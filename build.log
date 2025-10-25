@@ -1,0 +1,179 @@
+
+> enviolegalv2@0.1.0 build
+> next build
+
+   ▲ Next.js 15.5.4
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully in 11.3s
+   Linting and checking validity of types ...
+
+./app/(dashboard)/carrinho/page.tsx
+63:6  Warning: React Hook useEffect has an unnecessary dependency: 'message'. Either exclude it or remove the dependency array. Outer scope values like 'message' aren't valid dependencies because mutating them doesn't re-render the component.  react-hooks/exhaustive-deps
+83:6  Warning: React Hook useEffect has an unnecessary dependency: 'message'. Either exclude it or remove the dependency array. Outer scope values like 'message' aren't valid dependencies because mutating them doesn't re-render the component.  react-hooks/exhaustive-deps
+
+./app/(dashboard)/cotacoes/finalizar/page.tsx
+148:9  Warning: 'handleAddToCart' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./app/api/orders/[id]/route.ts
+8:3  Warning: Unused eslint-disable directive (no problems were reported from 'no-var').
+
+./app/api/payments/topups/card/route.ts
+54:12  Warning: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./app/api/pickups/[id]/manifest/route.ts
+8:3  Warning: Unused eslint-disable directive (no problems were reported from 'no-var').
+
+./app/api/pickups/[id]/route.ts
+7:3  Warning: Unused eslint-disable directive (no problems were reported from 'no-var').
+
+./app/api/pickups/route.ts
+16:3  Warning: Unused eslint-disable directive (no problems were reported from 'no-var').
+
+./app/api/support/tickets/[id]/attachments/route.ts
+10:3  Warning: Unused eslint-disable directive (no problems were reported from 'no-var').
+12:3  Warning: Unused eslint-disable directive (no problems were reported from 'no-var').
+
+./app/api/support/tickets/[id]/comments/route.ts
+8:3  Warning: Unused eslint-disable directive (no problems were reported from 'no-var').
+10:3  Warning: Unused eslint-disable directive (no problems were reported from 'no-var').
+
+./app/api/support/tickets/[id]/route.ts
+13:3  Warning: Unused eslint-disable directive (no problems were reported from 'no-var').
+
+./app/login/page.tsx
+41:14  Warning: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./components/dashboard/WalletCard.tsx
+13:9  Warning: The 'transactions' logical expression could make the dependencies of useMemo Hook (at line 24) change on every render. To fix this, wrap the initialization of 'transactions' in its own useMemo() Hook.  react-hooks/exhaustive-deps
+
+./components/forms/company-step-endereco.tsx
+6:3  Warning: 'FormProvider' is defined but never used.  @typescript-eslint/no-unused-vars
+7:3  Warning: 'useForm' is defined but never used.  @typescript-eslint/no-unused-vars
+60:9  Warning: 'cepHelp' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./components/labels/LabelModal.tsx
+3:21  Warning: 'useMemo' is defined but never used.  @typescript-eslint/no-unused-vars
+4:74  Warning: 'Flex' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./components/labels/LabelsTable.tsx
+4:70  Warning: 'Typography' is defined but never used.  @typescript-eslint/no-unused-vars
+26:11  Warning: 'message' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./components/quote/CepField.tsx
+52:9  Warning: 'lastValidatedCep' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+86:9  Warning: The 'data' conditional could make the dependencies of useEffect Hook (at line 124) change on every render. Move it inside the useEffect callback. Alternatively, wrap the initialization of 'data' in its own useMemo() Hook.  react-hooks/exhaustive-deps
+
+./components/quote/QuoteForm.tsx
+167:29  Warning: 'lastDestination' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+202:62  Warning: 'trigger' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+658:9  Warning: 'destinoLabel' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./components/wallet/AddFundsModal.tsx
+12:3  Warning: 'Space' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/quote/QuoteForm.tsx
+157:29  Warning: 'lastDestination' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+192:51  Warning: 'getValues' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+192:62  Warning: 'trigger' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+info  - Need to disable some ESLint rules? Learn more here: https://nextjs.org/docs/app/api-reference/config/eslint#disabling-rules
+   Collecting page data ...
+   Generating static pages (0/41) ...
+   Generating static pages (10/41) 
+   Generating static pages (20/41) 
+   Generating static pages (30/41) 
+ ✓ Generating static pages (41/41)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                                   Size  First Load JS
+┌ ○ /                                        25 kB         443 kB
+├ ○ /_not-found                               1 kB         103 kB
+├ ƒ /api/account/addresses                   258 B         102 kB
+├ ƒ /api/account/addresses/[id]              258 B         102 kB
+├ ƒ /api/account/cards                       258 B         102 kB
+├ ƒ /api/account/cards/[id]                  258 B         102 kB
+├ ƒ /api/account/company                     258 B         102 kB
+├ ƒ /api/account/password                    258 B         102 kB
+├ ƒ /api/account/profile                     258 B         102 kB
+├ ƒ /api/auth/forgot                         258 B         102 kB
+├ ƒ /api/auth/login                          258 B         102 kB
+├ ƒ /api/auth/register                       258 B         102 kB
+├ ƒ /api/auth/reset                          258 B         102 kB
+├ ƒ /api/carrinho                            258 B         102 kB
+├ ƒ /api/carrinho/[itemId]                   258 B         102 kB
+├ ƒ /api/carrinho/checkout                   258 B         102 kB
+├ ƒ /api/cart                                258 B         102 kB
+├ ƒ /api/cep                                 258 B         102 kB
+├ ƒ /api/cep/[cep]                           258 B         102 kB
+├ ƒ /api/cotacoes                            258 B         102 kB
+├ ƒ /api/cotacoes/selecionar                 258 B         102 kB
+├ ƒ /api/dashboard                           258 B         102 kB
+├ ƒ /api/envios/finalizar                    258 B         102 kB
+├ ƒ /api/invoices                            258 B         102 kB
+├ ƒ /api/labels                              258 B         102 kB
+├ ƒ /api/orders                              258 B         102 kB
+├ ƒ /api/orders/[id]                         258 B         102 kB
+├ ƒ /api/payments/cart/checkout              258 B         102 kB
+├ ƒ /api/payments/charge                     258 B         102 kB
+├ ƒ /api/payments/methods                    258 B         102 kB
+├ ƒ /api/payments/topups/card                258 B         102 kB
+├ ƒ /api/payments/topups/pix                 258 B         102 kB
+├ ƒ /api/pickups                             258 B         102 kB
+├ ƒ /api/pickups/[id]                        258 B         102 kB
+├ ƒ /api/pickups/[id]/manifest               258 B         102 kB
+├ ƒ /api/recipients                          258 B         102 kB
+├ ƒ /api/services                            258 B         102 kB
+├ ƒ /api/shipments                           258 B         102 kB
+├ ƒ /api/shipments/[id]/cancel               258 B         102 kB
+├ ƒ /api/support/tickets                     258 B         102 kB
+├ ƒ /api/support/tickets/[id]                258 B         102 kB
+├ ƒ /api/support/tickets/[id]/attachments    258 B         102 kB
+├ ƒ /api/support/tickets/[id]/comments       258 B         102 kB
+├ ƒ /api/support/webhooks                    258 B         102 kB
+├ ƒ /api/tracking                            258 B         102 kB
+├ ƒ /api/units                               258 B         102 kB
+├ ƒ /api/wallet                              258 B         102 kB
+├ ƒ /api/wallet/transactions                 258 B         102 kB
+├ ƒ /api/webhooks/pickups                    258 B         102 kB
+├ ƒ /api/webhooks/pix                        258 B         102 kB
+├ ƒ /api/webhooks/tracking                   258 B         102 kB
+├ ○ /auth/cadastro                            8 kB         333 kB
+├ ○ /auth/confirmacao                      2.12 kB         240 kB
+├ ○ /auth/esqueci-senha                     4.2 kB         320 kB
+├ ○ /auth/login                             5.9 kB         329 kB
+├ ƒ /auth/reset/[token]                    4.04 kB         327 kB
+├ ○ /carrinho                              8.13 kB         409 kB
+├ ○ /carteira                               4.2 kB         403 kB
+├ ○ /carteira/extrato                      1.58 kB         348 kB
+├ ○ /carteira/faturas                      5.02 kB         390 kB
+├ ○ /carteira/metodos                      7.16 kB         329 kB
+├ ○ /coletas                               5.62 kB         369 kB
+├ ƒ /coletas/[id]                           3.8 kB         313 kB
+├ ○ /coletas/nova                          12.6 kB         467 kB
+├ ○ /conta/perfil                            258 B         102 kB
+├ ○ /cotacoes                                11 kB         394 kB
+├ ○ /cotacoes/finalizar                      21 kB         488 kB
+├ ○ /cotacoes/resultados                   17.5 kB         417 kB
+├ ○ /cotar                                   258 B         102 kB
+├ ○ /devolucoes                              258 B         102 kB
+├ ○ /etiquetas                             8.92 kB         429 kB
+├ ○ /login                                 2.62 kB         286 kB
+├ ○ /minha-conta                           15.5 kB         388 kB
+├ ○ /rastreamento                          6.55 kB         370 kB
+├ ƒ /rastreamento/[id]                      3.9 kB         313 kB
+├ ○ /shipments                             7.17 kB         369 kB
+├ ƒ /shipments/[id]                        6.51 kB         257 kB
+├ ○ /suporte                               7.72 kB         385 kB
+├ ƒ /suporte/[id]                          12.4 kB         360 kB
+└ ○ /suporte/novo                          5.16 kB         360 kB
++ First Load JS shared by all               102 kB
+  ├ chunks/1255-ad92d48e3e7ce61a.js        45.7 kB
+  ├ chunks/4bd1b696-100b9d70ed4e49c1.js    54.4 kB
+  └ other shared chunks (total)            1.94 kB
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+

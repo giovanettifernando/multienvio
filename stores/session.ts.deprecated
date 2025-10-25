@@ -1,0 +1,33 @@
+'use client';
+import { create } from 'zustand';
+
+export type Usuario = {
+  id: string;
+  nome: string;
+  email?: string; // opcional para compatibilizar com perfil/page.tsx
+  // adicione outros campos necessários aqui
+};
+
+type SessionState = {
+  usuario: Usuario | null;
+  hasAccess: boolean;
+  hasCompany: boolean;
+};
+
+type SessionActions = {
+  setUsuario: (u: Usuario | null) => void;
+  clearSession: () => void;
+  setHasCompany: (v: boolean) => void;
+};
+
+export type SessionStore = SessionState & SessionActions;
+
+// Store criada em escopo de módulo (fora de componentes)
+export const useSessionStore = create<SessionStore>((set) => ({
+  usuario: null,
+  hasAccess: false,
+  hasCompany: false,
+  setUsuario: (u) => set({ usuario: u, hasAccess: !!u }),
+  clearSession: () => set({ usuario: null, hasAccess: false }),
+  setHasCompany: (v) => set({ hasCompany: v }),
+}));
