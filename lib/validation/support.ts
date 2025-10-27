@@ -12,7 +12,6 @@ export const ticketCreateSchema = z.object({
       "OUTROS",
     ])
     .default("OUTROS"),
-  priority: z.enum(["LOW", "NORMAL", "HIGH", "URGENT"]).default("NORMAL"),
   requester: z.object({
     name: z.string().min(3, "Informe o nome"),
     email: z.string().email("E-mail inválido").optional(),
@@ -21,13 +20,7 @@ export const ticketCreateSchema = z.object({
       .regex(/^(\(?\d{2}\)?\s?\d{4,5}-?\d{4})$/u, "Telefone inválido")
       .optional(),
   }),
-  related: z
-    .object({
-      orderId: z.string().optional(),
-      shipmentId: z.string().optional(),
-      labelId: z.string().optional(),
-    })
-    .optional(),
+  linkedTrackingCode: z.string().optional(),
   description: z.string().min(10, "Descreva o problema"),
 });
 
@@ -43,7 +36,6 @@ export const ticketUpdateSchema = z.object({
       "OUTROS",
     ])
     .optional(),
-  priority: z.enum(["LOW", "NORMAL", "HIGH", "URGENT"]).optional(),
   status: z
     .enum(["OPEN", "PENDING", "WAITING_CUSTOMER", "RESOLVED", "CLOSED"])
     .optional(),

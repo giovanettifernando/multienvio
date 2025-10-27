@@ -1,12 +1,16 @@
 "use client";
 
 import { useMemo } from "react";
-import { Card, Flex, Skeleton, Typography } from "antd";
+import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import type { CompanyWizardData } from "@/lib/validation/company";
 import { QuoteForm } from "@/components/quote/QuoteForm";
-import { useAddressStore } from "@/lib/state/addresses";
+import { useAddressStore, getCompanyDefaultAddress } from "@/lib/state/addresses";
 import { maskCEP } from "@/lib/masks";
+import { ELCard } from "@/components/ui/ELCard";
+import { ELSkeleton } from "@/components/ui/ELSkeleton";
+import { ELEmpty } from "@/components/ui/ELEmpty";
+import { PageShell } from "@/components/shared/PageShell";
 
 async function fetchCompany(): Promise<CompanyWizardData | null> {
   const res = await fetch("/api/account/company");
@@ -17,6 +21,7 @@ async function fetchCompany(): Promise<CompanyWizardData | null> {
 }
 
 export default function CotacoesPage() {
+  const router = useRouter();
   const { data: company, isLoading: companyLoading } = useQuery({
     queryKey: ["account", "company"],
     queryFn: fetchCompany,
@@ -26,6 +31,17 @@ export default function CotacoesPage() {
   const addresses = useAddressStore((s) => s.items);
 
   const defaultOrigin = useMemo(() => {
+    const companyAddress = getCompanyDefaultAddress();
+    if (companyAddress?.cep) {
+      return {
+        cep: maskCEP(companyAddress.cep),
+        cidade: companyAddress.cidade,
+        uf: companyAddress.uf,
+        label: companyAddress.nome,
+        isDefault: true,
+      };
+    }
+
     if (!addresses?.length) return null;
     const candidate = addresses.find((addr) => addr.isDefault) ?? addresses[0];
     if (!candidate) return null;
@@ -40,35 +56,51 @@ export default function CotacoesPage() {
 
   if (companyLoading) {
     return (
-      <Flex vertical gap={24}>
-        <Card variant="borderless">
-          <Skeleton active />
-        </Card>
-      </Flex>
+      <PageShell
+        title="Cotar envio"
+        description="Compare serviços e crie etiquetas de forma rápida com os dados da sua empresa."
+      >
+        <ELCard>
+          <ELSkeleton active paragraph={{ rows: 4 }} />
+        </ELCard>
+      </PageShell>
     );
   }
 
   if (!company) {
     return (
-      <Flex vertical gap={24}>
-        <Card variant="borderless">
-          <Typography.Title level={4} style={{ marginTop: 0 }}>
-            Complete o cadastro
-          </Typography.Title>
-          <Typography.Paragraph type="secondary" style={{ marginBottom: 12 }}>
-            Para cotar frete, finalize as informações da sua empresa na sua conta.
-          </Typography.Paragraph>
-          <Typography.Link href="/minha-conta">
-            Ir para Minha Conta
-          </Typography.Link>
-        </Card>
-      </Flex>
+      <PageShell
+        title="Cotar envio"
+        description="Compare serviços e crie etiquetas de forma rápida com os dados da sua empresa."
+      >
+        <ELCard>
+          <ELEmpty
+            title="Complete o cadastro"
+            description="Para cotar frete, finalize as informações da sua empresa na sua conta."
+            primaryAction={{
+              label: "Ir para Minha Conta",
+              onClick: () => router.push("/minha-conta"),
+            }}
+          />
+        </ELCard>
+      </PageShell>
     );
   }
 
   return (
-    <Flex vertical gap={24}>
-      <QuoteForm defaultOrigin={defaultOrigin} />
-    </Flex>
+    <PageShell
+      title="Cotar envio"
+      description="Compare serviços e crie etiquetas de forma rápida com os dados da sua empresa."
+    >
+      <ELCard
+        header={{
+          title: "Detalhes da cotação",
+          description:
+            "Informe origem e destino para receber as melhores opções de envio.",
+        }}
+      >
+        <QuoteForm defaultOrigin={defaultOrigin} />
+      </ELCard>
+    </PageShell>
   );
 }

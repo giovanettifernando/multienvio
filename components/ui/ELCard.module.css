@@ -1,0 +1,46 @@
+.card {
+  border: 1px solid rgba(0, 56, 115, 0.1) !important;
+  border-radius: var(--el-radius-base, 12px) !important;
+  box-shadow: var(--el-shadow-soft, 0 20px 48px rgba(0, 56, 115, 0.12));
+  background: var(--color-surface, #ffffff) !important;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--el-spacing-xs, 4px);
+  margin-bottom: var(--el-spacing-md, 12px);
+}
+
+.headerContent {
+  display: flex;
+  flex-direction: column;
+  gap: var(--el-spacing-xs, 4px);
+}
+
+.headerTitle {
+  margin: 0 !important;
+  color: var(--color-primary, #003873);
+  font-weight: 600 !important;
+}
+
+.headerDescription {
+  color: rgba(24, 34, 53, 0.72) !important;
+  margin: 0 !important;
+}
+
+.headerExtra {
+  margin-top: var(--el-spacing-sm, 8px);
+}
+
+@media (min-width: 768px) {
+  .header {
+    align-items: center;
+    flex-direction: row;
+    justify-content: space-between;
+  }
+
+  .headerExtra {
+    margin-top: 0;
+  }
+}

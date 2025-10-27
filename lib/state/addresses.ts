@@ -98,3 +98,35 @@ export function makeAddressFromForm(f: Partial<Address> & { apelido?: string }):
     isDefault: !!f?.isDefault,
   };
 }
+
+export type CompanyAddress = {
+  cep?: string;
+  logradouro?: string;
+  numero?: string;
+  complemento?: string;
+  bairro?: string;
+  cidade?: string;
+  uf?: string;
+  nome?: string;
+  email?: string;
+  telefone?: string;
+};
+
+export function getCompanyDefaultAddress(): CompanyAddress | null {
+  const state = useAddressStore.getState();
+  const address =
+    state.items.find((item) => item.isDefault) ?? state.items[0] ?? null;
+
+  if (!address) return null;
+
+  return {
+    cep: address.cep,
+    logradouro: address.logradouro,
+    numero: address.numero,
+    complemento: address.complemento,
+    bairro: address.bairro,
+    cidade: address.cidade,
+    uf: address.uf,
+    nome: address.apelido,
+  };
+}

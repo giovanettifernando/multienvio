@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo } from "react";
 import Link from "next/link";
-import { Layout, Menu } from "antd";
+import { Layout, Menu, Typography, Flex } from "antd";
 import { usePathname, useRouter } from "next/navigation";
 import { ADMIN_NAV } from "@/lib/admin/nav";
 import {
@@ -11,6 +11,7 @@ import {
   loadAdminSessionFromStorage,
 } from "@/lib/admin/auth";
 import { useAdminSession } from "@/stores/useAdminSession";
+import { spacing } from "@/lib/ui/theme";
 
 export default function AdminLayout({
   children,
@@ -51,20 +52,38 @@ export default function AdminLayout({
     }
   }, [pathname, router, setAdmin, token]);
 
+  const hasPermission = useAdminSession((state) => state.hasPermission);
+  const isSuperAdmin = useAdminSession((state) => state.isSuperAdmin);
+
   useEffect(() => {
-    if (!currentNavItem?.roles) return;
+    if (!currentNavItem?.permissions) return;
     if (!admin) return;
-    if (!currentNavItem.roles.includes(admin.role)) {
+
+    // Super admin has access to everything
+    if (isSuperAdmin()) return;
+
+    // Check if user has any of the required permissions
+    const hasAccess = currentNavItem.permissions.some((perm) =>
+      hasPermission(perm)
+    );
+
+    if (!hasAccess) {
       router.replace("/admin");
     }
-  }, [admin, currentNavItem, router]);
+  }, [admin, currentNavItem, router, hasPermission, isSuperAdmin]);
 
   const authorizedNav = useMemo(() => {
     return ADMIN_NAV.filter((item) => {
-      if (!item.roles) return true;
-      return admin ? item.roles.includes(admin.role) : false;
+      if (!item.permissions) return true;
+      if (!admin) return false;
+
+      // Super admin has access to everything
+      if (isSuperAdmin()) return true;
+
+      // Check if user has any of the required permissions
+      return item.permissions.some((perm) => hasPermission(perm));
     });
-  }, [admin]);
+  }, [admin, hasPermission, isSuperAdmin]);
 
   const menuItems = useMemo(
     () =>
@@ -88,20 +107,46 @@ export default function AdminLayout({
   }
 
   return (
-    <Layout style={{ minHeight: "100vh" }}>
-      <Layout.Sider width={240} breakpoint="lg" collapsedWidth={64}>
-        <div style={{ color: "#fff", padding: 16, fontWeight: 600 }}>
-          Envio Legal · Admin
-        </div>
+    <Layout style={{ minHeight: "100vh", background: "var(--color-background)" }}>
+      <Layout.Sider
+        width={240}
+        breakpoint="lg"
+        collapsedWidth={64}
+        style={{
+          background: "#FFFFFF",
+          borderRight: "1px solid var(--color-border)",
+        }}
+      >
+        <Flex
+          align="center"
+          justify="center"
+          style={{
+            height: 56,
+            padding: `0 ${spacing.lg}px`,
+            borderBottom: "1px solid var(--color-border)",
+          }}
+        >
+          <Typography.Text
+            strong
+            style={{
+              color: "var(--color-primary)",
+              fontSize: 15,
+            }}
+          >
+            Envio Legal · Admin
+          </Typography.Text>
+        </Flex>
         <Menu
-          theme="dark"
           mode="inline"
           selectedKeys={selectedKey ? [selectedKey] : []}
           items={menuItems}
+          style={{ borderRight: 0 }}
         />
       </Layout.Sider>
       <Layout>
-        <Layout.Content style={{ padding: 24 }}>{children}</Layout.Content>
+        <Layout.Content style={{ padding: spacing.xl }}>
+          {children}
+        </Layout.Content>
       </Layout>
     </Layout>
   );

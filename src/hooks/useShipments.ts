@@ -89,3 +89,36 @@ export function useShipmentCancel() {
     },
   });
 }
+
+/**
+ * Hook para buscar envios não concluídos (abertos)
+ * Usado para vincular tickets de suporte a envios em andamento
+ */
+export function useOpenShipments() {
+  return useQuery({
+    queryKey: ["shipments", "open"],
+    queryFn: async () => {
+      const response = await fetch("/api/shipments");
+      if (!response.ok) {
+        throw new Error("Falha ao carregar envios");
+      }
+      const data = await response.json();
+
+      // Filtrar apenas envios não concluídos/entregues/cancelados
+      const openItems = data.items?.filter(
+        (shipment: Shipment) =>
+          shipment.status !== "Entregue" &&
+          shipment.status !== "Cancelado"
+      ) ?? [];
+
+      return { items: openItems };
+    },
+    select: (data) => ({
+      items: data.items.map((shipment: Shipment) => ({
+        trackingCode: shipment.trackingCode,
+        recipientCityUf: shipment.recipientCityUf,
+        status: shipment.status,
+      })),
+    }),
+  });
+}

@@ -4,7 +4,7 @@ import { useAuthStore } from "@/stores/auth";
 import React, { useMemo, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Layout, Menu, Button, Typography } from 'antd';
+import { Layout, Menu, Button, Typography, Flex } from 'antd';
 import {
   HomeOutlined,
   FileAddOutlined,
@@ -17,6 +17,7 @@ import {
   MenuUnfoldOutlined,
   ShoppingCartOutlined,
 } from '@ant-design/icons';
+import { spacing } from "@/lib/ui/theme";
 
 const { Header, Sider, Content } = Layout;
 
@@ -77,18 +78,37 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   }, [collapsed]);
 
   return (
-    <Layout style={{ minHeight: '100dvh', background: 'var(--bg, #f5f7fb)' }}>
+    <Layout style={{ minHeight: '100dvh', background: 'var(--color-background)' }}>
       <Sider
         width={240}
         collapsible
         collapsed={collapsed}
         onCollapse={setCollapsed}
         breakpoint="lg"
-        style={{ background: '#fff', borderRight: '1px solid #f0f0f0' }}
+        style={{
+          background: '#FFFFFF',
+          borderRight: '1px solid var(--color-border)',
+        }}
       >
-        <div style={{ height: 56, display: 'flex', alignItems: 'center', paddingInline: 16, gap: 8 }}>
-          <Typography.Text strong>{collapsed ? 'EL' : 'Envio Legal'}</Typography.Text>
-        </div>
+        <Flex
+          align="center"
+          justify="center"
+          style={{
+            height: 56,
+            padding: `0 ${spacing.lg}px`,
+            borderBottom: '1px solid var(--color-border)',
+          }}
+        >
+          <Typography.Text
+            strong
+            style={{
+              color: 'var(--color-primary)',
+              fontSize: 15,
+            }}
+          >
+            {collapsed ? 'EL' : 'Envio Legal'}
+          </Typography.Text>
+        </Flex>
         <Menu
           mode="inline"
           selectedKeys={[selectedKey]}
@@ -97,34 +117,38 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             icon: item.icon,
             label: <Link href={item.href}>{item.label}</Link>,
           }))}
+          style={{ borderRight: 0 }}
         />
       </Sider>
       <Layout>
         <Header
           style={{
             height: 56,
-            background: '#fff',
-            borderBottom: '1px solid #f0f0f0',
-            display: 'flex',
-            alignItems: 'center',
-            paddingInline: 16,
-            gap: 12,
+            background: '#FFFFFF',
+            borderBottom: '1px solid var(--color-border)',
+            padding: `0 ${spacing.lg}px`,
           }}
         >
-          <Button
-            type="text"
-            aria-label="Alternar menu"
-            onClick={() => setCollapsed(v => !v)}
-            icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
-          />
-          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 12 }}>
-            <Typography.Text>{displayName}</Typography.Text>
-            <Button type="link" size="small" onClick={() => { clearSession(); router.replace('/login'); }}>
-              Sair
-            </Button>
-          </div>
+          <Flex align="center" gap={spacing.md} style={{ height: '100%' }}>
+            <Button
+              type="text"
+              aria-label="Alternar menu"
+              onClick={() => setCollapsed(v => !v)}
+              icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+            />
+            <Flex align="center" gap={spacing.md} style={{ marginLeft: 'auto' }}>
+              <Typography.Text>{displayName}</Typography.Text>
+              <Button
+                type="link"
+                size="small"
+                onClick={() => { clearSession(); router.replace('/login'); }}
+              >
+                Sair
+              </Button>
+            </Flex>
+          </Flex>
         </Header>
-        <Content style={{ padding: 16 }}>
+        <Content style={{ padding: spacing.lg }}>
           {children}
         </Content>
       </Layout>

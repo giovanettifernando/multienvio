@@ -167,7 +167,7 @@ export function TicketDetailHeader({ ticket, availableAgents = [], currentAgent 
           <Space size={8} align="center">
             <TicketStatusTag status={ticket.status} />
             <Tag color="gold">{categoryLabelMap[ticket.category]}</Tag>
-            <Tag color="purple">{priorityLabelMap[ticket.priority]}</Tag>
+            {ticket.priority && <Tag color="purple">{priorityLabelMap[ticket.priority]}</Tag>}
           </Space>
           {formatSla(ticket)}
         </Space>
@@ -221,13 +221,6 @@ export function TicketDetailHeader({ ticket, availableAgents = [], currentAgent 
               <Select
                 options={statusOptions}
                 aria-label="Alterar status do ticket"
-                disabled={mutation.isPending}
-              />
-            </Form.Item>
-            <Form.Item label="Prioridade" name="priority">
-              <Select
-                options={priorityOptions}
-                aria-label="Alterar prioridade do ticket"
                 disabled={mutation.isPending}
               />
             </Form.Item>

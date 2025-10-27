@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 import { AntdRegistry } from "@ant-design/nextjs-registry";
+import ConfigProvider from "antd/es/config-provider";
+import ptBR from "antd/locale/pt_BR";
 import { Inter } from "next/font/google";
 import { AppProviders } from "@/components/providers/app-providers";
+import { getThemeConfig } from "@/lib/ui/theme";
 import "./globals.css";
 
 const inter = Inter({
@@ -21,11 +24,15 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const themeConfig = getThemeConfig("light");
+
   return (
-    <html lang="pt-BR">
+    <html lang="pt-BR" data-new-theme="true">
       <body className={inter.variable}>
         <AntdRegistry>
-          <AppProviders>{children}</AppProviders>
+          <ConfigProvider theme={themeConfig} locale={ptBR}>
+            <AppProviders>{children}</AppProviders>
+          </ConfigProvider>
         </AntdRegistry>
       </body>
     </html>

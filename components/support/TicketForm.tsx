@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import type { Resolver } from "react-hook-form";
 import {
+  Alert,
   Button,
   Card,
   Flex,
@@ -13,15 +14,21 @@ import {
   Input,
   Select,
   Space,
+  Tooltip,
   Upload,
   Typography,
   message,
 } from "antd";
+import { InfoCircleOutlined } from "@ant-design/icons";
 import type { UploadFile } from "antd/es/upload/interface";
 import { Controller, useForm } from "react-hook-form";
 import { ticketCreateSchema } from "@/lib/validation/support";
+import { useAuthStore } from "@/stores/auth";
+import { useOpenShipments } from "@/hooks/useShipments";
 import type { Ticket } from "@/types/support";
+
 type TicketCreateFormValues = z.infer<typeof ticketCreateSchema>;
+
 type Props = {
   onCreated?: (ticket: Ticket) => void;
 };
@@ -52,67 +59,76 @@ async function uploadAttachments(ticketId: string, files: UploadFile[]) {
 
 export function TicketForm({ onCreated }: Props) {
   const [fileList, setFileList] = useState<UploadFile[]>([]);
+  const { user } = useAuthStore();
+  const { data: shipmentsData, isLoading: shipmentsLoading } = useOpenShipments();
 
   const {
     control,
     handleSubmit,
     reset,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<TicketCreateFormValues>({
-    resolver: zodResolver(ticketCreateSchema)  as Resolver<TicketCreateFormValues>,
+    resolver: zodResolver(ticketCreateSchema) as Resolver<TicketCreateFormValues>,
     defaultValues: {
       title: "",
       category: "OUTROS",
-      priority: "NORMAL",
       requester: {
         name: "",
         email: "",
         phone: "",
       },
-      related: {
-        orderId: "",
-        shipmentId: "",
-        labelId: "",
-      },
+      linkedTrackingCode: undefined,
       description: "",
     },
   });
 
+  // Auto-fill requester from session
+  useEffect(() => {
+    if (user) {
+      setValue("requester.name", user.name || "");
+      setValue("requester.email", user.email || "");
+      setValue("requester.phone", user.phone || "");
+    }
+  }, [user, setValue]);
+
+  const hasIncompleteProfile = user && (!user.name || !user.email || !user.phone);
+
   const mutation = useMutation<Ticket, Error, TicketCreateFormValues>({
-  mutationFn: async (values) => {
-    const response = await fetch("/api/support/tickets", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(values),
-    });
+    mutationFn: async (values) => {
+      const response = await fetch("/api/support/tickets", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(values),
+      });
 
-    if (!response.ok) {
-      const body = await response.json().catch(() => undefined);
-      throw new Error(body?.mensagem ?? "Não foi possível criar o ticket");
-    }
+      if (!response.ok) {
+        const body = await response.json().catch(() => undefined);
+        throw new Error(body?.mensagem ?? "Não foi possível criar o ticket");
+      }
 
-    const ticket = (await response.json()) as Ticket;
+      const ticket = (await response.json()) as Ticket;
 
-    if (fileList.length) {
-      await uploadAttachments(ticket.id, fileList);
-    }
+      if (fileList.length) {
+        await uploadAttachments(ticket.id, fileList);
+      }
 
-    return ticket;
-  },
-  onSuccess: (ticket) => {
-    message.success("Ticket criado com sucesso");
-    reset();
-    setFileList([]);
-    onCreated?.(ticket);
-  },
-  onError: (error) => {
-    message.error(error.message);
-  },
-});
+      return ticket;
+    },
+    onSuccess: (ticket) => {
+      message.success("Ticket criado com sucesso");
+      reset();
+      setFileList([]);
+      onCreated?.(ticket);
+    },
+    onError: (error) => {
+      message.error(error.message);
+    },
+  });
 
-const onSubmit = handleSubmit((values) => {
-  mutation.mutate(values);
-});
+  const onSubmit = handleSubmit((values) => {
+    mutation.mutate(values);
+  });
 
   return (
     <Card
@@ -122,6 +138,15 @@ const onSubmit = handleSubmit((values) => {
     >
       <Form layout="vertical" component="form" onSubmitCapture={onSubmit} autoComplete="off">
         <Space direction="vertical" size={16} style={{ width: "100%" }}>
+          {hasIncompleteProfile && (
+            <Alert
+              message="Complete seu cadastro (nome, e-mail, telefone) em Minha Conta antes de abrir chamados."
+              type="info"
+              showIcon
+              icon={<InfoCircleOutlined />}
+            />
+          )}
+
           <Controller
             name="title"
             control={control}
@@ -140,58 +165,35 @@ const onSubmit = handleSubmit((values) => {
             )}
           />
 
-          <Flex gap={16} wrap>
-            <Controller
-              name="category"
-              control={control}
-              render={({ field }) => (
-                <Form.Item
-                  label="Categoria"
-                  style={{ flex: 1, minWidth: 200 }}
-                  validateStatus={errors.category ? "error" : undefined}
-                  help={errors.category?.message}
-                >
-                  <Select
-                    {...field}
-                    options={[
-                      { label: "Financeiro", value: "FINANCEIRO" },
-                      { label: "Logística", value: "LOGISTICA" },
-                      { label: "Etiqueta", value: "ETIQUETA" },
-                      { label: "Rastreamento", value: "RASTREAMENTO" },
-                      { label: "Coletas", value: "COLETAS" },
-                      { label: "Outros", value: "OUTROS" },
-                    ]}
-                    aria-label="Selecionar categoria"
-                  />
-                </Form.Item>
-              )}
-            />
-            <Controller
-              name="priority"
-              control={control}
-              render={({ field }) => (
-                <Form.Item
-                  label="Prioridade"
-                  style={{ flex: 1, minWidth: 200 }}
-                  validateStatus={errors.priority ? "error" : undefined}
-                  help={errors.priority?.message}
-                >
-                  <Select
-                    {...field}
-                    options={[
-                      { label: "Baixa", value: "LOW" },
-                      { label: "Normal", value: "NORMAL" },
-                      { label: "Alta", value: "HIGH" },
-                      { label: "Urgente", value: "URGENT" },
-                    ]}
-                    aria-label="Selecionar prioridade"
-                  />
-                </Form.Item>
-              )}
-            />
-          </Flex>
+          <Controller
+            name="category"
+            control={control}
+            render={({ field }) => (
+              <Form.Item
+                label="Categoria"
+                validateStatus={errors.category ? "error" : undefined}
+                help={errors.category?.message}
+              >
+                <Select
+                  {...field}
+                  options={[
+                    { label: "Financeiro", value: "FINANCEIRO" },
+                    { label: "Logística", value: "LOGISTICA" },
+                    { label: "Etiqueta", value: "ETIQUETA" },
+                    { label: "Rastreamento", value: "RASTREAMENTO" },
+                    { label: "Coletas", value: "COLETAS" },
+                    { label: "Outros", value: "OUTROS" },
+                  ]}
+                  aria-label="Selecionar categoria"
+                  style={{ width: "100%" }}
+                />
+              </Form.Item>
+            )}
+          />
 
-          <Typography.Title level={5}>Solicitante</Typography.Title>
+          <Typography.Title level={5} style={{ marginBottom: 0 }}>
+            Solicitante
+          </Typography.Title>
           <Flex gap={16} wrap>
             <Controller
               name="requester.name"
@@ -203,11 +205,16 @@ const onSubmit = handleSubmit((values) => {
                   validateStatus={errors.requester?.name ? "error" : undefined}
                   help={errors.requester?.name?.message}
                 >
-                  <Input
-                    {...field}
-                    placeholder="Nome do solicitante"
-                    aria-invalid={Boolean(errors.requester?.name)}
-                  />
+                  <Tooltip title="Este dado vem do seu perfil">
+                    <Input
+                      {...field}
+                      placeholder="Nome do solicitante"
+                      disabled
+                      readOnly
+                      aria-readonly="true"
+                      style={{ cursor: "not-allowed", backgroundColor: "#f5f5f5" }}
+                    />
+                  </Tooltip>
                 </Form.Item>
               )}
             />
@@ -221,12 +228,17 @@ const onSubmit = handleSubmit((values) => {
                   validateStatus={errors.requester?.email ? "error" : undefined}
                   help={errors.requester?.email?.message}
                 >
-                  <Input
-                    {...field}
-                    type="email"
-                    placeholder="email@cliente.com"
-                    aria-invalid={Boolean(errors.requester?.email)}
-                  />
+                  <Tooltip title="Este dado vem do seu perfil">
+                    <Input
+                      {...field}
+                      type="email"
+                      placeholder="email@cliente.com"
+                      disabled
+                      readOnly
+                      aria-readonly="true"
+                      style={{ cursor: "not-allowed", backgroundColor: "#f5f5f5" }}
+                    />
+                  </Tooltip>
                 </Form.Item>
               )}
             />
@@ -240,46 +252,42 @@ const onSubmit = handleSubmit((values) => {
                   validateStatus={errors.requester?.phone ? "error" : undefined}
                   help={errors.requester?.phone?.message}
                 >
-                  <Input
-                    {...field}
-                    placeholder="(11) 99999-9999"
-                    aria-invalid={Boolean(errors.requester?.phone)}
-                  />
+                  <Tooltip title="Este dado vem do seu perfil">
+                    <Input
+                      {...field}
+                      placeholder="(11) 99999-9999"
+                      disabled
+                      readOnly
+                      aria-readonly="true"
+                      style={{ cursor: "not-allowed", backgroundColor: "#f5f5f5" }}
+                    />
+                  </Tooltip>
                 </Form.Item>
               )}
             />
           </Flex>
 
-          <Typography.Title level={5}>Vínculos</Typography.Title>
-          <Flex gap={16} wrap>
-            <Controller
-              name="related.orderId"
-              control={control}
-              render={({ field }) => (
-                <Form.Item label="Pedido" style={{ flex: 1, minWidth: 180 }}>
-                  <Input {...field} placeholder="ID do pedido" />
-                </Form.Item>
-              )}
-            />
-            <Controller
-              name="related.shipmentId"
-              control={control}
-              render={({ field }) => (
-                <Form.Item label="Envio" style={{ flex: 1, minWidth: 180 }}>
-                  <Input {...field} placeholder="ID do envio" />
-                </Form.Item>
-              )}
-            />
-            <Controller
-              name="related.labelId"
-              control={control}
-              render={({ field }) => (
-                <Form.Item label="Etiqueta" style={{ flex: 1, minWidth: 180 }}>
-                  <Input {...field} placeholder="Código da etiqueta" />
-                </Form.Item>
-              )}
-            />
-          </Flex>
+          <Controller
+            name="linkedTrackingCode"
+            control={control}
+            render={({ field }) => (
+              <Form.Item label="Vincular a um envio (opcional)">
+                <Select
+                  {...field}
+                  showSearch
+                  allowClear
+                  placeholder="Selecione um código de rastreio (opcional)"
+                  optionFilterProp="label"
+                  loading={shipmentsLoading}
+                  options={shipmentsData?.items.map((s: { trackingCode: string; recipientCityUf: string }) => ({
+                    value: s.trackingCode,
+                    label: `${s.trackingCode} — ${s.recipientCityUf}`,
+                  })) ?? []}
+                  style={{ width: "100%" }}
+                />
+              </Form.Item>
+            )}
+          />
 
           <Controller
             name="description"

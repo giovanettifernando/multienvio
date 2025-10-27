@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { customAlphabet, nanoid } from "nanoid";
 import { ticketCreateSchema } from "@/lib/validation/support";
+import { supportDb } from "@/lib/support/mock-db";
+import type { TicketCategory as AdminTicketCategory } from "@/lib/support/types";
 import type { Ticket, TicketEvent, TicketPriority } from "@/types/support";
 
 export const dynamic = "force-dynamic";
@@ -51,6 +53,23 @@ function buildEvent(
   };
 }
 
+function mapCategory(category: Ticket["category"]): AdminTicketCategory {
+  switch (category) {
+    case "FINANCEIRO":
+      return "pagamento";
+    case "LOGISTICA":
+    case "COLETAS":
+      return "coleta";
+    case "RASTREAMENTO":
+      return "rastreio";
+    case "ETIQUETA":
+      return "outros";
+    case "OUTROS":
+    default:
+      return "outros";
+  }
+}
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const status = searchParams.get("status");
@@ -74,6 +93,7 @@ export async function GET(request: Request) {
       (ticket) =>
         ticket.number.toLowerCase().includes(search) ||
         ticket.title.toLowerCase().includes(search) ||
+        ticket.linkedTrackingCode?.toLowerCase().includes(search) ||
         ticket.related?.orderId?.toLowerCase().includes(search) ||
         ticket.related?.shipmentId?.toLowerCase().includes(search) ||
         ticket.related?.labelId?.toLowerCase().includes(search),
@@ -105,7 +125,7 @@ export async function POST(request: Request) {
 
     const store = getTicketStore();
     const createdAt = new Date();
-    const targetHrs = priorityToHours(data.priority);
+    const targetHrs = 48; // Default SLA since priority was removed
     const dueAt = new Date(createdAt.getTime() + targetHrs * 60 * 60 * 1000);
 
     let id = `tic_${nanoid(10)}`;
@@ -121,10 +141,11 @@ export async function POST(request: Request) {
       number: generateTicketNumber(createdAt),
       title: data.title,
       category: data.category,
-      priority: data.priority,
+      priority: undefined,
       status: "OPEN",
       requester: data.requester,
-      related: data.related,
+      linkedTrackingCode: data.linkedTrackingCode,
+      related: undefined,
       sla: {
         targetHrs,
         dueAt: dueAt.toISOString(),
@@ -136,6 +157,34 @@ export async function POST(request: Request) {
     };
 
     store.set(ticket.id, ticket);
+
+    const maybeExisting = supportDb.findTicket(ticket.number);
+    if (!maybeExisting) {
+      const adminTicket = supportDb.createTicket(
+        {
+          title: ticket.title,
+          description: data.description,
+          status: "aberto",
+          category: mapCategory(ticket.category),
+          requester: {
+            name: ticket.requester.name,
+            email: ticket.requester.email ?? "",
+            phone: ticket.requester.phone ?? data.requester.phone ?? null,
+            userId: ticket.requester.email ?? undefined,
+          },
+          linkedTrackingCode: ticket.linkedTrackingCode ?? null,
+          assigneeUserId: null,
+          slaDueAt: ticket.sla?.dueAt ?? null,
+        },
+        { id: ticket.number, createdAt: ticket.createdAt },
+      );
+
+      supportDb.addTimelineEvent(adminTicket.id, {
+        type: "comment",
+        author: "cliente",
+        message: data.description,
+      });
+    }
 
     return NextResponse.json(ticket, { status: 201 });
   } catch {

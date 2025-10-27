@@ -1,0 +1,253 @@
+"use client";
+
+import { Table, Tag, Switch, Tooltip, Button, Flex, Typography, Modal } from "antd";
+import { EditOutlined, DeleteOutlined, KeyOutlined } from "@ant-design/icons";
+import type { ColumnsType } from "antd/es/table";
+import type { AdminUser } from "@/lib/auth/types";
+import {
+  useToggleUserStatus,
+  useDeleteUser,
+  useResetPassword,
+} from "@/lib/auth/hooks";
+import { getAllRoles } from "@/lib/auth/roles";
+
+interface UsersTableProps {
+  data: AdminUser[];
+  loading?: boolean;
+  onEdit: (user: AdminUser) => void;
+  pagination?: {
+    current: number;
+    pageSize: number;
+    total: number;
+    onChange: (page: number, pageSize: number) => void;
+  };
+}
+
+export function UsersTable({
+  data,
+  loading,
+  onEdit,
+  pagination,
+}: UsersTableProps) {
+  const toggleStatusMutation = useToggleUserStatus();
+  const deleteMutation = useDeleteUser();
+  const resetPasswordMutation = useResetPassword();
+
+  const allRoles = getAllRoles();
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleString("pt-BR", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  const handleStatusToggle = (user: AdminUser, checked: boolean) => {
+    const newStatus = checked ? "active" : "blocked";
+
+    Modal.confirm({
+      title: `${checked ? "Ativar" : "Bloquear"} usuário`,
+      content: `Tem certeza que deseja ${checked ? "ativar" : "bloquear"} ${user.name}?`,
+      okText: "Sim",
+      cancelText: "Cancelar",
+      onOk: () => {
+        toggleStatusMutation.mutate({ id: user.id, status: newStatus });
+      },
+    });
+  };
+
+  const handleDelete = (user: AdminUser) => {
+    Modal.confirm({
+      title: "Excluir usuário",
+      content: `Tem certeza que deseja excluir ${user.name}? Esta ação não pode ser desfeita.`,
+      okText: "Excluir",
+      okType: "danger",
+      cancelText: "Cancelar",
+      onOk: () => {
+        deleteMutation.mutate(user.id);
+      },
+    });
+  };
+
+  const handleResetPassword = (user: AdminUser) => {
+    Modal.confirm({
+      title: "Resetar senha",
+      content: `Enviar instruções de redefinição de senha para ${user.email}?`,
+      okText: "Enviar",
+      cancelText: "Cancelar",
+      onOk: () => {
+        resetPasswordMutation.mutate(user.id);
+      },
+    });
+  };
+
+  const columns: ColumnsType<AdminUser> = [
+    {
+      title: "Nome",
+      dataIndex: "name",
+      key: "name",
+      sorter: (a, b) => a.name.localeCompare(b.name),
+      render: (name: string, user) => (
+        <Flex vertical gap={4}>
+          <Typography.Text strong>{name}</Typography.Text>
+          <Typography.Text type="secondary" style={{ fontSize: 13 }}>
+            {user.email}
+          </Typography.Text>
+        </Flex>
+      ),
+    },
+    {
+      title: "Status",
+      dataIndex: "status",
+      key: "status",
+      width: 120,
+      filters: [
+        { text: "Ativo", value: "active" },
+        { text: "Bloqueado", value: "blocked" },
+      ],
+      onFilter: (value, record) => record.status === value,
+      render: (status: string, user) => (
+        <Flex align="center" gap={8}>
+          <Tag color={status === "active" ? "success" : "error"}>
+            {status === "active" ? "Ativo" : "Bloqueado"}
+          </Tag>
+          <Switch
+            size="small"
+            checked={status === "active"}
+            onChange={(checked) => handleStatusToggle(user, checked)}
+            loading={toggleStatusMutation.isPending}
+          />
+        </Flex>
+      ),
+    },
+    {
+      title: "Permissões",
+      dataIndex: "roles",
+      key: "roles",
+      render: (roles: string[]) => {
+        const displayRoles = roles.slice(0, 2);
+        const remainingCount = roles.length - displayRoles.length;
+
+        return (
+          <Flex gap={4} wrap="wrap">
+            {displayRoles.map((roleKey) => {
+              const role = allRoles.find((r) => r.key === roleKey);
+              return (
+                <Tag key={roleKey} color="blue">
+                  {role?.label || roleKey}
+                </Tag>
+              );
+            })}
+            {remainingCount > 0 && (
+              <Tooltip
+                title={
+                  <Flex vertical gap={4}>
+                    {roles.slice(2).map((roleKey) => {
+                      const role = allRoles.find((r) => r.key === roleKey);
+                      return (
+                        <div key={roleKey}>{role?.label || roleKey}</div>
+                      );
+                    })}
+                  </Flex>
+                }
+              >
+                <Tag>+{remainingCount}</Tag>
+              </Tooltip>
+            )}
+          </Flex>
+        );
+      },
+    },
+    {
+      title: "Último Acesso",
+      dataIndex: "lastLoginAt",
+      key: "lastLoginAt",
+      width: 150,
+      sorter: (a, b) => {
+        if (!a.lastLoginAt) return 1;
+        if (!b.lastLoginAt) return -1;
+        return (
+          new Date(a.lastLoginAt).getTime() -
+          new Date(b.lastLoginAt).getTime()
+        );
+      },
+      render: (lastLoginAt: string | null) => {
+        if (!lastLoginAt)
+          return <Typography.Text type="secondary">Nunca</Typography.Text>;
+        return <Typography.Text>{formatDate(lastLoginAt)}</Typography.Text>;
+      },
+    },
+    {
+      title: "Atualizado em",
+      dataIndex: "updatedAt",
+      key: "updatedAt",
+      width: 150,
+      sorter: (a, b) =>
+        new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime(),
+      render: (updatedAt: string) => (
+        <Typography.Text>{formatDate(updatedAt)}</Typography.Text>
+      ),
+    },
+    {
+      title: "Ações",
+      key: "actions",
+      width: 150,
+      fixed: "right",
+      render: (_, user) => (
+        <Flex gap={8}>
+          <Tooltip title="Editar">
+            <Button
+              type="text"
+              icon={<EditOutlined />}
+              onClick={() => onEdit(user)}
+            />
+          </Tooltip>
+          <Tooltip title="Resetar senha">
+            <Button
+              type="text"
+              icon={<KeyOutlined />}
+              onClick={() => handleResetPassword(user)}
+              loading={resetPasswordMutation.isPending}
+            />
+          </Tooltip>
+          <Tooltip title="Excluir">
+            <Button
+              type="text"
+              danger
+              icon={<DeleteOutlined />}
+              onClick={() => handleDelete(user)}
+              loading={deleteMutation.isPending}
+              disabled={user.id === "master-001"}
+            />
+          </Tooltip>
+        </Flex>
+      ),
+    },
+  ];
+
+  return (
+    <Table
+      columns={columns}
+      dataSource={data}
+      rowKey="id"
+      loading={loading}
+      pagination={
+        pagination
+          ? {
+              current: pagination.current,
+              pageSize: pagination.pageSize,
+              total: pagination.total,
+              onChange: pagination.onChange,
+              showSizeChanger: true,
+              showTotal: (total) => `Total: ${total} usuários`,
+            }
+          : false
+      }
+      scroll={{ x: 1200 }}
+    />
+  );
+}

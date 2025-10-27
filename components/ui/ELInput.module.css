@@ -1,0 +1,41 @@
+.input {
+  border-radius: var(--el-radius-base, 12px) !important;
+  border: 1px solid rgba(0, 56, 115, 0.18) !important;
+  padding-inline: 14px !important;
+  height: 44px !important;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.input:hover,
+.input:focus,
+.input:focus-within {
+  border-color: rgba(0, 56, 115, 0.45) !important;
+}
+
+.input:focus,
+.input:focus-within {
+  box-shadow: 0 0 0 3px rgba(0, 56, 115, 0.16);
+}
+
+.password :global(.ant-input) {
+  border-radius: var(--el-radius-base, 12px) !important;
+  border: 1px solid rgba(0, 56, 115, 0.18) !important;
+  height: 44px !important;
+  padding-inline: 14px !important;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.password :global(.ant-input:hover),
+.password :global(.ant-input:focus),
+.password :global(.ant-input:focus-within) {
+  border-color: rgba(0, 56, 115, 0.45) !important;
+}
+
+.password :global(.ant-input:focus),
+.password :global(.ant-input:focus-within) {
+  box-shadow: 0 0 0 3px rgba(0, 56, 115, 0.16);
+}
+
+.password :global(.ant-input-password-icon) {
+  color: rgba(24, 34, 53, 0.8) !important;
+}

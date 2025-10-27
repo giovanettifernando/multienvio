@@ -1,0 +1,175 @@
+'use client';
+
+import { Table, Button, Space, Switch, Modal, Typography } from 'antd';
+import { EditOutlined, DeleteOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
+import type { ColumnsType } from 'antd/es/table';
+import dayjs from 'dayjs';
+import { maskCNPJ } from '@/lib/pickup/masks';
+import StatusTag from './StatusTag';
+import type { PickupPoint, PickupPointListResponse } from '@/lib/pickup/types';
+
+const { Link } = Typography;
+const { confirm } = Modal;
+
+interface PointsTableProps {
+  data?: PickupPointListResponse;
+  loading: boolean;
+  onEdit: (point: PickupPoint) => void;
+  onDelete: (id: string) => void;
+  onToggleStatus: (id: string, newStatus: 'active' | 'blocked') => void;
+  onPageChange: (page: number, pageSize: number) => void;
+}
+
+export default function PointsTable({
+  data,
+  loading,
+  onEdit,
+  onDelete,
+  onToggleStatus,
+  onPageChange,
+}: PointsTableProps) {
+  const handleStatusToggle = (point: PickupPoint, checked: boolean) => {
+    const newStatus = checked ? 'active' : 'blocked';
+    const action = newStatus === 'active' ? 'ativar' : 'bloquear';
+
+    confirm({
+      title: `Confirmar ${action}`,
+      icon: <ExclamationCircleOutlined />,
+      content: `Deseja realmente ${action} o ponto de coleta "${point.nomeFantasia}"?`,
+      okText: 'Confirmar',
+      cancelText: 'Cancelar',
+      onOk() {
+        onToggleStatus(point.id, newStatus);
+      },
+    });
+  };
+
+  const handleDelete = (point: PickupPoint) => {
+    confirm({
+      title: 'Confirmar exclusão',
+      icon: <ExclamationCircleOutlined />,
+      content: `Deseja realmente excluir o ponto de coleta "${point.nomeFantasia}"? Esta ação não pode ser desfeita.`,
+      okText: 'Excluir',
+      okType: 'danger',
+      cancelText: 'Cancelar',
+      onOk() {
+        onDelete(point.id);
+      },
+    });
+  };
+
+  const columns: ColumnsType<PickupPoint> = [
+    {
+      title: 'Nome Fantasia',
+      dataIndex: 'nomeFantasia',
+      key: 'nomeFantasia',
+      render: (text: string, record: PickupPoint) => (
+        <Link onClick={() => onEdit(record)} style={{ cursor: 'pointer' }}>
+          {text}
+        </Link>
+      ),
+    },
+    {
+      title: 'CNPJ',
+      dataIndex: 'cnpj',
+      key: 'cnpj',
+      render: (cnpj: string) => maskCNPJ(cnpj),
+    },
+    {
+      title: 'Cidade/UF',
+      key: 'location',
+      render: (_: unknown, record: PickupPoint) => {
+        if (record.cidade && record.uf) {
+          return `${record.cidade}/${record.uf}`;
+        }
+        if (record.uf) {
+          return record.uf;
+        }
+        return '—';
+      },
+    },
+    {
+      title: 'Contato',
+      key: 'contact',
+      render: (_: unknown, record: PickupPoint) => {
+        const contact = [];
+        if (record.email) contact.push(record.email);
+        if (record.telefone) contact.push(record.telefone);
+        return contact.length > 0 ? contact.join(' • ') : '—';
+      },
+    },
+    {
+      title: 'Capacidade/dia',
+      key: 'capacityPerDay',
+      dataIndex: 'capacityPerDay',
+      render: (capacity: number | null | undefined) => {
+        if (capacity === null || capacity === undefined || capacity === 0) {
+          return '—';
+        }
+        return capacity;
+      },
+    },
+    {
+      title: 'Status',
+      key: 'status',
+      render: (_: unknown, record: PickupPoint) => (
+        <Space size="small">
+          <StatusTag status={record.status} />
+          <Switch
+            checked={record.status === 'active'}
+            onChange={(checked) => handleStatusToggle(record, checked)}
+            size="small"
+          />
+        </Space>
+      ),
+    },
+    {
+      title: 'Atualizado em',
+      dataIndex: 'updatedAt',
+      key: 'updatedAt',
+      render: (date: string) => dayjs(date).format('DD/MM/YYYY HH:mm'),
+    },
+    {
+      title: 'Ações',
+      key: 'actions',
+      render: (_: unknown, record: PickupPoint) => (
+        <Space size="small">
+          <Button
+            type="link"
+            icon={<EditOutlined />}
+            onClick={() => onEdit(record)}
+            size="small"
+          >
+            Editar
+          </Button>
+          <Button
+            type="link"
+            danger
+            icon={<DeleteOutlined />}
+            onClick={() => handleDelete(record)}
+            size="small"
+          >
+            Excluir
+          </Button>
+        </Space>
+      ),
+    },
+  ];
+
+  return (
+    <Table
+      columns={columns}
+      dataSource={data?.items || []}
+      loading={loading}
+      rowKey="id"
+      pagination={{
+        current: data?.page || 1,
+        pageSize: data?.pageSize || 10,
+        total: data?.total || 0,
+        showSizeChanger: true,
+        showTotal: (total) => `Total: ${total} pontos`,
+        onChange: onPageChange,
+      }}
+    />
+  );
+}

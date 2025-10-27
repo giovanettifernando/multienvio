@@ -1,6 +1,14 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  modularizeImports: {
+    antd: {
+      transform: "antd/es/{{member}}",
+    },
+    "@ant-design/icons": {
+      transform: "@ant-design/icons/{{member}}",
+    },
+  },
   async redirects() {
     return [
       // Redirects temporários (podem ser alterados no futuro)

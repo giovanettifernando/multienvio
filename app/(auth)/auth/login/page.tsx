@@ -2,26 +2,28 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
-import {
-  Alert,
-  App,
-  Button,
-  Checkbox,
-  Form,
-  Input,
-  Space,
-  Typography,
-} from "antd";
+import Alert from "antd/es/alert";
+import App from "antd/es/app";
+import Checkbox from "antd/es/checkbox";
+import Form from "antd/es/form";
+import Typography from "antd/es/typography";
 import { FormCard } from "@/components/ui/FormCard";
+import { ELButton } from "@/components/ui/ELButton";
+import { ELCard } from "@/components/ui/ELCard";
+import { ELFormItem } from "@/components/ui/ELFormItem";
+import { ELInput } from "@/components/ui/ELInput";
+import { NEW_THEME_ENABLED } from "@/lib/features/new-theme";
+import { spacing } from "@/src/styles/theme";
 import {
   loginSchema,
   type LoginInput,
 } from "@/lib/validation/auth";
 import { useAuthStore } from "@/stores/auth";
+import styles from "./login.module.css";
 
 type LoginResponse = {
   id: string;
@@ -147,29 +149,25 @@ export default function LoginPage() {
     [mutation],
   );
 
-  return (
-    <FormCard
-      titulo="Entrar"
-      subtitulo="Acesse o painel e gerencie todos os envios em um só lugar."
-      footer={
-        <Typography.Paragraph style={{ margin: 0 }} type="secondary">
-          Ainda não tem conta?{" "}
-          <Link href="/auth/cadastro">Crie agora mesmo</Link>
-        </Typography.Paragraph>
-      }
-    >
+  const formContent = useMemo(
+    () => (
       <Form
         layout="vertical"
         requiredMark={false}
         onFinish={handleSubmit(onSubmit)}
         aria-live="polite"
+        className={NEW_THEME_ENABLED ? styles.form : undefined}
       >
         {formError ? (
           <Alert
             type="error"
             message={formError}
             showIcon
-            style={{ marginBottom: 16 }}
+            style={
+              NEW_THEME_ENABLED
+                ? { marginBottom: spacing.md }
+                : { marginBottom: 16 }
+            }
           />
         ) : null}
 
@@ -177,20 +175,20 @@ export default function LoginPage() {
           name="email"
           control={control}
           render={({ field }) => (
-            <Form.Item
+            <ELFormItem
               label="E-mail"
               required
-              validateStatus={errors.email ? "error" : ""}
+              validateStatus={errors.email ? "error" : undefined}
               help={errors.email?.message}
             >
-              <Input
+              <ELInput
                 {...field}
                 autoComplete="email"
                 inputMode="email"
                 placeholder="seuemail@empresa.com"
                 aria-invalid={Boolean(errors.email)}
               />
-            </Form.Item>
+            </ELFormItem>
           )}
         />
 
@@ -198,27 +196,23 @@ export default function LoginPage() {
           name="senha"
           control={control}
           render={({ field }) => (
-            <Form.Item
+            <ELFormItem
               label="Senha"
               required
-              validateStatus={errors.senha ? "error" : ""}
+              validateStatus={errors.senha ? "error" : undefined}
               help={errors.senha?.message}
             >
-              <Input.Password
+              <ELInput.Password
                 {...field}
                 autoComplete="current-password"
                 placeholder="Digite sua senha"
                 aria-invalid={Boolean(errors.senha)}
               />
-            </Form.Item>
+            </ELFormItem>
           )}
         />
 
-        <Space
-          direction="horizontal"
-          align="center"
-          style={{ width: "100%", justifyContent: "space-between" }}
-        >
+        <div className={NEW_THEME_ENABLED ? styles.inlineRow : undefined}>
           <Controller
             name="lembrarEmail"
             control={control}
@@ -227,26 +221,76 @@ export default function LoginPage() {
                 {...field}
                 checked={field.value}
                 aria-checked={field.value}
+                className={NEW_THEME_ENABLED ? styles.checkboxLabel : undefined}
               >
                 Lembrar meu e-mail
               </Checkbox>
             )}
           />
-          <Link href="/auth/esqueci-senha">Esqueci minha senha</Link>
-        </Space>
+          <Link href="/auth/esqueci-senha" className={NEW_THEME_ENABLED ? styles.link : undefined}>
+            Esqueci minha senha
+          </Link>
+        </div>
 
-        <Space direction="vertical" size="large" style={{ width: "100%" }}>
-          <Button
-            type="primary"
+        <div className={NEW_THEME_ENABLED ? styles.actionsColumn : undefined}>
+          <ELButton
+            variant="primary"
             htmlType="submit"
             loading={mutation.isPending}
             disabled={mutation.isPending}
             block
           >
             Entrar
-          </Button>
-        </Space>
+          </ELButton>
+        </div>
       </Form>
-    </FormCard>
+    ),
+    [
+      control,
+      errors.email,
+      errors.senha,
+      formError,
+      handleSubmit,
+      mutation.isPending,
+      onSubmit,
+    ],
+  );
+
+  if (!NEW_THEME_ENABLED) {
+    return (
+      <FormCard
+        titulo="Entrar"
+        subtitulo="Acesse o painel e gerencie todos os envios em um só lugar."
+        footer={
+          <Typography.Paragraph style={{ margin: 0 }} type="secondary">
+            Ainda não tem conta? <Link href="/auth/cadastro">Crie agora mesmo</Link>
+          </Typography.Paragraph>
+        }
+      >
+        {formContent}
+      </FormCard>
+    );
+  }
+
+  return (
+    <div className={styles.container}>
+      <div className={styles.panel}>
+        <ELCard
+          header={{
+            title: "Bem-vindo de volta",
+            description: "Acesse o painel e gerencie seus envios com mais agilidade.",
+          }}
+          bodyGap="lg"
+        >
+          {formContent}
+          <Typography.Paragraph className={styles.footerText}>
+            Ainda não tem conta? {" "}
+            <Link href="/auth/cadastro" className={styles.link}>
+              Crie agora mesmo
+            </Link>
+          </Typography.Paragraph>
+        </ELCard>
+      </div>
+    </div>
   );
 }

@@ -1,0 +1,18 @@
+.skeleton :global(.ant-skeleton-title),
+.skeleton :global(.ant-skeleton-paragraph > li) {
+  background: linear-gradient(
+    90deg,
+    rgba(0, 56, 115, 0.08) 25%,
+    rgba(0, 56, 115, 0.15) 37%,
+    rgba(0, 56, 115, 0.08) 63%
+  ) !important;
+}
+
+.skeleton :global(.ant-skeleton-title) {
+  margin-bottom: var(--el-spacing-sm, 8px) !important;
+}
+
+.skeleton :global(.ant-skeleton-paragraph > li) {
+  border-radius: 12px !important;
+  height: 12px !important;
+}

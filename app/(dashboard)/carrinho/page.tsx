@@ -17,6 +17,7 @@ import {
   useCartClear as useShipmentsCartClear,
   useShipmentCreate,
 } from "@/hooks/useShipments";
+import { createColetaIfNeeded } from "@/lib/coletas/afterCheckout";
 import type { CartItem } from "@/types/cart";
 
 type PendingUpdate = { id: string; quantidade: number };
@@ -122,10 +123,12 @@ export default function CarrinhoPage() {
 
   async function afterCartPaymentSuccess(paidItems: CartItem[]) {
     for (const item of paidItems) {
+      const trackingCode =
+        item.trackingCode ||
+        `BR${Date.now()}${Math.random().toString(36).slice(2, 7).toUpperCase()}`;
+
       await createShipment.mutateAsync({
-        trackingCode:
-          item.trackingCode ||
-          `BR${Date.now()}${Math.random().toString(36).slice(2, 7).toUpperCase()}`,
+        trackingCode,
         recipientName: item.destinatario?.nome || "—",
         recipientCityUf:
           item.destinatario?.cidade && item.destinatario?.uf
@@ -139,6 +142,18 @@ export default function CarrinhoPage() {
         labelUrl: item.labelUrl,
         trackingUrl: item.trackingUrl,
       });
+
+      // Criar coleta automaticamente se necessário
+      if (item.coleta) {
+        await createColetaIfNeeded({
+          id: item.id,
+          trackingCode,
+          origemCep: item.origem.cep,
+          destinoCep: item.destino.cep,
+          pickupSelected: item.coleta,
+          dropoffPointSelected: false, // Cart items não têm seleção de ponto de coleta
+        });
+      }
     }
 
     await cartClear.mutateAsync();

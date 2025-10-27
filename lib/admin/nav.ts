@@ -1,10 +1,9 @@
-import type { AdminRole } from "@/stores/useAdminSession";
-
 export interface AdminNavItem {
   key: string;
   label: string;
   href: string;
-  roles?: AdminRole[];
+  /** Permissões necessárias (qualquer uma delas) */
+  permissions?: string[];
 }
 
 export const ADMIN_NAV: AdminNavItem[] = [
@@ -18,29 +17,40 @@ export const ADMIN_NAV: AdminNavItem[] = [
     key: "financeiro",
     label: "Financeiro",
     href: "/admin/financeiro",
-    roles: ["superadmin", "finance"],
+    permissions: ["finance.read", "finance.manage"],
   },
   {
     key: "operacoes",
     label: "Operações",
     href: "/admin/operacoes",
-    roles: ["superadmin", "ops"],
+    permissions: ["operations.read", "operations.manage"],
   },
   {
     key: "integracoes",
     label: "Integrações",
     href: "/admin/integracoes",
+    permissions: ["integrations.read", "integrations.manage"],
+  },
+  {
+    key: "suporte",
+    label: "Suporte",
+    href: "/admin/suporte",
+  },
+  {
+    key: "pontos-de-coleta",
+    label: "Pontos de Coleta",
+    href: "/admin/pontos-de-coleta",
+    permissions: ["pickup.read", "pickup.manage"],
   },
   {
     key: "usuarios",
-    label: "Usuários (admin)",
+    label: "Usuários",
     href: "/admin/usuarios",
-    roles: ["superadmin"],
+    permissions: ["admin.users.read", "admin.users.manage"],
   },
   {
     key: "config",
     label: "Configurações",
     href: "/admin/config",
-    roles: ["superadmin"],
   },
 ];

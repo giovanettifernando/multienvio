@@ -1,0 +1,26 @@
+.select :global(.ant-select-selector) {
+  height: 44px !important;
+  border-radius: var(--el-radius-base, 12px) !important;
+  border: 1px solid rgba(0, 56, 115, 0.18) !important;
+  padding-inline: 14px !important;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.select :global(.ant-select-selector:hover),
+.select :global(.ant-select-selector:focus),
+.select :global(.ant-select-selector:focus-within) {
+  border-color: rgba(0, 56, 115, 0.45) !important;
+}
+
+.select :global(.ant-select-selector:focus),
+.select :global(.ant-select-selector:focus-within) {
+  box-shadow: 0 0 0 3px rgba(0, 56, 115, 0.16);
+}
+
+.select :global(.ant-select-selection-placeholder),
+.select :global(.ant-select-selection-item) {
+  display: flex;
+  align-items: center;
+  font-weight: 500;
+  color: var(--color-text, #182235) !important;
+}

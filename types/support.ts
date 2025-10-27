@@ -35,13 +35,14 @@ export type Ticket = {
   number: string;
   title: string;
   category: TicketCategory;
-  priority: TicketPriority;
+  priority?: TicketPriority; // Optional for backward compatibility
   status: TicketStatus;
   requester: {
     name: string;
     email?: string;
     phone?: string;
   };
+  linkedTrackingCode?: string;
   related?: {
     orderId?: string;
     shipmentId?: string;

@@ -1,0 +1,56 @@
+.button {
+  height: 44px;
+  border-radius: var(--el-radius-base, 12px) !important;
+  font-weight: 600;
+  padding-inline: 20px !important;
+  transition: background-color 0.2s ease, border-color 0.2s ease,
+    color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.buttonDefault {
+  background-color: #ffffff !important;
+  border-color: rgba(0, 56, 115, 0.18) !important;
+  color: var(--color-text, #1a1c1f) !important;
+}
+
+.buttonDefault:hover,
+.buttonDefault:focus {
+  border-color: rgba(0, 56, 115, 0.32) !important;
+  color: #003873 !important;
+  box-shadow: 0 8px 20px rgba(0, 56, 115, 0.12);
+}
+
+.buttonPrimary {
+  background-color: var(--color-primary, #003873) !important;
+  border-color: var(--color-primary, #003873) !important;
+  color: #ffffff !important;
+}
+
+.buttonPrimary:hover,
+.buttonPrimary:focus {
+  background-color: #004a9b !important;
+  border-color: #004a9b !important;
+  box-shadow: 0 10px 24px rgba(0, 56, 115, 0.32);
+}
+
+.buttonLink {
+  color: var(--color-primary, #003873) !important;
+  padding-inline: 0 !important;
+  height: auto !important;
+}
+
+.buttonLink:hover,
+.buttonLink:focus {
+  color: #004a9b !important;
+}
+
+.button:focus-visible {
+  outline: 3px solid rgba(0, 56, 115, 0.35);
+  outline-offset: 2px;
+}
+
+.button:disabled {
+  box-shadow: none !important;
+  opacity: 0.6;
+  cursor: not-allowed;
+}

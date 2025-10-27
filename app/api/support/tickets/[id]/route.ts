@@ -29,7 +29,7 @@ const SLA_TARGET_HRS: Record<TicketPriority, number> = {
 };
 
 function recomputeSla(ticket: Ticket) {
-  const hrs = SLA_TARGET_HRS[ticket.priority] ?? 48;
+  const hrs = ticket.priority ? SLA_TARGET_HRS[ticket.priority] : 48;
   const due = new Date(ticket.createdAt);
   due.setHours(due.getHours() + hrs);
   ticket.sla = {
