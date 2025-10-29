@@ -37,6 +37,11 @@ export const ADMIN_NAV: AdminNavItem[] = [
     href: "/admin/suporte",
   },
   {
+    key: "coletores",
+    label: "Coletores",
+    href: "/admin/coletores",
+  },
+  {
     key: "pontos-de-coleta",
     label: "Pontos de Coleta",
     href: "/admin/pontos-de-coleta",

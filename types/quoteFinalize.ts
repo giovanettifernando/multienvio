@@ -74,14 +74,6 @@ export const finalizeFormSchema = z
     }),
     sender: z.object({
       addressId: z.string().optional(),
-      acceptedTerms: z
-        .boolean()
-        .refine((value) => value === true, {
-          message: "Confirme que aceita as regras de embarque.",
-        }),
-    }),
-    services: z.object({
-      avisoRecebimento: z.boolean(),
     }),
     payment: z.object({
       method: z.enum(["WALLET", "PIX", "CARD", "BOLETO"]).optional(),

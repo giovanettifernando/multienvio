@@ -1,113 +1,424 @@
 "use client";
 
-import React from "react";
-import { useEffect, useMemo, useState } from "react";
-import { App, Button, Card, Col, Form, Input, Row, Space, Switch } from "antd";
-import type { Resolver } from "react-hook-form";
-import { Controller, useForm } from "react-hook-form";
+/* eslint-disable @next/next/no-img-element */
+
+import Link from "next/link";
+import {
+  Alert,
+  App,
+  Button,
+  Card,
+  Col,
+  Flex,
+  Form,
+  Input,
+  Popconfirm,
+  Row,
+  Space,
+  Switch,
+  Typography,
+  Spin,
+  Tooltip,
+} from "antd";
+import { DeleteOutlined } from "@ant-design/icons";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { Controller, useForm, type FieldErrors } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
+
 import { useProfile, useProfileSave } from "@/hooks/useAccount";
 import type { Profile } from "@/types/account";
+import { useAuthStore } from "@/stores/auth";
+import { maskCPF, maskCNPJ, maskPhone, onlyDigits } from "@/lib/masks";
+import { isValidCNPJ, isValidCPF } from "@/lib/validation/utils";
 
-const pfSchema = z.object({
-  nome: z.string().min(3, "Informe seu nome."),
-  email: z.string().email("Email inválido."),
-  telefone: z.string().min(8, "Telefone inválido."),
-  cpf: z.string().min(11, "CPF inválido."),
-  // aceitar "" e transformar em undefined
-  nascimento: z.string().optional().or(z.literal("").transform(() => undefined)),
-});
+type FormValues = {
+  fullName: string;
+  email: string;
+  phone: string;
+  cpf: string;
+  hasCompany: boolean;
+  cnpj: string;
+  razaoSocial: string;
+  avatarDataUrl: string | null;
+};
 
-// PJ é OPCIONAL; todos os campos opcionais.
-// cnpj aceita "" e vira undefined para compatibilizar com o form.
-const pjSchema = z
+const formSchema = z
   .object({
-    cnpj: z
-      .string()
-      .min(14, "CNPJ inválido.")
-      .optional()
-      .or(z.literal("").transform(() => undefined)),
-    razaoSocial: z.string().optional(),
-    nomeFantasia: z.string().optional(),
-    ie: z.string().optional(),
+    fullName: z.string().trim().min(3, "Informe o nome completo."),
+    email: z.string().trim().email("E-mail inválido."),
+    phone: z.string().min(1, "Informe o telefone."),
+    cpf: z.string().min(1, "Informe o CPF."),
+    hasCompany: z.boolean(),
+    cnpj: z.string().optional().default(""),
+    razaoSocial: z.string().optional().default(""),
+    avatarDataUrl: z.string().nullable().optional(),
   })
-  .partial();
+  .superRefine((value, ctx) => {
+    const phoneDigits = onlyDigits(value.phone);
+    if (phoneDigits.length < 10 || phoneDigits.length > 11) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Telefone inválido",
+        path: ["phone"],
+      });
+    }
 
-const profileSchema = z.object({
-  pf: pfSchema,
-  pj: pjSchema.optional(),
-});
+    const cpfDigits = onlyDigits(value.cpf);
+    if (!isValidCPF(cpfDigits)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "CPF inválido",
+        path: ["cpf"],
+      });
+    }
 
-export type ProfileFormValues = z.infer<typeof profileSchema>;
+    if (value.hasCompany) {
+      const cnpjDigits = onlyDigits(value.cnpj ?? "");
+      if (cnpjDigits.length === 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Informe o CNPJ",
+          path: ["cnpj"],
+        });
+      } else if (!isValidCNPJ(cnpjDigits)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "CNPJ inválido",
+          path: ["cnpj"],
+        });
+      }
+
+      if (!value.razaoSocial?.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Informe a razão social",
+          path: ["razaoSocial"],
+        });
+      }
+    }
+  });
+
+type FormValues = z.infer<typeof formSchema>;
+
+const MAX_AVATAR_SIZE = 2 * 1024 * 1024; // 2 MB
+const ALLOWED_AVATAR_TYPES = ["image/jpeg", "image/png"];
+
+function profileToForm(profile?: Profile | null): FormValues {
+  return {
+    fullName: profile?.fullName ?? "",
+    email: profile?.email ?? "",
+    phone: profile?.phone ? maskPhone(profile.phone) : "",
+    cpf: profile?.cpf ? maskCPF(profile.cpf) : "",
+    hasCompany: profile?.hasCompany ?? false,
+    cnpj: profile?.company?.cnpj ? maskCNPJ(profile.company.cnpj) : "",
+    razaoSocial: profile?.company?.razaoSocial ?? "",
+    avatarDataUrl: profile?.avatarDataUrl ?? null,
+  };
+}
+
+function collectErrorMessages(errors: FieldErrors<FormValues>): string[] {
+  const messages = new Set<string>();
+
+  const visit = (value: unknown) => {
+    if (!value) return;
+    if (Array.isArray(value)) {
+      value.forEach(visit);
+      return;
+    }
+    if (typeof value === "object") {
+      const maybeMessage = (value as { message?: unknown }).message;
+      if (typeof maybeMessage === "string" && maybeMessage.trim()) {
+        messages.add(maybeMessage.trim());
+      }
+      const maybeTypes = (value as { types?: unknown }).types;
+      if (maybeTypes) {
+        visit(maybeTypes);
+      }
+      Object.entries(value as Record<string, unknown>).forEach(([key, nested]) => {
+        if (["message", "type", "ref", "types"].includes(key)) return;
+        visit(nested);
+      });
+    }
+  };
+
+  visit(errors);
+  return Array.from(messages);
+}
+
+function initialsFromName(name: string) {
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("");
+}
 
 export default function PersonalForm() {
   const { message } = App.useApp();
   const profileQuery = useProfile();
   const saveMutation = useProfileSave();
-  const [includePJ, setIncludePJ] = useState(false);
+  const updateUser = useAuthStore((state) => state.updateUser);
+  const setHasCompany = useAuthStore((state) => state.setHasCompany);
 
-  const defaultValues = useMemo<ProfileFormValues>(
-    () => ({
-      pf: {
-        nome: profileQuery.data?.pf.nome ?? "",
-        email: profileQuery.data?.pf.email ?? "",
-        telefone: profileQuery.data?.pf.telefone ?? "",
-        cpf: profileQuery.data?.pf.cpf ?? "",
-        nascimento: profileQuery.data?.pf.nascimento ?? undefined,
-      },
-      pj: profileQuery.data?.pj
-        ? {
-            cnpj: profileQuery.data.pj.cnpj ?? undefined,
-            razaoSocial: profileQuery.data.pj.razaoSocial ?? undefined,
-            nomeFantasia: profileQuery.data.pj.nomeFantasia ?? undefined,
-            ie: profileQuery.data.pj.ie ?? undefined,
-          }
-        : undefined,
-    }),
-    [profileQuery.data],
-  );
+  const defaultValues = useMemo(() => profileToForm(profileQuery.data), [profileQuery.data]);
 
-  const form = useForm<ProfileFormValues>({
-    resolver: zodResolver(profileSchema) as Resolver<ProfileFormValues>,
+  const form = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
     values: defaultValues,
+    mode: "onSubmit",
+    reValidateMode: "onChange",
   });
+
+  const [submitAttempted, setSubmitAttempted] = useState(false);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const hasCompany = form.watch("hasCompany");
+  const fullNameValue = form.watch("fullName");
 
   useEffect(() => {
-    setIncludePJ(Boolean(profileQuery.data?.pj));
-  }, [profileQuery.data?.pj]);
+    if (profileQuery.data) {
+      form.reset(profileToForm(profileQuery.data));
+    }
+  }, [profileQuery.data, form]);
 
-  const handleSubmit = form.handleSubmit((values) => {
-    const payload: Profile = {
-      pf: {
-        ...values.pf,
-        nascimento: values.pf.nascimento ?? null,
-      },
-      pj: includePJ ? values.pj : undefined,
+  useEffect(() => {
+    if (profileQuery.data) {
+      updateUser({
+        name: profileQuery.data.fullName,
+        email: profileQuery.data.email,
+        phone: profileQuery.data.phone,
+        avatarUrl: profileQuery.data.avatarDataUrl ?? undefined,
+      });
+      setHasCompany(profileQuery.data.hasCompany);
+    }
+  }, [profileQuery.data, updateUser, setHasCompany]);
+
+  const errorMessages = useMemo(
+    () => collectErrorMessages(form.formState.errors),
+    [form.formState.errors],
+  );
+
+  const handleCompanyToggle = (checked: boolean) => {
+    form.setValue("hasCompany", checked, { shouldDirty: true });
+    if (!checked) {
+      form.setValue("cnpj", "", { shouldDirty: true });
+      form.setValue("razaoSocial", "", { shouldDirty: true });
+      form.clearErrors(["cnpj", "razaoSocial"]);
+    }
+  };
+
+  const handleAvatarUpload = (file: File, onChange: (value: string | null) => void) => {
+    if (!ALLOWED_AVATAR_TYPES.includes(file.type)) {
+      message.warning("Formato não suportado. Use JPG ou PNG.");
+      return;
+    }
+    if (file.size > MAX_AVATAR_SIZE) {
+      message.warning("Tamanho máximo: 2 MB.");
+      return;
+    }
+
+    setAvatarUploading(true);
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result?.toString() ?? null;
+      onChange(result);
+      setAvatarUploading(false);
     };
-    saveMutation.mutate(payload, {
-      onSuccess: () => {
-        message.success("Dados atualizados com sucesso.");
-      },
-      onError: (error) => {
-        message.error(
-          error instanceof Error ? error.message : "Falha ao salvar dados.",
-        );
-      },
-    });
-  });
+    reader.onerror = () => {
+      message.error("Não foi possível carregar a imagem. Tente novamente.");
+      setAvatarUploading(false);
+    };
+    reader.readAsDataURL(file);
+  };
 
-  const isLoading = profileQuery.isLoading;
+  const handleAvatarInputChange = (
+    event: React.ChangeEvent<HTMLInputElement>,
+    onChange: (value: string | null) => void,
+  ) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      handleAvatarUpload(file, onChange);
+    }
+    event.target.value = "";
+  };
+
+  const handleSubmit = form.handleSubmit(
+    (values) => {
+      setSubmitAttempted(false);
+      const payload: Profile = {
+        fullName: values.fullName.trim(),
+        email: values.email.trim().toLowerCase(),
+        phone: onlyDigits(values.phone),
+        cpf: onlyDigits(values.cpf),
+        hasCompany: values.hasCompany,
+        company: values.hasCompany
+          ? {
+              cnpj: onlyDigits(values.cnpj),
+              razaoSocial: values.razaoSocial.trim(),
+            }
+          : null,
+        avatarDataUrl: values.avatarDataUrl ?? null,
+      };
+
+      saveMutation.mutate(payload, {
+        onSuccess: (profile) => {
+          form.reset(profileToForm(profile));
+          updateUser({
+            name: profile.fullName,
+            email: profile.email,
+            phone: profile.phone,
+            avatarUrl: profile.avatarDataUrl ?? undefined,
+          });
+          setHasCompany(profile.hasCompany);
+          message.success("Dados salvos com sucesso.");
+        },
+        onError: (error) => {
+          message.error(
+            error instanceof Error
+              ? error.message
+              : "Não foi possível salvar os dados.",
+          );
+        },
+      });
+    },
+    () => {
+      setSubmitAttempted(true);
+      message.error("Revise os campos destacados.");
+    },
+  );
+
+  const handleCancel = () => {
+    form.reset(defaultValues);
+    form.clearErrors();
+    setSubmitAttempted(false);
+    message.info("Alterações descartadas.");
+  };
+
+  const avatarInitials = useMemo(
+    () => initialsFromName(fullNameValue || "Usuário"),
+    [fullNameValue],
+  );
 
   return (
-    <Card title="Dados pessoais" loading={isLoading}>
-      <form onSubmit={handleSubmit}>
+    <Card loading={profileQuery.isLoading} bordered={false}>
+      <form onSubmit={handleSubmit} noValidate>
         <Space direction="vertical" size={24} style={{ width: "100%" }}>
-          <section>
+          <Typography.Title level={4} style={{ margin: 0 }}>
+            
+          </Typography.Title>
+
+          <Controller
+            name="avatarDataUrl"
+            control={form.control}
+            render={({ field, fieldState }) => (
+              <Flex
+                align="center"
+                justify="center"
+                vertical
+                gap={8}
+                style={{ width: "100%" }}
+              >
+                <input
+                  type="file"
+                  accept={ALLOWED_AVATAR_TYPES.join(",")}
+                  ref={fileInputRef}
+                  hidden
+                  onChange={(event) => handleAvatarInputChange(event, field.onChange)}
+                />
+                <Flex align="center" gap={12}>
+                  <Button
+                    type="text"
+                    onClick={() => fileInputRef.current?.click()}
+                    aria-label="Alterar foto do usuário"
+                    style={{ padding: 0 }}
+                  >
+                    <span
+                      style={{
+                        width: 120,
+                        height: 120,
+                        borderRadius: "50%",
+                        overflow: "hidden",
+                        border: "1px solid var(--color-border)",
+                        backgroundColor: "var(--color-fill-tertiary)",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      {field.value ? (
+                        <img
+                          src={field.value}
+                          alt="Foto do usuário"
+                          style={{
+                            width: "100%",
+                            height: "100%",
+                            objectFit: "contain",
+                            objectPosition: "center",
+                            imageRendering: "auto",
+                          }}
+                          draggable={false}
+                        />
+                      ) : (
+                        <Typography.Text strong style={{ fontSize: 32 }}>
+                          {avatarInitials}
+                        </Typography.Text>
+                      )}
+                    </span>
+                  </Button>
+                  {field.value ? (
+                    <Popconfirm
+                      title="Remover sua foto?"
+                      okText="Remover"
+                      cancelText="Cancelar"
+                      onConfirm={() => field.onChange(null)}
+                      placement="right"
+                    >
+                      <Tooltip title="Remover foto">
+                        <Button
+                          shape="circle"
+                          type="text"
+                          danger
+                          icon={<DeleteOutlined />}
+                          aria-label="Remover foto"
+                          tabIndex={0}
+                        />
+                      </Tooltip>
+                    </Popconfirm>
+                  ) : null}
+                </Flex>
+                {avatarUploading ? <Spin size="small" aria-live="polite" /> : null}
+                {fieldState.error ? (
+                  <Typography.Text type="danger" aria-live="assertive">
+                    {fieldState.error.message}
+                  </Typography.Text>
+                ) : null}
+              </Flex>
+            )}
+          />
+
+          {submitAttempted && errorMessages.length > 0 ? (
+            <Alert
+              type="error"
+              showIcon
+              message="Revise os campos obrigatórios"
+              description={
+                <ul style={{ margin: "8px 0 0 16px", padding: 0 }} aria-live="assertive">
+                  {errorMessages.map((msg) => (
+                    <li key={msg}>{msg}</li>
+                  ))}
+                </ul>
+              }
+            />
+          ) : null}
+
+          <Card size="small" title="Dados pessoais" bordered style={{ borderRadius: 12 }}>
             <Row gutter={[16, 16]}>
               <Col xs={24} md={12}>
                 <Controller
-                  name="pf.nome"
+                  name="fullName"
                   control={form.control}
                   render={({ field, fieldState }) => (
                     <Form.Item
@@ -116,30 +427,41 @@ export default function PersonalForm() {
                       validateStatus={fieldState.error ? "error" : ""}
                       help={fieldState.error?.message}
                     >
-                      <Input {...field} placeholder="Seu nome" />
+                      <Input
+                        {...field}
+                        placeholder="Nome e sobrenome"
+                        aria-invalid={fieldState.invalid}
+                      />
                     </Form.Item>
                   )}
                 />
               </Col>
               <Col xs={24} md={12}>
                 <Controller
-                  name="pf.email"
+                  name="email"
                   control={form.control}
                   render={({ field, fieldState }) => (
                     <Form.Item
-                      label="Email"
+                      label="E-mail"
                       required
                       validateStatus={fieldState.error ? "error" : ""}
                       help={fieldState.error?.message}
                     >
-                      <Input {...field} type="email" placeholder="email@dominio.com" />
+                      <Input
+                        {...field}
+                        type="email"
+                        inputMode="email"
+                        placeholder="email@empresa.com"
+                        aria-invalid={fieldState.invalid}
+                        onChange={(event) => field.onChange(event.target.value.toLowerCase())}
+                      />
                     </Form.Item>
                   )}
                 />
               </Col>
               <Col xs={24} md={8}>
                 <Controller
-                  name="pf.telefone"
+                  name="phone"
                   control={form.control}
                   render={({ field, fieldState }) => (
                     <Form.Item
@@ -148,14 +470,20 @@ export default function PersonalForm() {
                       validateStatus={fieldState.error ? "error" : ""}
                       help={fieldState.error?.message}
                     >
-                      <Input {...field} placeholder="(00) 00000-0000" />
+                      <Input
+                        {...field}
+                        inputMode="tel"
+                        placeholder="(00) 00000-0000"
+                        aria-invalid={fieldState.invalid}
+                        onChange={(event) => field.onChange(maskPhone(event.target.value))}
+                      />
                     </Form.Item>
                   )}
                 />
               </Col>
               <Col xs={24} md={8}>
                 <Controller
-                  name="pf.cpf"
+                  name="cpf"
                   control={form.control}
                   render={({ field, fieldState }) => (
                     <Form.Item
@@ -164,112 +492,110 @@ export default function PersonalForm() {
                       validateStatus={fieldState.error ? "error" : ""}
                       help={fieldState.error?.message}
                     >
-                      <Input {...field} placeholder="000.000.000-00" />
-                    </Form.Item>
-                  )}
-                />
-              </Col>
-              <Col xs={24} md={8}>
-                <Controller
-                  name="pf.nascimento"
-                  control={form.control}
-                  render={({ field, fieldState }) => (
-                    <Form.Item
-                      label="Data de nascimento"
-                      validateStatus={fieldState.error ? "error" : ""}
-                      help={fieldState.error?.message}
-                    >
-                      <Input {...field} type="date" />
+                      <Input
+                        {...field}
+                        inputMode="numeric"
+                        placeholder="000.000.000-00"
+                        aria-invalid={fieldState.invalid}
+                        onChange={(event) => field.onChange(maskCPF(event.target.value))}
+                      />
                     </Form.Item>
                   )}
                 />
               </Col>
             </Row>
-          </section>
+          </Card>
 
-          <section>
-            <Space direction="vertical" style={{ width: "100%" }}>
-              <Space align="center" size={12}>
-                <Switch checked={includePJ} onChange={setIncludePJ} />
-                <span>Adicionar dados de empresa</span>
-              </Space>
-              {includePJ ? (
-                <Row gutter={[16, 16]}>
-                  <Col xs={24} md={12}>
-                    <Controller
-                      name="pj.cnpj"
-                      control={form.control}
-                      render={({ field, fieldState }) => (
-                        <Form.Item
-                          label="CNPJ"
-                          validateStatus={fieldState.error ? "error" : ""}
-                          help={fieldState.error?.message}
-                        >
-                          <Input {...field} placeholder="00.000.000/0000-00" />
-                        </Form.Item>
-                      )}
-                    />
-                  </Col>
-                  <Col xs={24} md={12}>
-                    <Controller
-                      name="pj.razaoSocial"
-                      control={form.control}
-                      render={({ field, fieldState }) => (
-                        <Form.Item
-                          label="Razão Social"
-                          validateStatus={fieldState.error ? "error" : ""}
-                          help={fieldState.error?.message}
-                        >
-                          <Input {...field} placeholder="Razão Social" />
-                        </Form.Item>
-                      )}
-                    />
-                  </Col>
-                  <Col xs={24} md={12}>
-                    <Controller
-                      name="pj.nomeFantasia"
-                      control={form.control}
-                      render={({ field, fieldState }) => (
-                        <Form.Item
-                          label="Nome Fantasia"
-                          validateStatus={fieldState.error ? "error" : ""}
-                          help={fieldState.error?.message}
-                        >
-                          <Input {...field} placeholder="Nome Fantasia" />
-                        </Form.Item>
-                      )}
-                    />
-                  </Col>
-                  <Col xs={24} md={12}>
-                    <Controller
-                      name="pj.ie"
-                      control={form.control}
-                      render={({ field, fieldState }) => (
-                        <Form.Item
-                          label="Inscrição Estadual"
-                          validateStatus={fieldState.error ? "error" : ""}
-                          help={fieldState.error?.message}
-                        >
-                          <Input {...field} placeholder="Inscrição Estadual" />
-                        </Form.Item>
-                      )}
-                    />
-                  </Col>
-                </Row>
-              ) : null}
-            </Space>
-          </section>
+          <Card
+            size="small"
+            title="Dados da empresa"
+            bordered
+            style={{ borderRadius: 12 }}
+            extra={
+              <Flex align="center" gap={8}>
+                <Typography.Text>Adicionar dados de empresa</Typography.Text>
+                <Switch
+                  checked={hasCompany}
+                  onChange={handleCompanyToggle}
+                  aria-label="Adicionar dados de empresa"
+                />
+              </Flex>
+            }
+          >
+            {hasCompany ? (
+              <Row gutter={[16, 16]}>
+                <Col xs={24} md={12}>
+                <Controller
+                  name="cnpj"
+                  control={form.control}
+                  render={({ field, fieldState }) => (
+                    <Form.Item
+                      label="CNPJ"
+                      required
+                      validateStatus={fieldState.error ? "error" : ""}
+                      help={fieldState.error?.message}
+                    >
+                      <Input
+                        {...field}
+                        inputMode="numeric"
+                        placeholder="00.000.000/0000-00"
+                        aria-invalid={fieldState.invalid}
+                        onChange={(event) => field.onChange(maskCNPJ(event.target.value))}
+                      />
+                    </Form.Item>
+                  )}
+                />
+                </Col>
+                <Col xs={24} md={12}>
+                  <Controller
+                    name="razaoSocial"
+                    control={form.control}
+                    render={({ field, fieldState }) => (
+                      <Form.Item
+                        label="Razão social"
+                        required
+                        validateStatus={fieldState.error ? "error" : ""}
+                        help={fieldState.error?.message}
+                      >
+                        <Input
+                          {...field}
+                          placeholder="Nome empresarial"
+                          aria-invalid={fieldState.invalid}
+                        />
+                      </Form.Item>
+                    )}
+                  />
+                </Col>
+              </Row>
+            ) : (
+              <Typography.Text type="secondary">
+                Ative o alternador para complementar com dados da empresa (CNPJ).
+              </Typography.Text>
+            )}
+          </Card>
 
-          <div>
+          <Flex justify="flex-end">
+            <Typography.Text type="secondary" style={{ marginBottom: 8 }}>
+              Gerencie seus endereços na aba <Link href="/minha-conta#addresses">Endereços</Link>.
+            </Typography.Text>
+          </Flex>
+
+          <Flex justify="flex-end" gap={12} wrap>
+            <Button
+              type="text"
+              onClick={handleCancel}
+              disabled={saveMutation.isPending}
+            >
+              Cancelar
+            </Button>
             <Button
               type="primary"
               htmlType="submit"
               loading={saveMutation.isPending}
-              disabled={saveMutation.isPending}
             >
               Salvar
             </Button>
-          </div>
+          </Flex>
         </Space>
       </form>
     </Card>

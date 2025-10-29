@@ -1,7 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
-import { ArrowLeftOutlined, ReloadOutlined } from "@ant-design/icons";
+import { ArrowLeftOutlined } from "@ant-design/icons";
 import {
   Button,
   Card,
@@ -10,19 +9,14 @@ import {
   Skeleton,
   Space,
   Typography,
-  message,
 } from "antd";
-import type { ComponentProps } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useParams, useRouter } from "next/navigation";
 import { TicketDetailHeader } from "@/components/support/TicketDetailHeader";
 import { TicketTimeline } from "@/components/support/TicketTimeline";
 import { TicketCommentBox } from "@/components/support/TicketCommentBox";
 import { RelatedEntities } from "@/components/support/RelatedEntities";
 import type { SupportAttachment, Ticket } from "@/types/support";
-import { useAuthStore } from "@/stores/auth";
-
-type TicketDetailHeaderProps = ComponentProps<typeof TicketDetailHeader>;
 
 type HttpError = Error & { status?: number };
 
@@ -53,56 +47,10 @@ async function fetchAttachments(ticketId: string): Promise<SupportAttachment[]> 
   return data.attachments ?? [];
 }
 
-async function runSlaCheck(ticketId: string): Promise<Ticket> {
-  const response = await fetch("/api/support/webhooks", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      ticketId,
-      code: "SLA_CHECK",
-    }),
-  });
-  if (!response.ok) {
-    const body = await response.json().catch(() => undefined);
-    const error: HttpError = new Error(
-      body?.mensagem ?? "Não foi possível verificar o SLA",
-    );
-    error.status = response.status;
-    throw error;
-  }
-  return (await response.json()) as Ticket;
-}
-
 export default function TicketDetailPage() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
   const ticketId = params?.id ?? "";
-
-  const usuario = useAuthStore((state) => state.user);
-
-  const currentAgent = useMemo<TicketDetailHeaderProps["currentAgent"]>(() => {
-    if (!usuario) return undefined;
-    const emailOrName = usuario.email ?? usuario.name;
-    return {
-      id: emailOrName.replace(/\s+/g, "-").toLowerCase(),
-      name: usuario.name,
-    };
-  }, [usuario]);
-
-  const availableAgents = useMemo<TicketDetailHeaderProps["availableAgents"]>(() => {
-    const agents = [
-      { id: "aline.rocha", name: "Aline Rocha" },
-      { id: "marcos.tavares", name: "Marcos Tavares" },
-      { id: "beatriz.lima", name: "Beatriz Lima" },
-    ];
-
-    const registry = new Map<string, { id: string; name: string }>();
-    agents.forEach((agent) => registry.set(agent.id, agent));
-    if (currentAgent) {
-      registry.set(currentAgent.id, currentAgent);
-    }
-    return Array.from(registry.values());
-  }, [currentAgent]);
 
   const ticketQuery = useQuery({
     queryKey: ["ticket", ticketId],
@@ -115,22 +63,6 @@ export default function TicketDetailPage() {
     queryKey: ["ticket", ticketId, "attachments"],
     queryFn: () => fetchAttachments(ticketId),
     enabled: Boolean(ticketId) && ticketQuery.status === "success",
-  });
-
-  const slaCheckMutation = useMutation({
-    mutationFn: () => runSlaCheck(ticketId),
-    onSuccess: (updatedTicket) => {
-      message.success("SLA atualizado com sucesso");
-      ticketQuery.refetch();
-      if (updatedTicket.events.some((event) => event.type === "ATTACHMENT")) {
-        attachmentsQuery.refetch();
-      }
-    },
-    onError: (error: unknown) => {
-      const text =
-        error instanceof Error ? error.message : "Não foi possível verificar o SLA";
-      message.error(text);
-    },
   });
 
   const ticket = ticketQuery.data;
@@ -171,7 +103,7 @@ export default function TicketDetailPage() {
             <Button key="retry" type="primary" onClick={() => ticketQuery.refetch()}>
               Tentar novamente
             </Button>,
-            <Button key="back" onClick={() => router.push("/suporte")}>
+            <Button key="back" onClick={() => router.push("/suporte?status=OPEN")}>
               Voltar para lista
             </Button>,
           ]}
@@ -184,21 +116,11 @@ export default function TicketDetailPage() {
         <Space direction="vertical" size={16} style={{ flex: 1, minWidth: 320 }}>
           <TicketDetailHeader
             ticket={ticket}
-            availableAgents={availableAgents}
-            currentAgent={currentAgent}
+            mode="client"
           />
           <Card
             variant="borderless"
             title="Linha do tempo"
-            extra={
-              <Button
-                icon={<ReloadOutlined />}
-                onClick={() => slaCheckMutation.mutate()}
-                loading={slaCheckMutation.isPending}
-              >
-                Verificar SLA
-              </Button>
-            }
             styles={{ body: { paddingTop: 0 } }}
           >
             <TicketTimeline
@@ -209,8 +131,8 @@ export default function TicketDetailPage() {
         </Space>
 
         <Space direction="vertical" size={16} style={{ width: 360, minWidth: 280 }}>
-          <Card variant="borderless" title="Responder cliente">
-            <TicketCommentBox ticketId={ticket.id} />
+          <Card variant="borderless" title="Responder/complementar chamado">
+            <TicketCommentBox ticketId={ticket.id} mode="client" />
           </Card>
           <RelatedEntities related={ticket.related} />
         </Space>
@@ -223,7 +145,7 @@ export default function TicketDetailPage() {
       <Button
         type="text"
         icon={<ArrowLeftOutlined />}
-        onClick={() => router.push("/suporte")}
+        onClick={() => router.push("/suporte?status=OPEN")}
         style={{ padding: 0, width: "fit-content" }}
       >
         Voltar

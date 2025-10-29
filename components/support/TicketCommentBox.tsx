@@ -9,6 +9,7 @@ import { CannedReplySelect } from "@/components/support/CannedReplySelect";
 type Props = {
   ticketId: string;
   onSubmitted?: () => void;
+  mode?: 'client' | 'admin';
 };
 
 async function uploadAttachments(ticketId: string, files: UploadFile[]): Promise<string[]> {
@@ -60,7 +61,7 @@ async function postComment(ticketId: string, messageText: string, attachmentIds?
   return response.json();
 }
 
-export function TicketCommentBox({ ticketId, onSubmitted }: Props) {
+export function TicketCommentBox({ ticketId, onSubmitted, mode = 'admin' }: Props) {
   const [messageText, setMessageText] = useState("");
   const [touched, setTouched] = useState(false);
   const [fileList, setFileList] = useState<UploadFile[]>([]);
@@ -98,11 +99,13 @@ export function TicketCommentBox({ ticketId, onSubmitted }: Props) {
 
   return (
     <Space direction="vertical" style={{ width: "100%" }} size={12}>
-      <CannedReplySelect
-        onSelect={(reply) => {
-          setMessageText((prev) => `${prev ? `${prev}\n` : ""}${reply}`);
-        }}
-      />
+      {mode === 'admin' && (
+        <CannedReplySelect
+          onSelect={(reply) => {
+            setMessageText((prev) => `${prev ? `${prev}\n` : ""}${reply}`);
+          }}
+        />
+      )}
       <Input.TextArea
         value={messageText}
         onChange={(event) => setMessageText(event.target.value)}

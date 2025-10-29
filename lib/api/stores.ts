@@ -39,14 +39,13 @@ declare global {
 export function getProfileStore(): Profile {
   if (!globalThis.__envioProfile) {
     globalThis.__envioProfile = {
-      pf: {
-        nome: "Usuário",
-        email: "user@ex.com",
-        telefone: "41999999999",
-        cpf: "00000000000",
-        nascimento: undefined,
-      },
-      pj: undefined,
+      fullName: "Usuário Envio Legal",
+      email: "user@example.com",
+      phone: "41999999999",
+      cpf: "00000000000",
+      hasCompany: false,
+      company: null,
+      avatarDataUrl: null,
     };
   }
   return globalThis.__envioProfile;

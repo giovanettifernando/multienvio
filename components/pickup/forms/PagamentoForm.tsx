@@ -253,6 +253,31 @@ export default function PagamentoForm({ control, errors, watch }: PagamentoFormP
             )}
           />
         </Form.Item>
+
+        <Form.Item
+          label="Comissão por Item Recebido"
+          validateStatus={errors.commissionPerItem ? 'error' : ''}
+          help={errors.commissionPerItem?.message || 'Valor pago por cada item recebido neste ponto. Deixe em branco para não aplicar comissão.'}
+        >
+          <Controller
+            name="commissionPerItem"
+            control={control}
+            render={({ field }) => (
+              <InputNumber
+                {...field}
+                value={field.value ?? undefined}
+                onChange={(value) => field.onChange(value === null || value === undefined ? null : value)}
+                min={0}
+                step={0.01}
+                placeholder="0.00"
+                style={{ width: 160 }}
+                prefix="R$"
+                precision={2}
+                aria-label="Comissão por Item Recebido"
+              />
+            )}
+          />
+        </Form.Item>
       </Form>
     </div>
   );

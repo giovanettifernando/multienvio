@@ -1,63 +1,75 @@
-"use client";
+'use client';
 
-import { useCallback, useMemo } from "react";
-import { PlusOutlined } from "@ant-design/icons";
-import { Button, Card, Flex, Space, Typography } from "antd";
-import { useRouter, useSearchParams } from "next/navigation";
-import { TicketList } from "@/components/support/TicketList";
+import { useEffect, useState } from 'react';
+import { PlusOutlined } from '@ant-design/icons';
+import { Button, Card, Flex, Space, Typography } from 'antd';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { NewTicketList } from '@/components/support/NewTicketList';
+import { TicketDetailsDrawer } from '@/components/support/TicketDetailsDrawer';
+import { useSupportStore } from '@/stores/support';
 
 export default function SupportPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
+  const subscribeExternal = useSupportStore(s => s.subscribeExternal);
 
-  const filters = useMemo(
-    () => new URLSearchParams(searchParams.toString()),
-    [searchParams],
-  );
+  // Subscribe to external storage changes (cross-tab sync)
+  useEffect(() => {
+    const unsubscribe = subscribeExternal();
+    return () => unsubscribe();
+  }, [subscribeExternal]);
 
-  const handleFiltersChange = useCallback(
-    (next: URLSearchParams) => {
-      const query = next.toString();
-      router.push(`/suporte${query ? `?${query}` : ""}`);
-    },
-    [router],
-  );
+  // Handle ticket query param
+  useEffect(() => {
+    const ticketId = searchParams.get('ticket');
+    if (ticketId) {
+      setSelectedTicketId(ticketId);
+    }
+  }, [searchParams]);
 
-  const handleOpenTicket = useCallback(
-    (id: string) => {
-      router.push(`/suporte/${id}`);
-    },
-    [router],
-  );
+  const handleOpenTicket = (id: string) => {
+    setSelectedTicketId(id);
+    router.push(`/suporte?ticket=${id}`);
+  };
+
+  const handleCloseDrawer = () => {
+    setSelectedTicketId(null);
+    router.push('/suporte');
+  };
 
   return (
-    <Space direction="vertical" style={{ width: "100%", padding: 24 }} size={24}>
+    <Space direction="vertical" style={{ width: '100%', padding: 24 }} size={24}>
       <Flex justify="space-between" align="center" wrap gap={16}>
         <Space direction="vertical" size={0}>
           <Typography.Title level={2} style={{ margin: 0 }}>
             Central de Suporte
           </Typography.Title>
           <Typography.Text type="secondary">
-            Acompanhe solicitações, SLAs e interações com clientes em tempo real.
+            Acompanhe seus chamados e interaja com nossa equipe.
           </Typography.Text>
         </Space>
         <Button
           type="primary"
           variant="solid"
           icon={<PlusOutlined />}
-          onClick={() => router.push("/suporte/novo")}
+          onClick={() => router.push('/suporte/novo')}
         >
           Abrir ticket
         </Button>
       </Flex>
 
-      <Card variant="borderless" styles={{ body: { padding: 0 } }}>
-        <TicketList
-          filters={filters}
-          onOpenTicket={handleOpenTicket}
-          onFiltersChange={handleFiltersChange}
-        />
+      <Card variant="borderless" styles={{ body: { padding: 24 } }}>
+        <NewTicketList onTicketClick={handleOpenTicket} />
       </Card>
+
+      <TicketDetailsDrawer
+        ticketId={selectedTicketId}
+        open={!!selectedTicketId}
+        onClose={handleCloseDrawer}
+        userRole="cliente"
+        userName="Cliente"
+      />
     </Space>
   );
 }

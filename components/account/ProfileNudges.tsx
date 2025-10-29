@@ -13,8 +13,13 @@ export default function ProfileNudges() {
   const { data: cards } = useCards();
 
   const needsPF = useMemo(() => {
-    const pf = profile?.pf;
-    return !pf?.nome || !pf?.cpf || !pf?.email;
+    if (!profile) return true;
+    return (
+      !profile.fullName?.trim() ||
+      !profile.cpf?.trim() ||
+      !profile.email?.trim() ||
+      !profile.phone?.trim()
+    );
   }, [profile]);
 
   const needsAddress = useMemo(() => (addresses?.length ?? 0) === 0, [addresses]);

@@ -98,39 +98,91 @@ const transferMethodSchema = z.object({
 // Schema principal
 export const pickupPointSchema = z.object({
   // PJ
-  razaoSocial: z.string({ message: 'Razão Social é obrigatória' }).min(3, 'Razão Social deve ter pelo menos 3 caracteres'),
-  nomeFantasia: z.string({ message: 'Nome Fantasia é obrigatório' }).min(3, 'Nome Fantasia deve ter pelo menos 3 caracteres'),
+  razaoSocial: z
+    .string({ message: "Razão Social é obrigatória" })
+    .min(3, "Razão Social deve ter pelo menos 3 caracteres"),
+  nomeFantasia: z
+    .string({ message: "Nome Fantasia é obrigatório" })
+    .min(3, "Nome Fantasia deve ter pelo menos 3 caracteres"),
   cnpj: cnpjSchema,
-  ie: z.string().optional().or(z.literal('')),
-  email: z.string().email('Email inválido'),
-  telefone: z.string().regex(/^\+?\d{10,15}$/, 'Telefone deve ter entre 10 e 15 dígitos'),
+  ie: z.string().optional().or(z.literal("")),
+  email: z.string().email("Email inválido").optional().or(z.literal("")),
+  telefone: z
+    .string()
+    .regex(/^\+?\d{10,15}$/, "Telefone deve ter entre 10 e 15 dígitos")
+    .optional()
+    .or(z.literal("")),
 
-  // Endereço
-  cep: z.string().regex(/^\d{5}-?\d{3}$/, 'CEP inválido').optional().or(z.literal('')),
-  logradouro: z.string().optional().or(z.literal('')),
-  numero: z.string().optional().or(z.literal('')),
-  complemento: z.string().optional().or(z.literal('')),
-  bairro: z.string().optional().or(z.literal('')),
-  cidade: z.string().optional().or(z.literal('')),
-  uf: z.string().length(2, 'UF deve ter 2 letras').regex(/^[A-Z]{2}$/, 'UF inválida').optional().or(z.literal('')),
+  // Endereço (flat)
+  cep: z
+    .string()
+    .regex(/^\d{5}-?\d{3}$/, "CEP inválido")
+    .optional()
+    .or(z.literal("")),
+  logradouro: z.string().optional().or(z.literal("")),
+  numero: z.string().optional().or(z.literal("")),
+  complemento: z.string().optional().or(z.literal("")),
+  bairro: z.string().optional().or(z.literal("")),
+  cidade: z.string().optional().or(z.literal("")),
+  uf: z
+    .string()
+    .length(2, "UF deve ter 2 letras")
+    .regex(/^[A-Z]{2}$/, "UF inválida")
+    .optional()
+    .or(z.literal("")),
+
+  // Geolocalização (opcional)
+  geo: z
+    .object({
+      lat: z.number(),
+      lng: z.number(),
+    })
+    .nullable()
+    .optional(),
 
   // Pagamento
-  paymentMethod: z.discriminatedUnion('kind', [pixMethodSchema, transferMethodSchema]),
-  payoutDay: z.number().int().min(1, 'Dia deve ser entre 1 e 28').max(28, 'Dia deve ser entre 1 e 28').optional(),
-  minPayoutAmount: z.number().min(0, 'Valor mínimo deve ser maior ou igual a 0').optional(),
+  paymentMethod: z.discriminatedUnion("kind", [
+    pixMethodSchema,
+    transferMethodSchema,
+  ]),
+  payoutDay: z
+    .number()
+    .int()
+    .min(1, "Dia deve ser entre 1 e 28")
+    .max(28, "Dia deve ser entre 1 e 28")
+    .optional(),
+  minPayoutAmount: z
+    .number()
+    .min(0, "Valor mínimo deve ser maior ou igual a 0")
+    .optional(),
+  commissionPerItem: z
+    .number()
+    .min(0, "Valor inválido")
+    .max(999999, "Valor muito alto")
+    .nullable()
+    .optional(),
 
   // Operação
-  capacityPerDay: z.number().int().min(0, 'Capacidade deve ser maior ou igual a 0').nullable().optional(),
-}).refine((data) => {
-  // Se CEP preenchido, cidade deve estar preenchida
-  if (data.cep && !data.cidade) {
-    return false;
-  }
-  return true;
-}, {
-  message: 'Cidade é obrigatória quando CEP está preenchido',
-  path: ['cidade'],
-});
+  capacityPerDay: z
+    .number()
+    .int()
+    .min(0, "Capacidade deve ser maior ou igual a 0")
+    .nullable()
+    .optional(),
+})
+  .refine(
+    (data) => {
+      // Se CEP preenchido, cidade deve estar preenchida
+      if (data.cep && !data.cidade) {
+        return false;
+      }
+      return true;
+    },
+    {
+      message: "Cidade é obrigatória quando CEP está preenchido",
+      path: ["cidade"],
+    }
+  );
 
 export type PickupPointSchemaType = z.infer<typeof pickupPointSchema>;
 

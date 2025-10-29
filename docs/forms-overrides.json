@@ -1,0 +1,137 @@
+{
+  "routes": [
+    {
+      "path": "/auth/login",
+      "forms": [
+        {
+          "id": "form-auth-login-1",
+          "library": "react-hook-form",
+          "notes": [
+            "Form Ant Design embrulhado em React Hook Form (Controllers)."
+          ],
+          "fields": [
+            {
+              "name": "email",
+              "label": "E-mail",
+              "type": "ELInput",
+              "validation": [
+                "required",
+                "email"
+              ],
+              "dataSource": "localStorage[enviolegal:last-email]",
+              "notes": [
+                "Pré-preenchido quando lembrarEmail estiver ativo."
+              ]
+            },
+            {
+              "name": "senha",
+              "label": "Senha",
+              "type": "ELInput.Password",
+              "validation": [
+                "required"
+              ]
+            },
+            {
+              "name": "lembrarEmail",
+              "label": "Lembrar meu e-mail",
+              "type": "Checkbox",
+              "validation": [],
+              "notes": [
+                "Controla persistência local do último e-mail."
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "/minha-conta",
+      "forms": [
+        {
+          "id": "form-minha-conta-1",
+          "library": "react-hook-form",
+          "notes": [
+            "Form dividido em cartões (foto no topo, dados pessoais e empresa).",
+            "Foto clicável abre seletor nativo; CEP e endereço gerenciados na aba dedicada."
+          ],
+          "fields": [
+            {
+              "name": "fullName",
+              "label": "Nome completo",
+              "type": "Input",
+              "validation": [
+                "required",
+                "min:3"
+              ],
+              "mask": null
+            },
+            {
+              "name": "email",
+              "label": "E-mail",
+              "type": "Input",
+              "validation": [
+                "required",
+                "email"
+              ],
+              "notes": [
+                "Normalizado para minúsculas antes de salvar."
+              ]
+            },
+            {
+              "name": "phone",
+              "label": "Telefone",
+              "type": "Input",
+              "validation": [
+                "required",
+                "digits:10-11"
+              ],
+              "mask": "(##) #####-####"
+            },
+            {
+              "name": "cpf",
+              "label": "CPF",
+              "type": "Input",
+              "validation": [
+                "required",
+                "cpf"
+              ],
+              "mask": "000.000.000-00"
+            },
+            {
+              "name": "cnpj",
+              "label": "CNPJ",
+              "type": "Input",
+              "validation": [
+                "required_when:hasCompany",
+                "cnpj"
+              ],
+              "mask": "00.000.000/0000-00",
+              "visibility": "Alternador 'Adicionar dados de empresa'"
+            },
+            {
+              "name": "razaoSocial",
+              "label": "Razão social",
+              "type": "Input",
+              "validation": [
+                "required_when:hasCompany"
+              ],
+              "visibility": "Alternador 'Adicionar dados de empresa'"
+            },
+            {
+              "name": "avatarDataUrl",
+              "label": "Foto do usuário",
+              "type": "Upload",
+              "validation": [
+                "max:2MB",
+                "mimetypes:image/jpeg,image/png"
+              ],
+              "notes": [
+                "Foto clicável com confirmação para remover; CEP gerenciado na aba dedicada."
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

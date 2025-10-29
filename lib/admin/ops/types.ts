@@ -61,6 +61,7 @@ export interface PointOfCollection {
   capacityDaily?: number | null;
   itemsAwaiting: number;     // fila atual
   itemsReceivedToday: number;
+  monthlyReceived?: number;  // itens recebidos no mês corrente
 }
 
 export interface OpsException {

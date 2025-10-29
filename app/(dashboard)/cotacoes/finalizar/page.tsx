@@ -6,7 +6,6 @@ import {
   App,
   Button,
   Card,
-  Checkbox,
   Col,
   Flex,
   Form,
@@ -42,6 +41,7 @@ import {
 } from "@/types/quoteFinalize";
 import type { DocumentType } from "@/types/quote";
 import { useQuoteDraft } from "@/lib/state/quoteDraft";
+import { executeCheckout } from "@/lib/checkout/orchestrator";
 
 const dispatchTelemetry = (event: string, detail?: Record<string, unknown>) => {
   if (typeof window === "undefined") return;
@@ -119,10 +119,6 @@ export default function FinalizeQuotePage() {
         },
         sender: {
           addressId: "",
-          acceptedTerms: false,
-        },
-        services: {
-          avisoRecebimento: false,
         },
         payment: {
           method: "PIX",
@@ -145,84 +141,7 @@ export default function FinalizeQuotePage() {
     formState: { isSubmitting },
   } = formMethods;
 
-  const handleAddToCart: SubmitHandler<FinalizeFormValues> = async (values) => {
-    if (!selection || !results || !summary || !selectedService) return;
-
-    // Calculate total weight and cubic weight
-    const totalWeight = summary.volumes.reduce((sum, vol) => sum + vol.pesoKg, 0);
-    const totalCubicWeight = summary.volumes.reduce((sum, vol) => {
-      const cubicWeight = (vol.comprimentoCm * vol.larguraCm * vol.alturaCm) / 6000;
-      return sum + cubicWeight;
-    }, 0);
-
-    try {
-      const payload = {
-        selectionId: selection.selectionId,
-        quoteId: results.quoteId,
-        transportadora: selectedService.carrier,
-        modalidade: selectedService.modalidade,
-        prazoEstimadoDias: selectedService.prazoDias,
-        preco: selectedService.preco,
-        quantidade: 1,
-        origem: {
-          cep: summary.origemCep,
-          cidadeUF: summary.origemCidade && summary.origemUf
-            ? `${summary.origemCidade}/${summary.origemUf}`
-            : undefined,
-        },
-        destino: {
-          cep: summary.destinoCep,
-          cidadeUF: summary.destinoCidade && summary.destinoUf
-            ? `${summary.destinoCidade}/${summary.destinoUf}`
-            : undefined,
-        },
-        devolucao: summary.devolucao,
-        coleta: summary.coleta,
-        volumes: summary.volumes,
-        pesoTotalKg: totalWeight,
-        pesoCubadoTotalKg: totalCubicWeight,
-        documento: values.document.type,
-        aceitouDeclaracao: values.sender.acceptedTerms,
-        valorSeguro: summary.seguroValor,
-        avisoRecebimento: values.services.avisoRecebimento,
-      };
-      await cartAdd.mutateAsync(payload);
-      dispatchTelemetry("quote_finalize_submit", {
-        selectionId: selection.selectionId,
-        action: "ADICIONAR_AO_CARRINHO",
-        docType: values.document.type,
-      });
-      dispatchTelemetry("cart_add", {
-        selectionId: selection.selectionId,
-      });
-      if (
-        values.recipient.mode === "manual" &&
-        values.recipient.manual.salvarRecorrente
-      ) {
-        await recipientSave.mutateAsync({
-          nome: values.recipient.manual.nome,
-          telefone: values.recipient.manual.telefone,
-          email: values.recipient.manual.email,
-          documento: values.recipient.manual.documento,
-          cep: values.recipient.manual.cep,
-          logradouro: values.recipient.manual.logradouro,
-          numero: values.recipient.manual.numero,
-          complemento: values.recipient.manual.complemento,
-          bairro: values.recipient.manual.bairro,
-          cidade: values.recipient.manual.cidade,
-          uf: values.recipient.manual.uf,
-          observacoes: values.recipient.manual.observacoes,
-        });
-      }
-      message.success("Cotação adicionada ao carrinho.");
-      router.push("/carrinho");
-    } catch (error) {
-      console.error("Erro ao adicionar ao carrinho", error);
-      message.error("Não foi possível adicionar ao carrinho.");
-    }
-  };
-
-  // Handler simplificado que não depende da validação completa do formulário
+  // Handler que não depende da validação completa do formulário
   const onAddToCartClick = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -269,9 +188,9 @@ export default function FinalizeQuotePage() {
         pesoTotalKg: totalWeight,
         pesoCubadoTotalKg: totalCubicWeight,
         documento: values.document?.type ?? "DECLARACAO",
-        aceitouDeclaracao: values.sender?.acceptedTerms ?? false,
+        aceitouDeclaracao: true,
         valorSeguro: summary.seguroValor,
-        avisoRecebimento: values.services?.avisoRecebimento ?? false,
+        avisoRecebimento: false,
       };
 
       await cartAdd.mutateAsync(payload);
@@ -316,7 +235,8 @@ export default function FinalizeQuotePage() {
         ? new Date(Date.now() + etaDays * 86_400_000).toISOString()
         : undefined;
 
-      await createShipment.mutateAsync({
+      // Prepare shipment data
+      const shipmentData = {
         trackingCode,
         recipientName: recipientData.nome,
         recipientCityUf: `${recipientData.cidade}/${recipientData.uf ?? "BR"}`,
@@ -326,7 +246,41 @@ export default function FinalizeQuotePage() {
         expectedDeliveryDate,
         freightValue: selectedService?.preco ?? 0,
         status: "Aguardando coleta",
-      });
+      };
+
+      // Prepare collection data if pickup requested
+      const collectionData = pickupAtOrigin && summary
+        ? {
+            origem: {
+              nome: summary.origemLabel || "Remetente",
+              telefone: "", // No phone in summary, use empty
+              logradouro: "", // Use origin address when available
+              numero: "",
+              complemento: null,
+              bairro: "",
+              cidade: summary.origemCidade || "",
+              uf: summary.origemUf || "",
+              cep: summary.origemCep || "",
+            },
+            transportadora: selectedService?.carrier ?? null,
+            servico: selectedService?.modalidade ?? null,
+            janelaColeta: null,
+            observacoes: null,
+          }
+        : null;
+
+      // Execute orchestrated checkout (atomic shipment + collection)
+      const checkoutResult = await executeCheckout(
+        shipmentData,
+        collectionData,
+        pickupAtOrigin
+      );
+
+      // Only call shipment API if not a duplicate
+      if (!checkoutResult.isDuplicate) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await createShipment.mutateAsync(shipmentData as any);
+      }
 
       await cartClear.mutateAsync();
 
@@ -350,11 +304,25 @@ export default function FinalizeQuotePage() {
         });
       }
 
+      // Show appropriate success message
+      if (checkoutResult.isDuplicate) {
+        message.info("Pagamento já foi processado anteriormente.");
+      } else if (checkoutResult.collectionId) {
+        message.success("Pagamento confirmado, envio registrado e coleta criada.");
+        dispatchTelemetry("pickup_created", {
+          shipmentId: trackingCode,
+          collectionId: checkoutResult.collectionId,
+          origin: summary?.origemCep,
+        });
+      } else {
+        message.success("Pagamento confirmado e envio registrado.");
+      }
+
       dispatchTelemetry("payment_success", {
         selectionId: selection.selectionId,
         codigoRastreio: trackingCode,
       });
-      message.success("Pagamento confirmado e envio registrado.");
+
       router.push("/shipments");
     } catch (error) {
       console.error("Erro ao processar pagamento", error);
@@ -383,39 +351,6 @@ export default function FinalizeQuotePage() {
                 <DocumentChooser />
                 <PostingUnitPicker />
                 <RecipientForm />
-                <Controller
-                  name="sender.acceptedTerms"
-                  control={formMethods.control}
-                  render={({ field, fieldState }) => (
-                    <Form.Item
-                      validateStatus={fieldState.error ? "error" : undefined}
-                      help={fieldState.error?.message}
-                    >
-                      <Checkbox
-                        checked={field.value}
-                        onChange={(event) =>
-                          field.onChange(event.target.checked)
-                        }
-                      >
-                        Confirmo que li e aceito as regras de embarque da transportadora.
-                      </Checkbox>
-                    </Form.Item>
-                  )}
-                />
-                <Card title="Serviços adicionais">
-                  <Controller
-                    name="services.avisoRecebimento"
-                    control={formMethods.control}
-                    render={({ field }) => (
-                      <Checkbox
-                        checked={field.value}
-                        onChange={(event) => field.onChange(event.target.checked)}
-                      >
-                        Aviso de recebimento
-                      </Checkbox>
-                    )}
-                  />
-                </Card>
               </Space>
             </Col>
             <Col xs={24} lg={8}>

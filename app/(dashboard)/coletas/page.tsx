@@ -1,139 +1,109 @@
 "use client";
 
-import { useState } from "react";
-import { DatePicker } from "antd";
-import dayjs from "dayjs";
+import { useEffect, useState } from "react";
+import { App } from "antd";
 import { PageShell } from "@/components/shared/PageShell";
 import { SearchFilters } from "@/components/shared/SearchFilters";
 import { ColetasTable } from "@/components/coletas/ColetasTable";
-import { ReagendarModal } from "@/components/coletas/ReagendarModal";
-import { useColetas } from "@/lib/coletas/hooks";
-import type { Coleta, ColetaFilters } from "@/lib/coletas/types";
-
-const { RangePicker } = DatePicker;
+import { useColetas } from "@/hooks/useColetas";
+import { useColetasStore } from "@/stores/coletas";
+import {
+  CollectionStatus,
+  COLLECTION_STATUS_LABELS,
+} from "@/types/contracts";
+import type { Coleta, ColetaStatus } from "@/lib/coletas/types";
+import { subscribeCheckoutEvents } from "@/lib/checkout/orchestrator";
 
 export default function ColetasPage() {
-  const [filters, setFilters] = useState<ColetaFilters>({
-    q: "",
-    status: "all",
-    page: 1,
-    pageSize: 10,
-    sort: "scheduledFor_desc",
+  const { message } = App.useApp();
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<ColetaStatus | "all">("all");
+  const subscribeExternal = useColetasStore((s) => s.subscribeExternal);
+
+  // Subscribe to external changes (other tabs/checkout)
+  useEffect(() => {
+    const unsubscribe = subscribeExternal();
+    return () => unsubscribe();
+  }, [subscribeExternal]);
+
+  // Subscribe to checkout events
+  useEffect(() => {
+    const unsubscribe = subscribeCheckoutEvents((event, data) => {
+      if (event === "collection_created") {
+        message.success(
+          `Nova coleta criada para envio ${data.shipmentId}`,
+          3
+        );
+      }
+    });
+
+    return () => unsubscribe();
+  }, [message]);
+
+  const coletasResult = useColetas({
+    q: searchQuery,
+    status: statusFilter,
+    pageSize: 20, // 20 items per page
   });
 
-  const [selectedColeta, setSelectedColeta] = useState<Coleta | null>(null);
-  const [modalOpen, setModalOpen] = useState(false);
-
-  const { data, isLoading } = useColetas(filters);
+  const coletas = coletasResult.items;
 
   const handleSearch = (q: string) => {
-    setFilters((prev) => ({ ...prev, q, page: 1 }));
+    setSearchQuery(q);
   };
 
   const handleStatusFilter = (status: string) => {
-    setFilters((prev) => ({
-      ...prev,
-      status: status as ColetaFilters["status"],
-      page: 1,
-    }));
-  };
-
-  const handleDateRangeChange = (dates: [dayjs.Dayjs | null, dayjs.Dayjs | null] | null) => {
-    if (!dates || !dates[0] || !dates[1]) {
-      setFilters((prev) => ({
-        ...prev,
-        from: undefined,
-        to: undefined,
-        page: 1,
-      }));
-      return;
-    }
-
-    const [start, end] = dates;
-    if (start && end) {
-      setFilters((prev) => ({
-        ...prev,
-        from: start.format("YYYY-MM-DD"),
-        to: end.format("YYYY-MM-DD"),
-        page: 1,
-      }));
-    }
+    setStatusFilter(status as ColetaStatus | "all");
   };
 
   const handleReset = () => {
-    setFilters({
-      q: "",
-      status: "all",
-      page: 1,
-      pageSize: 10,
-      sort: "scheduledFor_desc",
-    });
-  };
-
-  const handlePageChange = (page: number, pageSize: number) => {
-    setFilters((prev) => ({ ...prev, page, pageSize }));
-  };
-
-  const handleReagendar = (coleta: Coleta) => {
-    setSelectedColeta(coleta);
-    setModalOpen(true);
-  };
-
-  const handleCloseModal = () => {
-    setModalOpen(false);
-    setSelectedColeta(null);
+    setSearchQuery("");
+    setStatusFilter("all");
   };
 
   return (
     <PageShell
-      title="Coletas Agendadas"
-      description="Gerencie as coletas no endereço geradas após o checkout"
+      title="Coletas"
+      description="Gerencie as coletas criadas automaticamente após o checkout"
     >
       <SearchFilters
-        searchValue={filters.q}
+        searchValue={searchQuery}
         onSearchChange={handleSearch}
-        searchPlaceholder="Buscar por pedido ou CEP..."
+        searchPlaceholder="Buscar por ID do envio, cidade ou UF..."
         filters={[
           {
-            value: filters.status || "all",
+            value: statusFilter || "all",
             onChange: handleStatusFilter,
             options: [
               { label: "Todos os Status", value: "all" },
-              { label: "Agendada", value: "agendada" },
-              { label: "Reagendada", value: "reagendada" },
-              { label: "Concluída", value: "concluida" },
-              { label: "Cancelada", value: "cancelada" },
+              {
+                label: COLLECTION_STATUS_LABELS[CollectionStatus.ABERTA],
+                value: CollectionStatus.ABERTA,
+              },
+              {
+                label: COLLECTION_STATUS_LABELS[CollectionStatus.AGENDADA],
+                value: CollectionStatus.AGENDADA,
+              },
+              {
+                label: COLLECTION_STATUS_LABELS[CollectionStatus.EM_ANDAMENTO],
+                value: CollectionStatus.EM_ANDAMENTO,
+              },
+              {
+                label: COLLECTION_STATUS_LABELS[CollectionStatus.CONCLUIDA],
+                value: CollectionStatus.CONCLUIDA,
+              },
+              {
+                label: COLLECTION_STATUS_LABELS[CollectionStatus.CANCELADA],
+                value: CollectionStatus.CANCELADA,
+              },
             ],
             placeholder: "Status",
           },
         ]}
         onReset={handleReset}
-        extra={
-          <RangePicker
-            format="DD/MM/YYYY"
-            placeholder={["Data inicial", "Data final"]}
-            onChange={handleDateRangeChange}
-          />
-        }
       />
 
-      <ColetasTable
-        data={data?.items || []}
-        loading={isLoading}
-        onReagendar={handleReagendar}
-        pagination={{
-          current: data?.page || 1,
-          pageSize: data?.pageSize || 10,
-          total: data?.total || 0,
-          onChange: handlePageChange,
-        }}
-      />
-
-      <ReagendarModal
-        coleta={selectedColeta}
-        open={modalOpen}
-        onClose={handleCloseModal}
-      />
+      <ColetasTable data={coletas} loading={false} />
     </PageShell>
   );
 }

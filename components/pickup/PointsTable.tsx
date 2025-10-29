@@ -5,6 +5,7 @@ import { EditOutlined, DeleteOutlined, ExclamationCircleOutlined } from '@ant-de
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import { maskCNPJ } from '@/lib/pickup/masks';
+import { formatBRL } from '@/lib/utils/format';
 import StatusTag from './StatusTag';
 import type { PickupPoint, PickupPointListResponse } from '@/lib/pickup/types';
 
@@ -107,6 +108,20 @@ export default function PointsTable({
           return '—';
         }
         return capacity;
+      },
+    },
+    {
+      title: 'Comissão/item',
+      key: 'commissionPerItem',
+      dataIndex: 'commissionPerItem',
+      render: (commission: number | null | undefined) => {
+        if (commission === null || commission === undefined) {
+          return '—';
+        }
+        if (commission === 0) {
+          return 'R$ 0,00';
+        }
+        return formatBRL(commission);
       },
     },
     {

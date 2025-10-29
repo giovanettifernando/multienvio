@@ -4,7 +4,7 @@ import { useAuthStore } from "@/stores/auth";
 import React, { useMemo, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Layout, Menu, Button, Typography, Flex } from 'antd';
+import { Layout, Menu, Button, Typography, Flex, Avatar } from 'antd';
 import {
   HomeOutlined,
   FileAddOutlined,
@@ -56,6 +56,15 @@ function keyFromPath(pathname: string): string {
   return NAV_ITEMS.find(i => i.href.startsWith('/' + first)) ? first : 'dashboard';
 }
 
+function getInitials(name: string) {
+  return name
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? '')
+    .join('');
+}
+
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -63,6 +72,8 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   const clearSession = useAuthStore((s) => s.logout);
 
   const displayName = useMemo(() => usuario?.name ?? 'Usuário', [usuario]);
+  const avatarUrl = usuario?.avatarUrl;
+  const avatarInitials = useMemo(() => getInitials(displayName), [displayName]);
   const [collapsed, setCollapsed] = useState(false);
   const selectedKey = useMemo(() => keyFromPath(pathname || '/'), [pathname]);
 
@@ -136,7 +147,10 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
               onClick={() => setCollapsed(v => !v)}
               icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
             />
-            <Flex align="center" gap={spacing.md} style={{ marginLeft: 'auto' }}>
+            <Flex align="center" gap={spacing.sm} style={{ marginLeft: 'auto' }}>
+              <Avatar size={32} src={avatarUrl ?? undefined} alt={displayName}>
+                {!avatarUrl ? avatarInitials : null}
+              </Avatar>
               <Typography.Text>{displayName}</Typography.Text>
               <Button
                 type="link"

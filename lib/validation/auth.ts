@@ -1,7 +1,6 @@
 import { z } from "zod";
 
 const telefoneRegex = /^\(?\d{2}\)?\s?\d{5}-?\d{4}$/;
-const cnpjRegex = /^\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}$/;
 const senhaRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[\S]{8,}$/;
 
 const optionalText = z
@@ -37,11 +36,6 @@ export const cadastroSchema = z
     telefone: optionalText.refine(
       (value) => !value || telefoneRegex.test(value),
       "Informe um telefone válido (DDD + 9 dígitos)",
-    ),
-    empresa: optionalText,
-    cnpj: optionalText.refine(
-      (value) => !value || cnpjRegex.test(value),
-      "Informe um CNPJ no formato 00.000.000/0000-00",
     ),
     consentLGPD: z
       .boolean()

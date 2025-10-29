@@ -17,7 +17,7 @@ import {
   useCartClear as useShipmentsCartClear,
   useShipmentCreate,
 } from "@/hooks/useShipments";
-import { createColetaIfNeeded } from "@/lib/coletas/afterCheckout";
+// Coletas agora são criadas automaticamente no checkout via finalizar/page.tsx
 import type { CartItem } from "@/types/cart";
 
 type PendingUpdate = { id: string; quantidade: number };
@@ -143,17 +143,8 @@ export default function CarrinhoPage() {
         trackingUrl: item.trackingUrl,
       });
 
-      // Criar coleta automaticamente se necessário
-      if (item.coleta) {
-        await createColetaIfNeeded({
-          id: item.id,
-          trackingCode,
-          origemCep: item.origem.cep,
-          destinoCep: item.destino.cep,
-          pickupSelected: item.coleta,
-          dropoffPointSelected: false, // Cart items não têm seleção de ponto de coleta
-        });
-      }
+      // Coletas são criadas automaticamente no checkout (finalizar/page.tsx)
+      // quando pickupAtOrigin está ativado
     }
 
     await cartClear.mutateAsync();

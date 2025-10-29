@@ -14,14 +14,12 @@ import {
   Checkbox,
   Form,
   Input,
-  Space,
   Typography,
 } from "antd";
 import { PasswordStrength } from "@/components/form/PasswordStrength";
 import { FormCard } from "@/components/ui/FormCard";
 import { cadastroSchema } from "@/lib/validation/auth";
 import {
-  normalizeCNPJInput,
   normalizePhoneInput,
 } from "@/lib/masks";
 import { useAuthStore } from "@/stores/auth";
@@ -61,7 +59,6 @@ export default function CadastroPage() {
     handleSubmit,
     setError,
     watch,
-    resetField,
     formState: { errors },
   } = useForm<CadastroFormValues>({
     resolver: zodResolver(cadastroSchema) as Resolver<CadastroFormValues>,
@@ -117,12 +114,6 @@ export default function CadastroPage() {
       );
     },
   });
-
-  const resetOptionalFields = useCallback(() => {
-    resetField("telefone");
-    resetField("empresa");
-    resetField("cnpj");
-  }, [resetField]);
 
   const onSubmit = useCallback(
     (values: CadastroFormValues) => {
@@ -241,76 +232,32 @@ export default function CadastroPage() {
           )}
         />
 
-        <Space direction="vertical" size="large" style={{ width: "100%" }}>
-          <Controller
-            name="telefone"
-            control={control}
-            render={({ field }) => (
-              <Form.Item
-                label="Telefone (opcional)"
-                validateStatus={errors.telefone ? "error" : ""}
-                help={errors.telefone?.message}
-              >
-                <Input
-                  {...field}
-                  value={field.value ?? ""}
-                  onChange={(event) => {
-                    const formatted = normalizePhoneInput(
-                      event.target.value,
-                    );
-                    field.onChange(formatted);
-                  }}
-                  autoComplete="tel"
-                  placeholder="(11) 91234-5678"
-                  aria-invalid={Boolean(errors.telefone)}
-                  maxLength={16}
-                />
-              </Form.Item>
-            )}
-          />
-
-          <Controller
-            name="empresa"
-            control={control}
-            render={({ field }) => (
-              <Form.Item label="Empresa (opcional)">
-                <Input
-                  {...field}
-                  value={field.value ?? ""}
-                  autoComplete="organization"
-                  placeholder="Nome da empresa"
-                />
-              </Form.Item>
-            )}
-          />
-
-          <Controller
-            name="cnpj"
-            control={control}
-            render={({ field }) => (
-              <Form.Item
-                label="CNPJ (opcional)"
-                validateStatus={errors.cnpj ? "error" : ""}
-                help={errors.cnpj?.message}
-              >
-                <Input
-                  {...field}
-                  value={field.value ?? ""}
-                  onChange={(event) => {
-                    const formatted = normalizeCNPJInput(
-                      event.target.value,
-                    );
-                    field.onChange(formatted);
-                  }}
-                  inputMode="numeric"
-                  placeholder="00.000.000/0000-00"
-                  aria-invalid={Boolean(errors.cnpj)}
-                  maxLength={18}
-                />
-              </Form.Item>
-            )}
-          />
-        </Space>
+        <Controller
+          name="telefone"
+          control={control}
+          render={({ field }) => (
+            <Form.Item
+              label="Telefone (opcional)"
+              validateStatus={errors.telefone ? "error" : ""}
+              help={errors.telefone?.message}
+            >
+              <Input
+                {...field}
+                value={field.value ?? ""}
+                onChange={(event) => {
+                  const formatted = normalizePhoneInput(
+                    event.target.value,
+                  );
+                  field.onChange(formatted);
+                }}
+                autoComplete="tel"
+                placeholder="(11) 91234-5678"
+                aria-invalid={Boolean(errors.telefone)}
+                maxLength={16}
+              />
+            </Form.Item>
+          )}
+        />
 
         <Controller
           name="consentLGPD"
@@ -335,7 +282,7 @@ export default function CadastroPage() {
           )}
         />
 
-        <Space direction="vertical" size="large" style={{ width: "100%" }}>
+        <Form.Item style={{ marginBottom: 0 }}>
           <Button
             type="primary"
             htmlType="submit"
@@ -344,10 +291,7 @@ export default function CadastroPage() {
           >
             Criar conta
           </Button>
-          <Button type="text" onClick={resetOptionalFields}>
-            Limpar dados opcionais
-          </Button>
-        </Space>
+        </Form.Item>
       </Form>
     </FormCard>
   );

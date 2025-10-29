@@ -77,6 +77,7 @@ function generateInitialSeed(): OpsSeed {
     capacityDaily: Math.floor(Math.random() * 100 + 50),
     itemsAwaiting: Math.floor(Math.random() * 30),
     itemsReceivedToday: Math.floor(Math.random() * 20),
+    monthlyReceived: Math.floor(Math.random() * 300 + 50), // 50-350 items per month
   }));
 
   // Generate 12 pickups

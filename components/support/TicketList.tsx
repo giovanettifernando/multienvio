@@ -247,7 +247,9 @@ export function TicketList({ filters, onOpenTicket, onFiltersChange }: Props) {
             disabled={!onFiltersChange}
             onClick={() => {
               if (!onFiltersChange) return;
-              onFiltersChange(new URLSearchParams());
+              const next = new URLSearchParams();
+              next.set('status', 'OPEN');
+              onFiltersChange(next);
             }}
           >
             Limpar

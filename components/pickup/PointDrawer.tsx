@@ -50,6 +50,7 @@ export default function PointDrawer({
       bairro: '',
       cidade: '',
       uf: undefined,
+      geo: null,
       paymentMethod: {
         kind: 'pix',
         pixType: 'email',
@@ -57,6 +58,7 @@ export default function PointDrawer({
       },
       payoutDay: undefined,
       minPayoutAmount: undefined,
+      commissionPerItem: null,
       capacityPerDay: null,
     },
   });
@@ -79,9 +81,11 @@ export default function PointDrawer({
           bairro: editPoint.bairro || '',
           cidade: editPoint.cidade || '',
           uf: editPoint.uf || '',
+          geo: editPoint.geo || null,
           paymentMethod: editPoint.paymentMethod,
           payoutDay: editPoint.payoutDay || undefined,
           minPayoutAmount: editPoint.minPayoutAmount || undefined,
+          commissionPerItem: editPoint.commissionPerItem ?? null,
           capacityPerDay: editPoint.capacityPerDay ?? null,
         });
       } else {
@@ -99,6 +103,7 @@ export default function PointDrawer({
           bairro: '',
           cidade: '',
           uf: undefined,
+          geo: null,
           paymentMethod: {
             kind: 'pix',
             pixType: 'email',
@@ -106,6 +111,7 @@ export default function PointDrawer({
           },
           payoutDay: undefined,
           minPayoutAmount: undefined,
+          commissionPerItem: null,
           capacityPerDay: null,
         });
       }
@@ -118,7 +124,7 @@ export default function PointDrawer({
       ...data,
       cnpj: unmaskDigits(data.cnpj),
       cep: data.cep ? unmaskDigits(data.cep) : undefined,
-      telefone: unmaskDigits(data.telefone),
+      telefone: data.telefone ? unmaskDigits(data.telefone) : undefined,
     };
 
     // Unmask payment method fields if needed

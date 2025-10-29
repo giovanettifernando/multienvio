@@ -1,11 +1,26 @@
-export type TicketStatus =
-  | "OPEN"
-  | "PENDING"
-  | "WAITING_CUSTOMER"
-  | "RESOLVED"
-  | "CLOSED";
+/**
+ * Support types migrated to use global contracts
+ */
 
-export type TicketPriority = "LOW" | "NORMAL" | "HIGH" | "URGENT";
+import {
+  SupportStatus,
+  SupportPriority,
+  SUPPORT_STATUS_LABELS,
+  SUPPORT_STATUS_COLORS,
+  SUPPORT_PRIORITY_LABELS,
+  SUPPORT_PRIORITY_COLORS,
+  type SupportTicket as GlobalSupportTicket,
+  type SupportMessage as GlobalSupportMessage,
+} from "./contracts";
+
+// Re-export for convenience
+export { SupportStatus, SupportPriority };
+export { SUPPORT_STATUS_LABELS, SUPPORT_STATUS_COLORS };
+export { SUPPORT_PRIORITY_LABELS, SUPPORT_PRIORITY_COLORS };
+
+// Legacy type aliases for backward compatibility
+export type TicketStatus = SupportStatus;
+export type TicketPriority = SupportPriority;
 export type TicketCategory =
   | "FINANCEIRO"
   | "LOGISTICA"
@@ -40,7 +55,7 @@ export type Ticket = {
   requester: {
     name: string;
     email?: string;
-    phone?: string;
+    phone?: string | null;
   };
   linkedTrackingCode?: string;
   related?: {

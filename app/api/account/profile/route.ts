@@ -10,14 +10,13 @@ declare global {
 function getProfileStore(): Profile {
   if (!globalThis.__envioProfile) {
     globalThis.__envioProfile = {
-      pf: {
-        nome: "Usuário",
-        email: "user@ex.com",
-        telefone: "41999999999",
-        cpf: "00000000000",
-        nascimento: undefined,
-      },
-      pj: undefined,
+      fullName: "Usuário Envio Legal",
+      email: "user@example.com",
+      phone: "41999999999",
+      cpf: "00000000000",
+      hasCompany: false,
+      company: null,
+      avatarDataUrl: null,
     };
   }
   return globalThis.__envioProfile;
@@ -31,5 +30,5 @@ export async function GET() {
 export async function PUT(req: NextRequest) {
   const body = (await req.json()) as Profile;
   globalThis.__envioProfile = body;
-  return NextResponse.json({ ok: true, profile: body });
+  return NextResponse.json(body);
 }

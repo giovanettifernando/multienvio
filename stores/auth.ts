@@ -41,3 +41,6 @@ export const useAuthStore = create<AuthState>()(
     }
   )
 );
+
+// Seletor seguro para usar em componentes
+export const useSessionUser = () => useAuthStore(s => s.user);

@@ -1,0 +1,4731 @@
+{
+  "generatedAt": "2025-10-29T00:30:26.035Z",
+  "routes": [
+    {
+      "path": "/",
+      "file": "app/(dashboard)/(overview)/page.tsx",
+      "breadcrumbs": [],
+      "tabs": [],
+      "components": [
+        "Flex",
+        "Space",
+        "Typography.Title",
+        "Typography.Paragraph",
+        "Card",
+        "Alert",
+        "QuickQuote",
+        "QuickActions",
+        "KpiCards",
+        "Skeleton",
+        "OrdersRecentTable",
+        "RecentTracking",
+        "AlertsPanel",
+        "WalletCard",
+        "PerformanceCarrier",
+        "DashboardFooterLinks",
+        "Button",
+        "Form",
+        "Row",
+        "Col",
+        "Form.Item",
+        "Input",
+        "InputNumber",
+        "Select",
+        "Modal",
+        "Typography.Text",
+        "FileAddOutlined",
+        "CloudUploadOutlined",
+        "SearchOutlined",
+        "CalendarOutlined",
+        "RocketOutlined",
+        "ExperimentOutlined",
+        "Tooltip",
+        "ArrowUpOutlined",
+        "ArrowDownOutlined",
+        "MinusOutlined",
+        "Tag",
+        "Table",
+        "Empty",
+        "List",
+        "List.Item",
+        "List.Item.Meta",
+        "Avatar",
+        "Badge",
+        "AddFundsModal",
+        "Progress",
+        "Typography.Link",
+        "Tabs",
+        "PixQRCode"
+      ],
+      "forms": [
+        {
+          "tempId": "form-1",
+          "library": "antd",
+          "componentPath": "components/dashboard/QuickQuote.tsx",
+          "fields": [
+            {
+              "name": "cepOrigem",
+              "label": "CEP origem",
+              "type": "Input",
+              "validation": [
+                "required",
+                "message: Informe o CEP de origem",
+                "pattern: /^[0-9]{5}-?[0-9]{3}$/u",
+                "message: CEP inválido"
+              ],
+              "notes": [],
+              "source": "components/dashboard/QuickQuote.tsx"
+            },
+            {
+              "name": "cepDestino",
+              "label": "CEP destino",
+              "type": "Input",
+              "validation": [
+                "required",
+                "message: Informe o CEP de destino",
+                "pattern: /^[0-9]{5}-?[0-9]{3}$/u",
+                "message: CEP inválido"
+              ],
+              "notes": [],
+              "source": "components/dashboard/QuickQuote.tsx"
+            },
+            {
+              "name": "pesoKg",
+              "label": "Peso (kg)",
+              "type": "InputNumber",
+              "validation": [
+                "required",
+                "message: Informe o peso",
+                "type: number",
+                "max: 30",
+                "message: Peso máximo suportado é 30 kg"
+              ],
+              "notes": [],
+              "source": "components/dashboard/QuickQuote.tsx"
+            },
+            {
+              "name": "valorDeclarado",
+              "label": "Valor declarado (R$)",
+              "type": "InputNumber",
+              "validation": [
+                "required",
+                "message: Informe o valor declarado"
+              ],
+              "mask": "(value, info) => {\n                  // enquanto o usuário digita, preserve o que está no input (evita “pular” o cursor)\n                  if (info.userTyping) return info.input || \"\";\n                  const num =\n                    typeof value === \"number\"\n                      ? value\n                      : value != null && value !== \"\"\n                      ? Number.parseFloat(String(value))\n                      : 0;\n\n                  return Number.isFinite(num)\n                    ? num.toLocaleString(\"pt-BR\", { style: \"currency\", currency: \"BRL\" })\n                    : \"\";\n                }",
+              "notes": [],
+              "source": "components/dashboard/QuickQuote.tsx"
+            },
+            {
+              "name": "comprimentoCm",
+              "label": "Comprimento (cm)",
+              "type": "InputNumber",
+              "validation": [
+                "required",
+                "message: Informe o comprimento",
+                "type: number",
+                "min: 16",
+                "message: Comprimento mínimo é 16 cm"
+              ],
+              "notes": [],
+              "source": "components/dashboard/QuickQuote.tsx"
+            },
+            {
+              "name": "larguraCm",
+              "label": "Largura (cm)",
+              "type": "InputNumber",
+              "validation": [
+                "required",
+                "message: Informe a largura",
+                "type: number",
+                "min: 11",
+                "message: Largura mínima é 11 cm"
+              ],
+              "notes": [],
+              "source": "components/dashboard/QuickQuote.tsx"
+            },
+            {
+              "name": "alturaCm",
+              "label": "Altura (cm)",
+              "type": "InputNumber",
+              "validation": [
+                "required",
+                "message: Informe a altura",
+                "type: number",
+                "min: 2",
+                "message: Altura mínima é 2 cm"
+              ],
+              "notes": [],
+              "source": "components/dashboard/QuickQuote.tsx"
+            },
+            {
+              "name": "servico",
+              "label": "Serviço preferencial",
+              "type": "Select",
+              "validation": [],
+              "dataSource": "serviceOptions",
+              "notes": [],
+              "source": "components/dashboard/QuickQuote.tsx"
+            }
+          ],
+          "actions": [
+            "onFinish: (values) => quoteMutation.mutate(values)",
+            "Button submit"
+          ],
+          "handlers": [],
+          "submitHandlers": [
+            "(values) => quoteMutation.mutate(values)"
+          ],
+          "schemas": [
+            "@/lib/validation/company"
+          ],
+          "storeActions": [],
+          "storageKeys": [],
+          "notes": [],
+          "id": "form-root-1"
+        },
+        {
+          "tempId": "form-1",
+          "library": "antd",
+          "componentPath": "components/wallet/AddFundsModal.tsx",
+          "fields": [
+            {
+              "name": "amount",
+              "label": "Valor",
+              "type": "InputNumber",
+              "validation": [
+                "required"
+              ],
+              "notes": [],
+              "source": "components/wallet/AddFundsModal.tsx"
+            }
+          ],
+          "actions": [
+            "onFinish: (values: { amount: number }) => pixMutation.mutate(values.amount)",
+            "Button submit"
+          ],
+          "handlers": [],
+          "submitHandlers": [
+            "(values: { amount: number }) => pixMutation.mutate(values.amount)"
+          ],
+          "schemas": [],
+          "storeActions": [],
+          "storageKeys": [],
+          "notes": [],
+          "id": "form-root-2"
+        },
+        {
+          "tempId": "form-2",
+          "library": "antd",
+          "componentPath": "components/wallet/AddFundsModal.tsx",
+          "fields": [
+            {
+              "name": "amount",
+              "label": "Valor",
+              "type": "InputNumber",
+              "validation": [
+                "required"
+              ],
+              "notes": [],
+              "source": "components/wallet/AddFundsModal.tsx"
+            },
+            {
+              "name": "cardId",
+              "label": "Cartão",
+              "type": "Select",
+              "validation": [
+                "required",
+                "message: Selecione um cartão."
+              ],
+              "dataSource": "cardOptions",
+              "notes": [],
+              "source": "components/wallet/AddFundsModal.tsx"
+            },
+            {
+              "name": "field-3",
+              "type": "Button",
+              "validation": [],
+              "notes": [],
+              "source": "components/wallet/AddFundsModal.tsx"
+            }
+          ],
+          "actions": [
+            "onFinish: (values: { amount: number; cardId?: string }) =>\n                    cardMutation.mutate({\n                      amount: values.amount,\n                      cardId: values.cardId ?? selectedCardId,\n                    })",
+            "Button submit"
+          ],
+          "handlers": [],
+          "submitHandlers": [
+            "(values: { amount: number; cardId?: string }) =>\n                    cardMutation.mutate({\n                      amount: values.amount,\n                      cardId: values.cardId ?? selectedCardId,\n                    })"
+          ],
+          "schemas": [],
+          "storeActions": [],
+          "storageKeys": [],
+          "notes": [],
+          "id": "form-root-3"
+        }
+      ],
+      "stores": [],
+      "schemas": [
+        "@/lib/validation/company"
+      ],
+      "storageKeys": [],
+      "mocks": [],
+      "comments": []
+    },
+    {
+      "path": "/admin",
+      "file": "app/(admin)/admin/page.tsx",
+      "breadcrumbs": [],
+      "tabs": [],
+      "components": [
+        "Typography.Title"
+      ],
+      "forms": [],
+      "stores": [],
+      "schemas": [],
+      "storageKeys": [],
+      "mocks": [],
+      "comments": [
+        "Nenhum formulário detectado automaticamente."
+      ]
+    },
+    {
+      "path": "/admin/coletores",
+      "file": "app/(admin)/admin/coletores/page.tsx",
+      "breadcrumbs": [],
+      "tabs": [],
+      "components": [
+        "Flex",
+        "Title",
+        "Button",
+        "PlusOutlined",
+        "Card",
+        "SearchFilters",
+        "CollectorsTable",
+        "CollectorDrawer",
+        "Form",
+        "Form.Item",
+        "Input",
+        "SearchOutlined",
+        "Select",
+        "Space",
+        "ClearOutlined",
+        "ExclamationCircleOutlined",
+        "Tooltip",
+        "Link",
+        "Text",
+        "DocsStatusBadge",
+        "Tag",
+        "Switch",
+        "EditOutlined",
+        "DeleteOutlined",
+        "Table",
+        "PFForm",
+        "PJForm",
+        "VehicleForm",
+        "DocumentsForm",
+        "FinanceForm",
+        "Drawer",
+        "FormProvider",
+        "Spin",
+        "Tabs",
+        "CheckCircleOutlined",
+        "CloseCircleOutlined",
+        "Controller",
+        "Typography.Title",
+        "DatePicker",
+        "Checkbox",
+        "CloseCircleFilled",
+        "CheckCircleFilled",
+        "Alert",
+        "Upload",
+        "UploadOutlined",
+        "Segmented",
+        "InputNumber"
+      ],
+      "forms": [
+        {
+          "tempId": "form-1",
+          "library": "antd",
+          "componentPath": "components/collectors/SearchFilters.tsx",
+          "fields": [
+            {
+              "name": "q",
+              "type": "Input",
+              "validation": [],
+              "notes": [],
+              "source": "components/collectors/SearchFilters.tsx"
+            },
+            {
+              "name": "status",
+              "type": "Select",
+              "validation": [],
+              "initialValue": "all",
+              "dataSource": "{ label: 'Todos', value: 'all' }.{ label: 'Ativo', value: 'active' }.{ label: 'Bloqueado', value: 'blocked' }",
+              "notes": [],
+              "source": "components/collectors/SearchFilters.tsx"
+            },
+            {
+              "name": "uf",
+              "type": "Select",
+              "validation": [],
+              "dataSource": "UFS.map((uf) => ({ label: uf, value: uf }))",
+              "notes": [],
+              "source": "components/collectors/SearchFilters.tsx"
+            },
+            {
+              "name": "cidade",
+              "type": "Input",
+              "validation": [],
+              "notes": [],
+              "source": "components/collectors/SearchFilters.tsx"
+            }
+          ],
+          "actions": [],
+          "handlers": [],
+          "submitHandlers": [],
+          "schemas": [],
+          "storeActions": [],
+          "storageKeys": [],
+          "notes": [],
+          "id": "form-admin-coletores-1"
+        }
+      ],
+      "stores": [],
+      "schemas": [
+        "@/lib/collectors/schemas"
+      ],
+      "storageKeys": [],
+      "mocks": [],
+      "comments": []
+    },
+    {
+      "path": "/admin/config",
+      "file": "app/(admin)/admin/config/page.tsx",
+      "breadcrumbs": [],
+      "tabs": [],
+      "components": [
+        "Typography.Title"
+      ],
+      "forms": [],
+      "stores": [],
+      "schemas": [],
+      "storageKeys": [],
+      "mocks": [],
+      "comments": [
+        "Nenhum formulário detectado automaticamente."
+      ]
+    },
+    {
+      "path": "/admin/contas",
+      "file": "app/(admin)/admin/contas/page.tsx",
+      "breadcrumbs": [],
+      "tabs": [],
+      "components": [
+        "App",
+        "Flex",
+        "Typography.Title",
+        "Typography.Paragraph",
+        "ClientsTable",
+        "ClientDrawer",
+        "Tag",
+        "Space",
+        "Button",
+        "EyeOutlined",
+        "Popconfirm",
+        "UnlockOutlined",
+        "LockOutlined",
+        "Input.Search",
+        "Select",
+        "KeyOutlined",
+        "Table",
+        "Drawer",
+        "Row",
+        "Col",
+        "Statistic",
+        "Descriptions",
+        "Descriptions.Item",
+        "Form",
+        "Form.Item"
+      ],
+      "forms": [
+        {
+          "tempId": "form-1",
+          "library": "antd",
+          "componentPath": "components/admin/clients/ClientDrawer.tsx",
+          "fields": [
+            {
+              "name": "status",
+              "label": "Status da Conta",
+              "type": "Select",
+              "validation": [
+                "required",
+                "message: Selecione o status"
+              ],
+              "dataSource": "{ label: statusLabels.active, value: 'active' }.{ label: statusLabels.blocked, value: 'blocked' }.{ label: statusLabels.suspended, value: 'suspended' }",
+              "notes": [],
+              "source": "components/admin/clients/ClientDrawer.tsx"
+            }
+          ],
+          "actions": [],
+          "handlers": [],
+          "submitHandlers": [],
+          "schemas": [],
+          "storeActions": [],
+          "storageKeys": [],
+          "notes": [],
+          "id": "form-admin-contas-1"
+        }
+      ],
+      "stores": [],
+      "schemas": [],
+      "storageKeys": [],
+      "mocks": [],
+      "comments": []
+    },
+    {
+      "path": "/admin/financeiro",
+      "file": "app/(admin)/admin/financeiro/page.tsx",
+      "breadcrumbs": [],
+      "tabs": [],
+      "components": [
+        "LedgerTable",
+        "InvoicesTable",
+        "ReconciliationTable",
+        "ChargebacksTable",
+        "PayoutsTable",
+        "CommissionsTable",
+        "FeesView",
+        "Reports",
+        "Flex",
+        "Select",
+        "RangePicker",
+        "Card",
+        "Skeleton",
+        "Row",
+        "Col",
+        "Statistic",
+        "Tabs",
+        "Tag",
+        "Input.Search",
+        "Button",
+        "DownloadOutlined",
+        "PlusOutlined",
+        "Popconfirm",
+        "CheckOutlined",
+        "Table",
+        "Modal",
+        "Form",
+        "Form.Item",
+        "Input",
+        "InputNumber",
+        "Input.TextArea",
+        "LinkOutlined",
+        "Space",
+        "CloseOutlined",
+        "Text",
+        "DollarOutlined",
+        "Descriptions",
+        "Descriptions.Item"
+      ],
+      "forms": [
+        {
+          "tempId": "form-1",
+          "library": "antd",
+          "componentPath": "components/admin/finance/LedgerTable.tsx",
+          "fields": [
+            {
+              "name": "customerId",
+              "label": "ID do Cliente",
+              "type": "Input",
+              "validation": [
+                "required"
+              ],
+              "notes": [],
+              "source": "components/admin/finance/LedgerTable.tsx"
+            },
+            {
+              "name": "customerName",
+              "label": "Nome do Cliente",
+              "type": "Input",
+              "validation": [
+                "required"
+              ],
+              "notes": [],
+              "source": "components/admin/finance/LedgerTable.tsx"
+            },
+            {
+              "name": "nature",
+              "label": "Natureza",
+              "type": "Select",
+              "validation": [
+                "required"
+              ],
+              "dataSource": "{ label: 'Crédito', value: 'credit' }.{ label: 'Débito', value: 'debit' }",
+              "notes": [],
+              "source": "components/admin/finance/LedgerTable.tsx"
+            },
+            {
+              "name": "amount",
+              "label": "Valor (R$)",
+              "type": "InputNumber",
+              "validation": [
+                "required"
+              ],
+              "mask": "(value) => `R$ ${value}`.replace(/\\B(?=(\\d{3})+(?!\\d))/g, '.')",
+              "notes": [],
+              "source": "components/admin/finance/LedgerTable.tsx"
+            },
+            {
+              "name": "description",
+              "label": "Descrição",
+              "type": "Input.TextArea",
+              "validation": [],
+              "notes": [],
+              "source": "components/admin/finance/LedgerTable.tsx"
+            }
+          ],
+          "actions": [],
+          "handlers": [],
+          "submitHandlers": [],
+          "schemas": [],
+          "storeActions": [],
+          "storageKeys": [],
+          "notes": [],
+          "id": "form-admin-financeiro-1"
+        },
+        {
+          "tempId": "form-1",
+          "library": "antd",
+          "componentPath": "components/admin/finance/PayoutsTable.tsx",
+          "fields": [
+            {
+              "name": "reference",
+              "label": "Referência (opcional)",
+              "type": "Input",
+              "validation": [],
+              "notes": [],
+              "source": "components/admin/finance/PayoutsTable.tsx"
+            },
+            {
+              "name": "proofUrl",
+              "label": "URL Comprovante (opcional)",
+              "type": "Input",
+              "validation": [],
+              "notes": [],
+              "source": "components/admin/finance/PayoutsTable.tsx"
+            }
+          ],
+          "actions": [],
+          "handlers": [],
+          "submitHandlers": [],
+          "schemas": [],
+          "storeActions": [],
+          "storageKeys": [],
+          "notes": [],
+          "id": "form-admin-financeiro-2"
+        },
+        {
+          "tempId": "form-1",
+          "library": "antd",
+          "componentPath": "components/admin/finance/FeesView.tsx",
+          "fields": [
+            {
+              "name": "customerId",
+              "label": "ID do Cliente",
+              "type": "Input",
+              "validation": [
+                "required"
+              ],
+              "notes": [],
+              "source": "components/admin/finance/FeesView.tsx"
+            },
+            {
+              "name": "customerName",
+              "label": "Nome do Cliente",
+              "type": "Input",
+              "validation": [
+                "required"
+              ],
+              "notes": [],
+              "source": "components/admin/finance/FeesView.tsx"
+            },
+            {
+              "name": "feeType",
+              "label": "Tipo de Taxa",
+              "type": "Select",
+              "validation": [
+                "required"
+              ],
+              "dataSource": "{ label: 'MDR Cartão', value: 'mdr' }.{ label: 'Taxa Boleto', value: 'boleto' }.{ label: 'Taxa Plataforma', value: 'platform' }",
+              "notes": [],
+              "source": "components/admin/finance/FeesView.tsx"
+            },
+            {
+              "name": "amount",
+              "label": "Valor (R$)",
+              "type": "InputNumber",
+              "validation": [
+                "required"
+              ],
+              "mask": "(value) => `R$ ${value}`.replace(/\\B(?=(\\d{3})+(?!\\d))/g, '.')",
+              "notes": [],
+              "source": "components/admin/finance/FeesView.tsx"
+            },
+            {
+              "name": "description",
+              "label": "Descrição",
+              "type": "Input.TextArea",
+              "validation": [],
+              "notes": [],
+              "source": "components/admin/finance/FeesView.tsx"
+            }
+          ],
+          "actions": [],
+          "handlers": [],
+          "submitHandlers": [],
+          "schemas": [],
+          "storeActions": [],
+          "storageKeys": [],
+          "notes": [],
+          "id": "form-admin-financeiro-3"
+        }
+      ],
+      "stores": [],
+      "schemas": [],
+      "storageKeys": [],
+      "mocks": [],
+      "comments": []
+    },
+    {
+      "path": "/admin/integracoes",
+      "file": "app/(admin)/admin/integracoes/page.tsx",
+      "breadcrumbs": [],
+      "tabs": [],
+      "components": [
+        "ApiOutlined",
+        "CarrierTable",
+        "CarrierDrawer",
+        "LinkOutlined",
+        "ApiTable",
+        "ApiDrawer",
+        "LockOutlined",
+        "AuthPanel",
+        "CreditCardOutlined",
+        "PaymentGatewayTab",
+        "HeartOutlined",
+        "HealthPanel",
+        "PageShell",
+        "Tabs",
+        "Image",
+        "Tag",
+        "Space",
+        "Switch",
+        "Button",
+        "EditOutlined",
+        "CopyOutlined",
+        "DeleteOutlined",
+        "Empty",
+        "PlusOutlined",
+        "Flex",
+        "Table",
+        "Drawer",
+        "Form",
+        "Form.Item",
+        "Controller",
+        "Input",
+        "Checkbox.Group",
+        "Tooltip",
+        "Select",
+        "TextArea",
+        "Card",
+        "Spin",
+        "SaveOutlined",
+        "Space.Compact",
+        "EyeInvisibleOutlined",
+        "EyeOutlined",
+        "ReloadOutlined",
+        "Alert",
+        "Input.Password",
+        "ServiceStatusBadge",
+        "Text",
+        "Descriptions",
+        "Descriptions.Item",
+        "Typography.Title",
+        "Typography.Text",
+        "Badge"
+      ],
+      "forms": [
+        {
+          "tempId": "form-1",
+          "library": "antd",
+          "componentPath": "components/integrations/CarrierDrawer.tsx",
+          "fields": [
+            {
+              "name": "field-1",
+              "label": "Nome",
+              "type": "Controller",
+              "validation": [],
+              "notes": [],
+              "source": "components/integrations/CarrierDrawer.tsx"
+            },
+            {
+              "name": "field-2",
+              "label": "Slug",
+              "type": "Controller",
+              "validation": [],
+              "notes": [],
+              "source": "components/integrations/CarrierDrawer.tsx"
+            },
+            {
+              "name": "field-3",
+              "label": "Website",
+              "type": "Controller",
+              "validation": [],
+              "notes": [],
+              "source": "components/integrations/CarrierDrawer.tsx"
+            },
+            {
+              "name": "field-4",
+              "label": "URL do Logo",
+              "type": "Controller",
+              "validation": [],
+              "notes": [],
+              "source": "components/integrations/CarrierDrawer.tsx"
+            },
+            {
+              "name": "field-5",
+              "label": "Serviços suportados",
+              "type": "Controller",
+              "validation": [],
+              "notes": [],
+              "source": "components/integrations/CarrierDrawer.tsx"
+            },
+            {
+              "name": "field-6",
+              "label": "Status",
+              "type": "Controller",
+              "validation": [],
+              "notes": [],
+              "source": "components/integrations/CarrierDrawer.tsx"
+            },
+            {
+              "name": "name",
+              "type": "Input",
+              "validation": [],
+              "notes": [],
+              "source": "components/integrations/CarrierDrawer.tsx"
+            },
+            {
+              "name": "slug",
+              "type": "Input",
+              "validation": [],
+              "notes": [],
+              "source": "components/integrations/CarrierDrawer.tsx"
+            },
+            {
+              "name": "website",
+              "type": "Input",
+              "validation": [],
+              "notes": [],
+              "source": "components/integrations/CarrierDrawer.tsx"
+            },
+            {
+              "name": "logoUrl",
+              "type": "Input",
+              "validation": [],
+              "notes": [],
+              "source": "components/integrations/CarrierDrawer.tsx"
+            },
+            {
+              "name": "services",
+              "type": "Checkbox.Group",
+              "validation": [],
+              "notes": [],
+              "source": "components/integrations/CarrierDrawer.tsx"
+            },
+            {
+              "name": "enabled",
+              "type": "Space",
+              "validation": [],
+              "notes": [],
+              "source": "components/integrations/CarrierDrawer.tsx"
+            }
+          ],
+          "actions": [],
+          "handlers": [],
+          "submitHandlers": [],
+          "schemas": [
+            "@/lib/integrations/schemas"
+          ],
+          "storeActions": [
+            "carrierDrawerOpen",
+            "carrierDrawerMode",
+            "editingCarrier",
+            "closeCarrierDrawer"
+          ],
+          "storageKeys": [],
+          "notes": [],
+          "id": "form-admin-integracoes-1"
+        },
+        {
+          "tempId": "form-1",
+          "library": "antd",
+          "componentPath": "components/integrations/ApiDrawer.tsx",
+          "fields": [
+            {
+              "name": "field-1",
+              "label": "Transportadora",
+              "type": "Controller",
+              "validation": [],
+              "notes": [],
+              "source": "components/integrations/ApiDrawer.tsx"
+            },
+            {
+              "name": "field-2",
+              "label": "Ambiente",
+              "type": "Controller",
+              "validation": [],
+              "notes": [],
+              "source": "components/integrations/ApiDrawer.tsx"
+            },
+            {
+              "name": "field-3",
+              "label": "Quote URL",
+              "type": "Controller",
+              "validation": [],
+              "notes": [],
+              "source": "components/integrations/ApiDrawer.tsx"
+            },
+            {
+              "name": "field-4",
+              "label": "Label URL",
+              "type": "Controller",
+              "validation": [],
+              "notes": [],
+              "source": "components/integrations/ApiDrawer.tsx"
+            },
+            {
+              "name": "field-5",
+              "label": "Tracking URL",
+              "type": "Controller",
+              "validation": [],
+              "notes": [],
+              "source": "components/integrations/ApiDrawer.tsx"
+            },
+            {
+              "name": "field-6",
+              "label": "Notas",
+              "type": "Controller",
+              "validation": [],
+              "notes": [],
+              "source": "components/integrations/ApiDrawer.tsx"
+            },
+            {
+              "name": "field-7",
+              "label": "Status",
+              "type": "Controller",
+              "validation": [],
+              "notes": [],
+              "source": "components/integrations/ApiDrawer.tsx"
+            },
+            {
+              "name": "carrierId",
+              "type": "Select",
+              "validation": [],
+              "notes": [],
+              "source": "components/integrations/ApiDrawer.tsx"
+            },
+            {
+              "name": "environment",
+              "type": "Select",
+              "validation": [],
+              "notes": [],
+              "source": "components/integrations/ApiDrawer.tsx"
+            },
+            {
+              "name": "quoteUrl",
+              "type": "Input",
+              "validation": [],
+              "notes": [],
+              "source": "components/integrations/ApiDrawer.tsx"
+            },
+            {
+              "name": "labelUrl",
+              "type": "Input",
+              "validation": [],
+              "notes": [],
+              "source": "components/integrations/ApiDrawer.tsx"
+            },
+            {
+              "name": "trackingUrl",
+              "type": "Input",
+              "validation": [],
+              "notes": [],
+              "source": "components/integrations/ApiDrawer.tsx"
+            },
+            {
+              "name": "notes",
+              "type": "TextArea",
+              "validation": [],
+              "notes": [],
+              "source": "components/integrations/ApiDrawer.tsx"
+            },
+            {
+              "name": "active",
+              "type": "Space",
+              "validation": [],
+              "notes": [],
+              "source": "components/integrations/ApiDrawer.tsx"
+            }
+          ],
+          "actions": [],
+          "handlers": [],
+          "submitHandlers": [],
+          "schemas": [
+            "@/lib/integrations/schemas"
+          ],
+          "storeActions": [
+            "apiDrawerOpen",
+            "apiDrawerMode",
+            "editingApi",
+            "selectedCarrierId",
+            "closeApiDrawer"
+          ],
+          "storageKeys": [],
+          "notes": [],
+          "id": "form-admin-integracoes-2"
+        },
+        {
+          "tempId": "form-1",
+          "library": "antd",
+          "componentPath": "components/integrations/AuthPanel.tsx",
+          "fields": [
+            {
+              "name": "field-1",
+              "label": "field.label",
+              "type": "Controller",
+              "validation": [],
+              "notes": [],
+              "source": "components/integrations/AuthPanel.tsx"
+            },
+            {
+              "name": "carrierId",
+              "type": "input",
+              "validation": [],
+              "notes": [],
+              "source": "components/integrations/AuthPanel.tsx"
+            },
+            {
+              "name": "`fields.${index}.key`",
+              "type": "input",
+              "validation": [],
+              "notes": [],
+              "source": "components/integrations/AuthPanel.tsx"
+            },
+            {
+              "name": "`fields.${index}.label`",
+              "type": "input",
+              "validation": [],
+              "notes": [],
+              "source": "components/integrations/AuthPanel.tsx"
+            },
+            {
+              "name": "`fields.${index}.type`",
+              "type": "input",
+              "validation": [],
+              "notes": [],
+              "source": "components/integrations/AuthPanel.tsx"
+            },
+            {
+              "name": "`fields.${index}.masked`",
+              "type": "input",
+              "validation": [],
+              "notes": [],
+              "source": "components/integrations/AuthPanel.tsx"
+            },
+            {
+              "name": "`fields.${index}.value`",
+              "type": "Space.Compact",
+              "validation": [],
+              "notes": [],
+              "source": "components/integrations/AuthPanel.tsx"
+            }
+          ],
+          "actions": [],
+          "handlers": [],
+          "submitHandlers": [],
+          "schemas": [
+            "@/lib/integrations/schemas"
+          ],
+          "storeActions": [],
+          "storageKeys": [],
+          "notes": [],
+          "id": "form-admin-integracoes-3"
+        },
+        {
+          "tempId": "form-1",
+          "library": "antd",
+          "componentPath": "components/integrations/PaymentGatewayTab.tsx",
+          "fields": [
+            {
+              "name": "field-1",
+              "label": "Public Key",
+              "type": "Controller",
+              "validation": [],
+              "notes": [],
+              "source": "components/integrations/PaymentGatewayTab.tsx"
+            },
+            {
+              "name": "field-2",
+              "label": "Access Token",
+              "type": "Controller",
+              "validation": [],
+              "notes": [],
+              "source": "components/integrations/PaymentGatewayTab.tsx"
+            },
+            {
+              "name": "field-3",
+              "label": "Webhook URL",
+              "type": "Controller",
+              "validation": [],
+              "notes": [],
+              "source": "components/integrations/PaymentGatewayTab.tsx"
+            },
+            {
+              "name": "field-4",
+              "label": "Webhook Secret",
+              "type": "Controller",
+              "validation": [],
+              "notes": [],
+              "source": "components/integrations/PaymentGatewayTab.tsx"
+            },
+            {
+              "name": "field-5",
+              "label": "Status",
+              "type": "Controller",
+              "validation": [],
+              "notes": [],
+              "source": "components/integrations/PaymentGatewayTab.tsx"
+            },
+            {
+              "name": "provider",
+              "type": "input",
+              "validation": [],
+              "notes": [],
+              "source": "components/integrations/PaymentGatewayTab.tsx"
+            },
+            {
+              "name": "publicKey",
+              "type": "Input",
+              "validation": [],
+              "notes": [],
+              "source": "components/integrations/PaymentGatewayTab.tsx"
+            },
+            {
+              "name": "accessToken",
+              "type": "Input.Password",
+              "validation": [],
+              "notes": [],
+              "source": "components/integrations/PaymentGatewayTab.tsx"
+            },
+            {
+              "name": "webhookUrl",
+              "type": "Input",
+              "validation": [],
+              "notes": [],
+              "source": "components/integrations/PaymentGatewayTab.tsx"
+            },
+            {
+              "name": "webhookSecret",
+              "type": "Input.Password",
+              "validation": [],
+              "notes": [],
+              "source": "components/integrations/PaymentGatewayTab.tsx"
+            },
+            {
+              "name": "active",
+              "type": "Space",
+              "validation": [],
+              "notes": [],
+              "source": "components/integrations/PaymentGatewayTab.tsx"
+            }
+          ],
+          "actions": [],
+          "handlers": [],
+          "submitHandlers": [],
+          "schemas": [
+            "@/lib/integrations/schemas"
+          ],
+          "storeActions": [],
+          "storageKeys": [],
+          "notes": [],
+          "id": "form-admin-integracoes-4"
+        }
+      ],
+      "stores": [
+        "@/store/integrations.store"
+      ],
+      "schemas": [
+        "@/lib/integrations/schemas"
+      ],
+      "storageKeys": [],
+      "mocks": [],
+      "comments": []
+    },
+    {
+      "path": "/admin/login",
+      "file": "app/(admin)/admin/login/page.tsx",
+      "breadcrumbs": [],
+      "tabs": [],
+      "components": [
+        "Card",
+        "Form",
+        "Form.Item",
+        "Input",
+        "Input.Password",
+        "Button",
+        "Suspense",
+        "AdminLoginForm"
+      ],
+      "forms": [
+        {
+          "tempId": "form-1",
+          "library": "antd",
+          "componentPath": "app/(admin)/admin/login/page.tsx",
+          "fields": [
+            {
+              "name": "email",
+              "label": "E-mail",
+              "type": "Input",
+              "validation": [
+                "required",
+                "message: E-mail é obrigatório",
+                "type: email",
+                "message: E-mail inválido"
+              ],
+              "notes": [],
+              "source": "app/(admin)/admin/login/page.tsx"
+            },
+            {
+              "name": "password",
+              "label": "Senha",
+              "type": "Input.Password",
+              "validation": [
+                "required",
+                "message: Senha é obrigatória"
+              ],
+              "notes": [],
+              "source": "app/(admin)/admin/login/page.tsx"
+            }
+          ],
+          "actions": [
+            "onFinish: onFinish",
+            "Button submit"
+          ],
+          "handlers": [],
+          "submitHandlers": [
+            "onFinish"
+          ],
+          "schemas": [],
+          "storeActions": [
+            "setAdmin"
+          ],
+          "storageKeys": [],
+          "notes": [],
+          "id": "form-admin-login-1"
+        }
+      ],
+      "stores": [
+        "@/stores/useAdminSession"
+      ],
+      "schemas": [],
+      "storageKeys": [],
+      "mocks": [],
+      "comments": []
+    },
+    {
+      "path": "/admin/logout",
+      "file": "app/(admin)/admin/logout/page.tsx",
+      "breadcrumbs": [],
+      "tabs": [],
+      "components": [],
+      "forms": [],
+      "stores": [
+        "@/stores/useAdminSession"
+      ],
+      "schemas": [],
+      "storageKeys": [],
+      "mocks": [],
+      "comments": [
+        "Nenhum formulário detectado automaticamente."
+      ]
+    },
+    {
+      "path": "/admin/operacoes",
+      "file": "app/(admin)/admin/operacoes/page.tsx",
+      "breadcrumbs": [],
+      "tabs": [],
+      "components": [
+        "ShipmentsTable",
+        "Alert",
+        "PoCTable",
+        "EventsTable",
+        "Flex",
+        "Select",
+        "RangePicker",
+        "Card",
+        "Skeleton",
+        "Row",
+        "Col",
+        "Statistic",
+        "Tabs",
+        "Tag",
+        "Space",
+        "Button",
+        "EyeOutlined",
+        "ReloadOutlined",
+        "Input",
+        "SearchOutlined",
+        "Checkbox",
+        "DownloadOutlined",
+        "Table",
+        "Drawer",
+        "Timeline",
+        "CheckOutlined"
+      ],
+      "forms": [],
+      "stores": [],
+      "schemas": [],
+      "storageKeys": [],
+      "mocks": [],
+      "comments": [
+        "Nenhum formulário detectado automaticamente."
+      ]
+    },
+    {
+      "path": "/admin/pontos-de-coleta",
+      "file": "app/(admin)/admin/pontos-de-coleta/page.tsx",
+      "breadcrumbs": [],
+      "tabs": [],
+      "components": [
+        "Flex",
+        "Title",
+        "Button",
+        "PlusOutlined",
+        "Card",
+        "SearchFilters",
+        "PointsTable",
+        "PointDrawer",
+        "Form",
+        "Form.Item",
+        "Input",
+        "SearchOutlined",
+        "Select",
+        "Space",
+        "ClearOutlined",
+        "ExclamationCircleOutlined",
+        "Link",
+        "StatusTag",
+        "Switch",
+        "EditOutlined",
+        "DeleteOutlined",
+        "Table",
+        "PJForm",
+        "EnderecoForm",
+        "PagamentoForm",
+        "Drawer",
+        "Spin",
+        "Tabs",
+        "Tag",
+        "Controller",
+        "InputNumber",
+        "Row",
+        "Col",
+        "Radio.Group",
+        "Radio.Button"
+      ],
+      "forms": [
+        {
+          "tempId": "form-1",
+          "library": "antd",
+          "componentPath": "components/pickup/SearchFilters.tsx",
+          "fields": [
+            {
+              "name": "q",
+              "type": "Input",
+              "validation": [],
+              "notes": [],
+              "source": "components/pickup/SearchFilters.tsx"
+            },
+            {
+              "name": "status",
+              "type": "Select",
+              "validation": [],
+              "initialValue": "all",
+              "dataSource": "{ label: 'Todos', value: 'all' }.{ label: 'Ativo', value: 'active' }.{ label: 'Bloqueado', value: 'blocked' }",
+              "notes": [],
+              "source": "components/pickup/SearchFilters.tsx"
+            },
+            {
+              "name": "uf",
+              "type": "Select",
+              "validation": [],
+              "dataSource": "UFS.map((uf) => ({ label: uf, value: uf }))",
+              "notes": [],
+              "source": "components/pickup/SearchFilters.tsx"
+            },
+            {
+              "name": "cidade",
+              "type": "Input",
+              "validation": [],
+              "notes": [],
+              "source": "components/pickup/SearchFilters.tsx"
+            }
+          ],
+          "actions": [],
+          "handlers": [],
+          "submitHandlers": [],
+          "schemas": [],
+          "storeActions": [],
+          "storageKeys": [],
+          "notes": [],
+          "id": "form-admin-pontos-de-coleta-1"
+        },
+        {
+          "tempId": "form-1",
+          "library": "antd",
+          "componentPath": "components/pickup/forms/PJForm.tsx",
+          "fields": [
+            {
+              "name": "field-1",
+              "label": "Razão Social",
+              "type": "Controller",
+              "validation": [],
+              "notes": [],
+              "source": "components/pickup/forms/PJForm.tsx"
+            },
+            {
+              "name": "field-2",
+              "label": "Nome Fantasia",
+              "type": "Controller",
+              "validation": [],
+              "notes": [],
+              "source": "components/pickup/forms/PJForm.tsx"
+            },
+            {
+              "name": "field-3",
+              "label": "CNPJ",
+              "type": "Controller",
+              "validation": [],
+              "notes": [],
+              "source": "components/pickup/forms/PJForm.tsx"
+            },
+            {
+              "name": "field-4",
+              "label": "Inscrição Estadual",
+              "type": "Controller",
+              "validation": [],
+              "notes": [],
+              "source": "components/pickup/forms/PJForm.tsx"
+            },
+            {
+              "name": "field-5",
+              "label": "E-mail",
+              "type": "Controller",
+              "validation": [],
+              "notes": [],
+              "source": "components/pickup/forms/PJForm.tsx"
+            },
+            {
+              "name": "field-6",
+              "label": "Telefone",
+              "type": "Controller",
+              "validation": [],
+              "notes": [],
+              "source": "components/pickup/forms/PJForm.tsx"
+            },
+            {
+              "name": "field-7",
+              "label": "Capacidade (pedidos/dia)",
+              "type": "Controller",
+              "validation": [],
+              "notes": [],
+              "source": "components/pickup/forms/PJForm.tsx"
+            },
+            {
+              "name": "razaoSocial",
+              "type": "Input",
+              "validation": [],
+              "notes": [],
+              "source": "components/pickup/forms/PJForm.tsx"
+            },
+            {
+              "name": "nomeFantasia",
+              "type": "Input",
+              "validation": [],
+              "notes": [],
+              "source": "components/pickup/forms/PJForm.tsx"
+            },
+            {
+              "name": "cnpj",
+              "type": "Input",
+              "validation": [],
+              "notes": [],
+              "source": "components/pickup/forms/PJForm.tsx"
+            },
+            {
+              "name": "ie",
+              "type": "Input",
+              "validation": [],
+              "notes": [],
+              "source": "components/pickup/forms/PJForm.tsx"
+            },
+            {
+              "name": "email",
+              "type": "Input",
+              "validation": [],
+              "notes": [],
+              "source": "components/pickup/forms/PJForm.tsx"
+            },
+            {
+              "name": "telefone",
+              "type": "Input",
+              "validation": [],
+              "notes": [],
+              "source": "components/pickup/forms/PJForm.tsx"
+            },
+            {
+              "name": "capacityPerDay",
+              "type": "InputNumber",
+              "validation": [],
+              "notes": [],
+              "source": "components/pickup/forms/PJForm.tsx"
+            }
+          ],
+          "actions": [],
+          "handlers": [],
+          "submitHandlers": [],
+          "schemas": [],
+          "storeActions": [],
+          "storageKeys": [],
+          "notes": [],
+          "id": "form-admin-pontos-de-coleta-2"
+        },
+        {
+          "tempId": "form-1",
+          "library": "antd",
+          "componentPath": "components/pickup/forms/EnderecoForm.tsx",
+          "fields": [
+            {
+              "name": "field-1",
+              "label": "CEP",
+              "type": "Controller",
+              "validation": [],
+              "notes": [],
+              "source": "components/pickup/forms/EnderecoForm.tsx"
+            },
+            {
+              "name": "field-2",
+              "label": "Logradouro",
+              "type": "Controller",
+              "validation": [],
+              "notes": [],
+              "source": "components/pickup/forms/EnderecoForm.tsx"
+            },
+            {
+              "name": "field-3",
+              "label": "Número",
+              "type": "Controller",
+              "validation": [],
+              "notes": [],
+              "source": "components/pickup/forms/EnderecoForm.tsx"
+            },
+            {
+              "name": "field-4",
+              "label": "Complemento",
+              "type": "Controller",
+              "validation": [],
+              "notes": [],
+              "source": "components/pickup/forms/EnderecoForm.tsx"
+            },
+            {
+              "name": "field-5",
+              "label": "Bairro",
+              "type": "Controller",
+              "validation": [],
+              "notes": [],
+              "source": "components/pickup/forms/EnderecoForm.tsx"
+            },
+            {
+              "name": "field-6",
+              "label": "Cidade",
+              "type": "Controller",
+              "validation": [],
+              "notes": [],
+              "source": "components/pickup/forms/EnderecoForm.tsx"
+            },
+            {
+              "name": "field-7",
+              "label": "UF",
+              "type": "Controller",
+              "validation": [],
+              "notes": [],
+              "source": "components/pickup/forms/EnderecoForm.tsx"
+            },
+            {
+              "name": "cep",
+              "type": "Input",
+              "validation": [],
+              "notes": [],
+              "source": "components/pickup/forms/EnderecoForm.tsx"
+            },
+            {
+              "name": "logradouro",
+              "type": "Input",
+              "validation": [],
+              "notes": [],
+              "source": "components/pickup/forms/EnderecoForm.tsx"
+            },
+            {
+              "name": "numero",
+              "type": "Input",
+              "validation": [],
+              "notes": [],
+              "source": "components/pickup/forms/EnderecoForm.tsx"
+            },
+            {
+              "name": "complemento",
+              "type": "Input",
+              "validation": [],
+              "notes": [],
+              "source": "components/pickup/forms/EnderecoForm.tsx"
+            },
+            {
+              "name": "bairro",
+              "type": "Input",
+              "validation": [],
+              "notes": [],
+              "source": "components/pickup/forms/EnderecoForm.tsx"
+            },
+            {
+              "name": "cidade",
+              "type": "Input",
+              "validation": [],
+              "notes": [],
+              "source": "components/pickup/forms/EnderecoForm.tsx"
+            },
+            {
+              "name": "uf",
+              "type": "Select",
+              "validation": [],
+              "notes": [],
+              "source": "components/pickup/forms/EnderecoForm.tsx"
+            }
+          ],
+          "actions": [],
+          "handlers": [],
+          "submitHandlers": [],
+          "schemas": [],
+          "storeActions": [],
+          "storageKeys": [],
+          "notes": [],
+          "id": "form-admin-pontos-de-coleta-3"
+        },
+        {
+          "tempId": "form-1",
+          "library": "antd",
+          "componentPath": "components/pickup/forms/PagamentoForm.tsx",
+          "fields": [
+            {
+              "name": "field-1",
+              "label": "Método de Pagamento",
+              "type": "Controller",
+              "validation": [],
+              "notes": [],
+              "source": "components/pickup/forms/PagamentoForm.tsx"
+            },
+            {
+              "name": "field-2",
+              "label": "Tipo de Chave PIX",
+              "type": "Controller",
+              "validation": [],
+              "notes": [],
+              "source": "components/pickup/forms/PagamentoForm.tsx"
+            },
+            {
+              "name": "field-3",
+              "label": "Chave PIX",
+              "type": "Controller",
+              "validation": [],
+              "notes": [],
+              "source": "components/pickup/forms/PagamentoForm.tsx"
+            },
+            {
+              "name": "field-4",
+              "label": "Código do Banco",
+              "type": "Controller",
+              "validation": [],
+              "notes": [],
+              "source": "components/pickup/forms/PagamentoForm.tsx"
+            },
+            {
+              "name": "field-5",
+              "label": "Agência",
+              "type": "Controller",
+              "validation": [],
+              "notes": [],
+              "source": "components/pickup/forms/PagamentoForm.tsx"
+            },
+            {
+              "name": "field-6",
+              "label": "Tipo de Conta",
+              "type": "Controller",
+              "validation": [],
+              "notes": [],
+              "source": "components/pickup/forms/PagamentoForm.tsx"
+            },
+            {
+              "name": "field-7",
+              "label": "Conta",
+              "type": "Controller",
+              "validation": [],
+              "notes": [],
+              "source": "components/pickup/forms/PagamentoForm.tsx"
+            },
+            {
+              "name": "field-8",
+              "label": "Nome do Titular",
+              "type": "Controller",
+              "validation": [],
+              "notes": [],
+              "source": "components/pickup/forms/PagamentoForm.tsx"
+            },
+            {
+              "name": "field-9",
+              "label": "CNPJ do Titular",
+              "type": "Controller",
+              "validation": [],
+              "notes": [],
+              "source": "components/pickup/forms/PagamentoForm.tsx"
+            },
+            {
+              "name": "field-10",
+              "label": "Dia do Repasse",
+              "type": "Controller",
+              "validation": [],
+              "notes": [],
+              "source": "components/pickup/forms/PagamentoForm.tsx"
+            },
+            {
+              "name": "field-11",
+              "label": "Valor Mínimo para Repasse",
+              "type": "Controller",
+              "validation": [],
+              "notes": [],
+              "source": "components/pickup/forms/PagamentoForm.tsx"
+            },
+            {
+              "name": "field-12",
+              "label": "Comissão por Item Recebido",
+              "type": "Controller",
+              "validation": [],
+              "notes": [],
+              "source": "components/pickup/forms/PagamentoForm.tsx"
+            },
+            {
+              "name": "paymentMethod.kind",
+              "type": "Radio.Group",
+              "validation": [],
+              "notes": [],
+              "source": "components/pickup/forms/PagamentoForm.tsx"
+            },
+            {
+              "name": "paymentMethod.pixType",
+              "type": "Select",
+              "validation": [],
+              "notes": [],
+              "source": "components/pickup/forms/PagamentoForm.tsx"
+            },
+            {
+              "name": "paymentMethod.pixKey",
+              "validation": [],
+              "notes": [],
+              "source": "components/pickup/forms/PagamentoForm.tsx"
+            },
+            {
+              "name": "paymentMethod.bankCode",
+              "type": "Input",
+              "validation": [],
+              "notes": [],
+              "source": "components/pickup/forms/PagamentoForm.tsx"
+            },
+            {
+              "name": "paymentMethod.branch",
+              "type": "Input",
+              "validation": [],
+              "notes": [],
+              "source": "components/pickup/forms/PagamentoForm.tsx"
+            },
+            {
+              "name": "paymentMethod.accountType",
+              "type": "Select",
+              "validation": [],
+              "notes": [],
+              "source": "components/pickup/forms/PagamentoForm.tsx"
+            },
+            {
+              "name": "paymentMethod.account",
+              "type": "Input",
+              "validation": [],
+              "notes": [],
+              "source": "components/pickup/forms/PagamentoForm.tsx"
+            },
+            {
+              "name": "paymentMethod.holderName",
+              "type": "Input",
+              "validation": [],
+              "notes": [],
+              "source": "components/pickup/forms/PagamentoForm.tsx"
+            },
+            {
+              "name": "paymentMethod.holderDocument",
+              "type": "Input",
+              "validation": [],
+              "notes": [],
+              "source": "components/pickup/forms/PagamentoForm.tsx"
+            },
+            {
+              "name": "payoutDay",
+              "type": "InputNumber",
+              "validation": [],
+              "notes": [],
+              "source": "components/pickup/forms/PagamentoForm.tsx"
+            },
+            {
+              "name": "minPayoutAmount",
+              "type": "InputNumber",
+              "validation": [],
+              "notes": [],
+              "source": "components/pickup/forms/PagamentoForm.tsx"
+            },
+            {
+              "name": "commissionPerItem",
+              "type": "InputNumber",
+              "validation": [],
+              "notes": [],
+              "source": "components/pickup/forms/PagamentoForm.tsx"
+            }
+          ],
+          "actions": [],
+          "handlers": [],
+          "submitHandlers": [],
+          "schemas": [],
+          "storeActions": [],
+          "storageKeys": [],
+          "notes": [],
+          "id": "form-admin-pontos-de-coleta-4"
+        }
+      ],
+      "stores": [
+        "@/stores/pontos"
+      ],
+      "schemas": [
+        "@/lib/pickup/schemas"
+      ],
+      "storageKeys": [],
+      "mocks": [],
+      "comments": []
+    },
+    {
+      "path": "/admin/suporte",
+      "file": "app/(admin)/admin/suporte/page.tsx",
+      "breadcrumbs": [],
+      "tabs": [],
+      "components": [
+        "Suspense",
+        "AdminSupportPageSkeleton",
+        "AdminSupportPageContent",
+        "Space",
+        "Typography.Title",
+        "Typography.Text",
+        "NewTicketList",
+        "TicketDetailsDrawer",
+        "Skeleton",
+        "Text",
+        "Tag",
+        "Input",
+        "SearchOutlined",
+        "Select",
+        "Table",
+        "Drawer",
+        "Empty",
+        "Title",
+        "Descriptions",
+        "Descriptions.Item",
+        "UserOutlined",
+        "Divider",
+        "Timeline",
+        "Space.Compact",
+        "TextArea",
+        "Button",
+        "SendOutlined"
+      ],
+      "forms": [],
+      "stores": [
+        "@/stores/support",
+        "@/stores/useAdminSession"
+      ],
+      "schemas": [
+        "@/lib/validation/support"
+      ],
+      "storageKeys": [],
+      "mocks": [],
+      "comments": [
+        "Nenhum formulário detectado automaticamente."
+      ]
+    },
+    {
+      "path": "/admin/suporte/[id]",
+      "file": "app/(admin)/admin/suporte/[id]/page.tsx",
+      "breadcrumbs": [],
+      "tabs": [],
+      "components": [
+        "Space",
+        "Breadcrumb",
+        "Link",
+        "Typography.Title",
+        "TicketDetails",
+        "MessageOutlined",
+        "FlagOutlined",
+        "IdcardOutlined",
+        "PlusCircleOutlined",
+        "Card",
+        "Empty",
+        "TicketDetailsSkeleton",
+        "Result",
+        "Typography.Link",
+        "TicketHeader",
+        "Typography.Paragraph",
+        "Flex",
+        "Timeline",
+        "Typography.Text",
+        "ReplyBox",
+        "Skeleton",
+        "Tag",
+        "CustomerServiceOutlined",
+        "ClockCircleOutlined",
+        "Select",
+        "Button",
+        "SendOutlined",
+        "Form",
+        "Form.Item",
+        "Input.TextArea",
+        "Upload",
+        "PaperClipOutlined"
+      ],
+      "forms": [
+        {
+          "tempId": "form-1",
+          "library": "antd",
+          "componentPath": "components/admin/support/ReplyBox.tsx",
+          "fields": [
+            {
+              "name": "message",
+              "label": "Mensagem",
+              "type": "Input.TextArea",
+              "validation": [
+                "required",
+                "message: Escreva a resposta ao cliente."
+              ],
+              "readOnly": "replyMutation.isPending",
+              "notes": [],
+              "source": "components/admin/support/ReplyBox.tsx"
+            }
+          ],
+          "actions": [
+            "onFinish: handleSubmit",
+            "Button submit"
+          ],
+          "handlers": [],
+          "submitHandlers": [
+            "handleSubmit"
+          ],
+          "schemas": [],
+          "storeActions": [],
+          "storageKeys": [],
+          "notes": [],
+          "id": "form-admin-suporte--id-1"
+        }
+      ],
+      "stores": [
+        "@/stores/useAdminSession"
+      ],
+      "schemas": [],
+      "storageKeys": [],
+      "mocks": [],
+      "comments": []
+    },
+    {
+      "path": "/admin/usuarios",
+      "file": "app/(admin)/admin/usuarios/page.tsx",
+      "breadcrumbs": [],
+      "tabs": [],
+      "components": [
+        "PageShell",
+        "Button",
+        "PlusOutlined",
+        "SearchFilters",
+        "UsersTable",
+        "UserDrawer",
+        "Flex",
+        "Typography.Title",
+        "Typography.Text",
+        "Input",
+        "SearchOutlined",
+        "Select",
+        "ReloadOutlined",
+        "Tag",
+        "Switch",
+        "Tooltip",
+        "EditOutlined",
+        "KeyOutlined",
+        "DeleteOutlined",
+        "Table",
+        "Drawer",
+        "Form",
+        "Form.Item",
+        "Controller",
+        "RolesChecklist",
+        "Alert",
+        "Collapse",
+        "Checkbox",
+        "Card"
+      ],
+      "forms": [
+        {
+          "tempId": "form-1",
+          "library": "antd",
+          "componentPath": "components/admin/users/UserDrawer.tsx",
+          "fields": [
+            {
+              "name": "field-1",
+              "label": "Nome",
+              "type": "Controller",
+              "validation": [],
+              "notes": [],
+              "source": "components/admin/users/UserDrawer.tsx"
+            },
+            {
+              "name": "field-2",
+              "label": "E-mail",
+              "type": "Controller",
+              "validation": [],
+              "notes": [],
+              "source": "components/admin/users/UserDrawer.tsx"
+            },
+            {
+              "name": "field-3",
+              "label": "Telefone",
+              "type": "Controller",
+              "validation": [],
+              "notes": [],
+              "source": "components/admin/users/UserDrawer.tsx"
+            },
+            {
+              "name": "field-4",
+              "label": "Status",
+              "type": "Controller",
+              "validation": [],
+              "notes": [],
+              "source": "components/admin/users/UserDrawer.tsx"
+            },
+            {
+              "name": "field-5",
+              "label": "Permissões",
+              "type": "Controller",
+              "validation": [],
+              "notes": [],
+              "source": "components/admin/users/UserDrawer.tsx"
+            },
+            {
+              "name": "name",
+              "type": "Input",
+              "validation": [],
+              "notes": [],
+              "source": "components/admin/users/UserDrawer.tsx"
+            },
+            {
+              "name": "email",
+              "type": "Input",
+              "validation": [],
+              "notes": [],
+              "source": "components/admin/users/UserDrawer.tsx"
+            },
+            {
+              "name": "phone",
+              "type": "Input",
+              "validation": [],
+              "notes": [],
+              "source": "components/admin/users/UserDrawer.tsx"
+            },
+            {
+              "name": "status",
+              "type": "Select",
+              "validation": [],
+              "notes": [],
+              "source": "components/admin/users/UserDrawer.tsx"
+            },
+            {
+              "name": "roles",
+              "type": "RolesChecklist",
+              "validation": [],
+              "notes": [],
+              "source": "components/admin/users/UserDrawer.tsx"
+            }
+          ],
+          "actions": [],
+          "handlers": [],
+          "submitHandlers": [],
+          "schemas": [
+            "@/lib/auth/schemas"
+          ],
+          "storeActions": [],
+          "storageKeys": [],
+          "notes": [],
+          "id": "form-admin-usuarios-1"
+        }
+      ],
+      "stores": [],
+      "schemas": [
+        "@/lib/auth/schemas"
+      ],
+      "storageKeys": [],
+      "mocks": [],
+      "comments": []
+    },
+    {
+      "path": "/auth/cadastro",
+      "file": "app/(auth)/auth/cadastro/page.tsx",
+      "breadcrumbs": [],
+      "tabs": [],
+      "components": [
+        "FormCard",
+        "Typography.Paragraph",
+        "Link",
+        "Form",
+        "Controller",
+        "Form.Item",
+        "Input",
+        "Input.Password",
+        "PasswordStrength",
+        "Checkbox",
+        "Button",
+        "Flex",
+        "Progress",
+        "Space",
+        "Typography.Text",
+        "Card",
+        "Typography.Title"
+      ],
+      "forms": [
+        {
+          "tempId": "form-1",
+          "library": "antd",
+          "componentPath": "app/(auth)/auth/cadastro/page.tsx",
+          "fields": [
+            {
+              "name": "field-1",
+              "label": "Nome completo",
+              "type": "Input",
+              "validation": [],
+              "notes": [],
+              "source": "app/(auth)/auth/cadastro/page.tsx"
+            },
+            {
+              "name": "field-2",
+              "label": "E-mail",
+              "type": "Input",
+              "validation": [],
+              "notes": [],
+              "source": "app/(auth)/auth/cadastro/page.tsx"
+            },
+            {
+              "name": "field-3",
+              "label": "Senha",
+              "type": "Input.Password",
+              "validation": [],
+              "notes": [],
+              "source": "app/(auth)/auth/cadastro/page.tsx"
+            },
+            {
+              "name": "field-4",
+              "label": "Confirmar senha",
+              "type": "Input.Password",
+              "validation": [],
+              "notes": [],
+              "source": "app/(auth)/auth/cadastro/page.tsx"
+            },
+            {
+              "name": "field-5",
+              "label": "Telefone (opcional)",
+              "type": "Input",
+              "validation": [],
+              "notes": [],
+              "source": "app/(auth)/auth/cadastro/page.tsx"
+            },
+            {
+              "name": "field-6",
+              "type": "Checkbox",
+              "validation": [],
+              "notes": [],
+              "source": "app/(auth)/auth/cadastro/page.tsx"
+            },
+            {
+              "name": "field-7",
+              "type": "Button",
+              "validation": [],
+              "notes": [],
+              "source": "app/(auth)/auth/cadastro/page.tsx"
+            },
+            {
+              "name": "nomeCompleto",
+              "type": "Form.Item",
+              "validation": [],
+              "notes": [],
+              "source": "app/(auth)/auth/cadastro/page.tsx"
+            },
+            {
+              "name": "email",
+              "type": "Form.Item",
+              "validation": [],
+              "notes": [],
+              "source": "app/(auth)/auth/cadastro/page.tsx"
+            },
+            {
+              "name": "senha",
+              "type": "Form.Item",
+              "validation": [],
+              "notes": [],
+              "source": "app/(auth)/auth/cadastro/page.tsx"
+            },
+            {
+              "name": "confirmarSenha",
+              "type": "Form.Item",
+              "validation": [],
+              "notes": [],
+              "source": "app/(auth)/auth/cadastro/page.tsx"
+            },
+            {
+              "name": "telefone",
+              "type": "Form.Item",
+              "validation": [],
+              "notes": [],
+              "source": "app/(auth)/auth/cadastro/page.tsx"
+            },
+            {
+              "name": "consentLGPD",
+              "type": "Form.Item",
+              "validation": [],
+              "notes": [],
+              "source": "app/(auth)/auth/cadastro/page.tsx"
+            }
+          ],
+          "actions": [
+            "onFinish: handleSubmit(onSubmit)",
+            "Button submit"
+          ],
+          "handlers": [],
+          "submitHandlers": [
+            "handleSubmit(onSubmit)"
+          ],
+          "schemas": [
+            "@/lib/validation/auth"
+          ],
+          "storeActions": [
+            "setUser"
+          ],
+          "storageKeys": [],
+          "notes": [],
+          "id": "form-auth-cadastro-1"
+        }
+      ],
+      "stores": [
+        "@/stores/auth"
+      ],
+      "schemas": [
+        "@/lib/validation/auth"
+      ],
+      "storageKeys": [],
+      "mocks": [],
+      "comments": []
+    },
+    {
+      "path": "/auth/confirmacao",
+      "file": "app/(auth)/auth/confirmacao/page.tsx",
+      "breadcrumbs": [],
+      "tabs": [],
+      "components": [
+        "FormCard",
+        "Typography.Paragraph",
+        "Link",
+        "Flex",
+        "Button",
+        "Card",
+        "Typography.Title"
+      ],
+      "forms": [],
+      "stores": [],
+      "schemas": [],
+      "storageKeys": [],
+      "mocks": [],
+      "comments": [
+        "Nenhum formulário detectado automaticamente."
+      ]
+    },
+    {
+      "path": "/auth/esqueci-senha",
+      "file": "app/(auth)/auth/esqueci-senha/page.tsx",
+      "breadcrumbs": [],
+      "tabs": [],
+      "components": [
+        "FormCard",
+        "Typography.Paragraph",
+        "Typography.Link",
+        "Space",
+        "Alert",
+        "EmailPreview",
+        "Button",
+        "Form",
+        "Controller",
+        "Form.Item",
+        "Input",
+        "Flex",
+        "Card",
+        "Typography.Title",
+        "Typography.Text"
+      ],
+      "forms": [
+        {
+          "tempId": "form-1",
+          "library": "antd",
+          "componentPath": "app/(auth)/auth/esqueci-senha/page.tsx",
+          "fields": [
+            {
+              "name": "field-1",
+              "label": "E-mail",
+              "type": "Input",
+              "validation": [],
+              "notes": [],
+              "source": "app/(auth)/auth/esqueci-senha/page.tsx"
+            },
+            {
+              "name": "email",
+              "type": "Form.Item",
+              "validation": [],
+              "notes": [],
+              "source": "app/(auth)/auth/esqueci-senha/page.tsx"
+            }
+          ],
+          "actions": [
+            "onFinish: handleSubmit((values) => mutation.mutate(values))",
+            "Button submit"
+          ],
+          "handlers": [],
+          "submitHandlers": [
+            "handleSubmit((values) => mutation.mutate(values))"
+          ],
+          "schemas": [
+            "@/lib/validation/auth"
+          ],
+          "storeActions": [],
+          "storageKeys": [],
+          "notes": [],
+          "id": "form-auth-esqueci-senha-1"
+        }
+      ],
+      "stores": [],
+      "schemas": [
+        "@/lib/validation/auth"
+      ],
+      "storageKeys": [],
+      "mocks": [],
+      "comments": []
+    },
+    {
+      "path": "/auth/login",
+      "file": "app/(auth)/auth/login/page.tsx",
+      "breadcrumbs": [],
+      "tabs": [],
+      "components": [
+        "Form",
+        "Alert",
+        "Controller",
+        "ELFormItem",
+        "ELInput",
+        "ELInput.Password",
+        "Checkbox",
+        "Link",
+        "ELButton",
+        "FormCard",
+        "Typography.Paragraph",
+        "ELCard",
+        "Flex",
+        "Card",
+        "Typography.Title",
+        "Button",
+        "Form.Item",
+        "Input",
+        "Input.Password",
+        "Input.TextArea"
+      ],
+      "forms": [
+        {
+          "tempId": "form-1",
+          "library": "react-hook-form",
+          "componentPath": "app/(auth)/auth/login/page.tsx",
+          "fields": [
+            {
+              "name": "email",
+              "label": "E-mail",
+              "type": "ELInput",
+              "validation": [
+                "required",
+                "email"
+              ],
+              "dataSource": "localStorage[enviolegal:last-email]",
+              "notes": [
+                "Pré-preenchido quando lembrarEmail estiver ativo."
+              ],
+              "source": "app/(auth)/auth/login/page.tsx"
+            },
+            {
+              "name": "senha",
+              "label": "Senha",
+              "type": "ELInput.Password",
+              "validation": [
+                "required"
+              ],
+              "notes": [],
+              "source": "app/(auth)/auth/login/page.tsx"
+            },
+            {
+              "name": "lembrarEmail",
+              "label": "Lembrar meu e-mail",
+              "type": "Checkbox",
+              "validation": [],
+              "notes": [
+                "Controla persistência local do último e-mail."
+              ],
+              "source": "app/(auth)/auth/login/page.tsx"
+            }
+          ],
+          "actions": [
+            "onFinish: handleSubmit(onSubmit)"
+          ],
+          "handlers": [],
+          "submitHandlers": [
+            "handleSubmit(onSubmit)"
+          ],
+          "schemas": [
+            "@/lib/validation/auth"
+          ],
+          "storeActions": [
+            "login"
+          ],
+          "storageKeys": [],
+          "notes": [
+            "Form Ant Design embrulhado em React Hook Form (Controllers)."
+          ],
+          "id": "form-auth-login-1"
+        }
+      ],
+      "stores": [
+        "@/stores/auth"
+      ],
+      "schemas": [
+        "@/lib/validation/auth"
+      ],
+      "storageKeys": [],
+      "mocks": [],
+      "comments": []
+    },
+    {
+      "path": "/auth/reset/[token]",
+      "file": "app/(auth)/auth/reset/[token]/page.tsx",
+      "breadcrumbs": [],
+      "tabs": [],
+      "components": [
+        "FormCard",
+        "Alert",
+        "Button",
+        "Typography.Paragraph",
+        "Typography.Link",
+        "Space",
+        "Form",
+        "Controller",
+        "Form.Item",
+        "Input.Password",
+        "PasswordStrength",
+        "Flex",
+        "Card",
+        "Typography.Title",
+        "Progress",
+        "Typography.Text"
+      ],
+      "forms": [
+        {
+          "tempId": "form-1",
+          "library": "antd",
+          "componentPath": "app/(auth)/auth/reset/[token]/page.tsx",
+          "fields": [
+            {
+              "name": "field-1",
+              "label": "Nova senha",
+              "type": "Input.Password",
+              "validation": [],
+              "notes": [],
+              "source": "app/(auth)/auth/reset/[token]/page.tsx"
+            },
+            {
+              "name": "field-2",
+              "label": "Confirmar nova senha",
+              "type": "Input.Password",
+              "validation": [],
+              "notes": [],
+              "source": "app/(auth)/auth/reset/[token]/page.tsx"
+            },
+            {
+              "name": "senha",
+              "type": "Form.Item",
+              "validation": [],
+              "notes": [],
+              "source": "app/(auth)/auth/reset/[token]/page.tsx"
+            },
+            {
+              "name": "confirmarSenha",
+              "type": "Form.Item",
+              "validation": [],
+              "notes": [],
+              "source": "app/(auth)/auth/reset/[token]/page.tsx"
+            }
+          ],
+          "actions": [
+            "onFinish: handleSubmit((values) => mutation.mutate(values))",
+            "Button submit"
+          ],
+          "handlers": [],
+          "submitHandlers": [
+            "handleSubmit((values) => mutation.mutate(values))"
+          ],
+          "schemas": [
+            "@/lib/validation/auth"
+          ],
+          "storeActions": [],
+          "storageKeys": [],
+          "notes": [],
+          "id": "form-auth-reset--token-1"
+        }
+      ],
+      "stores": [],
+      "schemas": [
+        "@/lib/validation/auth"
+      ],
+      "storageKeys": [],
+      "mocks": [],
+      "comments": []
+    },
+    {
+      "path": "/carrinho",
+      "file": "app/(dashboard)/carrinho/page.tsx",
+      "breadcrumbs": [],
+      "tabs": [],
+      "components": [
+        "Flex",
+        "Typography.Title",
+        "Skeleton",
+        "EmptyCart",
+        "Typography.Paragraph",
+        "Row",
+        "Col",
+        "CartTable",
+        "CartSummary",
+        "RemoveItemModal",
+        "Result",
+        "Button",
+        "Space",
+        "Typography.Text",
+        "Tag",
+        "InputNumber",
+        "Table",
+        "Card",
+        "Divider",
+        "Radio.Group",
+        "Radio",
+        "Modal"
+      ],
+      "forms": [],
+      "stores": [],
+      "schemas": [],
+      "storageKeys": [],
+      "mocks": [],
+      "comments": [
+        "Nenhum formulário detectado automaticamente."
+      ]
+    },
+    {
+      "path": "/carteira",
+      "file": "app/(dashboard)/carteira/page.tsx",
+      "breadcrumbs": [],
+      "tabs": [],
+      "components": [
+        "Alert",
+        "Typography.Link",
+        "BalanceCard",
+        "Card",
+        "TransactionsTable",
+        "AddFundsModal",
+        "Typography.Title",
+        "Typography.Text",
+        "Modal",
+        "Tabs",
+        "PixQRCode",
+        "Form",
+        "Form.Item",
+        "InputNumber",
+        "Button",
+        "Select",
+        "Empty",
+        "Table",
+        "Space",
+        "Typography.Paragraph"
+      ],
+      "forms": [
+        {
+          "tempId": "form-1",
+          "library": "antd",
+          "componentPath": "components/wallet/AddFundsModal.tsx",
+          "fields": [
+            {
+              "name": "amount",
+              "label": "Valor",
+              "type": "InputNumber",
+              "validation": [
+                "required"
+              ],
+              "notes": [],
+              "source": "components/wallet/AddFundsModal.tsx"
+            }
+          ],
+          "actions": [
+            "onFinish: (values: { amount: number }) => pixMutation.mutate(values.amount)",
+            "Button submit"
+          ],
+          "handlers": [],
+          "submitHandlers": [
+            "(values: { amount: number }) => pixMutation.mutate(values.amount)"
+          ],
+          "schemas": [],
+          "storeActions": [],
+          "storageKeys": [],
+          "notes": [],
+          "id": "form-carteira-1"
+        },
+        {
+          "tempId": "form-2",
+          "library": "antd",
+          "componentPath": "components/wallet/AddFundsModal.tsx",
+          "fields": [
+            {
+              "name": "amount",
+              "label": "Valor",
+              "type": "InputNumber",
+              "validation": [
+                "required"
+              ],
+              "notes": [],
+              "source": "components/wallet/AddFundsModal.tsx"
+            },
+            {
+              "name": "cardId",
+              "label": "Cartão",
+              "type": "Select",
+              "validation": [
+                "required",
+                "message: Selecione um cartão."
+              ],
+              "dataSource": "cardOptions",
+              "notes": [],
+              "source": "components/wallet/AddFundsModal.tsx"
+            },
+            {
+              "name": "field-3",
+              "type": "Button",
+              "validation": [],
+              "notes": [],
+              "source": "components/wallet/AddFundsModal.tsx"
+            }
+          ],
+          "actions": [
+            "onFinish: (values: { amount: number; cardId?: string }) =>\n                    cardMutation.mutate({\n                      amount: values.amount,\n                      cardId: values.cardId ?? selectedCardId,\n                    })",
+            "Button submit"
+          ],
+          "handlers": [],
+          "submitHandlers": [
+            "(values: { amount: number; cardId?: string }) =>\n                    cardMutation.mutate({\n                      amount: values.amount,\n                      cardId: values.cardId ?? selectedCardId,\n                    })"
+          ],
+          "schemas": [],
+          "storeActions": [],
+          "storageKeys": [],
+          "notes": [],
+          "id": "form-carteira-2"
+        }
+      ],
+      "stores": [],
+      "schemas": [],
+      "storageKeys": [],
+      "mocks": [],
+      "comments": []
+    },
+    {
+      "path": "/carteira/extrato",
+      "file": "app/(dashboard)/carteira/extrato/page.tsx",
+      "breadcrumbs": [],
+      "tabs": [],
+      "components": [
+        "Card",
+        "Button",
+        "Table"
+      ],
+      "forms": [],
+      "stores": [],
+      "schemas": [],
+      "storageKeys": [],
+      "mocks": [],
+      "comments": [
+        "Nenhum formulário detectado automaticamente."
+      ]
+    },
+    {
+      "path": "/carteira/faturas",
+      "file": "app/(dashboard)/carteira/faturas/page.tsx",
+      "breadcrumbs": [],
+      "tabs": [],
+      "components": [
+        "Flex",
+        "Modal",
+        "InputNumber",
+        "Space",
+        "Typography.Title",
+        "Typography.Paragraph",
+        "Button",
+        "Card",
+        "Table"
+      ],
+      "forms": [],
+      "stores": [],
+      "schemas": [],
+      "storageKeys": [],
+      "mocks": [],
+      "comments": [
+        "Nenhum formulário detectado automaticamente."
+      ]
+    },
+    {
+      "path": "/carteira/metodos",
+      "file": "app/(dashboard)/carteira/metodos/page.tsx",
+      "breadcrumbs": [],
+      "tabs": [],
+      "components": [
+        "Modal",
+        "Form",
+        "Form.Item",
+        "Input",
+        "Space",
+        "InputNumber",
+        "Flex",
+        "Typography.Title",
+        "Typography.Paragraph",
+        "Button",
+        "PaymentMethodCard",
+        "AddFundsModal",
+        "Tabs",
+        "PixQRCode",
+        "Select",
+        "Empty",
+        "Card",
+        "Typography.Text"
+      ],
+      "forms": [
+        {
+          "tempId": "form-1",
+          "library": "antd",
+          "componentPath": "app/(dashboard)/carteira/metodos/page.tsx",
+          "fields": [
+            {
+              "name": "holder",
+              "label": "Titular",
+              "type": "Input",
+              "validation": [
+                "required"
+              ],
+              "notes": [],
+              "source": "app/(dashboard)/carteira/metodos/page.tsx"
+            },
+            {
+              "name": "number",
+              "label": "Número",
+              "type": "Input",
+              "validation": [
+                "required"
+              ],
+              "notes": [],
+              "source": "app/(dashboard)/carteira/metodos/page.tsx"
+            },
+            {
+              "name": "expMonth",
+              "label": "Mês",
+              "type": "InputNumber",
+              "validation": [
+                "required"
+              ],
+              "notes": [],
+              "source": "app/(dashboard)/carteira/metodos/page.tsx"
+            },
+            {
+              "name": "expYear",
+              "label": "Ano",
+              "type": "InputNumber",
+              "validation": [
+                "required"
+              ],
+              "notes": [],
+              "source": "app/(dashboard)/carteira/metodos/page.tsx"
+            },
+            {
+              "name": "cvc",
+              "label": "CVC",
+              "type": "Input",
+              "validation": [
+                "required"
+              ],
+              "notes": [],
+              "source": "app/(dashboard)/carteira/metodos/page.tsx"
+            }
+          ],
+          "actions": [
+            "onFinish: (values) => addCardMutation.mutate(values)"
+          ],
+          "handlers": [],
+          "submitHandlers": [
+            "(values) => addCardMutation.mutate(values)"
+          ],
+          "schemas": [],
+          "storeActions": [],
+          "storageKeys": [],
+          "notes": [],
+          "id": "form-carteira-metodos-1"
+        },
+        {
+          "tempId": "form-1",
+          "library": "antd",
+          "componentPath": "components/wallet/AddFundsModal.tsx",
+          "fields": [
+            {
+              "name": "amount",
+              "label": "Valor",
+              "type": "InputNumber",
+              "validation": [
+                "required"
+              ],
+              "notes": [],
+              "source": "components/wallet/AddFundsModal.tsx"
+            }
+          ],
+          "actions": [
+            "onFinish: (values: { amount: number }) => pixMutation.mutate(values.amount)",
+            "Button submit"
+          ],
+          "handlers": [],
+          "submitHandlers": [
+            "(values: { amount: number }) => pixMutation.mutate(values.amount)"
+          ],
+          "schemas": [],
+          "storeActions": [],
+          "storageKeys": [],
+          "notes": [],
+          "id": "form-carteira-metodos-2"
+        },
+        {
+          "tempId": "form-2",
+          "library": "antd",
+          "componentPath": "components/wallet/AddFundsModal.tsx",
+          "fields": [
+            {
+              "name": "amount",
+              "label": "Valor",
+              "type": "InputNumber",
+              "validation": [
+                "required"
+              ],
+              "notes": [],
+              "source": "components/wallet/AddFundsModal.tsx"
+            },
+            {
+              "name": "cardId",
+              "label": "Cartão",
+              "type": "Select",
+              "validation": [
+                "required",
+                "message: Selecione um cartão."
+              ],
+              "dataSource": "cardOptions",
+              "notes": [],
+              "source": "components/wallet/AddFundsModal.tsx"
+            },
+            {
+              "name": "field-3",
+              "type": "Button",
+              "validation": [],
+              "notes": [],
+              "source": "components/wallet/AddFundsModal.tsx"
+            }
+          ],
+          "actions": [
+            "onFinish: (values: { amount: number; cardId?: string }) =>\n                    cardMutation.mutate({\n                      amount: values.amount,\n                      cardId: values.cardId ?? selectedCardId,\n                    })",
+            "Button submit"
+          ],
+          "handlers": [],
+          "submitHandlers": [
+            "(values: { amount: number; cardId?: string }) =>\n                    cardMutation.mutate({\n                      amount: values.amount,\n                      cardId: values.cardId ?? selectedCardId,\n                    })"
+          ],
+          "schemas": [],
+          "storeActions": [],
+          "storageKeys": [],
+          "notes": [],
+          "id": "form-carteira-metodos-3"
+        }
+      ],
+      "stores": [],
+      "schemas": [],
+      "storageKeys": [],
+      "mocks": [],
+      "comments": []
+    },
+    {
+      "path": "/coletas",
+      "file": "app/(dashboard)/coletas/page.tsx",
+      "breadcrumbs": [],
+      "tabs": [],
+      "components": [
+        "PageShell",
+        "SearchFilters",
+        "ColetasTable",
+        "Flex",
+        "Typography.Title",
+        "Typography.Text",
+        "Input",
+        "SearchOutlined",
+        "Select",
+        "Button",
+        "ReloadOutlined",
+        "Space",
+        "EnvironmentOutlined",
+        "EyeOutlined",
+        "Alert",
+        "Table",
+        "ColetaDetailDrawer",
+        "ClockCircleOutlined",
+        "SyncOutlined",
+        "CheckCircleOutlined",
+        "CloseCircleOutlined",
+        "Tag",
+        "Drawer",
+        "Descriptions",
+        "Descriptions.Item",
+        "TextArea",
+        "Timeline"
+      ],
+      "forms": [],
+      "stores": [
+        "@/stores/coletas"
+      ],
+      "schemas": [],
+      "storageKeys": [],
+      "mocks": [],
+      "comments": [
+        "Nenhum formulário detectado automaticamente."
+      ]
+    },
+    {
+      "path": "/coletas/[id]",
+      "file": "app/(dashboard)/coletas/[id]/page.tsx",
+      "title": "pickup.id",
+      "breadcrumbs": [],
+      "tabs": [],
+      "components": [
+        "Card",
+        "Typography.Text",
+        "Alert",
+        "Flex",
+        "Space",
+        "Typography.Title",
+        "Typography.Paragraph",
+        "Descriptions",
+        "Descriptions.Item",
+        "PickupStatusTag",
+        "Button",
+        "PickupTimeline",
+        "Form",
+        "Form.Item",
+        "Select",
+        "Input.TextArea",
+        "Tag",
+        "Timeline"
+      ],
+      "forms": [
+        {
+          "tempId": "form-1",
+          "library": "antd",
+          "componentPath": "app/(dashboard)/coletas/[id]/page.tsx",
+          "fields": [
+            {
+              "name": "status",
+              "label": "Status",
+              "type": "Select",
+              "validation": [
+                "required"
+              ],
+              "dataSource": "STATUS_OPTIONS",
+              "notes": [],
+              "source": "app/(dashboard)/coletas/[id]/page.tsx"
+            },
+            {
+              "name": "description",
+              "label": "Descrição",
+              "type": "Input.TextArea",
+              "validation": [],
+              "notes": [],
+              "source": "app/(dashboard)/coletas/[id]/page.tsx"
+            }
+          ],
+          "actions": [
+            "onFinish: (values: { status: PickupStatus; description?: string }) =>\n                updateStatusMutation.mutate(values)",
+            "Button submit"
+          ],
+          "handlers": [],
+          "submitHandlers": [
+            "(values: { status: PickupStatus; description?: string }) =>\n                updateStatusMutation.mutate(values)"
+          ],
+          "schemas": [],
+          "storeActions": [],
+          "storageKeys": [],
+          "notes": [],
+          "id": "form-coletas--id-1"
+        },
+        {
+          "tempId": "form-2",
+          "library": "antd",
+          "componentPath": "app/(dashboard)/coletas/[id]/page.tsx",
+          "fields": [
+            {
+              "name": "code",
+              "label": "Status",
+              "type": "Select",
+              "validation": [
+                "required"
+              ],
+              "dataSource": "WEBHOOK_OPTIONS",
+              "notes": [],
+              "source": "app/(dashboard)/coletas/[id]/page.tsx"
+            },
+            {
+              "name": "description",
+              "label": "Descrição",
+              "type": "Input.TextArea",
+              "validation": [
+                "required"
+              ],
+              "notes": [],
+              "source": "app/(dashboard)/coletas/[id]/page.tsx"
+            }
+          ],
+          "actions": [
+            "onFinish: (values: { code: string; description: string }) =>\n                webhookMutation.mutate(values)",
+            "Button submit"
+          ],
+          "handlers": [],
+          "submitHandlers": [
+            "(values: { code: string; description: string }) =>\n                webhookMutation.mutate(values)"
+          ],
+          "schemas": [],
+          "storeActions": [],
+          "storageKeys": [],
+          "notes": [],
+          "id": "form-coletas--id-2"
+        }
+      ],
+      "stores": [],
+      "schemas": [],
+      "storageKeys": [],
+      "mocks": [],
+      "comments": []
+    },
+    {
+      "path": "/coletas/nova",
+      "file": "app/(dashboard)/coletas/nova/page.tsx",
+      "breadcrumbs": [],
+      "tabs": [],
+      "components": [
+        "Flex",
+        "Typography.Title",
+        "Typography.Paragraph",
+        "Skeleton",
+        "Typography.Text",
+        "PickupWizard",
+        "Steps",
+        "Card",
+        "PickupShipmentsTable",
+        "Space",
+        "Controller",
+        "Form.Item",
+        "DatePicker",
+        "TimePicker",
+        "Select",
+        "Input.TextArea",
+        "Button",
+        "PickupSummary",
+        "Table",
+        "Descriptions",
+        "Descriptions.Item"
+      ],
+      "forms": [
+        {
+          "tempId": "form-1",
+          "library": "react-hook-form",
+          "componentPath": "components/pickups/PickupWizard.tsx",
+          "fields": [
+            {
+              "name": "schedule.date",
+              "type": "Form.Item",
+              "validation": [],
+              "notes": [],
+              "source": "components/pickups/PickupWizard.tsx"
+            },
+            {
+              "name": "schedule.windowStart",
+              "type": "Form.Item",
+              "validation": [],
+              "notes": [],
+              "source": "components/pickups/PickupWizard.tsx"
+            },
+            {
+              "name": "schedule.windowEnd",
+              "type": "Form.Item",
+              "validation": [],
+              "notes": [],
+              "source": "components/pickups/PickupWizard.tsx"
+            },
+            {
+              "name": "carrierPref",
+              "type": "Form.Item",
+              "validation": [],
+              "notes": [],
+              "source": "components/pickups/PickupWizard.tsx"
+            },
+            {
+              "name": "notes",
+              "type": "Form.Item",
+              "validation": [],
+              "notes": [],
+              "source": "components/pickups/PickupWizard.tsx"
+            }
+          ],
+          "actions": [
+            "onSubmit: handleSubmit(onSubmit)",
+            "Button submit"
+          ],
+          "handlers": [],
+          "submitHandlers": [
+            "handleSubmit(onSubmit)"
+          ],
+          "schemas": [
+            "@/lib/validation/company",
+            "@/lib/validation/pickup"
+          ],
+          "resolver": "zodResolver(pickupPayloadSchema) as Resolver<WizardForm>",
+          "storeActions": [],
+          "storageKeys": [],
+          "notes": [],
+          "id": "form-coletas-nova-1"
+        }
+      ],
+      "stores": [],
+      "schemas": [
+        "@/lib/validation/company",
+        "@/lib/validation/pickup"
+      ],
+      "storageKeys": [],
+      "mocks": [],
+      "comments": []
+    },
+    {
+      "path": "/conta/perfil",
+      "file": "app/(dashboard)/conta/perfil/page.tsx",
+      "breadcrumbs": [],
+      "tabs": [],
+      "components": [],
+      "forms": [],
+      "stores": [],
+      "schemas": [],
+      "storageKeys": [],
+      "mocks": [],
+      "comments": [
+        "Nenhum formulário detectado automaticamente."
+      ]
+    },
+    {
+      "path": "/cotacoes",
+      "file": "app/(dashboard)/cotacoes/page.tsx",
+      "breadcrumbs": [],
+      "tabs": [],
+      "components": [
+        "PageShell",
+        "ELCard",
+        "ELSkeleton",
+        "ELEmpty",
+        "QuoteForm",
+        "Space",
+        "Switch",
+        "Typography.Text",
+        "Radio.Group",
+        "Radio",
+        "OriginCard",
+        "Form.Item",
+        "AddressSelect",
+        "DestinationCard",
+        "Tag",
+        "Controller",
+        "Spin",
+        "CheckCircleTwoTone",
+        "CloseCircleTwoTone",
+        "Input",
+        "RecipientSelect",
+        "FormProvider",
+        "Form",
+        "Card",
+        "RouteSummaryBar",
+        "Alert",
+        "RouteModeTag",
+        "Steps",
+        "RouteCards",
+        "Row",
+        "Col",
+        "InputNumber",
+        "Typography.Title",
+        "Flex",
+        "Button",
+        "Typography.Paragraph",
+        "VolumesGrid",
+        "Divider",
+        "Modal",
+        "AddressModal",
+        "RecipientModal",
+        "Skeleton",
+        "Empty",
+        "ELButton",
+        "DeleteOutlined",
+        "PlusOutlined",
+        "Select",
+        "CepInput",
+        "RollbackOutlined",
+        "SwapRightOutlined",
+        "Badge.Ribbon",
+        "ArrowDownOutlined",
+        "ArrowRightOutlined",
+        "SummaryPart",
+        "CardContainer",
+        "ArrowIcon",
+        "BankOutlined",
+        "EnvironmentOutlined"
+      ],
+      "forms": [
+        {
+          "tempId": "form-1",
+          "library": "antd",
+          "componentPath": "components/quote/QuoteForm.tsx",
+          "fields": [
+            {
+              "name": "field-1",
+              "label": "Valor do seguro (R$)",
+              "type": "InputNumber",
+              "validation": [],
+              "notes": [],
+              "source": "components/quote/QuoteForm.tsx"
+            },
+            {
+              "name": "seguroValor",
+              "type": "Form.Item",
+              "validation": [],
+              "notes": [],
+              "source": "components/quote/QuoteForm.tsx"
+            },
+            {
+              "name": "coleta",
+              "type": "Flex",
+              "validation": [],
+              "notes": [],
+              "source": "components/quote/QuoteForm.tsx"
+            }
+          ],
+          "actions": [
+            "onFinish: handleSubmit(onSubmit)",
+            "Button submit"
+          ],
+          "handlers": [],
+          "submitHandlers": [
+            "handleSubmit(onSubmit)"
+          ],
+          "schemas": [],
+          "storeActions": [
+            "storedForm",
+            "setResults"
+          ],
+          "storageKeys": [],
+          "notes": [],
+          "id": "form-cotacoes-1"
+        },
+        {
+          "tempId": "form-1",
+          "library": "react-hook-form",
+          "componentPath": "components/account/AddressModal.tsx",
+          "fields": [
+            {
+              "name": "label",
+              "type": "Form.Item",
+              "validation": [],
+              "notes": [],
+              "source": "components/account/AddressModal.tsx"
+            },
+            {
+              "name": "numero",
+              "type": "Form.Item",
+              "validation": [],
+              "notes": [],
+              "source": "components/account/AddressModal.tsx"
+            },
+            {
+              "name": "complemento",
+              "type": "Form.Item",
+              "validation": [],
+              "notes": [],
+              "source": "components/account/AddressModal.tsx"
+            },
+            {
+              "name": "logradouro",
+              "type": "Form.Item",
+              "validation": [],
+              "notes": [],
+              "source": "components/account/AddressModal.tsx"
+            },
+            {
+              "name": "bairro",
+              "type": "Form.Item",
+              "validation": [],
+              "notes": [],
+              "source": "components/account/AddressModal.tsx"
+            },
+            {
+              "name": "cidade",
+              "type": "Form.Item",
+              "validation": [],
+              "notes": [],
+              "source": "components/account/AddressModal.tsx"
+            },
+            {
+              "name": "uf",
+              "type": "Form.Item",
+              "validation": [],
+              "notes": [],
+              "source": "components/account/AddressModal.tsx"
+            },
+            {
+              "name": "isDefault",
+              "type": "Form.Item",
+              "validation": [],
+              "notes": [],
+              "source": "components/account/AddressModal.tsx"
+            }
+          ],
+          "actions": [],
+          "handlers": [],
+          "submitHandlers": [],
+          "schemas": [],
+          "resolver": "zodResolver(addressSchema)",
+          "storeActions": [],
+          "storageKeys": [],
+          "notes": [],
+          "id": "form-cotacoes-2"
+        },
+        {
+          "tempId": "form-1",
+          "library": "react-hook-form",
+          "componentPath": "components/recipients/RecipientModal.tsx",
+          "fields": [
+            {
+              "name": "name",
+              "type": "Form.Item",
+              "validation": [],
+              "notes": [],
+              "source": "components/recipients/RecipientModal.tsx"
+            },
+            {
+              "name": "doc",
+              "type": "Form.Item",
+              "validation": [],
+              "notes": [],
+              "source": "components/recipients/RecipientModal.tsx"
+            },
+            {
+              "name": "phone",
+              "type": "Form.Item",
+              "validation": [],
+              "notes": [],
+              "source": "components/recipients/RecipientModal.tsx"
+            },
+            {
+              "name": "email",
+              "type": "Form.Item",
+              "validation": [],
+              "notes": [],
+              "source": "components/recipients/RecipientModal.tsx"
+            },
+            {
+              "name": "numero",
+              "type": "Form.Item",
+              "validation": [],
+              "notes": [],
+              "source": "components/recipients/RecipientModal.tsx"
+            },
+            {
+              "name": "complemento",
+              "type": "Form.Item",
+              "validation": [],
+              "notes": [],
+              "source": "components/recipients/RecipientModal.tsx"
+            },
+            {
+              "name": "logradouro",
+              "type": "Form.Item",
+              "validation": [],
+              "notes": [],
+              "source": "components/recipients/RecipientModal.tsx"
+            },
+            {
+              "name": "bairro",
+              "type": "Form.Item",
+              "validation": [],
+              "notes": [],
+              "source": "components/recipients/RecipientModal.tsx"
+            },
+            {
+              "name": "cidade",
+              "type": "Form.Item",
+              "validation": [],
+              "notes": [],
+              "source": "components/recipients/RecipientModal.tsx"
+            },
+            {
+              "name": "uf",
+              "type": "Form.Item",
+              "validation": [],
+              "notes": [],
+              "source": "components/recipients/RecipientModal.tsx"
+            }
+          ],
+          "actions": [],
+          "handlers": [],
+          "submitHandlers": [],
+          "schemas": [],
+          "resolver": "zodResolver(recipientSchema)",
+          "storeActions": [],
+          "storageKeys": [],
+          "notes": [],
+          "id": "form-cotacoes-3"
+        }
+      ],
+      "stores": [
+        "@/store/useQuoteStore"
+      ],
+      "schemas": [
+        "@/lib/validation/company"
+      ],
+      "storageKeys": [],
+      "mocks": [],
+      "comments": []
+    },
+    {
+      "path": "/cotacoes/finalizar",
+      "file": "app/(dashboard)/cotacoes/finalizar/page.tsx",
+      "breadcrumbs": [],
+      "tabs": [],
+      "components": [
+        "Skeleton",
+        "FormProvider",
+        "Flex",
+        "ResultsBanner",
+        "Row",
+        "Col",
+        "Space",
+        "DocumentChooser",
+        "PostingUnitPicker",
+        "RecipientForm",
+        "LabelPreview",
+        "Card",
+        "Controller",
+        "Form.Item",
+        "Select",
+        "Button",
+        "Typography.Text",
+        "Typography.Title",
+        "Typography.Paragraph",
+        "Tabs",
+        "NFeForm",
+        "DeclarationItems",
+        "Alert",
+        "Input",
+        "SearchOutlined",
+        "Radio.Group",
+        "List",
+        "List.Item",
+        "Radio",
+        "EnvironmentOutlined",
+        "Switch",
+        "MapModal",
+        "UserOutlined",
+        "PhoneOutlined",
+        "MailOutlined",
+        "ContactsOutlined",
+        "Input.TextArea",
+        "Checkbox",
+        "Tag",
+        "HomeOutlined",
+        "TagOutlined",
+        "CalendarOutlined",
+        "DividerSection",
+        "InboxOutlined",
+        "Modal",
+        "NFeGrid",
+        "DeleteOutlined",
+        "InputNumber",
+        "PlusOutlined",
+        "AimOutlined",
+        "Table",
+        "Dragger"
+      ],
+      "forms": [
+        {
+          "tempId": "form-1",
+          "library": "react-hook-form",
+          "componentPath": "app/(dashboard)/cotacoes/finalizar/page.tsx",
+          "fields": [
+            {
+              "name": "payment.method",
+              "type": "Form.Item",
+              "validation": [],
+              "notes": [],
+              "source": "app/(dashboard)/cotacoes/finalizar/page.tsx"
+            }
+          ],
+          "actions": [],
+          "handlers": [],
+          "submitHandlers": [],
+          "schemas": [],
+          "resolver": "zodResolver<FinalizeFormValues, unknown, FinalizeFormValues>(\n      createFinalizeFormSchema(pickupAtOrigin),\n    )",
+          "storeActions": [
+            "results",
+            "selection"
+          ],
+          "storageKeys": [],
+          "notes": [],
+          "id": "form-cotacoes-finalizar-1"
+        }
+      ],
+      "stores": [
+        "@/store/useQuoteStore",
+        "@/stores/pontos",
+        "@/stores/checkout"
+      ],
+      "schemas": [],
+      "storageKeys": [],
+      "mocks": [],
+      "comments": []
+    },
+    {
+      "path": "/cotacoes/resultados",
+      "file": "app/(dashboard)/cotacoes/resultados/page.tsx",
+      "breadcrumbs": [],
+      "tabs": [],
+      "components": [
+        "Flex",
+        "ResultsBanner",
+        "ResultsTable",
+        "Modal",
+        "Input",
+        "Space",
+        "Typography.Paragraph",
+        "ContentDeclarationModal",
+        "Card",
+        "Row",
+        "Col",
+        "Typography.Text",
+        "HomeOutlined",
+        "Typography.Title",
+        "Tag",
+        "TagOutlined",
+        "EnvironmentOutlined",
+        "CalendarOutlined",
+        "DividerSection",
+        "Button",
+        "InboxOutlined",
+        "Avatar",
+        "FieldTimeOutlined",
+        "ArrowDownOutlined",
+        "SafetyCertificateOutlined",
+        "LogoutOutlined",
+        "Segmented",
+        "Table",
+        "Empty",
+        "SafetyOutlined",
+        "Checkbox",
+        "FileTextOutlined"
+      ],
+      "forms": [],
+      "stores": [
+        "@/store/useQuoteStore"
+      ],
+      "schemas": [],
+      "storageKeys": [],
+      "mocks": [],
+      "comments": [
+        "Nenhum formulário detectado automaticamente."
+      ]
+    },
+    {
+      "path": "/cotar",
+      "file": "app/(dashboard)/cotar/page.tsx",
+      "breadcrumbs": [],
+      "tabs": [],
+      "components": [],
+      "forms": [],
+      "stores": [],
+      "schemas": [],
+      "storageKeys": [],
+      "mocks": [],
+      "comments": [
+        "Nenhum formulário detectado automaticamente."
+      ]
+    },
+    {
+      "path": "/devolucoes",
+      "file": "app/(dashboard)/devolucoes/page.tsx",
+      "breadcrumbs": [],
+      "tabs": [],
+      "components": [],
+      "forms": [],
+      "stores": [],
+      "schemas": [],
+      "storageKeys": [],
+      "mocks": [],
+      "comments": [
+        "Nenhum formulário detectado automaticamente."
+      ]
+    },
+    {
+      "path": "/etiquetas",
+      "file": "app/(dashboard)/etiquetas/page.tsx",
+      "breadcrumbs": [],
+      "tabs": [],
+      "components": [
+        "App",
+        "Flex",
+        "Breadcrumb",
+        "Typography.Title",
+        "Typography.Paragraph",
+        "LabelsTable",
+        "LabelModal",
+        "Tag",
+        "Space",
+        "Button",
+        "Input.Search",
+        "Select",
+        "RangePicker",
+        "Skeleton",
+        "Empty",
+        "Table",
+        "Modal",
+        "Tabs",
+        "Typography.Text",
+        "Descriptions",
+        "Descriptions.Item"
+      ],
+      "forms": [],
+      "stores": [],
+      "schemas": [],
+      "storageKeys": [],
+      "mocks": [],
+      "comments": [
+        "Nenhum formulário detectado automaticamente."
+      ]
+    },
+    {
+      "path": "/login",
+      "file": "app/login/page.tsx",
+      "breadcrumbs": [],
+      "tabs": [],
+      "components": [
+        "Card",
+        "Typography.Title",
+        "Form",
+        "Form.Item",
+        "Input",
+        "Input.Password",
+        "Button",
+        "Typography.Paragraph",
+        "Link"
+      ],
+      "forms": [
+        {
+          "tempId": "form-1",
+          "library": "antd",
+          "componentPath": "app/login/page.tsx",
+          "fields": [
+            {
+              "name": "email",
+              "label": "E-mail",
+              "type": "Input",
+              "validation": [
+                "required",
+                "message: Informe seu e-mail",
+                "type: email",
+                "message: E-mail inválido"
+              ],
+              "notes": [],
+              "source": "app/login/page.tsx"
+            },
+            {
+              "name": "senha",
+              "label": "Senha",
+              "type": "Input.Password",
+              "validation": [
+                "required",
+                "message: Informe sua senha"
+              ],
+              "notes": [],
+              "source": "app/login/page.tsx"
+            },
+            {
+              "name": "field-3",
+              "type": "Button",
+              "validation": [],
+              "notes": [],
+              "source": "app/login/page.tsx"
+            }
+          ],
+          "actions": [
+            "onFinish: onFinish",
+            "Button submit"
+          ],
+          "handlers": [],
+          "submitHandlers": [
+            "onFinish"
+          ],
+          "schemas": [],
+          "storeActions": [
+            "login"
+          ],
+          "storageKeys": [],
+          "notes": [],
+          "id": "form-login-1"
+        }
+      ],
+      "stores": [
+        "@/stores/auth"
+      ],
+      "schemas": [],
+      "storageKeys": [],
+      "mocks": [],
+      "comments": []
+    },
+    {
+      "path": "/minha-conta",
+      "file": "app/(dashboard)/minha-conta/page.tsx",
+      "title": "Minha Conta",
+      "breadcrumbs": [],
+      "tabs": [],
+      "components": [
+        "AccountTabs",
+        "Tabs",
+        "PersonalForm",
+        "AddressesList",
+        "CardsList",
+        "RecipientsList",
+        "SecurityForm",
+        "Card",
+        "Space",
+        "Typography.Title",
+        "Controller",
+        "Flex",
+        "Button",
+        "Avatar",
+        "Popconfirm",
+        "DeleteOutlined",
+        "Spin",
+        "Typography.Text",
+        "Alert",
+        "Row",
+        "Col",
+        "Form.Item",
+        "Input",
+        "Switch",
+        "Typography.Paragraph",
+        "Link",
+        "PlusOutlined",
+        "List",
+        "List.Item",
+        "List.Item.Meta",
+        "Tag",
+        "AddressModal",
+        "CreditCardOutlined",
+        "CardModal",
+        "SearchOutlined",
+        "RecipientModal",
+        "Input.Password",
+        "Modal",
+        "FormProvider",
+        "CepInput"
+      ],
+      "forms": [
+        {
+          "tempId": "form-1",
+          "library": "react-hook-form",
+          "componentPath": "components/account/PersonalForm.tsx",
+          "fields": [
+            {
+              "name": "avatarDataUrl",
+              "label": "Foto do usuário",
+              "type": "Upload",
+              "validation": [
+                "max:2MB",
+                "mimetypes:image/jpeg,image/png"
+              ],
+              "notes": [
+                "Foto clicável com confirmação para remover; CEP gerenciado na aba dedicada."
+              ],
+              "source": "components/account/PersonalForm.tsx"
+            },
+            {
+              "name": "fullName",
+              "label": "Nome completo",
+              "type": "Input",
+              "validation": [
+                "required",
+                "min:3"
+              ],
+              "notes": [],
+              "source": "components/account/PersonalForm.tsx"
+            },
+            {
+              "name": "email",
+              "label": "E-mail",
+              "type": "Input",
+              "validation": [
+                "required",
+                "email"
+              ],
+              "notes": [
+                "Normalizado para minúsculas antes de salvar."
+              ],
+              "source": "components/account/PersonalForm.tsx"
+            },
+            {
+              "name": "phone",
+              "label": "Telefone",
+              "type": "Input",
+              "validation": [
+                "required",
+                "digits:10-11"
+              ],
+              "mask": "(##) #####-####",
+              "notes": [],
+              "source": "components/account/PersonalForm.tsx"
+            },
+            {
+              "name": "cpf",
+              "label": "CPF",
+              "type": "Input",
+              "validation": [
+                "required",
+                "cpf"
+              ],
+              "mask": "000.000.000-00",
+              "notes": [],
+              "source": "components/account/PersonalForm.tsx"
+            },
+            {
+              "name": "cnpj",
+              "label": "CNPJ",
+              "type": "Input",
+              "validation": [
+                "required_when:hasCompany",
+                "cnpj"
+              ],
+              "mask": "00.000.000/0000-00",
+              "visibility": "Alternador 'Adicionar dados de empresa'",
+              "notes": [],
+              "source": "components/account/PersonalForm.tsx"
+            },
+            {
+              "name": "razaoSocial",
+              "label": "Razão social",
+              "type": "Input",
+              "validation": [
+                "required_when:hasCompany"
+              ],
+              "visibility": "Alternador 'Adicionar dados de empresa'",
+              "notes": [],
+              "source": "components/account/PersonalForm.tsx"
+            }
+          ],
+          "actions": [
+            "onSubmit: handleSubmit",
+            "Button submit"
+          ],
+          "handlers": [],
+          "submitHandlers": [
+            "handleSubmit"
+          ],
+          "schemas": [
+            "@/lib/validation/utils"
+          ],
+          "resolver": "zodResolver(formSchema)",
+          "storeActions": [
+            "updateUser",
+            "setHasCompany"
+          ],
+          "storageKeys": [],
+          "notes": [
+            "Form dividido em cartões (foto no topo, dados pessoais e empresa).",
+            "Foto clicável abre seletor nativo; CEP e endereço gerenciados na aba dedicada."
+          ],
+          "id": "form-minha-conta-1"
+        },
+        {
+          "tempId": "form-1",
+          "library": "react-hook-form",
+          "componentPath": "components/account/SecurityForm.tsx",
+          "fields": [
+            {
+              "name": "currentPassword",
+              "type": "Form.Item",
+              "validation": [],
+              "notes": [],
+              "source": "components/account/SecurityForm.tsx"
+            },
+            {
+              "name": "newPassword",
+              "type": "Form.Item",
+              "validation": [],
+              "notes": [],
+              "source": "components/account/SecurityForm.tsx"
+            },
+            {
+              "name": "confirmNewPassword",
+              "type": "Form.Item",
+              "validation": [],
+              "notes": [],
+              "source": "components/account/SecurityForm.tsx"
+            }
+          ],
+          "actions": [
+            "onSubmit: handleSubmit",
+            "Button submit"
+          ],
+          "handlers": [],
+          "submitHandlers": [
+            "handleSubmit"
+          ],
+          "schemas": [],
+          "resolver": "zodResolver(securitySchema)",
+          "storeActions": [],
+          "storageKeys": [],
+          "notes": [],
+          "id": "form-minha-conta-2"
+        },
+        {
+          "tempId": "form-1",
+          "library": "react-hook-form",
+          "componentPath": "components/account/AddressModal.tsx",
+          "fields": [
+            {
+              "name": "label",
+              "type": "Form.Item",
+              "validation": [],
+              "notes": [],
+              "source": "components/account/AddressModal.tsx"
+            },
+            {
+              "name": "numero",
+              "type": "Form.Item",
+              "validation": [],
+              "notes": [],
+              "source": "components/account/AddressModal.tsx"
+            },
+            {
+              "name": "complemento",
+              "type": "Form.Item",
+              "validation": [],
+              "notes": [],
+              "source": "components/account/AddressModal.tsx"
+            },
+            {
+              "name": "logradouro",
+              "type": "Form.Item",
+              "validation": [],
+              "notes": [],
+              "source": "components/account/AddressModal.tsx"
+            },
+            {
+              "name": "bairro",
+              "type": "Form.Item",
+              "validation": [],
+              "notes": [],
+              "source": "components/account/AddressModal.tsx"
+            },
+            {
+              "name": "cidade",
+              "type": "Form.Item",
+              "validation": [],
+              "notes": [],
+              "source": "components/account/AddressModal.tsx"
+            },
+            {
+              "name": "uf",
+              "type": "Form.Item",
+              "validation": [],
+              "notes": [],
+              "source": "components/account/AddressModal.tsx"
+            },
+            {
+              "name": "isDefault",
+              "type": "Form.Item",
+              "validation": [],
+              "notes": [],
+              "source": "components/account/AddressModal.tsx"
+            }
+          ],
+          "actions": [],
+          "handlers": [],
+          "submitHandlers": [],
+          "schemas": [],
+          "resolver": "zodResolver(addressSchema)",
+          "storeActions": [],
+          "storageKeys": [],
+          "notes": [],
+          "id": "form-minha-conta-3"
+        },
+        {
+          "tempId": "form-1",
+          "library": "react-hook-form",
+          "componentPath": "components/account/CardModal.tsx",
+          "fields": [
+            {
+              "name": "holderName",
+              "type": "Form.Item",
+              "validation": [],
+              "notes": [],
+              "source": "components/account/CardModal.tsx"
+            },
+            {
+              "name": "number",
+              "type": "Form.Item",
+              "validation": [],
+              "notes": [],
+              "source": "components/account/CardModal.tsx"
+            },
+            {
+              "name": "exp",
+              "type": "Form.Item",
+              "validation": [],
+              "notes": [],
+              "source": "components/account/CardModal.tsx"
+            },
+            {
+              "name": "cvv",
+              "type": "Form.Item",
+              "validation": [],
+              "notes": [],
+              "source": "components/account/CardModal.tsx"
+            },
+            {
+              "name": "document",
+              "type": "Form.Item",
+              "validation": [],
+              "notes": [],
+              "source": "components/account/CardModal.tsx"
+            },
+            {
+              "name": "isPrimary",
+              "type": "Form.Item",
+              "validation": [],
+              "notes": [],
+              "source": "components/account/CardModal.tsx"
+            }
+          ],
+          "actions": [],
+          "handlers": [],
+          "submitHandlers": [],
+          "schemas": [],
+          "resolver": "zodResolver(cardSchema)",
+          "storeActions": [],
+          "storageKeys": [],
+          "notes": [],
+          "id": "form-minha-conta-4"
+        },
+        {
+          "tempId": "form-1",
+          "library": "react-hook-form",
+          "componentPath": "components/recipients/RecipientModal.tsx",
+          "fields": [
+            {
+              "name": "name",
+              "type": "Form.Item",
+              "validation": [],
+              "notes": [],
+              "source": "components/recipients/RecipientModal.tsx"
+            },
+            {
+              "name": "doc",
+              "type": "Form.Item",
+              "validation": [],
+              "notes": [],
+              "source": "components/recipients/RecipientModal.tsx"
+            },
+            {
+              "name": "phone",
+              "type": "Form.Item",
+              "validation": [],
+              "notes": [],
+              "source": "components/recipients/RecipientModal.tsx"
+            },
+            {
+              "name": "email",
+              "type": "Form.Item",
+              "validation": [],
+              "notes": [],
+              "source": "components/recipients/RecipientModal.tsx"
+            },
+            {
+              "name": "numero",
+              "type": "Form.Item",
+              "validation": [],
+              "notes": [],
+              "source": "components/recipients/RecipientModal.tsx"
+            },
+            {
+              "name": "complemento",
+              "type": "Form.Item",
+              "validation": [],
+              "notes": [],
+              "source": "components/recipients/RecipientModal.tsx"
+            },
+            {
+              "name": "logradouro",
+              "type": "Form.Item",
+              "validation": [],
+              "notes": [],
+              "source": "components/recipients/RecipientModal.tsx"
+            },
+            {
+              "name": "bairro",
+              "type": "Form.Item",
+              "validation": [],
+              "notes": [],
+              "source": "components/recipients/RecipientModal.tsx"
+            },
+            {
+              "name": "cidade",
+              "type": "Form.Item",
+              "validation": [],
+              "notes": [],
+              "source": "components/recipients/RecipientModal.tsx"
+            },
+            {
+              "name": "uf",
+              "type": "Form.Item",
+              "validation": [],
+              "notes": [],
+              "source": "components/recipients/RecipientModal.tsx"
+            }
+          ],
+          "actions": [],
+          "handlers": [],
+          "submitHandlers": [],
+          "schemas": [],
+          "resolver": "zodResolver(recipientSchema)",
+          "storeActions": [],
+          "storageKeys": [],
+          "notes": [],
+          "id": "form-minha-conta-5"
+        }
+      ],
+      "stores": [
+        "@/stores/auth"
+      ],
+      "schemas": [
+        "@/lib/validation/utils"
+      ],
+      "storageKeys": [],
+      "mocks": [],
+      "comments": []
+    },
+    {
+      "path": "/rastreamento",
+      "file": "app/(dashboard)/rastreamento/page.tsx",
+      "breadcrumbs": [],
+      "tabs": [],
+      "components": [
+        "Flex",
+        "Space",
+        "Typography.Title",
+        "Typography.Paragraph",
+        "Card",
+        "Input.Search",
+        "Tag",
+        "Table",
+        "TrackingStatusTag",
+        "Button"
+      ],
+      "forms": [],
+      "stores": [],
+      "schemas": [],
+      "storageKeys": [],
+      "mocks": [],
+      "comments": [
+        "Nenhum formulário detectado automaticamente."
+      ]
+    },
+    {
+      "path": "/rastreamento/[id]",
+      "file": "app/(dashboard)/rastreamento/[id]/page.tsx",
+      "breadcrumbs": [],
+      "tabs": [],
+      "components": [
+        "Flex",
+        "Space",
+        "Typography.Title",
+        "Typography.Paragraph",
+        "Card",
+        "Typography.Text",
+        "Descriptions",
+        "Descriptions.Item",
+        "TrackingStatusTag",
+        "TrackingTimeline",
+        "Form",
+        "Form.Item",
+        "Select",
+        "Input.TextArea",
+        "Row",
+        "Col",
+        "Input",
+        "Button",
+        "Alert",
+        "Timeline",
+        "Tag"
+      ],
+      "forms": [
+        {
+          "tempId": "form-1",
+          "library": "antd",
+          "componentPath": "app/(dashboard)/rastreamento/[id]/page.tsx",
+          "fields": [
+            {
+              "name": "type",
+              "label": "Tipo",
+              "type": "Select",
+              "validation": [
+                "required"
+              ],
+              "dataSource": "EVENT_OPTIONS",
+              "notes": [],
+              "source": "app/(dashboard)/rastreamento/[id]/page.tsx"
+            },
+            {
+              "name": "description",
+              "label": "Descrição",
+              "type": "Input.TextArea",
+              "validation": [
+                "required",
+                "message: Informe a descrição"
+              ],
+              "notes": [],
+              "source": "app/(dashboard)/rastreamento/[id]/page.tsx"
+            },
+            {
+              "name": "city",
+              "label": "Cidade",
+              "type": "Input",
+              "validation": [],
+              "notes": [],
+              "source": "app/(dashboard)/rastreamento/[id]/page.tsx"
+            },
+            {
+              "name": "uf",
+              "label": "UF",
+              "type": "Input",
+              "validation": [],
+              "notes": [],
+              "source": "app/(dashboard)/rastreamento/[id]/page.tsx"
+            }
+          ],
+          "actions": [
+            "onFinish: (values: {\n                    type: TrackingEventType;\n                    description: string;\n                    city?: string;\n                    uf?: string;\n                  }) =>\n                    addEventMutation.mutate({\n                      shipmentId: id,\n                      ...values,\n                    })",
+            "Button submit"
+          ],
+          "handlers": [],
+          "submitHandlers": [
+            "(values: {\n                    type: TrackingEventType;\n                    description: string;\n                    city?: string;\n                    uf?: string;\n                  }) =>\n                    addEventMutation.mutate({\n                      shipmentId: id,\n                      ...values,\n                    })"
+          ],
+          "schemas": [],
+          "storeActions": [],
+          "storageKeys": [],
+          "notes": [],
+          "id": "form-rastreamento--id-1"
+        },
+        {
+          "tempId": "form-2",
+          "library": "antd",
+          "componentPath": "app/(dashboard)/rastreamento/[id]/page.tsx",
+          "fields": [
+            {
+              "name": "code",
+              "label": "Status",
+              "type": "Select",
+              "validation": [
+                "required"
+              ],
+              "dataSource": "EVENT_OPTIONS",
+              "notes": [],
+              "source": "app/(dashboard)/rastreamento/[id]/page.tsx"
+            },
+            {
+              "name": "description",
+              "label": "Descrição",
+              "type": "Input.TextArea",
+              "validation": [
+                "required"
+              ],
+              "notes": [],
+              "source": "app/(dashboard)/rastreamento/[id]/page.tsx"
+            },
+            {
+              "name": "city",
+              "label": "Cidade",
+              "type": "Input",
+              "validation": [],
+              "notes": [],
+              "source": "app/(dashboard)/rastreamento/[id]/page.tsx"
+            },
+            {
+              "name": "uf",
+              "label": "UF",
+              "type": "Input",
+              "validation": [],
+              "notes": [],
+              "source": "app/(dashboard)/rastreamento/[id]/page.tsx"
+            }
+          ],
+          "actions": [
+            "onFinish: (values: {\n                    code: TrackingEventType;\n                    description: string;\n                    city?: string;\n                    uf?: string;\n                  }) =>\n                    webhookMutation.mutate({\n                      shipmentId: id,\n                      ...values,\n                    })",
+            "Button submit"
+          ],
+          "handlers": [],
+          "submitHandlers": [
+            "(values: {\n                    code: TrackingEventType;\n                    description: string;\n                    city?: string;\n                    uf?: string;\n                  }) =>\n                    webhookMutation.mutate({\n                      shipmentId: id,\n                      ...values,\n                    })"
+          ],
+          "schemas": [],
+          "storeActions": [],
+          "storageKeys": [],
+          "notes": [],
+          "id": "form-rastreamento--id-2"
+        }
+      ],
+      "stores": [],
+      "schemas": [],
+      "storageKeys": [],
+      "mocks": [],
+      "comments": []
+    },
+    {
+      "path": "/shipments",
+      "file": "app/(dashboard)/shipments/page.tsx",
+      "breadcrumbs": [],
+      "tabs": [],
+      "components": [
+        "Tag",
+        "Space",
+        "Tooltip",
+        "Link",
+        "Button",
+        "EyeOutlined",
+        "PrinterOutlined",
+        "GlobalOutlined",
+        "StopOutlined",
+        "Typography.Title",
+        "Typography.Paragraph",
+        "Input",
+        "SearchOutlined",
+        "Segmented",
+        "Table"
+      ],
+      "forms": [],
+      "stores": [],
+      "schemas": [],
+      "storageKeys": [],
+      "mocks": [],
+      "comments": [
+        "Nenhum formulário detectado automaticamente."
+      ]
+    },
+    {
+      "path": "/shipments/[id]",
+      "file": "app/(dashboard)/shipments/[id]/page.tsx",
+      "breadcrumbs": [],
+      "tabs": [],
+      "components": [
+        "Flex",
+        "Space",
+        "Typography.Title",
+        "Button",
+        "Skeleton",
+        "Alert",
+        "Card",
+        "Descriptions",
+        "Descriptions.Item"
+      ],
+      "forms": [],
+      "stores": [],
+      "schemas": [],
+      "storageKeys": [],
+      "mocks": [],
+      "comments": [
+        "Nenhum formulário detectado automaticamente."
+      ]
+    },
+    {
+      "path": "/suporte",
+      "file": "app/(dashboard)/suporte/page.tsx",
+      "breadcrumbs": [],
+      "tabs": [],
+      "components": [
+        "Space",
+        "Flex",
+        "Typography.Title",
+        "Typography.Text",
+        "Button",
+        "PlusOutlined",
+        "Card",
+        "NewTicketList",
+        "TicketDetailsDrawer",
+        "Text",
+        "Tag",
+        "Input",
+        "SearchOutlined",
+        "Select",
+        "Table",
+        "Drawer",
+        "Empty",
+        "Title",
+        "Descriptions",
+        "Descriptions.Item",
+        "UserOutlined",
+        "Divider",
+        "Timeline",
+        "Space.Compact",
+        "TextArea",
+        "SendOutlined"
+      ],
+      "forms": [],
+      "stores": [
+        "@/stores/support"
+      ],
+      "schemas": [
+        "@/lib/validation/support"
+      ],
+      "storageKeys": [],
+      "mocks": [],
+      "comments": [
+        "Nenhum formulário detectado automaticamente."
+      ]
+    },
+    {
+      "path": "/suporte/[id]",
+      "file": "app/(dashboard)/suporte/[id]/page.tsx",
+      "breadcrumbs": [],
+      "tabs": [],
+      "components": [
+        "Space",
+        "Card",
+        "Skeleton",
+        "Flex",
+        "Result",
+        "Button",
+        "TicketDetailHeader",
+        "TicketTimeline",
+        "TicketCommentBox",
+        "RelatedEntities",
+        "ArrowLeftOutlined",
+        "Typography.Title",
+        "Badge",
+        "Typography.Text",
+        "TicketStatusTag",
+        "Tag",
+        "Form",
+        "Form.Item",
+        "Select",
+        "Timeline",
+        "Typography.Paragraph",
+        "Typography.Link",
+        "CannedReplySelect",
+        "Input.TextArea",
+        "Upload"
+      ],
+      "forms": [
+        {
+          "tempId": "form-1",
+          "library": "antd",
+          "componentPath": "components/support/TicketDetailHeader.tsx",
+          "fields": [
+            {
+              "name": "status",
+              "label": "Status",
+              "type": "Select",
+              "validation": [],
+              "dataSource": "statusOptions",
+              "readOnly": "mutation.isPending",
+              "notes": [],
+              "source": "components/support/TicketDetailHeader.tsx"
+            },
+            {
+              "name": "category",
+              "label": "Categoria",
+              "type": "Select",
+              "validation": [],
+              "dataSource": "categoryOptions",
+              "readOnly": "mutation.isPending",
+              "notes": [],
+              "source": "components/support/TicketDetailHeader.tsx"
+            },
+            {
+              "name": "assignee",
+              "label": "Responsável",
+              "type": "Select",
+              "validation": [],
+              "dataSource": "assigneeOptions",
+              "readOnly": "mutation.isPending",
+              "notes": [],
+              "source": "components/support/TicketDetailHeader.tsx"
+            }
+          ],
+          "actions": [
+            "onValuesChange: (changedValues) => {\n                const entries = Object.entries(changedValues) as Array<[string, unknown]>;\n                const payload: Partial<Ticket> = {};\n\n                entries.forEach(([field, value]) => {\n                  if (field === \"assignee\" && value === \"unassigned\") {\n                    payload.assignee = null;\n                    return;\n                  }\n\n                  if (!value) {\n                    if (field === \"assignee\") {\n                      payload.assignee = null;\n                    } else {\n                      (payload as Record<string, unknown>)[field] = value;\n                    }\n                    return;\n                  }\n\n                  if (field === \"assignee\") {\n                    const agent =\n                      availableAgents.find((item) => item.id === value) ??\n                      (ticket.assignee && ticket.assignee.id === value ? ticket.assignee : undefined) ??\n                      (currentAgent && currentAgent.id === value ? currentAgent : undefined);\n                    payload.assignee = agent ?? null;\n                  } else {\n                    (payload as Record<string, unknown>)[field] = value;\n                  }\n                });\n\n                if (Object.keys(payload).length > 0) {\n                  handleSubmit(payload);\n                }\n              }"
+          ],
+          "handlers": [
+            "onValuesChange: (changedValues) => {\n                const entries = Object.entries(changedValues) as Array<[string, unknown]>;\n                const payload: Partial<Ticket> = {};\n\n                entries.forEach(([field, value]) => {\n                  if (field === \"assignee\" && value === \"unassigned\") {\n                    payload.assignee = null;\n                    return;\n                  }\n\n                  if (!value) {\n                    if (field === \"assignee\") {\n                      payload.assignee = null;\n                    } else {\n                      (payload as Record<string, unknown>)[field] = value;\n                    }\n                    return;\n                  }\n\n                  if (field === \"assignee\") {\n                    const agent =\n                      availableAgents.find((item) => item.id === value) ??\n                      (ticket.assignee && ticket.assignee.id === value ? ticket.assignee : undefined) ??\n                      (currentAgent && currentAgent.id === value ? currentAgent : undefined);\n                    payload.assignee = agent ?? null;\n                  } else {\n                    (payload as Record<string, unknown>)[field] = value;\n                  }\n                });\n\n                if (Object.keys(payload).length > 0) {\n                  handleSubmit(payload);\n                }\n              }"
+          ],
+          "submitHandlers": [],
+          "schemas": [],
+          "storeActions": [],
+          "storageKeys": [],
+          "notes": [],
+          "id": "form-suporte--id-1"
+        }
+      ],
+      "stores": [],
+      "schemas": [],
+      "storageKeys": [],
+      "mocks": [],
+      "comments": []
+    },
+    {
+      "path": "/suporte/novo",
+      "file": "app/(dashboard)/suporte/novo/page.tsx",
+      "breadcrumbs": [],
+      "tabs": [],
+      "components": [
+        "Space",
+        "Title",
+        "Text",
+        "Card",
+        "SupportForm",
+        "Alert",
+        "InfoCircleOutlined",
+        "Form",
+        "Form.Item",
+        "Input",
+        "Select",
+        "TextArea",
+        "Upload",
+        "Button",
+        "PaperClipOutlined"
+      ],
+      "forms": [
+        {
+          "tempId": "form-1",
+          "library": "antd",
+          "componentPath": "components/support/SupportForm.tsx",
+          "fields": [
+            {
+              "name": "name",
+              "label": "Nome",
+              "type": "Input",
+              "validation": [
+                "required",
+                "message: Nome é obrigatório"
+              ],
+              "readOnly": "isLoggedIn",
+              "notes": [
+                "tooltip: isLoggedIn ? 'Preenchido automaticamente da sua conta' : undefined"
+              ],
+              "source": "components/support/SupportForm.tsx"
+            },
+            {
+              "name": "email",
+              "label": "E-mail",
+              "type": "Input",
+              "validation": [
+                "required",
+                "message: E-mail é obrigatório",
+                "type: email",
+                "message: E-mail inválido"
+              ],
+              "readOnly": "isLoggedIn",
+              "notes": [
+                "tooltip: isLoggedIn ? 'Preenchido automaticamente da sua conta' : undefined"
+              ],
+              "source": "components/support/SupportForm.tsx"
+            },
+            {
+              "name": "phone",
+              "label": "Telefone (opcional)",
+              "type": "Input",
+              "validation": [],
+              "notes": [
+                "tooltip: !usuario?.phone ? 'Você pode adicionar seu telefone aqui' : undefined"
+              ],
+              "source": "components/support/SupportForm.tsx"
+            },
+            {
+              "name": "subject",
+              "label": "Assunto",
+              "type": "Input",
+              "validation": [
+                "required",
+                "message: Assunto é obrigatório",
+                "min: 3"
+              ],
+              "notes": [],
+              "source": "components/support/SupportForm.tsx"
+            },
+            {
+              "name": "priority",
+              "label": "Prioridade",
+              "type": "Select",
+              "validation": [
+                "required"
+              ],
+              "dataSource": "{ value: 'baixa', label: 'Baixa' }.{ value: 'media', label: 'Média' }.{ value: 'alta', label: 'Alta' }.{ value: 'critica', label: 'Crítica' }",
+              "notes": [],
+              "source": "components/support/SupportForm.tsx"
+            },
+            {
+              "name": "description",
+              "label": "Descrição",
+              "type": "TextArea",
+              "validation": [
+                "required",
+                "message: Descrição é obrigatória",
+                "min: 3"
+              ],
+              "notes": [],
+              "source": "components/support/SupportForm.tsx"
+            },
+            {
+              "name": "field-7",
+              "label": "Anexos (opcional)",
+              "type": "Upload",
+              "validation": [],
+              "notes": [],
+              "source": "components/support/SupportForm.tsx"
+            },
+            {
+              "name": "field-8",
+              "type": "Space",
+              "validation": [],
+              "notes": [],
+              "source": "components/support/SupportForm.tsx"
+            }
+          ],
+          "actions": [
+            "onFinish: handleSubmit",
+            "Button submit"
+          ],
+          "handlers": [],
+          "submitHandlers": [
+            "handleSubmit"
+          ],
+          "schemas": [
+            "@/lib/validation/support"
+          ],
+          "storeActions": [
+            "usuario"
+          ],
+          "storageKeys": [],
+          "notes": [],
+          "id": "form-suporte-novo-1"
+        }
+      ],
+      "stores": [
+        "@/stores/auth"
+      ],
+      "schemas": [
+        "@/lib/validation/support"
+      ],
+      "storageKeys": [],
+      "mocks": [],
+      "comments": []
+    }
+  ],
+  "stores": [
+    "@/store/integrations.store",
+    "@/stores/useAdminSession",
+    "@/stores/pontos",
+    "@/stores/support",
+    "@/stores/auth",
+    "@/stores/coletas",
+    "@/store/useQuoteStore",
+    "@/stores/checkout"
+  ],
+  "schemas": [
+    "@/lib/validation/company",
+    "@/lib/collectors/schemas",
+    "@/lib/integrations/schemas",
+    "@/lib/pickup/schemas",
+    "@/lib/validation/support",
+    "@/lib/auth/schemas",
+    "@/lib/validation/auth",
+    "@/lib/validation/pickup",
+    "@/lib/validation/utils"
+  ],
+  "storageKeys": [],
+  "mocks": []
+}

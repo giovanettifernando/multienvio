@@ -1,10 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type {
-  Profile,
-  Address,
-  Card,
-  PasswordChange,
-} from "@/types/account";
+import type { Profile, Address, Card, PasswordChange } from "@/types/account";
 
 export function useProfile() {
   return useQuery<Profile>({
@@ -21,7 +16,7 @@ export function useProfile() {
 
 export function useProfileSave() {
   const qc = useQueryClient();
-  return useMutation({
+  return useMutation<Profile, Error, Profile>({
     mutationFn: async (payload: Profile) => {
       const response = await fetch("/api/account/profile", {
         method: "PUT",
@@ -31,7 +26,7 @@ export function useProfileSave() {
       if (!response.ok) {
         throw new Error("Falha ao salvar perfil");
       }
-      return response.json();
+      return (await response.json()) as Profile;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["account", "profile"] });

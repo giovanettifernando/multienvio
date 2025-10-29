@@ -1,28 +1,51 @@
 /**
  * Types para sistema de coletas
+ * Migrado para usar contratos globais de /types/contracts.ts
  */
 
-export type ColetaStatus = "agendada" | "reagendada" | "concluida" | "cancelada";
+import { CollectionStatus, type Address } from "@/types/contracts";
+
+// Re-exportar enum para retrocompatibilidade
+export { CollectionStatus };
+export type ColetaStatus = CollectionStatus;
+
+/**
+ * @deprecated Use Collection.origin do contrato global
+ * Mantido temporariamente para retrocompatibilidade
+ */
+export interface ColetaOrigem {
+  nome: string;
+  telefone: string;
+  logradouro: string;
+  numero: string;
+  complemento?: string | null;
+  bairro: string;
+  cidade: string;
+  uf: string;
+  cep: string;
+}
 
 export interface Coleta {
   id: string;
-  trackingCode: string; // código de rastreio (mesmo usado na Gestão de Envios)
-  origemCep: string;
-  destinoCep: string;
-  scheduledFor: string; // ISO date (yyyy-mm-dd)
+  shipmentId: string; // ID do envio/etiqueta associado
   status: ColetaStatus;
-  createdAt: string;
-  updatedAt: string;
+  origem: ColetaOrigem;
+  janelaColeta?: string | null; // ISO date/datetime se houver janela agendada
+  transportadora?: string | null;
+  servico?: string | null;
+  observacoes?: string | null;
+  createdAt: string; // ISO datetime
+  updatedAt: string; // ISO datetime
 }
 
 export interface ColetaFilters {
-  q?: string;
+  q?: string; // Busca por shipmentId, cidade, UF
   status?: ColetaStatus | "all";
   from?: string; // yyyy-mm-dd
   to?: string; // yyyy-mm-dd
   page?: number;
   pageSize?: number;
-  sort?: "scheduledFor_asc" | "scheduledFor_desc" | "created_asc" | "created_desc";
+  sort?: "updated_desc" | "updated_asc" | "created_desc" | "created_asc";
 }
 
 export interface ColetaListResponse {
@@ -33,12 +56,16 @@ export interface ColetaListResponse {
 }
 
 export interface CreateColetaInput {
-  trackingCode: string;
-  origemCep: string;
-  destinoCep: string;
-  scheduledFor: string;
+  shipmentId: string;
+  origem: ColetaOrigem;
+  janelaColeta?: string | null;
+  transportadora?: string | null;
+  servico?: string | null;
+  observacoes?: string | null;
 }
 
 export interface UpdateColetaInput {
-  scheduledFor: string;
+  status?: ColetaStatus;
+  janelaColeta?: string | null;
+  observacoes?: string | null;
 }

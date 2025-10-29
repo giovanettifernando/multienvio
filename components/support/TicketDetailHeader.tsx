@@ -66,6 +66,7 @@ type Props = {
   ticket: Ticket;
   availableAgents?: Agent[];
   currentAgent?: Agent;
+  mode?: 'client' | 'admin';
 };
 
 function buildAssigneeOptions(ticket: Ticket, agents: Agent[], currentAgent?: Agent) {
@@ -110,18 +111,20 @@ function formatSla(ticket: Ticket) {
   );
 }
 
-export function TicketDetailHeader({ ticket, availableAgents = [], currentAgent }: Props) {
+export function TicketDetailHeader({ ticket, availableAgents = [], currentAgent, mode = 'admin' }: Props) {
   const queryClient = useQueryClient();
   const [form] = Form.useForm();
 
   useEffect(() => {
-    form.setFieldsValue({
-      status: ticket.status,
-      priority: ticket.priority,
-      category: ticket.category,
-      assignee: ticket.assignee?.id ?? "unassigned",
-    });
-  }, [ticket, form]);
+    if (mode === 'admin') {
+      form.setFieldsValue({
+        status: ticket.status,
+        priority: ticket.priority,
+        category: ticket.category,
+        assignee: ticket.assignee?.id ?? "unassigned",
+      });
+    }
+  }, [ticket, form, mode]);
 
   const mutation = useMutation<Ticket, Error, Partial<Ticket>>({
   mutationFn: async (values: Partial<Ticket>) => {
@@ -147,10 +150,12 @@ export function TicketDetailHeader({ ticket, availableAgents = [], currentAgent 
 
 
   const handleSubmit = (changed: Partial<Ticket>) => {
-    mutation.mutate(changed);
+    if (mode === 'admin') {
+      mutation.mutate(changed);
+    }
   };
 
-  const assigneeOptions = buildAssigneeOptions(ticket, availableAgents, currentAgent);
+  const assigneeOptions = mode === 'admin' ? buildAssigneeOptions(ticket, availableAgents, currentAgent) : [];
 
   return (
     <Card
@@ -172,92 +177,94 @@ export function TicketDetailHeader({ ticket, availableAgents = [], currentAgent 
           {formatSla(ticket)}
         </Space>
 
-        <Flex gap={16} wrap align="center">
-          <Form
-            form={form}
-            layout="inline"
-            initialValues={{
-              status: ticket.status,
-              priority: ticket.priority,
-              category: ticket.category,
-              assignee: ticket.assignee?.id ?? "unassigned",
-            }}
-            onValuesChange={(changedValues) => {
-              const entries = Object.entries(changedValues) as Array<[string, unknown]>;
-              const payload: Partial<Ticket> = {};
+        {mode === 'admin' && (
+          <Flex gap={16} wrap align="center">
+            <Form
+              form={form}
+              layout="inline"
+              initialValues={{
+                status: ticket.status,
+                priority: ticket.priority,
+                category: ticket.category,
+                assignee: ticket.assignee?.id ?? "unassigned",
+              }}
+              onValuesChange={(changedValues) => {
+                const entries = Object.entries(changedValues) as Array<[string, unknown]>;
+                const payload: Partial<Ticket> = {};
 
-              entries.forEach(([field, value]) => {
-                if (field === "assignee" && value === "unassigned") {
-                  payload.assignee = null;
-                  return;
-                }
-
-                if (!value) {
-                  if (field === "assignee") {
+                entries.forEach(([field, value]) => {
+                  if (field === "assignee" && value === "unassigned") {
                     payload.assignee = null;
+                    return;
+                  }
+
+                  if (!value) {
+                    if (field === "assignee") {
+                      payload.assignee = null;
+                    } else {
+                      (payload as Record<string, unknown>)[field] = value;
+                    }
+                    return;
+                  }
+
+                  if (field === "assignee") {
+                    const agent =
+                      availableAgents.find((item) => item.id === value) ??
+                      (ticket.assignee && ticket.assignee.id === value ? ticket.assignee : undefined) ??
+                      (currentAgent && currentAgent.id === value ? currentAgent : undefined);
+                    payload.assignee = agent ?? null;
                   } else {
                     (payload as Record<string, unknown>)[field] = value;
                   }
+                });
+
+                if (Object.keys(payload).length > 0) {
+                  handleSubmit(payload);
+                }
+              }}
+            >
+              <Form.Item label="Status" name="status">
+                <Select
+                  options={statusOptions}
+                  aria-label="Alterar status do ticket"
+                  disabled={mutation.isPending}
+                />
+              </Form.Item>
+              <Form.Item label="Categoria" name="category">
+                <Select
+                  options={categoryOptions}
+                  aria-label="Alterar categoria do ticket"
+                  disabled={mutation.isPending}
+                />
+              </Form.Item>
+              <Form.Item label="Responsável" name="assignee">
+                <Select
+                  options={assigneeOptions}
+                  aria-label="Alterar responsável"
+                  disabled={mutation.isPending}
+                />
+              </Form.Item>
+            </Form>
+            <Button
+              variant="outlined"
+              onClick={() => {
+                if (!currentAgent) {
+                  message.info("Informe o atendente atual para atribuir.");
                   return;
                 }
-
-                if (field === "assignee") {
-                  const agent =
-                    availableAgents.find((item) => item.id === value) ??
-                    (ticket.assignee && ticket.assignee.id === value ? ticket.assignee : undefined) ??
-                    (currentAgent && currentAgent.id === value ? currentAgent : undefined);
-                  payload.assignee = agent ?? null;
-                } else {
-                  (payload as Record<string, unknown>)[field] = value;
+                if (ticket.assignee?.id === currentAgent.id) {
+                  message.success("Você já está atribuído a este ticket.");
+                  return;
                 }
-              });
-
-              if (Object.keys(payload).length > 0) {
-                handleSubmit(payload);
-              }
-            }}
-          >
-            <Form.Item label="Status" name="status">
-              <Select
-                options={statusOptions}
-                aria-label="Alterar status do ticket"
-                disabled={mutation.isPending}
-              />
-            </Form.Item>
-            <Form.Item label="Categoria" name="category">
-              <Select
-                options={categoryOptions}
-                aria-label="Alterar categoria do ticket"
-                disabled={mutation.isPending}
-              />
-            </Form.Item>
-            <Form.Item label="Responsável" name="assignee">
-              <Select
-                options={assigneeOptions}
-                aria-label="Alterar responsável"
-                disabled={mutation.isPending}
-              />
-            </Form.Item>
-          </Form>
-          <Button
-            variant="outlined"
-            onClick={() => {
-              if (!currentAgent) {
-                message.info("Informe o atendente atual para atribuir.");
-                return;
-              }
-              if (ticket.assignee?.id === currentAgent.id) {
-                message.success("Você já está atribuído a este ticket.");
-                return;
-              }
-              handleSubmit({ assignee: currentAgent });
-              form.setFieldsValue({ assignee: currentAgent.id });
-            }}
-            disabled={mutation.isPending || !currentAgent}
-          >
-            Atribuir a mim
-          </Button>
-        </Flex>
+                handleSubmit({ assignee: currentAgent });
+                form.setFieldsValue({ assignee: currentAgent.id });
+              }}
+              disabled={mutation.isPending || !currentAgent}
+            >
+              Atribuir a mim
+            </Button>
+          </Flex>
+        )}
       </Flex>
     </Card>
   );

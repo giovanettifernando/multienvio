@@ -1,39 +1,32 @@
-"use client";
+'use client';
 
-import { ArrowLeftOutlined } from "@ant-design/icons";
-import { Button, Space, Typography } from "antd";
-import { useRouter } from "next/navigation";
-import { TicketForm } from "@/components/support/TicketForm";
-import type { Ticket } from "@/types/support";
+import { Card, Space, Typography } from 'antd';
+import { useRouter } from 'next/navigation';
+import { SupportForm } from '@/components/support/SupportForm';
 
-export default function NewTicketPage() {
+const { Title, Text } = Typography;
+
+export default function NovoTicketPage() {
   const router = useRouter();
 
-  const handleCreated = (ticket: Ticket) => {
-    router.push(`/suporte/${ticket.id}`);
+  const handleSuccess = (ticketId: string) => {
+    router.push(`/suporte?ticket=${ticketId}`);
   };
 
   return (
-    <Space direction="vertical" style={{ width: "100%", padding: 24 }} size={24}>
-      <Button
-        type="text"
-        icon={<ArrowLeftOutlined />}
-        onClick={() => router.back()}
-        style={{ padding: 0, width: "fit-content" }}
-      >
-        Voltar
-      </Button>
+    <div style={{ padding: 24, maxWidth: 800, margin: '0 auto' }}>
+      <Space direction="vertical" style={{ width: '100%' }} size="large">
+        <div>
+          <Title level={2}>Abrir Novo Chamado</Title>
+          <Text type="secondary">
+            Preencha o formulário abaixo para abrir um novo chamado de suporte.
+          </Text>
+        </div>
 
-      <Space direction="vertical" size={4}>
-        <Typography.Title level={2} style={{ margin: 0 }}>
-          Abrir novo ticket
-        </Typography.Title>
-        <Typography.Text type="secondary">
-          Informe os detalhes do problema para que nossa equipe possa ajudar rapidamente.
-        </Typography.Text>
+        <Card>
+          <SupportForm onSuccess={handleSuccess} />
+        </Card>
       </Space>
-
-      <TicketForm onCreated={handleCreated} />
-    </Space>
+    </div>
   );
 }

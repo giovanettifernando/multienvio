@@ -21,24 +21,19 @@ export type Card = {
   isPrimary?: boolean;
 };
 
-export type PersonalPF = {
-  nome: string;
-  email: string;
-  telefone: string;
-  cpf: string;
-  nascimento?: string | null;
-};
-
-export type PersonalPJ = {
-  cnpj?: string | null;
-  razaoSocial?: string | null;
-  nomeFantasia?: string | null;
-  ie?: string | null;
+export type ProfileCompany = {
+  cnpj: string;
+  razaoSocial: string;
 };
 
 export type Profile = {
-  pf: PersonalPF;
-  pj?: PersonalPJ;
+  fullName: string;
+  email: string;
+  phone: string;
+  cpf: string;
+  hasCompany: boolean;
+  company?: ProfileCompany | null;
+  avatarDataUrl?: string | null;
 };
 
 export type PasswordChange = {

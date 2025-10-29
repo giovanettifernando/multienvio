@@ -1,0 +1,33 @@
+name: Forms Inventory Audit
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run forms audit
+        run: npm run audit:forms
+
+      - name: Ensure inventory committed
+        run: |
+          if [[ -n "$(git status --porcelain docs/forms-inventory.md docs/forms-inventory.json)" ]]; then
+            echo "::error::docs/forms-inventory.{md,json} estão desatualizados. Execute 'npm run audit:forms' e adicione ao commit."
+            git diff docs/forms-inventory.md docs/forms-inventory.json || true
+            exit 1
+          fi
