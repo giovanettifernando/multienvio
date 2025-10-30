@@ -1,0 +1,30 @@
+services:
+  db:
+    image: postgres:16
+    container_name: enviolegal-db
+    environment:
+      POSTGRES_DB: enviolegal
+      POSTGRES_USER: envio
+      POSTGRES_PASSWORD: envio
+    ports:
+      - "5432:5432"
+    volumes:
+      - ../../_data/postgres:/var/lib/postgresql/data:Z
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U envio -d enviolegal || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    command: ["postgres", "-c", "shared_buffers=256MB", "-c", "work_mem=16MB"]
+
+  adminer:
+    image: adminer:4
+    container_name: enviolegal-adminer
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    environment:
+      # Apenas para facilitar login padrão
+      ADMINER_DEFAULT_SERVER: db
