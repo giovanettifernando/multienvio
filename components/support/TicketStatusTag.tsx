@@ -1,22 +1,21 @@
 "use client";
 
 import { Tag } from "antd";
+import { SupportStatus } from "@/types/contracts";
 import type { TicketStatus } from "@/types/support";
 
 const STATUS_COLOR: Record<TicketStatus, string> = {
-  OPEN: "processing",
-  PENDING: "warning",
-  WAITING_CUSTOMER: "gold",
-  RESOLVED: "success",
-  CLOSED: "default",
+  [SupportStatus.ABERTO]: "processing",
+  [SupportStatus.EM_ATENDIMENTO]: "warning",
+  [SupportStatus.RESOLVIDO]: "success",
+  [SupportStatus.FECHADO]: "default",
 };
 
 const STATUS_LABEL: Record<TicketStatus, string> = {
-  OPEN: "Aberto",
-  PENDING: "Pendente",
-  WAITING_CUSTOMER: "Aguardando cliente",
-  RESOLVED: "Resolvido",
-  CLOSED: "Fechado",
+  [SupportStatus.ABERTO]: "Aberto",
+  [SupportStatus.EM_ATENDIMENTO]: "Em Atendimento",
+  [SupportStatus.RESOLVIDO]: "Resolvido",
+  [SupportStatus.FECHADO]: "Fechado",
 };
 
 type Props = {

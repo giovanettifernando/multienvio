@@ -27,7 +27,8 @@ export async function PATCH(
       );
     }
 
-    const updated = mockUsersDb.updateStatus(id, validated.status);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const updated = mockUsersDb.updateStatus(id, validated.status as any);
 
     return NextResponse.json(updated);
   } catch (error) {

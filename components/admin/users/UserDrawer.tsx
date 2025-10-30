@@ -74,7 +74,8 @@ export function UserDrawer({ open, user, onClose }: UserDrawerProps) {
             name: data.name,
             email: data.email,
             phone: data.phone || null,
-            status: data.status,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            status: data.status as any,
             roles: data.roles,
           },
         });
@@ -83,7 +84,8 @@ export function UserDrawer({ open, user, onClose }: UserDrawerProps) {
           name: data.name,
           email: data.email,
           phone: data.phone || null,
-          status: data.status,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          status: data.status as any,
           roles: data.roles,
         });
       }

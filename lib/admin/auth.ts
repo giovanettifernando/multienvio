@@ -3,50 +3,43 @@ import type { AdminUser } from "@/stores/useAdminSession";
 export const ADMIN_COOKIE = "admin_auth";
 export const ADMIN_SESSION_STORAGE_KEY = "envio-legal-admin-session";
 
+/**
+ * Get admin token from HttpOnly cookie (read-only, managed by server)
+ * Note: HttpOnly cookies cannot be read by JavaScript for security.
+ * This function is kept for compatibility but will return null in production.
+ */
 export function getAdminTokenFromCookie() {
   if (typeof document === "undefined") return null;
-  const m = document.cookie.match(
-    new RegExp(`(?:^|; )${ADMIN_COOKIE}=([^;]*)`),
-  );
-  return m ? decodeURIComponent(m[1]) : null;
+  // HttpOnly cookies are not accessible via document.cookie
+  // This is intentional for security reasons
+  return null;
 }
 
-export function setAdminTokenCookie(token: string) {
-  // Segurança real deve ser tratada no back-end; mock simplificado para DEV.
-  document.cookie = `${ADMIN_COOKIE}=${encodeURIComponent(
-    token,
-  )}; path=/; samesite=lax`;
-}
-
-export function clearAdminTokenCookie() {
-  document.cookie = `${ADMIN_COOKIE}=; path=/; Max-Age=0`;
-}
-
-export function devAdminBypassActive() {
-  return process.env.NEXT_PUBLIC_DEV_ADMIN_BYPASS === "true";
-}
-
-export function saveAdminSessionToStorage(admin: AdminUser, token: string) {
-  if (typeof window === "undefined") return;
-  window.sessionStorage.setItem(
-    ADMIN_SESSION_STORAGE_KEY,
-    JSON.stringify({ admin, token }),
-  );
-}
-
-export function loadAdminSessionFromStorage():
-  | { admin: AdminUser; token: string }
-  | null {
-  if (typeof window === "undefined") return null;
+/**
+ * Check if admin is authenticated by attempting to call /api/admin/auth/me
+ * This is the proper way to check authentication with HttpOnly cookies
+ */
+export async function checkAdminAuth(): Promise<AdminUser | null> {
   try {
-    const raw = window.sessionStorage.getItem(ADMIN_SESSION_STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as { admin: AdminUser; token: string }) : null;
+    const response = await fetch("/api/admin/auth/me");
+    if (!response.ok) return null;
+    const data = await response.json();
+    return data.staff || null;
   } catch {
     return null;
   }
 }
 
-export function clearAdminSessionStorage() {
-  if (typeof window === "undefined") return;
-  window.sessionStorage.removeItem(ADMIN_SESSION_STORAGE_KEY);
+/**
+ * Logout admin by calling the logout API
+ */
+export async function logoutAdmin(): Promise<boolean> {
+  try {
+    const response = await fetch("/api/admin/auth/logout", {
+      method: "POST",
+    });
+    return response.ok;
+  } catch {
+    return false;
+  }
 }

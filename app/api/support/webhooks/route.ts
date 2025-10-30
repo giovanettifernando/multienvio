@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { nanoid } from "nanoid";
+import { SupportStatus } from "@/types/contracts";
 import type { Ticket, TicketEvent } from "@/types/support";
 
 export const dynamic = "force-dynamic";
@@ -30,7 +31,7 @@ function buildEvent(type: TicketEvent["type"], message: string): TicketEvent {
 function handleSlaCheck(ticket: Ticket): boolean {
   const dueAt = ticket.sla?.dueAt ? new Date(ticket.sla.dueAt) : null;
   const alreadyBreached = Boolean(ticket.sla?.breached);
-  const isCompleted = ticket.status === "RESOLVED" || ticket.status === "CLOSED";
+  const isCompleted = ticket.status === SupportStatus.RESOLVIDO || ticket.status === SupportStatus.FECHADO;
 
   if (!dueAt || isCompleted || alreadyBreached) {
     return false;
@@ -66,12 +67,12 @@ ticket.sla = {
 }
 
 function handleAutoCloseResolved(ticket: Ticket): boolean {
-  if (ticket.status !== "RESOLVED") {
+  if (ticket.status !== SupportStatus.RESOLVIDO) {
     return false;
   }
 
   const resolvedEvent = ticket.events.find(
-    (event) => event.type === "STATUS_CHANGED" && event.message.includes("RESOLVED"),
+    (event) => event.type === "STATUS_CHANGED" && event.message.includes("Resolvido"),
   );
 
   if (!resolvedEvent) {
@@ -86,7 +87,7 @@ function handleAutoCloseResolved(ticket: Ticket): boolean {
     return false;
   }
 
-  ticket.status = "CLOSED";
+  ticket.status = SupportStatus.FECHADO;
   const event = buildEvent("STATUS_CHANGED", "Ticket encerrado automaticamente");
   ticket.events = [event, ...ticket.events];
   ticket.updatedAt = event.createdAt;

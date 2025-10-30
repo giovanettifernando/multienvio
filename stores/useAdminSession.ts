@@ -1,36 +1,33 @@
 import { create } from "zustand";
-import { hasSuperAdmin } from "@/lib/auth/roles";
 
 export interface AdminUser {
   id: string;
   email: string;
   name: string;
-  roles: string[];
+  role: string;
+  status: string;
 }
 
 interface AdminSessionState {
   admin: AdminUser | null;
-  token: string | null;
-  setAdmin: (admin: AdminUser, token: string) => void;
+  setAdmin: (admin: AdminUser) => void;
   clearAdmin: () => void;
-  isSuperAdmin: () => boolean;
-  hasPermission: (role: string) => boolean;
+  isAdmin: () => boolean;
+  hasRole: (role: string) => boolean;
 }
 
 export const useAdminSession = create<AdminSessionState>((set, get) => ({
   admin: null,
-  token: null,
-  setAdmin: (admin, token) => set({ admin, token }),
-  clearAdmin: () => set({ admin: null, token: null }),
-  isSuperAdmin: () => {
+  setAdmin: (admin) => set({ admin }),
+  clearAdmin: () => set({ admin: null }),
+  isAdmin: () => {
     const { admin } = get();
     if (!admin) return false;
-    return hasSuperAdmin(admin.roles);
+    return admin.role === 'admin';
   },
-  hasPermission: (role: string) => {
-    const { admin, isSuperAdmin } = get();
+  hasRole: (role: string) => {
+    const { admin } = get();
     if (!admin) return false;
-    if (isSuperAdmin()) return true;
-    return admin.roles.includes(role);
+    return admin.role === role || admin.role === 'admin';
   },
 }));

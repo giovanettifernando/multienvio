@@ -47,7 +47,8 @@ export async function PUT(
       }
     }
 
-    const updated = mockUsersDb.update(id, validated);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const updated = mockUsersDb.update(id, validated as any);
 
     return NextResponse.json(updated);
   } catch (error) {

@@ -1,6 +1,7 @@
 /**
  * Mock database em memória para usuários administrativos
  */
+import { UserStatus } from "@/types/contracts";
 import type { AdminUser } from "./types";
 
 // eslint-disable-next-line prefer-const
@@ -10,7 +11,7 @@ let users: AdminUser[] = [
     name: "Administrador Master",
     email: "master@enviolegal.com",
     phone: "+55 11 98765-4321",
-    status: "active",
+    status: UserStatus.ACTIVE,
     roles: ["admin.super"],
     lastLoginAt: new Date().toISOString(),
     createdAt: "2024-01-01T00:00:00.000Z",
@@ -21,7 +22,7 @@ let users: AdminUser[] = [
     name: "João Silva",
     email: "joao.silva@enviolegal.com",
     phone: "+55 11 91234-5678",
-    status: "active",
+    status: UserStatus.ACTIVE,
     roles: ["operations.read", "operations.manage", "shipments.read"],
     lastLoginAt: "2025-10-25T14:30:00.000Z",
     createdAt: "2024-02-15T10:00:00.000Z",
@@ -32,7 +33,7 @@ let users: AdminUser[] = [
     name: "Maria Santos",
     email: "maria.santos@enviolegal.com",
     phone: "+55 11 92345-6789",
-    status: "active",
+    status: UserStatus.ACTIVE,
     roles: [
       "finance.read",
       "finance.manage",
@@ -49,7 +50,7 @@ let users: AdminUser[] = [
     name: "Pedro Costa",
     email: "pedro.costa@enviolegal.com",
     phone: null,
-    status: "blocked",
+    status: UserStatus.BLOCKED,
     roles: ["integrations.read", "integrations.manage"],
     lastLoginAt: "2025-09-15T11:20:00.000Z",
     createdAt: "2024-04-20T09:00:00.000Z",
@@ -60,7 +61,7 @@ let users: AdminUser[] = [
     name: "Ana Oliveira",
     email: "ana.oliveira@enviolegal.com",
     phone: "+55 11 93456-7890",
-    status: "active",
+    status: UserStatus.ACTIVE,
     roles: [
       "admin.users.read",
       "admin.users.manage",
@@ -76,7 +77,7 @@ let users: AdminUser[] = [
     name: "Carlos Mendes",
     email: "carlos.mendes@enviolegal.com",
     phone: "+55 11 94567-8901",
-    status: "active",
+    status: UserStatus.ACTIVE,
     roles: ["shipments.read", "shipments.manage", "operations.read"],
     lastLoginAt: null,
     createdAt: "2025-10-01T10:00:00.000Z",
@@ -132,7 +133,7 @@ export const mockUsersDb = {
     return true;
   },
 
-  updateStatus: (id: string, status: "active" | "blocked"): AdminUser | null => {
+  updateStatus: (id: string, status: UserStatus): AdminUser | null => {
     return mockUsersDb.update(id, { status });
   },
 

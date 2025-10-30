@@ -32,17 +32,6 @@ import { useAuthStore } from "@/stores/auth";
 import { maskCPF, maskCNPJ, maskPhone, onlyDigits } from "@/lib/masks";
 import { isValidCNPJ, isValidCPF } from "@/lib/validation/utils";
 
-type FormValues = {
-  fullName: string;
-  email: string;
-  phone: string;
-  cpf: string;
-  hasCompany: boolean;
-  cnpj: string;
-  razaoSocial: string;
-  avatarDataUrl: string | null;
-};
-
 const formSchema = z
   .object({
     fullName: z.string().trim().min(3, "Informe o nome completo."),
@@ -50,8 +39,8 @@ const formSchema = z
     phone: z.string().min(1, "Informe o telefone."),
     cpf: z.string().min(1, "Informe o CPF."),
     hasCompany: z.boolean(),
-    cnpj: z.string().optional().default(""),
-    razaoSocial: z.string().optional().default(""),
+    cnpj: z.string(),
+    razaoSocial: z.string(),
     avatarDataUrl: z.string().nullable().optional(),
   })
   .superRefine((value, ctx) => {
@@ -74,7 +63,7 @@ const formSchema = z
     }
 
     if (value.hasCompany) {
-      const cnpjDigits = onlyDigits(value.cnpj ?? "");
+      const cnpjDigits = onlyDigits(value.cnpj);
       if (cnpjDigits.length === 0) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
@@ -89,7 +78,7 @@ const formSchema = z
         });
       }
 
-      if (!value.razaoSocial?.trim()) {
+      if (!value.razaoSocial.trim()) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           message: "Informe a razão social",
@@ -190,7 +179,6 @@ export default function PersonalForm() {
         name: profileQuery.data.fullName,
         email: profileQuery.data.email,
         phone: profileQuery.data.phone,
-        avatarUrl: profileQuery.data.avatarDataUrl ?? undefined,
       });
       setHasCompany(profileQuery.data.hasCompany);
     }
@@ -270,7 +258,6 @@ export default function PersonalForm() {
             name: profile.fullName,
             email: profile.email,
             phone: profile.phone,
-            avatarUrl: profile.avatarDataUrl ?? undefined,
           });
           setHasCompany(profile.hasCompany);
           message.success("Dados salvos com sucesso.");

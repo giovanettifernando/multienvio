@@ -14,22 +14,22 @@ import {
   message,
   Button,
 } from "antd";
+import { SupportStatus, SupportPriority } from "@/types/contracts";
 import type { Ticket, TicketStatus, TicketPriority, TicketCategory } from "@/types/support";
 import { TicketStatusTag } from "@/components/support/TicketStatusTag";
 
 const statusOptions: Array<{ label: string; value: TicketStatus }> = [
-  { label: "Aberto", value: "OPEN" },
-  { label: "Pendente", value: "PENDING" },
-  { label: "Aguardando cliente", value: "WAITING_CUSTOMER" },
-  { label: "Resolvido", value: "RESOLVED" },
-  { label: "Fechado", value: "CLOSED" },
+  { label: "Aberto", value: SupportStatus.ABERTO },
+  { label: "Em Atendimento", value: SupportStatus.EM_ATENDIMENTO },
+  { label: "Resolvido", value: SupportStatus.RESOLVIDO },
+  { label: "Fechado", value: SupportStatus.FECHADO },
 ];
 
 const priorityOptions: Array<{ label: string; value: TicketPriority }> = [
-  { label: "Baixa", value: "LOW" },
-  { label: "Normal", value: "NORMAL" },
-  { label: "Alta", value: "HIGH" },
-  { label: "Urgente", value: "URGENT" },
+  { label: "Baixa", value: SupportPriority.BAIXA },
+  { label: "Média", value: SupportPriority.MEDIA },
+  { label: "Alta", value: SupportPriority.ALTA },
+  { label: "Crítica", value: SupportPriority.CRITICA },
 ];
 
 const categoryOptions: Array<{ label: string; value: TicketCategory }> = [

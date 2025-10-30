@@ -103,3 +103,45 @@ export const resetSchema = z
   });
 
 export type ResetInput = z.infer<typeof resetSchema>;
+
+// ============================================================================
+// API Schemas (English names for backend routes)
+// ============================================================================
+
+export const LoginSchema = z.object({
+  email: z
+    .string({ message: 'Email é obrigatório' })
+    .email('Email inválido')
+    .toLowerCase()
+    .trim(),
+  password: z
+    .string({ message: 'Senha é obrigatória' })
+    .min(6, 'Senha deve ter no mínimo 6 caracteres'),
+});
+
+export type LoginAPIInput = z.infer<typeof LoginSchema>;
+
+export const RegisterSchema = z
+  .object({
+    name: z
+      .string({ message: 'Nome é obrigatório' })
+      .min(2, 'Nome deve ter no mínimo 2 caracteres')
+      .max(100, 'Nome deve ter no máximo 100 caracteres')
+      .trim(),
+    email: z
+      .string({ message: 'Email é obrigatório' })
+      .email('Email inválido')
+      .toLowerCase()
+      .trim(),
+    password: z
+      .string({ message: 'Senha é obrigatória' })
+      .min(6, 'Senha deve ter no mínimo 6 caracteres')
+      .max(100, 'Senha deve ter no máximo 100 caracteres'),
+    phone: z
+      .string()
+      .regex(/^\(\d{2}\)\s\d{4,5}-\d{4}$/, 'Telefone deve estar no formato (XX) XXXXX-XXXX')
+      .optional()
+      .nullable(),
+  });
+
+export type RegisterAPIInput = z.infer<typeof RegisterSchema>;

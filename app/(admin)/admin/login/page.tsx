@@ -3,21 +3,11 @@
 import { Suspense, useState } from "react";
 import { App, Button, Card, Form, Input } from "antd";
 import { useRouter, useSearchParams } from "next/navigation";
-import {
-  saveAdminSessionToStorage,
-  setAdminTokenCookie,
-} from "@/lib/admin/auth";
 import { useAdminSession } from "@/stores/useAdminSession";
-import { mockUsersDb } from "@/lib/auth/mock-db";
 
 type LoginFormValues = {
   email: string;
   password: string;
-};
-
-const MASTER_CREDENTIALS = {
-  email: "master@enviolegal.com",
-  password: "master@@123",
 };
 
 function AdminLoginForm() {
@@ -32,67 +22,40 @@ function AdminLoginForm() {
     setLoading(true);
 
     try {
-      // Check master credentials
-      if (
-        values.email.toLowerCase() === MASTER_CREDENTIALS.email &&
-        values.password === MASTER_CREDENTIALS.password
-      ) {
-        const masterUser = mockUsersDb.findByEmail(MASTER_CREDENTIALS.email);
+      // Call the real admin login API
+      const response = await fetch("/api/admin/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: values.email,
+          password: values.password,
+        }),
+      });
 
-        if (masterUser) {
-          // Update last login
-          mockUsersDb.updateLastLogin(masterUser.id);
+      const data = await response.json();
 
-          const token = "mock-admin-token-master";
-          const admin = {
-            id: masterUser.id,
-            email: masterUser.email,
-            name: masterUser.name,
-            roles: masterUser.roles,
-          };
-
-          setAdminTokenCookie(token);
-          saveAdminSessionToStorage(admin, token);
-          setAdmin(admin, token);
-          message.success(`Bem-vindo, ${masterUser.name}`);
-          router.replace(next);
-          return;
-        }
-      }
-
-      // Check other users from mock database
-      const user = mockUsersDb.findByEmail(values.email);
-
-      if (!user) {
-        message.error("E-mail ou senha incorretos");
+      if (!response.ok) {
+        message.error(data.message || "E-mail ou senha incorretos");
         setLoading(false);
         return;
       }
 
-      if (user.status === "blocked") {
-        message.error("Usuário bloqueado. Entre em contato com o administrador.");
-        setLoading(false);
-        return;
-      }
-
-      // In a real app, we would validate password here
-      // For mock, we just accept any password for non-master users
-      mockUsersDb.updateLastLogin(user.id);
-
-      const token = `mock-admin-token-${user.id}`;
+      // Update store with staff data
       const admin = {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        roles: user.roles,
+        id: data.staff.id,
+        email: data.staff.email,
+        name: data.staff.name,
+        role: data.staff.role,
+        status: data.staff.status,
       };
 
-      setAdminTokenCookie(token);
-      saveAdminSessionToStorage(admin, token);
-      setAdmin(admin, token);
-      message.success(`Bem-vindo, ${user.name}`);
+      setAdmin(admin);
+      message.success(`Bem-vindo, ${data.staff.name}`);
       router.replace(next);
-    } catch {
+    } catch (error) {
+      console.error("Login error:", error);
       message.error("Erro ao fazer login");
       setLoading(false);
     }

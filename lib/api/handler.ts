@@ -8,7 +8,7 @@ import type { ApiHandlerResult, RequestContext } from "@/lib/api/types";
 type Handler<P, T> = (context: RequestContext<P>) => Promise<ApiHandlerResult<T>>;
 
 type RouteContext<P> = {
-  params: P | Promise<P>;
+  params: Promise<P>;
 };
 
 function extractClientIp(req: NextRequest): string | null {
@@ -27,8 +27,11 @@ function extractUserAgent(req: NextRequest): string | null {
 
 export function withApiHandler<P extends Record<string, string>, T>(
   handler: Handler<P, T>,
-) {
-  return async (req: NextRequest, context?: RouteContext<P>) => {
+): (req: NextRequest, context: RouteContext<P>) => Promise<NextResponse> {
+  return async (
+    req: NextRequest,
+    context: RouteContext<P>
+  ) => {
     const startTime = Date.now();
     const requestId = req.headers.get("x-request-id") ?? randomUUID();
     const path = req.nextUrl.pathname;
@@ -46,9 +49,7 @@ export function withApiHandler<P extends Record<string, string>, T>(
     });
 
     try {
-      const params = context?.params
-        ? await context.params
-        : ({} as P);
+      const params = await context.params;
 
       const result = await handler({
         req,

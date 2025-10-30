@@ -244,7 +244,8 @@ export function useToggleUserStatus() {
           return {
             ...old,
             items: old.items.map((user) =>
-              user.id === id ? { ...user, status } : user
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              user.id === id ? { ...user, status: status as any } : user
             ),
           };
         }

@@ -96,7 +96,8 @@ export async function POST(request: NextRequest) {
       name: validated.name,
       email: validated.email,
       phone: validated.phone || null,
-      status: validated.status,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      status: validated.status as any,
       roles: validated.roles,
       lastLoginAt: null,
     });

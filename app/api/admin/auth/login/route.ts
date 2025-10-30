@@ -1,0 +1,129 @@
+// Force Node.js runtime (not Edge) to use bcrypt and Prisma
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
+import { NextResponse } from 'next/server';
+import { ZodError } from 'zod';
+import bcrypt from 'bcryptjs';
+import { AdminLoginSchema } from '@/lib/validation/admin-auth';
+import { prisma } from '@/lib/db';
+import { adminSign, createAdminCookieHeader } from '@/lib/auth/admin-session';
+import { logAdminLogin } from '@/lib/audit-admin';
+
+export async function POST(request: Request) {
+  try {
+    // Parse and validate request body
+    const payload = await request.json();
+    const data = AdminLoginSchema.parse(payload);
+
+    // Normalize email
+    const email = data.email.trim().toLowerCase();
+
+    console.log('[ADMIN_LOGIN] Attempting login for:', email);
+
+    // Find staff user by email with role
+    const staffUser = await prisma.staffUser.findUnique({
+      where: { email },
+      include: {
+        role: true,
+      },
+    });
+
+    // Generic error message to not reveal if email exists
+    if (!staffUser || !staffUser.passwordHash) {
+      console.log('[ADMIN_LOGIN_ERROR] Staff user not found or no password hash');
+      return NextResponse.json(
+        { message: 'Email ou senha inválidos' },
+        { status: 401 }
+      );
+    }
+
+    console.log('[ADMIN_LOGIN] Staff user found:', staffUser.id);
+
+    // Verify password
+    const passwordValid = await bcrypt.compare(data.password, staffUser.passwordHash);
+
+    if (!passwordValid) {
+      console.log('[ADMIN_LOGIN_ERROR] Invalid password');
+      return NextResponse.json(
+        { message: 'Email ou senha inválidos' },
+        { status: 401 }
+      );
+    }
+
+    // Check if staff is active
+    if (staffUser.status !== 'ACTIVE') {
+      console.log('[ADMIN_LOGIN_ERROR] Staff user is not active:', staffUser.status);
+      return NextResponse.json(
+        { message: 'Conta inativa ou bloqueada' },
+        { status: 403 }
+      );
+    }
+
+    // Update lastLoginAt
+    await prisma.staffUser.update({
+      where: { id: staffUser.id },
+      data: { lastLoginAt: new Date() },
+    });
+
+    // Create JWT token
+    const token = await adminSign({
+      staffId: staffUser.id,
+      email: staffUser.email,
+      role: staffUser.role?.name || 'operator',
+    });
+
+    // Log admin login for audit
+    try {
+      await logAdminLogin(staffUser.id, staffUser.email);
+    } catch (auditError) {
+      console.error('[ADMIN_LOGIN] Failed to log audit:', auditError);
+      // Don't fail the login if audit logging fails
+    }
+
+    // Return staff data (without passwordHash)
+    const staff = {
+      id: staffUser.id,
+      name: staffUser.name,
+      email: staffUser.email,
+      status: staffUser.status,
+      role: staffUser.role?.name,
+      lastLoginAt: staffUser.lastLoginAt?.toISOString() || null,
+      createdAt: staffUser.createdAt.toISOString(),
+      updatedAt: staffUser.updatedAt.toISOString(),
+    };
+
+    console.log('[ADMIN_LOGIN] Login successful for:', email);
+
+    // Create response with Set-Cookie header
+    const response = NextResponse.json({
+      staff,
+      message: 'Login realizado com sucesso',
+    });
+
+    // Add admin auth cookie
+    response.headers.set('Set-Cookie', createAdminCookieHeader(token));
+
+    return response;
+  } catch (error) {
+    if (error instanceof ZodError) {
+      console.log('[ADMIN_LOGIN_ERROR] Validation error:', error.issues);
+      return NextResponse.json(
+        {
+          message: 'Dados inválidos',
+          errors: error.issues.map((issue) => ({
+            field: issue.path.join('.'),
+            message: issue.message,
+          })),
+        },
+        { status: 422 }
+      );
+    }
+
+    console.error('[ADMIN_LOGIN_ERROR] Unexpected error:', error);
+    return NextResponse.json(
+      { message: 'Erro ao realizar login' },
+      { status: 500 }
+    );
+  }
+}

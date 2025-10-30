@@ -13,6 +13,7 @@ import {
   Tag,
   Typography,
 } from "antd";
+import { SupportPriority } from "@/types/contracts";
 import type { Ticket } from "@/types/support";
 import type { Pickup } from "@/types/pickup";
 import { useRouter } from "next/navigation";
@@ -69,7 +70,7 @@ export function AlertsPanel() {
         title: `Ticket ${ticket.number}`,
         description: ticket.title,
         type: "ticket",
-        severity: ticket.priority === "URGENT" ? "high" : "medium",
+        severity: ticket.priority === SupportPriority.CRITICA ? "high" : "medium",
         link: `/suporte/${ticket.id}`,
       });
     });

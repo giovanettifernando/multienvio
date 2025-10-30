@@ -1,0 +1,183 @@
+// Prisma Schema para Envio Legal
+// Database: PostgreSQL
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Modelo de Roles (papéis/permissões)
+model Role {
+  id        String   @id @default(uuid())
+  name      String   @unique // "admin", "user", "suporte", etc
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users User[]
+
+  @@map("roles")
+}
+
+// Modelo de Usuário
+model User {
+  id           String    @id @default(uuid())
+  name         String
+  email        String    @unique
+  passwordHash String?   // Nullable para permitir OAuth futuramente
+  phone        String?
+  status       String    @default("active") // "active", "blocked"
+  roleId       String?
+  role         Role?     @relation(fields: [roleId], references: [id])
+  lastLoginAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  // Relacionamentos
+  addresses         Address[]
+  sentShipments     Shipment[] @relation("SenderShipments")
+  receivedShipments Shipment[] @relation("RecipientShipments")
+
+  @@index([email])
+  @@map("users")
+}
+
+// Modelo de Endereço
+model Address {
+  id          String   @id @default(uuid())
+  cep         String
+  logradouro  String
+  numero      String
+  complemento String?
+  bairro      String
+  cidade      String
+  uf          String   @db.VarChar(2)
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@index([cep])
+  @@map("addresses")
+}
+
+// Modelo de Envio/Remessa
+model Shipment {
+  id               String   @id @default(uuid())
+  trackingCode     String   @unique
+  senderId         String
+  sender           User     @relation("SenderShipments", fields: [senderId], references: [id])
+  recipientId      String
+  recipient        User     @relation("RecipientShipments", fields: [recipientId], references: [id])
+  weight           Float // em kg
+  declaredValue    Float // valor declarado em R$
+  status           String   @default("criado") // "criado", "postado", "em_transporte", "entregue", "cancelado"
+  carrier          String? // transportadora
+  service          String? // serviço (PAC, SEDEX, etc)
+  originCep        String
+  destinationCep   String
+  estimatedDays    Int? // prazo estimado em dias
+  freightCost      Float? // custo do frete em R$
+  postedAt         DateTime?
+  deliveredAt      DateTime?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  // Relacionamentos
+  trackingEvents TrackingEvent[]
+
+  @@index([trackingCode])
+  @@index([senderId])
+  @@index([recipientId])
+  @@index([status])
+  @@map("shipments")
+}
+
+// Modelo de Evento de Rastreamento
+model TrackingEvent {
+  id          String   @id @default(uuid())
+  shipmentId  String
+  shipment    Shipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  type        String // "posted", "in_transit", "out_for_delivery", "delivered", "exception"
+  description String
+  city        String?
+  uf          String?  @db.VarChar(2)
+  occurredAt  DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  @@index([shipmentId])
+  @@index([occurredAt])
+  @@map("tracking_events")
+}
+
+// ============================================================================
+// STAFF AUTHENTICATION (Separate from customer auth)
+// ============================================================================
+
+enum StaffStatus {
+  ACTIVE
+  BLOCKED
+}
+
+// Modelo de Roles para Staff (separado de User roles)
+model StaffRole {
+  id        String      @id @default(cuid())
+  name      String      @unique // "admin", "operator", "finance", "support"
+  createdAt DateTime    @default(now())
+  users     StaffUser[]
+
+  @@map("staff_roles")
+}
+
+// Modelo de Usuário Staff (Painel Administrativo)
+model StaffUser {
+  id           String       @id @default(cuid())
+  name         String
+  email        String       @unique
+  passwordHash String       @map("passwordHash") // Map to exact DB column name
+  status       StaffStatus  @default(ACTIVE)
+  roleId       String       @map("roleId") // Map to exact DB column name
+  role         StaffRole    @relation(fields: [roleId], references: [id], onDelete: Restrict)
+  lastLoginAt  DateTime?    @map("lastLoginAt") // Map to exact DB column name
+  createdAt    DateTime     @default(now()) @map("createdAt") // Map to exact DB column name
+  updatedAt    DateTime     @updatedAt @map("updatedAt") // Map to exact DB column name
+  auditLogs    StaffAuditLog[]
+
+  @@index([email])
+  @@map("staff_users")
+}
+
+// Modelo de Auditoria de Ações Administrativas
+model StaffAuditLog {
+  id        String     @id @default(cuid())
+  actorId   String?
+  actor     StaffUser? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  action    String     // "login", "create_staff", "update_role", etc
+  entity    String     // "StaffUser", "User", "Shipment", etc
+  entityId  String?
+  data      Json?      // Dados adicionais da ação
+  createdAt DateTime   @default(now())
+
+  @@index([actorId])
+  @@index([entity, entityId])
+  @@index([createdAt])
+  @@map("staff_audit_logs")
+}
+
+// Preparação para PostGIS (extensão geográfica) - futuro
+// Quando instalar PostGIS, descomentar:
+//
+// model PickupPoint {
+//   id        String   @id @default(uuid())
+//   name      String
+//   address   String
+//   location  Unsupported("geography(Point, 4326)")? // PostGIS point
+//   createdAt DateTime @default(now())
+//   updatedAt DateTime @updatedAt
+//
+//   @@map("pickup_points")
+// }

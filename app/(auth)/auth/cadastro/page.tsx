@@ -2,11 +2,10 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { Controller, useForm, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useMutation } from "@tanstack/react-query";
 
 import {
   App,
@@ -24,35 +23,13 @@ import {
 } from "@/lib/masks";
 import { useAuthStore } from "@/stores/auth";
 
-type RegisterResponse = {
-  id: string;
-  name: string;
-  email: string;
-};
-
 type CadastroFormValues = z.infer<typeof cadastroSchema>;
-
-
-async function registerUser(
-  payload: CadastroFormValues,
-): Promise<RegisterResponse> {
-  const response = await fetch("/api/auth/register", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-
-  if (!response.ok) {
-    throw response;
-  }
-
-  return response.json();
-}
 
 export default function CadastroPage() {
   const router = useRouter();
   const { message } = App.useApp();
-  const setUser = useAuthStore((state) => state.setUser);
+  const registerStore = useAuthStore((state) => state.register);
+  const [isLoading, setIsLoading] = useState(false);
 
   const {
     control,
@@ -73,53 +50,43 @@ export default function CadastroPage() {
 
   const senhaAtual = watch("senha") ?? "";
 
-  const mutation = useMutation<RegisterResponse, Response, CadastroFormValues>({
-    mutationFn: registerUser,
-    onSuccess: (data) => {
-      setUser(data);
-      router.push("/auth/confirmacao");
-    },
-    onError: async (error) => {
-      if (error.status === 409) {
-        setError("email", {
-          type: "manual",
-          message: "Este e-mail já está cadastrado. Faça login para continuar.",
-        });
-        return;
-      }
-
-      if (error.status === 400) {
-        try {
-          const body = await error.json();
-          if (Array.isArray(body?.erros)) {
-            body.erros.forEach(
-              (issue: { campo?: string; mensagem?: string }) => {
-                if (!issue?.campo || !issue?.mensagem) return;
-                const campo = issue.campo as keyof CadastroFormValues;
-                setError(campo, {
-                  type: "server",
-                  message: issue.mensagem,
-                });
-              },
-            );
-            return;
-          }
-        } catch {
-          // continua para mensagem genérica
-        }
-      }
-
-      message.error(
-        "Não foi possível concluir seu cadastro. Tente novamente.",
-      );
-    },
-  });
-
   const onSubmit = useCallback(
-    (values: CadastroFormValues) => {
-      mutation.mutate(values);
+    async (values: CadastroFormValues) => {
+      setIsLoading(true);
+
+      try {
+        // Call store's register method with proper field mapping
+        const result = await registerStore({
+          name: values.nomeCompleto,
+          email: values.email,
+          password: values.senha,
+          phone: values.telefone || undefined,
+        });
+
+        if (!result.success) {
+          // Handle specific error cases
+          if (result.error?.includes("já cadastrado")) {
+            setError("email", {
+              type: "manual",
+              message: "Este e-mail já está cadastrado. Faça login para continuar.",
+            });
+          } else {
+            message.error(result.error || "Não foi possível concluir seu cadastro.");
+          }
+          setIsLoading(false);
+          return;
+        }
+
+        // Success - user is auto-logged in by the store
+        message.success("Conta criada com sucesso!");
+        router.push("/");
+      } catch (error) {
+        console.error("Register error:", error);
+        message.error("Não foi possível concluir seu cadastro. Tente novamente.");
+        setIsLoading(false);
+      }
     },
-    [mutation],
+    [registerStore, router, message, setError],
   );
 
   const campoEmailErro = errors.email?.message;
@@ -286,7 +253,8 @@ export default function CadastroPage() {
           <Button
             type="primary"
             htmlType="submit"
-            loading={mutation.isPending}
+            loading={isLoading}
+            disabled={isLoading}
             block
           >
             Criar conta

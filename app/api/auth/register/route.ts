@@ -1,53 +1,93 @@
-import { NextResponse } from "next/server";
-import { nanoid } from "nanoid";
-import { ZodError } from "zod";
-import { cadastroSchema } from "@/lib/validation/auth";
+import { NextResponse } from 'next/server';
+import { ZodError } from 'zod';
+import bcrypt from 'bcryptjs';
+import { RegisterSchema } from '@/lib/validation/auth';
+import { prisma } from '@/lib/db';
+import { createSession } from '@/lib/auth/session';
+import { UserStatus } from '@/types/contracts';
 
-export const dynamic = "force-dynamic";
+export const dynamic = 'force-dynamic';
 
 export async function POST(request: Request) {
   try {
     const payload = await request.json();
-    const dados = cadastroSchema.parse(payload);
+    const data = RegisterSchema.parse(payload);
 
-    await new Promise((resolve) => setTimeout(resolve, 800));
+    // Verificar se email já existe
+    const existingUser = await prisma.user.findUnique({
+      where: { email: data.email },
+    });
 
-    const emailNormalizado = dados.email
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "");
-
-    if (emailNormalizado.endsWith("@ja.com")) {
+    if (existingUser) {
       return NextResponse.json(
-        { mensagem: "E-mail já cadastrado" },
-        { status: 409 },
+        { message: 'E-mail já cadastrado' },
+        { status: 409 }
       );
     }
 
+    // Hash da senha
+    const passwordHash = await bcrypt.hash(data.password, 10);
+
+    // Buscar role "user" padrão
+    const userRole = await prisma.role.findUnique({
+      where: { name: 'user' },
+    });
+
+    if (!userRole) {
+      console.error('Role "user" não encontrada no banco');
+      return NextResponse.json(
+        { message: 'Erro ao criar usuário' },
+        { status: 500 }
+      );
+    }
+
+    // Criar usuário
+    const user = await prisma.user.create({
+      data: {
+        name: data.name,
+        email: data.email,
+        passwordHash,
+        phone: data.phone || null,
+        status: UserStatus.ACTIVE,
+        roleId: userRole.id,
+      },
+      include: {
+        role: true,
+      },
+    });
+
+    // Criar sessão automaticamente (auto-login após registro)
+    await createSession({
+      userId: user.id,
+      email: user.email,
+      role: user.role?.name || 'user',
+    });
+
     return NextResponse.json(
       {
-        id: nanoid(),
-        name: dados.nomeCompleto,
-        email: dados.email,
+        userId: user.id,
+        message: 'Usuário criado com sucesso',
       },
-      { status: 201 },
+      { status: 201 }
     );
   } catch (error) {
     if (error instanceof ZodError) {
       return NextResponse.json(
         {
-          mensagem: "Dados inválidos",
-          erros: error.issues.map((issue) => ({
-            campo: issue.path.join("."),
-            mensagem: issue.message,
+          message: 'Dados inválidos',
+          errors: error.issues.map((issue) => ({
+            field: issue.path.join('.'),
+            message: issue.message,
           })),
         },
-        { status: 400 },
+        { status: 422 }
       );
     }
 
+    console.error('Error creating user:', error);
     return NextResponse.json(
-      { mensagem: "Não foi possível concluir o cadastro." },
-      { status: 500 },
+      { message: 'Não foi possível concluir o cadastro' },
+      { status: 500 }
     );
   }
 }

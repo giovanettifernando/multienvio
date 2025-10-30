@@ -72,7 +72,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   const clearSession = useAuthStore((s) => s.logout);
 
   const displayName = useMemo(() => usuario?.name ?? 'Usuário', [usuario]);
-  const avatarUrl = usuario?.avatarUrl;
+  const avatarUrl = undefined; // avatarUrl removed from User contract
   const avatarInitials = useMemo(() => getInitials(displayName), [displayName]);
   const [collapsed, setCollapsed] = useState(false);
   const selectedKey = useMemo(() => keyFromPath(pathname || '/'), [pathname]);

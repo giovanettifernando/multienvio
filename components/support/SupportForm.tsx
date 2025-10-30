@@ -5,7 +5,7 @@ import { Form, Input, Select, Button, Upload, App, Space, Alert } from 'antd';
 import { PaperClipOutlined, InfoCircleOutlined } from '@ant-design/icons';
 import type { UploadFile } from 'antd';
 import { useCreateTicket } from '@/hooks/useSupport';
-import { useSessionUser } from '@/stores/auth';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { NewTicketInputSchema, type SupportAttachment, type Priority } from '@/lib/validation/support';
 
 const { TextArea } = Input;
@@ -32,7 +32,7 @@ export function SupportForm({ onSuccess, defaultValues }: SupportFormProps) {
   const [form] = Form.useForm();
   const { message } = App.useApp();
   const createTicket = useCreateTicket();
-  const usuario = useSessionUser();
+  const { user: usuario } = useCurrentUser();
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [loading, setLoading] = useState(false);
 

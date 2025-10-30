@@ -1,15 +1,11 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Layout, Menu, Typography, Flex } from "antd";
+import { Layout, Menu, Typography, Flex, Spin } from "antd";
 import { usePathname, useRouter } from "next/navigation";
 import { ADMIN_NAV } from "@/lib/admin/nav";
-import {
-  devAdminBypassActive,
-  getAdminTokenFromCookie,
-  loadAdminSessionFromStorage,
-} from "@/lib/admin/auth";
+import { checkAdminAuth } from "@/lib/admin/auth";
 import { useAdminSession } from "@/stores/useAdminSession";
 import { spacing } from "@/lib/ui/theme";
 
@@ -21,8 +17,9 @@ export default function AdminLayout({
   const pathname = usePathname();
   const router = useRouter();
   const admin = useAdminSession((state) => state.admin);
-  const token = useAdminSession((state) => state.token);
   const setAdmin = useAdminSession((state) => state.setAdmin);
+  const clearAdmin = useAdminSession((state) => state.clearAdmin);
+  const [isChecking, setIsChecking] = useState(true);
 
   const currentNavItem = useMemo(() => {
     return ADMIN_NAV.find((item) => {
@@ -33,57 +30,64 @@ export default function AdminLayout({
     });
   }, [pathname]);
 
+  // Check authentication on mount and when pathname changes
   useEffect(() => {
-    if (pathname === "/admin/login") return;
-    if (devAdminBypassActive()) return;
+    if (pathname === "/admin/login") {
+      setIsChecking(false);
+      return;
+    }
 
-    const cookieToken = getAdminTokenFromCookie();
+    const verifyAuth = async () => {
+      setIsChecking(true);
+      const staffUser = await checkAdminAuth();
 
-    if (cookieToken && token !== cookieToken) {
-      const stored = loadAdminSessionFromStorage();
-      if (stored && stored.token === cookieToken) {
-        setAdmin(stored.admin, stored.token);
-        return;
+      if (!staffUser) {
+        clearAdmin();
+        router.replace(`/admin/login?next=${encodeURIComponent(pathname)}`);
+      } else {
+        setAdmin(staffUser);
       }
-    }
 
-    if (!cookieToken || !token) {
-      router.replace(`/admin/login?next=${encodeURIComponent(pathname)}`);
-    }
-  }, [pathname, router, setAdmin, token]);
+      setIsChecking(false);
+    };
 
-  const hasPermission = useAdminSession((state) => state.hasPermission);
-  const isSuperAdmin = useAdminSession((state) => state.isSuperAdmin);
+    verifyAuth();
+  }, [pathname, router, setAdmin, clearAdmin]);
 
+  const hasRole = useAdminSession((state) => state.hasRole);
+  const isAdmin = useAdminSession((state) => state.isAdmin);
+
+  // Check permissions for current route
   useEffect(() => {
     if (!currentNavItem?.permissions) return;
     if (!admin) return;
 
-    // Super admin has access to everything
-    if (isSuperAdmin()) return;
+    // Admin role has access to everything
+    if (isAdmin()) return;
 
     // Check if user has any of the required permissions
     const hasAccess = currentNavItem.permissions.some((perm) =>
-      hasPermission(perm)
+      hasRole(perm)
     );
 
     if (!hasAccess) {
       router.replace("/admin");
     }
-  }, [admin, currentNavItem, router, hasPermission, isSuperAdmin]);
+  }, [admin, currentNavItem, router, hasRole, isAdmin]);
 
+  // Filter nav items based on permissions
   const authorizedNav = useMemo(() => {
     return ADMIN_NAV.filter((item) => {
       if (!item.permissions) return true;
       if (!admin) return false;
 
-      // Super admin has access to everything
-      if (isSuperAdmin()) return true;
+      // Admin role has access to everything
+      if (isAdmin()) return true;
 
       // Check if user has any of the required permissions
-      return item.permissions.some((perm) => hasPermission(perm));
+      return item.permissions.some((perm) => hasRole(perm));
     });
-  }, [admin, hasPermission, isSuperAdmin]);
+  }, [admin, hasRole, isAdmin]);
 
   const menuItems = useMemo(
     () =>
@@ -104,6 +108,20 @@ export default function AdminLayout({
 
   if (pathname === "/admin/login") {
     return children;
+  }
+
+  // Show loading while checking authentication
+  if (isChecking) {
+    return (
+      <div style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        minHeight: "100vh"
+      }}>
+        <Spin size="large" />
+      </div>
+    );
   }
 
   return (

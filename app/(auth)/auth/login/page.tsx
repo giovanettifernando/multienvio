@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation } from "@tanstack/react-query";
 import Alert from "antd/es/alert";
 import App from "antd/es/app";
 import Checkbox from "antd/es/checkbox";
@@ -25,36 +24,15 @@ import {
 import { useAuthStore } from "@/stores/auth";
 import styles from "./login.module.css";
 
-type LoginResponse = {
-  id: string;
-  name: string;
-  email: string;
-  token: string;
-};
-
-async function loginRequest(
-  payload: LoginInput,
-): Promise<LoginResponse> {
-  const response = await fetch("/api/auth/login", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-
-  if (!response.ok) {
-    throw response;
-  }
-
-  return response.json();
-}
-
 const STORAGE_KEY = "enviolegal:last-email";
 
 export default function LoginPage() {
   const router = useRouter();
   const { message } = App.useApp();
-  const login = useAuthStore((state) => state.login);
+  const loginStore = useAuthStore((state) => state.login);
+  const isAdmin = useAuthStore((state) => state.isAdmin);
   const [formError, setFormError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   const {
     control,
@@ -80,73 +58,49 @@ export default function LoginPage() {
     }
   }, [setValue]);
 
-  const mutation = useMutation<LoginResponse, Response, LoginInput>({
-    mutationFn: loginRequest,
-    onSuccess: (data, variables) => {
-      setFormError(null);
-      login(data);
-
-      if (typeof window !== "undefined") {
-        if (variables.lembrarEmail) {
-          window.localStorage.setItem(STORAGE_KEY, data.email);
-        } else {
-          window.localStorage.removeItem(STORAGE_KEY);
-        }
-      }
-
-      router.replace("/");
-    },
-    onError: async (error) => {
-      if (error.status === 423) {
-        setFormError(null);
-        message.warning(
-          "Sua conta ainda não foi confirmada. Verifique seu e-mail.",
-        );
-        router.push("/auth/confirmacao");
-        return;
-      }
-
-      if (error.status === 401) {
-        setFormError("E-mail ou senha inválidos. Tente novamente.");
-        setError("senha", {
-          type: "manual",
-          message: "Verifique as credenciais informadas.",
-        });
-        return;
-      }
-
-      if (error.status === 400) {
-        try {
-          const body = await error.json();
-          if (Array.isArray(body?.erros)) {
-            body.erros.forEach(
-              (issue: { campo?: string; mensagem?: string }) => {
-                if (!issue?.campo || !issue?.mensagem) return;
-                const campo = issue.campo as keyof LoginInput;
-                setError(campo, {
-                  type: "server",
-                  message: issue.mensagem,
-                });
-              },
-            );
-            return;
-          }
-        } catch {
-          // segue para mensagem genérica
-        }
-      }
-
-      message.error(
-        "Não foi possível iniciar a sessão. Tente novamente em instantes.",
-      );
-    },
-  });
-
   const onSubmit = useCallback(
-    (values: LoginInput) => {
-      mutation.mutate(values);
+    async (values: LoginInput) => {
+      setIsLoading(true);
+      setFormError(null);
+
+      try {
+        // Use the store's login method
+        const result = await loginStore(values.email, values.senha);
+
+        if (!result.success) {
+          setFormError(result.error || "E-mail ou senha inválidos. Tente novamente.");
+          setError("senha", {
+            type: "manual",
+            message: "Verifique as credenciais informadas.",
+          });
+          setIsLoading(false);
+          return;
+        }
+
+        // Handle remember email
+        if (typeof window !== "undefined") {
+          if (values.lembrarEmail) {
+            window.localStorage.setItem(STORAGE_KEY, values.email);
+          } else {
+            window.localStorage.removeItem(STORAGE_KEY);
+          }
+        }
+
+        message.success("Login realizado com sucesso!");
+
+        // Redirect based on role
+        if (isAdmin()) {
+          router.replace("/admin");
+        } else {
+          router.replace("/");
+        }
+      } catch (error) {
+        console.error("Login error:", error);
+        message.error("Não foi possível iniciar a sessão. Tente novamente em instantes.");
+        setIsLoading(false);
+      }
     },
-    [mutation],
+    [loginStore, isAdmin, router, message, setError],
   );
 
   const formContent = useMemo(
@@ -236,8 +190,8 @@ export default function LoginPage() {
           <ELButton
             variant="primary"
             htmlType="submit"
-            loading={mutation.isPending}
-            disabled={mutation.isPending}
+            loading={isLoading}
+            disabled={isLoading}
             block
           >
             Entrar
@@ -251,7 +205,7 @@ export default function LoginPage() {
       errors.senha,
       formError,
       handleSubmit,
-      mutation.isPending,
+      isLoading,
       onSubmit,
     ],
   );

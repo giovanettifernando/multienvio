@@ -15,6 +15,7 @@ import {
   message,
 } from "antd";
 import type { TablePaginationConfig } from "antd/es/table";
+import { SupportPriority, SupportStatus } from "@/types/contracts";
 import type { Ticket, TicketPriority, TicketStatus, TicketCategory } from "@/types/support";
 import { TicketStatusTag } from "@/components/support/TicketStatusTag";
 
@@ -47,25 +48,24 @@ async function fetchTickets(params: URLSearchParams): Promise<TicketListResponse
 }
 
 const priorityColor: Record<TicketPriority, string> = {
-  LOW: "default",
-  NORMAL: "blue",
-  HIGH: "orange",
-  URGENT: "red",
+  [SupportPriority.BAIXA]: "default",
+  [SupportPriority.MEDIA]: "blue",
+  [SupportPriority.ALTA]: "orange",
+  [SupportPriority.CRITICA]: "red",
 };
 
 const priorityLabel: Record<TicketPriority, string> = {
-  LOW: "Baixa",
-  NORMAL: "Normal",
-  HIGH: "Alta",
-  URGENT: "Urgente",
+  [SupportPriority.BAIXA]: "Baixa",
+  [SupportPriority.MEDIA]: "Média",
+  [SupportPriority.ALTA]: "Alta",
+  [SupportPriority.CRITICA]: "Crítica",
 };
 
 const statusOptions: Array<{ label: string; value: TicketStatus }> = [
-  { label: "Aberto", value: "OPEN" },
-  { label: "Pendente", value: "PENDING" },
-  { label: "Aguardando cliente", value: "WAITING_CUSTOMER" },
-  { label: "Resolvido", value: "RESOLVED" },
-  { label: "Fechado", value: "CLOSED" },
+  { label: "Aberto", value: SupportStatus.ABERTO },
+  { label: "Em Atendimento", value: SupportStatus.EM_ATENDIMENTO },
+  { label: "Resolvido", value: SupportStatus.RESOLVIDO },
+  { label: "Fechado", value: SupportStatus.FECHADO },
 ];
 
 const priorityOptions = Object.entries(priorityLabel).map(([value, label]) => ({

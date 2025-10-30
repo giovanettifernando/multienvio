@@ -1,86 +1,100 @@
-import { NextResponse } from "next/server";
-import { nanoid } from "nanoid";
-import { ZodError } from "zod";
-import { loginSchema } from "@/lib/validation/auth";
+import { NextResponse } from 'next/server';
+import { ZodError } from 'zod';
+import bcrypt from 'bcryptjs';
+import { LoginSchema } from '@/lib/validation/auth';
+import { prisma } from '@/lib/db';
+import { createSession } from '@/lib/auth/session';
+import { UserStatus, AuthRole, type User } from '@/types/contracts';
 
-export const dynamic = "force-dynamic";
-
-// Mock de usuários para desenvolvimento
-// Em produção, isso deve ser substituído por autenticação real com banco de dados
-const MOCK_USERS = [
-  {
-    email: "demo@enviolegal.com",
-    password: "demo123",
-    name: "Usuário Demo",
-    id: "user_demo_001",
-  },
-  {
-    email: "admin@enviolegal.com",
-    password: "admin123",
-    name: "Administrador",
-    id: "user_admin_001",
-  },
-];
+export const dynamic = 'force-dynamic';
 
 export async function POST(request: Request) {
   try {
     const payload = await request.json();
-    const dados = loginSchema.parse(payload);
+    const data = LoginSchema.parse(payload);
 
-    // Simular delay de rede
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    // Buscar usuário por email com role
+    const dbUser = await prisma.user.findUnique({
+      where: { email: data.email },
+      include: {
+        role: true,
+      },
+    });
 
-    const email = dados.email.toLowerCase();
-
-    // Casos de teste especiais
-    if (email.includes("invalido@")) {
+    // Mensagem genérica para não revelar se email existe
+    if (!dbUser || !dbUser.passwordHash) {
       return NextResponse.json(
-        { mensagem: "Credenciais inválidas" },
-        { status: 401 },
+        { message: 'E-mail ou senha inválidos' },
+        { status: 401 }
       );
     }
 
-    if (email.includes("pendente@")) {
+    // Verificar senha
+    const passwordValid = await bcrypt.compare(data.password, dbUser.passwordHash);
+
+    if (!passwordValid) {
       return NextResponse.json(
-        { mensagem: "Conta pendente de confirmação" },
-        { status: 423 },
+        { message: 'E-mail ou senha inválidos' },
+        { status: 401 }
       );
     }
 
-    // Verificar credenciais mock
-    const user = MOCK_USERS.find((u) => u.email === email);
-
-    if (!user || user.password !== dados.senha) {
+    // Verificar status do usuário
+    if (dbUser.status !== UserStatus.ACTIVE) {
       return NextResponse.json(
-        { mensagem: "E-mail ou senha inválidos" },
-        { status: 401 },
+        { message: 'Conta inativa ou bloqueada' },
+        { status: 403 }
       );
     }
 
-    // Retornar dados do usuário autenticado
+    // Atualizar lastLoginAt
+    await prisma.user.update({
+      where: { id: dbUser.id },
+      data: { lastLoginAt: new Date() },
+    });
+
+    // Criar sessão (JWT + cookie)
+    await createSession({
+      userId: dbUser.id,
+      email: dbUser.email,
+      role: dbUser.role?.name || 'user',
+    });
+
+    // Mapear para o tipo User global (sem expor passwordHash)
+    const user: User = {
+      id: dbUser.id,
+      name: dbUser.name,
+      email: dbUser.email,
+      phone: dbUser.phone,
+      status: dbUser.status as UserStatus,
+      roles: dbUser.role?.name === 'admin' ? [AuthRole.ADMIN] : [],
+      lastLoginAt: dbUser.lastLoginAt?.toISOString() || null,
+      createdAt: dbUser.createdAt.toISOString(),
+      updatedAt: dbUser.updatedAt.toISOString(),
+    };
+
     return NextResponse.json({
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      token: `${process.env.NODE_ENV === "production" ? "prod" : "dev"}-token-${nanoid(16)}`,
+      user,
+      message: 'Login realizado com sucesso',
     });
   } catch (error) {
     if (error instanceof ZodError) {
       return NextResponse.json(
         {
-          mensagem: "Dados inválidos",
-          erros: error.issues.map((issue) => ({
-            campo: issue.path.join("."),
-            mensagem: issue.message,
+          message: 'Dados inválidos',
+          errors: error.issues.map((issue) => ({
+            field: issue.path.join('.'),
+            message: issue.message,
           })),
         },
-        { status: 400 },
+        { status: 422 }
       );
     }
 
+    console.error('Error during login:', error);
     return NextResponse.json(
-      { mensagem: "Não foi possível realizar o login." },
-      { status: 500 },
+      { message: 'Não foi possível realizar o login' },
+      { status: 500 }
     );
   }
 }

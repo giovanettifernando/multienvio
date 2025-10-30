@@ -2,8 +2,19 @@
  * Types para autenticação e usuários administrativos
  */
 
-export type UserStatus = "active" | "blocked";
+import {
+  UserStatus,
+  AuthRole,
+  type User as GlobalUser,
+} from "@/types/contracts";
 
+export { UserStatus, AuthRole };
+
+export type User = GlobalUser;
+
+/**
+ * @deprecated Use User from global contracts
+ */
 export interface AdminUser {
   id: string;
   name: string;

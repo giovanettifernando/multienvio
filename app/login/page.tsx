@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { Form, Input, Button, Card, Typography, App } from 'antd';
+import { Form, Input, Button, Card, Typography, App, Spin } from 'antd';
 import { useAuthStore } from '@/stores/auth';
+import { useCurrentUser, useIsAdmin } from '@/hooks/useCurrentUser';
 import React from 'react';
 
 type LoginValues = {
@@ -12,38 +13,75 @@ type LoginValues = {
   senha: string;
 };
 
-export default function LoginPage() {
+function LoginPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { message } = App.useApp();
   const [loading, setLoading] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
   const login = useAuthStore((s) => s.login);
+  const { user: currentUser, loading: userLoading } = useCurrentUser();
+  const isAdmin = useIsAdmin();
+
+  // Wait for hydration
+  useEffect(() => {
+    setHydrated(true);
+  }, []);
+
+  // Auto-redirect if already logged in
+  useEffect(() => {
+    if (!hydrated || userLoading) return;
+
+    if (currentUser) {
+      const returnUrl = searchParams.get('returnUrl');
+      if (returnUrl) {
+        router.replace(returnUrl);
+      } else if (isAdmin) {
+        router.replace('/admin');
+      } else {
+        router.replace('/');
+      }
+    }
+  }, [currentUser, isAdmin, hydrated, userLoading, router, searchParams]);
 
   const onFinish = async (values: LoginValues) => {
     setLoading(true);
 
     try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(values),
-      });
+      // Use store's login method (email, password)
+      const result = await login(values.email, values.senha);
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        message.error(data.mensagem || 'Erro ao realizar login');
+      if (!result.success) {
+        message.error(result.error || 'E-mail ou senha inválidos');
+        setLoading(false);
         return;
       }
 
-      login(data);
       message.success('Login realizado com sucesso');
-      router.replace('/');
+
+      // Redirect based on returnUrl or user role
+      const returnUrl = searchParams.get('returnUrl');
+      if (returnUrl) {
+        router.replace(returnUrl);
+      } else if (isAdmin) {
+        router.replace('/admin');
+      } else {
+        router.replace('/');
+      }
     } catch (error) {
       message.error('Erro ao conectar com o servidor');
-    } finally {
       setLoading(false);
     }
   };
+
+  // Show loading while checking auth state
+  if (!hydrated || userLoading || (hydrated && currentUser)) {
+    return (
+      <div style={{ minHeight: '100dvh', display: 'grid', placeItems: 'center' }}>
+        <Spin size="large" tip="Carregando..." />
+      </div>
+    );
+  }
 
   return (
     <div style={{ minHeight: '100dvh', display: 'grid', placeItems: 'center', padding: 16 }}>
@@ -91,5 +129,17 @@ export default function LoginPage() {
         </Typography.Paragraph>
       </Card>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div style={{ minHeight: '100dvh', display: 'grid', placeItems: 'center' }}>
+        <Spin size="large" tip="Carregando..." />
+      </div>
+    }>
+      <LoginPageContent />
+    </Suspense>
   );
 }
