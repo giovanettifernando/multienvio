@@ -1,7 +1,6 @@
 import { z } from "zod";
 import { CardBrand } from "@prisma/client";
 import {
-  assertExpirationWindow,
   detectCardBrand,
   isCardExpired,
   isValidCardNumberLength,
@@ -10,8 +9,8 @@ import {
   normalizeCardNumber,
   normalizeHolderName,
   validateCvvFormat,
-} from "@/lib/utils/card";
-import { AddressSchema } from "@/lib/validation/address";
+} from "../utils/card";
+import { AddressSchema } from "./address";
 
 const { label, cep, logradouro, numero, complemento, bairro, cidade, uf } = AddressSchema.shape;
 
@@ -26,33 +25,53 @@ const BillingAddressSchema = z.object({
   uf,
 });
 
-const CardCreateSchema = z.object({
+const CvvSchema = z.string().optional();
+
+const ExpMonthInput = z.union([z.string(), z.number()]).transform((value) => String(value).trim());
+const ExpYearInput = z.union([z.string(), z.number()]).transform((value) => String(value).trim());
+
+const SharedCardFields = {
   number: z.string(),
   holderName: z.string(),
-  expMonth: z.coerce.number().int(),
-  expYear: z.coerce.number().int(),
-  cvv: z
-    .string()
-    .optional()
-    .refine((value) => !value || validateCvvFormat(value), {
-      message: "CVV inválido",
-    }),
+  cvv: CvvSchema,
+  document: z.string().optional(),
   billingAddressId: z.string().uuid().optional(),
   billingAddress: BillingAddressSchema.partial({
     label: true,
     complemento: true,
   }).optional(),
   isDefault: z.boolean().optional(),
-});
+};
+
+const CardCreateSeparatedSchema = z
+  .object({
+    ...SharedCardFields,
+    expMonth: ExpMonthInput,
+    expYear: ExpYearInput,
+    expiry: z.undefined().optional(),
+  })
+  .strict();
+
+const CardCreateCombinedSchema = z
+  .object({
+    ...SharedCardFields,
+    expiry: z.string().transform((value) => value.trim()),
+    expMonth: z.undefined().optional(),
+    expYear: z.undefined().optional(),
+  })
+  .strict();
+
+const CardCreateSchema = z.union([CardCreateSeparatedSchema, CardCreateCombinedSchema]);
 
 const CardUpdateSchema = z
   .object({
     holderName: z.string().optional(),
-    expMonth: z.coerce.number().int().optional(),
-    expYear: z.coerce.number().int().optional(),
+    expMonth: ExpMonthInput.optional(),
+    expYear: ExpYearInput.optional(),
     billingAddressId: z.string().uuid().optional().nullable(),
     isDefault: z.boolean().optional(),
   })
+  .strict()
   .superRefine((data, ctx) => {
     if (!Object.values(data).some((value) => value !== undefined)) {
       ctx.addIssue({
@@ -72,9 +91,18 @@ const CardUpdateSchema = z
     }
   });
 
-export type BillingAddressInput = z.infer<typeof BillingAddressSchema>;
+export type BillingAddressInput = z.input<typeof BillingAddressSchema>;
 
-export type NormalizedBillingAddress = ReturnType<typeof normalizeBillingAddress>;
+export type NormalizedBillingAddress = {
+  label: string | null;
+  cep: string;
+  logradouro: string;
+  numero: string;
+  complemento: string | null;
+  bairro: string;
+  cidade: string;
+  uf: string;
+};
 
 export type NormalizedCardCreateInput = {
   pan: string;
@@ -104,14 +132,91 @@ export class CardValidationError extends Error {
       | "invalid_number"
       | "invalid_holder"
       | "invalid_cvv"
-      | "expired_card",
+      | "invalid_exp_month"
+      | "invalid_exp_year"
+      | "card_expired",
   ) {
     super(message);
     this.name = "CardValidationError";
   }
 }
 
-function normalizeBillingAddress(input: BillingAddressInput) {
+type ParsedCreateInput = z.infer<typeof CardCreateSchema>;
+
+function normalizeExpMonth(raw: string): number {
+  const sanitized = raw.replace(/\s/g, "");
+  if (!/^\d{1,2}$/u.test(sanitized)) {
+    throw new CardValidationError("Mês inválido (01–12).", "invalid_exp_month");
+  }
+  const month = Number.parseInt(sanitized, 10);
+  if (!Number.isInteger(month) || month < 1 || month > 12) {
+    throw new CardValidationError("Mês inválido (01–12).", "invalid_exp_month");
+  }
+  return month;
+}
+
+function normalizeExpYear(raw: string): number {
+  const sanitized = raw.replace(/\s/g, "");
+  if (!/^\d{2}$|^\d{4}$/u.test(sanitized)) {
+    throw new CardValidationError("Ano inválido.", "invalid_exp_year");
+  }
+  const numeric = Number.parseInt(sanitized, 10);
+  if (!Number.isInteger(numeric)) {
+    throw new CardValidationError("Ano inválido.", "invalid_exp_year");
+  }
+  if (sanitized.length === 2) {
+    return 2000 + numeric;
+  }
+  return numeric;
+}
+
+function normalizeSeparatedExpiry(expMonthRaw: string, expYearRaw: string) {
+  return {
+    expMonth: normalizeExpMonth(expMonthRaw),
+    expYear: normalizeExpYear(expYearRaw),
+  };
+}
+
+function normalizeCombinedExpiry(expiryRaw: string) {
+  const sanitized = expiryRaw.replace(/\s/g, "");
+  const match = /^(\d{2})\/(\d{2}|\d{4})$/u.exec(sanitized);
+  if (!match) {
+    throw new CardValidationError("Mês inválido (01–12).", "invalid_exp_month");
+  }
+  const [, monthPart, yearPart] = match;
+  return normalizeSeparatedExpiry(monthPart, yearPart);
+}
+
+function normalizeExpiry(data: ParsedCreateInput) {
+  if ("expiry" in data && typeof data.expiry === "string") {
+    return normalizeCombinedExpiry(data.expiry);
+  }
+  if ("expMonth" in data && "expYear" in data) {
+    return normalizeSeparatedExpiry(data.expMonth as string, data.expYear as string);
+  }
+  throw new CardValidationError("Dados inválidos", "invalid_payload");
+}
+
+function validateExpiryWindow(expMonth: number, expYear: number) {
+  const now = new Date();
+  const nowYear = now.getUTCFullYear();
+  const minYear = nowYear - 1;
+  const maxYear = nowYear + 15;
+
+  if (expMonth < 1 || expMonth > 12) {
+    throw new CardValidationError("Mês inválido (01–12).", "invalid_exp_month");
+  }
+
+  if (expYear < minYear || expYear > maxYear) {
+    throw new CardValidationError("Ano inválido.", "invalid_exp_year");
+  }
+
+  if (isCardExpired(expMonth, expYear, now)) {
+    throw new CardValidationError("Cartão expirado.", "card_expired");
+  }
+}
+
+function normalizeBillingAddress(input: BillingAddressInput): NormalizedBillingAddress {
   const parsed = BillingAddressSchema.parse(input);
   return {
     label: parsed.label ?? null,
@@ -131,39 +236,52 @@ export function validateCardCreateInput(payload: unknown): NormalizedCardCreateI
     throw new CardValidationError("Dados inválidos", "invalid_payload");
   }
 
-  const pan = normalizeCardNumber(parsed.data.number);
+  const data = parsed.data;
+
+  if (data.billingAddressId && data.billingAddress) {
+    throw new CardValidationError("Dados inválidos", "invalid_payload");
+  }
+
+  const { expMonth, expYear } = normalizeExpiry(data);
+  validateExpiryWindow(expMonth, expYear);
+
+  if (process.env.NODE_ENV === "development") {
+    // eslint-disable-next-line no-console
+    console.debug("[account.cards] normalized-expiry", {
+      expMonth,
+      expYear,
+    });
+  }
+
+  const pan = normalizeCardNumber(data.number);
   if (!isValidCardNumberLength(pan) || !luhnCheck(pan)) {
     throw new CardValidationError("Número de cartão inválido", "invalid_number");
   }
 
-  const holderName = normalizeHolderName(parsed.data.holderName);
+  const holderName = normalizeHolderName(data.holderName);
   if (!isValidHolderName(holderName)) {
     throw new CardValidationError("Nome do titular inválido", "invalid_holder");
   }
 
-  if (!assertExpirationWindow(parsed.data.expYear, parsed.data.expMonth)) {
-    throw new CardValidationError("Cartão expirado ou validade inválida", "expired_card");
-  }
-
-  if (parsed.data.cvv && !validateCvvFormat(parsed.data.cvv)) {
+  if (data.cvv && !validateCvvFormat(data.cvv)) {
     throw new CardValidationError("CVV inválido", "invalid_cvv");
   }
 
   const brand = detectCardBrand(pan);
-  const billingAddress = parsed.data.billingAddress
-    ? normalizeBillingAddress(parsed.data.billingAddress)
+  const billingAddress = data.billingAddress
+    ? normalizeBillingAddress(data.billingAddress)
     : undefined;
 
   return {
     pan,
     brand,
     holderName,
-    expMonth: parsed.data.expMonth,
-    expYear: parsed.data.expYear,
+    expMonth,
+    expYear,
     last4: pan.slice(-4),
-    billingAddressId: parsed.data.billingAddressId,
+    billingAddressId: data.billingAddressId,
     billingAddress,
-    requestDefault: parsed.data.isDefault ?? false,
+    requestDefault: data.isDefault ?? false,
   };
 }
 
@@ -185,8 +303,10 @@ export function validateCardUpdateInput(payload: unknown): NormalizedCardUpdateI
   }
 
   if (data.expMonth !== undefined && data.expYear !== undefined) {
-    next.expMonth = data.expMonth;
-    next.expYear = data.expYear;
+    const { expMonth, expYear } = normalizeSeparatedExpiry(data.expMonth, data.expYear);
+    validateExpiryWindow(expMonth, expYear);
+    next.expMonth = expMonth;
+    next.expYear = expYear;
   }
 
   if (data.billingAddressId !== undefined) {

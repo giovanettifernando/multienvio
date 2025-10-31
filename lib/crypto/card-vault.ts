@@ -1,4 +1,4 @@
-import { createCipheriv, createDecipheriv, createHash, randomBytes } from "crypto";
+import { createCipheriv, createDecipheriv, randomBytes } from "crypto";
 
 export type PanCipherPayload = {
   cipher: string;
@@ -69,9 +69,44 @@ export function parsePanCipher(serialized: string | null): PanCipherPayload | nu
   }
 }
 
+const FINGERPRINT_DELIMITER = "-";
+
+export type CardFingerprintParts = {
+  bin: string;
+  last4: string;
+  expMonth: number;
+  expYear: number;
+};
+
 export function makeFingerprint(pan: string, expMonth: number, expYear: number): string {
   const bin = pan.slice(0, 6);
   const last4 = pan.slice(-4);
-  const payload = `${bin}|${last4}|${expYear}|${String(expMonth).padStart(2, "0")}`;
-  return createHash("sha256").update(payload).digest("hex");
+  const month = String(expMonth).padStart(2, "0");
+  return [bin, last4, String(expYear), month].join(FINGERPRINT_DELIMITER);
+}
+
+export function parseFingerprint(fingerprint: string): CardFingerprintParts {
+  const segments = fingerprint.split(FINGERPRINT_DELIMITER);
+  if (segments.length !== 4) {
+    throw new Error("Fingerprint malformado");
+  }
+
+  const [bin, last4, expYear, expMonth] = segments;
+  if (!/^\d{6}$/u.test(bin) || !/^\d{4}$/u.test(last4)) {
+    throw new Error("Fingerprint inválido");
+  }
+
+  const month = Number(expMonth);
+  const year = Number(expYear);
+
+  if (!Number.isInteger(month) || !Number.isInteger(year)) {
+    throw new Error("Fingerprint inválido");
+  }
+
+  return {
+    bin,
+    last4,
+    expMonth: month,
+    expYear: year,
+  };
 }

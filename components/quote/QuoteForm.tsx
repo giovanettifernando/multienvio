@@ -881,6 +881,7 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
       bairro: values.bairro,
       cidade: values.cidade,
       uf: values.uf,
+      notes: values.notes,
     };
 
     addRecipient(newRecipient);

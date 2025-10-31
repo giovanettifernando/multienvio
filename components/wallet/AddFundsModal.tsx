@@ -48,21 +48,27 @@ export function AddFundsModal({
   const [pixTopup, setPixTopup] = useState<PixTopup | null>(null);
   const [selectedCardId, setSelectedCardId] = useState<string | undefined>();
 
-  const { data: cards, isLoading: loadingCards } = useCards();
+  const { data: cards = [], isLoading: loadingCards } = useCards();
 
   const cardOptions = useMemo(
     () =>
-      (cards ?? []).map((card) => ({
+      cards.map((card) => ({
         label: `${card.brand} •••• ${card.last4} — ${card.holderName}`,
         value: card.id,
+        isDefault: card.isDefault,
       })),
     [cards],
   );
 
+  const defaultCardId = useMemo(
+    () => cardOptions.find((option) => option.isDefault)?.value,
+    [cardOptions],
+  );
+
   useEffect(() => {
     if (selectedCardId || !cardOptions.length) return;
-    setSelectedCardId(cardOptions[0]?.value);
-  }, [cardOptions, selectedCardId]);
+    setSelectedCardId(defaultCardId ?? cardOptions[0]?.value);
+  }, [cardOptions, defaultCardId, selectedCardId]);
 
   const pixMutation = useMutation<PixTopup, Error, number>({
     mutationFn: createPixTopup,
@@ -177,7 +183,7 @@ export function AddFundsModal({
                       }
                     />
                   </Form.Item>
-                  {!loadingCards && (cards?.length ?? 0) === 0 ? (
+                  {!loadingCards && cardOptions.length === 0 ? (
                     <Form.Item>
                       <Button
                         type="default"

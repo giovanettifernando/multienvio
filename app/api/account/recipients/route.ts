@@ -1,45 +1,46 @@
 import { withApiHandler } from "@/lib/api/handler";
+import { ApiError } from "@/lib/api/errors";
 import {
-  createUserCard,
-  listUserCards,
-} from "@/lib/services/account-cards.service";
+  createRecipient,
+  listRecipients,
+} from "@/lib/services/account-recipients.service";
 import {
-  validateCardCreateInput,
-} from "@/lib/validation/card";
+  validateRecipientCreateInput,
+} from "@/lib/validation/recipient";
 import {
-  enforceCardWriteLimit,
+  enforceRecipientWriteLimit,
+  mapRecipientValidationError,
   parsePositiveInteger,
-  rethrowCardValidation,
   requireUserId,
 } from "./helpers";
-import { ApiError } from "@/lib/api/errors";
 
 export const dynamic = "force-dynamic";
 
 export const GET = withApiHandler(async ({ req, logger }) => {
   const userId = await requireUserId(req);
-
   const search = req.nextUrl.searchParams;
+  const q = search.get("q") ?? undefined;
+  const city = search.get("city") ?? undefined;
+  const uf = search.get("uf") ?? undefined;
   const page = parsePositiveInteger(search.get("page"), 1);
   const pageSize = parsePositiveInteger(search.get("pageSize"), 20);
 
-  const result = await listUserCards(
+  const result = await listRecipients(
     userId,
-    { page, pageSize },
+    { q, city, uf, page, pageSize },
     { logger },
   );
 
   return {
     data: result,
-    meta: { tags: ["account", "cards"] },
+    meta: { tags: ["account", "recipients"] },
   };
 });
 
 export const POST = withApiHandler(async (context) => {
   const { req, logger } = context;
   const userId = await requireUserId(req);
-
-  enforceCardWriteLimit(context);
+  enforceRecipientWriteLimit(context);
 
   let payload: unknown;
   try {
@@ -54,16 +55,16 @@ export const POST = withApiHandler(async (context) => {
 
   let normalized;
   try {
-    normalized = validateCardCreateInput(payload);
+    normalized = validateRecipientCreateInput(payload);
   } catch (error) {
-    rethrowCardValidation(error);
+    mapRecipientValidationError(error);
   }
 
-  const card = await createUserCard(userId, normalized, { logger });
+  const recipient = await createRecipient(userId, normalized!, { logger });
 
   return {
-    data: card,
+    data: recipient,
     status: 201,
-    meta: { tags: ["account", "cards"] },
+    meta: { tags: ["account", "recipients"] },
   };
 });

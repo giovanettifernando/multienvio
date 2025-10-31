@@ -14,7 +14,7 @@ const cardSchema = z.object({
     .regex(/^(0[1-9]|1[0-2])\/(\d{2})$/u, "Validade inválida (MM/AA)"),
   cvv: z.string().regex(/^\d{3,4}$/u, "CVV inválido"),
   document: z.string().min(11, "Informe o CPF/CNPJ"),
-  isPrimary: z.boolean(),
+  isDefault: z.boolean(),
 });
 
 export type CardFormValues = z.infer<typeof cardSchema>;
@@ -37,7 +37,7 @@ export function CardModal({ open, loading, onSubmit, onCancel }: CardModalProps)
       exp: "",
       cvv: "",
       document: "",
-      isPrimary: false,
+      isDefault: false,
     },
   });
 
@@ -134,7 +134,7 @@ export function CardModal({ open, loading, onSubmit, onCancel }: CardModalProps)
           )}
         />
         <Controller
-          name="isPrimary"
+          name="isDefault"
           control={form.control}
           render={({ field }) => (
             <Form.Item valuePropName="checked">

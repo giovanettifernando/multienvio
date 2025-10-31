@@ -1,7 +1,6 @@
 "use client";
 
-import React from "react";
-import { useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
   App,
   Button,
@@ -27,25 +26,30 @@ export default function CardsList() {
   const cardsQuery = useCards();
   const createMutation = useCardCreate();
   const [showModal, setShowModal] = useState(false);
-  const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [primaryId, setPrimaryId] = useState<string | null>(null);
-
-  const deleteMutation = useCardDelete(deleteId ?? "");
-  const primaryMutation = useCardUpdate(primaryId ?? "");
+  const deleteMutation = useCardDelete();
+  const defaultMutation = useCardUpdate();
 
   const cards = cardsQuery.data ?? [];
 
   const handleSubmit = (values: CardFormValues) => {
     const digits = values.number.replace(/\D/g, "");
-    const [month, year] = values.exp.split("/");
+    const [monthPart = "", yearPart = ""] = values.exp.split("/");
+    const monthSanitized = monthPart.trim();
+    const yearSanitized = yearPart.trim();
+    const expMonth = Number.parseInt(monthSanitized, 10);
+    const rawYearNumber = Number.parseInt(yearSanitized, 10);
+    const expYear =
+      yearSanitized.length === 2 && Number.isInteger(rawYearNumber)
+        ? 2000 + rawYearNumber
+        : rawYearNumber;
     const payload = {
       holderName: values.holderName,
       number: digits,
-      expMonth: Number(month),
-      expYear: Number(year),
+      expMonth,
+      expYear,
       cvv: values.cvv,
       document: values.document,
-      isPrimary: values.isPrimary,
+      isDefault: values.isDefault,
     };
 
     createMutation.mutate(payload, {
@@ -62,10 +66,8 @@ export default function CardsList() {
       },
     });
   };
-
-  useEffect(() => {
-    if (!deleteId) return;
-    deleteMutation.mutate(undefined, {
+  const handleDelete = (cardId: string) => {
+    deleteMutation.mutate(cardId, {
       onSuccess: () => {
         message.success("Cartão removido.");
       },
@@ -76,14 +78,12 @@ export default function CardsList() {
             : "Falha ao remover cartão.",
         );
       },
-      onSettled: () => setDeleteId(null),
     });
-  }, [deleteId, deleteMutation, message]);
+  };
 
-  useEffect(() => {
-    if (!primaryId) return;
-    primaryMutation.mutate(
-      { isPrimary: true },
+  const handleSetDefault = (cardId: string) => {
+    defaultMutation.mutate(
+      { id: cardId, payload: { isDefault: true } },
       {
         onSuccess: () => {
           message.success("Cartão definido como principal.");
@@ -95,10 +95,9 @@ export default function CardsList() {
               : "Falha ao atualizar cartão.",
           );
         },
-        onSettled: () => setPrimaryId(null),
       },
     );
-  }, [primaryId, primaryMutation, message]);
+  };
 
   const loading = cardsQuery.isLoading;
 
@@ -121,9 +120,12 @@ export default function CardsList() {
               <Button
                 key="primary"
                 type="link"
-                disabled={item.isPrimary}
-                loading={primaryId === item.id && primaryMutation.isPending}
-                onClick={() => setPrimaryId(item.id)}
+                disabled={item.isDefault}
+                loading={
+                  defaultMutation.isPending &&
+                  defaultMutation.variables?.id === item.id
+                }
+                onClick={() => handleSetDefault(item.id)}
               >
                 Definir como principal
               </Button>,
@@ -132,12 +134,15 @@ export default function CardsList() {
                 title="Remover cartão"
                 okText="Remover"
                 cancelText="Cancelar"
-                onConfirm={() => setDeleteId(item.id)}
+                onConfirm={() => handleDelete(item.id)}
               >
                 <Button
                   type="link"
                   danger
-                  loading={deleteId === item.id && deleteMutation.isPending}
+                  loading={
+                    deleteMutation.isPending &&
+                    deleteMutation.variables === item.id
+                  }
                 >
                   Remover
                 </Button>
@@ -148,7 +153,7 @@ export default function CardsList() {
               title={
                 <Space>
                   <Typography.Text strong>{item.holderName}</Typography.Text>
-                  {item.isPrimary ? <Tag color="gold">Principal</Tag> : null}
+                  {item.isDefault ? <Tag color="gold">Principal</Tag> : null}
                 </Space>
               }
               description={

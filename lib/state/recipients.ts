@@ -5,20 +5,23 @@ import { persist, createJSONStorage } from "zustand/middleware";
 export type Recipient = {
   id: string;
   name: string;
-  doc?: string;        // CPF/CNPJ
+  doc?: string;
   phone?: string;
   email?: string;
-  cep: string;         // "58035-100"
+  notes?: string;
+  cep: string;
   logradouro?: string;
   numero?: string;
   complemento?: string;
   bairro?: string;
   cidade: string;
   uf: string;
+  isDefault?: boolean;
 };
 
 type RecipientsStore = {
   items: Recipient[];
+  setAll: (recipients: Recipient[]) => void;
   add: (r: Recipient) => void;
   update: (id: string, r: Partial<Recipient>) => void;
   remove: (id: string) => void;
@@ -33,6 +36,8 @@ export const useRecipientsStore = create<RecipientsStore>()(
   persist(
     (set) => ({
       items: [],
+      setAll: (recipients) =>
+        set({ items: recipients }),
       add: (r) => set((s) => ({ items: [r, ...s.items] })),
       update: (id, updates) =>
         set((s) => ({

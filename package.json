@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
+    "test": "node --test --require ./tests/register.js tests/**/*.test.ts",
     "lint:fix": "eslint --fix .",
     "audit:forms": "ts-node --transpile-only scripts/audit-forms.ts",
     "db:push": "npx prisma db push",

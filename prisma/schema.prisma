@@ -52,6 +52,7 @@ model User {
   sentShipments     Shipment[] @relation("SenderShipments")
   receivedShipments Shipment[] @relation("RecipientShipments")
   cards             Card[]
+  recipients        Recipient[]
 
   @@index([email])
   @@index([emailVerificationToken])
@@ -113,6 +114,34 @@ model Card {
   @@index([userId, isDefault])
   @@unique([userId, fingerprint])
   @@map("cards")
+}
+
+model Recipient {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name         String
+  nameSearch   String
+  email        String?  @db.VarChar(160)
+  document     String?  @db.VarChar(14)
+  phone        String?  @db.VarChar(20)
+  notes        String?  @db.VarChar(280)
+  isDefault    Boolean  @default(false)
+  cep          String   @db.VarChar(8)
+  logradouro   String
+  numero       String   @db.VarChar(20)
+  complemento  String?
+  bairro       String
+  cidade       String
+  uf           String   @db.VarChar(2)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([userId])
+  @@index([userId, isDefault])
+  @@index([userId, document])
+  @@index([userId, nameSearch])
+  @@map("recipients")
 }
 
 // Modelo de Envio/Remessa

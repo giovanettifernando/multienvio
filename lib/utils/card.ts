@@ -107,8 +107,8 @@ export function isValidHolderName(value: string): boolean {
 
 export function isCardExpired(expMonth: number, expYear: number, referenceDate = new Date()): boolean {
   if (expMonth < 1 || expMonth > 12) return true;
-  const year = referenceDate.getFullYear();
-  const month = referenceDate.getMonth() + 1;
+  const year = referenceDate.getUTCFullYear();
+  const month = referenceDate.getUTCMonth() + 1;
 
   if (expYear < year) return true;
   if (expYear === year && expMonth < month) return true;
@@ -117,8 +117,10 @@ export function isCardExpired(expMonth: number, expYear: number, referenceDate =
 
 export function assertExpirationWindow(expYear: number, expMonth: number): boolean {
   const now = new Date();
-  const maxYear = now.getFullYear() + 15;
-  if (expYear > maxYear) return false;
+  const maxYear = now.getUTCFullYear() + 15;
+  const minYear = now.getUTCFullYear() - 1;
+  if (expMonth < 1 || expMonth > 12) return false;
+  if (expYear > maxYear || expYear < minYear) return false;
   return !isCardExpired(expMonth, expYear, now);
 }
 

@@ -22,6 +22,7 @@ const recipientSchema = z.object({
   bairro: z.string().min(2, "Informe o bairro"),
   cidade: z.string().min(2, "Informe a cidade"),
   uf: z.string().min(2).max(2, "UF inválida"),
+  notes: z.string().max(280, "Máximo de 280 caracteres").optional(),
 });
 
 export type RecipientFormValues = z.infer<typeof recipientSchema>;
@@ -57,6 +58,7 @@ export function RecipientModal({
       bairro: "",
       cidade: "",
       uf: "",
+      notes: "",
     },
   });
 
@@ -74,6 +76,7 @@ export function RecipientModal({
         bairro: initialValues?.bairro ?? "",
         cidade: initialValues?.cidade ?? "",
         uf: initialValues?.uf ?? "",
+        notes: initialValues?.notes ?? "",
       });
     }
   }, [open, initialValues, form]);
@@ -251,6 +254,26 @@ export function RecipientModal({
                 help={fieldState.error?.message}
               >
                 <Input {...field} placeholder="SP" maxLength={2} style={{ width: 72 }} disabled />
+              </Form.Item>
+            )}
+          />
+
+          <Controller
+            name="notes"
+            control={form.control}
+            render={({ field, fieldState }) => (
+              <Form.Item
+                label="Observações"
+                validateStatus={fieldState.error ? "error" : undefined}
+                help={fieldState.error?.message}
+              >
+                <Input.TextArea
+                  {...field}
+                  rows={3}
+                  maxLength={280}
+                  showCount
+                  placeholder="Informações adicionais (opcional)"
+                />
               </Form.Item>
             )}
           />

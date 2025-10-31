@@ -18,7 +18,36 @@ export type Card = {
   brand: string;
   expMonth: number;
   expYear: number;
-  isPrimary?: boolean;
+  isDefault: boolean;
+  billingAddressId?: string | null;
+  createdAt?: string;
+};
+
+export type Recipient = {
+  id: string;
+  name: string;
+  email: string | null;
+  document: string | null;
+  phone: string | null;
+  notes: string | null;
+  isDefault: boolean;
+  cep: string;
+  logradouro: string;
+  numero: string;
+  complemento: string | null;
+  bairro: string;
+  cidade: string;
+  uf: string;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type RecipientList = {
+  items: Recipient[];
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
 };
 
 export type ProfileCompany = {

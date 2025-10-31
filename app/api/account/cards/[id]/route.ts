@@ -1,37 +1,62 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getCardsStore } from "@/lib/api/stores";
+import { withApiHandler } from "@/lib/api/handler";
+import { ApiError } from "@/lib/api/errors";
+import {
+  enforceCardWriteLimit,
+  rethrowCardValidation,
+  requireUserId,
+} from "../helpers";
+import {
+  deleteUserCard,
+  updateUserCard,
+} from "@/lib/services/account-cards.service";
+import { validateCardUpdateInput } from "@/lib/validation/card";
 
-export async function PUT(
-  req: NextRequest,
-  context: { params: Promise<{ id: string }> },
-) {
-  const { id } = await context.params;
-  const body = (await req.json()) as Record<string, unknown>;
-  const cards = getCardsStore();
-  const index = cards.findIndex((item) => item.id === id);
-  if (index < 0) {
-    return NextResponse.json({ ok: false }, { status: 404 });
-  }
-  cards[index] = { ...cards[index], ...body };
-  if (cards[index].isPrimary) {
-    cards.forEach((card, idx) => {
-      if (idx !== index) {
-        card.isPrimary = false;
-      }
+export const dynamic = "force-dynamic";
+
+export const PUT = withApiHandler(async (context) => {
+  const { req, params, logger } = context;
+  const { id } = await params;
+  const userId = await requireUserId(req);
+
+  enforceCardWriteLimit(context);
+
+  let payload: unknown;
+  try {
+    payload = await req.json();
+  } catch {
+    throw new ApiError({
+      code: "invalid_payload",
+      message: "JSON inválido.",
+      status: 400,
     });
   }
-  return NextResponse.json({ ok: true, card: cards[index] });
-}
 
-export async function DELETE(
-  _req: NextRequest,
-  context: { params: Promise<{ id: string }> },
-) {
-  const { id } = await context.params;
-  const index = getCardsStore().findIndex((item) => item.id === id);
-  if (index < 0) {
-    return NextResponse.json({ ok: false }, { status: 404 });
-  }
-  getCardsStore().splice(index, 1);
-  return NextResponse.json({ ok: true });
-}
+  const normalized = (() => {
+    try {
+      return validateCardUpdateInput(payload);
+    } catch (error) {
+      rethrowCardValidation(error);
+    }
+  })();
+
+  const card = await updateUserCard(userId, id, normalized, { logger });
+
+  return {
+    data: card,
+    meta: { tags: ["account", "cards"] },
+  };
+});
+
+export const DELETE = withApiHandler(async (context) => {
+  const { req, params, logger } = context;
+  const { id } = await params;
+  const userId = await requireUserId(req);
+
+  enforceCardWriteLimit(context);
+  await deleteUserCard(userId, id, { logger });
+
+  return {
+    data: { deleted: true },
+    meta: { tags: ["account", "cards"] },
+  };
+});
