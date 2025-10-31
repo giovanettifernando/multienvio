@@ -110,3 +110,31 @@ export async function createSession(payload: Omit<JWTPayload, 'iat' | 'exp'>): P
 export async function destroySession(): Promise<void> {
   await removeAuthCookie();
 }
+
+/**
+ * Obtém o usuário a partir do request (via cookie)
+ * Útil para API routes
+ */
+export async function getUserFromRequest(request: Request): Promise<JWTPayload | null> {
+  try {
+    // Obter cookie do request
+    const cookieHeader = request.headers.get('cookie');
+    if (!cookieHeader) return null;
+
+    // Parsear cookies
+    const cookies = cookieHeader.split(';').reduce((acc, cookie) => {
+      const [key, value] = cookie.trim().split('=');
+      acc[key] = value;
+      return acc;
+    }, {} as Record<string, string>);
+
+    const token = cookies[AUTH_COOKIE_NAME];
+    if (!token) return null;
+
+    // Verificar e decodificar JWT
+    return verify(token);
+  } catch (error) {
+    console.error('Error getting user from request:', error);
+    return null;
+  }
+}

@@ -5,8 +5,15 @@ export function useProfile() {
   return useQuery<Profile>({
     queryKey: ["account", "profile"],
     queryFn: async () => {
-      const response = await fetch("/api/account/profile");
+      const response = await fetch("/api/account/profile", {
+        credentials: 'include', // Send cookies for authentication
+      });
       if (!response.ok) {
+        // Handle 401 Unauthorized - redirect to login
+        if (response.status === 401) {
+          window.location.href = '/auth/login';
+          throw new Error("Sessão expirada");
+        }
         throw new Error("Falha ao carregar perfil");
       }
       return (await response.json()) as Profile;
@@ -20,10 +27,16 @@ export function useProfileSave() {
     mutationFn: async (payload: Profile) => {
       const response = await fetch("/api/account/profile", {
         method: "PUT",
+        credentials: 'include', // Send cookies for authentication
         body: JSON.stringify(payload),
         headers: { "Content-Type": "application/json" },
       });
       if (!response.ok) {
+        // Handle 401 Unauthorized - redirect to login
+        if (response.status === 401) {
+          window.location.href = '/auth/login';
+          throw new Error("Sessão expirada");
+        }
         throw new Error("Falha ao salvar perfil");
       }
       return (await response.json()) as Profile;
@@ -38,11 +51,18 @@ export function useAddresses() {
   return useQuery<Address[]>({
     queryKey: ["account", "addresses"],
     queryFn: async () => {
-      const response = await fetch("/api/account/addresses");
+      const response = await fetch("/api/account/addresses", {
+        credentials: 'include',
+      });
       if (!response.ok) {
+        if (response.status === 401) {
+          window.location.href = '/auth/login';
+          throw new Error("Sessão expirada");
+        }
         throw new Error("Falha ao carregar endereços");
       }
-      return (await response.json()) as Address[];
+      const data = await response.json();
+      return data.addresses || [];
     },
   });
 }
@@ -53,6 +73,7 @@ export function useAddressCreate() {
     mutationFn: async (payload: Partial<Address>) => {
       const response = await fetch("/api/account/addresses", {
         method: "POST",
+        credentials: 'include',
         body: JSON.stringify(payload),
         headers: { "Content-Type": "application/json" },
       });

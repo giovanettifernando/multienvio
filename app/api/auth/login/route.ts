@@ -39,6 +39,17 @@ export async function POST(request: Request) {
       );
     }
 
+    // Verificar se o email foi verificado
+    if (!dbUser.emailVerified) {
+      return NextResponse.json(
+        {
+          message: 'Email não verificado. Verifique sua caixa de entrada para ativar sua conta.',
+          code: 'EMAIL_NOT_VERIFIED'
+        },
+        { status: 403 }
+      );
+    }
+
     // Verificar status do usuário
     if (dbUser.status !== UserStatus.ACTIVE) {
       return NextResponse.json(

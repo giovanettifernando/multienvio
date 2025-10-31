@@ -39,3 +39,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# DB local / volumes Docker
+_data/
+data/
+postgres-data/

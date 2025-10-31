@@ -1,34 +1,150 @@
+/**
+ * /api/account/profile - Adapter endpoint for PersonalForm
+ *
+ * This endpoint maps between the frontend Profile type and the backend /api/account/me endpoint.
+ *
+ * Frontend Profile structure:
+ * - fullName, email, phone, cpf, hasCompany, company, avatarDataUrl
+ *
+ * Backend /api/account/me structure:
+ * - name, email, phone, cpf, avatarUrl
+ *
+ * Flow:
+ * 1. GET: Fetch from /api/account/me → transform to Profile → return
+ * 2. PUT: Receive Profile → transform to backend format → save to /api/account/me → return
+ */
+
 import { NextRequest, NextResponse } from "next/server";
 import type { Profile } from "@/types/account";
 
 export const dynamic = "force-dynamic";
 
-declare global {
-  var __envioProfile: Profile | undefined;
-}
+/**
+ * GET /api/account/profile
+ * Fetches user data from /api/account/me and transforms it to Profile format
+ */
+export async function GET(request: NextRequest) {
+  try {
+    // Forward cookies for authentication
+    const cookieHeader = request.headers.get('cookie') || '';
 
-function getProfileStore(): Profile {
-  if (!globalThis.__envioProfile) {
-    globalThis.__envioProfile = {
-      fullName: "Usuário Envio Legal",
-      email: "user@example.com",
-      phone: "41999999999",
-      cpf: "00000000000",
-      hasCompany: false,
-      company: null,
-      avatarDataUrl: null,
+    // Fetch from real backend endpoint
+    const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/account/me`, {
+      headers: {
+        'Cookie': cookieHeader,
+      },
+      cache: 'no-store',
+    });
+
+    if (!response.ok) {
+      // Pass through error status
+      const error = await response.json().catch(() => ({ message: 'Failed to fetch profile' }));
+      return NextResponse.json(error, { status: response.status });
+    }
+
+    const data = await response.json();
+
+    if (!data.success || !data.user) {
+      return NextResponse.json(
+        { success: false, message: 'Invalid response from server' },
+        { status: 500 }
+      );
+    }
+
+    const user = data.user;
+
+    // Transform backend response to frontend Profile format
+    const profile: Profile = {
+      fullName: user.name || '',
+      email: user.email || '',
+      phone: user.phone || '',
+      cpf: user.cpf || '',
+      hasCompany: user.hasCompany || false,
+      company: user.hasCompany && user.cnpj ? {
+        cnpj: user.cnpj,
+        razaoSocial: user.razaoSocial || '',
+      } : null,
+      avatarDataUrl: user.avatarUrl || null,
     };
+
+    return NextResponse.json(profile);
+  } catch (error) {
+    console.error('[GET /api/account/profile] Error:', error);
+    return NextResponse.json(
+      { success: false, message: 'Internal server error' },
+      { status: 500 }
+    );
   }
-  return globalThis.__envioProfile;
 }
 
-export async function GET() {
-  const profile = getProfileStore();
-  return NextResponse.json(profile);
-}
+/**
+ * PUT /api/account/profile
+ * Receives Profile data, transforms it, and saves to /api/account/me
+ */
+export async function PUT(request: NextRequest) {
+  try {
+    const profile = (await request.json()) as Profile;
+    const cookieHeader = request.headers.get('cookie') || '';
 
-export async function PUT(req: NextRequest) {
-  const body = (await req.json()) as Profile;
-  globalThis.__envioProfile = body;
-  return NextResponse.json(body);
+    // Transform Profile to backend format
+    // Note: email is read-only in backend, so we don't send it
+    const payload = {
+      name: profile.fullName?.trim() || '',
+      phone: profile.phone || null,
+      cpf: profile.cpf || null,
+      avatarUrl: profile.avatarDataUrl || null,
+      hasCompany: profile.hasCompany || false,
+      cnpj: profile.company?.cnpj || null,
+      razaoSocial: profile.company?.razaoSocial || null,
+    };
+
+    // Save to real backend endpoint
+    const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/account/me`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Cookie': cookieHeader,
+      },
+      body: JSON.stringify(payload),
+      cache: 'no-store',
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: 'Failed to save profile' }));
+      return NextResponse.json(error, { status: response.status });
+    }
+
+    const data = await response.json();
+
+    if (!data.success || !data.user) {
+      return NextResponse.json(
+        { success: false, message: 'Invalid response from server' },
+        { status: 500 }
+      );
+    }
+
+    const user = data.user;
+
+    // Transform saved data back to Profile format
+    const savedProfile: Profile = {
+      fullName: user.name || '',
+      email: user.email || '',
+      phone: user.phone || '',
+      cpf: user.cpf || '',
+      hasCompany: user.hasCompany || false,
+      company: user.hasCompany && user.cnpj ? {
+        cnpj: user.cnpj,
+        razaoSocial: user.razaoSocial || '',
+      } : null,
+      avatarDataUrl: user.avatarUrl || null,
+    };
+
+    return NextResponse.json(savedProfile);
+  } catch (error) {
+    console.error('[PUT /api/account/profile] Error:', error);
+    return NextResponse.json(
+      { success: false, message: 'Internal server error' },
+      { status: 500 }
+    );
+  }
 }

@@ -25,9 +25,10 @@ export function AppProviders({ children }: PropsWithChildren) {
   return (
     <QueryClientProvider client={queryClient}>
       <App>{children}</App>
-      {process.env.NODE_ENV === "development" ? (
+      {/* ReactQueryDevtools disabled due to Next.js 15 compatibility issue */}
+      {/* {process.env.NODE_ENV === "development" ? (
         <ReactQueryDevtools initialIsOpen={false} />
-      ) : null}
+      ) : null} */}
     </QueryClientProvider>
   );
 }

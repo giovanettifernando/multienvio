@@ -38,7 +38,7 @@ async function main() {
   // Hash da senha do admin
   const adminPasswordHash = await bcrypt.hash('admin123', 10);
 
-  // Criar usuário admin
+  // Criar usuário admin (já verificado)
   console.log('🔐 Criando usuário administrador...');
   const adminUser = await prisma.user.create({
     data: {
@@ -47,6 +47,9 @@ async function main() {
       passwordHash: adminPasswordHash,
       phone: '(11) 99999-9999',
       status: 'active',
+      emailVerified: true,
+      emailVerifiedAt: new Date(),
+      termsAcceptedAt: new Date(),
       roleId: adminRole.id,
       lastLoginAt: null,
     },
@@ -54,7 +57,7 @@ async function main() {
 
   console.log(`✅ Usuário admin criado: ${adminUser.email}`);
 
-  // Criar usuário de teste comum
+  // Criar usuário de teste comum (já verificado)
   console.log('👤 Criando usuário de teste...');
   const testUserPasswordHash = await bcrypt.hash('user123', 10);
 
@@ -65,6 +68,9 @@ async function main() {
       passwordHash: testUserPasswordHash,
       phone: '(11) 88888-8888',
       status: 'active',
+      emailVerified: true,
+      emailVerifiedAt: new Date(),
+      termsAcceptedAt: new Date(),
       roleId: userRole.id,
       lastLoginAt: null,
     },

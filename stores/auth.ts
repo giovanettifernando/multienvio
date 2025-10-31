@@ -20,7 +20,21 @@ type AuthState = {
   hasCompany: boolean;
   setUser: (user: User | null) => void;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string; user?: User }>;
-  register: (data: { name: string; email: string; password: string; phone?: string }) => Promise<{ success: boolean; error?: string; userId?: string }>;
+  register: (data: {
+    name: string;
+    email: string;
+    password: string;
+    phone?: string;
+    aceiteTermos?: boolean;
+    acceptTerms?: boolean;
+  }) => Promise<{
+    success: boolean;
+    error?: string;
+    userId?: string;
+    email?: string;
+    emailVerificationSent?: boolean;
+    emailError?: string;
+  }>;
   logout: () => Promise<void>;
   fetchCurrentUser: () => Promise<User | null>;
   updateUser: (partial: Partial<User>) => void;
@@ -77,13 +91,15 @@ export const useAuthStore = create<AuthState>()(
             return { success: false, error: result.message || 'Erro ao criar conta' };
           }
 
-          // Auto-login after registration - fetch current user
-          const currentUser = await get().fetchCurrentUser();
-          if (currentUser) {
-            set({ user: currentUser });
-          }
-
-          return { success: true, userId: result.userId };
+          // DON'T auto-login after registration - user must verify email first
+          // Return result with email verification status
+          return {
+            success: true,
+            userId: result.userId,
+            email: result.email,
+            emailVerificationSent: result.emailVerificationSent,
+            emailError: result.emailError,
+          };
         } catch (error) {
           console.error('Register error:', error);
           return { success: false, error: 'Erro ao conectar com o servidor' };

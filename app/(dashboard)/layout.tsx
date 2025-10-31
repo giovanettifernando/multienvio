@@ -29,7 +29,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   if (!hydrated || !user || !isAuthenticated()) {
     return (
       <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center' }}>
-        <Spin size="large" tip="Carregando..." />
+        <Spin size="large" />
       </div>
     );
   }

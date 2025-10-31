@@ -1,0 +1,125 @@
+
+> enviolegalv2@0.1.0 build
+> next build
+
+   ▲ Next.js 15.5.4
+   - Environments: .env.local, .env.production, .env
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully in 11.5s
+   Linting and checking validity of types ...
+
+./app/(admin)/admin/pontos-de-coleta/page.tsx
+87:14  Warning: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
+96:14  Warning: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
+105:14  Warning: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./app/(dashboard)/carrinho/page.tsx
+64:6  Warning: React Hook useEffect has an unnecessary dependency: 'message'. Either exclude it or remove the dependency array. Outer scope values like 'message' aren't valid dependencies because mutating them doesn't re-render the component.  react-hooks/exhaustive-deps
+84:6  Warning: React Hook useEffect has an unnecessary dependency: 'message'. Either exclude it or remove the dependency array. Outer scope values like 'message' aren't valid dependencies because mutating them doesn't re-render the component.  react-hooks/exhaustive-deps
+
+./app/(dashboard)/coletas/page.tsx
+14:15  Warning: 'Coleta' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./app/api/admin/ops/shipments/[id]/timeline/route.ts
+8:11  Warning: 'id' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./app/api/orders/[id]/route.ts
+8:3  Warning: Unused eslint-disable directive (no problems were reported from 'no-var').
+
+./app/api/payments/topups/card/route.ts
+54:12  Warning: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./app/api/pickups/[id]/manifest/route.ts
+8:3  Warning: Unused eslint-disable directive (no problems were reported from 'no-var').
+
+./app/api/pickups/[id]/route.ts
+7:3  Warning: Unused eslint-disable directive (no problems were reported from 'no-var').
+
+./app/api/pickups/route.ts
+16:3  Warning: Unused eslint-disable directive (no problems were reported from 'no-var').
+
+./app/api/test-email/route.ts
+18:5  Warning: Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-var-requires').
+
+./app/login/page.tsx
+71:14  Warning: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./components/admin/finance/FeesView.tsx
+8:11  Warning: 'FeesViewProps' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./components/coletas/ColetaDetailDrawer.tsx
+46:14  Warning: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
+56:14  Warning: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./components/collectors/CollectorDrawer.tsx
+116:5  Warning: 'getValues' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+181:9  Warning: 'resolveFileUrl' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./components/collectors/forms/DocumentsForm.tsx
+3:10  Warning: 'Controller' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./components/dashboard/WalletCard.tsx
+13:9  Warning: The 'transactions' logical expression could make the dependencies of useMemo Hook (at line 24) change on every render. To fix this, wrap the initialization of 'transactions' in its own useMemo() Hook.  react-hooks/exhaustive-deps
+
+./components/forms/company-step-endereco.tsx
+6:3  Warning: 'FormProvider' is defined but never used.  @typescript-eslint/no-unused-vars
+7:3  Warning: 'useForm' is defined but never used.  @typescript-eslint/no-unused-vars
+60:9  Warning: 'cepHelp' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./components/labels/LabelModal.tsx
+3:21  Warning: 'useMemo' is defined but never used.  @typescript-eslint/no-unused-vars
+4:74  Warning: 'Flex' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./components/labels/LabelsTable.tsx
+4:70  Warning: 'Typography' is defined but never used.  @typescript-eslint/no-unused-vars
+26:11  Warning: 'message' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./components/quote/CepField.tsx
+52:9  Warning: 'lastValidatedCep' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+86:9  Warning: The 'data' conditional could make the dependencies of useEffect Hook (at line 124) change on every render. Move it inside the useEffect callback. Alternatively, wrap the initialization of 'data' in its own useMemo() Hook.  react-hooks/exhaustive-deps
+
+./components/support/TicketDetailsDrawer.tsx
+4:24  Warning: 'ClockCircleOutlined' is defined but never used.  @typescript-eslint/no-unused-vars
+62:50  Warning: 'addTag' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+62:58  Warning: 'removeTag' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+100:14  Warning: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./components/ui/ELCard.tsx
+27:3  Warning: 'title' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./components/wallet/AddFundsModal.tsx
+12:3  Warning: 'Space' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./lib/api/runtime.ts
+2:3  Warning: Unused eslint-disable directive (no problems were reported from 'no-var').
+
+./lib/auth/hooks.ts
+13:3  Warning: 'ToggleStatusInput' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./lib/coletas/types.ts
+6:33  Warning: 'Address' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./lib/email/mailer.ts
+6:3  Warning: Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-var-requires').
+
+./lib/pickup/schemas.ts
+14:7  Warning: 'emailSchema' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+22:7  Warning: 'telefoneSchema' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+30:7  Warning: 'cepSchema' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+38:7  Warning: 'ufSchema' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+info  - Need to disable some ESLint rules? Learn more here: https://nextjs.org/docs/app/api-reference/config/eslint#disabling-rules
+Failed to compile.
+
+./app/(auth)/auth/cadastro/page.tsx:93:25
+Type error: Property 'email' does not exist on type '{ success: boolean; error?: string | undefined; userId?: string | undefined; }'.
+
+[0m [90m 91 |[39m         [90m// Redirect to confirmation page with email and verification status[39m
+ [90m 92 |[39m         [36mconst[39m params [33m=[39m [36mnew[39m [33mURLSearchParams[39m({
+[31m[1m>[22m[39m[90m 93 |[39m           email[33m:[39m result[33m.[39memail [33m||[39m values[33m.[39memail[33m,[39m
+ [90m    |[39m                         [31m[1m^[22m[39m
+ [90m 94 |[39m           emailSent[33m:[39m result[33m.[39memailVerificationSent [33m?[39m [32m'true'[39m [33m:[39m [32m'false'[39m[33m,[39m
+ [90m 95 |[39m         })[33m;[39m
+ [90m 96 |[39m         router[33m.[39mpush([32m`/auth/confirmacao?${params.toString()}`[39m)[33m;[39m[0m
+Next.js build worker exited with code: 1 and signal: null

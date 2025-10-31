@@ -432,7 +432,7 @@ export default function PersonalForm() {
                       label="E-mail"
                       required
                       validateStatus={fieldState.error ? "error" : ""}
-                      help={fieldState.error?.message}
+                      help={fieldState.error?.message || "Email não pode ser alterado"}
                     >
                       <Input
                         {...field}
@@ -440,6 +440,8 @@ export default function PersonalForm() {
                         inputMode="email"
                         placeholder="email@empresa.com"
                         aria-invalid={fieldState.invalid}
+                        disabled
+                        readOnly
                         onChange={(event) => field.onChange(event.target.value.toLowerCase())}
                       />
                     </Form.Item>

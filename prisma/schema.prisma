@@ -24,30 +24,45 @@ model Role {
 
 // Modelo de Usuário
 model User {
-  id           String    @id @default(uuid())
-  name         String
-  email        String    @unique
-  passwordHash String?   // Nullable para permitir OAuth futuramente
-  phone        String?
-  status       String    @default("active") // "active", "blocked"
-  roleId       String?
-  role         Role?     @relation(fields: [roleId], references: [id])
-  lastLoginAt  DateTime?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  id                    String    @id @default(uuid())
+  name                  String
+  email                 String    @unique
+  passwordHash          String?   // Nullable para permitir OAuth futuramente
+  phone                 String?
+  cpf                   String?   // CPF sem máscara (apenas números)
+  avatarUrl             String?   // URL do avatar
+  hasCompany            Boolean   @default(false) // Se o usuário tem empresa
+  cnpj                  String?   // CNPJ sem máscara (apenas números)
+  razaoSocial           String?   // Razão social da empresa
+  status                String    @default("pending") // "pending", "active", "blocked"
+  emailVerified         Boolean   @default(false)
+  emailVerificationToken String?  @unique
+  emailVerifiedAt       DateTime?
+  resetPasswordToken    String?   @unique
+  resetPasswordExpiry   DateTime?
+  termsAcceptedAt       DateTime? // Data de aceite dos termos
+  roleId                String?
+  role                  Role?     @relation(fields: [roleId], references: [id])
+  lastLoginAt           DateTime?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
 
   // Relacionamentos
   addresses         Address[]
   sentShipments     Shipment[] @relation("SenderShipments")
   receivedShipments Shipment[] @relation("RecipientShipments")
+  cards             Card[]
 
   @@index([email])
+  @@index([emailVerificationToken])
+  @@index([resetPasswordToken])
   @@map("users")
 }
 
 // Modelo de Endereço
 model Address {
   id          String   @id @default(uuid())
+  label       String?  // Ex: "Casa", "Trabalho", "Escritório"
   cep         String
   logradouro  String
   numero      String
@@ -55,14 +70,49 @@ model Address {
   bairro      String
   cidade      String
   uf          String   @db.VarChar(2)
+  isDefault   Boolean  @default(false) // Endereço padrão do usuário
   userId      String
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  billingCards Card[]  @relation("BillingAddress")
 
   @@index([userId])
   @@index([cep])
   @@map("addresses")
+}
+
+enum CardBrand {
+  VISA
+  MASTERCARD
+  ELO
+  AMEX
+  HIPERCARD
+  OTHER
+}
+
+model Card {
+  id               String     @id @default(cuid())
+  userId           String
+  user             User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  brand            CardBrand
+  holderName       String
+  last4            String     @db.VarChar(4)
+  expMonth         Int
+  expYear          Int
+  fingerprint      String
+  isDefault        Boolean    @default(false)
+  billingAddressId String?
+  billingAddress   Address?   @relation("BillingAddress", fields: [billingAddressId], references: [id], onDelete: SetNull)
+  vaultToken       String     @unique
+  panCipher        String?
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+
+  @@index([userId])
+  @@index([userId, isDefault])
+  @@unique([userId, fingerprint])
+  @@map("cards")
 }
 
 // Modelo de Envio/Remessa

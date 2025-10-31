@@ -55,12 +55,20 @@ export default function CadastroPage() {
       setIsLoading(true);
 
       try {
+        console.log('[CADASTRO] Form values:', {
+          name: values.nomeCompleto,
+          email: values.email,
+          phone: values.telefone,
+          consentLGPD: values.consentLGPD,
+        });
+
         // Call store's register method with proper field mapping
         const result = await registerStore({
           name: values.nomeCompleto,
           email: values.email,
           password: values.senha,
           phone: values.telefone || undefined,
+          aceiteTermos: values.consentLGPD, // Enviar aceite de termos
         });
 
         if (!result.success) {
@@ -77,9 +85,15 @@ export default function CadastroPage() {
           return;
         }
 
-        // Success - user is auto-logged in by the store
+        // Success - redirect to confirmation page (NOT auto-logged in)
         message.success("Conta criada com sucesso!");
-        router.push("/");
+
+        // Redirect to confirmation page with email and verification status
+        const params = new URLSearchParams({
+          email: result.email || values.email,
+          emailSent: result.emailVerificationSent ? 'true' : 'false',
+        });
+        router.push(`/auth/confirmacao?${params.toString()}`);
       } catch (error) {
         console.error("Register error:", error);
         message.error("Não foi possível concluir seu cadastro. Tente novamente.");
