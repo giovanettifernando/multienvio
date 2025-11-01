@@ -4,7 +4,7 @@ import {
   normalizeCPF,
   validateCNPJ,
   validateCPF,
-} from "@/lib/validation/profile";
+} from "./profile";
 
 const RecipientBaseSchema = z
   .object({

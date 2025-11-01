@@ -1,10 +1,13 @@
-import { ApiError } from "@/lib/api/errors";
-import prisma from "@/lib/db";
-import type { RequestLogger } from "@/lib/api/types";
-import type { NormalizedRecipientCreateInput, NormalizedRecipientUpdateInput } from "@/lib/validation/recipient";
+import { ApiError } from "../api/errors";
+import prisma from "../db";
+import type { RequestLogger } from "../api/types";
+import type {
+  NormalizedRecipientCreateInput,
+  NormalizedRecipientUpdateInput,
+} from "../validation/recipient";
 import { Prisma } from "@prisma/client";
 
-export type AccountRecipientDto = {
+type RecipientRecord = {
   id: string;
   name: string;
   email: string | null;
@@ -23,9 +26,22 @@ export type AccountRecipientDto = {
   updatedAt: Date;
 };
 
+export type AccountRecipientDto = RecipientRecord;
+
+type RecipientDelegateLike = {
+  count: (args: Prisma.RecipientCountArgs) => Promise<number>;
+  findMany: (args: Prisma.RecipientFindManyArgs) => Promise<Prisma.RecipientGetPayload<Prisma.RecipientFindManyArgs>[]>;
+  findFirst: (args: Prisma.RecipientFindFirstArgs) => Promise<Prisma.RecipientGetPayload<Prisma.RecipientFindFirstArgs> | null>;
+  findUnique: (args: Prisma.RecipientFindUniqueArgs) => Promise<Prisma.RecipientGetPayload<Prisma.RecipientFindUniqueArgs> | null>;
+  create: (args: Prisma.RecipientCreateArgs) => Promise<Prisma.RecipientGetPayload<Prisma.RecipientCreateArgs>>;
+  update: (args: Prisma.RecipientUpdateArgs) => Promise<Prisma.RecipientGetPayload<Prisma.RecipientUpdateArgs>>;
+  updateMany: (args: Prisma.RecipientUpdateManyArgs) => Promise<{ count: number }>;
+  delete: (args: Prisma.RecipientDeleteArgs) => Promise<Prisma.RecipientGetPayload<Prisma.RecipientDeleteArgs>>;
+};
+
 type PrismaClientLike = {
-  recipient: typeof prisma.recipient;
-  $transaction: typeof prisma.$transaction;
+  recipient: RecipientDelegateLike;
+  $transaction: <T>(fn: (tx: PrismaClientLike) => Promise<T>) => Promise<T>;
 };
 
 type ListOptions = {
@@ -55,12 +71,12 @@ type ServiceDeps = {
 
 function getDeps(overrides?: Partial<ServiceDeps>): ServiceDeps {
   return {
-    prisma: overrides?.prisma ?? prisma,
+    prisma: overrides?.prisma ?? (prisma as unknown as PrismaClientLike),
     logger: overrides?.logger,
   };
 }
 
-function mapToDto(recipient: { [key: string]: any }): AccountRecipientDto {
+function mapToDto(recipient: RecipientRecord): AccountRecipientDto {
   return {
     id: recipient.id,
     name: recipient.name,
@@ -97,7 +113,7 @@ function buildSearchWhere(userId: string, filters: ListOptions): Prisma.Recipien
   }
 
   if (filters.city) {
-    where.city = { equals: filters.city.trim(), mode: "insensitive" };
+    where.cidade = { equals: filters.city.trim(), mode: "insensitive" };
   }
 
   if (filters.uf) {

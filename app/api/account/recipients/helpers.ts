@@ -1,9 +1,11 @@
 import { NextRequest } from "next/server";
+import { Prisma } from "@prisma/client";
 import { ApiError } from "@/lib/api/errors";
 import { enforceRateLimit } from "@/lib/api/rate-limit";
 import { getUserFromRequest } from "@/lib/auth/session";
 import type { RequestContext } from "@/lib/api/types";
 import { RecipientValidationError } from "@/lib/validation/recipient";
+import { isDatabaseUnavailableError, schedulePrismaReconnect } from "@/lib/db";
 
 const WRITE_LIMIT = 10;
 const WRITE_WINDOW_MS = 60_000;
@@ -44,6 +46,46 @@ export function parsePositiveInteger(value: string | null, fallback: number) {
     return fallback;
   }
   return parsed;
+}
+
+function makeSchemaOutOfDateError(): never {
+  throw new ApiError({
+    code: "schema_out_of_date",
+    message: "Estrutura de destinatários indisponível. Execute as migrações (public.recipients).",
+    status: 503,
+  });
+}
+
+const MISSING_RECIPIENT_PATTERNS = [
+  /relation ["`]recipients["`] does not exist/i,
+  /table ["`]recipients["`]/i,
+];
+
+export function handleRecipientDataStoreError(error: unknown): never {
+  if (isDatabaseUnavailableError(error)) {
+    void schedulePrismaReconnect();
+    throw error;
+  }
+
+  if (error instanceof Prisma.PrismaClientKnownRequestError) {
+    if (error.code === "P2021") {
+      makeSchemaOutOfDateError();
+    }
+  }
+
+  if (error instanceof Prisma.PrismaClientUnknownRequestError) {
+    if (MISSING_RECIPIENT_PATTERNS.some((pattern) => pattern.test(error.message))) {
+      makeSchemaOutOfDateError();
+    }
+  }
+
+  if (error instanceof Error) {
+    if (MISSING_RECIPIENT_PATTERNS.some((pattern) => pattern.test(error.message))) {
+      makeSchemaOutOfDateError();
+    }
+  }
+
+  throw error;
 }
 
 export function mapRecipientValidationError(error: unknown): never {

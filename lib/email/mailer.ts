@@ -243,3 +243,127 @@ export async function sendPasswordResetEmail(
     html,
   });
 }
+
+/**
+ * Send password changed notification email
+ */
+export async function sendPasswordChangedEmail(
+  to: string,
+  name: string,
+  metadata: {
+    changedAt: Date;
+    ip?: string;
+    userAgent?: string;
+  }
+): Promise<boolean> {
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+  const securityUrl = `${baseUrl}/minha-conta#security`;
+
+  const formattedDate = metadata.changedAt.toLocaleString('pt-BR', {
+    dateStyle: 'long',
+    timeStyle: 'short',
+  });
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Senha alterada - Envio Legal</title>
+    </head>
+    <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f5f5f5;">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f5f5f5; padding: 20px 0;">
+        <tr>
+          <td align="center">
+            <table width="600" cellpadding="0" cellspacing="0" border="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+              <!-- Header -->
+              <tr>
+                <td style="background-color: #52c41a; padding: 30px; text-align: center;">
+                  <h1 style="margin: 0; color: #ffffff; font-size: 28px;">Envio Legal</h1>
+                </td>
+              </tr>
+
+              <!-- Content -->
+              <tr>
+                <td style="padding: 40px 30px;">
+                  <h2 style="margin: 0 0 20px 0; color: #333333; font-size: 24px;">Olá, ${name}!</h2>
+                  <p style="margin: 0 0 20px 0; color: #666666; font-size: 16px; line-height: 1.6;">
+                    Sua senha foi alterada com sucesso em <strong>${formattedDate}</strong>.
+                  </p>
+
+                  <!-- Info Box -->
+                  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f6ffed; border-radius: 4px; border-left: 3px solid #52c41a; margin: 20px 0;">
+                    <tr>
+                      <td style="padding: 15px;">
+                        <p style="margin: 0 0 10px 0; color: #52c41a; font-size: 14px; font-weight: bold;">
+                          ✓ Alteração confirmada
+                        </p>
+                        <p style="margin: 0; color: #666666; font-size: 14px; line-height: 1.6;">
+                          Todas as sessões anteriores foram encerradas por segurança. Use sua nova senha para fazer login novamente.
+                        </p>
+                      </td>
+                    </tr>
+                  </table>
+
+                  ${metadata.ip || metadata.userAgent ? `
+                  <p style="margin: 20px 0 0 0; color: #999999; font-size: 13px; line-height: 1.6;">
+                    <strong>Detalhes da alteração:</strong><br>
+                    ${metadata.ip ? `• Endereço IP: ${metadata.ip}<br>` : ''}
+                    ${metadata.userAgent ? `• Dispositivo: ${metadata.userAgent.slice(0, 100)}...` : ''}
+                  </p>
+                  ` : ''}
+
+                  <!-- Warning Box -->
+                  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #fff7e6; border-radius: 4px; border-left: 3px solid #fa8c16; margin: 20px 0;">
+                    <tr>
+                      <td style="padding: 15px;">
+                        <p style="margin: 0 0 10px 0; color: #fa8c16; font-size: 14px; font-weight: bold;">
+                          ⚠ Você não reconhece esta alteração?
+                        </p>
+                        <p style="margin: 0; color: #666666; font-size: 14px; line-height: 1.6;">
+                          Se você não realizou esta alteração, sua conta pode estar comprometida. Entre em contato com nosso suporte imediatamente.
+                        </p>
+                      </td>
+                    </tr>
+                  </table>
+
+                  <!-- Button -->
+                  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                    <tr>
+                      <td align="center">
+                        <a href="${securityUrl}" style="display: inline-block; background-color: #1890ff; color: #ffffff; text-decoration: none; padding: 14px 40px; border-radius: 4px; font-size: 16px; font-weight: bold;">
+                          Acessar Configurações de Segurança
+                        </a>
+                      </td>
+                    </tr>
+                  </table>
+
+                  <p style="margin: 30px 0 0 0; color: #999999; font-size: 14px; line-height: 1.6;">
+                    Esta é uma notificação automática de segurança. Por favor, não responda este email.
+                  </p>
+                </td>
+              </tr>
+
+              <!-- Footer -->
+              <tr>
+                <td style="background-color: #f5f5f5; padding: 20px 30px; text-align: center; border-top: 1px solid #e8e8e8;">
+                  <p style="margin: 0; color: #999999; font-size: 12px;">
+                    © ${new Date().getFullYear()} Envio Legal. Todos os direitos reservados.
+                  </p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </body>
+    </html>
+  `;
+
+  return sendEmail({
+    to,
+    subject: 'Senha alterada com sucesso - Envio Legal',
+    html,
+  });
+}

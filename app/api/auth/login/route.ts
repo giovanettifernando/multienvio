@@ -13,7 +13,7 @@ export async function POST(request: Request) {
     const payload = await request.json();
     const data = LoginSchema.parse(payload);
 
-    // Buscar usuário por email com role
+    // Buscar usuário por email com role (sempre buscar do banco, sem cache)
     const dbUser = await prisma.user.findUnique({
       where: { email: data.email },
       include: {
@@ -64,11 +64,12 @@ export async function POST(request: Request) {
       data: { lastLoginAt: new Date() },
     });
 
-    // Criar sessão (JWT + cookie)
+    // Criar sessão (JWT + cookie) com tokenVersion
     await createSession({
       userId: dbUser.id,
       email: dbUser.email,
       role: dbUser.role?.name || 'user',
+      tokenVersion: dbUser.tokenVersion,
     });
 
     // Mapear para o tipo User global (sem expor passwordHash)

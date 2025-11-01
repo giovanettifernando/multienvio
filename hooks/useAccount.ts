@@ -292,22 +292,22 @@ type RecipientPayload = {
   isDefault?: boolean;
 };
 
-type RawRecipientList = {
-  data?: RecipientList;
-} | RecipientList;
-
 function normalizeRecipientListPayload(payload: unknown): RecipientList {
   if (!payload || typeof payload !== "object") {
     throw new Error("Falha ao carregar destinatários");
   }
 
-  const data = (payload as RawRecipientList).data ?? (payload as RecipientList);
-  if (!data || !Array.isArray(data.items)) {
+  const maybeData = (payload as { data?: unknown }).data;
+  const target = maybeData && typeof maybeData === "object" ? maybeData : payload;
+
+  if (!Array.isArray((target as RecipientList).items)) {
     throw new Error("Falha ao carregar destinatários");
   }
+
+  const list = target as RecipientList;
   return {
-    ...data,
-    items: data.items.map(mapRecipientDto),
+    ...list,
+    items: list.items.map(mapRecipientDto),
   };
 }
 
@@ -341,7 +341,7 @@ type RecipientListFilters = {
 };
 
 export function useAccountRecipients(filters: RecipientListFilters) {
-  return useQuery<RecipientList>({
+  return useQuery<RecipientList, Error>({
     queryKey: ["account", "recipients", filters],
     queryFn: async () => {
       const params = new URLSearchParams();
@@ -360,7 +360,7 @@ export function useAccountRecipients(filters: RecipientListFilters) {
       const json = await response.json();
       return normalizeRecipientListPayload(json);
     },
-    keepPreviousData: true,
+    placeholderData: (previousData) => previousData,
   });
 }
 
@@ -459,10 +459,16 @@ export function usePasswordChange() {
         body: JSON.stringify(payload),
         headers: { "Content-Type": "application/json" },
       });
+
+      const data = await response.json();
+
       if (!response.ok) {
-        throw new Error("Falha ao alterar senha");
+        // Extrair mensagem de erro específica do backend
+        const errorMessage = data.message || data.errors?.[0]?.message || "Falha ao alterar senha";
+        throw new Error(errorMessage);
       }
-      return response.json();
+
+      return data;
     },
   });
 }

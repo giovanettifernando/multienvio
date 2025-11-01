@@ -62,18 +62,26 @@ export default function RecipientsList() {
   const [page, setPage] = useState(1);
   const pageSize = PAGE_SIZE;
 
-  const recipientsQuery = useAccountRecipients({
-    q: search.trim() || undefined,
-    page,
-    pageSize,
-  });
+  const filters = useMemo(
+    () => ({
+      q: search.trim() || undefined,
+      page,
+      pageSize,
+    }),
+    [search, page, pageSize],
+  );
 
-  const recipients = useMemo(() => recipientsQuery.data?.items ?? [], [recipientsQuery.data]);
+  const recipientsQuery = useAccountRecipients(filters);
+
+  const recipients: Recipient[] = useMemo(
+    () => (recipientsQuery.data?.items ?? []) as Recipient[],
+    [recipientsQuery.data],
+  );
   const total = recipientsQuery.data?.total ?? 0;
 
   useEffect(() => {
     if (recipientsQuery.data) {
-      setAll(mapToStoreRecipients(recipientsQuery.data.items));
+      setAll(mapToStoreRecipients(recipientsQuery.data.items as Recipient[]));
     }
   }, [recipientsQuery.data, setAll]);
 
@@ -105,14 +113,14 @@ export default function RecipientsList() {
   const handleSubmit = (values: RecipientFormValues) => {
     const payload = {
       name: values.name,
-      email: values.email?.trim() || null,
-      document: values.doc?.trim() || null,
-      phone: values.phone?.trim() || null,
-      notes: values.notes?.trim() || null,
+      email: values.email?.trim() || undefined,
+      document: values.doc?.trim() || undefined,
+      phone: values.phone?.trim() || undefined,
+      notes: values.notes?.trim() || undefined,
       cep: values.cep,
       logradouro: values.logradouro,
       numero: values.numero,
-      complemento: values.complemento?.trim() || null,
+      complemento: values.complemento?.trim() || undefined,
       bairro: values.bairro,
       cidade: values.cidade,
       uf: values.uf,
@@ -196,7 +204,7 @@ export default function RecipientsList() {
           allowClear
         />
 
-        <List
+        <List<Recipient>
           dataSource={recipients}
           loading={loadingList}
           locale={{ emptyText: "Você ainda não cadastrou destinatários." }}
@@ -285,21 +293,25 @@ export default function RecipientsList() {
       <RecipientModal
         open={showModal}
         loading={createMutation.isPending || updateMutation.isPending}
-       initialValues={editing ? {
-         id: editing.id,
-         name: editing.name,
-         doc: editing.document ?? undefined,
-         phone: formatPhoneForForm(editing.phone),
-         email: editing.email ?? undefined,
-          notes: editing.notes ?? "",
-         cep: editing.cep,
-         logradouro: editing.logradouro,
-         numero: editing.numero,
-         complemento: editing.complemento ?? undefined,
-          bairro: editing.bairro,
-          cidade: editing.cidade,
-          uf: editing.uf,
-        } : null}
+        initialValues={
+          editing
+            ? {
+                id: editing.id,
+                name: editing.name,
+                doc: editing.document ?? undefined,
+                phone: formatPhoneForForm(editing.phone),
+                email: editing.email ?? undefined,
+                notes: editing.notes ?? "",
+                cep: editing.cep,
+                logradouro: editing.logradouro,
+                numero: editing.numero,
+                complemento: editing.complemento ?? undefined,
+                bairro: editing.bairro,
+                cidade: editing.cidade,
+                uf: editing.uf,
+              }
+            : null
+        }
         onSubmit={handleSubmit}
         onCancel={() => {
           setShowModal(false);

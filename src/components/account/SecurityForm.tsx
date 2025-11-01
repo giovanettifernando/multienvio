@@ -5,6 +5,7 @@ import { App, Button, Card, Form, Input, Space } from "antd";
 import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useRouter } from "next/navigation";
 import { usePasswordChange } from "@/hooks/useAccount";
 
 const passwordPolicy = z
@@ -34,6 +35,7 @@ export type SecurityFormValues = z.infer<typeof securitySchema>;
 
 export default function SecurityForm() {
   const { message } = App.useApp();
+  const router = useRouter();
   const mutation = usePasswordChange();
 
   const form = useForm<SecurityFormValues>({
@@ -48,8 +50,13 @@ export default function SecurityForm() {
   const handleSubmit = form.handleSubmit((values) => {
     mutation.mutate(values, {
       onSuccess: () => {
-        message.success("Senha atualizada com sucesso.");
+        message.success("Senha atualizada com sucesso. Redirecionando para o login...");
         form.reset();
+
+        // Redirecionar para a tela de login após 1.5 segundos
+        setTimeout(() => {
+          router.push("/login");
+        }, 1500);
       },
       onError: (error) => {
         message.error(

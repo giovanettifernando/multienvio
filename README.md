@@ -29,9 +29,9 @@ To learn more about Next.js, take a look at the following resources:
 
 You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
-## Deploy on Vercel
+## Database connectivity & health checks
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-# envio-legal
+- Configure the database through the `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, and `DB_SCHEMA` variables. A `DATABASE_URL` value is generated automatically at runtime when it is not provided. See `.env.local.example` for Docker (`DB_HOST=db`) and local (`DB_HOST=localhost`) profiles.
+- Use `GET /api/health/db` to verify connectivity; it returns `200` when the database answers and `503` when it is offline.
+- When the application successfully connects it runs `npx prisma migrate status` and logs the outcome. If pending migrations are reported, run `npx prisma migrate deploy`.
+- Requests fail fast with `503 service_unavailable` while the database is unreachable and `503 schema_out_of_date` when required tables are missing. The server attempts to reconnect automatically once the database comes back.

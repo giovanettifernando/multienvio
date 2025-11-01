@@ -28,6 +28,9 @@ model User {
   name                  String
   email                 String    @unique
   passwordHash          String?   // Nullable para permitir OAuth futuramente
+  passwordUpdatedAt     DateTime? // Data da última alteração de senha
+  passwordHistory       Json?     // Últimos N hashes de senha (evitar reutilização)
+  tokenVersion          Int       @default(0) // Versão do token para invalidação global de sessões
   phone                 String?
   cpf                   String?   // CPF sem máscara (apenas números)
   avatarUrl             String?   // URL do avatar
@@ -53,6 +56,7 @@ model User {
   receivedShipments Shipment[] @relation("RecipientShipments")
   cards             Card[]
   recipients        Recipient[]
+  securityEvents    UserSecurityEvent[]
 
   @@index([email])
   @@index([emailVerificationToken])
@@ -140,6 +144,7 @@ model Recipient {
   @@index([userId])
   @@index([userId, isDefault])
   @@index([userId, document])
+  @@index([userId, name])
   @@index([userId, nameSearch])
   @@map("recipients")
 }
@@ -245,6 +250,23 @@ model StaffAuditLog {
   @@index([entity, entityId])
   @@index([createdAt])
   @@map("staff_audit_logs")
+}
+
+// Modelo de Eventos de Segurança de Usuários
+model UserSecurityEvent {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String   // "PASSWORD_CHANGED", "PASSWORD_RESET", "LOGIN_FAILED", "SESSION_INVALIDATED", etc
+  ip        String?
+  userAgent String?
+  metadata  Json?    // Dados adicionais do evento
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([userId, type])
+  @@index([createdAt])
+  @@map("user_security_events")
 }
 
 // Preparação para PostGIS (extensão geográfica) - futuro

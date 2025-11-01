@@ -1,3 +1,6 @@
+import { Prisma } from "@prisma/client";
+import { schedulePrismaReconnect, isDatabaseUnavailableError } from "../db";
+
 export type ApiErrorInput = {
   code: string;
   message: string;
@@ -43,7 +46,44 @@ export class ApiError extends Error {
   }
 }
 
+function isRelationMissing(error: Prisma.PrismaClientKnownRequestError | Error) {
+  const message = error.message ?? "";
+  return /relation .* does not exist/i.test(message) || /table .* does not exist/i.test(message);
+}
+
 export function toApiError(error: unknown): ApiError {
+  if (error instanceof Prisma.PrismaClientInitializationError || isDatabaseUnavailableError(error)) {
+    const message = error instanceof Error ? error.message : String(error);
+    void schedulePrismaReconnect();
+    return new ApiError({
+      code: "service_unavailable",
+      message: "Banco de dados indisponível. Tente novamente em instantes.",
+      status: 503,
+      details: { message },
+      cause: error,
+    });
+  }
+
+  if (error instanceof Prisma.PrismaClientKnownRequestError && isRelationMissing(error)) {
+    return new ApiError({
+      code: "schema_out_of_date",
+      message: "Estrutura de dados indisponível. Execute `npx prisma migrate deploy`.",
+      status: 503,
+      details: { code: error.code, meta: error.meta },
+      cause: error,
+    });
+  }
+
+  if (error instanceof Prisma.PrismaClientUnknownRequestError && isRelationMissing(error as Error)) {
+    return new ApiError({
+      code: "schema_out_of_date",
+      message: "Estrutura de dados indisponível. Execute `npx prisma migrate deploy`.",
+      status: 503,
+      details: { message: error.message },
+      cause: error,
+    });
+  }
+
   if (error instanceof ApiError) {
     return error;
   }

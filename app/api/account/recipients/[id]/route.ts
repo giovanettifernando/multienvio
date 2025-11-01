@@ -11,6 +11,7 @@ import {
   enforceRecipientWriteLimit,
   mapRecipientValidationError,
   requireUserId,
+  handleRecipientDataStoreError,
 } from "../helpers";
 
 export const dynamic = "force-dynamic";
@@ -40,12 +41,16 @@ export const PUT = withApiHandler(async (context) => {
     mapRecipientValidationError(error);
   }
 
-  const recipient = await updateRecipient(userId, id, normalized!, { logger });
+  try {
+    const recipient = await updateRecipient(userId, id, normalized!, { logger });
 
-  return {
-    data: recipient,
-    meta: { tags: ["account", "recipients"] },
-  };
+    return {
+      data: recipient,
+      meta: { tags: ["account", "recipients"] },
+    };
+  } catch (error) {
+    handleRecipientDataStoreError(error);
+  }
 });
 
 export const DELETE = withApiHandler(async (context) => {
@@ -54,10 +59,14 @@ export const DELETE = withApiHandler(async (context) => {
   enforceRecipientWriteLimit(context);
 
   const { id } = await params;
-  await deleteRecipient(userId, id, { logger });
+  try {
+    await deleteRecipient(userId, id, { logger });
 
-  return {
-    data: { deleted: true },
-    meta: { tags: ["account", "recipients"] },
-  };
+    return {
+      data: { deleted: true },
+      meta: { tags: ["account", "recipients"] },
+    };
+  } catch (error) {
+    handleRecipientDataStoreError(error);
+  }
 });

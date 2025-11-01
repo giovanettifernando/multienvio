@@ -12,6 +12,7 @@ import {
   mapRecipientValidationError,
   parsePositiveInteger,
   requireUserId,
+  handleRecipientDataStoreError,
 } from "./helpers";
 
 export const dynamic = "force-dynamic";
@@ -25,16 +26,20 @@ export const GET = withApiHandler(async ({ req, logger }) => {
   const page = parsePositiveInteger(search.get("page"), 1);
   const pageSize = parsePositiveInteger(search.get("pageSize"), 20);
 
-  const result = await listRecipients(
-    userId,
-    { q, city, uf, page, pageSize },
-    { logger },
-  );
+  try {
+    const result = await listRecipients(
+      userId,
+      { q, city, uf, page, pageSize },
+      { logger },
+    );
 
-  return {
-    data: result,
-    meta: { tags: ["account", "recipients"] },
-  };
+    return {
+      data: result,
+      meta: { tags: ["account", "recipients"] },
+    };
+  } catch (error) {
+    handleRecipientDataStoreError(error);
+  }
 });
 
 export const POST = withApiHandler(async (context) => {
@@ -60,11 +65,15 @@ export const POST = withApiHandler(async (context) => {
     mapRecipientValidationError(error);
   }
 
-  const recipient = await createRecipient(userId, normalized!, { logger });
+  try {
+    const recipient = await createRecipient(userId, normalized!, { logger });
 
-  return {
-    data: recipient,
-    status: 201,
-    meta: { tags: ["account", "recipients"] },
-  };
+    return {
+      data: recipient,
+      status: 201,
+      meta: { tags: ["account", "recipients"] },
+    };
+  } catch (error) {
+    handleRecipientDataStoreError(error);
+  }
 });

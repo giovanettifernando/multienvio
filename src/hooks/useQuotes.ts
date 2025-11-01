@@ -67,6 +67,7 @@ export const useRecipients = (cep?: string) =>
     queryFn: async () => {
       const res = await fetch(
         `/api/recipients${cep ? `?cep=${encodeURIComponent(cep)}` : ""}`,
+        { credentials: "include" },
       );
       if (!res.ok) {
         throw new Error("Erro ao carregar destinatários.");
@@ -84,6 +85,7 @@ export const useRecipientSave = () =>
         method: "POST",
         body: JSON.stringify(payload),
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
       });
       if (!res.ok) {
         throw new Error("Erro ao salvar destinatário");
