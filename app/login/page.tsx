@@ -112,6 +112,12 @@ function LoginPageContent() {
             <Input.Password placeholder="Sua senha" autoComplete="current-password" />
           </Form.Item>
 
+          <div style={{ marginBottom: 16, textAlign: 'right' }}>
+            <Link href="/auth/forgot-password" style={{ fontSize: 14 }}>
+              Esqueci minha senha
+            </Link>
+          </div>
+
           <Form.Item style={{ marginTop: 8 }}>
             <Button type="primary" htmlType="submit" block loading={loading}>
               Entrar
@@ -122,10 +128,6 @@ function LoginPageContent() {
         <Typography.Paragraph style={{ marginTop: 16, textAlign: 'center' }} type="secondary">
           Ainda não tem conta?{' '}
           <Link href="/auth/cadastro">Crie agora mesmo</Link>
-        </Typography.Paragraph>
-
-        <Typography.Paragraph style={{ marginTop: 8, textAlign: 'center', fontSize: 12 }} type="secondary">
-          Usuários de teste: demo@enviolegal.com / demo123 ou admin@enviolegal.com / admin123
         </Typography.Paragraph>
       </Card>
     </div>

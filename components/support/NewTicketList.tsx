@@ -1,7 +1,8 @@
 'use client';
 
-import { Table, Tag, Space, Typography, Input, Select } from 'antd';
-import { SearchOutlined } from '@ant-design/icons';
+import { useEffect } from 'react';
+import { Table, Tag, Space, Typography, Input, Select, App, Button } from 'antd';
+import { ReloadOutlined, SearchOutlined } from '@ant-design/icons';
 import { useState } from 'react';
 import type { SupportTicket, Status, Priority } from '@/lib/validation/support';
 import { useTickets } from '@/hooks/useSupport';
@@ -18,6 +19,9 @@ interface NewTicketListProps {
   onTicketClick?: (ticketId: string) => void;
   filterByEmail?: string;
   showRequester?: boolean;
+  audience?: 'user' | 'admin';
+  autoRefresh?: boolean;
+  isComposing?: boolean;
 }
 
 const statusColors: Record<Status, string> = {
@@ -48,17 +52,43 @@ const priorityLabels: Record<Priority, string> = {
   critica: 'Crítica',
 };
 
-export function NewTicketList({ onTicketClick, filterByEmail, showRequester = false }: NewTicketListProps) {
+export function NewTicketList({
+  onTicketClick,
+  filterByEmail,
+  showRequester = false,
+  audience = 'user',
+  autoRefresh = true,
+  isComposing = false,
+}: NewTicketListProps) {
+  void autoRefresh;
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<Status[]>([]);
   const [priorityFilter, setPriorityFilter] = useState<Priority[]>([]);
+  const { message } = App.useApp();
 
-  const tickets = useTickets({
-    query,
-    status: statusFilter.length > 0 ? statusFilter : undefined,
-    priority: priorityFilter.length > 0 ? priorityFilter : undefined,
-    requesterEmail: filterByEmail,
+  const ticketsQuery = useTickets({
+    audience,
+    filters: {
+      query,
+      status: statusFilter.length > 0 ? statusFilter : undefined,
+      priority: priorityFilter.length > 0 ? priorityFilter : undefined,
+      requesterEmail: filterByEmail,
+    },
+    pageSize: audience === 'admin' ? 50 : undefined,
+    refetchInterval: false,
+    refetchOnWindowFocus: false,
+    enabled: !isComposing,
   });
+
+  useEffect(() => {
+    if (ticketsQuery.isError) {
+      const error = ticketsQuery.error;
+      const text = error instanceof Error ? error.message : 'Erro ao carregar chamados';
+      message.error(text);
+    }
+  }, [ticketsQuery.isError, ticketsQuery.error, message]);
+
+  const tickets = ticketsQuery.data?.tickets ?? [];
 
   const columns = [
     {
@@ -66,7 +96,11 @@ export function NewTicketList({ onTicketClick, filterByEmail, showRequester = fa
       dataIndex: 'id',
       key: 'id',
       width: 100,
-      render: (id: string) => <Text code>{id.slice(0, 8)}</Text>,
+      render: (id: string) => (
+        <Text code style={{ whiteSpace: 'nowrap' }}>
+          {id.slice(0, 8)}
+        </Text>
+      ),
     },
     {
       title: 'Assunto',
@@ -129,12 +163,13 @@ export function NewTicketList({ onTicketClick, filterByEmail, showRequester = fa
 
   return (
     <Space direction="vertical" style={{ width: '100%' }} size="middle">
-      <Space wrap>
-        <Input
-          placeholder="Buscar por assunto, descrição ou solicitante"
-          prefix={<SearchOutlined />}
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
+      <Space style={{ width: '100%', justifyContent: 'space-between' }} align="start" wrap>
+        <Space wrap>
+          <Input
+            placeholder="Buscar por assunto, descrição ou solicitante"
+            prefix={<SearchOutlined />}
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
           style={{ width: 300 }}
           allowClear
         />
@@ -165,20 +200,32 @@ export function NewTicketList({ onTicketClick, filterByEmail, showRequester = fa
             { value: 'critica', label: 'Crítica' },
           ]}
           allowClear
-        />
+          />
+        </Space>
+        <Button
+          icon={<ReloadOutlined />}
+          onClick={() => {
+            void ticketsQuery.refetch();
+          }}
+          loading={ticketsQuery.isFetching}
+          variant="outlined"
+        >
+          Atualizar
+        </Button>
       </Space>
 
       <Table
         dataSource={tickets}
         columns={columns}
         rowKey="id"
+        loading={ticketsQuery.isLoading || ticketsQuery.isFetching}
         pagination={{
           pageSize: 10,
           showSizeChanger: true,
           showTotal: (total) => `Total: ${total} chamado${total !== 1 ? 's' : ''}`,
         }}
         locale={{
-          emptyText: 'Nenhum chamado encontrado',
+          emptyText: ticketsQuery.isLoading ? 'Carregando...' : 'Nenhum chamado encontrado',
         }}
       />
     </Space>

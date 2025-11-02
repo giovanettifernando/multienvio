@@ -1,10 +1,32 @@
 'use client';
 
-import { Drawer, Descriptions, Tag, Timeline, Input, Button, Space, Typography, Select, App, Divider, Empty } from 'antd';
-import { SendOutlined, ClockCircleOutlined, UserOutlined } from '@ant-design/icons';
-import { useState, useEffect } from 'react';
-import { useTicket } from '@/hooks/useSupport';
-import { newMessage } from '@/lib/validation/support';
+import {
+  Drawer,
+  Descriptions,
+  Tag,
+  Timeline,
+  Input,
+  Button,
+  Space,
+  Typography,
+  Select,
+  App,
+  Divider,
+  Empty,
+  Skeleton,
+  Result,
+  Upload,
+} from 'antd';
+import { PaperClipOutlined, ReloadOutlined, SendOutlined, UserOutlined } from '@ant-design/icons';
+import { useState, useEffect, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import type { RcFile, UploadFile } from 'antd/es/upload/interface';
+import {
+  useAssignTicket,
+  usePostTicketMessage,
+  useTicket,
+  useUpdateTicketStatus,
+} from '@/hooks/useSupport';
 import type { Status, Priority, AuthorRole } from '@/lib/validation/support';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
@@ -16,12 +38,16 @@ dayjs.locale('pt-br');
 const { TextArea } = Input;
 const { Text, Title } = Typography;
 
-interface TicketDetailsDrawerProps {
+interface TicketDetailsBaseProps {
   ticketId: string | null;
+  userRole?: AuthorRole;
+  enableQuery?: boolean;
+  onComposingChange?: (value: boolean) => void;
+}
+
+interface TicketDetailsDrawerProps extends TicketDetailsBaseProps {
   open: boolean;
   onClose: () => void;
-  userRole?: AuthorRole;
-  userName?: string;
 }
 
 const statusColors: Record<Status, string> = {
@@ -52,122 +78,286 @@ const priorityLabels: Record<Priority, string> = {
   critica: 'Crítica',
 };
 
-export function TicketDetailsDrawer({
+function formatFileSize(size?: number | null): string | null {
+  if (size === undefined || size === null) return null;
+  if (size >= 1024 * 1024) {
+    return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+  }
+  if (size >= 1024) {
+    return `${(size / 1024).toFixed(1)} KB`;
+  }
+  return `${size} B`;
+}
+
+export function TicketDetailsContent({
   ticketId,
-  open,
-  onClose,
   userRole = 'cliente',
-  userName = 'Usuário'
-}: TicketDetailsDrawerProps) {
-  const { ticket, addMessage, setStatus, assign, addTag, removeTag } = useTicket(ticketId);
-  const { message } = App.useApp();
+  enableQuery = true,
+  onComposingChange,
+}: TicketDetailsBaseProps) {
+  const audience = userRole === 'admin' ? 'admin' : 'user';
+  const [isTextareaFocused, setIsTextareaFocused] = useState(false);
   const [messageText, setMessageText] = useState('');
+  const [fileList, setFileList] = useState<UploadFile[]>([]);
+  const [isComposing, setIsComposing] = useState(false);
+  const ticketQuery = useTicket(ticketId, audience, {
+    enabled: enableQuery && !isComposing,
+    refetchInterval: false,
+    refetchOnWindowFocus: false,
+  });
+  const postMessage = usePostTicketMessage(audience);
+  const updateStatus = useUpdateTicketStatus();
+  const assignTicket = useAssignTicket();
+  const { message } = App.useApp();
   const [sending, setSending] = useState(false);
+  const MAX_FILES = 5;
+  const MAX_FILE_SIZE = 10 * 1024 * 1024;
+
+  const staffUsersQuery = useQuery({
+    queryKey: ['adminStaffUsers'],
+    queryFn: async (): Promise<Array<{ id: string; name: string; email: string }>> => {
+      const response = await fetch('/api/admin/staff/users', { cache: 'no-store' });
+      const data = await response.json().catch(() => undefined);
+      if (!response.ok) {
+        const errorMessage =
+          (data as Record<string, unknown> | undefined)?.message ??
+          'Não foi possível carregar a equipe de suporte.';
+        throw new Error(String(errorMessage));
+      }
+      const users = (data as { users?: Array<{ id: string; name: string; email: string }> } | undefined)
+        ?.users;
+      return users ?? [];
+    },
+    staleTime: 5 * 60 * 1000,
+    enabled: userRole === 'admin',
+  });
 
   useEffect(() => {
-    if (!open) {
+    setMessageText('');
+    setFileList([]);
+    setIsTextareaFocused(false);
+    setIsComposing(false);
+  }, [ticketId]);
+
+  useEffect(() => {
+    if (!enableQuery) {
       setMessageText('');
+      setFileList([]);
+      setIsTextareaFocused(false);
+      setIsComposing(false);
+      postMessage.reset();
+      updateStatus.reset();
+      assignTicket.reset();
     }
-  }, [open]);
+  }, [enableQuery, postMessage, updateStatus, assignTicket]);
 
-  if (!ticket) {
-    return (
-      <Drawer
-        title="Detalhes do Chamado"
-        open={open}
-        onClose={onClose}
-        width={600}
-      >
-        <Empty description="Chamado não encontrado" />
-      </Drawer>
-    );
-  }
+  useEffect(() => {
+    if (userRole === 'admin' && staffUsersQuery.isError) {
+      const err = staffUsersQuery.error;
+      const text =
+        err instanceof Error ? err.message : 'Não foi possível carregar a equipe de suporte.';
+      message.error(text);
+    }
+  }, [staffUsersQuery.isError, staffUsersQuery.error, message, userRole]);
 
-  const handleSendMessage = async () => {
+  useEffect(() => {
+    const next =
+      isTextareaFocused || messageText.trim().length > 0 || fileList.length > 0;
+    setIsComposing((prev) => (prev === next ? prev : next));
+  }, [isTextareaFocused, messageText, fileList]);
+
+  useEffect(() => {
+    onComposingChange?.(isComposing);
+  }, [isComposing, onComposingChange]);
+
+  useEffect(() => {
+    return () => {
+      onComposingChange?.(false);
+    };
+  }, [onComposingChange]);
+
+  const ticket = ticketQuery.data;
+  const isLoading = ticketQuery.isLoading || ticketQuery.isFetching;
+  const error = ticketQuery.isError ? ticketQuery.error : null;
+
+  const staffUsers = useMemo(
+    () => staffUsersQuery.data ?? [],
+    [staffUsersQuery.data],
+  );
+  const staffOptions = useMemo(
+    () =>
+      staffUsers.map((user) => ({
+        value: user.id,
+        label: `${user.name} (${user.email})`,
+      })),
+    [staffUsers],
+  );
+  const currentAssigneeId = useMemo(() => {
+    if (!ticket) return undefined;
+    const byId = staffUsers.find((user) => user.id === ticket.assignedTo);
+    if (byId) return byId.id;
+    const byName = staffUsers.find((user) => user.name === ticket.assignedTo);
+    return byName?.id;
+  }, [staffUsers, ticket]);
+
+  const handleBeforeUpload = (file: RcFile) => {
+    if (file.size > MAX_FILE_SIZE) {
+      message.error('Cada arquivo deve ter no máximo 10 MB.');
+      return Upload.LIST_IGNORE;
+    }
+    if (fileList.length >= MAX_FILES) {
+      message.warning(`É permitido enviar até ${MAX_FILES} arquivos por mensagem.`);
+      return Upload.LIST_IGNORE;
+    }
+    return false;
+  };
+
+const handleSendMessage = async () => {
     if (!messageText.trim() || !ticketId) return;
 
     setSending(true);
     try {
-      const msg = newMessage({
-        authorRole: userRole,
-        authorName: userName,
-        text: messageText,
+      const attachments = fileList
+        .map((upload) => upload.originFileObj)
+        .filter((file): file is RcFile => !!file)
+        .map((file) => file as File);
+      await postMessage.mutateAsync({
+        ticketId,
+        text: messageText.trim(),
+        attachments: attachments.length ? attachments : undefined,
+        internal: userRole === 'admin' ? false : undefined,
       });
-
-      addMessage(ticketId, msg);
       setMessageText('');
+      setFileList([]);
+      setIsTextareaFocused(false);
       message.success('Mensagem enviada');
-    } catch (error) {
-      message.error('Erro ao enviar mensagem');
+      await ticketQuery.refetch();
+    } catch (err) {
+      const text = err instanceof Error ? err.message : 'Erro ao enviar mensagem';
+      message.error(text);
     } finally {
       setSending(false);
     }
   };
 
-  const handleStatusChange = (newStatus: Status) => {
+  const handleStatusChange = async (newStatus: Status) => {
     if (!ticketId) return;
-    setStatus(ticketId, newStatus);
-    message.success('Status atualizado');
+    try {
+      await updateStatus.mutateAsync({ ticketId, status: newStatus });
+      message.success('Status atualizado');
+    } catch (err) {
+      const text = err instanceof Error ? err.message : 'Erro ao atualizar status';
+      message.error(text);
+    }
   };
 
-  const handleAssign = (assignedTo: string | null) => {
+  const handleAssign = async (assignedTo: string | null) => {
     if (!ticketId) return;
-    assign(ticketId, assignedTo);
-    message.success(assignedTo ? 'Chamado atribuído' : 'Atribuição removida');
+    const normalized = assignedTo ?? null;
+    const current = currentAssigneeId ?? null;
+    if (normalized === current) {
+      return;
+    }
+    try {
+      await assignTicket.mutateAsync({ ticketId, assignedTo: normalized });
+      message.success(normalized ? 'Chamado atribuído' : 'Atribuição removida');
+    } catch (err) {
+      const text = err instanceof Error ? err.message : 'Erro ao atualizar atribuição';
+      message.error(text);
+    }
   };
 
-  return (
-    <Drawer
-      title={`Chamado #${ticket.id.slice(0, 8)}`}
-      open={open}
-      onClose={onClose}
-      width={700}
-    >
+  const renderContent = () => {
+    if (isLoading) {
+      return (
+        <Space direction="vertical" style={{ width: '100%' }} size="large">
+          <Skeleton active paragraph={{ rows: 3 }} />
+          <Skeleton active paragraph={{ rows: 6 }} />
+          <Skeleton active paragraph={{ rows: 3 }} />
+        </Space>
+      );
+    }
+
+    if (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Erro ao carregar chamado';
+      return (
+        <Result
+          status="error"
+          title="Não foi possível carregar o chamado"
+          subTitle={errorMessage}
+          extra={
+            <Button type="primary" onClick={() => ticketQuery.refetch()}>
+              Tentar novamente
+            </Button>
+          }
+        />
+      );
+    }
+
+    if (!ticket) {
+      return <Empty description="Chamado não encontrado" />;
+    }
+
+    return (
       <Space direction="vertical" style={{ width: '100%' }} size="large">
-        {/* Header Info */}
-        <div>
-          <Title level={4} style={{ marginBottom: 8 }}>{ticket.subject}</Title>
-          <Space wrap>
-            <Tag color={statusColors[ticket.status]}>{statusLabels[ticket.status]}</Tag>
-            <Tag color={priorityColors[ticket.priority]}>{priorityLabels[ticket.priority]}</Tag>
-            {ticket.tags.map(tag => (
-              <Tag key={tag}>{tag}</Tag>
-            ))}
-          </Space>
-        </div>
+        <Space
+          style={{ width: '100%', justifyContent: 'space-between', alignItems: 'flex-start' }}
+          align="start"
+          wrap
+        >
+          <div>
+            <Title level={4} style={{ marginBottom: 8 }}>{ticket.subject}</Title>
+            <Space wrap>
+              <Tag color={statusColors[ticket.status]}>{statusLabels[ticket.status]}</Tag>
+              <Tag color={priorityColors[ticket.priority]}>{priorityLabels[ticket.priority]}</Tag>
+              {ticket.tags.map(tag => (
+                <Tag key={tag}>{tag}</Tag>
+              ))}
+            </Space>
+          </div>
+          <Button
+            icon={<ReloadOutlined />}
+            onClick={() => {
+              void ticketQuery.refetch();
+            }}
+            loading={ticketQuery.isFetching}
+            variant="outlined"
+          >
+            Atualizar
+          </Button>
+        </Space>
 
-        {/* Admin Controls */}
         {userRole === 'admin' && (
           <Space direction="vertical" style={{ width: '100%' }}>
             <Space wrap>
               <Select
                 value={ticket.status}
                 onChange={handleStatusChange}
-                style={{ width: 180 }}
+                style={{ width: 200 }}
                 options={[
                   { value: 'aberto', label: 'Aberto' },
                   { value: 'em_atendimento', label: 'Em Atendimento' },
                   { value: 'resolvido', label: 'Resolvido' },
                   { value: 'fechado', label: 'Fechado' },
                 ]}
+                loading={updateStatus.isPending}
               />
               <Select
-                value={ticket.assignedTo || undefined}
+                value={currentAssigneeId ?? undefined}
                 placeholder="Atribuir a..."
-                onChange={handleAssign}
+                onChange={(value) => {
+                  void handleAssign((value as string | undefined) ?? null);
+                }}
                 allowClear
-                style={{ width: 200 }}
-                options={[
-                  { value: 'admin1', label: 'Admin 1' },
-                  { value: 'admin2', label: 'Admin 2' },
-                  { value: 'admin3', label: 'Admin 3' },
-                ]}
+                style={{ width: 220 }}
+                options={staffOptions}
+                loading={staffUsersQuery.isLoading || staffUsersQuery.isFetching || assignTicket.isPending}
+                disabled={staffUsersQuery.isLoading || assignTicket.isPending}
               />
             </Space>
           </Space>
         )}
 
-        {/* Ticket Details */}
         <Descriptions column={1} bordered size="small">
           <Descriptions.Item label="Solicitante">
             <Space direction="vertical" size={0}>
@@ -196,7 +386,6 @@ export function TicketDetailsDrawer({
 
         <Divider />
 
-        {/* Timeline */}
         <div>
           <Title level={5}>Histórico de Mensagens</Title>
           {ticket.messages.length === 0 ? (
@@ -217,6 +406,33 @@ export function TicketDetailsDrawer({
                       </Text>
                     </Space>
                     <Text>{msg.text}</Text>
+                    {msg.attachments && msg.attachments.length > 0 ? (
+                      <Space direction="vertical" size={2} style={{ width: '100%' }}>
+                        {msg.attachments.map((attachment) => {
+                          if (!attachment.url) {
+                            return null;
+                          }
+                          const sizeLabel = formatFileSize(attachment.size ?? null);
+                          return (
+                            <Space key={attachment.id} size={6} align="center">
+                              <PaperClipOutlined />
+                              <Typography.Link
+                                href={attachment.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                {attachment.name}
+                              </Typography.Link>
+                              {sizeLabel ? (
+                                <Text type="secondary" style={{ fontSize: 12 }}>
+                                  {sizeLabel}
+                                </Text>
+                              ) : null}
+                            </Space>
+                          );
+                        })}
+                      </Space>
+                    ) : null}
                   </Space>
                 ),
               }))}
@@ -224,13 +440,14 @@ export function TicketDetailsDrawer({
           )}
         </div>
 
-        {/* Reply Box */}
         <div>
           <Title level={5}>Responder</Title>
           <Space.Compact style={{ width: '100%' }}>
             <TextArea
               value={messageText}
               onChange={(e) => setMessageText(e.target.value)}
+              onFocus={() => setIsTextareaFocused(true)}
+              onBlur={() => setIsTextareaFocused(false)}
               placeholder="Digite sua mensagem..."
               rows={3}
               maxLength={1000}
@@ -242,11 +459,27 @@ export function TicketDetailsDrawer({
               }}
             />
           </Space.Compact>
+          <Upload
+            multiple
+            fileList={fileList}
+            beforeUpload={handleBeforeUpload}
+            maxCount={MAX_FILES}
+            onRemove={(file) => {
+              setFileList((prev) => prev.filter((item) => item.uid !== file.uid));
+            }}
+            onChange={({ fileList: newList }) => {
+              setFileList(newList.slice(0, MAX_FILES));
+            }}
+            aria-label="Anexar arquivos à resposta"
+            style={{ marginTop: 8 }}
+          >
+            <Button variant="outlined">Anexar arquivo</Button>
+          </Upload>
           <Button
             type="primary"
             icon={<SendOutlined />}
             onClick={handleSendMessage}
-            loading={sending}
+            loading={sending || postMessage.isPending}
             disabled={!messageText.trim()}
             style={{ marginTop: 8 }}
           >
@@ -254,6 +487,44 @@ export function TicketDetailsDrawer({
           </Button>
         </div>
       </Space>
+    );
+  };
+
+  return (
+      <>
+        {renderContent()}
+      </>
+  );
+}
+
+export function TicketDetailsDrawer({
+  ticketId,
+  open,
+  onClose,
+  userRole = 'cliente',
+  onComposingChange,
+}: TicketDetailsDrawerProps) {
+  const title = ticketId ? `Chamado #${ticketId.slice(0, 8)}` : 'Detalhes do Chamado';
+
+  useEffect(() => {
+    if (!open) {
+      onComposingChange?.(false);
+    }
+  }, [open, onComposingChange]);
+
+  return (
+    <Drawer
+      title={title}
+      open={open}
+      onClose={onClose}
+      width={700}
+    >
+      <TicketDetailsContent
+        ticketId={ticketId}
+        userRole={userRole}
+        enableQuery={Boolean(open && ticketId)}
+        onComposingChange={onComposingChange}
+      />
     </Drawer>
   );
 }

@@ -1,25 +1,24 @@
 "use client";
 
 import { Tag } from "antd";
-import { SupportStatus } from "@/types/contracts";
-import type { TicketStatus } from "@/types/support";
+import type { Status } from "@/lib/validation/support";
 
-const STATUS_COLOR: Record<TicketStatus, string> = {
-  [SupportStatus.ABERTO]: "processing",
-  [SupportStatus.EM_ATENDIMENTO]: "warning",
-  [SupportStatus.RESOLVIDO]: "success",
-  [SupportStatus.FECHADO]: "default",
+const STATUS_COLOR: Record<Status, string> = {
+  aberto: "processing",
+  em_atendimento: "warning",
+  resolvido: "success",
+  fechado: "default",
 };
 
-const STATUS_LABEL: Record<TicketStatus, string> = {
-  [SupportStatus.ABERTO]: "Aberto",
-  [SupportStatus.EM_ATENDIMENTO]: "Em Atendimento",
-  [SupportStatus.RESOLVIDO]: "Resolvido",
-  [SupportStatus.FECHADO]: "Fechado",
+const STATUS_LABEL: Record<Status, string> = {
+  aberto: "Aberto",
+  em_atendimento: "Em Atendimento",
+  resolvido: "Resolvido",
+  fechado: "Fechado",
 };
 
 type Props = {
-  status: TicketStatus;
+  status: Status;
 };
 
 export function TicketStatusTag({ status }: Props) {

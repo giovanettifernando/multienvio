@@ -21,8 +21,15 @@ export async function POST(request: Request) {
       },
     });
 
+    console.log('[LOGIN] User found:', dbUser?.email);
+    console.log('[LOGIN] Password hash in DB:', dbUser?.passwordHash?.substring(0, 20) + '...');
+    console.log('[LOGIN] Password hash length:', dbUser?.passwordHash?.length);
+    console.log('[LOGIN] TokenVersion:', dbUser?.tokenVersion);
+    console.log('[LOGIN] PasswordUpdatedAt:', dbUser?.passwordUpdatedAt);
+
     // Mensagem genérica para não revelar se email existe
     if (!dbUser || !dbUser.passwordHash) {
+      console.log('[LOGIN] User not found or no password hash');
       return NextResponse.json(
         { message: 'E-mail ou senha inválidos' },
         { status: 401 }
@@ -30,7 +37,9 @@ export async function POST(request: Request) {
     }
 
     // Verificar senha
+    console.log('[LOGIN] Comparing password...');
     const passwordValid = await bcrypt.compare(data.password, dbUser.passwordHash);
+    console.log('[LOGIN] Password valid:', passwordValid);
 
     if (!passwordValid) {
       return NextResponse.json(

@@ -3,8 +3,9 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button, Input, Space, Upload, Typography, message } from "antd";
-import type { UploadFile } from "antd/es/upload/interface";
+import type { RcFile, UploadFile } from "antd/es/upload/interface";
 import { CannedReplySelect } from "@/components/support/CannedReplySelect";
+import { usePostTicketMessage } from "@/hooks/useSupport";
 
 type Props = {
   ticketId: string;
@@ -12,60 +13,26 @@ type Props = {
   mode?: 'client' | 'admin';
 };
 
-async function uploadAttachments(ticketId: string, files: UploadFile[]): Promise<string[]> {
-  if (!files.length) {
-    return [];
-  }
-
-  const payload = files
-    .map((file) => ({
-      fileName: file.name,
-      size: file.size ?? file.originFileObj?.size ?? 0,
-    }))
-    .filter((file) => file.size > 0);
-
-  if (!payload.length) {
-    return [];
-  }
-
-  const response = await fetch(`/api/support/tickets/${ticketId}/attachments`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ files: payload }),
-  });
-
-  if (!response.ok) {
-    const body = await response.json().catch(() => undefined);
-    throw new Error(body?.mensagem ?? "Falha ao enviar anexos");
-  }
-
-  const data = (await response.json()) as Array<{ id: string }>;
-  return data.map((attachment) => attachment.id);
-}
-
-async function postComment(ticketId: string, messageText: string, attachmentIds?: string[]) {
-  const response = await fetch(`/api/support/tickets/${ticketId}/comments`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      message: messageText,
-      ...(attachmentIds?.length ? { attachmentsIds: attachmentIds } : {}),
-    }),
-  });
-
-  if (!response.ok) {
-    const body = await response.json().catch(() => undefined);
-    throw new Error(body?.mensagem ?? "Não foi possível enviar o comentário");
-  }
-
-  return response.json();
-}
-
 export function TicketCommentBox({ ticketId, onSubmitted, mode = 'admin' }: Props) {
+  const MAX_FILES = 5;
+  const MAX_FILE_SIZE = 10 * 1024 * 1024;
   const [messageText, setMessageText] = useState("");
   const [touched, setTouched] = useState(false);
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const queryClient = useQueryClient();
+  const postMessage = usePostTicketMessage(mode === 'admin' ? 'admin' : 'user');
+
+  const handleBeforeUpload = (file: RcFile) => {
+    if (file.size > MAX_FILE_SIZE) {
+      message.error("Cada arquivo deve ter no máximo 10 MB.");
+      return Upload.LIST_IGNORE;
+    }
+    if (fileList.length >= MAX_FILES) {
+      message.warning(`É permitido enviar até ${MAX_FILES} arquivos por mensagem.`);
+      return Upload.LIST_IGNORE;
+    }
+    return false;
+  };
 
   const mutation = useMutation<void, Error, void>({
   mutationFn: async () => {
@@ -73,8 +40,16 @@ export function TicketCommentBox({ ticketId, onSubmitted, mode = 'admin' }: Prop
     if (!trimmed) {
       throw new Error("Escreva uma mensagem antes de enviar");
     }
-      const attachmentIds = await uploadAttachments(ticketId, fileList);
-      return postComment(ticketId, trimmed, attachmentIds);
+      const attachments = fileList
+        .map((file) => file.originFileObj)
+        .filter((file): file is RcFile => !!file)
+        .map((file) => file as File);
+      await postMessage.mutateAsync({
+        ticketId,
+        text: trimmed,
+        attachments: attachments.length ? attachments : undefined,
+        internal: mode === 'admin' ? false : undefined,
+      });
     },
       onSuccess: () => {
         message.success("Comentário enviado");
@@ -126,12 +101,13 @@ export function TicketCommentBox({ ticketId, onSubmitted, mode = 'admin' }: Prop
       <Upload
         multiple
         fileList={fileList}
-        beforeUpload={() => false}
+        beforeUpload={handleBeforeUpload}
+        maxCount={MAX_FILES}
         onRemove={(file) => {
           setFileList((prev) => prev.filter((item) => item.uid !== file.uid));
         }}
         onChange={({ fileList: newList }) => {
-          setFileList(newList);
+          setFileList(newList.slice(0, MAX_FILES));
         }}
         aria-label="Adicionar anexos"
       >
@@ -141,7 +117,8 @@ export function TicketCommentBox({ ticketId, onSubmitted, mode = 'admin' }: Prop
         type="primary"
         variant="solid"
         onClick={() => mutation.mutate()}
-        loading={mutation.isPending}
+        loading={mutation.isPending || postMessage.isPending}
+        disabled={!messageText.trim()}
       >
         Enviar
       </Button>

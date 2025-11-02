@@ -181,7 +181,7 @@ export default function LoginPage() {
               </Checkbox>
             )}
           />
-          <Link href="/auth/esqueci-senha" className={NEW_THEME_ENABLED ? styles.link : undefined}>
+          <Link href="/auth/forgot-password" className={NEW_THEME_ENABLED ? styles.link : undefined}>
             Esqueci minha senha
           </Link>
         </div>

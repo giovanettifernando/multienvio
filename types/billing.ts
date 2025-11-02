@@ -52,10 +52,11 @@ export type CardMethod = {
 export type PixTopup = {
   id: string;
   amount: number;
-  currency: "BRL";
+  currency?: "BRL";
   status: "PENDING" | "CONFIRMED" | "EXPIRED";
   qrCode: string;
-  expiresAt: string;
+  expiresAt?: string;
+  referenceId?: string;
 };
 
 export type Invoice = {

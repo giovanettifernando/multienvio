@@ -3,9 +3,8 @@
 import { use } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Breadcrumb, Space, Typography } from "antd";
-import { useAdminSession } from "@/stores/useAdminSession";
-import { TicketDetails } from "@/components/admin/support/TicketDetails";
+import { Breadcrumb, Space, Typography, Card } from "antd";
+import { TicketDetailsContent } from "@/components/support/TicketDetailsDrawer";
 
 type RouteParams = { id: string };
 
@@ -16,8 +15,6 @@ export default function AdminSupportTicketPage({
 }) {
   const { id: ticketId = "" } = use(params ?? Promise.resolve({ id: "" }));
   const searchParams = useSearchParams();
-  const admin = useAdminSession((state) => state.admin);
-  const viewerId = admin?.id;
   const query = searchParams.toString();
   const backHref = `/admin/suporte${query ? `?${query}` : ""}`;
 
@@ -36,11 +33,13 @@ export default function AdminSupportTicketPage({
       <Typography.Title level={2} style={{ margin: 0 }}>
         Detalhes do chamado
       </Typography.Title>
-      <TicketDetails
-        ticketId={ticketId}
-        viewerId={viewerId}
-        headingId={ticketId ? `ticket-page-${ticketId}` : undefined}
-      />
+      <Card variant="borderless" styles={{ body: { padding: 0 } }}>
+        <TicketDetailsContent
+          ticketId={ticketId}
+          userRole="admin"
+          enableQuery
+        />
+      </Card>
     </Space>
   );
 }

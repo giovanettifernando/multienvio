@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
 import { ZodError } from 'zod';
 import { ForgotPasswordSchema } from '@/lib/validation/auth';
-import { prisma } from '@/lib/db';
-import { generateTokenWithExpiry } from '@/lib/auth/tokens';
+import prisma from '@/lib/db';
 import { sendPasswordResetEmail } from '@/lib/email/mailer';
+import crypto from 'crypto';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -17,7 +17,12 @@ export async function POST(request: Request) {
 
     // Find user by email
     const user = await prisma.user.findUnique({
-      where: { email: data.email },
+      where: { email: data.email.toLowerCase() },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+      },
     });
 
     // Don't reveal if email exists or not (security best practice)
@@ -28,25 +33,35 @@ export async function POST(request: Request) {
       });
     }
 
-    // Generate reset token with 1 hour expiry
-    const { token, hashedToken, expiry } = generateTokenWithExpiry(1);
+    // Generate random token (32 bytes = 256 bits)
+    const token = crypto.randomBytes(32).toString('hex');
 
-    // Store hashed token in database
-    await prisma.user.update({
-      where: { id: user.id },
+    // Hash token with SHA-256 for storage
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+
+    // Expiry: 1 hour from now
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
+
+    // Store token in password_reset_tokens table
+    await prisma.passwordResetToken.create({
       data: {
-        resetPasswordToken: hashedToken,
-        resetPasswordExpiry: expiry,
+        userId: user.id,
+        tokenHash,
+        expiresAt,
       },
     });
 
-    console.log('[FORGOT_PASSWORD] Reset token generated for user:', user.id);
+    console.log('[FORGOT_PASSWORD] Reset token created for user:', user.id);
+
+    // Build reset URL
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const resetUrl = `${baseUrl}/auth/reset-password?token=${token}`;
 
     // Send password reset email
     const emailSent = await sendPasswordResetEmail(
       user.email,
       user.name,
-      token // Send plain token, not hashed
+      resetUrl
     );
 
     if (!emailSent) {

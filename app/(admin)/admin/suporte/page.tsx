@@ -5,8 +5,6 @@ import { Space, Typography, Grid, Skeleton } from 'antd';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { NewTicketList } from '@/components/support/NewTicketList';
 import { TicketDetailsDrawer } from '@/components/support/TicketDetailsDrawer';
-import { useSupportStore } from '@/stores/support';
-import { useAdminSession } from '@/stores/useAdminSession';
 
 export default function AdminSupportPage() {
   return (
@@ -20,29 +18,26 @@ function AdminSupportPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
-  const subscribeExternal = useSupportStore(s => s.subscribeExternal);
-  const admin = useAdminSession(s => s.admin);
+  const [isComposing, setIsComposing] = useState(false);
   const screens = Grid.useBreakpoint();
   const isDesktop = screens.lg ?? false;
-
-  // Subscribe to external storage changes (cross-tab sync)
-  useEffect(() => {
-    const unsubscribe = subscribeExternal();
-    return () => unsubscribe();
-  }, [subscribeExternal]);
 
   // Handle ticket query param
   useEffect(() => {
     const ticketId = searchParams.get('ticket');
     if (ticketId && isDesktop) {
       setSelectedTicketId(ticketId);
+      return;
     }
+    setSelectedTicketId(null);
+    setIsComposing(false);
   }, [searchParams, isDesktop]);
 
   // Close drawer on mobile
   useEffect(() => {
     if (!isDesktop) {
       setSelectedTicketId(null);
+      setIsComposing(false);
     }
   }, [isDesktop]);
 
@@ -60,6 +55,7 @@ function AdminSupportPageContent() {
 
   const handleCloseDrawer = () => {
     setSelectedTicketId(null);
+    setIsComposing(false);
     const params = new URLSearchParams(searchParams.toString());
     params.delete('ticket');
     const query = params.toString();
@@ -79,7 +75,9 @@ function AdminSupportPageContent() {
 
       <NewTicketList
         onTicketClick={handleSelectTicket}
+        audience="admin"
         showRequester
+        isComposing={isComposing}
       />
 
       <TicketDetailsDrawer
@@ -87,7 +85,7 @@ function AdminSupportPageContent() {
         open={isDesktop && !!selectedTicketId}
         onClose={handleCloseDrawer}
         userRole="admin"
-        userName={admin?.name || 'Admin'}
+        onComposingChange={setIsComposing}
       />
     </Space>
   );

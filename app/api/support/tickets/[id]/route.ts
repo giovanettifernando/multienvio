@@ -1,30 +1,29 @@
-import { NextResponse } from "next/server";
+import { NextResponse } from 'next/server';
+import { getSession } from '@/lib/auth/session';
+import { getTicketForUser } from '@/lib/support/service';
 
-// DEPRECATED: This API route is no longer used.
-// Support system now uses Zustand store (stores/support.ts) for state management.
+export const dynamic = 'force-dynamic';
 
-export const dynamic = "force-dynamic";
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const session = await getSession();
+  if (!session) {
+    return NextResponse.json({ message: 'Não autenticado' }, { status: 401 });
+  }
 
-export async function GET() {
-  return NextResponse.json({ 
-    message: "This endpoint is deprecated.",
-  }, { status: 410 });
-}
+  const { id: ticketId } = await params;
+  if (!ticketId) {
+    return NextResponse.json({ message: 'Ticket inválido' }, { status: 400 });
+  }
 
-export async function POST() {
-  return NextResponse.json({
-    message: "This endpoint is deprecated.",
-  }, { status: 410 });
-}
+  try {
+    const ticket = await getTicketForUser(session.userId, ticketId);
+    if (!ticket) {
+      return NextResponse.json({ message: 'Ticket não encontrado' }, { status: 404 });
+    }
 
-export async function PUT() {
-  return NextResponse.json({
-    message: "This endpoint is deprecated.",
-  }, { status: 410 });
-}
-
-export async function DELETE() {
-  return NextResponse.json({
-    message: "This endpoint is deprecated.",
-  }, { status: 410 });
+    return NextResponse.json(ticket);
+  } catch (error) {
+    console.error('[SUPPORT_TICKET_GET]', error);
+    return NextResponse.json({ message: 'Erro ao carregar ticket' }, { status: 500 });
+  }
 }

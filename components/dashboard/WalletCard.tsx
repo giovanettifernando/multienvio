@@ -4,26 +4,26 @@ import { useMemo, useState } from "react";
 import { Button, Card, Skeleton, Space, Typography } from "antd";
 import AddFundsModal from "@/components/wallet/AddFundsModal";
 import { useWallet, useWalletInvalidate } from "@/hooks/useWallet";
+import { useWalletTransactions } from "@/hooks/useWalletTransactions";
 
 export function WalletCard() {
   const [modalOpen, setModalOpen] = useState(false);
   const invalidateWallet = useWalletInvalidate();
   const { data: wallet, isLoading } = useWallet();
-
-  const transactions = wallet?.transactions ?? [];
+  const { data: txData } = useWalletTransactions(30);
 
   const last30DaysSpend = useMemo(() => {
-    if (!transactions.length) return 0;
+    if (!txData?.transactions.length) return 0;
     const thirtyDaysAgo = new Date().getTime() - 30 * 24 * 60 * 60 * 1000;
-    return transactions
+    return txData.transactions
       .filter((entry) => {
-        const occurred = new Date(entry.date).getTime();
-        return occurred >= thirtyDaysAgo && entry.amount < 0;
+        const occurred = new Date(entry.createdAt).getTime();
+        return occurred >= thirtyDaysAgo && entry.amountCents < 0;
       })
-      .reduce((acc, entry) => acc + Math.abs(entry.amount), 0);
-  }, [transactions]);
+      .reduce((acc, entry) => acc + Math.abs(entry.amountReais), 0);
+  }, [txData]);
 
-  const lastUpdate = transactions[0]?.date;
+  const lastUpdate = txData?.transactions[0]?.createdAt;
 
   return (
     <>
@@ -48,13 +48,13 @@ export function WalletCard() {
           <Space direction="vertical" size={8}>
             <Typography.Text type="secondary">Saldo disponível</Typography.Text>
             <Typography.Title level={3} style={{ margin: 0 }}>
-              {wallet.balance.toLocaleString("pt-BR", {
+              {wallet.available.toLocaleString("pt-BR", {
                 style: "currency",
                 currency: "BRL",
               })}
             </Typography.Title>
-            <Typography.Text type={wallet.balance < 50 ? "danger" : "secondary"}>
-              {wallet.balance < 50
+            <Typography.Text type={wallet.available < 50 ? "danger" : "secondary"}>
+              {wallet.available < 50
                 ? "Saldo baixo — recarregue para continuar emitindo etiquetas."
                 : lastUpdate
                   ? `Atualizado em ${new Date(lastUpdate).toLocaleString("pt-BR")}`

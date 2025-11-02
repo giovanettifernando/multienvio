@@ -28,7 +28,7 @@ type ForgotResponse = {
 async function forgotRequest(
   payload: ForgotInput,
 ): Promise<ForgotResponse> {
-  const response = await fetch("/api/auth/forgot", {
+  const response = await fetch("/api/auth/forgot-password", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),

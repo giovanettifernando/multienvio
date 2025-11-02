@@ -1,27 +1,19 @@
 'use client';
 
-import { useState, useMemo } from 'react';
-import { Table, Tag, Space, Button, Input, Select, Flex, App, Popconfirm } from 'antd';
+import { useEffect, useMemo, useState } from 'react';
+import { App, Button, Flex, Input, Popconfirm, Select, Space, Table, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import type { TableRowSelection } from 'antd/lib/table/interface';
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 import dayjs from 'dayjs';
-import {
-  LockOutlined,
-  UnlockOutlined,
-  EyeOutlined,
-  KeyOutlined,
-} from '@ant-design/icons';
-import type { AdminClient, ClientType, AccountStatus, ClientsResponse } from '@/lib/admin/types';
-import {
-  fetchClients,
-  blockAccounts,
-  unblockAccounts,
-  resetPassword,
-} from '@/lib/admin/api/clients';
+import { EyeOutlined, KeyOutlined, LockOutlined, UnlockOutlined } from '@ant-design/icons';
+import type { AccountStatus, AdminClient, ClientType } from '@/lib/admin/types';
+import { blockAccounts, resetPassword, unblockAccounts } from '@/lib/admin/api/clients';
 
 interface ClientsTableProps {
+  clients: AdminClient[];
   onViewClient: (client: AdminClient) => void;
+  onStatusChange: (id: string, status: AccountStatus) => void;
 }
 
 const statusColors: Record<AccountStatus, string> = {
@@ -36,76 +28,78 @@ const statusLabels: Record<AccountStatus, string> = {
   suspended: 'Suspenso',
 };
 
-export function ClientsTable({ onViewClient }: ClientsTableProps) {
+function formatCurrencyFromCents(value: number): string {
+  return (value / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+}
+
+export function ClientsTable({ clients, onViewClient, onStatusChange }: ClientsTableProps) {
   const { message } = App.useApp();
-  const queryClient = useQueryClient();
 
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [searchValue, setSearchValue] = useState('');
   const [q, setQ] = useState('');
   const [type, setType] = useState<ClientType | 'all'>('all');
   const [status, setStatus] = useState<AccountStatus | 'all'>('all');
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
 
-  const params = useMemo(
-    () => ({ page, pageSize, q, type, status }),
-    [page, pageSize, q, type, status]
+  const normalizedQuery = useMemo(() => q.trim().toLowerCase(), [q]);
+  const normalizedDigits = useMemo(() => q.replace(/\D/g, ''), [q]);
+
+  const filteredClients = useMemo(() => {
+    return clients.filter((client) => {
+      const matchesType = type === 'all' || client.type === type;
+      const matchesStatus = status === 'all' || client.status === status;
+
+      if (!normalizedQuery && !normalizedDigits) {
+        return matchesType && matchesStatus;
+      }
+
+      const nameMatch = client.name.toLowerCase().includes(normalizedQuery);
+      const emailMatch = client.email.toLowerCase().includes(normalizedQuery);
+      const documentMatch = client.document
+        ? client.document.toLowerCase().includes(normalizedQuery) ||
+          client.document.replace(/\D/g, '').includes(normalizedDigits)
+        : false;
+
+      return matchesType && matchesStatus && (nameMatch || emailMatch || documentMatch);
+    });
+  }, [clients, normalizedDigits, normalizedQuery, status, type]);
+
+  useEffect(() => {
+    const maxPage = Math.max(1, Math.ceil(filteredClients.length / pageSize) || 1);
+    if (page > maxPage) {
+      setPage(maxPage);
+    }
+  }, [filteredClients.length, page, pageSize]);
+
+  const offset = (page - 1) * pageSize;
+  const paginatedClients = useMemo(
+    () => filteredClients.slice(offset, offset + pageSize),
+    [filteredClients, offset, pageSize]
   );
 
-  const { data, isLoading } = useQuery({
-    queryKey: ['admin', 'clients', params],
-    queryFn: () => fetchClients(params),
-    placeholderData: keepPreviousData,
-  });
-
-  // Mutations
   const blockMutation = useMutation({
     mutationFn: blockAccounts,
-    onMutate: async (ids) => {
-      await queryClient.cancelQueries({ queryKey: ['admin', 'clients'] });
-      queryClient.setQueriesData({ queryKey: ['admin', 'clients'] }, (old: ClientsResponse | undefined) => {
-        if (!old) return old;
-        return {
-          ...old,
-          items: old.items.map((c: AdminClient) =>
-            ids.includes(c.id) ? { ...c, status: 'blocked' as AccountStatus } : c
-          ),
-        };
-      });
-    },
-    onSuccess: () => {
+    onSuccess: (_data, ids) => {
+      ids.forEach((id) => onStatusChange(id, 'blocked'));
       message.success('Contas bloqueadas com sucesso');
       setSelectedRowKeys([]);
-      queryClient.invalidateQueries({ queryKey: ['admin', 'clients'] });
     },
     onError: () => {
       message.error('Falha ao bloquear contas');
-      queryClient.invalidateQueries({ queryKey: ['admin', 'clients'] });
     },
   });
 
   const unblockMutation = useMutation({
     mutationFn: unblockAccounts,
-    onMutate: async (ids) => {
-      await queryClient.cancelQueries({ queryKey: ['admin', 'clients'] });
-      queryClient.setQueriesData({ queryKey: ['admin', 'clients'] }, (old: ClientsResponse | undefined) => {
-        if (!old) return old;
-        return {
-          ...old,
-          items: old.items.map((c: AdminClient) =>
-            ids.includes(c.id) ? { ...c, status: 'active' as AccountStatus } : c
-          ),
-        };
-      });
-    },
-    onSuccess: () => {
+    onSuccess: (_data, ids) => {
+      ids.forEach((id) => onStatusChange(id, 'active'));
       message.success('Contas desbloqueadas com sucesso');
       setSelectedRowKeys([]);
-      queryClient.invalidateQueries({ queryKey: ['admin', 'clients'] });
     },
     onError: () => {
       message.error('Falha ao desbloquear contas');
-      queryClient.invalidateQueries({ queryKey: ['admin', 'clients'] });
     },
   });
 
@@ -147,11 +141,6 @@ export function ClientsTable({ onViewClient }: ClientsTableProps) {
       render: (v: ClientType) => <Tag color={v === 'PJ' ? 'blue' : 'green'}>{v}</Tag>,
     },
     {
-      title: 'Documento',
-      dataIndex: 'document',
-      width: 160,
-    },
-    {
       title: 'Nome',
       dataIndex: 'name',
       width: 220,
@@ -166,10 +155,9 @@ export function ClientsTable({ onViewClient }: ClientsTableProps) {
     {
       title: 'Saldo em carteira',
       dataIndex: 'walletBalance',
-      width: 140,
+      width: 160,
       align: 'right',
-      render: (v: number) =>
-        v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
+      render: (v: number) => formatCurrencyFromCents(v),
       sorter: (a, b) => a.walletBalance - b.walletBalance,
     },
     {
@@ -181,10 +169,9 @@ export function ClientsTable({ onViewClient }: ClientsTableProps) {
     {
       title: 'Créditos no mês',
       dataIndex: 'creditsMonth',
-      width: 140,
+      width: 160,
       align: 'right',
-      render: (v: number) =>
-        v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
+      render: (v: number) => formatCurrencyFromCents(v),
       sorter: (a, b) => a.creditsMonth - b.creditsMonth,
     },
     {
@@ -192,9 +179,7 @@ export function ClientsTable({ onViewClient }: ClientsTableProps) {
       dataIndex: 'debitsMonth',
       width: 140,
       align: 'right',
-      render: (v: number) =>
-        v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
-      sorter: (a, b) => a.debitsMonth - b.debitsMonth,
+      render: () => '—',
     },
     {
       title: 'Ações',
@@ -213,7 +198,12 @@ export function ClientsTable({ onViewClient }: ClientsTableProps) {
               okText="Sim"
               cancelText="Não"
             >
-              <Button type="link" size="small" icon={<UnlockOutlined />}>
+              <Button
+                type="link"
+                size="small"
+                icon={<UnlockOutlined />}
+                disabled={unblockMutation.isPending || blockMutation.isPending}
+              >
                 Desbloquear
               </Button>
             </Popconfirm>
@@ -225,7 +215,13 @@ export function ClientsTable({ onViewClient }: ClientsTableProps) {
                 okText="Sim"
                 cancelText="Não"
               >
-                <Button type="link" size="small" danger icon={<LockOutlined />}>
+                <Button
+                  type="link"
+                  size="small"
+                  danger
+                  icon={<LockOutlined />}
+                  disabled={blockMutation.isPending || unblockMutation.isPending}
+                >
                   Bloquear
                 </Button>
               </Popconfirm>
@@ -248,11 +244,21 @@ export function ClientsTable({ onViewClient }: ClientsTableProps) {
     <Flex vertical gap={12}>
       <Flex wrap="wrap" gap={8} align="center">
         <Input.Search
+          value={searchValue}
+          onChange={(event) => {
+            const value = event.target.value;
+            setSearchValue(value);
+            if (!value) {
+              setQ('');
+              setPage(1);
+            }
+          }}
           allowClear
           placeholder="Buscar por nome, e-mail ou documento..."
           onSearch={(v) => {
             setPage(1);
             setQ(v);
+            setSearchValue(v);
           }}
           style={{ maxWidth: 360 }}
         />
@@ -322,15 +328,15 @@ export function ClientsTable({ onViewClient }: ClientsTableProps) {
 
       <Table<AdminClient>
         rowKey="id"
-        dataSource={data?.items ?? []}
+        dataSource={paginatedClients}
         columns={columns}
-        loading={isLoading}
+        loading={blockMutation.isPending || unblockMutation.isPending}
         rowSelection={rowSelection}
-        scroll={{ x: 1600 }}
+        scroll={{ x: 1400 }}
         pagination={{
-          current: data?.page ?? page,
-          pageSize: data?.pageSize ?? pageSize,
-          total: data?.total ?? 0,
+          current: page,
+          pageSize,
+          total: filteredClients.length,
           showSizeChanger: true,
           showTotal: (total) => `Total: ${total} clientes`,
           onChange: (p, ps) => {

@@ -18,17 +18,24 @@ import { PixQRCode } from "@/components/wallet/PixQRCode";
 import { useCards } from "@/hooks/useAccount";
 
 async function createPixTopup(amount: number): Promise<PixTopup> {
-  const response = await fetch("/api/payments/topups/pix", {
+  const response = await fetch("/api/wallet/topups/pix", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ amount }),
+    body: JSON.stringify({ amountReais: amount }),
   });
   if (!response.ok) {
     const body = await response.json().catch(() => undefined);
-    throw new Error(body?.mensagem ?? "Não foi possível gerar o PIX");
+    throw new Error(body?.message ?? "Não foi possível gerar o PIX");
   }
   const data = await response.json();
-  return (data && "topup" in data ? data.topup : data) as PixTopup;
+  // Converter resposta da nova API para formato esperado pelo componente
+  return {
+    id: data.transactionId,
+    qrCode: data.qrCode,
+    amount: data.amountReais,
+    referenceId: data.referenceId,
+    status: data.status,
+  } as PixTopup;
 }
 
 
@@ -128,7 +135,15 @@ export function AddFundsModal({
               key: "pix",
               label: "PIX",
               children: pixTopup ? (
-                <PixQRCode topup={pixTopup} />
+                <PixQRCode
+                  topup={pixTopup}
+                  onConfirm={() => {
+                    // Invalidar todas as queries relacionadas a wallet
+                    queryClient.invalidateQueries({ queryKey: ["wallet"] });
+                    setPixTopup(null);
+                    onClose();
+                  }}
+                />
               ) : (
                 <Form
                   layout="vertical"

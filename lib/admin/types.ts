@@ -10,9 +10,10 @@ export interface AdminClient {
   phone?: string | null;
   createdAt: string; // ISO
   status: AccountStatus;
-  walletBalance: number;     // Saldo em carteira (R$)
-  creditsMonth: number;      // Créditos no mês (R$)
-  debitsMonth: number;       // Débitos no mês (R$)
+  walletBalance: number;     // Saldo em carteira (centavos)
+  creditsMonth: number;      // Créditos no mês (centavos)
+  debitsMonth: number | null;       // Débitos no mês (centavos)
+  walletPendingCents?: number; // Saldo pendente em centavos (opcional)
 }
 
 export interface ClientsQuery {

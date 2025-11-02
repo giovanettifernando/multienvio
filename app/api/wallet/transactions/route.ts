@@ -1,51 +1,73 @@
-import { NextResponse } from "next/server";
-import { getBillingStore } from "@/lib/billing/store";
+/**
+ * GET /api/wallet/transactions
+ *
+ * Lista as transações da carteira do usuário autenticado
+ */
 
-export const dynamic = "force-dynamic";
+import { NextResponse } from 'next/server';
+import { ZodError } from 'zod';
+import { listTransactions } from '@/lib/wallet/wallet.service';
+import { ListTransactionsSchema } from '@/lib/validation/wallet';
+import { getSession } from '@/lib/auth/session';
+
+export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const type = searchParams.get("type");
-  const source = searchParams.get("source");
-  const text = searchParams.get("q")?.toLowerCase() ?? "";
-  const from = searchParams.get("from");
-  const to = searchParams.get("to");
+  try {
+    // Verificar autenticação
+    const session = await getSession();
 
-  await new Promise((resolve) => setTimeout(resolve, 250));
+    if (!session) {
+      console.log('[WALLET_TRANSACTIONS] No session found');
+      return NextResponse.json(
+        { message: 'Não autenticado' },
+        { status: 401 }
+      );
+    }
 
-  const store = getBillingStore();
-  let entries = store.ledger;
+    console.log('[WALLET_TRANSACTIONS] Request from user:', session.userId);
 
-  if (type) {
-    entries = entries.filter((entry) => entry.type === type);
-  }
+    // Parsear query params
+    const { searchParams } = new URL(request.url);
+    const rawParams = {
+      limit: searchParams.get('limit'),
+      cursor: searchParams.get('cursor'),
+    };
 
-  if (source) {
-    entries = entries.filter((entry) => entry.source === source);
-  }
+    // Validar params
+    const params = ListTransactionsSchema.parse(rawParams);
+    console.log('[WALLET_TRANSACTIONS] Params:', params);
 
-  if (from) {
-    const fromDate = new Date(from);
-    entries = entries.filter(
-      (entry) => new Date(entry.occurredAt) >= fromDate,
+    // Buscar transações (converter null para undefined se necessário)
+    const transactions = await listTransactions(session.userId, {
+      limit: params.limit,
+      cursor: params.cursor ?? undefined,
+    });
+    console.log('[WALLET_TRANSACTIONS] Found transactions:', transactions.length);
+
+    return NextResponse.json({
+      transactions,
+      hasMore: transactions.length === params.limit,
+      cursor: transactions.length > 0 ? transactions[transactions.length - 1].id : null,
+    });
+  } catch (error) {
+    if (error instanceof ZodError) {
+      return NextResponse.json(
+        {
+          message: 'Parâmetros inválidos',
+          errors: error.issues.map((issue) => ({
+            field: issue.path.join('.'),
+            message: issue.message,
+          })),
+        },
+        { status: 422 }
+      );
+    }
+
+    console.error('[WALLET_TRANSACTIONS] Error fetching transactions:', error);
+    return NextResponse.json(
+      { message: 'Erro ao buscar transações' },
+      { status: 500 }
     );
   }
-
-  if (to) {
-    const toDate = new Date(to);
-    entries = entries.filter((entry) => new Date(entry.occurredAt) <= toDate);
-  }
-
-  if (text) {
-    entries = entries.filter(
-      (entry) =>
-        entry.description.toLowerCase().includes(text) ||
-        entry.ref?.shipmentId?.toLowerCase().includes(text) ||
-        entry.ref?.orderId?.toLowerCase().includes(text) ||
-        entry.ref?.labelId?.toLowerCase().includes(text) ||
-        entry.ref?.invoiceId?.toLowerCase().includes(text),
-    );
-  }
-
-  return NextResponse.json({ dados: entries });
 }

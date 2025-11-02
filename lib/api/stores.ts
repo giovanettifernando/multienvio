@@ -5,7 +5,23 @@
 
 import type { Address, Card, Profile } from "@/types/account";
 import type { Cart } from "@/types/cart";
-import type { Wallet } from "@/types/wallet";
+
+// Legacy Wallet type para mock/store (não usar em código novo)
+type LegacyWalletTx = {
+  id: string;
+  date: string;
+  type: string;
+  origin: string;
+  amount: number;
+  balanceAfter: number;
+  description?: string;
+};
+
+type LegacyWallet = {
+  balance: number;
+  currency: "BRL";
+  transactions: LegacyWalletTx[];
+};
 
 // Addresses Store
 declare global {
@@ -81,12 +97,12 @@ export function recomputeCartTotals(cart: Cart) {
   globalThis.__envioCart = { ...cart, subtotal, descontos, taxas, total };
 }
 
-// Wallet Store
+// Legacy Wallet Store (não usar em código novo - migrar para /api/wallet)
 declare global {
-  var __envioWallet: Wallet | undefined;
+  var __envioWallet: LegacyWallet | undefined;
 }
 
-export function getWalletStore(): Wallet {
+export function getWalletStore(): LegacyWallet {
   if (!globalThis.__envioWallet) {
     globalThis.__envioWallet = {
       balance: 0,
@@ -98,7 +114,7 @@ export function getWalletStore(): Wallet {
 }
 
 export function pushTx(
-  tx: Pick<Wallet["transactions"][number], "type" | "origin" | "amount" | "description">,
+  tx: Pick<LegacyWalletTx, "type" | "origin" | "amount" | "description">,
 ) {
   const wallet = getWalletStore();
   const id = `tx_${Date.now()}`;

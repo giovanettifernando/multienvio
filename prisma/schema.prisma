@@ -57,6 +57,9 @@ model User {
   cards             Card[]
   recipients        Recipient[]
   securityEvents    UserSecurityEvent[]
+  passwordResetTokens PasswordResetToken[]
+  wallet            Wallet?
+  supportTickets    SupportTicket[]
 
   @@index([email])
   @@index([emailVerificationToken])
@@ -267,6 +270,145 @@ model UserSecurityEvent {
   @@index([userId, type])
   @@index([createdAt])
   @@map("user_security_events")
+}
+
+// Modelo de Token de Reset de Senha
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique // Hash SHA-256 do token (nunca armazenar token em claro)
+  expiresAt DateTime  // Token expira em 1 hora
+  usedAt    DateTime? // Marca quando o token foi utilizado (uso único)
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@index([tokenHash])
+  @@map("password_reset_tokens")
+}
+
+// ============================================================================
+// WALLET (Carteira Digital)
+// ============================================================================
+
+enum WalletTxType {
+  TOPUP       // Recarga/adição de saldo
+  PURCHASE    // Compra/débito
+  REFUND      // Reembolso
+  WITHDRAW    // Saque
+  ADJUSTMENT  // Ajuste manual
+}
+
+enum WalletTxStatus {
+  PENDING   // Pendente de confirmação
+  CONFIRMED // Confirmado
+  FAILED    // Falhou
+  CANCELED  // Cancelado
+}
+
+model Wallet {
+  id              String              @id @default(cuid())
+  userId          String              @unique
+  availableCents  Int                 @default(0) // Saldo disponível em centavos
+  pendingCents    Int                 @default(0) // Saldo pendente em centavos
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  user            User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions    WalletTransaction[]
+
+  @@index([userId])
+  @@map("wallets")
+}
+
+model WalletTransaction {
+  id           String         @id @default(cuid())
+  walletId     String
+  type         WalletTxType
+  status       WalletTxStatus @default(PENDING)
+  amountCents  Int            // Positivo para crédito, negativo para débito
+  title        String?
+  referenceId  String?        @unique // Para idempotência
+  meta         Json?          // Metadados adicionais
+  createdAt    DateTime       @default(now())
+  confirmedAt  DateTime?
+  wallet       Wallet         @relation(fields: [walletId], references: [id], onDelete: Cascade)
+
+  @@index([walletId, status, createdAt])
+  @@index([referenceId])
+  @@map("wallet_transactions")
+}
+
+// ============================================================================
+// SUPPORT (Tickets)
+// ============================================================================
+
+enum SupportTicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum SupportPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum SupportAuthorRole {
+  USER
+  AGENT
+}
+
+model SupportTicket {
+  id             String               @id @default(cuid())
+  userId         String
+  subject        String
+  description    String
+  status         SupportTicketStatus  @default(OPEN)
+  priority       SupportPriority      @default(MEDIUM)
+  assignedTo     String?
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+  lastActivityAt DateTime             @default(now())
+  tags           Json?
+  user           User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages       SupportMessage[]
+
+  @@index([status, priority, createdAt])
+  @@index([userId, createdAt])
+  @@index([assignedTo])
+  @@map("support_tickets")
+}
+
+model SupportMessage {
+  id         String            @id @default(cuid())
+  ticketId   String
+  authorId   String
+  authorRole SupportAuthorRole
+  body       String
+  isInternal Boolean           @default(false)
+  createdAt  DateTime          @default(now())
+  ticket     SupportTicket     @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  attachments SupportAttachment[]
+
+  @@index([ticketId, createdAt])
+  @@map("support_messages")
+}
+
+model SupportAttachment {
+  id        String         @id @default(cuid())
+  messageId String
+  filename  String
+  url       String
+  size      Int?
+  createdAt DateTime       @default(now())
+  message   SupportMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([messageId])
+  @@map("support_attachments")
 }
 
 // Preparação para PostGIS (extensão geográfica) - futuro

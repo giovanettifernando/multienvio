@@ -1,41 +1,108 @@
-'use client';
+import { WalletTxStatus, WalletTxType } from '@prisma/client';
+import type { AccountStatus, AdminClient, ClientType } from '@/lib/admin/types';
+import { formatCNPJ, formatCPF } from '@/lib/masks';
+import { AdminClientsPage } from '@/components/admin/clients/AdminClientsPage';
 
-import { useState } from 'react';
-import { Typography, Flex, App } from 'antd';
-import { ClientsTable } from '@/components/admin/clients/ClientsTable';
-import { ClientDrawer } from '@/components/admin/clients/ClientDrawer';
-import type { AdminClient } from '@/lib/admin/types';
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
-export default function AdminContasPage() {
-  const [selectedClient, setSelectedClient] = useState<AdminClient | null>(null);
-  const [drawerOpen, setDrawerOpen] = useState(false);
+function mapClientStatus(status: string): AccountStatus {
+  if (status === 'active') return 'active';
+  if (status === 'blocked') return 'blocked';
+  if (status === 'suspended') return 'suspended';
+  return 'suspended';
+}
 
-  const handleViewClient = (client: AdminClient) => {
-    setSelectedClient(client);
-    setDrawerOpen(true);
-  };
+function resolveClientType(hasCompany: boolean, cnpj?: string | null): ClientType {
+  if (hasCompany) return 'PJ';
+  if (cnpj) return 'PJ';
+  return 'PF';
+}
 
-  const handleCloseDrawer = () => {
-    setDrawerOpen(false);
-    setSelectedClient(null);
-  };
+function resolveClientDocument(hasCompany: boolean, cpf?: string | null, cnpj?: string | null): string {
+  if (hasCompany) {
+    return cnpj ? formatCNPJ(cnpj) : '—';
+  }
+  if (cnpj) {
+    return formatCNPJ(cnpj);
+  }
+  if (cpf) {
+    return formatCPF(cpf);
+  }
+  return '—';
+}
 
-  return (
-    <App>
-      <Flex vertical gap={16}>
-        <div>
-          <Typography.Title level={2} style={{ marginBottom: 0 }}>
-            Contas de clientes
-          </Typography.Title>
-          <Typography.Paragraph type="secondary">
-            Gerencie contas de clientes (PF/PJ), aprove KYC, bloqueie/desbloqueie e edite limites
-          </Typography.Paragraph>
-        </div>
+async function fetchAdminClients(): Promise<AdminClient[]> {
+  try {
+    const { prisma } = await import('@/lib/db');
 
-        <ClientsTable onViewClient={handleViewClient} />
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const startOfNextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
 
-        <ClientDrawer open={drawerOpen} client={selectedClient} onClose={handleCloseDrawer} />
-      </Flex>
-    </App>
-  );
+    const users = await prisma.user.findMany({
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phone: true,
+        status: true,
+        createdAt: true,
+        hasCompany: true,
+        cpf: true,
+        cnpj: true,
+        wallet: {
+          select: {
+            availableCents: true,
+            pendingCents: true,
+            transactions: {
+              where: {
+                type: WalletTxType.TOPUP,
+                status: WalletTxStatus.CONFIRMED,
+                createdAt: {
+                  gte: startOfMonth,
+                  lt: startOfNextMonth,
+                },
+              },
+              select: {
+                amountCents: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    return users.map((user) => {
+      const walletAvailable = user.wallet?.availableCents ?? 0;
+      const walletPending = user.wallet?.pendingCents ?? 0;
+      const creditsMonth =
+        user.wallet?.transactions.reduce((total, tx) => total + tx.amountCents, 0) ?? 0;
+      const type = resolveClientType(user.hasCompany, user.cnpj);
+
+      return {
+        id: user.id,
+        type,
+        document: resolveClientDocument(user.hasCompany, user.cpf, user.cnpj),
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        createdAt: user.createdAt.toISOString(),
+        status: mapClientStatus(user.status),
+        walletBalance: walletAvailable,
+        creditsMonth,
+        debitsMonth: null,
+        walletPendingCents: walletPending,
+      };
+    });
+  } catch (error) {
+    console.error('[admin/contas] Failed to fetch admin clients', error);
+    return [];
+  }
+}
+
+export default async function AdminContasPage() {
+  const clients = await fetchAdminClients();
+  return <AdminClientsPage clients={clients} />;
 }

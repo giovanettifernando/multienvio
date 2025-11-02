@@ -13,8 +13,7 @@ import {
   Tag,
   Typography,
 } from "antd";
-import { SupportPriority } from "@/types/contracts";
-import type { Ticket } from "@/types/support";
+import type { SupportTicket } from "@/lib/validation/support";
 import type { Pickup } from "@/types/pickup";
 import { useRouter } from "next/navigation";
 
@@ -27,13 +26,17 @@ type AlertItem = {
   link?: string;
 };
 
-async function fetchOpenTickets(): Promise<Ticket[]> {
-  const response = await fetch("/api/support/tickets?status=OPEN");
+async function fetchOpenTickets(): Promise<SupportTicket[]> {
+  const params = new URLSearchParams();
+  params.append("status", "aberto");
+  const response = await fetch(`/api/support/tickets?${params.toString()}`, {
+    cache: "no-store",
+  });
   if (!response.ok) {
     throw new Error("Não foi possível carregar os tickets.");
   }
   const data = await response.json();
-  return data.dados ?? [];
+  return Array.isArray(data.tickets) ? data.tickets : [];
 }
 
 async function fetchPickups(): Promise<Pickup[]> {
@@ -67,10 +70,10 @@ export function AlertsPanel() {
     tickets.slice(0, 3).forEach((ticket) => {
       entries.push({
         id: ticket.id,
-        title: `Ticket ${ticket.number}`,
-        description: ticket.title,
+        title: `Ticket ${ticket.id.slice(0, 8)}`,
+        description: ticket.subject,
         type: "ticket",
-        severity: ticket.priority === SupportPriority.CRITICA ? "high" : "medium",
+        severity: ticket.priority === "critica" ? "high" : "medium",
         link: `/suporte/${ticket.id}`,
       });
     });

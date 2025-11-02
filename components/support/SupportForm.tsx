@@ -34,7 +34,6 @@ export function SupportForm({ onSuccess, defaultValues }: SupportFormProps) {
   const createTicket = useCreateTicket();
   const { user: usuario } = useCurrentUser();
   const [fileList, setFileList] = useState<UploadFile[]>([]);
-  const [loading, setLoading] = useState(false);
 
   // Auto-preencher dados do usuário logado
   useEffect(() => {
@@ -50,7 +49,6 @@ export function SupportForm({ onSuccess, defaultValues }: SupportFormProps) {
   const isLoggedIn = Boolean(usuario);
 
   const handleSubmit = async (values: FormValues) => {
-    setLoading(true);
     try {
       // Convert file list to attachments (metadata only)
       const attachments: SupportAttachment[] = fileList.map(file => ({
@@ -75,7 +73,7 @@ export function SupportForm({ onSuccess, defaultValues }: SupportFormProps) {
         attachments,
       });
 
-      const ticket = createTicket(input);
+      const ticket = await createTicket.mutateAsync(input);
       message.success('Chamado aberto com sucesso!');
 
       // Resetar apenas campos não relacionados ao usuário
@@ -91,9 +89,8 @@ export function SupportForm({ onSuccess, defaultValues }: SupportFormProps) {
       }
     } catch (error) {
       console.error('Error creating ticket:', error);
-      message.error('Erro ao criar chamado. Verifique os dados e tente novamente.');
-    } finally {
-      setLoading(false);
+      const text = error instanceof Error ? error.message : 'Erro ao criar chamado. Verifique os dados e tente novamente.';
+      message.error(text);
     }
   };
 
@@ -206,7 +203,7 @@ export function SupportForm({ onSuccess, defaultValues }: SupportFormProps) {
 
       <Form.Item>
         <Space>
-          <Button type="primary" htmlType="submit" loading={loading}>
+          <Button type="primary" htmlType="submit" loading={createTicket.isPending}>
             Abrir chamado
           </Button>
           <Button onClick={() => {

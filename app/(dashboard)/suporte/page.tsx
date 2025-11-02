@@ -6,26 +6,22 @@ import { Button, Card, Flex, Space, Typography } from 'antd';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { NewTicketList } from '@/components/support/NewTicketList';
 import { TicketDetailsDrawer } from '@/components/support/TicketDetailsDrawer';
-import { useSupportStore } from '@/stores/support';
 
 export default function SupportPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
-  const subscribeExternal = useSupportStore(s => s.subscribeExternal);
-
-  // Subscribe to external storage changes (cross-tab sync)
-  useEffect(() => {
-    const unsubscribe = subscribeExternal();
-    return () => unsubscribe();
-  }, [subscribeExternal]);
+  const [isComposing, setIsComposing] = useState(false);
 
   // Handle ticket query param
   useEffect(() => {
     const ticketId = searchParams.get('ticket');
     if (ticketId) {
       setSelectedTicketId(ticketId);
+      return;
     }
+    setSelectedTicketId(null);
+    setIsComposing(false);
   }, [searchParams]);
 
   const handleOpenTicket = (id: string) => {
@@ -35,6 +31,7 @@ export default function SupportPage() {
 
   const handleCloseDrawer = () => {
     setSelectedTicketId(null);
+    setIsComposing(false);
     router.push('/suporte');
   };
 
@@ -60,7 +57,7 @@ export default function SupportPage() {
       </Flex>
 
       <Card variant="borderless" styles={{ body: { padding: 24 } }}>
-        <NewTicketList onTicketClick={handleOpenTicket} />
+        <NewTicketList onTicketClick={handleOpenTicket} isComposing={isComposing} />
       </Card>
 
       <TicketDetailsDrawer
@@ -68,7 +65,7 @@ export default function SupportPage() {
         open={!!selectedTicketId}
         onClose={handleCloseDrawer}
         userRole="cliente"
-        userName="Cliente"
+        onComposingChange={setIsComposing}
       />
     </Space>
   );

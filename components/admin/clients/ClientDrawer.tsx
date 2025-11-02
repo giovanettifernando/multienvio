@@ -2,27 +2,28 @@
 
 import { useEffect } from 'react';
 import {
-  Drawer,
-  Descriptions,
-  Tag,
-  Form,
-  Select,
+  App,
   Button,
+  Col,
+  Descriptions,
+  Drawer,
+  Form,
+  Row,
+  Select,
   Space,
   Statistic,
-  Row,
-  Col,
-  App,
+  Tag,
 } from 'antd';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 import dayjs from 'dayjs';
-import type { AdminClient, AccountStatus, ClientsResponse } from '@/lib/admin/types';
+import type { AccountStatus, AdminClient } from '@/lib/admin/types';
 import { updateAccount } from '@/lib/admin/api/clients';
 
 interface ClientDrawerProps {
   open: boolean;
   client: AdminClient | null;
   onClose: () => void;
+  onStatusChange: (id: string, status: AccountStatus) => void;
 }
 
 const statusLabels: Record<AccountStatus, string> = {
@@ -31,9 +32,11 @@ const statusLabels: Record<AccountStatus, string> = {
   suspended: 'Suspenso',
 };
 
-export function ClientDrawer({ open, client, onClose }: ClientDrawerProps) {
+const formatCurrency = (value: number) =>
+  value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+export function ClientDrawer({ open, client, onClose, onStatusChange }: ClientDrawerProps) {
   const { message } = App.useApp();
-  const queryClient = useQueryClient();
   const [form] = Form.useForm();
 
   useEffect(() => {
@@ -47,24 +50,16 @@ export function ClientDrawer({ open, client, onClose }: ClientDrawerProps) {
   const updateMutation = useMutation({
     mutationFn: ({ id, patch }: { id: string; patch: Partial<AdminClient> }) =>
       updateAccount(id, patch),
-    onMutate: async ({ id, patch }) => {
-      await queryClient.cancelQueries({ queryKey: ['admin', 'clients'] });
-      queryClient.setQueriesData({ queryKey: ['admin', 'clients'] }, (old: ClientsResponse | undefined) => {
-        if (!old) return old;
-        return {
-          ...old,
-          items: old.items.map((c: AdminClient) => (c.id === id ? { ...c, ...patch } : c)),
-        };
-      });
-    },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       message.success('Conta atualizada com sucesso');
-      queryClient.invalidateQueries({ queryKey: ['admin', 'clients'] });
+      const nextStatus = variables.patch.status as AccountStatus | undefined;
+      if (nextStatus) {
+        onStatusChange(variables.id, nextStatus);
+      }
       onClose();
     },
     onError: () => {
       message.error('Falha ao atualizar conta');
-      queryClient.invalidateQueries({ queryKey: ['admin', 'clients'] });
     },
   });
 
@@ -85,8 +80,12 @@ export function ClientDrawer({ open, client, onClose }: ClientDrawerProps) {
 
   if (!client) return null;
 
-  // Mock total shipments KPI
   const totalShipments = Math.floor(Math.random() * 500) + 50;
+  const walletAvailable = client.walletBalance / 100;
+  const creditsMonth = client.creditsMonth / 100;
+  const debitsMonth = client.debitsMonth != null ? client.debitsMonth / 100 : null;
+  const monthBalanceCents = client.creditsMonth - (client.debitsMonth ?? 0);
+  const monthBalance = monthBalanceCents / 100;
 
   return (
     <Drawer
@@ -104,39 +103,32 @@ export function ClientDrawer({ open, client, onClose }: ClientDrawerProps) {
       }
     >
       <Space direction="vertical" size="large" style={{ width: '100%' }}>
-        {/* KPIs */}
         <Row gutter={16}>
           <Col span={8}>
             <Statistic title="Total de Envios" value={totalShipments} />
           </Col>
           <Col span={8}>
-            <Statistic
-              title="Saldo em Carteira"
-              value={client.walletBalance}
-              precision={2}
-              prefix="R$"
-            />
+            <Statistic title="Saldo em Carteira" value={walletAvailable} precision={2} prefix="R$" />
           </Col>
           <Col span={8}>
             <Statistic
               title="Balanço do Mês"
-              value={client.creditsMonth - client.debitsMonth}
+              value={monthBalance}
               precision={2}
               prefix="R$"
               valueStyle={{
-                color: client.creditsMonth - client.debitsMonth >= 0 ? '#3f8600' : '#cf1322',
+                color: monthBalanceCents >= 0 ? '#3f8600' : '#cf1322',
               }}
             />
           </Col>
         </Row>
 
-        {/* Informações básicas */}
         <Descriptions title="Informações Básicas" bordered column={1}>
           <Descriptions.Item label="ID">{client.id}</Descriptions.Item>
           <Descriptions.Item label="Tipo">
             <Tag color={client.type === 'PJ' ? 'blue' : 'green'}>{client.type}</Tag>
           </Descriptions.Item>
-          <Descriptions.Item label="Documento">{client.document}</Descriptions.Item>
+          <Descriptions.Item label="Documento">{client.document ?? '—'}</Descriptions.Item>
           <Descriptions.Item label="Nome">{client.name}</Descriptions.Item>
           <Descriptions.Item label="E-mail">{client.email}</Descriptions.Item>
           <Descriptions.Item label="Telefone">{client.phone || '—'}</Descriptions.Item>
@@ -145,7 +137,6 @@ export function ClientDrawer({ open, client, onClose }: ClientDrawerProps) {
           </Descriptions.Item>
         </Descriptions>
 
-        {/* Formulário de edição */}
         <Form form={form} layout="vertical">
           <Form.Item
             name="status"
@@ -162,37 +153,24 @@ export function ClientDrawer({ open, client, onClose }: ClientDrawerProps) {
           </Form.Item>
         </Form>
 
-        {/* Informações financeiras */}
         <Descriptions title="Informações Financeiras" bordered column={1}>
           <Descriptions.Item label="Saldo em Carteira">
-            {client.walletBalance.toLocaleString('pt-BR', {
-              style: 'currency',
-              currency: 'BRL',
-            })}
+            {formatCurrency(walletAvailable)}
           </Descriptions.Item>
           <Descriptions.Item label="Créditos no Mês">
-            {client.creditsMonth.toLocaleString('pt-BR', {
-              style: 'currency',
-              currency: 'BRL',
-            })}
+            {formatCurrency(creditsMonth)}
           </Descriptions.Item>
           <Descriptions.Item label="Débitos no Mês">
-            {client.debitsMonth.toLocaleString('pt-BR', {
-              style: 'currency',
-              currency: 'BRL',
-            })}
+            {debitsMonth != null ? formatCurrency(debitsMonth) : '—'}
           </Descriptions.Item>
           <Descriptions.Item label="Balanço do Mês">
             <span
               style={{
-                color: client.creditsMonth - client.debitsMonth >= 0 ? '#3f8600' : '#cf1322',
+                color: monthBalanceCents >= 0 ? '#3f8600' : '#cf1322',
                 fontWeight: 'bold',
               }}
             >
-              {(client.creditsMonth - client.debitsMonth).toLocaleString('pt-BR', {
-                style: 'currency',
-                currency: 'BRL',
-              })}
+              {formatCurrency(monthBalance)}
             </span>
           </Descriptions.Item>
         </Descriptions>
