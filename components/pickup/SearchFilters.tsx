@@ -52,8 +52,8 @@ export default function SearchFilters({ onChange }: SearchFiltersProps) {
             style={{ width: 140 }}
             options={[
               { label: 'Todos', value: 'all' },
-              { label: 'Ativo', value: 'active' },
-              { label: 'Bloqueado', value: 'blocked' },
+              { label: 'Ativo', value: 'ACTIVE' },
+              { label: 'Bloqueado', value: 'BLOCKED' },
             ]}
           />
         </Form.Item>

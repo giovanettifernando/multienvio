@@ -2,17 +2,16 @@
 > enviolegalv2@0.1.0 build
 > next build
 
+ ⚠ You are using a non-standard "NODE_ENV" value in your environment. This creates inconsistencies in the project and is strongly advised against. Read more: https://nextjs.org/docs/messages/non-standard-node-env
    ▲ Next.js 15.5.4
    - Environments: .env.local, .env.production, .env
 
    Creating an optimized production build ...
- ✓ Compiled successfully in 11.5s
+ ✓ Compiled successfully in 13.0s
    Linting and checking validity of types ...
 
-./app/(admin)/admin/pontos-de-coleta/page.tsx
-87:14  Warning: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
-96:14  Warning: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
-105:14  Warning: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
+./app/(auth)/auth/forgot-password/page.tsx
+50:5  Warning: 'setError' is assigned a value but never used.  @typescript-eslint/no-unused-vars
 
 ./app/(dashboard)/carrinho/page.tsx
 64:6  Warning: React Hook useEffect has an unnecessary dependency: 'message'. Either exclude it or remove the dependency array. Outer scope values like 'message' aren't valid dependencies because mutating them doesn't re-render the component.  react-hooks/exhaustive-deps
@@ -20,6 +19,9 @@
 
 ./app/(dashboard)/coletas/page.tsx
 14:15  Warning: 'Coleta' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./app/api/admin/integrations/carriers/[id]/route.ts
+15:10  Warning: 'prisma' is defined but never used.  @typescript-eslint/no-unused-vars
 
 ./app/api/admin/ops/shipments/[id]/timeline/route.ts
 8:11  Warning: 'id' is assigned a value but never used.  @typescript-eslint/no-unused-vars
@@ -42,8 +44,15 @@
 ./app/api/test-email/route.ts
 18:5  Warning: Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-var-requires').
 
+./app/error.tsx
+4:3  Warning: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
+
 ./app/login/page.tsx
 71:14  Warning: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./components/account/AddressesList.tsx
+16:42  Warning: 'useAddressUpdate' is defined but never used.  @typescript-eslint/no-unused-vars
+16:60  Warning: 'useAddressDelete' is defined but never used.  @typescript-eslint/no-unused-vars
 
 ./components/admin/finance/FeesView.tsx
 8:11  Warning: 'FeesViewProps' is defined but never used.  @typescript-eslint/no-unused-vars
@@ -59,9 +68,6 @@
 ./components/collectors/forms/DocumentsForm.tsx
 3:10  Warning: 'Controller' is defined but never used.  @typescript-eslint/no-unused-vars
 
-./components/dashboard/WalletCard.tsx
-13:9  Warning: The 'transactions' logical expression could make the dependencies of useMemo Hook (at line 24) change on every render. To fix this, wrap the initialization of 'transactions' in its own useMemo() Hook.  react-hooks/exhaustive-deps
-
 ./components/forms/company-step-endereco.tsx
 6:3  Warning: 'FormProvider' is defined but never used.  @typescript-eslint/no-unused-vars
 7:3  Warning: 'useForm' is defined but never used.  @typescript-eslint/no-unused-vars
@@ -75,15 +81,15 @@
 4:70  Warning: 'Typography' is defined but never used.  @typescript-eslint/no-unused-vars
 26:11  Warning: 'message' is assigned a value but never used.  @typescript-eslint/no-unused-vars
 
+./components/providers/app-providers.tsx
+10:10  Warning: 'ReactQueryDevtools' is defined but never used.  @typescript-eslint/no-unused-vars
+
 ./components/quote/CepField.tsx
 52:9  Warning: 'lastValidatedCep' is assigned a value but never used.  @typescript-eslint/no-unused-vars
 86:9  Warning: The 'data' conditional could make the dependencies of useEffect Hook (at line 124) change on every render. Move it inside the useEffect callback. Alternatively, wrap the initialization of 'data' in its own useMemo() Hook.  react-hooks/exhaustive-deps
 
-./components/support/TicketDetailsDrawer.tsx
-4:24  Warning: 'ClockCircleOutlined' is defined but never used.  @typescript-eslint/no-unused-vars
-62:50  Warning: 'addTag' is assigned a value but never used.  @typescript-eslint/no-unused-vars
-62:58  Warning: 'removeTag' is assigned a value but never used.  @typescript-eslint/no-unused-vars
-100:14  Warning: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
+./components/support/CollectorSupportForm.tsx
+3:10  Warning: 'useState' is defined but never used.  @typescript-eslint/no-unused-vars
 
 ./components/ui/ELCard.tsx
 27:3  Warning: 'title' is defined but never used.  @typescript-eslint/no-unused-vars
@@ -94,14 +100,14 @@
 ./lib/api/runtime.ts
 2:3  Warning: Unused eslint-disable directive (no problems were reported from 'no-var').
 
-./lib/auth/hooks.ts
-13:3  Warning: 'ToggleStatusInput' is defined but never used.  @typescript-eslint/no-unused-vars
-
 ./lib/coletas/types.ts
 6:33  Warning: 'Address' is defined but never used.  @typescript-eslint/no-unused-vars
 
 ./lib/email/mailer.ts
 6:3  Warning: Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-var-requires').
+
+./lib/integrations/carriers/carrier.service.ts
+7:10  Warning: 'maskCredentials' is defined but never used.  @typescript-eslint/no-unused-vars
 
 ./lib/pickup/schemas.ts
 14:7  Warning: 'emailSchema' is assigned a value but never used.  @typescript-eslint/no-unused-vars
@@ -109,17 +115,33 @@
 30:7  Warning: 'cepSchema' is assigned a value but never used.  @typescript-eslint/no-unused-vars
 38:7  Warning: 'ufSchema' is assigned a value but never used.  @typescript-eslint/no-unused-vars
 
+./lib/services/account-cards.service.ts
+180:12  Warning: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./lib/validation/card.ts
+249:5  Warning: Unused eslint-disable directive (no problems were reported from 'no-console').
+
+./lib/validation/integrations-carriers.ts
+221:28  Warning: 'secret' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./lib/validation/integrations-payments.ts
+3:3  Warning: 'IntegrationEnvironment' is defined but never used.  @typescript-eslint/no-unused-vars
+4:3  Warning: 'IntegrationStatus' is defined but never used.  @typescript-eslint/no-unused-vars
+5:3  Warning: 'AuthType' is defined but never used.  @typescript-eslint/no-unused-vars
+11:3  Warning: 'healthStatusSchema' is defined but never used.  @typescript-eslint/no-unused-vars
+
 info  - Need to disable some ESLint rules? Learn more here: https://nextjs.org/docs/app/api-reference/config/eslint#disabling-rules
 Failed to compile.
 
-./app/(auth)/auth/cadastro/page.tsx:93:25
-Type error: Property 'email' does not exist on type '{ success: boolean; error?: string | undefined; userId?: string | undefined; }'.
+./lib/integrations/carriers/carrier-endpoint.service.ts:47:7
+Type error: Type 'Record<string | number | symbol, unknown> | null' is not assignable to type 'NullableJsonNullValueInput | InputJsonValue | undefined'.
+  Type 'null' is not assignable to type 'NullableJsonNullValueInput | InputJsonValue | undefined'.
 
-[0m [90m 91 |[39m         [90m// Redirect to confirmation page with email and verification status[39m
- [90m 92 |[39m         [36mconst[39m params [33m=[39m [36mnew[39m [33mURLSearchParams[39m({
-[31m[1m>[22m[39m[90m 93 |[39m           email[33m:[39m result[33m.[39memail [33m||[39m values[33m.[39memail[33m,[39m
- [90m    |[39m                         [31m[1m^[22m[39m
- [90m 94 |[39m           emailSent[33m:[39m result[33m.[39memailVerificationSent [33m?[39m [32m'true'[39m [33m:[39m [32m'false'[39m[33m,[39m
- [90m 95 |[39m         })[33m;[39m
- [90m 96 |[39m         router[33m.[39mpush([32m`/auth/confirmacao?${params.toString()}`[39m)[33m;[39m[0m
+[0m [90m 45 |[39m       timeout[33m:[39m data[33m.[39mtimeout [33m||[39m [36mnull[39m[33m,[39m
+ [90m 46 |[39m       retryable[33m:[39m data[33m.[39mretryable [33m!==[39m undefined [33m?[39m data[33m.[39mretryable [33m:[39m [36mtrue[39m[33m,[39m
+[31m[1m>[22m[39m[90m 47 |[39m       requestMapping[33m:[39m data[33m.[39mrequestMapping [33m||[39m [36mnull[39m[33m,[39m
+ [90m    |[39m       [31m[1m^[22m[39m
+ [90m 48 |[39m       responseMapping[33m:[39m data[33m.[39mresponseMapping [33m||[39m [36mnull[39m[33m,[39m
+ [90m 49 |[39m     }[33m,[39m
+ [90m 50 |[39m   })[33m;[39m[0m
 Next.js build worker exited with code: 1 and signal: null

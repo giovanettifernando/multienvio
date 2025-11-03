@@ -1,4 +1,5 @@
 import { SignJWT, jwtVerify } from 'jose';
+import type { AdminPermission } from '@prisma/client';
 
 // Configuração do JWT para Admin (separado do cliente)
 const ADMIN_JWT_SECRET = new TextEncoder().encode(
@@ -16,7 +17,9 @@ export const ADMIN_AUTH_COOKIE_NAME = 'admin_auth';
 export interface AdminJWTPayload {
   staffId: string;
   email: string;
-  role: string;
+  role?: string;
+  isSuperAdmin: boolean;
+  permissions: AdminPermission[];
   iss?: string;
   aud?: string;
   iat?: number;
@@ -27,7 +30,27 @@ export interface AdminJWTPayload {
  * Assina um payload e gera um JWT para admin
  */
 export async function adminSign(payload: Omit<AdminJWTPayload, 'iss' | 'aud' | 'iat' | 'exp'>): Promise<string> {
-  const jwt = await new SignJWT(payload as Record<string, unknown>)
+  console.log('[ADMIN_SIGN] Creating JWT with payload:', {
+    staffId: payload.staffId,
+    email: payload.email,
+    isSuperAdmin: payload.isSuperAdmin,
+    permissions: payload.permissions,
+    permissionsType: typeof payload.permissions,
+    permissionsIsArray: Array.isArray(payload.permissions),
+  });
+
+  // Convert payload to plain object to ensure all fields are serialized
+  const jwtPayload = {
+    staffId: payload.staffId,
+    email: payload.email,
+    role: payload.role,
+    isSuperAdmin: payload.isSuperAdmin || false,
+    permissions: payload.permissions || [],
+  };
+
+  console.log('[ADMIN_SIGN] JWT payload after conversion:', jwtPayload);
+
+  const jwt = await new SignJWT(jwtPayload)
     .setProtectedHeader({ alg: JWT_ALGORITHM })
     .setIssuer(JWT_ISSUER)
     .setAudience(JWT_AUDIENCE)
@@ -47,7 +70,16 @@ export async function adminVerify(token: string): Promise<AdminJWTPayload | null
       issuer: JWT_ISSUER,
       audience: JWT_AUDIENCE,
     });
-    return payload as unknown as AdminJWTPayload;
+    const decoded = payload as unknown as AdminJWTPayload;
+    console.log('[ADMIN_VERIFY] Decoded JWT payload:', {
+      staffId: decoded.staffId,
+      email: decoded.email,
+      isSuperAdmin: decoded.isSuperAdmin,
+      permissions: decoded.permissions,
+      permissionsType: typeof decoded.permissions,
+      permissionsIsArray: Array.isArray(decoded.permissions),
+    });
+    return decoded;
   } catch (error) {
     // Token invalid, expired, or wrong issuer/audience
     console.error('Admin JWT verification failed:', error);

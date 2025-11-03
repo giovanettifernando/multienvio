@@ -18,7 +18,7 @@ import {
   Upload,
 } from 'antd';
 import { PaperClipOutlined, ReloadOutlined, SendOutlined, UserOutlined } from '@ant-design/icons';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { RcFile, UploadFile } from 'antd/es/upload/interface';
 import {
@@ -38,9 +38,12 @@ dayjs.locale('pt-br');
 const { TextArea } = Input;
 const { Text, Title } = Typography;
 
+type Audience = 'user' | 'admin' | 'collector';
+
 interface TicketDetailsBaseProps {
   ticketId: string | null;
   userRole?: AuthorRole;
+  audience?: Audience;
   enableQuery?: boolean;
   onComposingChange?: (value: boolean) => void;
 }
@@ -92,14 +95,23 @@ function formatFileSize(size?: number | null): string | null {
 export function TicketDetailsContent({
   ticketId,
   userRole = 'cliente',
+  audience: audienceProp,
   enableQuery = true,
   onComposingChange,
 }: TicketDetailsBaseProps) {
-  const audience = userRole === 'admin' ? 'admin' : 'user';
+  // Use explicit audience prop if provided, otherwise derive from userRole
+  const audience = audienceProp ?? (userRole === 'admin' ? 'admin' : 'user');
   const [isTextareaFocused, setIsTextareaFocused] = useState(false);
   const [messageText, setMessageText] = useState('');
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [isComposing, setIsComposing] = useState(false);
+
+  // Stabilize callback with useRef to avoid re-renders
+  const onComposingChangeRef = useRef(onComposingChange);
+  useEffect(() => {
+    onComposingChangeRef.current = onComposingChange;
+  });
+
   const ticketQuery = useTicket(ticketId, audience, {
     enabled: enableQuery && !isComposing,
     refetchInterval: false,
@@ -116,7 +128,7 @@ export function TicketDetailsContent({
   const staffUsersQuery = useQuery({
     queryKey: ['adminStaffUsers'],
     queryFn: async (): Promise<Array<{ id: string; name: string; email: string }>> => {
-      const response = await fetch('/api/admin/staff/users', { cache: 'no-store' });
+      const response = await fetch('/api/admin/staff/users?status=active', { cache: 'no-store' });
       const data = await response.json().catch(() => undefined);
       if (!response.ok) {
         const errorMessage =
@@ -149,7 +161,8 @@ export function TicketDetailsContent({
       updateStatus.reset();
       assignTicket.reset();
     }
-  }, [enableQuery, postMessage, updateStatus, assignTicket]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enableQuery]);
 
   useEffect(() => {
     if (userRole === 'admin' && staffUsersQuery.isError) {
@@ -158,7 +171,8 @@ export function TicketDetailsContent({
         err instanceof Error ? err.message : 'Não foi possível carregar a equipe de suporte.';
       message.error(text);
     }
-  }, [staffUsersQuery.isError, staffUsersQuery.error, message, userRole]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [staffUsersQuery.isError, staffUsersQuery.error, userRole]);
 
   useEffect(() => {
     const next =
@@ -167,14 +181,14 @@ export function TicketDetailsContent({
   }, [isTextareaFocused, messageText, fileList]);
 
   useEffect(() => {
-    onComposingChange?.(isComposing);
-  }, [isComposing, onComposingChange]);
+    onComposingChangeRef.current?.(isComposing);
+  }, [isComposing]);
 
   useEffect(() => {
     return () => {
-      onComposingChange?.(false);
+      onComposingChangeRef.current?.(false);
     };
-  }, [onComposingChange]);
+  }, []);
 
   const ticket = ticketQuery.data;
   const isLoading = ticketQuery.isLoading || ticketQuery.isFetching;
@@ -310,7 +324,7 @@ const handleSendMessage = async () => {
             <Space wrap>
               <Tag color={statusColors[ticket.status]}>{statusLabels[ticket.status]}</Tag>
               <Tag color={priorityColors[ticket.priority]}>{priorityLabels[ticket.priority]}</Tag>
-              {ticket.tags.map(tag => (
+              {(ticket.tags ?? []).map(tag => (
                 <Tag key={tag}>{tag}</Tag>
               ))}
             </Space>
@@ -361,9 +375,9 @@ const handleSendMessage = async () => {
         <Descriptions column={1} bordered size="small">
           <Descriptions.Item label="Solicitante">
             <Space direction="vertical" size={0}>
-              <Text strong>{ticket.requester.name}</Text>
-              <Text type="secondary">{ticket.requester.email}</Text>
-              {ticket.requester.phone && (
+              <Text strong>{ticket.requester?.name || 'N/A'}</Text>
+              <Text type="secondary">{ticket.requester?.email || 'N/A'}</Text>
+              {ticket.requester?.phone && (
                 <Text type="secondary">{ticket.requester.phone}</Text>
               )}
             </Space>
@@ -502,15 +516,22 @@ export function TicketDetailsDrawer({
   open,
   onClose,
   userRole = 'cliente',
+  audience,
   onComposingChange,
 }: TicketDetailsDrawerProps) {
   const title = ticketId ? `Chamado #${ticketId.slice(0, 8)}` : 'Detalhes do Chamado';
 
+  // Stabilize callback
+  const onComposingChangeRef = useRef(onComposingChange);
+  useEffect(() => {
+    onComposingChangeRef.current = onComposingChange;
+  });
+
   useEffect(() => {
     if (!open) {
-      onComposingChange?.(false);
+      onComposingChangeRef.current?.(false);
     }
-  }, [open, onComposingChange]);
+  }, [open]);
 
   return (
     <Drawer
@@ -522,6 +543,7 @@ export function TicketDetailsDrawer({
       <TicketDetailsContent
         ticketId={ticketId}
         userRole={userRole}
+        audience={audience}
         enableQuery={Boolean(open && ticketId)}
         onComposingChange={onComposingChange}
       />

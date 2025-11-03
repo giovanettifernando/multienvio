@@ -67,15 +67,14 @@ export function UserDrawer({ open, user, onClose }: UserDrawerProps) {
 
   const onSubmit = async (data: UserFormData) => {
     try {
-      if (isEdit) {
+      if (isEdit && user) {
         await updateMutation.mutateAsync({
           id: user.id,
           data: {
             name: data.name,
             email: data.email,
             phone: data.phone || null,
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            status: data.status as any,
+            status: data.status,
             roles: data.roles,
           },
         });
@@ -84,8 +83,7 @@ export function UserDrawer({ open, user, onClose }: UserDrawerProps) {
           name: data.name,
           email: data.email,
           phone: data.phone || null,
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          status: data.status as any,
+          status: data.status,
           roles: data.roles,
         });
       }

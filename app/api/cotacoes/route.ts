@@ -1,64 +1,104 @@
-import { NextResponse } from "next/server";
-import { nanoid } from "nanoid";
-import type { QuoteRequestPayload, QuoteResultItem, PartnerPoint } from "@/types/quote";
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
-const mockCarriers: QuoteResultItem[] = [
-  {
-    id: `quote-${nanoid(6)}`,
-    carrier: "Correios",
-    modalidade: "SEDEX",
-    prazoDias: 2,
-    preco: 38.9,
-    exigeSeguro: false,
-  },
-  {
-    id: `quote-${nanoid(6)}`,
-    carrier: "Azul Cargo",
-    modalidade: "Next Day",
-    prazoDias: 1,
-    preco: 52.4,
-    exigeSeguro: true,
-  },
-  {
-    id: `quote-${nanoid(6)}`,
-    carrier: "JadLog",
-    modalidade: "Econômico",
-    prazoDias: 4,
-    preco: 29.9,
-    exigeSeguro: false,
-  },
-];
+import { NextResponse } from 'next/server';
+import { getUserSessionFromRequest } from '@/lib/auth/user-session';
+import { createQuote, listQuotes } from '@/lib/quotes/service';
+import {
+  quoteRequestSchema,
+  listQuotesQuerySchema,
+  type QuoteRequest,
+} from '@/lib/validation/quote-backend';
 
-const partnerPoints: PartnerPoint[] = [
-  {
-    id: "pp-1",
-    nome: "Loja Parceira Central",
-    distanciaKm: 1.2,
-    enderecoCurto: "Av. Central, 100 - Centro",
-  },
-  {
-    id: "pp-2",
-    nome: "Mercado 24h",
-    distanciaKm: 2.5,
-    enderecoCurto: "Rua das Flores, 200 - Jardim",
-  },
-];
-
+/**
+ * POST /api/cotacoes
+ * Creates a new quote with shipping options
+ */
 export async function POST(request: Request) {
-  const body = (await request.json()) as QuoteRequestPayload;
+  try {
+    // Authenticate user
+    const session = await getUserSessionFromRequest(request);
+    if (!session) {
+      return NextResponse.json({ message: 'Não autenticado' }, { status: 401 });
+    }
 
-  const results = mockCarriers.map((item, index) => ({
-    ...item,
-    id: `${item.id}-${index}`,
-    preco: Number((item.preco + index * 3.2).toFixed(2)),
-    prazoDias: item.prazoDias + index,
-    exigeSeguro: index === 1 ? true : item.exigeSeguro,
-  }));
+    // Parse and validate request body
+    const body = (await request.json()) as unknown;
+    const parsed = quoteRequestSchema.safeParse(body);
 
-  const response = {
-    results,
-    pontosParceiros: body.coleta ? [] : partnerPoints,
-  };
+    if (!parsed.success) {
+      return NextResponse.json(
+        {
+          message: 'Dados inválidos',
+          errors: parsed.error.flatten(),
+        },
+        { status: 400 }
+      );
+    }
 
-  return NextResponse.json(response);
+    const data: QuoteRequest = parsed.data;
+
+    // Create quote with shipping options
+    const result = await createQuote(session.userId, data);
+
+    // Return response matching frontend contract
+    return NextResponse.json(
+      {
+        quoteId: result.quoteId,
+        results: result.results,
+        pontosParceiros: result.pontosParceiros,
+      },
+      { status: 201 }
+    );
+  } catch (error) {
+    console.error('[COTACOES_POST]', error);
+    const message = error instanceof Error ? error.message : 'Erro ao criar cotação';
+    return NextResponse.json({ message }, { status: 500 });
+  }
+}
+
+/**
+ * GET /api/cotacoes
+ * Lists user's quotes with pagination and filtering
+ */
+export async function GET(request: Request) {
+  try {
+    // Authenticate user
+    const session = await getUserSessionFromRequest(request);
+    if (!session) {
+      return NextResponse.json({ message: 'Não autenticado' }, { status: 401 });
+    }
+
+    // Parse query parameters
+    const url = new URL(request.url);
+    const params = Object.fromEntries(url.searchParams.entries());
+    const parsed = listQuotesQuerySchema.safeParse(params);
+
+    if (!parsed.success) {
+      return NextResponse.json(
+        {
+          message: 'Parâmetros inválidos',
+          errors: parsed.error.flatten(),
+        },
+        { status: 400 }
+      );
+    }
+
+    const query = parsed.data;
+
+    // Get quotes
+    const result = await listQuotes(session.userId, {
+      page: query.page,
+      limit: query.limit,
+      status: query.status,
+      sort: query.sort,
+      order: query.order,
+    });
+
+    return NextResponse.json(result);
+  } catch (error) {
+    console.error('[COTACOES_GET]', error);
+    const message = error instanceof Error ? error.message : 'Erro ao listar cotações';
+    return NextResponse.json({ message }, { status: 500 });
+  }
 }

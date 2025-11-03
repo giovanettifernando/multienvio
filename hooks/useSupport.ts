@@ -16,7 +16,7 @@ import {
   type SupportTicket,
 } from "@/lib/validation/support";
 
-type Audience = "user" | "admin";
+type Audience = "user" | "admin" | "collector";
 
 type TicketFilters = {
   status?: Status[];
@@ -85,17 +85,22 @@ function buildQueryParams({ filters, page, pageSize }: Omit<TicketsQueryOptions,
 }
 
 function getTicketsEndpoint(audience: Audience): string {
-  return audience === "admin" ? "/api/admin/support/tickets" : "/api/support/tickets";
+  if (audience === "admin") return "/api/admin/support/tickets";
+  if (audience === "collector") return "/api/collector/tickets";
+  return "/api/support/tickets";
 }
 
 function getTicketEndpoint(audience: Audience, ticketId: string): string {
-  const base = audience === "admin" ? "/api/admin/support/tickets" : "/api/support/tickets";
+  const base = getTicketsEndpoint(audience);
   return `${base}/${ticketId}`;
 }
 
 function getMessageEndpoint(audience: Audience, ticketId: string): string {
   if (audience === "admin") {
     return `/api/admin/support/tickets/${ticketId}/reply`;
+  }
+  if (audience === "collector") {
+    return `/api/collector/tickets/${ticketId}/messages`;
   }
   return `/api/support/tickets/${ticketId}/messages`;
 }
@@ -211,7 +216,7 @@ export function useTicket(
   });
 }
 
-export function useCreateTicket(): UseMutationResult<
+export function useCreateTicket(audience: Audience = "user"): UseMutationResult<
   SupportTicket,
   Error,
   NewTicketInput,
@@ -221,7 +226,8 @@ export function useCreateTicket(): UseMutationResult<
 
   return useMutation({
     mutationFn: async (input: NewTicketInput) => {
-      return fetchJson<SupportTicket>("/api/support/tickets", {
+      const endpoint = getTicketsEndpoint(audience);
+      return fetchJson<SupportTicket>(endpoint, {
         method: "POST",
         body: JSON.stringify(input),
       });
@@ -232,7 +238,7 @@ export function useCreateTicket(): UseMutationResult<
         predicate: (query) => query.queryKey[0] === "supportTicket",
       });
       // Prime individual ticket cache for immediate access
-      queryClient.setQueryData(["supportTicket", "user", ticket.id], ticket);
+      queryClient.setQueryData(["supportTicket", audience, ticket.id], ticket);
     },
   });
 }

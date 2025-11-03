@@ -89,9 +89,16 @@ export default function CadastroPage() {
         message.success("Conta criada com sucesso!");
 
         // Redirect to confirmation page with email and verification status
+        const hasEmail = typeof result === "object" && result !== null && "email" in result && typeof result.email === "string";
+        const hasEmailVerificationSent =
+          typeof result === "object" && result !== null && "emailVerificationSent" in result;
+
         const params = new URLSearchParams({
-          email: result.email || values.email,
-          emailSent: result.emailVerificationSent ? 'true' : 'false',
+          email: hasEmail ? (result as { email: string }).email : values.email,
+          emailSent:
+            hasEmailVerificationSent && (result as { emailVerificationSent?: boolean }).emailVerificationSent
+              ? "true"
+              : "false",
         });
         router.push(`/auth/confirmacao?${params.toString()}`);
       } catch (error) {

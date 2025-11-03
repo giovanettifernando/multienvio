@@ -9,7 +9,8 @@ import {
   useDeleteUser,
   useResetPassword,
 } from "@/lib/auth/hooks";
-import { getAllRoles } from "@/lib/auth/roles";
+import { getPermissionLabel } from "@/lib/auth/roles";
+import { ADMIN_PERMISSION_KEYS, type AdminPermissionKey } from "@/lib/auth/types";
 
 interface UsersTableProps {
   data: AdminUser[];
@@ -33,7 +34,7 @@ export function UsersTable({
   const deleteMutation = useDeleteUser();
   const resetPasswordMutation = useResetPassword();
 
-  const allRoles = getAllRoles();
+  const allPermissions = ADMIN_PERMISSION_KEYS;
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -126,32 +127,39 @@ export function UsersTable({
     },
     {
       title: "Permissões",
-      dataIndex: "roles",
-      key: "roles",
-      render: (roles: string[]) => {
-        const displayRoles = roles.slice(0, 2);
-        const remainingCount = roles.length - displayRoles.length;
+      dataIndex: "permissions",
+      key: "permissions",
+      render: (_: AdminPermissionKey[], user) => {
+        const permissionList: string[] = user.isSuperAdmin
+          ? ["admin.super", ...allPermissions]
+          : user.permissions;
+
+        const displayRoles = permissionList.slice(0, 2);
+        const remainingCount = Math.max(permissionList.length - displayRoles.length, 0);
+
+        const renderLabel = (key: string) => {
+          if (key === "admin.super") {
+            return "Super Administrador";
+          }
+          return getPermissionLabel(key as AdminPermissionKey);
+        };
+
+        const remainingItems = permissionList.slice(2);
 
         return (
           <Flex gap={4} wrap="wrap">
-            {displayRoles.map((roleKey) => {
-              const role = allRoles.find((r) => r.key === roleKey);
-              return (
-                <Tag key={roleKey} color="blue">
-                  {role?.label || roleKey}
-                </Tag>
-              );
-            })}
+            {displayRoles.map((roleKey) => (
+              <Tag key={roleKey} color={roleKey === "admin.super" ? "gold" : "blue"}>
+                {renderLabel(roleKey)}
+              </Tag>
+            ))}
             {remainingCount > 0 && (
               <Tooltip
                 title={
                   <Flex vertical gap={4}>
-                    {roles.slice(2).map((roleKey) => {
-                      const role = allRoles.find((r) => r.key === roleKey);
-                      return (
-                        <div key={roleKey}>{role?.label || roleKey}</div>
-                      );
-                    })}
+                    {remainingItems.map((roleKey) => (
+                      <div key={roleKey}>{renderLabel(roleKey)}</div>
+                    ))}
                   </Flex>
                 }
               >
@@ -164,21 +172,21 @@ export function UsersTable({
     },
     {
       title: "Último Acesso",
-      dataIndex: "lastLoginAt",
-      key: "lastLoginAt",
+      dataIndex: "lastAccessAt",
+      key: "lastAccessAt",
       width: 150,
       sorter: (a, b) => {
-        if (!a.lastLoginAt) return 1;
-        if (!b.lastLoginAt) return -1;
+        if (!a.lastAccessAt) return 1;
+        if (!b.lastAccessAt) return -1;
         return (
-          new Date(a.lastLoginAt).getTime() -
-          new Date(b.lastLoginAt).getTime()
+          new Date(a.lastAccessAt).getTime() -
+          new Date(b.lastAccessAt).getTime()
         );
       },
-      render: (lastLoginAt: string | null) => {
-        if (!lastLoginAt)
+      render: (lastAccessAt: string | null) => {
+        if (!lastAccessAt)
           return <Typography.Text type="secondary">Nunca</Typography.Text>;
-        return <Typography.Text>{formatDate(lastLoginAt)}</Typography.Text>;
+        return <Typography.Text>{formatDate(lastAccessAt)}</Typography.Text>;
       },
     },
     {

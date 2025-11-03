@@ -11,8 +11,10 @@ export const dynamic = 'force-dynamic';
 export async function POST(request: Request) {
   try {
     const payload = await request.json();
+    console.log('[LOGIN] Request payload:', { email: payload.email });
     const data = LoginSchema.parse(payload);
 
+    console.log('[LOGIN] Searching for user with email:', data.email);
     // Buscar usuário por email com role (sempre buscar do banco, sem cache)
     const dbUser = await prisma.user.findUnique({
       where: { email: data.email },
@@ -21,7 +23,10 @@ export async function POST(request: Request) {
       },
     });
 
-    console.log('[LOGIN] User found:', dbUser?.email);
+    console.log('[LOGIN] Query result - User found:', !!dbUser);
+    console.log('[LOGIN] User email:', dbUser?.email);
+    console.log('[LOGIN] User ID:', dbUser?.id);
+    console.log('[LOGIN] Password hash exists:', !!dbUser?.passwordHash);
     console.log('[LOGIN] Password hash in DB:', dbUser?.passwordHash?.substring(0, 20) + '...');
     console.log('[LOGIN] Password hash length:', dbUser?.passwordHash?.length);
     console.log('[LOGIN] TokenVersion:', dbUser?.tokenVersion);

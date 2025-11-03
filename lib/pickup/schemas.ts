@@ -112,6 +112,11 @@ export const pickupPointSchema = z.object({
     .regex(/^\+?\d{10,15}$/, "Telefone deve ter entre 10 e 15 dígitos")
     .optional()
     .or(z.literal("")),
+  password: z
+    .string({ message: "Senha é obrigatória" })
+    .min(6, "Senha deve ter no mínimo 6 caracteres")
+    .optional()
+    .or(z.literal("")),
 
   // Endereço (flat)
   cep: z

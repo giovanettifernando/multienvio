@@ -7,8 +7,8 @@ interface StatusTagProps {
 
 export default function StatusTag({ status }: StatusTagProps) {
   return (
-    <Tag color={status === 'active' ? 'success' : 'error'}>
-      {status === 'active' ? 'Ativo' : 'Bloqueado'}
+    <Tag color={String(status) === 'ACTIVE' ? 'success' : 'error'}>
+      {String(status) === 'ACTIVE' ? 'Ativo' : 'Bloqueado'}
     </Tag>
   );
 }

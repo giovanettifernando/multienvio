@@ -5,6 +5,7 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
 import { prisma } from '@/lib/db';
+import { AdminPermission } from '@prisma/client';
 
 export async function GET(request: Request) {
   try {
@@ -48,7 +49,12 @@ export async function GET(request: Request) {
       email: staffUser.email,
       status: staffUser.status,
       role: staffUser.role?.name,
+      isSuperAdmin: staffUser.isSuperAdmin,
+      permissions: staffUser.isSuperAdmin
+        ? Object.values(AdminPermission)
+        : staffUser.permissions,
       lastLoginAt: staffUser.lastLoginAt?.toISOString() || null,
+      lastAccessAt: staffUser.lastAccessAt?.toISOString() || null,
       createdAt: staffUser.createdAt.toISOString(),
       updatedAt: staffUser.updatedAt.toISOString(),
     };

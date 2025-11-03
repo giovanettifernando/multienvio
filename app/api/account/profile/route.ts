@@ -17,6 +17,30 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { Profile } from "@/types/account";
 
+function resolveBaseUrl(request: NextRequest): string {
+  const rawEnv = process.env.NEXT_PUBLIC_APP_URL?.trim();
+
+  if (rawEnv) {
+    const sanitized = rawEnv.replace(/^['"`]+|['"`]+$/g, "");
+    try {
+      const url = new URL(sanitized);
+      return url.origin;
+    } catch (error) {
+      console.warn(
+        "[account/profile] Invalid NEXT_PUBLIC_APP_URL, falling back to request origin",
+        { rawEnv, error },
+      );
+    }
+  }
+
+  return request.nextUrl.origin;
+}
+
+function resolveMeEndpoint(request: NextRequest): string {
+  const baseUrl = resolveBaseUrl(request);
+  return new URL("/api/account/me", baseUrl).toString();
+}
+
 export const dynamic = "force-dynamic";
 
 /**
@@ -29,7 +53,8 @@ export async function GET(request: NextRequest) {
     const cookieHeader = request.headers.get('cookie') || '';
 
     // Fetch from real backend endpoint
-    const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/account/me`, {
+    const meEndpoint = resolveMeEndpoint(request);
+    const response = await fetch(meEndpoint, {
       headers: {
         'Cookie': cookieHeader,
       },
@@ -99,7 +124,8 @@ export async function PUT(request: NextRequest) {
     };
 
     // Save to real backend endpoint
-    const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/account/me`, {
+    const meEndpoint = resolveMeEndpoint(request);
+    const response = await fetch(meEndpoint, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',

@@ -18,6 +18,7 @@ import {
 type TicketRecord = Prisma.SupportTicketGetPayload<{
   include: {
     user: { select: { id: true; name: true; email: true; phone: true } };
+    pickupPoint: { select: { id: true; nomeFantasia: true; email: true; telefone: true } };
     messages: {
       include: {
         attachments: true;
@@ -174,7 +175,14 @@ function mapMessage(
   let authorName: string;
 
   if (role === 'cliente') {
-    authorName = ticket.user.name;
+    // Ticket can be from user or pickupPoint (collector)
+    if (ticket.user) {
+      authorName = ticket.user.name;
+    } else if (ticket.pickupPoint) {
+      authorName = ticket.pickupPoint.nomeFantasia;
+    } else {
+      authorName = 'Cliente';
+    }
   } else {
     authorName = agentNames.get(message.authorId) ?? 'Suporte';
   }
@@ -205,6 +213,27 @@ function mapTicketRecord(ticket: TicketRecord, agentNames: Map<string, string>):
       ? agentNames.get(ticket.assignedTo) ?? ticket.assignedTo
       : ticket.assignedTo ?? null;
 
+  // Determine requester based on whether it's a user or collector ticket
+  let requester: { name: string; email: string; phone?: string };
+  if (ticket.user) {
+    requester = {
+      name: ticket.user.name,
+      email: ticket.user.email,
+      phone: ticket.user.phone ?? undefined,
+    };
+  } else if (ticket.pickupPoint) {
+    requester = {
+      name: ticket.pickupPoint.nomeFantasia,
+      email: ticket.pickupPoint.email ?? '',
+      phone: ticket.pickupPoint.telefone ?? undefined,
+    };
+  } else {
+    requester = {
+      name: 'Desconhecido',
+      email: '',
+    };
+  }
+
   return {
     id: ticket.id,
     createdAt: ticket.createdAt.toISOString(),
@@ -214,11 +243,7 @@ function mapTicketRecord(ticket: TicketRecord, agentNames: Map<string, string>):
     subject: ticket.subject,
     description: ticket.description,
     tags,
-    requester: {
-      name: ticket.user.name,
-      email: ticket.user.email,
-      phone: ticket.user.phone ?? undefined,
-    },
+    requester,
     messages,
     attachments: deduplicateAttachments(attachments),
     assignedTo,
@@ -247,6 +272,7 @@ async function fetchTicketRecord(ticketId: string): Promise<TicketRecord | null>
     where: { id: ticketId },
     include: {
       user: { select: { id: true, name: true, email: true, phone: true } },
+      pickupPoint: { select: { id: true, nomeFantasia: true, email: true, telefone: true } },
       messages: {
         include: { attachments: true },
         orderBy: { createdAt: 'asc' },
@@ -264,6 +290,7 @@ export async function listTicketsForUser(userId: string, filters: TicketFilters 
     orderBy: { createdAt: 'desc' },
     include: {
       user: { select: { id: true, name: true, email: true, phone: true } },
+      pickupPoint: { select: { id: true, nomeFantasia: true, email: true, telefone: true } },
       messages: { include: { attachments: true }, orderBy: { createdAt: 'asc' } },
     },
   });
@@ -289,6 +316,7 @@ export async function listTicketsForAdmin(
       orderBy: { createdAt: 'desc' },
       include: {
         user: { select: { id: true, name: true, email: true, phone: true } },
+        pickupPoint: { select: { id: true, nomeFantasia: true, email: true, telefone: true } },
         messages: { include: { attachments: true }, orderBy: { createdAt: 'asc' } },
       },
     }),
@@ -459,6 +487,7 @@ export async function updateTicketStatus(ticketId: string, status: Status): Prom
       },
       include: {
         user: { select: { id: true, name: true, email: true, phone: true } },
+        pickupPoint: { select: { id: true, nomeFantasia: true, email: true, telefone: true } },
         messages: { include: { attachments: true }, orderBy: { createdAt: 'asc' } },
       },
     });
@@ -483,6 +512,7 @@ export async function assignTicket(ticketId: string, assignedTo: string | null):
       },
       include: {
         user: { select: { id: true, name: true, email: true, phone: true } },
+        pickupPoint: { select: { id: true, nomeFantasia: true, email: true, telefone: true } },
         messages: { include: { attachments: true }, orderBy: { createdAt: 'asc' } },
       },
     });

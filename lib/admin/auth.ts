@@ -1,4 +1,5 @@
 import type { AdminUser } from "@/stores/useAdminSession";
+import { ADMIN_PERMISSION_KEYS, type AdminPermissionKey } from "@/lib/auth/types";
 
 export const ADMIN_COOKIE = "admin_auth";
 export const ADMIN_SESSION_STORAGE_KEY = "envio-legal-admin-session";
@@ -24,7 +25,29 @@ export async function checkAdminAuth(): Promise<AdminUser | null> {
     const response = await fetch("/api/admin/auth/me");
     if (!response.ok) return null;
     const data = await response.json();
-    return data.staff || null;
+    const staff = data?.staff;
+    if (!staff) return null;
+
+    const permissionSet = new Set<AdminPermissionKey>(ADMIN_PERMISSION_KEYS);
+    const rawPermissions = Array.isArray(staff.permissions) ? staff.permissions : [];
+    const normalizedPermissions: AdminPermissionKey[] = staff.isSuperAdmin
+      ? [...ADMIN_PERMISSION_KEYS]
+      : rawPermissions.filter(
+          (perm: unknown): perm is AdminPermissionKey =>
+            typeof perm === "string" && permissionSet.has(perm as AdminPermissionKey),
+        );
+
+    const normalizedStatus = staff.status === "BLOCKED" ? "blocked" : "active";
+
+    return {
+      id: staff.id,
+      email: staff.email,
+      name: staff.name,
+      status: normalizedStatus,
+      isSuperAdmin: Boolean(staff.isSuperAdmin),
+      permissions: normalizedPermissions,
+      role: staff.role,
+    };
   } catch {
     return null;
   }

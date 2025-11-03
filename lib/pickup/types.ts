@@ -77,6 +77,7 @@ export type PickupPointFormData = {
   ie?: string;
   email?: string;
   telefone?: string;
+  password?: string; // Senha para acesso ao portal do coletor
   cep?: string;
   logradouro?: string;
   numero?: string;

@@ -6,12 +6,16 @@ import { PaperClipOutlined, InfoCircleOutlined } from '@ant-design/icons';
 import type { UploadFile } from 'antd';
 import { useCreateTicket } from '@/hooks/useSupport';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { useCollectorSession } from '@/stores/useCollectorSession';
 import { NewTicketInputSchema, type SupportAttachment, type Priority } from '@/lib/validation/support';
 
 const { TextArea } = Input;
 
+type Audience = 'user' | 'admin' | 'collector';
+
 interface SupportFormProps {
   onSuccess?: (ticketId: string) => void;
+  audience?: Audience;
   defaultValues?: {
     name?: string;
     email?: string;
@@ -28,25 +32,32 @@ interface FormValues {
   description: string;
 }
 
-export function SupportForm({ onSuccess, defaultValues }: SupportFormProps) {
+export function SupportForm({ onSuccess, audience = 'user', defaultValues }: SupportFormProps) {
   const [form] = Form.useForm();
   const { message } = App.useApp();
-  const createTicket = useCreateTicket();
+  const createTicket = useCreateTicket(audience);
   const { user: usuario } = useCurrentUser();
+  const { collector } = useCollectorSession();
   const [fileList, setFileList] = useState<UploadFile[]>([]);
 
-  // Auto-preencher dados do usuário logado
+  // Auto-preencher dados do usuário ou coletor logado
   useEffect(() => {
-    if (!usuario) return;
+    if (audience === 'collector' && collector) {
+      form.setFieldsValue({
+        name: collector.nomeFantasia || '',
+        email: collector.email || '',
+        phone: collector.telefone || '',
+      });
+    } else if (audience === 'user' && usuario) {
+      form.setFieldsValue({
+        name: usuario.name || '',
+        email: usuario.email || '',
+        phone: usuario.phone || '',
+      });
+    }
+  }, [usuario, collector, audience, form]);
 
-    form.setFieldsValue({
-      name: usuario.name || '',
-      email: usuario.email || '',
-      phone: usuario.phone || '',
-    });
-  }, [usuario, form]);
-
-  const isLoggedIn = Boolean(usuario);
+  const isLoggedIn = audience === 'collector' ? Boolean(collector) : Boolean(usuario);
 
   const handleSubmit = async (values: FormValues) => {
     try {
@@ -59,12 +70,30 @@ export function SupportForm({ onSuccess, defaultValues }: SupportFormProps) {
         url: null, // No actual upload for now
       }));
 
-      // Garantir que usamos os dados do usuário se estiver logado
+      // Garantir que usamos os dados do usuário/coletor se estiver logado
+      let requesterName: string;
+      let requesterEmail: string;
+      let requesterPhone: string | null;
+
+      if (audience === 'collector' && collector) {
+        requesterName = collector.nomeFantasia || values.name;
+        requesterEmail = collector.email || values.email;
+        requesterPhone = values.phone || collector.telefone || null;
+      } else if (audience === 'user' && usuario) {
+        requesterName = usuario.name || values.name;
+        requesterEmail = usuario.email || values.email;
+        requesterPhone = values.phone || usuario.phone || null;
+      } else {
+        requesterName = values.name;
+        requesterEmail = values.email;
+        requesterPhone = values.phone || null;
+      }
+
       const input = NewTicketInputSchema.parse({
         requester: {
-          name: usuario?.name || values.name,
-          email: usuario?.email || values.email,
-          phone: values.phone || usuario?.phone || null,
+          name: requesterName,
+          email: requesterEmail,
+          phone: requesterPhone,
         },
         subject: values.subject,
         priority: values.priority as Priority,

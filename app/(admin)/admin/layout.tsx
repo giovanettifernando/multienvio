@@ -54,8 +54,8 @@ export default function AdminLayout({
     verifyAuth();
   }, [pathname, router, setAdmin, clearAdmin]);
 
-  const hasRole = useAdminSession((state) => state.hasRole);
-  const isAdmin = useAdminSession((state) => state.isAdmin);
+  const hasPermission = useAdminSession((state) => state.hasPermission);
+  const isSuperAdmin = useAdminSession((state) => state.isSuperAdmin);
 
   // Check permissions for current route
   useEffect(() => {
@@ -63,17 +63,17 @@ export default function AdminLayout({
     if (!admin) return;
 
     // Admin role has access to everything
-    if (isAdmin()) return;
+    if (isSuperAdmin()) return;
 
     // Check if user has any of the required permissions
     const hasAccess = currentNavItem.permissions.some((perm) =>
-      hasRole(perm)
+      hasPermission(perm)
     );
 
     if (!hasAccess) {
       router.replace("/admin");
     }
-  }, [admin, currentNavItem, router, hasRole, isAdmin]);
+  }, [admin, currentNavItem, router, hasPermission, isSuperAdmin]);
 
   // Filter nav items based on permissions
   const authorizedNav = useMemo(() => {
@@ -82,12 +82,12 @@ export default function AdminLayout({
       if (!admin) return false;
 
       // Admin role has access to everything
-      if (isAdmin()) return true;
+      if (isSuperAdmin()) return true;
 
       // Check if user has any of the required permissions
-      return item.permissions.some((perm) => hasRole(perm));
+      return item.permissions.some((perm) => hasPermission(perm));
     });
-  }, [admin, hasRole, isAdmin]);
+  }, [admin, hasPermission, isSuperAdmin]);
 
   const menuItems = useMemo(
     () =>

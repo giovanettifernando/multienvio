@@ -141,6 +141,26 @@ export default function PJForm({ control, errors }: PJFormProps) {
         </Form.Item>
 
         <Form.Item
+          label="Senha de Acesso"
+          required
+          validateStatus={errors.password ? 'error' : ''}
+          help={errors.password?.message || 'Senha para o ponto acessar o portal do coletor'}
+        >
+          <Controller
+            name="password"
+            control={control}
+            render={({ field }) => (
+              <Input.Password
+                {...field}
+                value={field.value || ''}
+                placeholder="Mínimo 6 caracteres"
+                aria-label="Senha de Acesso"
+              />
+            )}
+          />
+        </Form.Item>
+
+        <Form.Item
           label="Capacidade (pedidos/dia)"
           validateStatus={errors.capacityPerDay ? 'error' : ''}
           help={errors.capacityPerDay?.message || 'Número máximo de pedidos que este ponto consegue receber por dia. Deixe 0 para ilimitado.'}

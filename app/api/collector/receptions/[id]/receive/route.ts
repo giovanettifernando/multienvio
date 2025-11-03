@@ -1,0 +1,118 @@
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
+import { NextResponse } from 'next/server';
+import { z } from 'zod';
+import { prisma } from '@/lib/db';
+import { getCollectorSessionFromRequest } from '@/lib/auth/collector-session';
+import { ReceptionStatus, Prisma } from '@prisma/client';
+
+const receiveSchema = z.object({
+  hasIssue: z.boolean(),
+  issueType: z.enum(['damaged', 'incomplete', 'wrong_address', 'other']).optional(),
+  issueDetails: z.string().optional(),
+  issuePhotos: z.array(z.string()).optional(), // Array de URLs
+});
+
+async function requireCollectorSession(request: Request) {
+  const session = await getCollectorSessionFromRequest(request);
+  if (!session) {
+    throw NextResponse.json({ message: 'Não autenticado' }, { status: 401 });
+  }
+
+  const point = await prisma.pickupPoint.findUnique({
+    where: { id: session.pointId },
+    select: {
+      id: true,
+      status: true,
+    },
+  });
+
+  if (!point) {
+    throw NextResponse.json({ message: 'Ponto não encontrado' }, { status: 404 });
+  }
+
+  if (point.status !== 'ACTIVE') {
+    throw NextResponse.json(
+      { message: 'Ponto de coleta inativo ou bloqueado' },
+      { status: 403 }
+    );
+  }
+
+  return { pointId: point.id };
+}
+
+// POST /api/collector/receptions/[id]/receive - Marcar como recebido
+export async function POST(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { pointId } = await requireCollectorSession(request);
+    const { id } = await params;
+    const body = await request.json();
+    const data = receiveSchema.parse(body);
+
+    // Buscar recepção (row-level security)
+    const reception = await prisma.reception.findFirst({
+      where: {
+        id,
+        pickupPointId: pointId, // Garantir que pertence a este ponto
+      },
+    });
+
+    if (!reception) {
+      return NextResponse.json({ message: 'Recepção não encontrada' }, { status: 404 });
+    }
+
+    // Verificar se já foi recebida
+    if (reception.status !== ReceptionStatus.PENDING) {
+      return NextResponse.json(
+        { message: 'Esta recepção já foi processada' },
+        { status: 400 }
+      );
+    }
+
+    // Atualizar status
+    const newStatus = data.hasIssue
+      ? ReceptionStatus.ISSUE_REPORTED
+      : ReceptionStatus.RECEIVED;
+
+    const updated = await prisma.reception.update({
+      where: { id },
+      data: {
+        status: newStatus,
+        receivedAt: new Date(),
+        issueType: data.hasIssue ? data.issueType : null,
+        issueDetails: data.hasIssue ? data.issueDetails : null,
+        issuePhotos: data.hasIssue && data.issuePhotos ? data.issuePhotos : Prisma.JsonNull,
+      },
+    });
+
+    return NextResponse.json({
+      message: data.hasIssue
+        ? 'Recepção marcada com problema'
+        : 'Recepção confirmada com sucesso',
+      reception: {
+        id: updated.id,
+        status: updated.status,
+        receivedAt: updated.receivedAt,
+      },
+    });
+  } catch (error) {
+    if (error instanceof NextResponse) {
+      return error;
+    }
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { message: 'Dados inválidos', errors: error.flatten() },
+        { status: 400 }
+      );
+    }
+    console.error('[COLLECTOR_RECEPTION_RECEIVE]', error);
+    return NextResponse.json(
+      { message: 'Erro ao processar recepção' },
+      { status: 500 }
+    );
+  }
+}

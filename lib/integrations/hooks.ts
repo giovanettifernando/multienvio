@@ -19,9 +19,10 @@ export function useCarriers() {
   return useQuery({
     queryKey: integrationKeys.carriers(),
     queryFn: async (): Promise<Carrier[]> => {
-      const res = await fetch('/api/integrations/carriers');
+      const res = await fetch('/api/admin/integrations/carriers');
       if (!res.ok) throw new Error('Erro ao carregar transportadoras');
-      return res.json();
+      const data = await res.json();
+      return data.carriers || [];
     },
   });
 }
@@ -30,7 +31,7 @@ export function useCarrier(id: string | null) {
   return useQuery({
     queryKey: integrationKeys.carrier(id || ''),
     queryFn: async (): Promise<Carrier> => {
-      const res = await fetch(`/api/integrations/carriers/${id}`);
+      const res = await fetch(`/api/admin/integrations/carriers/${id}`);
       if (!res.ok) throw new Error('Erro ao carregar transportadora');
       return res.json();
     },
@@ -43,7 +44,7 @@ export function useCreateCarrier() {
 
   return useMutation({
     mutationFn: async (data: CarrierFormData): Promise<Carrier> => {
-      const res = await fetch('/api/integrations/carriers', {
+      const res = await fetch('/api/admin/integrations/carriers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
@@ -69,7 +70,7 @@ export function useUpdateCarrier() {
 
   return useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<CarrierFormData> }): Promise<Carrier> => {
-      const res = await fetch(`/api/integrations/carriers/${id}`, {
+      const res = await fetch(`/api/admin/integrations/carriers/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
@@ -109,7 +110,7 @@ export function useDeleteCarrier() {
 
   return useMutation({
     mutationFn: async (id: string): Promise<void> => {
-      const res = await fetch(`/api/integrations/carriers/${id}`, {
+      const res = await fetch(`/api/admin/integrations/carriers/${id}`, {
         method: 'DELETE',
       });
       if (!res.ok) throw new Error('Erro ao excluir transportadora');

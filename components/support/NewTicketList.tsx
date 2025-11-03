@@ -19,7 +19,7 @@ interface NewTicketListProps {
   onTicketClick?: (ticketId: string) => void;
   filterByEmail?: string;
   showRequester?: boolean;
-  audience?: 'user' | 'admin';
+  audience?: 'user' | 'admin' | 'collector';
   autoRefresh?: boolean;
   isComposing?: boolean;
 }
@@ -86,7 +86,8 @@ export function NewTicketList({
       const text = error instanceof Error ? error.message : 'Erro ao carregar chamados';
       message.error(text);
     }
-  }, [ticketsQuery.isError, ticketsQuery.error, message]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ticketsQuery.isError, ticketsQuery.error]);
 
   const tickets = ticketsQuery.data?.tickets ?? [];
 

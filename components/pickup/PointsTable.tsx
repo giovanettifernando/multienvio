@@ -17,7 +17,7 @@ interface PointsTableProps {
   loading: boolean;
   onEdit: (point: PickupPoint) => void;
   onDelete: (id: string) => void;
-  onToggleStatus: (id: string, newStatus: 'active' | 'blocked') => void;
+  onToggleStatus: (id: string) => void;
   onPageChange: (page: number, pageSize: number) => void;
 }
 
@@ -30,8 +30,7 @@ export default function PointsTable({
   onPageChange,
 }: PointsTableProps) {
   const handleStatusToggle = (point: PickupPoint, checked: boolean) => {
-    const newStatus = checked ? 'active' : 'blocked';
-    const action = newStatus === 'active' ? 'ativar' : 'bloquear';
+    const action = checked ? 'ativar' : 'bloquear';
 
     confirm({
       title: `Confirmar ${action}`,
@@ -40,7 +39,7 @@ export default function PointsTable({
       okText: 'Confirmar',
       cancelText: 'Cancelar',
       onOk() {
-        onToggleStatus(point.id, newStatus);
+        onToggleStatus(point.id);
       },
     });
   };
@@ -131,7 +130,7 @@ export default function PointsTable({
         <Space size="small">
           <StatusTag status={record.status} />
           <Switch
-            checked={record.status === 'active'}
+            checked={String(record.status) === 'ACTIVE'}
             onChange={(checked) => handleStatusToggle(record, checked)}
             size="small"
           />

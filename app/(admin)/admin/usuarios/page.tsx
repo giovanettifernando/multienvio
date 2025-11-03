@@ -8,13 +8,18 @@ import { SearchFilters } from "@/components/shared/SearchFilters";
 import { UsersTable } from "@/components/admin/users/UsersTable";
 import { UserDrawer } from "@/components/admin/users/UserDrawer";
 import { useUsers, useRoles } from "@/lib/auth/hooks";
-import type { AdminUser, AdminUserFilters } from "@/lib/auth/types";
+import {
+  ADMIN_PERMISSION_KEYS,
+  type AdminPermissionKey,
+  type AdminUser,
+  type AdminUserFilters,
+} from "@/lib/auth/types";
 
 export default function AdminUsersPage() {
   const [filters, setFilters] = useState<AdminUserFilters>({
     q: "",
     status: "all",
-    role: undefined,
+    permission: undefined,
     page: 1,
     pageSize: 10,
     sort: "updated_desc",
@@ -38,10 +43,15 @@ export default function AdminUsersPage() {
     }));
   };
 
-  const handleRoleFilter = (role: string) => {
+  const permissionSet = new Set<AdminPermissionKey>(ADMIN_PERMISSION_KEYS);
+
+  const handlePermissionFilter = (permission: string) => {
+    const normalized = permissionSet.has(permission as AdminPermissionKey)
+      ? (permission as AdminPermissionKey)
+      : undefined;
     setFilters((prev) => ({
       ...prev,
-      role: role || undefined,
+      permission: normalized,
       page: 1,
     }));
   };
@@ -50,7 +60,7 @@ export default function AdminUsersPage() {
     setFilters({
       q: "",
       status: "all",
-      role: undefined,
+      permission: undefined,
       page: 1,
       pageSize: 10,
       sort: "updated_desc",
@@ -76,12 +86,15 @@ export default function AdminUsersPage() {
     setSelectedUser(null);
   };
 
-  const roleOptions = rolesData?.groups.flatMap((group) =>
-    group.roles.map((role) => ({
-      label: role.label,
-      value: role.key,
-    }))
-  ) || [];
+  const permissionOptions =
+    rolesData?.groups.flatMap((group) =>
+      group.roles
+        .filter((role) => role.key !== "admin.super")
+        .map((role) => ({
+          label: role.label,
+          value: role.key,
+        })),
+    ) || [];
 
   return (
     <PageShell
@@ -109,11 +122,11 @@ export default function AdminUsersPage() {
             placeholder: "Status",
           },
           {
-            value: filters.role || "",
-            onChange: handleRoleFilter,
+            value: filters.permission || "",
+            onChange: handlePermissionFilter,
             options: [
               { label: "Todas as Permissões", value: "" },
-              ...roleOptions,
+              ...permissionOptions,
             ],
             placeholder: "Permissão",
           },

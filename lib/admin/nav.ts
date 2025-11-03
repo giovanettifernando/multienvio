@@ -1,9 +1,11 @@
+import type { AdminPermissionKey } from "@/lib/auth/types";
+
 export interface AdminNavItem {
   key: string;
   label: string;
   href: string;
   /** Permissões necessárias (qualquer uma delas) */
-  permissions?: string[];
+  permissions?: AdminPermissionKey[];
 }
 
 export const ADMIN_NAV: AdminNavItem[] = [
@@ -12,50 +14,54 @@ export const ADMIN_NAV: AdminNavItem[] = [
     key: "contas",
     label: "Contas de clientes",
     href: "/admin/contas",
+    permissions: ["CONTAS"],
   },
   {
     key: "financeiro",
     label: "Financeiro",
     href: "/admin/financeiro",
-    permissions: ["finance.read", "finance.manage"],
+    permissions: ["FINANCEIRO"],
   },
   {
     key: "operacoes",
     label: "Operações",
     href: "/admin/operacoes",
-    permissions: ["operations.read", "operations.manage"],
+    permissions: ["OPERACOES"],
   },
   {
     key: "integracoes",
     label: "Integrações",
     href: "/admin/integracoes",
-    permissions: ["integrations.read", "integrations.manage"],
+    permissions: ["INTEGRACOES"],
   },
   {
     key: "suporte",
     label: "Suporte",
     href: "/admin/suporte",
+    permissions: ["SUPORTE"],
   },
   {
     key: "coletores",
     label: "Coletores",
     href: "/admin/coletores",
+    permissions: ["COLETORES"],
   },
   {
     key: "pontos-de-coleta",
     label: "Pontos de Coleta",
     href: "/admin/pontos-de-coleta",
-    permissions: ["pickup.read", "pickup.manage"],
+    permissions: ["PONTOS_COLETA"],
   },
   {
     key: "usuarios",
     label: "Usuários",
     href: "/admin/usuarios",
-    permissions: ["admin.users.read", "admin.users.manage"],
+    permissions: ["USUARIOS"],
   },
   {
     key: "config",
     label: "Configurações",
     href: "/admin/config",
+    permissions: ["CONFIGURACOES"],
   },
 ];

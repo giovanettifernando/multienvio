@@ -4,6 +4,11 @@ import { Suspense, useState } from "react";
 import { App, Button, Card, Form, Input } from "antd";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAdminSession } from "@/stores/useAdminSession";
+import {
+  ADMIN_PERMISSION_KEYS,
+  type AdminPermissionKey,
+  type AdminStatus,
+} from "@/lib/auth/types";
 
 type LoginFormValues = {
   email: string;
@@ -43,12 +48,26 @@ function AdminLoginForm() {
       }
 
       // Update store with staff data
+      const rawPermissions = Array.isArray(data.staff.permissions)
+        ? data.staff.permissions
+        : [];
+      const permissionSet = new Set<AdminPermissionKey>(ADMIN_PERMISSION_KEYS);
+      const permissions: AdminPermissionKey[] = data.staff.isSuperAdmin
+        ? [...ADMIN_PERMISSION_KEYS]
+        : rawPermissions.filter((perm: unknown): perm is AdminPermissionKey =>
+            typeof perm === "string" && permissionSet.has(perm as AdminPermissionKey),
+          );
+
+      const status: AdminStatus = data.staff.status === "BLOCKED" ? "blocked" : "active";
+
       const admin = {
         id: data.staff.id,
         email: data.staff.email,
         name: data.staff.name,
+        status,
+        isSuperAdmin: Boolean(data.staff.isSuperAdmin),
+        permissions,
         role: data.staff.role,
-        status: data.staff.status,
       };
 
       setAdmin(admin);

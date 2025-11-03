@@ -1,14 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, Button, Flex, Typography, App } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import SearchFilters from '@/components/pickup/SearchFilters';
 import PointsTable from '@/components/pickup/PointsTable';
 import PointDrawer from '@/components/pickup/PointDrawer';
-import { usePontos, usePontosActions } from '@/hooks/usePontos';
-import { usePontosStore } from '@/stores/pontos';
-import type { PickupPointFilters, PickupPoint, PickupPointFormData } from '@/lib/pickup/types';
+import { usePickupPointsAPI } from '@/hooks/usePickupPointsAPI';
+import type { PickupPointFilters, PickupPoint, PickupPointFormData, PickupPointListResponse } from '@/lib/pickup/types';
 
 const { Title } = Typography;
 
@@ -17,42 +16,36 @@ export default function PontosDeColetaPage() {
   const [filters, setFilters] = useState<PickupPointFilters>({ status: 'all', page: 1, pageSize: 10 });
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editingPoint, setEditingPoint] = useState<PickupPoint | null>(null);
-
-  // Usar hooks do store Zustand
-  const allPoints = usePontos({
-    status: filters.status !== 'all' ? filters.status : undefined,
-    uf: filters.uf,
-    cidade: filters.cidade,
-    query: filters.q,
+  const [data, setData] = useState<PickupPointListResponse>({
+    items: [],
+    total: 0,
+    page: 1,
+    pageSize: 10,
   });
+  const [isLoading, setIsLoading] = useState(false);
 
-  const { createPoint, updatePoint, deletePoint, toggleStatus } = usePontosActions();
-  const subscribeExternal = usePontosStore((s) => s.subscribeExternal);
+  const api = usePickupPointsAPI();
 
-  // Subscrever a mudanças de outras abas
+  const loadData = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const result = await api.fetchPoints(filters);
+      setData(result);
+    } catch {
+      message.error('Erro ao carregar pontos de coleta');
+    } finally {
+      setIsLoading(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters]);
+
+  // Carregar dados quando filtros mudarem
   useEffect(() => {
-    const unsubscribe = subscribeExternal();
-    return () => unsubscribe();
-  }, [subscribeExternal]);
-
-  // Simular paginação (no frontend)
-  const page = filters.page || 1;
-  const pageSize = filters.pageSize || 10;
-  const startIndex = (page - 1) * pageSize;
-  const endIndex = startIndex + pageSize;
-  const paginatedPoints = allPoints.slice(startIndex, endIndex);
-
-  const data = {
-    items: paginatedPoints,
-    total: allPoints.length,
-    page,
-    pageSize,
-  };
-
-  const isLoading = false; // Store é síncrono
+    loadData();
+  }, [loadData]);
 
   const handleFiltersChange = (newFilters: PickupPointFilters) => {
-    setFilters({ ...newFilters, pageSize: filters.pageSize });
+    setFilters({ ...newFilters, page: 1, pageSize: filters.pageSize });
   };
 
   const handlePageChange = (page: number, pageSize: number) => {
@@ -74,36 +67,39 @@ export default function PontosDeColetaPage() {
     setEditingPoint(null);
   };
 
-  const handleSubmit = (data: PickupPointFormData) => {
+  const handleSubmit = async (formData: PickupPointFormData) => {
     try {
       if (editingPoint) {
-        updatePoint(editingPoint.id, data);
+        await api.updatePoint(editingPoint.id, formData);
         message.success('Ponto atualizado com sucesso');
       } else {
-        createPoint(data);
+        await api.createPoint(formData);
         message.success('Ponto criado com sucesso');
       }
       handleDrawerClose();
-    } catch (error) {
-      message.error('Erro ao salvar ponto');
+      await loadData();
+    } catch {
+      message.error(api.error || 'Erro ao salvar ponto');
     }
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     try {
-      deletePoint(id);
+      await api.deletePoint(id);
       message.success('Ponto excluído com sucesso');
-    } catch (error) {
-      message.error('Erro ao excluir ponto');
+      await loadData();
+    } catch {
+      message.error(api.error || 'Erro ao excluir ponto');
     }
   };
 
-  const handleToggleStatus = (id: string) => {
+  const handleToggleStatus = async (id: string) => {
     try {
-      toggleStatus(id);
+      await api.toggleStatus(id);
       message.success('Status atualizado');
-    } catch (error) {
-      message.error('Erro ao atualizar status');
+      await loadData();
+    } catch {
+      message.error(api.error || 'Erro ao atualizar status');
     }
   };
 
@@ -122,7 +118,7 @@ export default function PontosDeColetaPage() {
         <SearchFilters onChange={handleFiltersChange} />
         <PointsTable
           data={data}
-          loading={isLoading}
+          loading={isLoading || api.loading}
           onEdit={handleEdit}
           onDelete={handleDelete}
           onToggleStatus={handleToggleStatus}
@@ -134,7 +130,7 @@ export default function PontosDeColetaPage() {
         open={drawerOpen}
         onClose={handleDrawerClose}
         onSubmit={handleSubmit}
-        loading={false}
+        loading={api.loading}
         editPoint={editingPoint}
       />
     </div>

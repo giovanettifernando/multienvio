@@ -9,6 +9,7 @@ import { AdminLoginSchema } from '@/lib/validation/admin-auth';
 import { prisma } from '@/lib/db';
 import { adminSign, createAdminCookieHeader } from '@/lib/auth/admin-session';
 import { logAdminLogin } from '@/lib/audit-admin';
+import { AdminPermission } from '@prisma/client';
 
 export async function POST(request: Request) {
   try {
@@ -28,6 +29,14 @@ export async function POST(request: Request) {
         role: true,
       },
     });
+
+    console.log('[ADMIN_LOGIN] Query result - Staff user found:', !!staffUser);
+    console.log('[ADMIN_LOGIN] Staff email:', staffUser?.email);
+    console.log('[ADMIN_LOGIN] Staff ID:', staffUser?.id);
+    console.log('[ADMIN_LOGIN] Password hash exists:', !!staffUser?.passwordHash);
+    console.log('[ADMIN_LOGIN] Status:', staffUser?.status);
+    console.log('[ADMIN_LOGIN] IsSuperAdmin:', staffUser?.isSuperAdmin);
+    console.log('[ADMIN_LOGIN] Permissions:', staffUser?.permissions);
 
     // Generic error message to not reveal if email exists
     if (!staffUser || !staffUser.passwordHash) {
@@ -61,9 +70,13 @@ export async function POST(request: Request) {
     }
 
     // Update lastLoginAt
+    const now = new Date();
     await prisma.staffUser.update({
       where: { id: staffUser.id },
-      data: { lastLoginAt: new Date() },
+      data: {
+        lastLoginAt: now,
+        lastAccessAt: now,
+      },
     });
 
     // Create JWT token
@@ -71,6 +84,8 @@ export async function POST(request: Request) {
       staffId: staffUser.id,
       email: staffUser.email,
       role: staffUser.role?.name || 'operator',
+      isSuperAdmin: staffUser.isSuperAdmin,
+      permissions: staffUser.permissions,
     });
 
     // Log admin login for audit
@@ -88,7 +103,12 @@ export async function POST(request: Request) {
       email: staffUser.email,
       status: staffUser.status,
       role: staffUser.role?.name,
+      isSuperAdmin: staffUser.isSuperAdmin,
+      permissions: staffUser.isSuperAdmin
+        ? Object.values(AdminPermission)
+        : staffUser.permissions,
       lastLoginAt: staffUser.lastLoginAt?.toISOString() || null,
+      lastAccessAt: (staffUser.lastAccessAt ?? now).toISOString(),
       createdAt: staffUser.createdAt.toISOString(),
       updatedAt: staffUser.updatedAt.toISOString(),
     };

@@ -1,33 +1,37 @@
 import { create } from "zustand";
+import type { AdminPermissionKey, AdminStatus } from "@/lib/auth/types";
 
 export interface AdminUser {
   id: string;
   email: string;
   name: string;
-  role: string;
-  status: string;
+  status: AdminStatus;
+  isSuperAdmin: boolean;
+  permissions: AdminPermissionKey[];
+  role?: string;
 }
 
 interface AdminSessionState {
   admin: AdminUser | null;
   setAdmin: (admin: AdminUser) => void;
   clearAdmin: () => void;
-  isAdmin: () => boolean;
-  hasRole: (role: string) => boolean;
+  isSuperAdmin: () => boolean;
+  hasPermission: (permission: AdminPermissionKey) => boolean;
 }
 
 export const useAdminSession = create<AdminSessionState>((set, get) => ({
   admin: null,
   setAdmin: (admin) => set({ admin }),
   clearAdmin: () => set({ admin: null }),
-  isAdmin: () => {
+  isSuperAdmin: () => {
     const { admin } = get();
     if (!admin) return false;
-    return admin.role === 'admin';
+    return admin.isSuperAdmin === true;
   },
-  hasRole: (role: string) => {
+  hasPermission: (permission: AdminPermissionKey) => {
     const { admin } = get();
     if (!admin) return false;
-    return admin.role === role || admin.role === 'admin';
+    if (admin.isSuperAdmin) return true;
+    return admin.permissions?.includes(permission) ?? false;
   },
 }));
