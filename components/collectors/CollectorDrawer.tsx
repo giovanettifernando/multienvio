@@ -13,7 +13,7 @@ import FinanceForm from './forms/FinanceForm';
 import { collectorFormSchema } from '@/lib/collectors/schemas';
 import type { Collector, CollectorFormData, CollectorFormInput } from '@/lib/collectors/types';
 import { useUpload } from '@/lib/collectors/hooks';
-import { maskCNPJ, maskPhone, maskCEP, maskPlateMercosul } from '@/lib/collectors/masks';
+import { maskCNPJ, maskCPF, maskPhone, maskCEP } from '@/lib/collectors/masks';
 
 interface CollectorDrawerProps {
   open: boolean;
@@ -28,9 +28,11 @@ const allowedUrlPrefixes = ['data:', 'http://', 'https://', '/uploads/'];
 const defaultValues: CollectorFormInput = {
   pf: {
     nome: '',
+    cpf: '',
+    email: '',
     cnh: {
       number: '',
-      category: '',
+      category: 'B',
       expiresAt: '',
     },
     endereco: {
@@ -49,8 +51,6 @@ const defaultValues: CollectorFormInput = {
   pj: {
     razaoSocial: '',
     cnpj: '',
-    email: null,
-    telefone: null,
     endereco: {
       cep: null,
       logradouro: null,
@@ -60,13 +60,13 @@ const defaultValues: CollectorFormInput = {
       cidade: null,
       uf: null,
     },
+    usarEnderecoFisico: false,
   },
   vehicle: {
     plate: '',
     brand: '',
     model: null,
     year: null,
-    renavam: '',
   },
   documents: {
     cnhFiles: [],
@@ -121,7 +121,12 @@ export default function CollectorDrawer({
       reset({
         pf: {
           nome: editCollector.pf.nome,
-          cnh: editCollector.pf.cnh,
+          cpf: editCollector.pf.cpf ? maskCPF(editCollector.pf.cpf) : '',
+          email: editCollector.pf.email || '',
+          cnh: {
+            ...editCollector.pf.cnh,
+            category: editCollector.pf.cnh.category as 'ACC' | 'A' | 'B' | 'C' | 'D' | 'E',
+          },
           endereco: {
             cep: editCollector.pf.endereco.cep ? maskCEP(editCollector.pf.endereco.cep) : null,
             logradouro: editCollector.pf.endereco.logradouro,
@@ -138,8 +143,6 @@ export default function CollectorDrawer({
         pj: {
           razaoSocial: editCollector.pj.razaoSocial,
           cnpj: maskCNPJ(editCollector.pj.cnpj),
-          email: editCollector.pj.email,
-          telefone: editCollector.pj.telefone ? maskPhone(editCollector.pj.telefone) : null,
           endereco: {
             cep: editCollector.pj.endereco.cep ? maskCEP(editCollector.pj.endereco.cep) : null,
             logradouro: editCollector.pj.endereco.logradouro,
@@ -149,13 +152,13 @@ export default function CollectorDrawer({
             cidade: editCollector.pj.endereco.cidade,
             uf: editCollector.pj.endereco.uf,
           },
+          usarEnderecoFisico: editCollector.pj.usarEnderecoFisico || false,
         },
         vehicle: {
-          plate: maskPlateMercosul(editCollector.vehicle.plate),
+          plate: editCollector.vehicle.plate,
           brand: editCollector.vehicle.brand,
           model: editCollector.vehicle.model,
           year: editCollector.vehicle.year,
-          renavam: editCollector.vehicle.renavam,
         },
         documents: editCollector.documents,
         commission: editCollector.commission,

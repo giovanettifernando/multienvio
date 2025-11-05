@@ -76,23 +76,21 @@ export function computeDashboardKpis(
 ): KpiComputation[] {
   const now = new Date();
   const todayStart = startOfDay(now);
-  const yesterdayStart = new Date(todayStart);
-  yesterdayStart.setDate(todayStart.getDate() - 1);
-  const dayBeforeYesterdayStart = new Date(yesterdayStart);
-  dayBeforeYesterdayStart.setDate(yesterdayStart.getDate() - 1);
 
-  const ordersToday = orders.filter((order) => {
+  // Current month calculation
+  const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const previousMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const previousMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
+
+  const ordersThisMonth = orders.filter((order) => {
     const created = toDate(order.createdAt);
-    return created ? created >= todayStart : false;
+    return created ? created >= currentMonthStart : false;
   });
 
-  const ordersYesterday = orders.filter((order) => {
+  const ordersLastMonth = orders.filter((order) => {
     const created = toDate(order.createdAt);
     if (!created) return false;
-    return (
-      created >= yesterdayStart &&
-      created < todayStart
-    );
+    return created >= previousMonthStart && created <= previousMonthEnd;
   });
 
   const inTransitCurrent = shipments.filter((shipment) => {
@@ -173,41 +171,65 @@ export function computeDashboardKpis(
     ? average(previousCosts)
     : currentAverageCost || average(shipments.map((shipment) => shipment.valorFrete ?? 0));
 
+  // Calculate on-time delivery percentage
+  const deliveredThisMonth = shipments.filter((shipment) => {
+    if (shipment.status !== "entregue") return false;
+    const updatedAt = toDate(shipment.atualizadoEm);
+    if (!updatedAt) return false;
+    return updatedAt >= currentMonthStart;
+  });
+
+  const onTimeDeliveries = deliveredThisMonth.filter((shipment) => {
+    const deliveredDate = toDate(shipment.atualizadoEm);
+    const dueDate = toDate(shipment.prazoEstimado);
+    if (!deliveredDate || !dueDate) return false;
+    return deliveredDate <= dueDate;
+  });
+
+  const onTimePercentage = deliveredThisMonth.length > 0
+    ? (onTimeDeliveries.length / deliveredThisMonth.length) * 100
+    : 0;
+
+  const deliveredLastMonth = shipments.filter((shipment) => {
+    if (shipment.status !== "entregue") return false;
+    const updatedAt = toDate(shipment.atualizadoEm);
+    if (!updatedAt) return false;
+    return updatedAt >= previousMonthStart && updatedAt <= previousMonthEnd;
+  });
+
+  const onTimeDeliveriesLastMonth = deliveredLastMonth.filter((shipment) => {
+    const deliveredDate = toDate(shipment.atualizadoEm);
+    const dueDate = toDate(shipment.prazoEstimado);
+    if (!deliveredDate || !dueDate) return false;
+    return deliveredDate <= dueDate;
+  });
+
+  const onTimePercentageLastMonth = deliveredLastMonth.length > 0
+    ? (onTimeDeliveriesLastMonth.length / deliveredLastMonth.length) * 100
+    : 0;
+
   return [
     {
-      key: "orders_today",
-      label: "Pedidos hoje",
-      value: ordersToday.length,
-      previous: ordersYesterday.length,
-      format: "number",
-    },
-    {
-      key: "in_transit",
-      label: "Em transporte",
-      value: inTransitCurrent.length,
-      previous: inTransitPrevious.length,
-      format: "number",
-    },
-    {
-      key: "delivered_week",
-      label: "Entregues (7d)",
-      value: deliveredLast7.length,
-      previous: deliveredPrev7.length,
-      format: "number",
-    },
-    {
-      key: "overdue_sla",
-      label: "Atrasados (SLA)",
-      value: overdueCurrent.length,
-      previous: overduePrevious.length,
+      key: "orders_month",
+      label: "Pedidos no mês",
+      value: ordersThisMonth.length,
+      previous: ordersLastMonth.length,
       format: "number",
     },
     {
       key: "avg_cost",
-      label: "Custo médio (30d)",
+      label: "Custo médio",
       value: Number(currentAverageCost.toFixed(2)),
       previous: Number((previousAverageCost || currentAverageCost).toFixed(2)),
       format: "currency",
+    },
+    {
+      key: "on_time_delivery",
+      label: "Entregas no prazo",
+      value: Number(onTimePercentage.toFixed(1)),
+      previous: Number(onTimePercentageLastMonth.toFixed(1)),
+      format: "number",
+      suffix: "%",
     },
   ];
 }

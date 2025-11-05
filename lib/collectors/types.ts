@@ -1,7 +1,7 @@
 import type { FieldValues } from 'react-hook-form';
 import type { CollectorFormSchemaInput, CollectorFormSchemaType } from './schemas';
 
-export type CollectorStatus = 'active' | 'blocked';
+export type CollectorStatus = 'active' | 'inactive' | 'blocked';
 
 export type PixKeyType = 'cpf' | 'cnpj' | 'email' | 'phone' | 'random';
 export type AccountType = 'corrente' | 'poupanca';
@@ -34,6 +34,10 @@ export interface Endereco {
 
 export interface PessoaFisica {
   nome: string;
+  cpf: string;
+  email: string;
+  password?: string | null;
+  confirmPassword?: string | null;
   cnh: {
     number: string;
     category: string;
@@ -48,9 +52,8 @@ export interface PessoaFisica {
 export interface PessoaJuridica {
   razaoSocial: string;
   cnpj: string;
-  email?: string | null;
-  telefone?: string | null;
   endereco: Endereco;
+  usarEnderecoFisico?: boolean;
 }
 
 export interface Vehicle {
@@ -58,7 +61,6 @@ export interface Vehicle {
   brand: string;
   model?: string | null;
   year?: string | null;
-  renavam: string;
 }
 
 export interface Documents {
@@ -100,7 +102,7 @@ export type CollectorFormData = CollectorFormSchemaType & FieldValues;
 
 export interface CollectorFilters {
   q?: string;
-  status?: CollectorStatus | 'all';
+  status?: 'active' | 'inactive' | 'blocked' | 'all';
   uf?: string;
   cidade?: string;
   page?: number;

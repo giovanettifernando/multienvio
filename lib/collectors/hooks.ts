@@ -31,10 +31,11 @@ function normalizePayload(data: CollectorFormData): CollectorFormData {
     ...data,
     pf: {
       ...data.pf,
+      cpf: unmaskDigits(data.pf.cpf),
       cnh: {
         ...data.pf.cnh,
         number: unmaskDigits(data.pf.cnh.number),
-        category: data.pf.cnh.category.toUpperCase(),
+        category: data.pf.cnh.category as 'ACC' | 'A' | 'B' | 'C' | 'D' | 'E',
       },
       endereco: {
         ...data.pf.endereco,
@@ -47,7 +48,6 @@ function normalizePayload(data: CollectorFormData): CollectorFormData {
     pj: {
       ...data.pj,
       cnpj: unmaskDigits(data.pj.cnpj),
-      telefone: data.pj.telefone ? unmaskDigits(data.pj.telefone) : null,
       endereco: {
         ...data.pj.endereco,
         cep: data.pj.endereco.cep ? unmaskDigits(data.pj.endereco.cep) : null,
@@ -57,7 +57,6 @@ function normalizePayload(data: CollectorFormData): CollectorFormData {
     vehicle: {
       ...data.vehicle,
       plate: data.vehicle.plate.toUpperCase(),
-      renavam: unmaskDigits(data.vehicle.renavam),
     },
     commission: data.commission.kind === 'fixa'
       ? { kind: 'fixa', amount: Number(data.commission.amount) }
@@ -100,7 +99,7 @@ export function useCollectors(params?: CollectorFilters) {
     queryKey: qk.list(serializeParams(params)),
     queryFn: async (): Promise<CollectorListResponse> => {
       const suffix = searchParams.toString();
-      const url = `/api/mock/collectors${suffix ? `?${suffix}` : ''}`;
+      const url = `/api/admin/coletores${suffix ? `?${suffix}` : ''}`;
       const res = await fetch(url);
       if (!res.ok) throw new Error('Erro ao carregar coletores');
       return res.json();
@@ -112,9 +111,10 @@ export function useCollector(id: string | null) {
   return useQuery({
     queryKey: qk.one(id || ''),
     queryFn: async (): Promise<Collector> => {
-      const res = await fetch(`/api/mock/collectors/${id}`);
+      const res = await fetch(`/api/admin/coletores/${id}`);
       if (!res.ok) throw new Error('Erro ao carregar coletor');
-      return res.json();
+      const data = await res.json();
+      return data.collector || data;
     },
     enabled: !!id,
   });
@@ -125,7 +125,7 @@ export function useCreateCollector() {
 
   return useMutation({
     mutationFn: async (data: CollectorFormData): Promise<Collector> => {
-      const res = await fetch('/api/mock/collectors', {
+      const res = await fetch('/api/admin/coletores', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(normalizePayload(data)),
@@ -136,7 +136,8 @@ export function useCreateCollector() {
         throw new Error(error.message || 'Erro ao criar coletor');
       }
 
-      return res.json();
+      const result = await res.json();
+      return result.collector || result;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['collectors.list'] });
@@ -153,8 +154,8 @@ export function useUpdateCollector() {
 
   return useMutation({
     mutationFn: async ({ id, data }: { id: string; data: CollectorFormData }): Promise<Collector> => {
-      const res = await fetch(`/api/mock/collectors/${id}`, {
-        method: 'PUT',
+      const res = await fetch(`/api/admin/coletores/${id}`, {
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(normalizePayload(data)),
       });
@@ -164,7 +165,8 @@ export function useUpdateCollector() {
         throw new Error(error.message || 'Erro ao atualizar coletor');
       }
 
-      return res.json();
+      const result = await res.json();
+      return result.collector || result;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['collectors.list'] });
@@ -181,7 +183,7 @@ export function useDeleteCollector() {
 
   return useMutation({
     mutationFn: async (id: string): Promise<void> => {
-      const res = await fetch(`/api/mock/collectors/${id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/admin/coletores/${id}`, { method: 'DELETE' });
       if (!res.ok) {
         const error = await res.json();
         throw new Error(error.message || 'Erro ao excluir coletor');
@@ -202,7 +204,7 @@ export function useToggleCollectorStatus() {
 
   return useMutation({
     mutationFn: async ({ id, status }: { id: string; status: 'active' | 'blocked' }): Promise<Collector> => {
-      const res = await fetch(`/api/mock/collectors/${id}`, {
+      const res = await fetch(`/api/admin/coletores/${id}/status`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status }),
@@ -213,7 +215,8 @@ export function useToggleCollectorStatus() {
         throw new Error(error.message || 'Erro ao atualizar status');
       }
 
-      return res.json();
+      const result = await res.json();
+      return result.collector || result;
     },
     onMutate: async ({ id, status }) => {
       await queryClient.cancelQueries({ queryKey: ['collectors.list'] });

@@ -64,13 +64,26 @@ const enderecoSchema = z.object({
 // 1) Cadastro PF
 export const pfSchema = z.object({
   nome: z.string({ message: 'Nome completo é obrigatório' }).min(3, 'Nome deve ter pelo menos 3 caracteres'),
+  cpf: z
+    .string({ message: 'CPF é obrigatório' })
+    .min(11, 'CPF deve ter 11 dígitos')
+    .refine((value) => cpfDigits(value).length === 11, 'CPF deve ter 11 dígitos'),
+  email: z.string({ message: 'E-mail é obrigatório' }).email('E-mail inválido'),
+  password: z
+    .string()
+    .optional()
+    .or(z.literal(''))
+    .transform((value) => (value == null || value === '' ? null : value)),
+  confirmPassword: z
+    .string()
+    .optional()
+    .or(z.literal(''))
+    .transform((value) => (value == null || value === '' ? null : value)),
   cnh: z.object({
     number: z.string({ message: 'Número da CNH é obrigatório' }).min(9, 'Número da CNH deve ter no mínimo 9 caracteres'),
-    category: z
-      .string({ message: 'Categoria é obrigatória' })
-      .min(1, 'Categoria é obrigatória')
-      .regex(/^[A-Z]{1,3}$/i, 'Categoria deve ter entre 1 e 3 letras')
-      .transform((value) => value.toUpperCase()),
+    category: z.enum(['ACC', 'A', 'B', 'C', 'D', 'E'], {
+      message: 'Categoria deve ser ACC, A, B, C, D ou E',
+    }),
     expiresAt: z
       .string({ message: 'Validade é obrigatória' })
       .refine((value) => {
@@ -83,6 +96,15 @@ export const pfSchema = z.object({
   celular: z.string({ message: 'Celular é obrigatório' }).regex(/^\(?\d{2}\)?\s?\d{4,5}-?\d{4}$/, 'Celular inválido'),
   whatsapp: optionalString(),
   usarMesmoNumero: z.boolean().optional().default(false),
+}).refine((data) => {
+  // Only validate password matching if password is provided
+  if (data.password && data.password !== data.confirmPassword) {
+    return false;
+  }
+  return true;
+}, {
+  message: "Senhas não coincidem",
+  path: ["confirmPassword"],
 });
 
 // 2) Cadastro PJ (sem Nome Fantasia e IE)
@@ -96,22 +118,22 @@ export const pjSchema = z.object({
     .string({ message: 'Razão Social é obrigatória' })
     .min(3, 'Razão Social deve ter pelo menos 3 caracteres'),
   cnpj: cnpjSchema,
-  email: emailSchema,
-  telefone: phoneSchema,
   endereco: enderecoSchema,
+  usarEnderecoFisico: z.boolean().optional().default(false),
 });
 
-// 3) Veículo (sem upload de CRLV, com marca)
+// 3) Veículo (aceita placa antiga AAA-0000 ou Mercosul AAA0A00, sem RENAVAM)
 const plateSchema = z
   .string({ message: 'Placa é obrigatória' })
   .min(7, 'Placa inválida')
-  .max(7, 'Placa inválida')
-  .regex(/^[A-Z]{3}\d[A-Z0-9]\d{2}$/i, 'Placa no padrão Mercosul (AAA0A00)')
-  .transform((value) => value.toUpperCase());
-
-const renavamSchema = z
-  .string({ message: 'RENAVAM é obrigatório' })
-  .regex(/^\d{9,11}$/, 'RENAVAM deve ter entre 9 e 11 dígitos');
+  .max(8, 'Placa inválida')
+  .refine((value) => {
+    const clean = value.replace(/-/g, '');
+    // Padrão antigo: AAA0000 (3 letras + 4 números)
+    // Padrão Mercosul: AAA0A00 (3 letras + 1 número + 1 letra + 2 números)
+    return /^[A-Z]{3}\d{4}$/i.test(clean) || /^[A-Z]{3}\d[A-Z]\d{2}$/i.test(clean);
+  }, 'Placa deve estar no formato AAA-0000 ou AAA0A00')
+  .transform((value) => value.toUpperCase().replace(/-/g, ''));
 
 export const vehicleSchema = z.object({
   plate: plateSchema,
@@ -127,7 +149,6 @@ export const vehicleSchema = z.object({
       return /^\d{4}$/.test(value);
     }, 'Ano deve ter 4 dígitos')
     .transform((value) => (value == null || value === '' ? null : value)),
-  renavam: renavamSchema,
 });
 
 // 4) Documentos (uploads obrigatórios)
@@ -139,9 +160,9 @@ const fileRefSchema = z.object({
 });
 
 export const documentsSchema = z.object({
-  cnhFiles: z.array(fileRefSchema).min(1, 'É necessário enviar pelo menos 1 arquivo da CNH'),
-  crlvFile: z.array(fileRefSchema).min(1, 'Arquivo do CRLV é obrigatório'),
-  pfAddressProofFile: z.array(fileRefSchema).min(1, 'Comprovante de endereço PF é obrigatório'),
+  cnhFiles: z.array(fileRefSchema).optional().default([]),
+  crlvFile: z.array(fileRefSchema).optional().default([]),
+  pfAddressProofFile: z.array(fileRefSchema).optional().default([]),
 });
 
 // 5) Financeiro (PIX/Transferência + Comissão)
@@ -225,7 +246,7 @@ const commissionSchema: z.ZodType<CommissionModel> = z.discriminatedUnion('kind'
 
 export const commissionSchemaExport = commissionSchema;
 
-// Schema completo do formulário
+// Schema completo do formulário (admin - passwords optional)
 export const collectorFormSchema = z.object({
   pf: pfSchema,
   pj: pjSchema,
@@ -238,6 +259,50 @@ export const collectorFormSchema = z.object({
 export type CollectorFormSchemaType = z.infer<typeof collectorFormSchema>;
 export type CollectorFormSchemaInput = z.input<typeof collectorFormSchema>;
 
+// Schema para registro público (password obrigatório)
+const pfWithPasswordSchema = z.object({
+  nome: z.string({ message: 'Nome completo é obrigatório' }).min(3, 'Nome deve ter pelo menos 3 caracteres'),
+  cpf: z
+    .string({ message: 'CPF é obrigatório' })
+    .min(11, 'CPF deve ter 11 dígitos')
+    .refine((value) => cpfDigits(value).length === 11, 'CPF deve ter 11 dígitos'),
+  email: z.string({ message: 'E-mail é obrigatório' }).email('E-mail inválido'),
+  password: z.string({ message: 'Senha é obrigatória' }).min(8, 'Senha deve ter no mínimo 8 caracteres'),
+  confirmPassword: z.string({ message: 'Confirme a senha' }),
+  cnh: z.object({
+    number: z.string({ message: 'Número da CNH é obrigatório' }).min(9, 'Número da CNH deve ter no mínimo 9 caracteres'),
+    category: z.enum(['ACC', 'A', 'B', 'C', 'D', 'E'], {
+      message: 'Categoria deve ser ACC, A, B, C, D ou E',
+    }),
+    expiresAt: z
+      .string({ message: 'Validade é obrigatória' })
+      .refine((value) => {
+        const expires = new Date(value);
+        if (Number.isNaN(expires.getTime())) return false;
+        return expires >= today();
+      }, 'Validade deve ser igual ou superior à data de hoje'),
+  }),
+  endereco: enderecoSchema,
+  celular: z.string({ message: 'Celular é obrigatório' }).regex(/^\(?\d{2}\)?\s?\d{4,5}-?\d{4}$/, 'Celular inválido'),
+  whatsapp: optionalString(),
+  usarMesmoNumero: z.boolean().optional().default(false),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Senhas não coincidem",
+  path: ["confirmPassword"],
+});
+
+export const publicRegistrationSchema = z.object({
+  pf: pfWithPasswordSchema,
+  pj: pjSchema,
+  vehicle: vehicleSchema,
+  documents: documentsSchema,
+  bank: bankSchema,
+  commission: commissionSchema,
+});
+
+export type PublicRegistrationSchemaType = z.infer<typeof publicRegistrationSchema>;
+export type PublicRegistrationSchemaInput = z.input<typeof publicRegistrationSchema>;
+
 // Legacy schema para compatibilidade (deprecated)
 export const collectorSchema = collectorFormSchema;
 export type CollectorSchemaType = CollectorFormSchemaType;
@@ -245,7 +310,7 @@ export type CollectorSchemaInput = CollectorFormSchemaInput;
 
 export const filtersSchema = z.object({
   q: z.string().optional(),
-  status: z.enum(['all', 'active', 'blocked']).optional(),
+  status: z.enum(['all', 'active', 'inactive', 'blocked']).optional(),
   uf: z.string().length(2).optional(),
   cidade: z.string().optional(),
   page: z.number().int().min(1).optional().default(1),

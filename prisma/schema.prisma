@@ -1201,3 +1201,162 @@ model LedgerEntry {
   @@index([type, createdAt])
   @@map("ledger_entries")
 }
+
+// ============================================================================
+// COLETORES (Collectors)
+// ============================================================================
+
+enum CollectorStatus {
+  ACTIVE
+  INACTIVE
+  BLOCKED
+
+  @@map("collector_status")
+}
+
+enum PixKeyType {
+  CPF
+  CNPJ
+  EMAIL
+  PHONE
+  RANDOM
+
+  @@map("pix_key_type")
+}
+
+enum AccountType {
+  CORRENTE
+  POUPANCA
+
+  @@map("account_type")
+}
+
+enum CommissionKind {
+  FIXA
+  POR_KM
+
+  @@map("commission_kind")
+}
+
+enum BankMethodKind {
+  PIX
+  TRANSFER
+
+  @@map("bank_method_kind")
+}
+
+// Modelo principal de Coletor
+model Collector {
+  id        String          @id @default(cuid())
+  status    CollectorStatus @default(ACTIVE)
+
+  // Dados da Pessoa Física (obrigatório)
+  pfNome        String
+  pfCpf         String?       @unique
+  pfEmail       String?       @unique
+  pfEmailVerified Boolean     @default(false)
+  pfEmailVerificationToken String? @unique
+  pfEmailVerifiedAt DateTime?
+  pfCnhNumber   String
+  pfCnhCategory String
+  pfCnhExpires  DateTime
+  pfCelular     String
+  pfWhatsapp    String?
+
+  // Endereço PF
+  pfCep         String?
+  pfLogradouro  String?
+  pfNumero      String?
+  pfComplemento String?
+  pfBairro      String?
+  pfCidade      String?
+  pfUf          String?       @db.VarChar(2)
+
+  // Dados da Pessoa Jurídica (obrigatório)
+  pjRazaoSocial String
+  pjCnpj        String        @unique
+
+  // Endereço PJ
+  pjCep         String?
+  pjLogradouro  String?
+  pjNumero      String?
+  pjComplemento String?
+  pjBairro      String?
+  pjCidade      String?
+  pjUf          String?       @db.VarChar(2)
+
+  // Veículo
+  vehiclePlate   String
+  vehicleBrand   String
+  vehicleModel   String?
+  vehicleYear    String?
+
+  // Comissão
+  commissionKind      CommissionKind
+  commissionAmount    Float?          // Para FIXA
+  commissionAmountPerKm Float?        // Para POR_KM
+
+  // Banco/PIX
+  bankMethodKind    BankMethodKind
+
+  // PIX fields
+  bankPixType       PixKeyType?
+  bankPixKey        String?
+
+  // Transfer fields
+  bankCode          String?
+  bankBranch        String?
+  bankAccount       String?
+  bankAccountType   AccountType?
+  bankHolderName    String?
+  bankHolderCnpj    String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relacionamentos
+  documents  CollectorDocument[]
+  credential CollectorCredential?
+
+  @@index([status])
+  @@index([pfCpf])
+  @@index([pfEmail])
+  @@index([pjCnpj])
+  @@index([pfCidade, pfUf])
+  @@index([pjCidade, pjUf])
+  @@map("collectors")
+}
+
+// Documentos do coletor (CNH, CRLV, Comprovante de endereço)
+model CollectorDocument {
+  id          String   @id @default(cuid())
+  collectorId String
+  collector   Collector @relation(fields: [collectorId], references: [id], onDelete: Cascade)
+
+  type        String   // "cnh", "crlv", "pf_address_proof"
+  filename    String
+  url         String?  // URL pública ou null se usar storageKey
+  storageKey  String?  // Chave no storage (S3, local, etc)
+  mimeType    String?
+  size        Int?     // Tamanho em bytes
+  issuedAt    DateTime? // Data de emissão do documento
+  expiresAt   DateTime? // Data de vencimento do documento
+  uploadedAt  DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([collectorId, type])
+  @@index([collectorId, type])
+  @@map("collector_documents")
+}
+
+model CollectorCredential {
+  id           String    @id @default(cuid())
+  collectorId  String    @unique
+  collector    Collector @relation(fields: [collectorId], references: [id], onDelete: Cascade)
+  passwordHash String
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@map("collector_credentials")
+}

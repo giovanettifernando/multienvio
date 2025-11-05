@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { Controller, useFormContext } from 'react-hook-form';
-import { Form, Input, Space, Typography } from 'antd';
+import { Form, Input, Checkbox, Space, Typography } from 'antd';
 import type { CollectorFormInput } from '@/lib/collectors/types';
-import { maskCNPJ, maskPhone, maskCEP, unmaskDigits } from '@/lib/collectors/masks';
+import { maskCNPJ, maskCEP, unmaskDigits } from '@/lib/collectors/masks';
 
 const { Text } = Typography;
 
@@ -13,10 +13,27 @@ export default function PJForm() {
   const [cepLoading, setCepLoading] = useState(false);
 
   const cep = watch('pj.endereco.cep');
+  const usarEnderecoFisico = watch('pj.usarEnderecoFisico');
+  const pfEndereco = watch('pf.endereco');
   const [cepResolved, setCepResolved] = useState(false);
 
-  // Buscar CEP quando válido
+  // Copiar endereço da PF quando checkbox marcado
   useEffect(() => {
+    if (usarEnderecoFisico && pfEndereco) {
+      setValue('pj.endereco.cep', pfEndereco.cep, { shouldValidate: false });
+      setValue('pj.endereco.logradouro', pfEndereco.logradouro, { shouldValidate: false });
+      setValue('pj.endereco.numero', pfEndereco.numero, { shouldValidate: false });
+      setValue('pj.endereco.complemento', pfEndereco.complemento, { shouldValidate: false });
+      setValue('pj.endereco.bairro', pfEndereco.bairro, { shouldValidate: false });
+      setValue('pj.endereco.cidade', pfEndereco.cidade, { shouldValidate: false });
+      setValue('pj.endereco.uf', pfEndereco.uf, { shouldValidate: false });
+    }
+  }, [usarEnderecoFisico, pfEndereco, setValue]);
+
+  // Buscar CEP quando válido (apenas se não estiver usando endereço da PF)
+  useEffect(() => {
+    if (usarEnderecoFisico) return;
+
     const fetchCep = async () => {
       if (!cep) {
         setCepResolved(false);
@@ -52,7 +69,7 @@ export default function PJForm() {
 
     const timer = setTimeout(fetchCep, 500);
     return () => clearTimeout(timer);
-  }, [cep, setValue]);
+  }, [cep, setValue, usarEnderecoFisico]);
 
   return (
     <Space direction="vertical" style={{ width: '100%' }} size={16}>
@@ -93,50 +110,27 @@ export default function PJForm() {
         />
       </Form.Item>
 
-      <Form.Item
-        label="E-mail"
-        validateStatus={errors.pj?.email ? 'error' : ''}
-        help={errors.pj?.email?.message}
-      >
-        <Controller
-          name="pj.email"
-          control={control}
-          render={({ field }) => (
-            <Input
-              {...field}
-              value={field.value || ''}
-              type="email"
-              placeholder="empresa@exemplo.com"
-              style={{ width: 300 }}
-            />
-          )}
-        />
-      </Form.Item>
-
-      <Form.Item
-        label="Telefone"
-        validateStatus={errors.pj?.telefone ? 'error' : ''}
-        help={errors.pj?.telefone?.message}
-      >
-        <Controller
-          name="pj.telefone"
-          control={control}
-          render={({ field }) => (
-            <Input
-              {...field}
-              value={field.value || ''}
-              onChange={(e) => field.onChange(maskPhone(e.target.value))}
-              placeholder="(11) 3456-7890"
-              style={{ width: 200 }}
-              maxLength={15}
-            />
-          )}
-        />
-      </Form.Item>
-
       <Typography.Title level={5} style={{ marginTop: 16, marginBottom: 8 }}>
         Endereço
       </Typography.Title>
+
+      <Form.Item
+        validateStatus={errors.pj?.usarEnderecoFisico ? 'error' : ''}
+        help={errors.pj?.usarEnderecoFisico?.message}
+      >
+        <Controller
+          name="pj.usarEnderecoFisico"
+          control={control}
+          render={({ field }) => (
+            <Checkbox
+              checked={field.value}
+              onChange={(e) => field.onChange(e.target.checked)}
+            >
+              Usar mesmo endereço da Pessoa Física
+            </Checkbox>
+          )}
+        />
+      </Form.Item>
 
       <Form.Item
         label="CEP"
@@ -154,6 +148,7 @@ export default function PJForm() {
               placeholder="00000-000"
               style={{ width: 160 }}
               maxLength={9}
+              disabled={usarEnderecoFisico}
             />
           )}
         />
@@ -171,7 +166,7 @@ export default function PJForm() {
             <Input
               {...field}
               value={field.value || ''}
-              disabled={cepResolved}
+              disabled={usarEnderecoFisico || cepResolved}
               placeholder="Rua, Avenida..."
             />
           )}
@@ -193,6 +188,7 @@ export default function PJForm() {
                 value={field.value || ''}
                 placeholder="123"
                 style={{ width: 100 }}
+                disabled={usarEnderecoFisico}
               />
             )}
           />
@@ -212,6 +208,7 @@ export default function PJForm() {
                 value={field.value || ''}
                 placeholder="Sala, Andar..."
                 style={{ width: 200 }}
+                disabled={usarEnderecoFisico}
               />
             )}
           />
@@ -230,7 +227,7 @@ export default function PJForm() {
             <Input
               {...field}
               value={field.value || ''}
-              disabled={cepResolved}
+              disabled={usarEnderecoFisico || cepResolved}
               placeholder="Bairro"
             />
           )}
@@ -250,7 +247,7 @@ export default function PJForm() {
               <Input
                 {...field}
                 value={field.value || ''}
-                disabled={cepResolved}
+                disabled={usarEnderecoFisico || cepResolved}
                 placeholder="Cidade"
                 style={{ width: 200 }}
               />
@@ -270,7 +267,7 @@ export default function PJForm() {
               <Input
                 {...field}
                 value={field.value || ''}
-                disabled={cepResolved}
+                disabled={usarEnderecoFisico || cepResolved}
                 placeholder="SP"
                 maxLength={2}
                 style={{ width: 80 }}
@@ -281,9 +278,14 @@ export default function PJForm() {
         </Form.Item>
       </Space>
 
-      {cepResolved && (
+      {!usarEnderecoFisico && cepResolved && (
         <Text type="secondary" style={{ fontSize: 12 }}>
           Edite apenas número e complemento
+        </Text>
+      )}
+      {usarEnderecoFisico && (
+        <Text type="secondary" style={{ fontSize: 12 }}>
+          Endereço copiado da Pessoa Física
         </Text>
       )}
     </Space>

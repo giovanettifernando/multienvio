@@ -3,7 +3,6 @@
 import { Controller, useFormContext } from 'react-hook-form';
 import { Form, Input, Select, Space } from 'antd';
 import type { CollectorFormInput } from '@/lib/collectors/types';
-import { maskPlateMercosul, unmaskDigits } from '@/lib/collectors/masks';
 
 // Marcas comuns de veículos
 const VEHICLE_BRANDS = [
@@ -28,10 +27,10 @@ export default function VehicleForm() {
   return (
     <Space direction="vertical" style={{ width: '100%' }} size={16}>
       <Form.Item
-        label="Placa (Mercosul)"
+        label="Placa"
         required
         validateStatus={errors.vehicle?.plate ? 'error' : ''}
-        help={errors.vehicle?.plate?.message || 'Formato: AAA0A00'}
+        help={errors.vehicle?.plate?.message || 'Formato: AAA-0000 ou AAA0A00'}
       >
         <Controller
           name="vehicle.plate"
@@ -40,10 +39,10 @@ export default function VehicleForm() {
             <Input
               {...field}
               value={field.value || ''}
-              placeholder="AAA0A00"
-              maxLength={7}
-              onChange={(e) => field.onChange(maskPlateMercosul(e.target.value).toUpperCase())}
-              style={{ width: 160 }}
+              placeholder="AAA-0000 ou AAA0A00"
+              maxLength={8}
+              onChange={(e) => field.onChange(e.target.value.toUpperCase())}
+              style={{ width: 200 }}
             />
           )}
         />
@@ -111,31 +110,6 @@ export default function VehicleForm() {
                 field.onChange(value || null);
               }}
               style={{ width: 120 }}
-            />
-          )}
-        />
-      </Form.Item>
-
-      <Form.Item
-        label="RENAVAM"
-        required
-        validateStatus={errors.vehicle?.renavam ? 'error' : ''}
-        help={errors.vehicle?.renavam?.message || 'Deve ter entre 9 e 11 dígitos'}
-      >
-        <Controller
-          name="vehicle.renavam"
-          control={control}
-          render={({ field }) => (
-            <Input
-              {...field}
-              value={field.value || ''}
-              placeholder="12345678901"
-              maxLength={11}
-              onChange={(e) => {
-                const value = unmaskDigits(e.target.value);
-                field.onChange(value);
-              }}
-              style={{ width: 200 }}
             />
           )}
         />

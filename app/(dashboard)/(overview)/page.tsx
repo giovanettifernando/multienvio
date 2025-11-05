@@ -2,19 +2,22 @@
 
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Alert, Card, Flex, Skeleton, Space, Typography } from "antd";
-import { QuickQuote } from "@/components/dashboard/QuickQuote";
-import { QuickActions } from "@/components/dashboard/QuickActions";
+import { Alert, Card, Flex, Space, Typography, Row, Col, Grid } from "antd";
+import { QuickCalculator } from "@/components/dashboard/QuickCalculator";
 import { KpiCards } from "@/components/dashboard/KpiCards";
-import { OrdersRecentTable } from "@/components/dashboard/OrdersRecentTable";
-import { RecentTracking } from "@/components/dashboard/RecentTracking";
-import { AlertsPanel } from "@/components/dashboard/AlertsPanel";
+import { ShipmentsStatusBoard } from "@/components/dashboard/ShipmentsStatusBoard";
+import { ShipmentsCostTrend } from "@/components/dashboard/ShipmentsCostTrend";
+import { WalletRecent } from "@/components/dashboard/WalletRecent";
 import { WalletCard } from "@/components/dashboard/WalletCard";
-import { PerformanceCarrier } from "@/components/dashboard/PerformanceCarrier";
+import { SupportQuickView } from "@/components/dashboard/SupportQuickView";
+import { PickupSchedule } from "@/components/dashboard/PickupSchedule";
+import { AlertsPanel } from "@/components/dashboard/AlertsPanel";
 import { DashboardFooterLinks } from "@/components/dashboard/DashboardFooterLinks";
 import { computeDashboardKpis } from "@/lib/dashboard/stats";
 import type { Order } from "@/types/order";
 import type { Shipment } from "@/types/shipment";
+
+const { useBreakpoint } = Grid;
 
 type OrdersResponse = {
   dados: Order[];
@@ -43,16 +46,18 @@ async function fetchShipments(): Promise<Shipment[]> {
 }
 
 export default function OverviewPage() {
+  const screens = useBreakpoint();
+
   const ordersQuery = useQuery({
     queryKey: ["orders"],
     queryFn: fetchOrders,
-    staleTime: 60_000,
+    staleTime: 90_000,
   });
 
   const shipmentsQuery = useQuery({
     queryKey: ["shipments"],
     queryFn: fetchShipments,
-    staleTime: 60_000,
+    staleTime: 90_000,
   });
 
   const kpiItems = useMemo(
@@ -60,83 +65,96 @@ export default function OverviewPage() {
     [ordersQuery.data, shipmentsQuery.data],
   );
 
+  // Add wallet KPI dynamically
+  const allKpis = [...kpiItems];
+
   return (
-    <Flex vertical gap={24}>
+    <Flex vertical gap={12}>
       <Space direction="vertical" size={4}>
         <Typography.Title level={2} style={{ margin: 0 }}>
-          Olá, bem-vindo ao seu painel 👋
+          Painel de Controle
         </Typography.Title>
         <Typography.Paragraph type="secondary" style={{ margin: 0 }}>
-          Acompanhe performance, alertas e inicie ações operacionais em poucos cliques.
+          Acompanhe suas métricas, envios e operações em tempo real
         </Typography.Paragraph>
       </Space>
 
-      <Flex gap={24} wrap align="stretch">
-        <div style={{ flex: "2 1 520px", minWidth: 320 }}>
-          {ordersQuery.isError ? (
-            <Card variant="outlined">
-              <Alert
-                type="error"
-                message="Não foi possível carregar os dados de pedidos."
-                showIcon
-              />
-            </Card>
-          ) : shipmentsQuery.isError ? (
-            <Card variant="outlined">
-              <Alert
-                type="error"
-                message="Não foi possível carregar os envios."
-                showIcon
-              />
-            </Card>
-          ) : null}
-          <QuickQuote />
-        </div>
-        <div style={{ flex: "1 1 260px", minWidth: 260 }}>
-          <QuickActions />
-        </div>
-      </Flex>
+      {/* Errors Display */}
+      {ordersQuery.isError && (
+        <Alert
+          type="error"
+          message="Não foi possível carregar os dados de pedidos."
+          showIcon
+          closable
+        />
+      )}
+      {shipmentsQuery.isError && (
+        <Alert
+          type="error"
+          message="Não foi possível carregar os envios."
+          showIcon
+          closable
+        />
+      )}
 
-      <KpiCards
-        loading={ordersQuery.isLoading || shipmentsQuery.isLoading}
-        items={kpiItems}
-      />
+      {/* Row 1: KPIs principais + Saldo da carteira */}
+      <Row gutter={[12, 12]}>
+        <Col xs={24} sm={24} md={24} lg={18} xl={18}>
+          <KpiCards
+            loading={ordersQuery.isLoading || shipmentsQuery.isLoading}
+            items={allKpis}
+          />
+        </Col>
+        <Col xs={24} sm={24} md={24} lg={6} xl={6}>
+          <WalletCard />
+        </Col>
+      </Row>
 
-      <Flex gap={24} wrap align="stretch">
-        <Card
-          title="Últimos pedidos"
-          variant="outlined"
-          styles={{ body: { paddingTop: 0 } }}
-          style={{ flex: "2 1 520px", minWidth: 320 }}
-        >
-          {ordersQuery.isLoading ? (
-            <Skeleton active paragraph={{ rows: 6 }} />
-          ) : (
-            <OrdersRecentTable
-              orders={ordersQuery.data ?? []}
-              loading={ordersQuery.isLoading}
-            />
-          )}
-        </Card>
-        <div style={{ flex: "1 1 320px", minWidth: 280 }}>
-          <RecentTracking
+      {/* Row 2: Gráfico Volume x Custo */}
+      <Row gutter={[12, 12]}>
+        <Col xs={24}>
+          <ShipmentsCostTrend
+            shipments={shipmentsQuery.data ?? []}
+            loading={shipmentsQuery.isLoading}
+            months={6}
+          />
+        </Col>
+      </Row>
+
+      {/* Row 3: Status de envios + Calculadora */}
+      <Row gutter={[12, 12]}>
+        <Col xs={24} sm={24} md={24} lg={16} xl={16}>
+          <ShipmentsStatusBoard
             shipments={shipmentsQuery.data ?? []}
             loading={shipmentsQuery.isLoading}
           />
-        </div>
-      </Flex>
+        </Col>
+        <Col xs={24} sm={24} md={24} lg={8} xl={8}>
+          <QuickCalculator />
+        </Col>
+      </Row>
 
-      <Flex gap={24} wrap align="stretch">
-        <div style={{ flex: "1 1 360px", minWidth: 280 }}>
+      {/* Row 4: Transações da carteira + Tickets de suporte */}
+      <Row gutter={[12, 12]}>
+        <Col xs={24} sm={24} md={12} lg={12} xl={12}>
+          <WalletRecent />
+        </Col>
+        <Col xs={24} sm={24} md={12} lg={12} xl={12}>
+          <SupportQuickView />
+        </Col>
+      </Row>
+
+      {/* Row 5: Coletas agendadas + Alertas */}
+      <Row gutter={[12, 12]}>
+        <Col xs={24} sm={24} md={12} lg={12} xl={12}>
+          <PickupSchedule />
+        </Col>
+        <Col xs={24} sm={24} md={12} lg={12} xl={12}>
           <AlertsPanel />
-        </div>
-        <div style={{ flex: "1 1 320px", minWidth: 280 }}>
-          <WalletCard />
-        </div>
-      </Flex>
+        </Col>
+      </Row>
 
-      <PerformanceCarrier shipments={shipmentsQuery.data ?? []} />
-
+      {/* Footer Links */}
       <DashboardFooterLinks />
     </Flex>
   );

@@ -12,6 +12,8 @@ export const db = {
       status: 'active' as const,
       pf: {
         nome: 'João da Silva Santos',
+        cpf: '123.456.789-01',
+        email: 'joao.silva@email.com',
         cnh: {
           number: '12345678901',
           category: 'D',
@@ -33,8 +35,6 @@ export const db = {
       pj: {
         razaoSocial: 'Translog Nordeste Logística Ltda',
         cnpj: '12.345.678/0001-99',
-        email: 'contato@translog.com.br',
-        telefone: '(85) 3232-4455',
         endereco: {
           cep: '60025-101',
           logradouro: 'Rua Barão de Aracati',
@@ -44,13 +44,13 @@ export const db = {
           cidade: 'Fortaleza',
           uf: 'CE',
         },
+        usarEnderecoFisico: false,
       },
       vehicle: {
         plate: 'ABC1D23',
         brand: 'Fiat',
         model: 'Ducato',
         year: '2021',
-        renavam: '12345678901',
       },
       documents: {
         cnhFiles: [
@@ -74,6 +74,8 @@ export const db = {
       status: 'active' as const,
       pf: {
         nome: 'Maria Oliveira Costa',
+        cpf: '987.654.321-00',
+        email: 'maria.oliveira@email.com',
         cnh: {
           number: '9988776655',
           category: 'E',
@@ -95,8 +97,6 @@ export const db = {
       pj: {
         razaoSocial: 'Eco Coletas Sustentáveis S.A.',
         cnpj: '45.678.901/0001-55',
-        email: 'financeiro@eco-coletas.com',
-        telefone: '(41) 3344-5566',
         endereco: {
           cep: '80410-150',
           logradouro: 'Av. Sete de Setembro',
@@ -106,13 +106,13 @@ export const db = {
           cidade: 'Curitiba',
           uf: 'PR',
         },
+        usarEnderecoFisico: false,
       },
       vehicle: {
         plate: 'QWE2R34',
         brand: 'Mercedes',
         model: 'Sprinter',
         year: '2022',
-        renavam: '98765432109',
       },
       documents: {
         cnhFiles: [

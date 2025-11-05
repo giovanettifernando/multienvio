@@ -2,10 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import { Controller, useFormContext } from 'react-hook-form';
-import { Form, Input, DatePicker, Checkbox, Space, Typography } from 'antd';
+import { Form, Input, DatePicker, Checkbox, Space, Typography, Select } from 'antd';
 import dayjs from 'dayjs';
 import type { CollectorFormInput } from '@/lib/collectors/types';
-import { maskPhone, maskCEP, unmaskDigits } from '@/lib/collectors/masks';
+import { maskPhone, maskCEP, maskCPF, unmaskDigits } from '@/lib/collectors/masks';
 
 const { Text } = Typography;
 
@@ -81,6 +81,84 @@ export default function PFForm() {
         />
       </Form.Item>
 
+      <Form.Item
+        label="CPF"
+        required
+        validateStatus={errors.pf?.cpf ? 'error' : ''}
+        help={errors.pf?.cpf?.message}
+      >
+        <Controller
+          name="pf.cpf"
+          control={control}
+          render={({ field }) => (
+            <Input
+              {...field}
+              onChange={(e) => field.onChange(maskCPF(e.target.value))}
+              placeholder="000.000.000-00"
+              style={{ width: 200 }}
+              maxLength={14}
+            />
+          )}
+        />
+      </Form.Item>
+
+      <Form.Item
+        label="E-mail"
+        required
+        validateStatus={errors.pf?.email ? 'error' : ''}
+        help={errors.pf?.email?.message}
+      >
+        <Controller
+          name="pf.email"
+          control={control}
+          render={({ field }) => (
+            <Input
+              {...field}
+              type="email"
+              placeholder="email@exemplo.com"
+            />
+          )}
+        />
+      </Form.Item>
+
+      <Form.Item
+        label="Senha"
+        validateStatus={errors.pf?.password ? 'error' : ''}
+        help={errors.pf?.password?.message || 'Mínimo 8 caracteres (apenas para cadastro público)'}
+      >
+        <Controller
+          name="pf.password"
+          control={control}
+          render={({ field }) => (
+            <Input.Password
+              {...field}
+              value={field.value || ''}
+              placeholder="Mínimo 8 caracteres"
+              autoComplete="new-password"
+            />
+          )}
+        />
+      </Form.Item>
+
+      <Form.Item
+        label="Confirmar senha"
+        validateStatus={errors.pf?.confirmPassword ? 'error' : ''}
+        help={errors.pf?.confirmPassword?.message}
+      >
+        <Controller
+          name="pf.confirmPassword"
+          control={control}
+          render={({ field }) => (
+            <Input.Password
+              {...field}
+              value={field.value || ''}
+              placeholder="Repita a senha"
+              autoComplete="new-password"
+            />
+          )}
+        />
+      </Form.Item>
+
       <Typography.Title level={5} style={{ marginTop: 16, marginBottom: 8 }}>
         CNH
       </Typography.Title>
@@ -110,12 +188,18 @@ export default function PFForm() {
           name="pf.cnh.category"
           control={control}
           render={({ field }) => (
-            <Input
+            <Select
               {...field}
-              placeholder="Ex: AB, C, D"
-              maxLength={3}
-              style={{ width: 120 }}
-              onChange={(e) => field.onChange(e.target.value.toUpperCase())}
+              placeholder="Selecione a categoria"
+              style={{ width: 180 }}
+              options={[
+                { value: 'ACC', label: 'ACC' },
+                { value: 'A', label: 'A' },
+                { value: 'B', label: 'B' },
+                { value: 'C', label: 'C' },
+                { value: 'D', label: 'D' },
+                { value: 'E', label: 'E' },
+              ]}
             />
           )}
         />
