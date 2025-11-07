@@ -21,9 +21,23 @@ import type { PickupPoint } from "@/lib/pickup/types";
 import type { GeoCoordinates } from "@/lib/utils/geo";
 import { matchesSearch } from "@/lib/utils/string";
 import { formatDistance } from "@/lib/utils/geo";
+import UnitsMap from "./UnitsMap";
+import type { Marker } from "./LeafletMapInner";
 
 interface PickupPointWithDistance extends PickupPoint {
   distance?: number;
+}
+
+// Normalizar pontos para markers
+function toMarkers(points: any[]): Marker[] {
+  return points
+    .map((p) => ({
+      id: String(p.id),
+      name: p.nomeFantasia ?? p.name ?? p.razaoSocial ?? p.alias ?? "Unidade",
+      lat: typeof p.geo?.lat === "string" ? parseFloat(p.geo.lat) : p.geo?.lat ?? p.lat,
+      lng: typeof p.geo?.lng === "string" ? parseFloat(p.geo.lng) : p.geo?.lng ?? p.lng,
+    }))
+    .filter((m) => Number.isFinite(m.lat) && Number.isFinite(m.lng));
 }
 
 interface MapModalProps {
@@ -69,6 +83,19 @@ export function MapModal({
     });
   }, [points, searchQuery]);
 
+  // Converter pontos filtrados para markers normalizados
+  const markers = useMemo(() => toMarkers(filteredPoints), [filteredPoints]);
+
+  // Fallback: usar coordenadas do primeiro ponto se origem não disponível
+  const mapCenter = useMemo(() => {
+    if (originCoords) return originCoords;
+    // Fallback: primeiro ponto com geo
+    const firstPointWithGeo = filteredPoints.find((p) => p.geo);
+    if (firstPointWithGeo?.geo) return firstPointWithGeo.geo;
+    // Default: São Paulo centro
+    return { lat: -23.5505, lng: -46.6333 };
+  }, [originCoords, filteredPoints]);
+
   const handleKeyDown = (e: React.KeyboardEvent, pointId: string) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
@@ -84,6 +111,12 @@ export function MapModal({
       width={900}
       footer={null}
       styles={{ body: { maxHeight: '70vh', overflow: 'hidden' } }}
+      afterOpenChange={(visible) => {
+        if (visible) {
+          // Trigger resize event to fix map rendering
+          setTimeout(() => window.dispatchEvent(new Event('resize')), 50);
+        }
+      }}
     >
       <Space direction="vertical" size={16} style={{ width: '100%' }}>
         {/* Info sobre origem */}
@@ -116,62 +149,26 @@ export function MapModal({
           aria-label="Buscar unidades no mapa"
         />
 
-        {/* Container com mapa simulado e lista */}
+        {/* Container com mapa real e lista */}
         <Flex gap={16} style={{ height: '400px' }}>
-          {/* Área do mapa (placeholder) */}
+          {/* Área do mapa com Leaflet */}
           <div
+            id="map-container"
             style={{
               flex: 1,
-              background: '#f0f0f0',
+              height: 400,
               borderRadius: 8,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              border: '1px solid #d9d9d9',
-              position: 'relative',
               overflow: 'hidden',
+              border: '1px solid #d9d9d9',
             }}
           >
-            <Space direction="vertical" align="center">
-              <EnvironmentOutlined style={{ fontSize: 48, color: '#bfbfbf' }} />
-              <Typography.Text type="secondary">
-                Mapa interativo
-              </Typography.Text>
-              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                {filteredPoints.length} {filteredPoints.length === 1 ? 'ponto' : 'pontos'} disponíveis
-              </Typography.Text>
-            </Space>
-
-            {/* Marcadores simplificados (simulação) */}
-            {filteredPoints.slice(0, 8).map((point, index) => (
-              <div
-                key={point.id}
-                style={{
-                  position: 'absolute',
-                  top: `${15 + (index % 4) * 25}%`,
-                  left: `${20 + Math.floor(index / 4) * 45}%`,
-                  cursor: 'pointer',
-                  transform: hoveredPointId === point.id ? 'scale(1.3)' : 'scale(1)',
-                  transition: 'transform 0.2s',
-                }}
-                onClick={() => onSelect(point.id)}
-                onMouseEnter={() => setHoveredPointId(point.id)}
-                onMouseLeave={() => setHoveredPointId(null)}
-                title={point.nomeFantasia || point.razaoSocial}
-              >
-                <EnvironmentOutlined
-                  style={{
-                    fontSize: 28,
-                    color:
-                      selectedPointId === point.id
-                        ? '#1890ff'
-                        : hoveredPointId === point.id
-                        ? '#40a9ff'
-                        : '#ff4d4f',
-                  }}
-                />
-              </div>
-            ))}
+            <UnitsMap
+              originCenter={mapCenter}
+              markers={markers}
+              selectedPointId={selectedPointId}
+              onPointClick={onSelect}
+              open={open}
+            />
           </div>
 
           {/* Lista lateral */}

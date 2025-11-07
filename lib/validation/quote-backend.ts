@@ -18,37 +18,27 @@ export const cepSchema = z
   );
 
 // Volume validation (matching frontend constraints)
-export const volumeSchema = z
-  .object({
-    comprimentoCm: z.coerce
-      .number()
-      .int('Comprimento deve ser inteiro')
-      .min(16, 'Comprimento mínimo: 16cm')
-      .max(150, 'Comprimento máximo: 150cm'),
-    larguraCm: z.coerce
-      .number()
-      .int('Largura deve ser inteira')
-      .min(11, 'Largura mínima: 11cm')
-      .max(120, 'Largura máxima: 120cm'),
-    alturaCm: z.coerce
-      .number()
-      .int('Altura deve ser inteira')
-      .min(2, 'Altura mínima: 2cm')
-      .max(120, 'Altura máxima: 120cm'),
-    pesoKg: z.coerce
-      .number()
-      .positive('Peso deve ser positivo')
-      .max(30, 'Peso máximo: 30kg'),
-  })
-  .refine(
-    (vol) => {
-      // Validate minimum dimensions
-      return vol.comprimentoCm >= 16 && vol.larguraCm >= 11 && vol.alturaCm >= 2;
-    },
-    {
-      message: 'Dimensões mínimas não atendidas (16x11x2cm)',
-    }
-  );
+export const volumeSchema = z.object({
+  comprimentoCm: z.coerce
+    .number()
+    .int('Comprimento deve ser inteiro')
+    .positive('Comprimento deve ser positivo')
+    .max(150, 'Comprimento máximo: 150cm'),
+  larguraCm: z.coerce
+    .number()
+    .int('Largura deve ser inteira')
+    .positive('Largura deve ser positiva')
+    .max(120, 'Largura máxima: 120cm'),
+  alturaCm: z.coerce
+    .number()
+    .int('Altura deve ser inteira')
+    .positive('Altura deve ser positiva')
+    .max(120, 'Altura máxima: 120cm'),
+  pesoKg: z.coerce
+    .number()
+    .positive('Peso deve ser positivo')
+    .max(30, 'Peso máximo: 30kg'),
+});
 
 export type VolumeInput = z.infer<typeof volumeSchema>;
 

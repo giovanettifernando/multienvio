@@ -1,0 +1,27 @@
+/* Mobile-first: stack vertical em telas pequenas */
+.quoteNavigationButtons {
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+  margin-top: 24px;
+}
+
+/* Mobile: botões em coluna com largura 100% */
+@media (max-width: 768px) {
+  .quoteNavigationButtons {
+    flex-direction: column;
+    gap: 8px !important;
+  }
+
+  .quoteNavigationButtons button {
+    width: 100% !important;
+    min-width: unset !important;
+  }
+}
+
+/* Desktop: botões em linha */
+@media (min-width: 769px) {
+  .quoteNavigationButtons {
+    flex-direction: row;
+  }
+}

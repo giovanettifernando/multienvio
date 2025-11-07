@@ -49,6 +49,7 @@ export type QuoteResultItem = {
   prazoDias: number;
   preco: number;
   exigeSeguro?: boolean;
+  source?: "real" | "mock"; // Indica se é cotação real ou mockada por falha de integração
 };
 
 export type QuoteSummary = {
@@ -170,6 +171,7 @@ export type QuoteTelemetry = {
 };
 
 export type QuoteCalculateResponse = {
+  quoteId?: string; // ID retornado pela API (opcional para compatibilidade)
   results: QuoteResultItem[];
   pontosParceiros?: PartnerPoint[];
 };

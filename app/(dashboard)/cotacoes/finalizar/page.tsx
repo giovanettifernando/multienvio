@@ -28,6 +28,7 @@ import { PostingUnitPicker } from "@/components/quote/PostingUnitPicker";
 import { RecipientForm } from "@/components/quote/RecipientForm";
 import { LabelPreview } from "@/components/quote/LabelPreview";
 import { ResultsBanner } from "@/components/quote/ResultsBanner";
+import { QuoteNavigationButtons } from "@/components/quote/QuoteNavigationButtons";
 import { useQuoteStore } from "@/store/useQuoteStore";
 import { useCartAdd } from "@/hooks/useCart";
 import { useRecipientSave } from "@/hooks/useQuotes";
@@ -42,6 +43,7 @@ import {
 import type { DocumentType } from "@/types/quote";
 import { useQuoteDraft } from "@/lib/state/quoteDraft";
 import { executeCheckout } from "@/lib/checkout/orchestrator";
+import { useCheckoutStore } from "@/stores/checkout";
 
 const dispatchTelemetry = (event: string, detail?: Record<string, unknown>) => {
   if (typeof window === "undefined") return;
@@ -59,6 +61,7 @@ export default function FinalizeQuotePage() {
     })),
   );
   const pickupAtOrigin = useQuoteDraft((s) => s.pickupAtOrigin);
+  const pickupPointId = useCheckoutStore((s) => s.pickupPointId);
   const cartAdd = useCartAdd();
   const recipientSave = useRecipientSave();
   const createShipment = useShipmentCreate();
@@ -82,15 +85,15 @@ export default function FinalizeQuotePage() {
           type: initialDoc,
           nfeKey: "",
           nfeXml: null,
-          nfeKeys: Array.from({ length: volumesCount }, () => ({ chave: "" })),
-          declarationItems: [
+          nfeKeys: initialDoc === "NFE" ? Array.from({ length: volumesCount }, () => ({ chave: "" })) : undefined,
+          declarationItems: initialDoc === "DECLARACAO" ? [
             {
               id: crypto.randomUUID(),
-              descricao: "",
-              valorUnitario: 0,
+              descricao: "Produto",
+              valorUnitario: 100,
               quantidade: 1,
             },
-          ],
+          ] : undefined,
         },
         postingUnit: {
           selected: null,
@@ -138,8 +141,35 @@ export default function FinalizeQuotePage() {
 
   const {
     handleSubmit,
-    formState: { isSubmitting },
+    formState: { isSubmitting, errors },
+    watch,
   } = formMethods;
+
+  // Debug: log form errors
+  useEffect(() => {
+    if (Object.keys(errors).length > 0) {
+      console.log('[FORM_ERRORS]', errors);
+    }
+  }, [errors]);
+
+  // Pré-condições para habilitar botão "Pagar agora"
+  const preconditionsOk = useMemo(() => {
+    const checks = {
+      selection: !!selection,
+      results: !!results,
+      summary: !!summary,
+      volumes: !!(summary?.volumes && summary.volumes.length > 0),
+      pickupPoint: pickupAtOrigin || !!pickupPointId,
+    };
+
+    console.log('[PRECONDITIONS]', checks, { pickupAtOrigin, pickupPointId });
+
+    if (!checks.selection || !checks.results || !checks.summary) return false;
+    if (!checks.volumes) return false;
+    if (!checks.pickupPoint) return false;
+
+    return true;
+  }, [selection, results, summary, pickupAtOrigin, pickupPointId]);
 
   // Handler que não depende da validação completa do formulário
   const onAddToCartClick = async (e: React.MouseEvent) => {
@@ -213,8 +243,41 @@ export default function FinalizeQuotePage() {
   };
 
   const handlePayNow: SubmitHandler<FinalizeFormValues> = async (values) => {
-    if (!selection || !results) {
+    console.log('[HANDLE_PAY_NOW] Iniciando checkout', { selection, results: !!results, summary: !!summary, selectedService: !!selectedService });
+
+    if (!selection || !results || !summary || !selectedService) {
       message.error("Nenhuma seleção de serviço ativa.");
+      return;
+    }
+
+    // Determinar dados do destinatário
+    let recipientData: any;
+
+    if (values.recipient.mode === "manual") {
+      recipientData = values.recipient.manual;
+
+      // Validar dados mínimos do destinatário manual
+      if (!recipientData?.cidade || !recipientData?.uf || !recipientData?.cep) {
+        message.error("Dados do destinatário incompletos. Informe ao menos CEP, cidade e UF.");
+        return;
+      }
+    } else if (values.recipient.mode === "saved" && values.recipient.savedId) {
+      // Buscar destinatário salvo (TODO: implementar API para buscar)
+      // Por enquanto, usar dados do summary
+      recipientData = {
+        nome: "Destinatário Salvo",
+        cep: summary.destinoCep,
+        cidade: summary.destinoCidade,
+        uf: summary.destinoUf,
+      };
+    } else {
+      message.error("Selecione ou preencha os dados do destinatário.");
+      return;
+    }
+
+    // Validar pickup point se não houver coleta na origem
+    if (!pickupAtOrigin && !pickupPointId) {
+      message.error("Selecione um ponto de coleta.");
       return;
     }
 
@@ -225,71 +288,11 @@ export default function FinalizeQuotePage() {
         docType: values.document.type,
       });
 
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      const recipientData = values.recipient.manual;
-      const trackingCode = `BR${Date.now()}BR`;
-
-      const etaDays = selectedService?.prazoDias ?? 0;
-      const expectedDeliveryDate = etaDays
-        ? new Date(Date.now() + etaDays * 86_400_000).toISOString()
-        : undefined;
-
-      // Prepare shipment data
-      const shipmentData = {
-        trackingCode,
-        recipientName: recipientData.nome,
-        recipientCityUf: `${recipientData.cidade}/${recipientData.uf ?? "BR"}`,
-        carrierName: selectedService?.carrier ?? "Transportadora",
-        serviceName: selectedService?.modalidade ?? "Serviço",
-        etaDays,
-        expectedDeliveryDate,
-        freightValue: selectedService?.preco ?? 0,
-        status: "Aguardando coleta",
-      };
-
-      // Prepare collection data if pickup requested
-      const collectionData = pickupAtOrigin && summary
-        ? {
-            origem: {
-              nome: summary.origemLabel || "Remetente",
-              telefone: "", // No phone in summary, use empty
-              logradouro: "", // Use origin address when available
-              numero: "",
-              complemento: null,
-              bairro: "",
-              cidade: summary.origemCidade || "",
-              uf: summary.origemUf || "",
-              cep: summary.origemCep || "",
-            },
-            transportadora: selectedService?.carrier ?? null,
-            servico: selectedService?.modalidade ?? null,
-            janelaColeta: null,
-            observacoes: null,
-          }
-        : null;
-
-      // Execute orchestrated checkout (atomic shipment + collection)
-      const checkoutResult = await executeCheckout(
-        shipmentData,
-        collectionData,
-        pickupAtOrigin
-      );
-
-      // Only call shipment API if not a duplicate
-      if (!checkoutResult.isDuplicate) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        await createShipment.mutateAsync(shipmentData as any);
-      }
-
-      await cartClear.mutateAsync();
-
-      if (
-        values.recipient.mode === "manual" &&
-        values.recipient.manual.salvarRecorrente
-      ) {
-        await recipientSave.mutateAsync({
-          nome: recipientData.nome,
+      // Montar payload do checkout
+      const payload = {
+        quoteId: selection.selectionId,
+        recipient: {
+          nome: recipientData.nome || "Cliente",
           telefone: recipientData.telefone,
           email: recipientData.email,
           documento: recipientData.documento,
@@ -300,33 +303,64 @@ export default function FinalizeQuotePage() {
           bairro: recipientData.bairro,
           cidade: recipientData.cidade,
           uf: recipientData.uf,
-          observacoes: recipientData.observacoes,
-        });
+        },
+        document: {
+          type: values.document.type,
+          nfeKeys: values.document.type === "NFE" ? values.document.nfeKeys : undefined,
+          declarationItems: values.document.type === "DECLARACAO" ? values.document.declarationItems : undefined,
+        },
+        volumes: summary.volumes.map((v) => ({
+          peso: v.pesoKg,
+          altura: v.alturaCm,
+          largura: v.larguraCm,
+          comprimento: v.comprimentoCm,
+        })),
+        insuranceValue: summary.valorSeguro || 0,
+        pickupPointId: pickupAtOrigin ? null : pickupPointId,
+        carrier: selectedService.carrier,
+        service: selectedService.modalidade,
+        originCep: summary.origemCep || "",
+        destinationCep: summary.destinoCep || "",
+        estimatedDays: selectedService.prazoDias,
+        freightCost: selectedService.preco,
+        paymentMethod: values.payment.method || "PIX",
+      };
+
+      const res = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Erro ao processar checkout");
       }
 
-      // Show appropriate success message
-      if (checkoutResult.isDuplicate) {
-        message.info("Pagamento já foi processado anteriormente.");
-      } else if (checkoutResult.collectionId) {
-        message.success("Pagamento confirmado, envio registrado e coleta criada.");
-        dispatchTelemetry("pickup_created", {
-          shipmentId: trackingCode,
-          collectionId: checkoutResult.collectionId,
-          origin: summary?.origemCep,
-        });
+      const out = await res.json();
+
+      // Redirecionar baseado no resultado
+      if (out.paymentUrl) {
+        // Gateway de pagamento externo
+        window.location.href = out.paymentUrl;
+      } else if (out.source === 'wallet') {
+        // Pagamento via carteira aprovado
+        message.success(out.message || "Pagamento aprovado!");
+        router.push(`/shipments`);
       } else {
-        message.success("Pagamento confirmado e envio registrado.");
+        // Mock ou outros métodos
+        message.info(out.message || "Envio criado com sucesso!");
+        router.push(`/shipments`);
       }
 
       dispatchTelemetry("payment_success", {
         selectionId: selection.selectionId,
-        codigoRastreio: trackingCode,
+        shipmentId: out.shipmentId,
+        source: out.source,
       });
-
-      router.push("/shipments");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erro ao processar pagamento", error);
-      message.error("Não foi possível concluir o pagamento.");
+      message.error(error?.message ?? "Não foi possível iniciar o pagamento.");
     }
   };
 
@@ -398,7 +432,22 @@ export default function FinalizeQuotePage() {
                         htmlType="button"
                         block
                         loading={isSubmitting}
-                        onClick={handleSubmit(handlePayNow)}
+                        disabled={isSubmitting || !preconditionsOk}
+                        onClick={(e) => {
+                          console.log('[BUTTON_CLICK]', {
+                            isSubmitting,
+                            preconditionsOk,
+                            disabled: isSubmitting || !preconditionsOk,
+                            formErrors: errors
+                          });
+                          handleSubmit(
+                            handlePayNow,
+                            (validationErrors) => {
+                              console.log('[FORM_VALIDATION_FAILED]', validationErrors);
+                              message.error('Por favor, preencha todos os campos obrigatórios.');
+                            }
+                          )(e);
+                        }}
                       >
                         Pagar agora
                       </Button>
@@ -412,6 +461,11 @@ export default function FinalizeQuotePage() {
             </Col>
           </Row>
         </Flex>
+
+        <QuoteNavigationButtons
+          onBack={() => router.push("/cotacoes/resultados")}
+          backLabel="Ver outros serviços"
+        />
       </form>
     </FormProvider>
   );

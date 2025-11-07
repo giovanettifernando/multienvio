@@ -55,6 +55,8 @@ import { AddressModal, type AddressFormValues } from "@/components/account/Addre
 import { RecipientSelect } from "@/components/recipients/RecipientSelect";
 import { RecipientModal, type RecipientFormValues } from "@/components/recipients/RecipientModal";
 import { useRecipientsStore } from "@/lib/state/recipients";
+import type { Recipient } from "@/types/account";
+import { useAddresses, useAccountRecipients } from "@/hooks/useAccount";
 import { useQuoteDraft } from "@/lib/state/quoteDraft";
 import { RouteModeTag } from "@/components/shipping/RouteModeTag";
 import {
@@ -74,6 +76,7 @@ import {
   useAddressStore,
   type Address as StoreAddress,
 } from "@/lib/state/addresses";
+import { QuoteNavigationButtons } from "@/components/quote/QuoteNavigationButtons";
 
 const companyAddressKeys: Array<keyof CompanyAddress> = [
   "cep",
@@ -98,22 +101,26 @@ const addressesEqual = (
 };
 
 const MAX_VOLUMES = 30;
-const cepRegex = /^\d{5}-\d{3}$/;
+const cepRegex = /^\d{5}-?\d{3}$/; // Aceita com ou sem hífen
+
+// Helper para converter endereço em info de header
+const toHeaderInfo = (addr: StoreAddress | null | undefined) => {
+  if (!addr) return null;
+  return {
+    cidade: addr.cidade,
+    uf: addr.uf,
+    label: addr.apelido ?? addr.nome ?? `${addr.logradouro}, ${addr.numero}`,
+    cep: addr.cep,
+    isDefault: addr.isDefault ?? false,
+  };
+};
 
 const volumeSchema = z.object({
   id: z.string().min(1),
-  comprimentoCm: z
-    .number()
-    .gt(0, "Comprimento deve ser maior que zero."),
-  larguraCm: z
-    .number()
-    .gt(0, "Largura deve ser maior que zero."),
-  alturaCm: z
-    .number()
-    .gt(0, "Altura deve ser maior que zero."),
-  pesoKg: z
-    .number()
-    .gt(0, "Peso deve ser maior que zero."),
+  comprimentoCm: z.number().optional(),
+  larguraCm: z.number().optional(),
+  alturaCm: z.number().optional(),
+  pesoKg: z.number().optional(),
 });
 
 const routeAddressSchema = z.object({
@@ -130,8 +137,8 @@ const routeAddressSchema = z.object({
 });
 
 const quoteFormSchema = z.object({
-  origem: routeAddressSchema.default({}),
-  destino: routeAddressSchema.default({}),
+  origem: z.any().optional().default({}),
+  destino: z.any().optional().default({}),
   modoOrigem: z.enum(["manual", "recorrente"]).optional(),
   modoDestino: z.enum(["manual", "recorrente"]).optional(),
   remetenteRecorrenteId: z.string().nullable().optional(),
@@ -139,11 +146,19 @@ const quoteFormSchema = z.object({
   origemCep: z
     .string()
     .trim()
-    .regex(cepRegex, "CEP inválido."),
+    .transform((val) => {
+      const normalized = val.replace(/\D/g, ""); // Remove não-dígitos
+      return normalized.length === 8 ? `${normalized.slice(0, 5)}-${normalized.slice(5)}` : val;
+    })
+    .refine((val) => cepRegex.test(val), { message: "CEP inválido." }),
   destinoCep: z
     .string()
     .trim()
-    .regex(cepRegex, "CEP inválido."),
+    .transform((val) => {
+      const normalized = val.replace(/\D/g, ""); // Remove não-dígitos
+      return normalized.length === 8 ? `${normalized.slice(0, 5)}-${normalized.slice(5)}` : val;
+    })
+    .refine((val) => cepRegex.test(val), { message: "CEP inválido." }),
   coleta: z.boolean(),
   devolucao: z.boolean(),
   seguroValor: z
@@ -233,12 +248,14 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
     })),
   );
 
+  // Buscar endereços via React Query (mesma fonte que AddressSelect)
+  const addressesQuery = useAddresses();
+  const addresses = addressesQuery.data ?? [];
+
+  // Manter zustand apenas para selectedOriginId (controle de seleção)
   const {
     selectedOriginId,
     selectOrigin,
-    items: addresses,
-    add: addAddress,
-    getDefaultId,
   } = useAddressStore();
 
   const companyAddress = getCompanyDefaultAddress();
@@ -318,8 +335,8 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
 
   const formMethods = useForm<QuoteFormValues>({
     resolver: zodResolver(quoteFormSchema),
-    mode: "onChange",
-    reValidateMode: "onChange",
+    mode: "onBlur", // Validar apenas no blur, não no onChange
+    reValidateMode: "onBlur",
     defaultValues: {
       origem: (storedOriginAddress ?? defaultCompanyAddress ?? {}) as CompanyAddress,
       destino: (storedDestinationAddress ?? {}) as CompanyAddress,
@@ -363,10 +380,11 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
   // Inicializa seleção de endereço com default (se houver)
   useEffect(() => {
     if (!selectedOriginId && addresses.length) {
-      const id = getDefaultId();
-      if (id) selectOrigin(id);
+      // Encontrar endereço padrão ou primeiro disponível
+      const defaultAddr = addresses.find((a) => a.isDefault) ?? addresses[0];
+      if (defaultAddr?.id) selectOrigin(defaultAddr.id);
     }
-  }, [addresses, selectedOriginId, selectOrigin, getDefaultId]);
+  }, [addresses, selectedOriginId, selectOrigin]);
 
   // Carregar destino salvo ao montar
   useEffect(() => {
@@ -400,38 +418,17 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
     cidade?: string;
     uf?: string;
     label?: string;
+    cep?: string;
     isDefault?: boolean;
-  } | null>(
-    storedForm?.origemCidade || storedForm?.origemUf
-      ? {
-          cidade: storedForm.origemCidade,
-          uf: storedForm.origemUf,
-          label: storedForm.origemLabel,
-          isDefault: storedForm.origemIsDefault,
-        }
-      : defaultCompanyAddress
-      ? {
-          cidade: defaultCompanyAddress.cidade,
-          uf: defaultCompanyAddress.uf,
-          label: defaultCompanyAddress.nome ?? "Endereço da empresa",
-          isDefault: true,
-        }
-      : null,
-  );
+  } | null>(null); // Inicializa vazio - useEffect reativo preencherá
 
   const [destinoInfo, setDestinoInfo] = useState<{
     cidade?: string;
     uf?: string;
     label?: string;
+    cep?: string;
     isDefault?: boolean;
-  } | null>(
-    storedForm?.destinoCidade || storedForm?.destinoUf
-      ? {
-          cidade: storedForm.destinoCidade,
-          uf: storedForm.destinoUf,
-        }
-      : null,
-  );
+  } | null>(null); // Inicializa vazio - useEffect reativo preencherá
 
   const [cepStatus, setCepStatus] = useState({
     origem: Boolean(storedForm?.origemCep ?? defaultCompanyAddress?.cep),
@@ -465,8 +462,10 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
   const [selectedRecipientId, setSelectedRecipientId] = useState<string | null>(
     destination?.recipientId ?? null
   );
-  const recipients = useRecipientsStore((s) => s.items);
-  const addRecipient = useRecipientsStore((s) => s.add);
+
+  // Buscar recipients via React Query (mesma fonte que RecipientSelect)
+  const recipientsQuery = useAccountRecipients({ page: 1, pageSize: 1000 });
+  const recipients = recipientsQuery.data?.items ?? [];
 
   // Estado para logística reversa
   const [isReverse, setIsReverse] = useState(false);
@@ -485,6 +484,96 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
       setReverseAlertMessage(null);
     };
   }, []);
+
+  // Atualização reativa do header de origem/destino
+  useEffect(() => {
+    if (!isReverse) {
+      // Modo normal: origem = endereço selecionado, destino = recipient/manual
+      const originAddr = addresses?.find((x) => x.id === selectedOriginId);
+      const headerInfo = toHeaderInfo(originAddr);
+
+      // Apenas atualizar se os valores mudaram (previne loop infinito)
+      setOrigemInfo(prev => {
+        if (!prev && !headerInfo) return prev;
+        if (!prev || !headerInfo) return headerInfo;
+        if (prev.cidade === headerInfo.cidade &&
+            prev.uf === headerInfo.uf &&
+            prev.label === headerInfo.label &&
+            prev.cep === headerInfo.cep &&
+            prev.isDefault === headerInfo.isDefault) {
+          return prev; // Sem mudança, retorna anterior para evitar re-render
+        }
+        return headerInfo;
+      });
+
+      // Atualizar destino se for modo recipient
+      if (destinationMode === "recipient" && selectedRecipientId) {
+        const recipientData = recipients?.find((r) => r.id === selectedRecipientId);
+        if (recipientData) {
+          setDestinoInfo(prev => {
+            const newInfo = {
+              cidade: recipientData.cidade,
+              uf: recipientData.uf,
+              label: recipientData.name,
+              cep: recipientData.cep,
+              isDefault: false,
+            };
+            if (!prev) return newInfo;
+            if (prev.cidade === newInfo.cidade &&
+                prev.uf === newInfo.uf &&
+                prev.label === newInfo.label &&
+                prev.cep === newInfo.cep &&
+                prev.isDefault === newInfo.isDefault) {
+              return prev;
+            }
+            return newInfo;
+          });
+        }
+      }
+    } else {
+      // Modo reverso: origem = recipient/manual, destino = endereço selecionado
+      const destinationAddr = addresses?.find((x) => x.id === selectedOriginId);
+      const headerInfo = toHeaderInfo(destinationAddr);
+
+      setDestinoInfo(prev => {
+        if (!prev && !headerInfo) return prev;
+        if (!prev || !headerInfo) return headerInfo;
+        if (prev.cidade === headerInfo.cidade &&
+            prev.uf === headerInfo.uf &&
+            prev.label === headerInfo.label &&
+            prev.cep === headerInfo.cep &&
+            prev.isDefault === headerInfo.isDefault) {
+          return prev;
+        }
+        return headerInfo;
+      });
+
+      // Atualizar origem se for modo recipient
+      if (destinationMode === "recipient" && selectedRecipientId) {
+        const recipientData = recipients?.find((r) => r.id === selectedRecipientId);
+        if (recipientData) {
+          setOrigemInfo(prev => {
+            const newInfo = {
+              cidade: recipientData.cidade,
+              uf: recipientData.uf,
+              label: recipientData.name,
+              cep: recipientData.cep,
+              isDefault: false,
+            };
+            if (!prev) return newInfo;
+            if (prev.cidade === newInfo.cidade &&
+                prev.uf === newInfo.uf &&
+                prev.label === newInfo.label &&
+                prev.cep === newInfo.cep &&
+                prev.isDefault === newInfo.isDefault) {
+              return prev;
+            }
+            return newInfo;
+          });
+        }
+      }
+    }
+  }, [selectedOriginId, selectedRecipientId, addresses, recipients, isReverse, destinationMode]);
 
   const volumesValues = watch("volumes");
   const totals = useMemo(
@@ -557,7 +646,7 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
         state:
           origemAddress?.uf ??
           (isReverse ? destinoInfo?.uf ?? null : origemInfo?.uf ?? null),
-        cep: origemCepValue,
+        cep: isReverse ? destinoInfo?.cep ?? null : origemInfo?.cep ?? null,
         fallback: isReverse
           ? "Origem (cliente não definida)"
           : "Origem (empresa não definida)",
@@ -567,7 +656,6 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
       formatSummary,
       isReverse,
       origemAddress,
-      origemCepValue,
       origemInfo,
     ],
   );
@@ -582,14 +670,13 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
         state:
           destinoAddress?.uf ??
           (isReverse ? origemInfo?.uf ?? null : destinoInfo?.uf ?? null),
-        cep: destinoCepValue,
+        cep: isReverse ? origemInfo?.cep ?? null : destinoInfo?.cep ?? null,
         fallback: isReverse
           ? "Destino (empresa não definido)"
           : "Destino (cliente não definido)",
       }),
     [
       destinoAddress,
-      destinoCepValue,
       destinoInfo,
       formatSummary,
       isReverse,
@@ -598,10 +685,21 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
   );
 
   const canSubmit =
-    formState.isValid &&
+    !calculateQuotes.isPending &&
+    selectedOriginId && // Verificar se remetente foi selecionado
+    (destinationMode === "manual" || selectedRecipientId) && // Verificar se destinatário foi selecionado (quando não manual)
     cepStatus.origem &&
-    cepStatus.destino &&
-    !calculateQuotes.isPending;
+    cepStatus.destino;
+
+  // Debug: log canSubmit status
+  console.log('[DEBUG canSubmit]', {
+    canSubmit,
+    isPending: calculateQuotes.isPending,
+    selectedOriginId,
+    destinationMode,
+    selectedRecipientId,
+    cepStatus,
+  });
 
   const handleAddVolume = useCallback(() => {
     if (fields.length >= MAX_VOLUMES) {
@@ -844,6 +942,36 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
     applyCompanySide(isReverse);
   }, [applyCompanySide, isReverse]);
 
+  // Reset state e revalidar formulário ao montar/retornar para Step 1
+  useEffect(() => {
+    // Revalidar formulário para atualizar formState.isValid
+    trigger().catch(() => {});
+  }, [trigger]);
+
+  const handleAddressChange = useCallback((id: string | null) => {
+    // Atualiza store - o useEffect reativo cuidará de atualizar origemInfo/destinoInfo
+    selectOrigin(id);
+
+    // Atualizar campos do form e status de CEP
+    if (id) {
+      const selected = addresses.find((addr) => addr.id === id);
+      if (selected) {
+        const companyAddr = mapStoreAddressToCompany(selected);
+        if (companyAddr) {
+          if (!isReverse) {
+            setValue("origem", companyAddr, { shouldDirty: false });
+            setValue("origemCep", formatCep(companyAddr.cep ?? ""), { shouldValidate: false });
+            setCepStatus((status) => ({ ...status, origem: true }));
+          } else {
+            setValue("destino", companyAddr, { shouldDirty: false });
+            setValue("destinoCep", formatCep(companyAddr.cep ?? ""), { shouldValidate: false });
+            setCepStatus((status) => ({ ...status, destino: true }));
+          }
+        }
+      }
+    }
+  }, [selectOrigin, addresses, isReverse, mapStoreAddressToCompany, setValue]);
+
   const handleAddressModalOpen = () => {
     setAddressModalOpen(true);
   };
@@ -943,10 +1071,10 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
     message.success("Destinatário adicionado com sucesso!");
   };
 
-  const handleRecipientSelect = (recipientId: string | null) => {
+  const handleRecipientSelect = (recipientId: string | null, recipient?: Recipient | undefined) => {
     setSelectedRecipientId(recipientId);
 
-    if (!recipientId) {
+    if (!recipientId || !recipient) {
       if (isReverse) {
         setValue("origem", {} as CompanyAddress, { shouldDirty: true });
         setValue("origemCep", "", { shouldValidate: false });
@@ -960,9 +1088,6 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
       }
       return;
     }
-
-    const recipient = recipients.find((r) => r.id === recipientId);
-    if (!recipient) return;
 
     setValue(
       (isReverse ? "modoOrigem" : "modoDestino") as
@@ -1013,6 +1138,8 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
       setDestinoInfo({
         cidade: recipient.cidade,
         uf: recipient.uf,
+        label: recipient.name,
+        isDefault: false,
       });
       setCepStatus((status) => ({ ...status, destino: true }));
     }
@@ -1186,6 +1313,10 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
   };
 
   const onSubmit: SubmitHandler<QuoteFormValues> = async (values) => {
+    const formRequestId = `FORM-${Date.now()}`;
+    console.log(`[FORM][${formRequestId}] ========== INÍCIO DO SUBMIT ==========`);
+    console.log(`[FORM][${formRequestId}] Values recebidos:`, values);
+
     const payload: QuoteRequestPayload = {
       origem: { cep: values.origemCep },
       destino: { cep: values.destinoCep },
@@ -1197,29 +1328,56 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
           : Number(values.seguroValor),
       lembrete: values.lembrete?.trim() || null,
       volumes: values.volumes.map((item) => ({
-        comprimentoCm: Number(item.comprimentoCm),
-        larguraCm: Number(item.larguraCm),
-        alturaCm: Number(item.alturaCm),
-        pesoKg: Number(item.pesoKg),
+        comprimentoCm: Number(item.comprimentoCm) || 0,
+        larguraCm: Number(item.larguraCm) || 0,
+        alturaCm: Number(item.alturaCm) || 0,
+        pesoKg: Number(item.pesoKg) || 0,
       })),
     };
 
+    console.log(`[FORM][${formRequestId}] Payload montado:`, JSON.stringify(payload, null, 2));
+
+    // Validar se há pelo menos um volume válido
+    const hasValidVolume = payload.volumes.some(
+      (v) => v.comprimentoCm > 0 && v.larguraCm > 0 && v.alturaCm > 0 && v.pesoKg > 0
+    );
+
+    if (!hasValidVolume) {
+      message.error("Preencha ao menos um volume completo com dimensões e peso.");
+      return;
+    }
+
     try {
+      console.log(`[FORM][${formRequestId}] Chamando calculateQuotes.mutateAsync...`);
       const response = await calculateQuotes.mutateAsync(payload);
+      console.log(`[FORM][${formRequestId}] Response recebida:`, response);
+      console.log(`[FORM][${formRequestId}] Response type:`, typeof response, Array.isArray(response));
+
       const normalized: QuoteCalculateResponse = Array.isArray(response)
         ? { results: response }
         : response;
+      console.log(`[FORM][${formRequestId}] Normalized:`, {
+        hasQuoteId: !!normalized.quoteId,
+        resultsLength: normalized.results?.length || 0,
+        hasPontos: !!normalized.pontosParceiros,
+      });
 
       if (!normalized.results.length) {
+        console.warn(`[FORM][${formRequestId}] Nenhum resultado retornado!`);
         message.warning(
           "Nenhum serviço disponível para os parâmetros informados.",
         );
         return;
       }
 
-      const quoteId = crypto.randomUUID();
-      const resumo = buildSummary(values);
+      // Usar quoteId da API se disponível, senão gerar no cliente
+      const quoteId = normalized.quoteId || crypto.randomUUID();
+      console.log(`[FORM][${formRequestId}] QuoteId a ser usado:`, quoteId);
 
+      const resumo = buildSummary(values);
+      console.log(`[FORM][${formRequestId}] Resumo montado:`, resumo);
+
+      console.log(`[FORM][${formRequestId}] Salvando no store...`);
       setResults({
         quoteId,
         createdAt: new Date().toISOString(),
@@ -1227,6 +1385,7 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
         results: normalized.results,
         pontosParceiros: normalized.pontosParceiros,
       });
+      console.log(`[FORM][${formRequestId}] Store atualizado!`);
 
       dispatchTelemetry("quote_form_submit", {
         quoteId,
@@ -1238,10 +1397,32 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
         hasInsuranceValue: Boolean(payload.seguro),
       });
 
+      console.log(`[FORM][${formRequestId}] Redirecionando para /cotacoes/resultados?quoteId=${quoteId}`);
       router.push(`/cotacoes/resultados?quoteId=${quoteId}`);
+      console.log(`[FORM][${formRequestId}] ========== FIM DO SUBMIT (SUCESSO) ==========`);
     } catch (error) {
-      console.error("Erro ao calcular cotações", error);
-      message.error("Não foi possível calcular as cotações. Tente novamente.");
+      console.error(`[FORM][${formRequestId}] ========== ERRO CAPTURADO ==========`);
+      console.error(`[FORM][${formRequestId}] Error:`, error);
+      console.error(`[FORM][${formRequestId}] Error type:`, typeof error);
+      console.error(`[FORM][${formRequestId}] Error name:`, error instanceof Error ? error.name : 'N/A');
+      console.error(`[FORM][${formRequestId}] Error message:`, error instanceof Error ? error.message : String(error));
+      console.error(`[FORM][${formRequestId}] Error stack:`, error instanceof Error ? error.stack : 'N/A');
+
+      // Mostrar mensagem de erro específica se disponível
+      const errorMessage = error instanceof Error ? error.message : String(error);
+
+      if (errorMessage.includes("Validação falhou:")) {
+        // Erro de validação - mostrar detalhes
+        message.error({
+          content: errorMessage.replace("Validação falhou:", "Verifique os dados:"),
+          duration: 8,
+        });
+      } else {
+        // Erro genérico
+        message.error("Não foi possível calcular as cotações. Tente novamente.");
+      }
+
+      console.error(`[FORM][${formRequestId}] ========== FIM DO SUBMIT (ERRO) ==========`);
     }
   };
 
@@ -1363,7 +1544,7 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
       >
         <AddressSelect
           value={selectedOriginId}
-          onChange={(id) => selectOrigin(id)}
+          onChange={handleAddressChange}
           onAddAddress={handleAddressModalOpen}
           placeholder={origemPlaceholder}
         />
@@ -1406,10 +1587,10 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
               <Form.Item
                 label={destinationManualLabel}
                 validateStatus={
-                  fieldState.error || clientCepError ? "error" : undefined
+                  (fieldState.isTouched && fieldState.error) || clientCepError ? "error" : undefined
                 }
                 help={
-                  fieldState.error?.message ||
+                  (fieldState.isTouched && fieldState.error?.message) ||
                   clientCepError ||
                   destinationManualHelper
                 }
@@ -1427,7 +1608,7 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
                     void handleClientBlur();
                   }}
                   maxLength={9}
-                  placeholder={destinationManualPlaceholder}
+                  placeholder="00000-000"
                   suffix={suffix}
                   autoComplete="postal-code"
                   inputMode="numeric"
@@ -1627,33 +1808,26 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
 
             <Divider />
 
-            <Flex align="center" justify="space-between" wrap gap={16}>
+            <Flex align="center" justify="flex-start" wrap gap={16}>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 16 }}>
                 <div>
                   Volumes: <strong>{fields.length}</strong>
                 </div>
-                <div>
-                  Peso total: <strong>{formatKg(totals.pesoRealKg)} kg</strong>
-                </div>
-                <div>
-                  Cubado: <strong>{formatKg(totals.pesoCubadoKg)} kg</strong>
-                </div>
               </div>
-
-              <Button
-                type="primary"
-                htmlType="submit"
-                size="large"
-                loading={calculateQuotes.isPending}
-                disabled={!canSubmit}
-              >
-                {calculateQuotes.isPending
-                  ? "Calculando cotações..."
-                  : "Calcular"}
-              </Button>
             </Flex>
           </Space>
         </Card>
+
+        <QuoteNavigationButtons
+          onNext={handleSubmit(onSubmit, (errors) => {
+            console.error('[FORM VALIDATION ERROR]', errors);
+            console.error('[FORM VALIDATION ERROR] formState.errors:', formState.errors);
+            message.error('Preencha todos os campos obrigatórios corretamente.');
+          })}
+          disableNext={!canSubmit}
+          loadingNext={calculateQuotes.isPending}
+          nextLabel={calculateQuotes.isPending ? "Calculando..." : "Próximo"}
+        />
       </Form>
 
       <Modal

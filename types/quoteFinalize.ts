@@ -22,19 +22,19 @@ const nfeKeySchema = z.object({
 export type NFeKey = z.infer<typeof nfeKeySchema>;
 
 const manualRecipientSchema = z.object({
-  nome: z.string().min(3, "Informe o nome completo."),
-  telefone: z.string().min(10, "Informe o telefone."),
+  nome: z.string().optional(),
+  telefone: z.string().optional(),
   email: z
     .union([z.string().email("E-mail inválido."), z.literal(""), z.undefined()])
     .optional(),
-  documento: z.string().min(11, "Informe CPF ou CNPJ."),
-  cep: z.string().regex(cepRegex, "CEP inválido."),
-  logradouro: z.string().min(3, "Informe o logradouro."),
-  numero: z.string().min(1, "Informe o número."),
+  documento: z.string().optional(),
+  cep: z.string(),
+  logradouro: z.string().optional(),
+  numero: z.string().optional(),
   complemento: z.string().optional(),
-  bairro: z.string().min(2, "Informe o bairro."),
-  cidade: z.string().min(2, "Informe a cidade."),
-  uf: z.string().min(2, "Informe a UF.").max(2, "UF deve ter 2 letras."),
+  bairro: z.string().optional(),
+  cidade: z.string(),
+  uf: z.string(),
   observacoes: z.string().optional(),
   salvarRecorrente: z.boolean(),
 });
@@ -64,13 +64,13 @@ export const finalizeFormSchema = z
       nfeKey: z.string().optional(),
       nfeXml: z.string().optional().nullable(),
       nfeKeys: z.array(nfeKeySchema).optional(),
-      declarationItems: z.array(declarationItemSchema),
+      declarationItems: z.array(declarationItemSchema).optional(),
     }),
     postingUnit: postingUnitSchema,
     recipient: z.object({
       mode: z.enum(["manual", "saved"]),
       savedId: z.string().optional(),
-      manual: manualRecipientSchema,
+      manual: manualRecipientSchema.optional(),
     }),
     sender: z.object({
       addressId: z.string().optional(),
@@ -136,6 +136,72 @@ export const finalizeFormSchema = z
         code: z.ZodIssueCode.custom,
         message: "Selecione um destinatário salvo.",
       });
+    }
+
+    // Validar destinatário apenas se mode for "manual" e não houver savedId
+    if (values.recipient.mode === "manual") {
+      const manual = values.recipient.manual;
+
+      // Se não tem manual data, significa que precisa preencher
+      if (!manual) {
+        ctx.addIssue({
+          path: ["recipient", "manual"],
+          code: z.ZodIssueCode.custom,
+          message: "Preencha os dados do destinatário.",
+        });
+        return;
+      }
+
+      // Validar apenas campos realmente preenchidos (permite CEP-only no /cotacoes)
+      // Nome é obrigatório apenas se estiver preenchendo manualmente
+      if (manual.nome && manual.nome.length > 0 && manual.nome.length < 3) {
+        ctx.addIssue({
+          path: ["recipient", "manual", "nome"],
+          code: z.ZodIssueCode.custom,
+          message: "Nome deve ter pelo menos 3 caracteres.",
+        });
+      }
+
+      if (manual.telefone && manual.telefone.length > 0 && manual.telefone.length < 10) {
+        ctx.addIssue({
+          path: ["recipient", "manual", "telefone"],
+          code: z.ZodIssueCode.custom,
+          message: "Telefone inválido.",
+        });
+      }
+
+      if (manual.documento && manual.documento.length > 0 && manual.documento.length < 11) {
+        ctx.addIssue({
+          path: ["recipient", "manual", "documento"],
+          code: z.ZodIssueCode.custom,
+          message: "Documento inválido.",
+        });
+      }
+
+      // CEP, cidade e UF são sempre obrigatórios (vêm do /cotacoes)
+      if (!manual.cep || !/^\d{5}-\d{3}$/.test(manual.cep)) {
+        ctx.addIssue({
+          path: ["recipient", "manual", "cep"],
+          code: z.ZodIssueCode.custom,
+          message: "CEP inválido.",
+        });
+      }
+
+      if (!manual.cidade || manual.cidade.length < 2) {
+        ctx.addIssue({
+          path: ["recipient", "manual", "cidade"],
+          code: z.ZodIssueCode.custom,
+          message: "Informe a cidade.",
+        });
+      }
+
+      if (!manual.uf || manual.uf.length !== 2) {
+        ctx.addIssue({
+          path: ["recipient", "manual", "uf"],
+          code: z.ZodIssueCode.custom,
+          message: "Informe a UF.",
+        });
+      }
     }
   });
 

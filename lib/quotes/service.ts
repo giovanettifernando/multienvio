@@ -14,6 +14,11 @@ import type {
   PartnerPoint,
 } from '@/types/quote';
 import type { Quote, QuoteStatus } from '@prisma/client';
+import {
+  generateMockQuotes,
+  shouldUseMockFallback,
+  type CarrierCode,
+} from './mocks';
 
 /**
  * Service layer for quotation operations
@@ -66,60 +71,117 @@ export type QuoteDetail = Quote & {
 };
 
 // ============================================================================
-// Quote Calculation (Mock Implementation)
+// Quote Calculation with Fallback
 // ============================================================================
 
 /**
- * Calculates shipping options for a quote
- * Currently uses mock data, will be replaced with real carrier API integration
+ * Tenta cotar com uma transportadora específica
+ * Em caso de falha de integração, retorna mock
+ */
+async function quoteCarrier(
+  carrier: CarrierCode,
+  request: QuoteRequest
+): Promise<{ results: QuoteResultItem[]; source: 'real' | 'mock'; error?: string }> {
+  const requestId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  const startTime = Date.now();
+
+  try {
+    // TODO: Aqui entraria a integração real com cada transportadora
+    // Por enquanto, simulamos com erro para demonstrar o fallback
+    console.info(`[QUOTE][${requestId}] Attempting real quote for ${carrier}`, {
+      origin: request.origem.cep,
+      dest: request.destino.cep,
+      volumes: request.volumes.length,
+    });
+
+    // Simula integração não configurada para demonstrar fallback
+    // Em produção, isso seria substituído por:
+    // const realQuotes = await realCarrierApi.quote(carrier, request);
+    // return { results: realQuotes, source: 'real' };
+
+    throw new Error('INTEGRATION_DISABLED');
+  } catch (error) {
+    const duration = Date.now() - startTime;
+    const shouldFallback = shouldUseMockFallback(error);
+
+    console.warn(`[QUOTE][${requestId}] Carrier ${carrier} failed (${duration}ms)`, {
+      shouldFallback,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+
+    if (shouldFallback) {
+      // Usar mock como fallback
+      const mockResults = generateMockQuotes(carrier, request);
+      console.info(`[QUOTE][${requestId}] Using ${mockResults.length} mock quotes for ${carrier}`);
+
+      return {
+        results: mockResults,
+        source: 'mock',
+        error: error instanceof Error ? error.message : 'Integration unavailable',
+      };
+    }
+
+    // Erro crítico, não usar fallback
+    console.error(`[QUOTE][${requestId}] Critical error for ${carrier}, no fallback`, {
+      error,
+    });
+
+    return {
+      results: [],
+      source: 'mock',
+      error: error instanceof Error ? error.message : 'Critical error',
+    };
+  }
+}
+
+/**
+ * Calcula cotações de todas as transportadoras com fallback automático
  */
 async function calculateShippingOptions(
   request: QuoteRequest
 ): Promise<QuoteResultItem[]> {
-  // Mock implementation - in production, this would call actual carrier APIs
-  const baseResults: QuoteResultItem[] = [
-    {
-      id: 'correios-pac',
-      carrier: 'Correios',
-      modalidade: 'PAC',
-      prazoDias: 10,
-      preco: 25.5,
-      exigeSeguro: false,
-    },
-    {
-      id: 'correios-sedex',
-      carrier: 'Correios',
-      modalidade: 'SEDEX',
-      prazoDias: 5,
-      preco: 45.0,
-      exigeSeguro: false,
-    },
-    {
-      id: 'jadlog-package',
-      carrier: 'Jadlog',
-      modalidade: '.Package',
-      prazoDias: 7,
-      preco: 30.0,
-      exigeSeguro: true,
-    },
-    {
-      id: 'jadlog-com',
-      carrier: 'Jadlog',
-      modalidade: '.COM',
-      prazoDias: 4,
-      preco: 50.0,
-      exigeSeguro: true,
-    },
-  ];
+  const carriers: CarrierCode[] = ['CORREIOS', 'JADLOG', 'LOGGI', 'JT'];
+  const requestId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-  // Apply simple price variation based on weight
-  const totalWeight = request.volumes.reduce((sum, vol) => sum + vol.pesoKg, 0);
-  const weightMultiplier = 1 + totalWeight / 30; // Max 2x for 30kg
+  console.info(`[QUOTE][${requestId}] Starting quote calculation`, {
+    origin: request.origem.cep,
+    dest: request.destino.cep,
+    carriers: carriers.length,
+  });
 
-  return baseResults.map((result) => ({
-    ...result,
-    preco: Math.round(result.preco * weightMultiplier * 100) / 100,
-  }));
+  // Cotar todas as transportadoras em paralelo
+  const quotePromises = carriers.map((carrier) => quoteCarrier(carrier, request));
+  const quoteResults = await Promise.all(quotePromises);
+
+  // Mesclar todos os resultados (reais + mocks)
+  const allResults: QuoteResultItem[] = [];
+  const stats = {
+    real: 0,
+    mock: 0,
+    failed: 0,
+  };
+
+  for (const result of quoteResults) {
+    if (result.results.length > 0) {
+      allResults.push(...result.results);
+      if (result.source === 'real') {
+        stats.real += result.results.length;
+      } else {
+        stats.mock += result.results.length;
+      }
+    } else {
+      stats.failed++;
+    }
+  }
+
+  console.info(`[QUOTE][${requestId}] Quote calculation completed`, {
+    total: allResults.length,
+    real: stats.real,
+    mock: stats.mock,
+    failed: stats.failed,
+  });
+
+  return allResults;
 }
 
 // ============================================================================

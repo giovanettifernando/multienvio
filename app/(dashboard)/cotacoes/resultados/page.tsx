@@ -7,6 +7,7 @@ import { useShallow } from "zustand/react/shallow";
 import { ResultsBanner } from "@/components/quote/ResultsBanner";
 import { ResultsTable } from "@/components/quote/ResultsTable";
 import { ContentDeclarationModal } from "@/components/quote/ContentDeclarationModal";
+import { QuoteNavigationButtons } from "@/components/quote/QuoteNavigationButtons";
 import { useQuoteStore } from "@/store/useQuoteStore";
 import { useQuoteSelection } from "@/hooks/useQuotes";
 import type {
@@ -336,6 +337,11 @@ export default function QuoteResultsPage() {
           loading={selectMutation.isPending}
         />
       </Flex>
+
+      <QuoteNavigationButtons
+        onBack={() => router.push("/cotacoes")}
+        backLabel="Editar cotação"
+      />
 
       <Modal
         title="Editar lembrete"

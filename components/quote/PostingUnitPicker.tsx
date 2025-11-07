@@ -24,6 +24,8 @@ import type { PickupPoint } from "@/lib/pickup/types";
 import { matchesSearch } from "@/lib/utils/string";
 import { calculateDistance, getUFCoordinates, formatDistance } from "@/lib/utils/geo";
 import { MapModal } from "./MapModal";
+import { usePickupPoints } from "@/hooks/usePickupPoints";
+import { PickupPointStatus } from "@/types/contracts";
 
 interface PickupPointWithDistance extends PickupPoint {
   distance?: number;
@@ -47,10 +49,54 @@ export function PostingUnitPicker() {
   const definirComoPadrao = watch("postingUnit.definirComoPadrao");
 
   // Usar store de pontos ao invés de API
-  const points = usePontosStore((s) => s.points);
+  const points = usePontosStore ((s) => s.points);
   const setDefaultPoint = usePontosStore((s) => s.setDefaultPoint);
   const setCheckoutPickupPoint = useCheckoutStore((s) => s.setPickupPoint);
   const subscribeExternal = usePontosStore((s) => s.subscribeExternal);
+
+  // Buscar pontos da API do banco de dados
+  const destinoCidade = results?.resumo?.destinoCidade;
+  const destinoUf = results?.resumo?.destinoUf;
+  const { data: apiPickupPoints, isLoading: isLoadingPickupPoints } = usePickupPoints({
+    cidade: destinoCidade,
+    uf: destinoUf,
+  });
+
+  // Popul ar store com pontos do banco quando carregarem
+  useEffect(() => {
+    if (apiPickupPoints && apiPickupPoints.length > 0) {
+      // Converter pontos da API para formato do store
+      const storePoints: PickupPoint[] = apiPickupPoints.map((apiPoint) => ({
+        id: apiPoint.id,
+        status: PickupPointStatus.ACTIVE,
+        razaoSocial: apiPoint.alias,
+        nomeFantasia: apiPoint.name,
+        cnpj: '', // Não retornado pela API
+        ie: null,
+        email: null,
+        telefone: null,
+        cep: apiPoint.cep || null,
+        logradouro: apiPoint.address || null,
+        numero: apiPoint.number || null,
+        complemento: null,
+        bairro: apiPoint.neighborhood || null,
+        cidade: apiPoint.city || null,
+        uf: apiPoint.uf || null,
+        geo: apiPoint.lat && apiPoint.lng ? { lat: apiPoint.lat, lng: apiPoint.lng } : null,
+        paymentMethod: {},
+        payoutDay: null,
+        minPayoutAmount: null,
+        commissionPerItem: null,
+        capacityPerDay: null,
+        monthlyReceived: 0,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }));
+
+      // Atualizar store com pontos do banco (substituir pontos locais)
+      usePontosStore.setState({ points: storePoints });
+    }
+  }, [apiPickupPoints]);
 
   // Subscrever a mudanças externas (outras abas)
   useEffect(() => {

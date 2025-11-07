@@ -1,56 +1,185 @@
 "use client";
 
-import { Select, Empty, Button, Space } from "antd";
-import { useMemo } from "react";
-import { useAddressStore } from "@/lib/state/addresses";
+import { useState } from "react";
+import { App, Button, Empty, Select, Skeleton, Space } from "antd";
+import { PlusOutlined } from "@ant-design/icons";
+import { useAddresses, useAddressCreate } from "@/hooks/useAccount";
+import { AddressModal, type AddressFormValues } from "@/components/account/AddressModal";
+import type { Address } from "@/types/account";
 
-type Props = {
-  value?: string | null;
-  onChange?: (id: string | null) => void;
-  onAddAddress?: () => void; // abre o modal
+interface AddressSelectProps {
+  value?: string | null; // address ID
+  onChange?: (addressId: string | null, address?: Address | undefined) => void;
+  onAddAddress?: () => void; // Deprecated: modal abre automaticamente agora
   placeholder?: string;
-};
+  disabled?: boolean;
+}
 
 export function AddressSelect({
   value,
   onChange,
-  onAddAddress,
-  placeholder = "Selecione um endereço",
-}: Props) {
-  const items = useAddressStore((s) => s.items);
+  placeholder = "Selecione um endereço de remetente",
+  disabled,
+}: AddressSelectProps) {
+  const { message } = App.useApp();
+  const [showModal, setShowModal] = useState(false);
 
-  const options = useMemo(
-    () =>
-      items.map((a) => ({
-        label: `${a.apelido} — ${a.cidade} / ${a.uf} · CEP ${a.cep}`,
-        value: a.id,
-      })),
-    [items]
-  );
+  // Reutilizar hooks existentes
+  const addressesQuery = useAddresses();
+  const createMutation = useAddressCreate();
 
-  if (!items.length) {
+  const addresses = addressesQuery.data ?? [];
+  const loading = addressesQuery.isLoading;
+
+  // Formatar opções para o Select
+  const options = addresses.map((addr) => ({
+    value: addr.id,
+    label: formatAddressLabel(addr),
+    address: addr,
+  }));
+
+  // Adicionar opção "+ Adicionar novo..."
+  const allOptions = [
+    ...options,
+    {
+      value: "__add_new__",
+      label: (
+        <Space>
+          <PlusOutlined />
+          Adicionar novo endereço...
+        </Space>
+      ),
+      address: undefined,
+    },
+  ];
+
+  const handleChange = (selectedValue: string | undefined) => {
+    if (selectedValue === "__add_new__") {
+      setShowModal(true);
+      return;
+    }
+
+    if (!selectedValue) {
+      onChange?.(null, undefined);
+      return;
+    }
+
+    const selected = addresses.find((a) => a.id === selectedValue);
+    onChange?.(selectedValue, selected);
+  };
+
+  const handleModalSubmit = async (values: AddressFormValues) => {
+    try {
+      const result = await createMutation.mutateAsync({
+        label: values.label,
+        cep: values.cep.replace(/\D/g, ""), // Remove máscara
+        logradouro: values.logradouro,
+        numero: values.numero,
+        complemento: values.complemento || undefined,
+        bairro: values.bairro,
+        cidade: values.cidade,
+        uf: values.uf,
+        isDefault: values.isDefault,
+      });
+
+      message.success("Endereço salvo com sucesso");
+      setShowModal(false);
+
+      // Selecionar o recém-criado (optimistic)
+      const newAddress = result?.address;
+      if (newAddress?.id) {
+        onChange?.(newAddress.id, newAddress);
+      }
+    } catch (error) {
+      message.error("Erro ao salvar endereço");
+      console.error(error);
+    }
+  };
+
+  const handleModalCancel = () => {
+    setShowModal(false);
+  };
+
+  if (loading) {
+    return <Skeleton.Input active block />;
+  }
+
+  if (!loading && addresses.length === 0) {
     return (
       <Space direction="vertical" style={{ width: "100%" }}>
-        <Empty description="Você ainda não tem endereços cadastrados" />
-        <Button type="primary" onClick={onAddAddress}>
-          Adicionar endereço
-        </Button>
+        <Empty
+          image={Empty.PRESENTED_IMAGE_SIMPLE}
+          description="Nenhum endereço cadastrado"
+        >
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => setShowModal(true)}
+          >
+            Cadastrar endereço
+          </Button>
+        </Empty>
+
+        <AddressModal
+          open={showModal}
+          loading={createMutation.isPending}
+          initialValues={null}
+          onSubmit={handleModalSubmit}
+          onCancel={handleModalCancel}
+        />
       </Space>
     );
   }
 
   return (
-    <Select
-      showSearch
-      allowClear
-      placeholder={placeholder}
-      value={value ?? undefined}
-      options={options}
-      onChange={(v) => onChange?.(v ?? null)}
-      filterOption={(input, option) =>
-        (option?.label as string)?.toLowerCase().includes(input.toLowerCase())
-      }
-      style={{ width: "100%" }}
-    />
+    <>
+      <Select
+        showSearch
+        allowClear
+        value={value ?? undefined}
+        onChange={handleChange}
+        options={allOptions}
+        placeholder={placeholder}
+        disabled={disabled}
+        filterOption={(input, option) => {
+          if (option?.value === "__add_new__") return false;
+          const label = option?.label;
+          if (typeof label === "string") {
+            return label.toLowerCase().includes(input.toLowerCase());
+          }
+          return false;
+        }}
+        style={{ width: "100%" }}
+        aria-label="Selecionar endereço de remetente"
+      />
+
+      <AddressModal
+        open={showModal}
+        loading={createMutation.isPending}
+        initialValues={null}
+        onSubmit={handleModalSubmit}
+        onCancel={handleModalCancel}
+      />
+    </>
   );
+}
+
+/**
+ * Formata endereço para exibição no Select
+ * Formato: "Label - Rua X, 123 - Bairro - Cidade/UF"
+ */
+function formatAddressLabel(addr: Address): string {
+  const parts: string[] = [];
+
+  if (addr.label) {
+    parts.push(addr.label);
+  }
+
+  const street = `${addr.logradouro}, ${addr.numero}${addr.complemento ? ` - ${addr.complemento}` : ""}`;
+  parts.push(street);
+
+  parts.push(addr.bairro);
+  parts.push(`${addr.cidade}/${addr.uf}`);
+
+  return parts.join(" - ");
 }

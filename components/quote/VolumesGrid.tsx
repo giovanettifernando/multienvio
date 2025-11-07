@@ -212,16 +212,7 @@ export function VolumesGrid({
         );
       })}
 
-      <div style={{ display: "flex", justifyContent: "space-between" }}>
-        <div>
-          <div>
-            <Typography.Text>Peso total real:</Typography.Text>{" "}
-            <strong>{formatNumber(totals.pesoRealKg)} kg</strong>
-            <br />
-            <Typography.Text>Peso cubado total:</Typography.Text>{" "}
-            <strong>{formatNumber(totals.pesoCubadoKg)} kg</strong>
-          </div>
-        </div>
+      <div style={{ display: "flex", justifyContent: "flex-end" }}>
         <Button
           type="dashed"
           icon={<PlusOutlined />}

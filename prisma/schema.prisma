@@ -1,6 +1,3 @@
-// Prisma Schema para Envio Legal
-// Database: PostgreSQL
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -10,58 +7,53 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Modelo de Roles (papéis/permissões)
 model Role {
   id        String   @id @default(uuid())
-  name      String   @unique // "admin", "user", "suporte", etc
+  name      String   @unique
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
-  users User[]
+  users     User[]
 
   @@map("roles")
 }
 
-// Modelo de Usuário
 model User {
-  id                    String    @id @default(uuid())
-  name                  String
-  email                 String    @unique
-  passwordHash          String?   // Nullable para permitir OAuth futuramente
-  passwordUpdatedAt     DateTime? // Data da última alteração de senha
-  passwordHistory       Json?     // Últimos N hashes de senha (evitar reutilização)
-  tokenVersion          Int       @default(0) // Versão do token para invalidação global de sessões
-  phone                 String?
-  cpf                   String?   // CPF sem máscara (apenas números)
-  avatarUrl             String?   // URL do avatar
-  hasCompany            Boolean   @default(false) // Se o usuário tem empresa
-  cnpj                  String?   // CNPJ sem máscara (apenas números)
-  razaoSocial           String?   // Razão social da empresa
-  status                String    @default("pending") // "pending", "active", "blocked"
-  emailVerified         Boolean   @default(false)
-  emailVerificationToken String?  @unique
-  emailVerifiedAt       DateTime?
-  resetPasswordToken    String?   @unique
-  resetPasswordExpiry   DateTime?
-  termsAcceptedAt       DateTime? // Data de aceite dos termos
-  roleId                String?
-  role                  Role?     @relation(fields: [roleId], references: [id])
-  lastLoginAt           DateTime?
-  createdAt             DateTime  @default(now())
-  updatedAt             DateTime  @updatedAt
-
-  // Relacionamentos
-  addresses         Address[]
-  sentShipments     Shipment[] @relation("SenderShipments")
-  receivedShipments Shipment[] @relation("RecipientShipments")
-  cards             Card[]
-  recipients        Recipient[]
-  securityEvents    UserSecurityEvent[]
-  passwordResetTokens PasswordResetToken[]
-  wallet            Wallet?
-  supportTickets    SupportTicket[]
-  quotes            Quote[]
-  paymentTransactions PaymentTransaction[]
+  id                     String               @id @default(uuid())
+  name                   String
+  email                  String               @unique
+  passwordHash           String?
+  phone                  String?
+  status                 String               @default("pending")
+  roleId                 String?
+  lastLoginAt            DateTime?
+  createdAt              DateTime             @default(now())
+  updatedAt              DateTime             @updatedAt
+  emailVerificationToken String?              @unique
+  emailVerified          Boolean              @default(false)
+  emailVerifiedAt        DateTime?
+  resetPasswordExpiry    DateTime?
+  resetPasswordToken     String?              @unique
+  termsAcceptedAt        DateTime?
+  avatarUrl              String?
+  cpf                    String?
+  cnpj                   String?
+  hasCompany             Boolean              @default(false)
+  razaoSocial            String?
+  passwordUpdatedAt      DateTime?
+  passwordHistory        Json?
+  tokenVersion           Int                  @default(0)
+  addresses              Address[]
+  cards                  Card[]
+  passwordResetTokens    PasswordResetToken[]
+  paymentTransactions    PaymentTransaction[]
+  quotes                 Quote[]
+  recipients             Recipient[]
+  receivedShipments      Shipment[]           @relation("RecipientShipments")
+  sentShipments          Shipment[]           @relation("SenderShipments")
+  supportTickets         SupportTicket[]
+  securityEvents         UserSecurityEvent[]
+  role                   Role?                @relation(fields: [roleId], references: [id])
+  wallet                 Wallet?
 
   @@index([email])
   @@index([emailVerificationToken])
@@ -69,27 +61,898 @@ model User {
   @@map("users")
 }
 
-// Modelo de Endereço
 model Address {
-  id          String   @id @default(uuid())
-  label       String?  // Ex: "Casa", "Trabalho", "Escritório"
-  cep         String
+  id           String   @id @default(uuid())
+  cep          String   @db.VarChar(8)
+  logradouro   String
+  numero       String
+  complemento  String?
+  bairro       String
+  cidade       String
+  uf           String   @db.VarChar(2)
+  userId       String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  isDefault    Boolean  @default(false)
+  label        String?
+  cpfCnpj      String?
+  name         String?
+  referencia   String?
+  role         String?  @default("recipient")
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  billingCards Card[]   @relation("BillingAddress")
+
+  @@index([userId, role])
+  @@index([userId])
+  @@index([cep])
+  @@map("addresses")
+}
+
+model Card {
+  id               String    @id @default(cuid())
+  userId           String
+  brand            CardBrand
+  holderName       String
+  last4            String    @db.VarChar(4)
+  expMonth         Int
+  expYear          Int
+  fingerprint      String
+  isDefault        Boolean   @default(false)
+  billingAddressId String?
+  vaultToken       String    @unique
+  panCipher        String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  billingAddress   Address?  @relation("BillingAddress", fields: [billingAddressId], references: [id])
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, fingerprint])
+  @@index([userId])
+  @@index([userId, isDefault])
+  @@map("cards")
+}
+
+model Recipient {
+  id          String   @id @default(cuid())
+  userId      String
+  name        String
+  nameSearch  String
+  email       String?  @db.VarChar(160)
+  document    String?  @db.VarChar(14)
+  phone       String?  @db.VarChar(20)
+  notes       String?  @db.VarChar(280)
+  isDefault   Boolean  @default(false)
+  cep         String   @db.VarChar(8)
   logradouro  String
-  numero      String
+  numero      String   @db.VarChar(20)
   complemento String?
   bairro      String
   cidade      String
   uf          String   @db.VarChar(2)
-  isDefault   Boolean  @default(false) // Endereço padrão do usuário
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  billingCards Card[]  @relation("BillingAddress")
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
-  @@index([cep])
-  @@map("addresses")
+  @@index([userId, isDefault])
+  @@index([userId, document])
+  @@index([userId, name])
+  @@index([userId, nameSearch])
+  @@map("recipients")
+}
+
+model Shipment {
+  id                      String          @id @default(uuid())
+  trackingCode            String          @unique
+  senderId                String
+  recipientId             String?
+  recipientName           String?
+  recipientPhone          String?
+  recipientEmail          String?
+  recipientDocument       String?
+  destinationAddress      String?
+  destinationNeighborhood String?
+  destinationCity         String
+  destinationState        String
+  weight                  Float
+  declaredValue           Float
+  status                  String          @default("criado")
+  carrier                 String?
+  service                 String?
+  originCep               String
+  destinationCep          String
+  estimatedDays           Int?
+  freightCost             Float?
+  pickupPointId           String?
+  document                Json?
+  paymentMethod           String?
+  postedAt                DateTime?
+  deliveredAt             DateTime?
+  createdAt               DateTime        @default(now())
+  updatedAt               DateTime        @updatedAt
+  recipient               User?           @relation("RecipientShipments", fields: [recipientId], references: [id])
+  sender                  User            @relation("SenderShipments", fields: [senderId], references: [id])
+  trackingEvents          TrackingEvent[]
+
+  @@index([trackingCode])
+  @@index([senderId])
+  @@index([recipientId])
+  @@index([status])
+  @@map("shipments")
+}
+
+model TrackingEvent {
+  id          String   @id @default(uuid())
+  shipmentId  String
+  type        String
+  description String
+  city        String?
+  uf          String?  @db.VarChar(2)
+  occurredAt  DateTime @default(now())
+  createdAt   DateTime @default(now())
+  shipment    Shipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+
+  @@index([shipmentId])
+  @@index([occurredAt])
+  @@map("tracking_events")
+}
+
+model StaffRole {
+  id        String      @id @default(cuid())
+  name      String      @unique
+  createdAt DateTime    @default(now())
+  users     StaffUser[]
+
+  @@map("staff_roles")
+}
+
+model StaffUser {
+  id           String            @id @default(cuid())
+  name         String
+  email        String            @unique
+  passwordHash String            @map("passwordHash")
+  status       StaffStatus       @default(ACTIVE)
+  roleId       String            @map("roleId")
+  lastLoginAt  DateTime?         @map("lastLoginAt")
+  createdAt    DateTime          @default(now()) @map("createdAt")
+  updatedAt    DateTime          @updatedAt @map("updatedAt")
+  lastAccessAt DateTime?         @map("lastAccessAt")
+  phone        String?
+  isSuperAdmin Boolean           @default(false)
+  permissions  AdminPermission[] @default([])
+  auditLogs    StaffAuditLog[]
+  role         StaffRole         @relation(fields: [roleId], references: [id])
+
+  @@index([email])
+  @@map("staff_users")
+}
+
+model StaffAuditLog {
+  id        String     @id @default(cuid())
+  actorId   String?
+  action    String
+  entity    String
+  entityId  String?
+  data      Json?
+  createdAt DateTime   @default(now())
+  actor     StaffUser? @relation(fields: [actorId], references: [id])
+
+  @@index([actorId])
+  @@index([entity, entityId])
+  @@index([createdAt])
+  @@map("staff_audit_logs")
+}
+
+model UserSecurityEvent {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String
+  ip        String?
+  userAgent String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, type])
+  @@index([createdAt])
+  @@map("user_security_events")
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@index([tokenHash])
+  @@map("password_reset_tokens")
+}
+
+model Wallet {
+  id             String              @id @default(cuid())
+  userId         String              @unique
+  availableCents Int                 @default(0)
+  pendingCents   Int                 @default(0)
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  transactions   WalletTransaction[]
+  user           User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("wallets")
+}
+
+model WalletTransaction {
+  id          String         @id @default(cuid())
+  walletId    String
+  type        WalletTxType
+  status      WalletTxStatus @default(PENDING)
+  amountCents Int
+  title       String?
+  referenceId String?        @unique
+  meta        Json?
+  createdAt   DateTime       @default(now())
+  confirmedAt DateTime?
+  wallet      Wallet         @relation(fields: [walletId], references: [id], onDelete: Cascade)
+
+  @@index([walletId, status, createdAt])
+  @@index([referenceId])
+  @@map("wallet_transactions")
+}
+
+model SupportTicket {
+  id             String              @id @default(cuid())
+  userId         String?
+  subject        String
+  description    String
+  status         SupportTicketStatus @default(OPEN)
+  priority       SupportPriority     @default(MEDIUM)
+  assignedTo     String?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  lastActivityAt DateTime            @default(now())
+  tags           Json?
+  pickupPointId  String?
+  messages       SupportMessage[]
+  pickupPoint    PickupPoint?        @relation(fields: [pickupPointId], references: [id], onDelete: Cascade)
+  user           User?               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([status, priority, createdAt])
+  @@index([userId, createdAt])
+  @@index([pickupPointId, createdAt])
+  @@index([assignedTo])
+  @@map("support_tickets")
+}
+
+model SupportMessage {
+  id          String              @id @default(cuid())
+  ticketId    String
+  authorId    String
+  authorRole  SupportAuthorRole
+  body        String
+  isInternal  Boolean             @default(false)
+  createdAt   DateTime            @default(now())
+  attachments SupportAttachment[]
+  ticket      SupportTicket       @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId, createdAt])
+  @@map("support_messages")
+}
+
+model SupportAttachment {
+  id        String         @id @default(cuid())
+  messageId String
+  filename  String
+  url       String
+  size      Int?
+  createdAt DateTime       @default(now())
+  message   SupportMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([messageId])
+  @@map("support_attachments")
+}
+
+model PickupPoint {
+  id                String            @id @default(cuid())
+  status            PickupPointStatus @default(ACTIVE)
+  razaoSocial       String
+  nomeFantasia      String
+  cnpj              String            @unique
+  ie                String?
+  email             String?
+  telefone          String?
+  cep               String?
+  logradouro        String?
+  numero            String?
+  complemento       String?
+  bairro            String?
+  cidade            String?
+  uf                String?           @db.VarChar(2)
+  geo               Json?
+  paymentMethod     Json
+  payoutDay         Int?
+  minPayoutAmount   Decimal?          @db.Decimal(10, 2)
+  commissionPerItem Decimal?          @db.Decimal(10, 2)
+  capacityPerDay    Int?
+  monthlyReceived   Int               @default(0)
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  passwordHash      String?
+  receptions        Reception[]
+  supportTickets    SupportTicket[]
+
+  @@index([status])
+  @@index([uf, cidade])
+  @@index([cnpj])
+  @@map("pickup_points")
+}
+
+model Reception {
+  id              String          @id @default(cuid())
+  pickupPointId   String
+  trackingCode    String          @unique
+  senderName      String
+  recipientName   String
+  weight          Float?
+  declaredValue   Float?
+  status          ReceptionStatus @default(PENDING)
+  expectedAt      DateTime?
+  receivedAt      DateTime?
+  processedAt     DateTime?
+  issueType       String?
+  issueDetails    String?
+  issuePhotos     Json?
+  commissionCents Int             @default(0)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  pickupPoint     PickupPoint     @relation(fields: [pickupPointId], references: [id], onDelete: Cascade)
+
+  @@index([pickupPointId, status])
+  @@index([pickupPointId, receivedAt])
+  @@index([trackingCode])
+  @@index([status])
+  @@map("receptions")
+}
+
+model Quote {
+  id           String          @id @default(cuid())
+  userId       String
+  status       QuoteStatus     @default(DRAFT)
+  originCep    String          @db.VarChar(8)
+  destCep      String          @db.VarChar(8)
+  documentType DocumentType
+  nfeNumber    String?
+  nfeValue     Decimal?        @db.Decimal(10, 2)
+  isReverse    Boolean         @default(false)
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  expiresAt    DateTime
+  selectedAt   DateTime?
+  confirmedAt  DateTime?
+  options      QuoteOption[]
+  selection    QuoteSelection?
+  volumes      QuoteVolume[]
+  user         User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status, createdAt])
+  @@index([userId, createdAt])
+  @@index([status, expiresAt])
+  @@map("quotes")
+}
+
+model QuoteVolume {
+  id          String  @id @default(cuid())
+  quoteId     String
+  height      Int
+  width       Int
+  length      Int
+  weight      Decimal @db.Decimal(6, 2)
+  cubicWeight Decimal @db.Decimal(6, 2)
+  quote       Quote   @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+
+  @@index([quoteId])
+  @@map("quote_volumes")
+}
+
+model QuoteOption {
+  id              String   @id @default(cuid())
+  quoteId         String
+  carrierId       String
+  carrierName     String
+  serviceId       String
+  serviceName     String
+  basePriceCents  Int
+  insuranceCents  Int      @default(0)
+  additionalCents Int      @default(0)
+  discountCents   Int      @default(0)
+  totalCents      Int
+  deliveryDays    Int
+  metadata        Json?
+  createdAt       DateTime @default(now())
+  quote           Quote    @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+
+  @@index([quoteId])
+  @@index([quoteId, totalCents])
+  @@map("quote_options")
+}
+
+model QuoteSelection {
+  id           String   @id @default(cuid())
+  quoteId      String   @unique
+  optionId     String
+  carrierName  String
+  serviceName  String
+  totalCents   Int
+  deliveryDays Int
+  selectedAt   DateTime @default(now())
+  quote        Quote    @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+
+  @@index([quoteId])
+  @@map("quote_selections")
+}
+
+model Carrier {
+  id           String                 @id @default(cuid())
+  name         String
+  slug         String                 @unique
+  status       IntegrationStatus      @default(ACTIVE)
+  environment  IntegrationEnvironment @default(PRODUCTION)
+  baseUrl      String?
+  timeout      Int                    @default(30000)
+  maxRetries   Int                    @default(3)
+  logoUrl      String?
+  description  String?
+  createdAt    DateTime               @default(now())
+  updatedAt    DateTime               @updatedAt
+  apiCalls     CarrierApiCall[]
+  credentials  CarrierCredential[]
+  endpoints    CarrierEndpoint[]
+  healthChecks CarrierHealthCheck[]
+  pricingRules CarrierPricingRule[]
+  services     CarrierService[]
+  webhooks     CarrierWebhook[]
+
+  @@index([slug])
+  @@index([status])
+  @@map("carriers")
+}
+
+model CarrierService {
+  id                String   @id @default(cuid())
+  carrierId         String
+  serviceId         String
+  name              String
+  type              String
+  isActive          Boolean  @default(true)
+  minDays           Int?
+  maxDays           Int?
+  requiresInsurance Boolean  @default(false)
+  metadata          Json?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  carrier           Carrier  @relation(fields: [carrierId], references: [id], onDelete: Cascade)
+
+  @@unique([carrierId, serviceId])
+  @@index([carrierId, isActive])
+  @@map("carrier_services")
+}
+
+model CarrierEndpoint {
+  id              String    @id @default(cuid())
+  carrierId       String
+  operation       String
+  method          String
+  path            String
+  timeout         Int?
+  retryable       Boolean   @default(true)
+  requestMapping  Json?
+  responseMapping Json?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  lastTestedAt    DateTime?
+  carrier         Carrier   @relation(fields: [carrierId], references: [id], onDelete: Cascade)
+
+  @@unique([carrierId, operation])
+  @@index([carrierId])
+  @@map("carrier_endpoints")
+}
+
+model CarrierCredential {
+  id            String                 @id @default(cuid())
+  carrierId     String
+  environment   IntegrationEnvironment
+  authType      AuthType
+  apiKey        String?
+  clientId      String?
+  clientSecret  String?
+  username      String?
+  password      String?
+  token         String?
+  tokenUrl      String?
+  scope         String?
+  accessToken   String?
+  refreshToken  String?
+  expiresAt     DateTime?
+  customHeaders Json?
+  isActive      Boolean                @default(true)
+  createdAt     DateTime               @default(now())
+  updatedAt     DateTime               @updatedAt
+  lastRotatedAt DateTime?
+  carrier       Carrier                @relation(fields: [carrierId], references: [id], onDelete: Cascade)
+
+  @@index([carrierId, environment, isActive])
+  @@map("carrier_credentials")
+}
+
+model CarrierPricingRule {
+  id               String   @id @default(cuid())
+  carrierId        String
+  name             String
+  serviceId        String?
+  originStates     String?
+  destStates       String?
+  minWeight        Decimal? @db.Decimal(6, 2)
+  maxWeight        Decimal? @db.Decimal(6, 2)
+  basePriceCents   Int?
+  pricePerKg       Decimal? @db.Decimal(10, 2)
+  insurancePercent Decimal? @db.Decimal(5, 2)
+  additionalFees   Json?
+  isActive         Boolean  @default(true)
+  priority         Int      @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  carrier          Carrier  @relation(fields: [carrierId], references: [id], onDelete: Cascade)
+
+  @@index([carrierId, isActive, priority])
+  @@map("carrier_pricing_rules")
+}
+
+model CarrierWebhook {
+  id           String    @id @default(cuid())
+  carrierId    String
+  eventType    String
+  externalId   String?
+  payload      Json
+  signature    String?
+  status       String
+  processedAt  DateTime?
+  errorMessage String?
+  retryCount   Int       @default(0)
+  maxRetries   Int       @default(5)
+  nextRetryAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  carrier      Carrier   @relation(fields: [carrierId], references: [id], onDelete: Cascade)
+
+  @@index([carrierId, status, nextRetryAt])
+  @@index([externalId])
+  @@index([createdAt])
+  @@map("carrier_webhooks")
+}
+
+model CarrierHealthCheck {
+  id           String       @id @default(cuid())
+  carrierId    String
+  status       HealthStatus
+  responseTime Int?
+  errorMessage String?
+  successRate  Decimal?     @db.Decimal(5, 2)
+  avgLatency   Int?
+  checkedAt    DateTime     @default(now())
+  carrier      Carrier      @relation(fields: [carrierId], references: [id], onDelete: Cascade)
+
+  @@index([carrierId, checkedAt])
+  @@map("carrier_health_checks")
+}
+
+model CarrierApiCall {
+  id           String    @id @default(cuid())
+  carrierId    String
+  operation    String
+  method       String
+  endpoint     String
+  requestBody  Json?
+  responseBody Json?
+  statusCode   Int?
+  startedAt    DateTime
+  completedAt  DateTime?
+  duration     Int?
+  success      Boolean
+  errorMessage String?
+  carrier      Carrier   @relation(fields: [carrierId], references: [id], onDelete: Cascade)
+
+  @@index([carrierId, operation, startedAt])
+  @@index([success, startedAt])
+  @@map("carrier_api_calls")
+}
+
+model PaymentGateway {
+  id             String                 @id @default(cuid())
+  name           String
+  slug           String                 @unique
+  status         IntegrationStatus      @default(ACTIVE)
+  environment    IntegrationEnvironment @default(PRODUCTION)
+  baseUrl        String?
+  timeout        Int                    @default(30000)
+  enabledMethods PaymentMethod[]
+  logoUrl        String?
+  description    String?
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+  credentials    PaymentCredential[]
+  endpoints      PaymentEndpoint[]
+  healthChecks   PaymentHealthCheck[]
+  transactions   PaymentTransaction[]
+  webhooks       PaymentWebhook[]
+
+  @@index([slug])
+  @@index([status])
+  @@map("payment_gateways")
+}
+
+model PaymentCredential {
+  id            String                 @id @default(cuid())
+  gatewayId     String
+  environment   IntegrationEnvironment
+  authType      AuthType
+  merchantId    String?
+  apiKey        String?
+  publicKey     String?
+  secretKey     String?
+  clientId      String?
+  clientSecret  String?
+  accessToken   String?
+  refreshToken  String?
+  expiresAt     DateTime?
+  isActive      Boolean                @default(true)
+  createdAt     DateTime               @default(now())
+  updatedAt     DateTime               @updatedAt
+  lastRotatedAt DateTime?
+  gateway       PaymentGateway         @relation(fields: [gatewayId], references: [id], onDelete: Cascade)
+
+  @@index([gatewayId, environment, isActive])
+  @@map("payment_credentials")
+}
+
+model PaymentEndpoint {
+  id              String         @id @default(cuid())
+  gatewayId       String
+  operation       String
+  method          String
+  path            String
+  timeout         Int?
+  retryable       Boolean        @default(true)
+  requestMapping  Json?
+  responseMapping Json?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  lastTestedAt    DateTime?
+  gateway         PaymentGateway @relation(fields: [gatewayId], references: [id], onDelete: Cascade)
+
+  @@unique([gatewayId, operation])
+  @@index([gatewayId])
+  @@map("payment_endpoints")
+}
+
+model PaymentTransaction {
+  id            String              @id @default(cuid())
+  gatewayId     String
+  externalId    String?
+  referenceId   String              @unique
+  userId        String?
+  method        PaymentMethod
+  status        TransactionStatus   @default(PENDING)
+  amountCents   Int
+  feeCents      Int                 @default(0)
+  netCents      Int
+  cardBrand     String?
+  cardLast4     String?
+  pixKey        String?
+  pixQrCode     String?
+  boletoUrl     String?
+  boletoBarcode String?
+  metadata      Json?
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+  authorizedAt  DateTime?
+  capturedAt    DateTime?
+  paidAt        DateTime?
+  refundedAt    DateTime?
+  ledgerEntries LedgerEntry[]
+  chargebacks   PaymentChargeback[]
+  refunds       PaymentRefund[]
+  gateway       PaymentGateway      @relation(fields: [gatewayId], references: [id])
+  user          User?               @relation(fields: [userId], references: [id])
+
+  @@index([gatewayId, status, createdAt])
+  @@index([userId, status])
+  @@index([referenceId])
+  @@index([externalId])
+  @@map("payment_transactions")
+}
+
+model PaymentRefund {
+  id            String             @id @default(cuid())
+  transactionId String
+  externalId    String?
+  amountCents   Int
+  reason        String?
+  status        String
+  createdAt     DateTime           @default(now())
+  completedAt   DateTime?
+  transaction   PaymentTransaction @relation(fields: [transactionId], references: [id])
+
+  @@index([transactionId])
+  @@map("payment_refunds")
+}
+
+model PaymentChargeback {
+  id            String             @id @default(cuid())
+  transactionId String
+  externalId    String?
+  reason        String
+  amountCents   Int
+  status        String
+  receivedAt    DateTime
+  resolvedAt    DateTime?
+  transaction   PaymentTransaction @relation(fields: [transactionId], references: [id])
+
+  @@index([transactionId])
+  @@map("payment_chargebacks")
+}
+
+model PaymentWebhook {
+  id           String         @id @default(cuid())
+  gatewayId    String
+  eventType    String
+  externalId   String?
+  payload      Json
+  signature    String?
+  status       String
+  processedAt  DateTime?
+  errorMessage String?
+  retryCount   Int            @default(0)
+  maxRetries   Int            @default(5)
+  nextRetryAt  DateTime?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  gateway      PaymentGateway @relation(fields: [gatewayId], references: [id], onDelete: Cascade)
+
+  @@index([gatewayId, status, nextRetryAt])
+  @@index([externalId])
+  @@index([createdAt])
+  @@map("payment_webhooks")
+}
+
+model PaymentHealthCheck {
+  id           String         @id @default(cuid())
+  gatewayId    String
+  status       HealthStatus
+  responseTime Int?
+  errorMessage String?
+  successRate  Decimal?       @db.Decimal(5, 2)
+  avgLatency   Int?
+  checkedAt    DateTime       @default(now())
+  gateway      PaymentGateway @relation(fields: [gatewayId], references: [id], onDelete: Cascade)
+
+  @@index([gatewayId, checkedAt])
+  @@map("payment_health_checks")
+}
+
+model LedgerEntry {
+  id            String              @id @default(cuid())
+  transactionId String?
+  type          LedgerEntryType
+  amountCents   Int
+  accountType   String
+  accountId     String?
+  description   String
+  metadata      Json?
+  createdAt     DateTime            @default(now())
+  transaction   PaymentTransaction? @relation(fields: [transactionId], references: [id])
+
+  @@index([accountType, accountId, createdAt])
+  @@index([transactionId])
+  @@index([type, createdAt])
+  @@map("ledger_entries")
+}
+
+model Collector {
+  id                       String               @id @default(cuid())
+  status                   CollectorStatus      @default(ACTIVE)
+  pfNome                   String
+  pfCnhNumber              String
+  pfCnhCategory            String
+  pfCnhExpires             DateTime
+  pfCelular                String
+  pfWhatsapp               String?
+  pfCep                    String?
+  pfLogradouro             String?
+  pfNumero                 String?
+  pfComplemento            String?
+  pfBairro                 String?
+  pfCidade                 String?
+  pfUf                     String?              @db.VarChar(2)
+  pjRazaoSocial            String
+  pjCnpj                   String               @unique
+  pjCep                    String?
+  pjLogradouro             String?
+  pjNumero                 String?
+  pjComplemento            String?
+  pjBairro                 String?
+  pjCidade                 String?
+  pjUf                     String?              @db.VarChar(2)
+  vehiclePlate             String
+  vehicleBrand             String
+  vehicleModel             String?
+  vehicleYear              String?
+  commissionKind           CommissionKind
+  commissionAmount         Float?
+  commissionAmountPerKm    Float?
+  bankMethodKind           BankMethodKind
+  bankPixType              PixKeyType?
+  bankPixKey               String?
+  bankCode                 String?
+  bankBranch               String?
+  bankAccount              String?
+  bankAccountType          AccountType?
+  bankHolderName           String?
+  bankHolderCnpj           String?
+  createdAt                DateTime             @default(now())
+  updatedAt                DateTime             @updatedAt
+  pfCpf                    String?              @unique
+  pfEmail                  String?              @unique
+  pfEmailVerificationToken String?              @unique
+  pfEmailVerified          Boolean              @default(false)
+  pfEmailVerifiedAt        DateTime?
+  credential               CollectorCredential?
+  documents                CollectorDocument[]
+
+  @@index([status])
+  @@index([pfCpf])
+  @@index([pfEmail])
+  @@index([pjCnpj])
+  @@index([pfCidade, pfUf])
+  @@index([pjCidade, pjUf])
+  @@map("collectors")
+}
+
+model CollectorDocument {
+  id          String    @id @default(cuid())
+  collectorId String
+  type        String
+  filename    String
+  url         String?
+  uploadedAt  DateTime  @default(now())
+  createdAt   DateTime  @default(now())
+  expiresAt   DateTime?
+  issuedAt    DateTime?
+  mimeType    String?
+  size        Int?
+  storageKey  String?
+  updatedAt   DateTime  @updatedAt
+  collector   Collector @relation(fields: [collectorId], references: [id], onDelete: Cascade)
+
+  @@unique([collectorId, type])
+  @@index([collectorId, type])
+  @@map("collector_documents")
+}
+
+model CollectorCredential {
+  id           String    @id @default(cuid())
+  collectorId  String    @unique
+  passwordHash String
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  collector    Collector @relation(fields: [collectorId], references: [id], onDelete: Cascade)
+
+  @@map("collector_credentials")
 }
 
 enum CardBrand {
@@ -101,128 +964,11 @@ enum CardBrand {
   OTHER
 }
 
-model Card {
-  id               String     @id @default(cuid())
-  userId           String
-  user             User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  brand            CardBrand
-  holderName       String
-  last4            String     @db.VarChar(4)
-  expMonth         Int
-  expYear          Int
-  fingerprint      String
-  isDefault        Boolean    @default(false)
-  billingAddressId String?
-  billingAddress   Address?   @relation("BillingAddress", fields: [billingAddressId], references: [id], onDelete: SetNull)
-  vaultToken       String     @unique
-  panCipher        String?
-  createdAt        DateTime   @default(now())
-  updatedAt        DateTime   @updatedAt
-
-  @@index([userId])
-  @@index([userId, isDefault])
-  @@unique([userId, fingerprint])
-  @@map("cards")
-}
-
-model Recipient {
-  id           String   @id @default(cuid())
-  userId       String
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  name         String
-  nameSearch   String
-  email        String?  @db.VarChar(160)
-  document     String?  @db.VarChar(14)
-  phone        String?  @db.VarChar(20)
-  notes        String?  @db.VarChar(280)
-  isDefault    Boolean  @default(false)
-  cep          String   @db.VarChar(8)
-  logradouro   String
-  numero       String   @db.VarChar(20)
-  complemento  String?
-  bairro       String
-  cidade       String
-  uf           String   @db.VarChar(2)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  @@index([userId])
-  @@index([userId, isDefault])
-  @@index([userId, document])
-  @@index([userId, name])
-  @@index([userId, nameSearch])
-  @@map("recipients")
-}
-
-// Modelo de Envio/Remessa
-model Shipment {
-  id               String   @id @default(uuid())
-  trackingCode     String   @unique
-  senderId         String
-  sender           User     @relation("SenderShipments", fields: [senderId], references: [id])
-  recipientId      String
-  recipient        User     @relation("RecipientShipments", fields: [recipientId], references: [id])
-  weight           Float // em kg
-  declaredValue    Float // valor declarado em R$
-  status           String   @default("criado") // "criado", "postado", "em_transporte", "entregue", "cancelado"
-  carrier          String? // transportadora
-  service          String? // serviço (PAC, SEDEX, etc)
-  originCep        String
-  destinationCep   String
-  estimatedDays    Int? // prazo estimado em dias
-  freightCost      Float? // custo do frete em R$
-  postedAt         DateTime?
-  deliveredAt      DateTime?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-
-  // Relacionamentos
-  trackingEvents TrackingEvent[]
-
-  @@index([trackingCode])
-  @@index([senderId])
-  @@index([recipientId])
-  @@index([status])
-  @@map("shipments")
-}
-
-// Modelo de Evento de Rastreamento
-model TrackingEvent {
-  id          String   @id @default(uuid())
-  shipmentId  String
-  shipment    Shipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
-  type        String // "posted", "in_transit", "out_for_delivery", "delivered", "exception"
-  description String
-  city        String?
-  uf          String?  @db.VarChar(2)
-  occurredAt  DateTime @default(now())
-  createdAt   DateTime @default(now())
-
-  @@index([shipmentId])
-  @@index([occurredAt])
-  @@map("tracking_events")
-}
-
-// ============================================================================
-// STAFF AUTHENTICATION (Separate from customer auth)
-// ============================================================================
-
 enum StaffStatus {
   ACTIVE
   BLOCKED
 }
 
-// Modelo de Roles para Staff (separado de User roles)
-model StaffRole {
-  id        String      @id @default(cuid())
-  name      String      @unique // "admin", "operator", "finance", "support"
-  createdAt DateTime    @default(now())
-  users     StaffUser[]
-
-  @@map("staff_roles")
-}
-
-// Modelo de Usuário Staff (Painel Administrativo)
 enum AdminPermission {
   CONTAS
   FINANCEIRO
@@ -235,131 +981,20 @@ enum AdminPermission {
   CONFIGURACOES
 }
 
-model StaffUser {
-  id           String              @id @default(cuid())
-  name         String
-  email        String              @unique
-  passwordHash String              @map("passwordHash")
-  status       StaffStatus         @default(ACTIVE)
-  roleId       String              @map("roleId")
-  role         StaffRole           @relation(fields: [roleId], references: [id], onDelete: Restrict)
-  lastLoginAt  DateTime?           @map("lastLoginAt")
-  lastAccessAt DateTime?           @map("lastAccessAt")
-  phone        String?
-  isSuperAdmin Boolean             @default(false)
-  permissions  AdminPermission[]   @default([])
-  createdAt    DateTime            @default(now()) @map("createdAt")
-  updatedAt    DateTime            @updatedAt @map("updatedAt")
-  auditLogs    StaffAuditLog[]
-
-  @@index([email])
-  @@map("staff_users")
-}
-
-// Modelo de Auditoria de Ações Administrativas
-model StaffAuditLog {
-  id        String     @id @default(cuid())
-  actorId   String?
-  actor     StaffUser? @relation(fields: [actorId], references: [id], onDelete: SetNull)
-  action    String     // "login", "create_staff", "update_role", etc
-  entity    String     // "StaffUser", "User", "Shipment", etc
-  entityId  String?
-  data      Json?      // Dados adicionais da ação
-  createdAt DateTime   @default(now())
-
-  @@index([actorId])
-  @@index([entity, entityId])
-  @@index([createdAt])
-  @@map("staff_audit_logs")
-}
-
-// Modelo de Eventos de Segurança de Usuários
-model UserSecurityEvent {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  type      String   // "PASSWORD_CHANGED", "PASSWORD_RESET", "LOGIN_FAILED", "SESSION_INVALIDATED", etc
-  ip        String?
-  userAgent String?
-  metadata  Json?    // Dados adicionais do evento
-  createdAt DateTime @default(now())
-
-  @@index([userId])
-  @@index([userId, type])
-  @@index([createdAt])
-  @@map("user_security_events")
-}
-
-// Modelo de Token de Reset de Senha
-model PasswordResetToken {
-  id        String    @id @default(cuid())
-  userId    String
-  tokenHash String    @unique // Hash SHA-256 do token (nunca armazenar token em claro)
-  expiresAt DateTime  // Token expira em 1 hora
-  usedAt    DateTime? // Marca quando o token foi utilizado (uso único)
-  createdAt DateTime  @default(now())
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([expiresAt])
-  @@index([tokenHash])
-  @@map("password_reset_tokens")
-}
-
-// ============================================================================
-// WALLET (Carteira Digital)
-// ============================================================================
-
 enum WalletTxType {
-  TOPUP       // Recarga/adição de saldo
-  PURCHASE    // Compra/débito
-  REFUND      // Reembolso
-  WITHDRAW    // Saque
-  ADJUSTMENT  // Ajuste manual
+  TOPUP
+  PURCHASE
+  REFUND
+  WITHDRAW
+  ADJUSTMENT
 }
 
 enum WalletTxStatus {
-  PENDING   // Pendente de confirmação
-  CONFIRMED // Confirmado
-  FAILED    // Falhou
-  CANCELED  // Cancelado
+  PENDING
+  CONFIRMED
+  FAILED
+  CANCELED
 }
-
-model Wallet {
-  id              String              @id @default(cuid())
-  userId          String              @unique
-  availableCents  Int                 @default(0) // Saldo disponível em centavos
-  pendingCents    Int                 @default(0) // Saldo pendente em centavos
-  createdAt       DateTime            @default(now())
-  updatedAt       DateTime            @updatedAt
-  user            User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  transactions    WalletTransaction[]
-
-  @@index([userId])
-  @@map("wallets")
-}
-
-model WalletTransaction {
-  id           String         @id @default(cuid())
-  walletId     String
-  type         WalletTxType
-  status       WalletTxStatus @default(PENDING)
-  amountCents  Int            // Positivo para crédito, negativo para débito
-  title        String?
-  referenceId  String?        @unique // Para idempotência
-  meta         Json?          // Metadados adicionais
-  createdAt    DateTime       @default(now())
-  confirmedAt  DateTime?
-  wallet       Wallet         @relation(fields: [walletId], references: [id], onDelete: Cascade)
-
-  @@index([walletId, status, createdAt])
-  @@index([referenceId])
-  @@map("wallet_transactions")
-}
-
-// ============================================================================
-// SUPPORT (Tickets)
-// ============================================================================
 
 enum SupportTicketStatus {
   OPEN
@@ -380,286 +1015,31 @@ enum SupportAuthorRole {
   AGENT
 }
 
-model SupportTicket {
-  id             String               @id @default(cuid())
-  userId         String?
-  pickupPointId  String?
-  subject        String
-  description    String
-  status         SupportTicketStatus  @default(OPEN)
-  priority       SupportPriority      @default(MEDIUM)
-  assignedTo     String?
-  createdAt      DateTime             @default(now())
-  updatedAt      DateTime             @updatedAt
-  lastActivityAt DateTime             @default(now())
-  tags           Json?
-  user           User?                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  pickupPoint    PickupPoint?         @relation(fields: [pickupPointId], references: [id], onDelete: Cascade)
-  messages       SupportMessage[]
-
-  @@index([status, priority, createdAt])
-  @@index([userId, createdAt])
-  @@index([pickupPointId, createdAt])
-  @@index([assignedTo])
-  @@map("support_tickets")
-}
-
-model SupportMessage {
-  id         String            @id @default(cuid())
-  ticketId   String
-  authorId   String
-  authorRole SupportAuthorRole
-  body       String
-  isInternal Boolean           @default(false)
-  createdAt  DateTime          @default(now())
-  ticket     SupportTicket     @relation(fields: [ticketId], references: [id], onDelete: Cascade)
-  attachments SupportAttachment[]
-
-  @@index([ticketId, createdAt])
-  @@map("support_messages")
-}
-
-model SupportAttachment {
-  id        String         @id @default(cuid())
-  messageId String
-  filename  String
-  url       String
-  size      Int?
-  createdAt DateTime       @default(now())
-  message   SupportMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
-
-  @@index([messageId])
-  @@map("support_attachments")
-}
-
-// ============================================================================
-// PICKUP POINTS (Pontos de Coleta)
-// ============================================================================
-
 enum PickupPointStatus {
   ACTIVE
   BLOCKED
   PENDING
 }
 
-model PickupPoint {
-  id            String             @id @default(cuid())
-  status        PickupPointStatus  @default(ACTIVE)
-
-  // Dados da empresa
-  razaoSocial   String
-  nomeFantasia  String
-  cnpj          String             @unique
-  ie            String?
-  email         String?
-  telefone      String?
-  passwordHash  String?            // Senha para login no portal collector
-
-  // Endereço
-  cep           String?
-  logradouro    String?
-  numero        String?
-  complemento   String?
-  bairro        String?
-  cidade        String?
-  uf            String?            @db.VarChar(2)
-
-  // Geolocalização (JSON para flexibilidade)
-  geo           Json?              // { lat: number, lng: number }
-
-  // Pagamento (JSON para suportar múltiplos tipos)
-  paymentMethod Json               // MetodoPagamento (PIX ou TED)
-  payoutDay     Int?               // Dia do mês para repasse
-  minPayoutAmount Decimal?         @db.Decimal(10, 2)
-
-  // Operacional
-  commissionPerItem Decimal?       @db.Decimal(10, 2)
-  capacityPerDay    Int?
-  monthlyReceived   Int            @default(0)
-
-  createdAt     DateTime           @default(now())
-  updatedAt     DateTime           @updatedAt
-
-  // Relacionamentos
-  receptions    Reception[]
-  supportTickets SupportTicket[]
-
-  @@index([status])
-  @@index([uf, cidade])
-  @@index([cnpj])
-  @@map("pickup_points")
-}
-
-// ============================================================================
-// RECEPTIONS (Recepções/Itens recebidos pelos Pontos de Coleta)
-// ============================================================================
-
 enum ReceptionStatus {
-  PENDING        // Aguardando chegada no ponto de coleta
-  RECEIVED       // Recebido no ponto de coleta (OK)
-  ISSUE_REPORTED // Recebido com problema reportado
-  PROCESSED      // Processado/coletado pela Envio Legal
+  PENDING
+  RECEIVED
+  ISSUE_REPORTED
+  PROCESSED
 }
-
-model Reception {
-  id              String            @id @default(cuid())
-  pickupPointId   String
-  pickupPoint     PickupPoint       @relation(fields: [pickupPointId], references: [id], onDelete: Cascade)
-
-  // Dados da remessa
-  trackingCode    String            @unique
-  senderName      String
-  recipientName   String
-  weight          Float?            // kg
-  declaredValue   Float?            // R$
-
-  // Status e timestamps
-  status          ReceptionStatus   @default(PENDING)
-  expectedAt      DateTime?         // Data prevista de chegada
-  receivedAt      DateTime?         // Data de recebimento pelo ponto
-  processedAt     DateTime?         // Data de coleta pela Envio Legal
-
-  // Problemas reportados
-  issueType       String?           // "damaged", "incomplete", "wrong_address", "other"
-  issueDetails    String?           @db.Text
-  issuePhotos     Json?             // Array de URLs de fotos
-
-  // Comissão
-  commissionCents Int               @default(0) // Comissão em centavos
-
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
-
-  @@index([pickupPointId, status])
-  @@index([pickupPointId, receivedAt])
-  @@index([trackingCode])
-  @@index([status])
-  @@map("receptions")
-}
-
-// ============================================================================
-// QUOTATIONS (Cotações)
-// ============================================================================
 
 enum QuoteStatus {
-  DRAFT       // Cotação em rascunho (apenas calculada, não confirmada)
-  SELECTED    // Opção selecionada pelo usuário
-  CONFIRMED   // Cotação confirmada e paga
-  EXPIRED     // Cotação expirada (após 24h sem confirmação)
-  CANCELED    // Cotação cancelada pelo usuário
+  DRAFT
+  SELECTED
+  CONFIRMED
+  EXPIRED
+  CANCELED
 }
 
 enum DocumentType {
-  NFE         // Nota Fiscal Eletrônica
-  DECLARATION // Declaração de Conteúdo
+  NFE
+  DECLARATION
 }
-
-model Quote {
-  id          String      @id @default(cuid())
-  userId      String
-  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  status      QuoteStatus @default(DRAFT)
-
-  // Dados de origem e destino
-  originCep   String      @db.VarChar(8)
-  destCep     String      @db.VarChar(8)
-
-  // Documento fiscal
-  documentType DocumentType
-  nfeNumber   String?     // Número da NFE (se documentType = NFE)
-  nfeValue    Decimal?    @db.Decimal(10, 2) // Valor da NFE em R$
-
-  // Reversa
-  isReverse   Boolean     @default(false)
-
-  // Timestamps
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-  expiresAt   DateTime    // Cotação expira em 24h
-  selectedAt  DateTime?   // Quando o usuário selecionou uma opção
-  confirmedAt DateTime?   // Quando foi confirmada e paga
-
-  // Relacionamentos
-  volumes     QuoteVolume[]
-  options     QuoteOption[]
-  selection   QuoteSelection?
-
-  @@index([userId, status, createdAt])
-  @@index([userId, createdAt])
-  @@index([status, expiresAt])
-  @@map("quotes")
-}
-
-model QuoteVolume {
-  id       String  @id @default(cuid())
-  quoteId  String
-  quote    Quote   @relation(fields: [quoteId], references: [id], onDelete: Cascade)
-
-  // Dimensões em centímetros
-  height   Int     // Altura (cm)
-  width    Int     // Largura (cm)
-  length   Int     // Comprimento (cm)
-  weight   Decimal @db.Decimal(6, 2) // Peso em kg (max 30kg)
-
-  // Peso cúbico calculado: (A × L × C) / 6000
-  cubicWeight Decimal @db.Decimal(6, 2)
-
-  @@index([quoteId])
-  @@map("quote_volumes")
-}
-
-model QuoteOption {
-  id          String  @id @default(cuid())
-  quoteId     String
-  quote       Quote   @relation(fields: [quoteId], references: [id], onDelete: Cascade)
-
-  // Identificação da transportadora/serviço
-  carrierId   String  // ID da transportadora (ex: "correios", "jadlog")
-  carrierName String  // Nome da transportadora
-  serviceId   String  // ID do serviço (ex: "pac", "sedex", "package")
-  serviceName String  // Nome do serviço
-
-  // Preços em centavos
-  basePriceCents    Int // Preço base do frete
-  insuranceCents    Int @default(0) // Seguro
-  additionalCents   Int @default(0) // Taxas adicionais
-  discountCents     Int @default(0) // Desconto
-  totalCents        Int // Preço total = base + insurance + additional - discount
-
-  // Prazo
-  deliveryDays      Int // Prazo de entrega em dias úteis
-
-  // Dados adicionais (JSON para flexibilidade)
-  metadata          Json? // Dados extras da transportadora
-
-  createdAt         DateTime @default(now())
-
-  @@index([quoteId])
-  @@index([quoteId, totalCents]) // Para ordenação por preço
-  @@map("quote_options")
-}
-
-model QuoteSelection {
-  id         String      @id @default(cuid())
-  quoteId    String      @unique
-  quote      Quote       @relation(fields: [quoteId], references: [id], onDelete: Cascade)
-  optionId   String      // ID da QuoteOption selecionada
-
-  // Dados snapshot da opção selecionada (para auditoria)
-  carrierName    String
-  serviceName    String
-  totalCents     Int
-  deliveryDays   Int
-
-  selectedAt DateTime    @default(now())
-
-  @@index([quoteId])
-  @@map("quote_selections")
-}
-
-// ============================================================================
-// INTEGRATIONS (Integrações - Transportadoras e Pagamentos)
-// ============================================================================
 
 enum IntegrationEnvironment {
   SANDBOX
@@ -689,241 +1069,6 @@ enum HealthStatus {
   UNKNOWN
 }
 
-// ============================================================================
-// CARRIERS (Transportadoras)
-// ============================================================================
-
-model Carrier {
-  id          String              @id @default(cuid())
-  name        String              // Nome da transportadora (ex: Correios, Jadlog)
-  slug        String              @unique // Identificador único (ex: correios, jadlog)
-  status      IntegrationStatus   @default(ACTIVE)
-  environment IntegrationEnvironment @default(PRODUCTION)
-
-  // Configuration
-  baseUrl     String?             // URL base da API
-  timeout     Int                 @default(30000) // Timeout em ms
-  maxRetries  Int                 @default(3)
-
-  // Metadata
-  logoUrl     String?
-  description String?
-
-  createdAt   DateTime            @default(now())
-  updatedAt   DateTime            @updatedAt
-
-  // Relations
-  services    CarrierService[]
-  endpoints   CarrierEndpoint[]
-  credentials CarrierCredential[]
-  pricingRules CarrierPricingRule[]
-  webhooks    CarrierWebhook[]
-  healthChecks CarrierHealthCheck[]
-  apiCalls    CarrierApiCall[]
-
-  @@index([slug])
-  @@index([status])
-  @@map("carriers")
-}
-
-model CarrierService {
-  id          String   @id @default(cuid())
-  carrierId   String
-  carrier     Carrier  @relation(fields: [carrierId], references: [id], onDelete: Cascade)
-
-  serviceId   String   // ID interno do serviço (ex: pac, sedex, package)
-  name        String   // Nome do serviço (ex: PAC, SEDEX, .Package)
-  type        String   // Tipo: express, economic, reverse
-  isActive    Boolean  @default(true)
-
-  // Service characteristics
-  minDays     Int?     // Prazo mínimo em dias
-  maxDays     Int?     // Prazo máximo em dias
-  requiresInsurance Boolean @default(false)
-
-  // Metadata
-  metadata    Json?    // Dados adicionais específicos do serviço
-
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@unique([carrierId, serviceId])
-  @@index([carrierId, isActive])
-  @@map("carrier_services")
-}
-
-model CarrierEndpoint {
-  id          String   @id @default(cuid())
-  carrierId   String
-  carrier     Carrier  @relation(fields: [carrierId], references: [id], onDelete: Cascade)
-
-  operation   String   // quote, create_order, cancel, label, tracking
-  method      String   // GET, POST, PUT, DELETE
-  path        String   // Caminho do endpoint
-
-  // Configuration
-  timeout     Int?     // Override do timeout padrão
-  retryable   Boolean  @default(true)
-
-  // Field mappings
-  requestMapping  Json?  // Mapeamento de campos de request
-  responseMapping Json?  // Mapeamento de campos de response
-
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  lastTestedAt DateTime?
-
-  @@unique([carrierId, operation])
-  @@index([carrierId])
-  @@map("carrier_endpoints")
-}
-
-model CarrierCredential {
-  id          String              @id @default(cuid())
-  carrierId   String
-  carrier     Carrier             @relation(fields: [carrierId], references: [id], onDelete: Cascade)
-
-  environment IntegrationEnvironment
-  authType    AuthType
-
-  // Credentials (encrypted)
-  apiKey      String?             // Para API_KEY
-  clientId    String?             // Para OAUTH2
-  clientSecret String?            // Para OAUTH2 (encrypted)
-  username    String?             // Para BASIC
-  password    String?             // Para BASIC (encrypted)
-  token       String?             // Para BEARER (encrypted)
-
-  // OAuth2 specific
-  tokenUrl    String?
-  scope       String?
-  accessToken String?             // Cached access token (encrypted)
-  refreshToken String?            // Refresh token (encrypted)
-  expiresAt   DateTime?
-
-  // Custom headers
-  customHeaders Json?             // Headers customizados
-
-  isActive    Boolean             @default(true)
-  createdAt   DateTime            @default(now())
-  updatedAt   DateTime            @updatedAt
-  lastRotatedAt DateTime?
-
-  @@index([carrierId, environment, isActive])
-  @@map("carrier_credentials")
-}
-
-model CarrierPricingRule {
-  id          String   @id @default(cuid())
-  carrierId   String
-  carrier     Carrier  @relation(fields: [carrierId], references: [id], onDelete: Cascade)
-
-  name        String   // Nome da regra
-  serviceId   String?  // Serviço específico ou null para geral
-
-  // Geographic rules
-  originStates    String? // UFs de origem (comma-separated)
-  destStates      String? // UFs de destino (comma-separated)
-
-  // Weight/dimension rules
-  minWeight   Decimal? @db.Decimal(6, 2)
-  maxWeight   Decimal? @db.Decimal(6, 2)
-
-  // Pricing
-  basePriceCents    Int?
-  pricePerKg        Decimal? @db.Decimal(10, 2)
-  insurancePercent  Decimal? @db.Decimal(5, 2)
-  additionalFees    Json?    // Taxas adicionais
-
-  isActive    Boolean  @default(true)
-  priority    Int      @default(0) // Ordem de aplicação
-
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@index([carrierId, isActive, priority])
-  @@map("carrier_pricing_rules")
-}
-
-model CarrierWebhook {
-  id          String   @id @default(cuid())
-  carrierId   String
-  carrier     Carrier  @relation(fields: [carrierId], references: [id], onDelete: Cascade)
-
-  // Webhook data
-  eventType   String   // tracking_update, delivery, exception, etc
-  externalId  String?  // Tracking code or external reference
-  payload     Json     // Raw webhook payload
-  signature   String?  // Webhook signature for validation
-
-  // Processing
-  status      String   // pending, processed, failed, retrying
-  processedAt DateTime?
-  errorMessage String?
-  retryCount  Int      @default(0)
-  maxRetries  Int      @default(5)
-  nextRetryAt DateTime?
-
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@index([carrierId, status, nextRetryAt])
-  @@index([externalId])
-  @@index([createdAt])
-  @@map("carrier_webhooks")
-}
-
-model CarrierHealthCheck {
-  id          String       @id @default(cuid())
-  carrierId   String
-  carrier     Carrier      @relation(fields: [carrierId], references: [id], onDelete: Cascade)
-
-  status      HealthStatus
-  responseTime Int?        // Tempo de resposta em ms
-  errorMessage String?
-
-  // Metrics
-  successRate  Decimal?    @db.Decimal(5, 2) // Últimas 24h
-  avgLatency   Int?        // Latência média em ms
-
-  checkedAt   DateTime    @default(now())
-
-  @@index([carrierId, checkedAt])
-  @@map("carrier_health_checks")
-}
-
-model CarrierApiCall {
-  id          String   @id @default(cuid())
-  carrierId   String
-  carrier     Carrier  @relation(fields: [carrierId], references: [id], onDelete: Cascade)
-
-  operation   String   // quote, create_order, tracking, etc
-  method      String
-  endpoint    String
-
-  // Request/Response
-  requestBody  Json?
-  responseBody Json?
-  statusCode   Int?
-
-  // Timing
-  startedAt   DateTime
-  completedAt DateTime?
-  duration    Int?     // Duração em ms
-
-  // Result
-  success     Boolean
-  errorMessage String?
-
-  @@index([carrierId, operation, startedAt])
-  @@index([success, startedAt])
-  @@map("carrier_api_calls")
-}
-
-// ============================================================================
-// PAYMENT GATEWAYS (Gateways de Pagamento)
-// ============================================================================
-
 enum PaymentMethod {
   CREDIT_CARD
   DEBIT_CARD
@@ -943,273 +1088,19 @@ enum TransactionStatus {
   FAILED
 }
 
-model PaymentGateway {
-  id          String              @id @default(cuid())
-  name        String              // Nome do gateway (ex: Stripe, PagSeguro)
-  slug        String              @unique
-  status      IntegrationStatus   @default(ACTIVE)
-  environment IntegrationEnvironment @default(PRODUCTION)
-
-  // Configuration
-  baseUrl     String?
-  timeout     Int                 @default(30000)
-
-  // Enabled methods
-  enabledMethods PaymentMethod[]
-
-  // Metadata
-  logoUrl     String?
-  description String?
-
-  createdAt   DateTime            @default(now())
-  updatedAt   DateTime            @updatedAt
-
-  // Relations
-  credentials PaymentCredential[]
-  endpoints   PaymentEndpoint[]
-  transactions PaymentTransaction[]
-  webhooks    PaymentWebhook[]
-  healthChecks PaymentHealthCheck[]
-
-  @@index([slug])
-  @@index([status])
-  @@map("payment_gateways")
-}
-
-model PaymentCredential {
-  id          String              @id @default(cuid())
-  gatewayId   String
-  gateway     PaymentGateway      @relation(fields: [gatewayId], references: [id], onDelete: Cascade)
-
-  environment IntegrationEnvironment
-  authType    AuthType
-
-  // Credentials (encrypted)
-  merchantId  String?
-  apiKey      String?             // Encrypted
-  publicKey   String?
-  secretKey   String?             // Encrypted
-  clientId    String?
-  clientSecret String?            // Encrypted
-
-  // OAuth2 tokens
-  accessToken String?             // Encrypted
-  refreshToken String?            // Encrypted
-  expiresAt   DateTime?
-
-  isActive    Boolean             @default(true)
-  createdAt   DateTime            @default(now())
-  updatedAt   DateTime            @updatedAt
-  lastRotatedAt DateTime?
-
-  @@index([gatewayId, environment, isActive])
-  @@map("payment_credentials")
-}
-
-model PaymentEndpoint {
-  id          String         @id @default(cuid())
-  gatewayId   String
-  gateway     PaymentGateway @relation(fields: [gatewayId], references: [id], onDelete: Cascade)
-
-  operation   String         // charge, capture, refund, check_status
-  method      String
-  path        String
-
-  timeout     Int?
-  retryable   Boolean        @default(true)
-
-  requestMapping  Json?
-  responseMapping Json?
-
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
-  lastTestedAt DateTime?
-
-  @@unique([gatewayId, operation])
-  @@index([gatewayId])
-  @@map("payment_endpoints")
-}
-
-model PaymentTransaction {
-  id          String            @id @default(cuid())
-  gatewayId   String
-  gateway     PaymentGateway    @relation(fields: [gatewayId], references: [id])
-
-  // Transaction data
-  externalId  String?           // ID da transação no gateway
-  referenceId String            @unique // ID interno da plataforma
-
-  userId      String?
-  user        User?             @relation(fields: [userId], references: [id])
-
-  method      PaymentMethod
-  status      TransactionStatus @default(PENDING)
-
-  // Amounts in cents
-  amountCents Int
-  feeCents    Int               @default(0)
-  netCents    Int               // amount - fee
-
-  // Card data (masked)
-  cardBrand   String?
-  cardLast4   String?
-
-  // Pix data
-  pixKey      String?
-  pixQrCode   String?
-
-  // Boleto data
-  boletoUrl   String?
-  boletoBarcode String?
-
-  // Metadata
-  metadata    Json?
-
-  // Timestamps
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
-  authorizedAt DateTime?
-  capturedAt  DateTime?
-  paidAt      DateTime?
-  refundedAt  DateTime?
-
-  // Relations
-  refunds     PaymentRefund[]
-  chargebacks PaymentChargeback[]
-  ledgerEntries LedgerEntry[]
-
-  @@index([gatewayId, status, createdAt])
-  @@index([userId, status])
-  @@index([referenceId])
-  @@index([externalId])
-  @@map("payment_transactions")
-}
-
-model PaymentRefund {
-  id            String             @id @default(cuid())
-  transactionId String
-  transaction   PaymentTransaction @relation(fields: [transactionId], references: [id])
-
-  externalId    String?            // ID do refund no gateway
-
-  amountCents   Int                // Valor do reembolso
-  reason        String?
-  status        String             // pending, completed, failed
-
-  createdAt     DateTime           @default(now())
-  completedAt   DateTime?
-
-  @@index([transactionId])
-  @@map("payment_refunds")
-}
-
-model PaymentChargeback {
-  id            String             @id @default(cuid())
-  transactionId String
-  transaction   PaymentTransaction @relation(fields: [transactionId], references: [id])
-
-  externalId    String?
-  reason        String
-  amountCents   Int
-  status        String             // received, accepted, contested, won, lost
-
-  receivedAt    DateTime
-  resolvedAt    DateTime?
-
-  @@index([transactionId])
-  @@map("payment_chargebacks")
-}
-
-model PaymentWebhook {
-  id          String         @id @default(cuid())
-  gatewayId   String
-  gateway     PaymentGateway @relation(fields: [gatewayId], references: [id], onDelete: Cascade)
-
-  eventType   String         // payment.paid, payment.refunded, etc
-  externalId  String?
-  payload     Json
-  signature   String?
-
-  status      String         // pending, processed, failed
-  processedAt DateTime?
-  errorMessage String?
-  retryCount  Int            @default(0)
-  maxRetries  Int            @default(5)
-  nextRetryAt DateTime?
-
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
-
-  @@index([gatewayId, status, nextRetryAt])
-  @@index([externalId])
-  @@index([createdAt])
-  @@map("payment_webhooks")
-}
-
-model PaymentHealthCheck {
-  id          String         @id @default(cuid())
-  gatewayId   String
-  gateway     PaymentGateway @relation(fields: [gatewayId], references: [id], onDelete: Cascade)
-
-  status      HealthStatus
-  responseTime Int?
-  errorMessage String?
-
-  successRate  Decimal?      @db.Decimal(5, 2)
-  avgLatency   Int?
-
-  checkedAt   DateTime      @default(now())
-
-  @@index([gatewayId, checkedAt])
-  @@map("payment_health_checks")
-}
-
-// ============================================================================
-// LEDGER (Razão Contábil para Pagamentos)
-// ============================================================================
-
 enum LedgerEntryType {
-  CHARGE        // Cobrança
-  REFUND        // Reembolso
-  CHARGEBACK    // Chargeback
-  FEE           // Taxa
-  PAYOUT        // Repasse
-  ADJUSTMENT    // Ajuste manual
+  CHARGE
+  REFUND
+  CHARGEBACK
+  FEE
+  PAYOUT
+  ADJUSTMENT
 }
-
-model LedgerEntry {
-  id            String             @id @default(cuid())
-  transactionId String?
-  transaction   PaymentTransaction? @relation(fields: [transactionId], references: [id])
-
-  type          LedgerEntryType
-
-  // Amounts in cents (positive = credit, negative = debit)
-  amountCents   Int
-
-  // Account information
-  accountType   String             // platform, user_wallet, partner_payout
-  accountId     String?            // ID da conta (userId, pickupPointId, etc)
-
-  description   String
-  metadata      Json?
-
-  createdAt     DateTime           @default(now())
-
-  @@index([accountType, accountId, createdAt])
-  @@index([transactionId])
-  @@index([type, createdAt])
-  @@map("ledger_entries")
-}
-
-// ============================================================================
-// COLETORES (Collectors)
-// ============================================================================
 
 enum CollectorStatus {
   ACTIVE
-  INACTIVE
   BLOCKED
+  INACTIVE
 
   @@map("collector_status")
 }
@@ -1243,120 +1134,4 @@ enum BankMethodKind {
   TRANSFER
 
   @@map("bank_method_kind")
-}
-
-// Modelo principal de Coletor
-model Collector {
-  id        String          @id @default(cuid())
-  status    CollectorStatus @default(ACTIVE)
-
-  // Dados da Pessoa Física (obrigatório)
-  pfNome        String
-  pfCpf         String?       @unique
-  pfEmail       String?       @unique
-  pfEmailVerified Boolean     @default(false)
-  pfEmailVerificationToken String? @unique
-  pfEmailVerifiedAt DateTime?
-  pfCnhNumber   String
-  pfCnhCategory String
-  pfCnhExpires  DateTime
-  pfCelular     String
-  pfWhatsapp    String?
-
-  // Endereço PF
-  pfCep         String?
-  pfLogradouro  String?
-  pfNumero      String?
-  pfComplemento String?
-  pfBairro      String?
-  pfCidade      String?
-  pfUf          String?       @db.VarChar(2)
-
-  // Dados da Pessoa Jurídica (obrigatório)
-  pjRazaoSocial String
-  pjCnpj        String        @unique
-
-  // Endereço PJ
-  pjCep         String?
-  pjLogradouro  String?
-  pjNumero      String?
-  pjComplemento String?
-  pjBairro      String?
-  pjCidade      String?
-  pjUf          String?       @db.VarChar(2)
-
-  // Veículo
-  vehiclePlate   String
-  vehicleBrand   String
-  vehicleModel   String?
-  vehicleYear    String?
-
-  // Comissão
-  commissionKind      CommissionKind
-  commissionAmount    Float?          // Para FIXA
-  commissionAmountPerKm Float?        // Para POR_KM
-
-  // Banco/PIX
-  bankMethodKind    BankMethodKind
-
-  // PIX fields
-  bankPixType       PixKeyType?
-  bankPixKey        String?
-
-  // Transfer fields
-  bankCode          String?
-  bankBranch        String?
-  bankAccount       String?
-  bankAccountType   AccountType?
-  bankHolderName    String?
-  bankHolderCnpj    String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relacionamentos
-  documents  CollectorDocument[]
-  credential CollectorCredential?
-
-  @@index([status])
-  @@index([pfCpf])
-  @@index([pfEmail])
-  @@index([pjCnpj])
-  @@index([pfCidade, pfUf])
-  @@index([pjCidade, pjUf])
-  @@map("collectors")
-}
-
-// Documentos do coletor (CNH, CRLV, Comprovante de endereço)
-model CollectorDocument {
-  id          String   @id @default(cuid())
-  collectorId String
-  collector   Collector @relation(fields: [collectorId], references: [id], onDelete: Cascade)
-
-  type        String   // "cnh", "crlv", "pf_address_proof"
-  filename    String
-  url         String?  // URL pública ou null se usar storageKey
-  storageKey  String?  // Chave no storage (S3, local, etc)
-  mimeType    String?
-  size        Int?     // Tamanho em bytes
-  issuedAt    DateTime? // Data de emissão do documento
-  expiresAt   DateTime? // Data de vencimento do documento
-  uploadedAt  DateTime @default(now())
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@unique([collectorId, type])
-  @@index([collectorId, type])
-  @@map("collector_documents")
-}
-
-model CollectorCredential {
-  id           String    @id @default(cuid())
-  collectorId  String    @unique
-  collector    Collector @relation(fields: [collectorId], references: [id], onDelete: Cascade)
-  passwordHash String
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-
-  @@map("collector_credentials")
 }

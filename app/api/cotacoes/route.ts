@@ -15,18 +15,28 @@ import {
  * Creates a new quote with shipping options
  */
 export async function POST(request: Request) {
+  const requestId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  console.log(`[API][${requestId}] POST /api/cotacoes - Início`);
+
   try {
     // Authenticate user
+    console.log(`[API][${requestId}] Verificando autenticação...`);
     const session = await getUserSessionFromRequest(request);
     if (!session) {
+      console.warn(`[API][${requestId}] Não autenticado`);
       return NextResponse.json({ message: 'Não autenticado' }, { status: 401 });
     }
+    console.log(`[API][${requestId}] Usuário autenticado:`, { userId: session.userId });
 
     // Parse and validate request body
+    console.log(`[API][${requestId}] Parseando body...`);
     const body = (await request.json()) as unknown;
+    console.log(`[API][${requestId}] Body recebido:`, JSON.stringify(body, null, 2));
+
     const parsed = quoteRequestSchema.safeParse(body);
 
     if (!parsed.success) {
+      console.error(`[API][${requestId}] Validação falhou:`, parsed.error.flatten());
       return NextResponse.json(
         {
           message: 'Dados inválidos',
@@ -37,21 +47,33 @@ export async function POST(request: Request) {
     }
 
     const data: QuoteRequest = parsed.data;
+    console.log(`[API][${requestId}] Dados validados com sucesso`);
 
     // Create quote with shipping options
+    console.log(`[API][${requestId}] Chamando createQuote...`);
     const result = await createQuote(session.userId, data);
+    console.log(`[API][${requestId}] createQuote retornou:`, {
+      quoteId: result.quoteId,
+      resultsCount: result.results.length,
+      hasPontos: !!result.pontosParceiros,
+    });
 
     // Return response matching frontend contract
-    return NextResponse.json(
-      {
-        quoteId: result.quoteId,
-        results: result.results,
-        pontosParceiros: result.pontosParceiros,
-      },
-      { status: 201 }
-    );
+    const response = {
+      quoteId: result.quoteId,
+      results: result.results,
+      pontosParceiros: result.pontosParceiros,
+    };
+    console.log(`[API][${requestId}] Enviando resposta (status 201):`, {
+      quoteId: response.quoteId,
+      resultsCount: response.results.length,
+      firstResult: response.results[0],
+    });
+
+    return NextResponse.json(response, { status: 201 });
   } catch (error) {
-    console.error('[COTACOES_POST]', error);
+    console.error(`[API][${requestId}] ERRO:`, error);
+    console.error(`[API][${requestId}] Stack:`, error instanceof Error ? error.stack : 'N/A');
     const message = error instanceof Error ? error.message : 'Erro ao criar cotação';
     return NextResponse.json({ message }, { status: 500 });
   }
