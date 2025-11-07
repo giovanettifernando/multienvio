@@ -75,9 +75,6 @@ export const finalizeFormSchema = z
     sender: z.object({
       addressId: z.string().optional(),
     }),
-    payment: z.object({
-      method: z.enum(["WALLET", "PIX", "CARD", "BOLETO"]).optional(),
-    }),
   })
   .superRefine((values, ctx) => {
     if (values.document.type === "NFE") {
@@ -121,7 +118,7 @@ export const finalizeFormSchema = z
         }
       }
     } else if (values.document.type === "DECLARACAO") {
-      if (!values.document.declarationItems.length) {
+      if (!values.document.declarationItems?.length) {
         ctx.addIssue({
           path: ["document", "declarationItems"],
           code: z.ZodIssueCode.custom,

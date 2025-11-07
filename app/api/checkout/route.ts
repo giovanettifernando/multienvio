@@ -45,7 +45,6 @@ const checkoutSchema = z.object({
   destinationCep: z.string(),
   estimatedDays: z.number(),
   freightCost: z.number(),
-  paymentMethod: z.enum(['WALLET', 'PIX', 'CARD', 'BOLETO']),
 });
 
 type CheckoutPayload = z.infer<typeof checkoutSchema>;
@@ -90,7 +89,11 @@ export async function POST(request: Request) {
     const trackingCode = `BR${Date.now()}${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
 
     // Preparar documento (priorizar NFE se ambos estiverem preenchidos)
-    const documentData: any = {
+    const documentData: {
+      type: string;
+      nfeKeys?: string[];
+      declarationItems?: Array<{ descricao: string; valorUnitario: number; quantidade: number }>;
+    } = {
       type: data.document.type,
     };
 
@@ -102,6 +105,21 @@ export async function POST(request: Request) {
 
     // Criar shipment dentro de uma transação
     const result = await prisma.$transaction(async (tx) => {
+      // Obter ou criar carteira do usuário
+      let wallet = await tx.wallet.findUnique({
+        where: { userId: session.userId },
+      });
+
+      if (!wallet) {
+        wallet = await tx.wallet.create({
+          data: {
+            userId: session.userId,
+            availableCents: 0,
+            pendingCents: 0,
+          },
+        });
+      }
+
       // Criar envio
       const shipment = await tx.shipment.create({
         data: {
@@ -132,24 +150,14 @@ export async function POST(request: Request) {
           pickupPointId: data.pickupPointId,
           document: documentData,
           status: 'pending_payment', // aguardando pagamento
-          paymentMethod: data.paymentMethod,
+          paymentMethod: null, // Será preenchido após pagamento
         },
       });
 
-      // Criar transação financeira
-      const transaction = await tx.walletTransaction.create({
-        data: {
-          userId: session.userId,
-          type: 'DEBIT', // Débito (saída de dinheiro)
-          amount: data.freightCost,
-          description: `Envio ${trackingCode} - ${data.carrier} ${data.service}`,
-          status: 'PENDING', // Pendente até confirmação de pagamento
-          relatedId: shipment.id,
-          relatedType: 'SHIPMENT',
-        },
-      });
+      // Nota: A transação financeira será criada pelo /api/wallet/debit
+      // quando o usuário confirmar o pagamento no modal
 
-      return { shipment, transaction };
+      return { shipment };
     });
 
     // Verificar se há integração de pagamento configurada
@@ -167,49 +175,15 @@ export async function POST(request: Request) {
       });
     }
 
-    // Sem integração: modo simulado (aprovar automaticamente se método for WALLET)
-    if (data.paymentMethod === 'WALLET') {
-      // Verificar saldo em carteira
-      const user = await prisma.user.findUnique({
-        where: { id: session.userId },
-        select: { walletBalance: true },
-      });
-
-      if (!user || (user.walletBalance ?? 0) < data.freightCost) {
-        return NextResponse.json(
-          { message: 'Saldo insuficiente na carteira' },
-          { status: 400 }
-        );
-      }
-
-      // Debitar da carteira e aprovar envio
-      await prisma.$transaction([
-        prisma.user.update({
-          where: { id: session.userId },
-          data: { walletBalance: { decrement: data.freightCost } },
-        }),
-        prisma.shipment.update({
-          where: { id: result.shipment.id },
-          data: { status: 'ready_for_posting' }, // Pronto para postagem
-        }),
-        prisma.walletTransaction.update({
-          where: { id: result.transaction.id },
-          data: { status: 'COMPLETED' }, // Transação completada
-        }),
-      ]);
-
-      return NextResponse.json({
-        shipmentId: result.shipment.id,
-        trackingCode: result.shipment.trackingCode,
-        source: 'wallet',
-        message: 'Pagamento aprovado via carteira',
-      });
-    }
+    // Nota: Pagamento não é mais processado aqui.
+    // O modal de checkout irá chamar /api/wallet/debit para processar o pagamento.
 
     // Outros métodos: retornar info do envio
     return NextResponse.json({
       shipmentId: result.shipment.id,
       trackingCode: result.shipment.trackingCode,
+      publicTrackingId: result.shipment.publicTrackingId,
+      trackingUrl: `/rastreio/${result.shipment.publicTrackingId}`,
       source: 'mock',
       message: 'Envio criado. Aguardando confirmação de pagamento.',
     });

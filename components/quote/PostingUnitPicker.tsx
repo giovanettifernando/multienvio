@@ -83,7 +83,7 @@ export function PostingUnitPicker() {
         cidade: apiPoint.city || null,
         uf: apiPoint.uf || null,
         geo: apiPoint.lat && apiPoint.lng ? { lat: apiPoint.lat, lng: apiPoint.lng } : null,
-        paymentMethod: {},
+        paymentMethod: { kind: 'pix', pixType: 'random', pixKey: '' },
         payoutDay: null,
         minPayoutAmount: null,
         commissionPerItem: null,

@@ -29,14 +29,23 @@ interface PickupPointWithDistance extends PickupPoint {
 }
 
 // Normalizar pontos para markers
-function toMarkers(points: any[]): Marker[] {
+function toMarkers(points: Array<Record<string, unknown> | PickupPointWithDistance>): Marker[] {
   return points
-    .map((p) => ({
-      id: String(p.id),
-      name: p.nomeFantasia ?? p.name ?? p.razaoSocial ?? p.alias ?? "Unidade",
-      lat: typeof p.geo?.lat === "string" ? parseFloat(p.geo.lat) : p.geo?.lat ?? p.lat,
-      lng: typeof p.geo?.lng === "string" ? parseFloat(p.geo.lng) : p.geo?.lng ?? p.lng,
-    }))
+    .map((p) => {
+      const geo = p.geo as { lat?: number | string; lng?: number | string } | undefined | null;
+      const fallbackLat = 'lat' in p ? (p as Record<string, unknown>).lat : undefined;
+      const fallbackLng = 'lng' in p ? (p as Record<string, unknown>).lng : undefined;
+
+      const latValue = typeof geo?.lat === "string" ? parseFloat(geo.lat) : (geo?.lat ?? fallbackLat) as number;
+      const lngValue = typeof geo?.lng === "string" ? parseFloat(geo.lng) : (geo?.lng ?? fallbackLng) as number;
+
+      return {
+        id: String(p.id),
+        name: (p.nomeFantasia ?? ('name' in p ? p.name : undefined) ?? p.razaoSocial ?? ('alias' in p ? (p as Record<string, unknown>).alias : undefined) ?? "Unidade") as string,
+        lat: latValue,
+        lng: lngValue,
+      };
+    })
     .filter((m) => Number.isFinite(m.lat) && Number.isFinite(m.lng));
 }
 

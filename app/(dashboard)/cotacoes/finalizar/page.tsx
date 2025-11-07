@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   App,
@@ -44,6 +44,7 @@ import type { DocumentType } from "@/types/quote";
 import { useQuoteDraft } from "@/lib/state/quoteDraft";
 import { executeCheckout } from "@/lib/checkout/orchestrator";
 import { useCheckoutStore } from "@/stores/checkout";
+import { CheckoutModal } from "@/components/payments/CheckoutModal";
 
 const dispatchTelemetry = (event: string, detail?: Record<string, unknown>) => {
   if (typeof window === "undefined") return;
@@ -66,6 +67,14 @@ export default function FinalizeQuotePage() {
   const recipientSave = useRecipientSave();
   const createShipment = useShipmentCreate();
   const cartClear = useShipmentsCartClear();
+
+  // Estados para o modal de checkout
+  const [checkoutModalOpen, setCheckoutModalOpen] = useState(false);
+  const [createdShipment, setCreatedShipment] = useState<{
+    id: string;
+    trackingCode: string;
+    totalAmount: number;
+  } | null>(null);
 
   const summary = results?.resumo ?? null;
   const selectedService = selection?.result ?? null;
@@ -122,9 +131,6 @@ export default function FinalizeQuotePage() {
         },
         sender: {
           addressId: "",
-        },
-        payment: {
-          method: "PIX",
         },
       };
     },
@@ -251,7 +257,7 @@ export default function FinalizeQuotePage() {
     }
 
     // Determinar dados do destinatário
-    let recipientData: any;
+    let recipientData: FinalizeFormValues['recipient']['manual'] | undefined;
 
     if (values.recipient.mode === "manual") {
       recipientData = values.recipient.manual;
@@ -264,11 +270,16 @@ export default function FinalizeQuotePage() {
     } else if (values.recipient.mode === "saved" && values.recipient.savedId) {
       // Buscar destinatário salvo (TODO: implementar API para buscar)
       // Por enquanto, usar dados do summary
+      if (!summary.destinoCidade || !summary.destinoUf) {
+        message.error("Dados de destino incompletos.");
+        return;
+      }
       recipientData = {
         nome: "Destinatário Salvo",
         cep: summary.destinoCep,
         cidade: summary.destinoCidade,
         uf: summary.destinoUf,
+        salvarRecorrente: false,
       };
     } else {
       message.error("Selecione ou preencha os dados do destinatário.");
@@ -315,7 +326,7 @@ export default function FinalizeQuotePage() {
           largura: v.larguraCm,
           comprimento: v.comprimentoCm,
         })),
-        insuranceValue: summary.valorSeguro || 0,
+        insuranceValue: summary.seguroValor || 0,
         pickupPointId: pickupAtOrigin ? null : pickupPointId,
         carrier: selectedService.carrier,
         service: selectedService.modalidade,
@@ -323,9 +334,9 @@ export default function FinalizeQuotePage() {
         destinationCep: summary.destinoCep || "",
         estimatedDays: selectedService.prazoDias,
         freightCost: selectedService.preco,
-        paymentMethod: values.payment.method || "PIX",
       };
 
+      // Criar shipment via API
       const res = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -339,28 +350,22 @@ export default function FinalizeQuotePage() {
 
       const out = await res.json();
 
-      // Redirecionar baseado no resultado
-      if (out.paymentUrl) {
-        // Gateway de pagamento externo
-        window.location.href = out.paymentUrl;
-      } else if (out.source === 'wallet') {
-        // Pagamento via carteira aprovado
-        message.success(out.message || "Pagamento aprovado!");
-        router.push(`/shipments`);
-      } else {
-        // Mock ou outros métodos
-        message.info(out.message || "Envio criado com sucesso!");
-        router.push(`/shipments`);
-      }
+      // Guardar informações do shipment e abrir modal de pagamento
+      setCreatedShipment({
+        id: out.shipmentId,
+        trackingCode: out.trackingCode,
+        totalAmount: selectedService.preco,
+      });
+      setCheckoutModalOpen(true);
 
-      dispatchTelemetry("payment_success", {
+      dispatchTelemetry("checkout_created", {
         selectionId: selection.selectionId,
         shipmentId: out.shipmentId,
-        source: out.source,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Erro ao processar pagamento", error);
-      message.error(error?.message ?? "Não foi possível iniciar o pagamento.");
+      const errorMessage = error instanceof Error ? error.message : "Não foi possível iniciar o pagamento.";
+      message.error(errorMessage);
     }
   };
 
@@ -398,24 +403,6 @@ export default function FinalizeQuotePage() {
                 />
                 <Card title="Pagamento">
                   <Space direction="vertical" size={16} style={{ width: "100%" }}>
-                    <Controller
-                      name="payment.method"
-                      control={formMethods.control}
-                      render={({ field }) => (
-                        <Form.Item label="Método preferencial">
-                          <Select
-                            value={field.value}
-                            options={[
-                              { value: "WALLET", label: "Saldo em carteira" },
-                              { value: "PIX", label: "PIX" },
-                              { value: "CARD", label: "Cartão de crédito" },
-                              { value: "BOLETO", label: "Boleto" },
-                            ]}
-                            onChange={field.onChange}
-                          />
-                        </Form.Item>
-                      )}
-                    />
                     <Space direction="vertical" style={{ width: "100%" }}>
                       <Button
                         type="default"
@@ -467,6 +454,17 @@ export default function FinalizeQuotePage() {
           backLabel="Ver outros serviços"
         />
       </form>
+
+      {/* Modal de escolha de pagamento */}
+      {createdShipment && (
+        <CheckoutModal
+          open={checkoutModalOpen}
+          onClose={() => setCheckoutModalOpen(false)}
+          shipmentId={createdShipment.id}
+          totalAmount={createdShipment.totalAmount}
+          trackingCode={createdShipment.trackingCode}
+        />
+      )}
     </FormProvider>
   );
 }

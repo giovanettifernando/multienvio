@@ -44,6 +44,7 @@ model User {
   tokenVersion           Int                  @default(0)
   addresses              Address[]
   cards                  Card[]
+  carts                  Cart[]
   passwordResetTokens    PasswordResetToken[]
   paymentTransactions    PaymentTransaction[]
   quotes                 Quote[]
@@ -141,6 +142,40 @@ model Recipient {
   @@map("recipients")
 }
 
+model Cart {
+  id        String     @id @default(cuid())
+  userId    String
+  status    String     @default("OPEN")
+  totals    Json?
+  meta      Json?
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  items     CartItem[]
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@map("carts")
+}
+
+model CartItem {
+  id             String   @id @default(cuid())
+  cartId         String
+  originAddress  Json
+  destination    Json
+  volumes        Json
+  preferences    Json
+  insuranceValue Decimal?
+  pickupPoint    Json?
+  selectedQuote  Json
+  totals         Json
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  cart           Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+
+  @@index([cartId])
+  @@map("cart_items")
+}
+
 model Shipment {
   id                      String          @id @default(uuid())
   trackingCode            String          @unique
@@ -166,6 +201,8 @@ model Shipment {
   pickupPointId           String?
   document                Json?
   paymentMethod           String?
+  publicTrackingId        String?         @unique @default(cuid())
+  publicTrackingAt        DateTime?       @default(now())
   postedAt                DateTime?
   deliveredAt             DateTime?
   createdAt               DateTime        @default(now())
@@ -178,6 +215,7 @@ model Shipment {
   @@index([senderId])
   @@index([recipientId])
   @@index([status])
+  @@index([publicTrackingId])
   @@map("shipments")
 }
 

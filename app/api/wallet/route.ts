@@ -26,6 +26,8 @@ export async function GET() {
     const balance = await getBalance(session.userId);
 
     return NextResponse.json({
+      balance: balance.availableReais,
+      currency: 'BRL',
       available: balance.availableReais,
       pending: balance.pendingReais,
       availableCents: balance.availableCents,

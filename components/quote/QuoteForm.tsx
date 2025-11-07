@@ -104,12 +104,13 @@ const MAX_VOLUMES = 30;
 const cepRegex = /^\d{5}-?\d{3}$/; // Aceita com ou sem hífen
 
 // Helper para converter endereço em info de header
-const toHeaderInfo = (addr: StoreAddress | null | undefined) => {
+const toHeaderInfo = (addr: StoreAddress | null | undefined | { id: string; cidade: string; uf: string; cep: string; logradouro?: string; numero?: string; apelido?: string; isDefault?: boolean }) => {
   if (!addr) return null;
+  const apelido = 'apelido' in addr ? addr.apelido : undefined;
   return {
     cidade: addr.cidade,
     uf: addr.uf,
-    label: addr.apelido ?? addr.nome ?? `${addr.logradouro}, ${addr.numero}`,
+    label: apelido ?? `${addr.logradouro || ''}, ${addr.numero || ''}`,
     cep: addr.cep,
     isDefault: addr.isDefault ?? false,
   };
@@ -256,7 +257,10 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
   const {
     selectedOriginId,
     selectOrigin,
+    add: addAddress,
   } = useAddressStore();
+
+  const { add: addRecipient } = useRecipientsStore();
 
   const companyAddress = getCompanyDefaultAddress();
 
@@ -313,8 +317,9 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
   }, [storedForm]);
 
   const mapStoreAddressToCompany = useCallback(
-    (address: StoreAddress | null | undefined): CompanyAddress | null => {
+    (address: StoreAddress | { id: string; cidade: string; uf: string; cep: string; logradouro?: string; numero?: string; complemento?: string; bairro?: string; apelido?: string; isDefault?: boolean } | null | undefined): CompanyAddress | null => {
       if (!address) return null;
+      const apelido = 'apelido' in address ? address.apelido : undefined;
       return {
         cep: address.cep,
         logradouro: address.logradouro,
@@ -323,7 +328,7 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
         bairro: address.bairro,
         cidade: address.cidade,
         uf: address.uf,
-        nome: address.apelido,
+        nome: apelido,
       };
     },
     [],

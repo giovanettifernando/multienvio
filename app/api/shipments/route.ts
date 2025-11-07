@@ -1,81 +1,96 @@
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 import { NextRequest, NextResponse } from "next/server";
-import type { Shipment, ShipmentStatus } from "@/src/types/shipments";
+import { getSession } from '@/lib/auth/session';
+import { prisma } from '@/lib/db';
 
-declare global {
-  var __envioShipmentsStore: Shipment[] | undefined;
-}
-
-const getStore = (): Shipment[] => {
-  if (!globalThis.__envioShipmentsStore) {
-    globalThis.__envioShipmentsStore = [];
-  }
-  return globalThis.__envioShipmentsStore;
-};
-
-const setStore = (items: Shipment[]) => {
-  globalThis.__envioShipmentsStore = items;
-};
-
-const matchesQuery = (shipment: Shipment, term: string) => {
-  const normalized = term.trim().toLowerCase();
-  if (!normalized) return true;
-  return [
-    shipment.id,
-    shipment.trackingCode,
-    shipment.recipientName,
-    shipment.recipientCityUf,
-    shipment.carrierName,
-    shipment.serviceName,
-    shipment.createdAt,
-  ]
-    .filter(Boolean)
-    .map((value) => String(value).toLowerCase())
-    .some((value) => value.includes(normalized));
-};
-
-const matchesStatus = (shipment: Shipment, status?: ShipmentStatus | "Todos") => {
-  if (!status || status === "Todos") return true;
-  return shipment.status === status;
+// Mapeamento de status do banco para os status da UI
+const STATUS_MAP: Record<string, string> = {
+  'pending_payment': 'Aguardando coleta',
+  'ready_for_posting': 'Aguardando coleta',
+  'posted': 'Postado',
+  'in_transit': 'Em trânsito',
+  'out_for_delivery': 'Em rota de entrega',
+  'delivered': 'Entregue',
+  'cancelled': 'Cancelado',
+  'payment_failed': 'Cancelado',
 };
 
 export async function GET(request: NextRequest) {
-  const { searchParams } = new URL(request.url);
-  const q = searchParams.get("q") ?? "";
-  const statusParam = (searchParams.get("status") as ShipmentStatus | "Todos" | null) ?? "Todos";
+  try {
+    const session = await getSession();
 
-  const filtered = getStore().filter(
-    (item) => matchesQuery(item, q) && matchesStatus(item, statusParam ?? undefined),
-  );
+    if (!session?.userId) {
+      return NextResponse.json({ message: 'Não autorizado' }, { status: 401 });
+    }
 
-  return NextResponse.json({ items: filtered });
+    const { searchParams } = new URL(request.url);
+    const q = searchParams.get("q") ?? "";
+    const statusParam = searchParams.get("status") ?? "Todos";
+
+    // Buscar shipments do banco de dados
+    const where: any = {
+      senderId: session.userId,
+    };
+
+    // Filtro de busca por texto
+    if (q) {
+      where.OR = [
+        { trackingCode: { contains: q, mode: 'insensitive' } },
+        { recipientName: { contains: q, mode: 'insensitive' } },
+        { destinationCity: { contains: q, mode: 'insensitive' } },
+        { carrier: { contains: q, mode: 'insensitive' } },
+        { service: { contains: q, mode: 'insensitive' } },
+      ];
+    }
+
+    // Filtro de status
+    if (statusParam && statusParam !== "Todos") {
+      // Converter status da UI para status do banco
+      const dbStatus = Object.entries(STATUS_MAP).find(
+        ([_, uiStatus]) => uiStatus === statusParam
+      )?.[0];
+
+      if (dbStatus) {
+        where.status = dbStatus;
+      }
+    }
+
+    const shipments = await prisma.shipment.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      take: 100, // Limitar resultados
+    });
+
+    // Mapear para o formato esperado pela UI
+    const items = shipments.map((s) => ({
+      id: s.id,
+      trackingCode: s.trackingCode,
+      recipientName: s.recipientName || 'Não informado',
+      recipientCityUf: s.destinationCity && s.destinationState
+        ? `${s.destinationCity}/${s.destinationState}`
+        : 'Não informado',
+      carrierName: s.carrier || 'Não informado',
+      serviceName: s.service || 'Não informado',
+      etaDays: s.estimatedDays || 0,
+      expectedDeliveryDate: s.deliveredAt?.toISOString() || undefined,
+      freightValue: s.freightCost || 0,
+      status: STATUS_MAP[s.status] || s.status,
+      createdAt: s.createdAt.toISOString(),
+      labelUrl: undefined, // TODO: implementar geração de etiquetas
+      trackingUrl: undefined, // TODO: implementar URL de rastreamento
+    }));
+
+    return NextResponse.json({ items });
+  } catch (error) {
+    console.error('[SHIPMENTS_LIST]', error);
+    return NextResponse.json(
+      { message: 'Erro ao buscar envios' },
+      { status: 500 }
+    );
+  }
 }
 
-export async function POST(request: NextRequest) {
-  const body = await request.json();
-  const now = new Date();
-  const etaDays = Number(body.etaDays ?? 0);
-  const expectedDeliveryDate = body.expectedDeliveryDate
-    ? new Date(body.expectedDeliveryDate).toISOString()
-    : etaDays > 0
-      ? new Date(now.getTime() + etaDays * 86_400_000).toISOString()
-      : undefined;
-
-  const shipment: Shipment = {
-    id: crypto.randomUUID(),
-    trackingCode: body.trackingCode ?? `BR${Date.now()}BR`,
-    recipientName: body.recipientName ?? "Destinatário",
-    recipientCityUf: body.recipientCityUf ?? "Cidade/UF",
-    carrierName: body.carrierName ?? body.serviceName ?? "Transportadora",
-    serviceName: body.serviceName ?? "Serviço",
-    etaDays,
-    expectedDeliveryDate,
-    freightValue: Number(body.freightValue ?? 0),
-    status: (body.status as ShipmentStatus) ?? "Aguardando coleta",
-    createdAt: now.toISOString(),
-    labelUrl: body.labelUrl ?? undefined,
-    trackingUrl: body.trackingUrl ?? undefined,
-  };
-
-  setStore([shipment, ...getStore()]);
-  return NextResponse.json({ ok: true, shipment });
-}
+// POST /api/shipments foi movido para /api/checkout
+// A criação de shipments agora é feita através do fluxo de checkout

@@ -22,7 +22,7 @@ interface LeafletMapInnerProps {
 }
 
 // Fix default marker icons
-delete (L.Icon.Default.prototype as any)._getIconUrl;
+delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
   iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png",
@@ -162,11 +162,11 @@ export default function LeafletMapInner({
 
   // Global function for popup button
   useEffect(() => {
-    (window as any).selectPickupPoint = (pointId: string) => {
+    (window as Window & { selectPickupPoint?: (pointId: string) => void }).selectPickupPoint = (pointId: string) => {
       onPointClick?.(pointId);
     };
     return () => {
-      delete (window as any).selectPickupPoint;
+      delete (window as Window & { selectPickupPoint?: (pointId: string) => void }).selectPickupPoint;
     };
   }, [onPointClick]);
 

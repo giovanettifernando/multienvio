@@ -16,7 +16,12 @@ export async function GET(request: Request) {
     const q = searchParams.get('q'); // Busca por nome/bairro/cidade
 
     // Filtros base
-    const where: any = {
+    const where: {
+      status: 'ACTIVE' | 'BLOCKED' | 'PENDING';
+      cidade?: { equals: string; mode: 'insensitive' };
+      uf?: string;
+      OR?: Array<{ [key: string]: { contains: string; mode: 'insensitive' } }>;
+    } = {
       status: 'ACTIVE',
     };
 
