@@ -92,13 +92,7 @@ export default function CotacoesPage() {
       title="Cotar envio"
       description="Compare serviços e crie etiquetas de forma rápida com os dados da sua empresa."
     >
-      <ELCard
-        header={{
-          title: "Detalhes da cotação",
-          description:
-            "Informe origem e destino para receber as melhores opções de envio.",
-        }}
-      >
+      <ELCard>
         <QuoteForm defaultOrigin={defaultOrigin} />
       </ELCard>
     </PageShell>

@@ -24,8 +24,6 @@ import type { QuoteSummary, QuoteVolume } from "@/types/quote";
 type ResultsBannerProps = {
   summary: QuoteSummary;
   onEditVolumes: () => void;
-  onEditReminder: () => void;
-  onRemoveReminder: () => void;
 };
 
 const formatVolume = (volume: QuoteVolume, index: number) => {
@@ -50,8 +48,6 @@ const formatCurrency = (value: number | null | undefined) => {
 export function ResultsBanner({
   summary,
   onEditVolumes,
-  onEditReminder,
-  onRemoveReminder,
 }: ResultsBannerProps) {
   const [volumesModalOpen, setVolumesModalOpen] = useState(false);
 
@@ -154,26 +150,6 @@ export function ResultsBanner({
           </Button>
         </Flex>
 
-        <DividerSection />
-
-        <Flex align="center" gap={12} wrap>
-          <Typography.Text strong>Lembrete</Typography.Text>
-          {summary.lembrete ? (
-            <Space size={8}>
-              <Tag color="geekblue">{summary.lembrete}</Tag>
-              <Button type="link" onClick={onEditReminder}>
-                Editar
-              </Button>
-              <Button type="link" danger onClick={onRemoveReminder}>
-                Remover
-              </Button>
-            </Space>
-          ) : (
-            <Button type="link" onClick={onEditReminder}>
-              Adicionar lembrete
-            </Button>
-          )}
-        </Flex>
       </Card>
 
       <Modal

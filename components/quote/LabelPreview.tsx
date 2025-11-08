@@ -1,13 +1,12 @@
 "use client";
 
-import { Card, Space, Tag, Typography } from "antd";
+import { Card, Space, Typography } from "antd";
 
 type LabelPreviewProps = {
   carrier: string;
   modalidade: string;
   prazoDias: number;
   preco: number;
-  lembrete?: string | null;
 };
 
 const currency = new Intl.NumberFormat("pt-BR", {
@@ -20,7 +19,6 @@ export function LabelPreview({
   modalidade,
   prazoDias,
   preco,
-  lembrete,
 }: LabelPreviewProps) {
   return (
     <Card size="small" title="Resumo do serviço">
@@ -46,14 +44,6 @@ export function LabelPreview({
             {currency.format(preco)}
           </Typography.Title>
         </div>
-
-        {lembrete ? (
-          <div>
-            <Typography.Text type="secondary">Lembrete</Typography.Text>
-            <br />
-            <Tag color="geekblue">{lembrete}</Tag>
-          </div>
-        ) : null}
       </Space>
     </Card>
   );

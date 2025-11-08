@@ -1,1 +1,1 @@
-export { GET, POST, DELETE } from "../carrinho/route";
+export { GET, DELETE } from "../carrinho/route";

@@ -198,35 +198,54 @@ export default function FinalizeQuotePage() {
     }, 0);
 
     try {
+      // Obter dados do destinatário (manual ou salvo)
+      const recipientData = values.recipient.mode === 'manual'
+        ? values.recipient.manual
+        : null; // TODO: buscar dados do destinatário salvo se necessário
+
+      // Construir payload no novo formato esperado pelo backend
       const payload = {
-        selectionId: selection.selectionId,
-        quoteId: results.quoteId,
-        transportadora: selectedService.carrier,
-        modalidade: selectedService.modalidade,
-        prazoEstimadoDias: selectedService.prazoDias,
-        preco: selectedService.preco,
-        quantidade: 1,
-        origem: {
+        originAddress: {
           cep: summary.origemCep,
-          cidadeUF: summary.origemCidade && summary.origemUf
-            ? `${summary.origemCidade}/${summary.origemUf}`
-            : undefined,
+          logradouro: 'N/A', // QuoteSummary não tem logradouro de origem
+          numero: 'S/N',
+          bairro: 'N/A',
+          cidade: summary.origemCidade || '',
+          uf: summary.origemUf || '',
         },
-        destino: {
+        destination: {
           cep: summary.destinoCep,
-          cidadeUF: summary.destinoCidade && summary.destinoUf
-            ? `${summary.destinoCidade}/${summary.destinoUf}`
-            : undefined,
+          logradouro: recipientData?.logradouro || 'N/A',
+          numero: recipientData?.numero || 'S/N',
+          bairro: recipientData?.bairro || 'N/A',
+          cidade: summary.destinoCidade || '',
+          uf: summary.destinoUf || '',
+          nome: recipientData?.nome,
+          telefone: recipientData?.telefone,
+          email: recipientData?.email,
+          documento: recipientData?.documento,
+          complemento: recipientData?.complemento,
         },
-        devolucao: summary.devolucao,
-        coleta: summary.coleta,
         volumes: summary.volumes,
-        pesoTotalKg: totalWeight,
-        pesoCubadoTotalKg: totalCubicWeight,
-        documento: values.document?.type ?? "DECLARACAO",
-        aceitouDeclaracao: true,
-        valorSeguro: summary.seguroValor,
-        avisoRecebimento: false,
+        preferences: {
+          pickupRequested: summary.coleta || false,
+          reverse: summary.devolucao || false,
+        },
+        insuranceValue: summary.seguroValor || undefined,
+        pickupPoint: pickupPointId ? { id: pickupPointId } : undefined,
+        selectedQuote: {
+          carrier: selectedService.carrier,
+          serviceCode: selectedService.modalidade,
+          serviceName: selectedService.modalidade,
+          price: selectedService.preco,
+          deadlineDays: selectedService.prazoDias,
+          source: 'mock' as const,
+        },
+        totals: {
+          total: selectedService.preco,
+          subtotal: selectedService.preco,
+          moeda: 'BRL',
+        },
       };
 
       await cartAdd.mutateAsync(payload);
@@ -380,8 +399,6 @@ export default function FinalizeQuotePage() {
           <ResultsBanner
             summary={summary!}
             onEditVolumes={() => router.push("/cotacoes")}
-            onEditReminder={() => {}}
-            onRemoveReminder={() => {}}
           />
 
           <Row gutter={[24, 24]}>
@@ -399,7 +416,6 @@ export default function FinalizeQuotePage() {
                   modalidade={selectedService?.modalidade ?? ""}
                   prazoDias={selectedService?.prazoDias ?? 0}
                   preco={selectedService?.preco ?? 0}
-                  lembrete={summary?.lembrete ?? null}
                 />
                 <Card title="Pagamento">
                   <Space direction="vertical" size={16} style={{ width: "100%" }}>

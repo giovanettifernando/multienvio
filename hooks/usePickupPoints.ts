@@ -40,7 +40,7 @@ export function usePickupPoints({ cidade, uf, q, enabled = true }: UsePickupPoin
       const data: PickupPoint[] = await response.json();
       return data;
     },
-    enabled: enabled && !!(cidade || uf || q),
+    enabled: enabled,
     staleTime: 5 * 60 * 1000, // 5 minutos
   });
 }

@@ -18,9 +18,10 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { shipmentId, amount, reason, trackingCode } = body;
+    const { shipmentId, referenceId: customReferenceId, amount, reason, trackingCode, metadata } = body;
 
-    if (!shipmentId || !amount || amount <= 0) {
+    // Aceita tanto shipmentId (legado) quanto referenceId (novo)
+    if ((!shipmentId && !customReferenceId) || !amount || amount <= 0) {
       return NextResponse.json(
         { message: 'Dados inválidos' },
         { status: 400 }
@@ -30,18 +31,20 @@ export async function POST(request: Request) {
     const amountCents = Math.round(amount * 100);
 
     // referenceId estável para garantir idempotência
-    const referenceId = `shipment:${shipmentId}`;
+    const referenceId = customReferenceId || `shipment:${shipmentId}`;
 
-    // Verificar se o shipment existe
-    const existingShipment = await prisma.shipment.findUnique({
-      where: { id: shipmentId },
-    });
+    // Verificar se o shipment existe (apenas se shipmentId foi fornecido)
+    if (shipmentId) {
+      const existingShipment = await prisma.shipment.findUnique({
+        where: { id: shipmentId },
+      });
 
-    if (!existingShipment) {
-      return NextResponse.json(
-        { message: 'Envio não encontrado' },
-        { status: 404 }
-      );
+      if (!existingShipment) {
+        return NextResponse.json(
+          { message: 'Envio não encontrado' },
+          { status: 404 }
+        );
+      }
     }
 
     // Realizar débito em transação atômica e idempotente
@@ -99,12 +102,17 @@ export async function POST(request: Request) {
             amountCents,
             status: 'CONFIRMED',
             confirmedAt: new Date(),
-            title: `Pagamento envio ${trackingCode || shipmentId}`,
+            title: trackingCode
+              ? `Pagamento envio ${trackingCode}`
+              : shipmentId
+              ? `Pagamento envio ${shipmentId}`
+              : `Pagamento - ${reason || 'compra'}`,
             referenceId, // UNIQUE - garante idempotência
             meta: {
-              shipmentId,
-              trackingCode,
+              ...(shipmentId && { shipmentId }),
+              ...(trackingCode && { trackingCode }),
               reason: reason || 'shipment_payment',
+              ...(metadata && metadata),
             },
           },
         });
@@ -116,12 +124,17 @@ export async function POST(request: Request) {
             amountCents,
             accountType: 'WALLET',
             accountId: wallet.id,
-            description: `Pagamento envio ${trackingCode || shipmentId}`,
+            description: trackingCode
+              ? `Pagamento envio ${trackingCode}`
+              : shipmentId
+              ? `Pagamento envio ${shipmentId}`
+              : `Pagamento - ${reason || 'compra'}`,
             metadata: {
-              shipmentId,
-              trackingCode,
+              ...(shipmentId && { shipmentId }),
+              ...(trackingCode && { trackingCode }),
               userId: session.userId,
               walletTransactionId: transaction.id,
+              ...(metadata && metadata),
             },
           },
         });
@@ -144,9 +157,9 @@ export async function POST(request: Request) {
         }),
       });
 
-    } catch (txError: any) {
+    } catch (txError) {
       // Tratamento especial para P2002 (unique constraint violation)
-      if (txError.code === 'P2002') {
+      if (txError instanceof Error && 'code' in txError && (txError as { code: string }).code === 'P2002') {
         // Buscar a transação existente e retornar sucesso idempotente
         const existingTransaction = await prisma.walletTransaction.findUnique({
           where: { referenceId },
@@ -171,11 +184,11 @@ export async function POST(request: Request) {
       throw txError;
     }
 
-  } catch (error: any) {
+  } catch (error) {
     console.error('[WALLET_DEBIT]', error);
 
     // Saldo insuficiente
-    if (error.code === 'INSUFFICIENT_FUNDS') {
+    if (error instanceof Error && 'code' in error && (error as { code: string }).code === 'INSUFFICIENT_FUNDS') {
       return NextResponse.json(
         {
           ok: false,

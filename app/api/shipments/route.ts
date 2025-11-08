@@ -4,6 +4,7 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from '@/lib/auth/session';
 import { prisma } from '@/lib/db';
+import type { Prisma } from '@prisma/client';
 
 // Mapeamento de status do banco para os status da UI
 const STATUS_MAP: Record<string, string> = {
@@ -30,7 +31,7 @@ export async function GET(request: NextRequest) {
     const statusParam = searchParams.get("status") ?? "Todos";
 
     // Buscar shipments do banco de dados
-    const where: any = {
+    const where: Prisma.ShipmentWhereInput = {
       senderId: session.userId,
     };
 

@@ -1,83 +1,132 @@
-import { NextRequest, NextResponse } from "next/server";
-import type { Cart, CartItem } from "@/types/cart";
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
-export const dynamic = "force-dynamic";
+import { NextResponse } from 'next/server';
+import { getSession } from '@/lib/auth/session';
+import { prisma } from '@/lib/db';
 
-declare global {
-  var __envioCart: Cart | undefined;
-}
-
-function getCartStore(): Cart {
-  if (!globalThis.__envioCart) {
-    globalThis.__envioCart = {
-      items: [],
-      subtotal: 0,
-      descontos: 0,
-      taxas: 0,
-      total: 0,
-      currency: "BRL",
-    };
-  }
-  return globalThis.__envioCart;
-}
-
-function recomputeCartTotals(cart: Cart) {
-  const subtotal = cart.items.reduce(
-    (accumulator, item) => accumulator + item.preco * item.quantidade,
-    0,
-  );
-  const descontos = 0;
-  const taxas = 0;
-  const total = subtotal - descontos + taxas;
-  globalThis.__envioCart = { ...cart, subtotal, descontos, taxas, total };
-}
-
+/**
+ * GET /api/carrinho (alias para /api/cart)
+ * Retorna o carrinho OPEN do usuário logado com seus itens
+ */
 export async function GET() {
-  const cart = getCartStore();
-  recomputeCartTotals(cart);
-  return NextResponse.json(globalThis.__envioCart);
+  try {
+    const session = await getSession();
+
+    if (!session?.userId) {
+      return NextResponse.json({ message: 'Não autorizado' }, { status: 401 });
+    }
+
+    // Buscar carrinho OPEN do usuário
+    let cart = await prisma.cart.findFirst({
+      where: {
+        userId: session.userId,
+        status: 'OPEN',
+      },
+      include: {
+        items: {
+          orderBy: {
+            createdAt: 'asc',
+          },
+        },
+      },
+    });
+
+    // Se não existir, criar um novo carrinho vazio
+    if (!cart) {
+      cart = await prisma.cart.create({
+        data: {
+          userId: session.userId,
+          status: 'OPEN',
+          totals: { total: 0, moeda: 'BRL' },
+        },
+        include: {
+          items: true,
+        },
+      });
+    }
+
+    return NextResponse.json({
+      cart: {
+        id: cart.id,
+        status: cart.status,
+        totals: cart.totals,
+        meta: cart.meta,
+        createdAt: cart.createdAt.toISOString(),
+        updatedAt: cart.updatedAt.toISOString(),
+        items: cart.items.map((item) => ({
+          id: item.id,
+          originAddress: item.originAddress,
+          destination: item.destination,
+          volumes: item.volumes,
+          preferences: item.preferences,
+          insuranceValue: item.insuranceValue ? Number(item.insuranceValue) : undefined,
+          pickupPoint: item.pickupPoint,
+          selectedQuote: item.selectedQuote,
+          totals: item.totals,
+          createdAt: item.createdAt.toISOString(),
+          updatedAt: item.updatedAt.toISOString(),
+        })),
+      },
+    });
+  } catch (error) {
+    console.error('[CART_GET]', error);
+    return NextResponse.json(
+      { message: 'Erro ao buscar carrinho' },
+      { status: 500 }
+    );
+  }
 }
 
-export async function POST(request: NextRequest) {
-  const body = (await request.json()) as Partial<CartItem> & {
-    selectionId: string;
-    quoteId: string;
-  };
-
-  const id = crypto.randomUUID();
-  const item: CartItem = {
-    id,
-    selectionId: body.selectionId,
-    quoteId: body.quoteId,
-    transportadora: body.transportadora ?? "Transportadora",
-    modalidade: body.modalidade ?? "Modalidade",
-    prazoEstimadoDias: body.prazoEstimadoDias ?? 3,
-    preco: body.preco ?? 0,
-    quantidade: body.quantidade ?? 1,
-    origem: body.origem!,
-    destino: body.destino!,
-    devolucao: Boolean(body.devolucao),
-    coleta: Boolean(body.coleta),
-    volumes: body.volumes ?? [],
-    pesoTotalKg: body.pesoTotalKg ?? 0,
-    pesoCubadoTotalKg: body.pesoCubadoTotalKg ?? 0,
-    documento: body.documento ?? "DECLARACAO",
-    aceitouDeclaracao: Boolean(body.aceitouDeclaracao),
-    valorSeguro: body.valorSeguro ?? null,
-    avisoRecebimento: body.avisoRecebimento ?? false,
-    status: body.status ?? "OK",
-  };
-
-  const cart = getCartStore();
-  cart.items.push(item);
-  recomputeCartTotals(cart);
-
-  return NextResponse.json({ ok: true, item });
-}
-
+/**
+ * DELETE /api/carrinho (alias para /api/cart)
+ * Limpa o carrinho do usuário (remove todos os itens)
+ */
 export async function DELETE() {
-  const cart = getCartStore();
-  cart.items = [];
-  recomputeCartTotals(cart);
-  return NextResponse.json({ ok: true });
+  try {
+    const session = await getSession();
+
+    if (!session?.userId) {
+      return NextResponse.json({ message: 'Não autorizado' }, { status: 401 });
+    }
+
+    // Buscar carrinho OPEN
+    const cart = await prisma.cart.findFirst({
+      where: {
+        userId: session.userId,
+        status: 'OPEN',
+      },
+    });
+
+    if (!cart) {
+      return NextResponse.json({ message: 'Carrinho não encontrado' }, { status: 404 });
+    }
+
+    // Remover todos os itens
+    await prisma.cartItem.deleteMany({
+      where: {
+        cartId: cart.id,
+      },
+    });
+
+    // Atualizar totals do carrinho
+    await prisma.cart.update({
+      where: { id: cart.id },
+      data: {
+        totals: { total: 0, moeda: 'BRL' },
+        updatedAt: new Date(),
+      },
+    });
+
+    return NextResponse.json({
+      message: 'Carrinho limpo com sucesso',
+      ok: true,
+    });
+  } catch (error) {
+    console.error('[CART_DELETE]', error);
+    return NextResponse.json(
+      { message: 'Erro ao limpar carrinho' },
+      { status: 500 }
+    );
+  }
 }

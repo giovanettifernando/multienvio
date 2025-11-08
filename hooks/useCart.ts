@@ -1,10 +1,72 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
   Cart,
+  CartItem,
+  CartItemSnapshot,
   CartUpdatableFields,
   CheckoutPayload,
   CheckoutResponse,
 } from "@/types/cart";
+
+// Adapter: converte a nova estrutura do banco para a estrutura legada do frontend
+function adaptCartSnapshot(snapshot: {
+  id: string;
+  status: string;
+  totals: { subtotal?: number; desconto?: number; taxas?: number; total: number; moeda: string };
+  items: CartItemSnapshot[];
+}): Cart {
+  // Converter items da nova estrutura para a estrutura legada
+  const adaptedItems: CartItem[] = snapshot.items.map((item) => ({
+    id: item.id,
+    selectionId: "", // Não existe mais, usar string vazia
+    quoteId: "", // Não existe mais, usar string vazia
+    transportadora: item.selectedQuote.carrier,
+    modalidade: item.selectedQuote.serviceName,
+    prazoEstimadoDias: item.selectedQuote.deadlineDays,
+    prazoDias: item.selectedQuote.deadlineDays,
+    preco: item.selectedQuote.price,
+    quantidade: 1, // Nova estrutura não tem quantidade
+    origem: {
+      cep: item.originAddress.cep,
+      cidadeUF: `${item.originAddress.cidade}/${item.originAddress.uf}`,
+    },
+    destino: {
+      cep: item.destination.cep,
+      cidadeUF: `${item.destination.cidade}/${item.destination.uf}`,
+    },
+    destinatario: {
+      nome: item.destination.nome,
+      cidade: item.destination.cidade,
+      uf: item.destination.uf,
+    },
+    devolucao: item.preferences.reverse || false,
+    coleta: item.preferences.pickupRequested || false,
+    volumes: item.volumes.map((v) => ({
+      id: String(v.idx || 0),
+      comprimentoCm: v.comprimentoCm,
+      larguraCm: v.larguraCm,
+      alturaCm: v.alturaCm,
+      pesoKg: v.pesoKg,
+    })),
+    pesoTotalKg: item.volumes.reduce((sum, v) => sum + v.pesoKg, 0),
+    pesoCubadoTotalKg: item.volumes.reduce((sum, v) => sum + (v.pesoCubadoKg || 0), 0),
+    documento: "DECLARACAO", // Não temos essa info no snapshot
+    aceitouDeclaracao: false,
+    valorSeguro: item.insuranceValue,
+    avisoRecebimento: false,
+    status: "OK",
+  }));
+
+  // Retornar estrutura legada
+  return {
+    items: adaptedItems,
+    subtotal: snapshot.totals.subtotal || snapshot.totals.total,
+    descontos: snapshot.totals.desconto || 0,
+    taxas: snapshot.totals.taxas || 0,
+    total: snapshot.totals.total,
+    currency: "BRL",
+  };
+}
 
 export function useCart() {
   return useQuery<Cart>({
@@ -14,7 +76,9 @@ export function useCart() {
       if (!response.ok) {
         throw new Error("Falha ao carregar carrinho");
       }
-      return (await response.json()) as Cart;
+      const data = await response.json();
+      // A API retorna { cart: { ... } }, extrair e adaptar
+      return adaptCartSnapshot(data.cart);
     },
   });
 }
@@ -23,7 +87,7 @@ export function useCartAdd() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (payload: unknown) => {
-      const response = await fetch("/api/carrinho", {
+      const response = await fetch("/api/cart/items", {
         method: "POST",
         body: JSON.stringify(payload),
         headers: { "Content-Type": "application/json" },
@@ -43,7 +107,7 @@ export function useCartUpdate(itemId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (patch: CartUpdatableFields) => {
-      const response = await fetch(`/api/carrinho/${itemId}`, {
+      const response = await fetch(`/api/cart/items/${itemId}`, {
         method: "PATCH",
         body: JSON.stringify(patch),
         headers: { "Content-Type": "application/json" },
@@ -63,7 +127,7 @@ export function useCartRemove(itemId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async () => {
-      const response = await fetch(`/api/carrinho/${itemId}`, {
+      const response = await fetch(`/api/cart/items/${itemId}`, {
         method: "DELETE",
       });
       if (!response.ok) {
@@ -99,7 +163,7 @@ export function useCartCheckout() {
     mutationFn: async (
       payload: CheckoutPayload,
     ): Promise<CheckoutResponse> => {
-      const response = await fetch("/api/carrinho/checkout", {
+      const response = await fetch("/api/cart/checkout", {
         method: "POST",
         body: JSON.stringify(payload),
         headers: { "Content-Type": "application/json" },

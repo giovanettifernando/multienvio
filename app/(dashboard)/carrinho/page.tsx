@@ -2,28 +2,22 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Col, Flex, Row, Skeleton, Typography, message } from "antd";
-import { useRouter } from "next/navigation";
 import { EmptyCart } from "@/components/cart/EmptyCart";
 import { CartTable } from "@/components/cart/CartTable";
 import { CartSummary } from "@/components/cart/CartSummary";
 import { RemoveItemModal } from "@/components/cart/RemoveItemModal";
+import { CheckoutCartModal } from "@/components/payments/CheckoutCartModal";
 import {
   useCart,
   useCartClear as useCartClearMutation,
   useCartRemove,
   useCartUpdate,
 } from "@/hooks/useCart";
-import {
-  useCartClear as useShipmentsCartClear,
-  useShipmentCreate,
-} from "@/hooks/useShipments";
-// Coletas agora são criadas automaticamente no checkout via finalizar/page.tsx
 import type { CartItem } from "@/types/cart";
 
 type PendingUpdate = { id: string; quantidade: number };
 
 export default function CarrinhoPage() {
-  const router = useRouter();
   const cartQuery = useCart();
 
   const [removeModalOpen, setRemoveModalOpen] = useState(false);
@@ -32,13 +26,16 @@ export default function CarrinhoPage() {
     null,
   );
   const [pendingRemoveId, setPendingRemoveId] = useState<string | null>(null);
-  const [isPayingCart, setIsPayingCart] = useState(false);
+  const [checkoutModalOpen, setCheckoutModalOpen] = useState(false);
+  const [createdShipments, setCreatedShipments] = useState<{
+    cartId: string;
+    shipmentIds: string[];
+    totalAmount: number;
+  } | null>(null);
 
   const updateMutation = useCartUpdate(pendingUpdate?.id ?? "");
   const removeMutation = useCartRemove(pendingRemoveId ?? "");
   const clearMutation = useCartClearMutation();
-  const createShipment = useShipmentCreate();
-  const cartClear = useShipmentsCartClear();
 
   useEffect(() => {
     if (!pendingUpdate?.id) return;
@@ -121,82 +118,40 @@ export default function CarrinhoPage() {
     });
   };
 
-  async function afterCartPaymentSuccess(paidItems: CartItem[]) {
-    for (const item of paidItems) {
-      const trackingCode =
-        item.trackingCode ||
-        `BR${Date.now()}${Math.random().toString(36).slice(2, 7).toUpperCase()}`;
-
-      await createShipment.mutateAsync({
-        trackingCode,
-        recipientName: item.destinatario?.nome || "—",
-        recipientCityUf:
-          item.destinatario?.cidade && item.destinatario?.uf
-            ? `${item.destinatario.cidade}/${item.destinatario.uf}`
-            : item.destino?.cidadeUF ?? "—/--",
-        carrierName: item.transportadora || item.modalidade || "—",
-        etaDays: Number(item.prazoDias ?? item.prazoEstimadoDias ?? 0),
-        expectedDeliveryDate: undefined,
-        freightValue: Number(item.preco ?? 0),
-        status: "Aguardando coleta",
-        labelUrl: item.labelUrl,
-        trackingUrl: item.trackingUrl,
-      });
-
-      // Coletas são criadas automaticamente no checkout (finalizar/page.tsx)
-      // quando pickupAtOrigin está ativado
-    }
-
-    await cartClear.mutateAsync();
-
-    message.success("Pagamento confirmado! Envios registrados com sucesso.");
-    router.push("/shipments");
-  }
-
-  const handlePayCart = async (
-    method: "WALLET" | "PIX" | "CARD" | "BOLETO",
-  ) => {
+  const handlePayCart = async () => {
     if (!cart?.items?.length) {
       message.error("Carrinho vazio.");
       return;
     }
 
     try {
-      setIsPayingCart(true);
-      const response = await fetch("/api/payments/cart/checkout", {
+      // Fazer checkout do carrinho (criar shipments)
+      const response = await fetch("/api/cart/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pagamento: { metodo: method } }),
+        body: JSON.stringify({}), // Checkout de todos os itens
       });
-      const result = await response.json();
 
-      if (!response.ok || result?.ok === false) {
-        throw new Error(result?.mensagem || result?.message || "Falha no pagamento");
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Erro ao processar checkout");
       }
 
-      const itemsToRegister: CartItem[] = cart.items.map((item) => {
-        const matchedLabel =
-          result?.labels?.find?.(
-            (label: { cartItemId?: string }) => label?.cartItemId === item.id,
-          ) ?? null;
+      const result = await response.json();
 
-        return {
-          ...item,
-          trackingCode: matchedLabel?.trackingCode ?? item.trackingCode,
-          labelUrl: matchedLabel?.labelUrl ?? item.labelUrl,
-          trackingUrl: matchedLabel?.trackingUrl ?? item.trackingUrl,
-        };
+      // Guardar informações dos shipments e abrir modal de pagamento
+      setCreatedShipments({
+        cartId: result.cartId,
+        shipmentIds: result.shipmentIds,
+        totalAmount: result.totalAmount,
       });
-
-      await afterCartPaymentSuccess(itemsToRegister);
+      setCheckoutModalOpen(true);
     } catch (error) {
       const errorMessage =
         error instanceof Error
           ? error.message
-          : "Erro ao processar pagamento do carrinho.";
+          : "Não foi possível iniciar o pagamento.";
       message.error(errorMessage);
-    } finally {
-      setIsPayingCart(false);
     }
   };
 
@@ -238,7 +193,6 @@ export default function CarrinhoPage() {
           <CartSummary
             cart={cart}
             isClearing={clearMutation.isPending}
-            isCheckingOut={isPayingCart}
             onClear={handleClearCart}
             onCheckout={handlePayCart}
           />
@@ -252,6 +206,17 @@ export default function CarrinhoPage() {
         onCancel={() => setRemoveModalOpen(false)}
         onConfirm={confirmRemove}
       />
+
+      {/* Modal de escolha de pagamento */}
+      {createdShipments && createdShipments.shipmentIds.length > 0 && (
+        <CheckoutCartModal
+          open={checkoutModalOpen}
+          onClose={() => setCheckoutModalOpen(false)}
+          cartId={createdShipments.cartId}
+          shipmentIds={createdShipments.shipmentIds}
+          totalAmount={createdShipments.totalAmount}
+        />
+      )}
     </>
   );
 }

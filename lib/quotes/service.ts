@@ -264,7 +264,6 @@ export async function createQuote(
       pesoKg: Number(vol.weight),
     })),
     seguroValor: request.seguro ?? null,
-    lembrete: request.lembrete ?? null,
     coleta: request.coleta,
     devolucao: request.devolucao,
   };

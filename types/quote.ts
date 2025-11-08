@@ -29,7 +29,6 @@ export type QuoteFormState = {
   devolucao: boolean;
   volumes: QuoteVolume[];
   seguroValor?: number | null;
-  lembrete?: string | null;
   updatedAt: string;
 };
 
@@ -63,7 +62,6 @@ export type QuoteSummary = {
   destinoUf?: string;
   volumes: QuoteVolume[];
   seguroValor?: number | null;
-  lembrete?: string | null;
   coleta: boolean;
   devolucao: boolean;
 };
@@ -88,7 +86,6 @@ export type QuoteRequestPayload = {
   seguro?: number | null;
   coleta: boolean;
   devolucao: boolean;
-  lembrete?: string | null;
 };
 
 export type QuoteResponsePayload = QuoteResultItem[];

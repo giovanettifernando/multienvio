@@ -55,11 +55,12 @@ export function PostingUnitPicker() {
   const subscribeExternal = usePontosStore((s) => s.subscribeExternal);
 
   // Buscar pontos da API do banco de dados
-  const destinoCidade = results?.resumo?.destinoCidade;
-  const destinoUf = results?.resumo?.destinoUf;
+  // Pontos de coleta devem estar próximos à ORIGEM (onde o cliente postará o envio)
+  const origemCidade = results?.resumo?.origemCidade;
+  const origemUf = results?.resumo?.origemUf;
   const { data: apiPickupPoints, isLoading: isLoadingPickupPoints } = usePickupPoints({
-    cidade: destinoCidade,
-    uf: destinoUf,
+    cidade: origemCidade,
+    uf: origemUf,
   });
 
   // Popul ar store com pontos do banco quando carregarem

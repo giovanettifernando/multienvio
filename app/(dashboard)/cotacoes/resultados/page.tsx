@@ -85,8 +85,6 @@ export default function QuoteResultsPage() {
 
   const summary = results?.resumo ?? null;
   const [sortOrder, setSortOrder] = useState<SortOrder>("price");
-  const [reminderModalOpen, setReminderModalOpen] = useState(false);
-  const [reminderDraft, setReminderDraft] = useState(summary?.lembrete ?? "");
   const [selectedResult, setSelectedResult] = useState<QuoteResultItem | null>(
     null,
   );
@@ -129,27 +127,6 @@ export default function QuoteResultsPage() {
       hasInsuranceValue: Boolean(summary.seguroValor),
     });
   }, [results, sortOrder, summary]);
-
-  useEffect(() => {
-    setReminderDraft(summary?.lembrete ?? "");
-  }, [summary?.lembrete]);
-
-  const handleReminderSave = () => {
-    const trimmed = reminderDraft.trim();
-    updateSummary({ lembrete: trimmed ? trimmed : null });
-    setReminderModalOpen(false);
-    if (trimmed) {
-      message.success("Lembrete atualizado.");
-    } else {
-      message.success("Lembrete removido.");
-    }
-  };
-
-  const handleReminderRemove = () => {
-    updateSummary({ lembrete: null });
-    setReminderDraft("");
-    message.success("Lembrete removido.");
-  };
 
   const handleEditVolumes = () => {
     router.push("/cotacoes");
@@ -325,8 +302,6 @@ export default function QuoteResultsPage() {
         <ResultsBanner
           summary={summary}
           onEditVolumes={handleEditVolumes}
-          onEditReminder={() => setReminderModalOpen(true)}
-          onRemoveReminder={handleReminderRemove}
         />
 
         <ResultsTable
@@ -342,22 +317,6 @@ export default function QuoteResultsPage() {
         onBack={() => router.push("/cotacoes")}
         backLabel="Editar cotação"
       />
-
-      <Modal
-        title="Editar lembrete"
-        open={reminderModalOpen}
-        onCancel={() => setReminderModalOpen(false)}
-        onOk={handleReminderSave}
-        okText="Salvar"
-        cancelText="Cancelar"
-      >
-        <Input
-          value={reminderDraft}
-          onChange={(event) => setReminderDraft(event.target.value.slice(0, 40))}
-          maxLength={40}
-          placeholder="Até 40 caracteres"
-        />
-      </Modal>
 
       <Modal
         title="Informe o valor do seguro"

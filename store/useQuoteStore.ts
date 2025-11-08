@@ -43,7 +43,6 @@ const toSummary = (form: QuoteFormState): QuoteSummary => ({
   devolucao: form.devolucao,
   volumes: form.volumes,
   seguroValor: form.seguroValor ?? null,
-  lembrete: form.lembrete ?? null,
 });
 
 const fromSummary = (summary: QuoteSummary): QuoteFormState => ({
@@ -59,7 +58,6 @@ const fromSummary = (summary: QuoteSummary): QuoteFormState => ({
   devolucao: summary.devolucao,
   volumes: summary.volumes,
   seguroValor: summary.seguroValor ?? null,
-  lembrete: summary.lembrete ?? null,
   updatedAt: nowIso(),
 });
 
@@ -70,7 +68,6 @@ const emptyForm = (): QuoteFormState => ({
   devolucao: false,
   volumes: [],
   seguroValor: null,
-  lembrete: null,
   origemCidade: undefined,
   origemUf: undefined,
   destinoCidade: undefined,
@@ -98,7 +95,6 @@ const mergeSummary = (
   volumes: patch.volumes ?? base.volumes,
   seguroValor:
     patch.seguroValor !== undefined ? patch.seguroValor : base.seguroValor,
-  lembrete: patch.lembrete !== undefined ? patch.lembrete : base.lembrete,
 });
 
 const noopStorage: StateStorage = {

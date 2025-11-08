@@ -171,11 +171,6 @@ const quoteFormSchema = z.object({
       z.undefined(),
     ])
     .optional(),
-  lembrete: z
-    .string()
-    .trim()
-    .max(40, "Lembrete deve ter no máximo 40 caracteres.")
-    .optional(),
   volumes: z
     .array(volumeSchema)
     .min(1, "Adicione ao menos um volume.")
@@ -362,7 +357,6 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
       coleta: storedForm?.coleta ?? false,
       devolucao: storedForm?.devolucao ?? false,
       seguroValor: storedForm?.seguroValor ?? undefined,
-      lembrete: storedForm?.lembrete ?? undefined,
       volumes: defaultVolumes,
     },
   });
@@ -450,10 +444,6 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
   const [clientCepLoading, setClientCepLoading] = useState(false);
   const [clientCepError, setClientCepError] = useState<string | null>(null);
 
-  const [reminderModalOpen, setReminderModalOpen] = useState(false);
-  const [reminderDraft, setReminderDraft] = useState<string>(
-    storedForm?.lembrete ?? "",
-  );
 
   // Estado para modal de adicionar endereço
   const [addressModalOpen, setAddressModalOpen] = useState(false);
@@ -586,7 +576,6 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
     [volumesValues],
   );
 
-  const lembreteValue = watch("lembrete");
   const origemCepValue = watch("origemCep");
   const destinoCepValue = watch("destinoCep");
   const origemAddressValue = watch("origem");
@@ -1150,25 +1139,6 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
     }
   };
 
-  const handleReminderOpen = () => {
-    setReminderDraft(lembreteValue ?? "");
-    setReminderModalOpen(true);
-  };
-
-  const handleReminderSave = () => {
-    const trimmed = reminderDraft.trim();
-    if (trimmed.length > 40) {
-      message.warning("Lembrete deve ter no máximo 40 caracteres.");
-      return;
-    }
-    setValue("lembrete", trimmed || undefined, { shouldDirty: true });
-    setReminderModalOpen(false);
-  };
-
-  const handleReminderRemove = () => {
-    setValue("lembrete", undefined, { shouldDirty: true });
-    setReminderDraft("");
-  };
 
   const normalizeVolumes = (
     volumes: QuoteFormValues["volumes"],
@@ -1199,7 +1169,6 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
       values.seguroValor === undefined || values.seguroValor === null
         ? null
         : Number(values.seguroValor),
-    lembrete: values.lembrete?.trim() || null,
   });
 
   // Handlers de CEP da parte do cliente (onFocus/onBlur)
@@ -1331,7 +1300,6 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
         values.seguroValor === undefined || values.seguroValor === null
           ? null
           : Number(values.seguroValor),
-      lembrete: values.lembrete?.trim() || null,
       volumes: values.volumes.map((item) => ({
         comprimentoCm: Number(item.comprimentoCm) || 0,
         larguraCm: Number(item.larguraCm) || 0,
@@ -1453,13 +1421,7 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
     ? [{ title: "Destinatário" }, { title: "Empresa" }]
     : [{ title: "Origem" }, { title: "Destino" }];
   const companyCardTitle = isReverse ? "2) Destino" : "1) Origem";
-  const companyCardSubtitle = isReverse
-    ? "Endereço que receberá a devolução."
-    : "Endereço onde o envio começa.";
   const clientCardTitle = isReverse ? "1) Origem" : "2) Destino";
-  const clientCardSubtitle = isReverse
-    ? "Quem enviará a devolução."
-    : "Quem receberá o envio.";
   const destinationManualRadioLabel = isReverse
     ? "Informar manualmente o remetente"
     : "Informar manualmente o CEP";
@@ -1538,7 +1500,6 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
   const companyCardContent = (
     <OriginCard
       title={companyCardTitle}
-      subtitle={companyCardSubtitle}
       info={isReverse ? destinoInfo : origemInfo}
     >
       <Form.Item
@@ -1560,7 +1521,6 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
   const clientCardContent = (
     <DestinationCard
       title={clientCardTitle}
-      subtitle={clientCardSubtitle}
       info={clientCardInfo}
       modeSelector={destinationModeSelector}
       tag=
@@ -1751,38 +1711,6 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
                       />
                     </Space>
                   </div>
-
-                  <div>
-                    <Typography.Title level={5} style={{ marginBottom: 8 }}>
-                      Lembrete
-                    </Typography.Title>
-                    {lembreteValue ? (
-                      <Space size={8}>
-                        <Tag>{lembreteValue}</Tag>
-                        <Button type="text" onClick={handleReminderOpen}>
-                          Editar
-                        </Button>
-                        <Button
-                          type="text"
-                          danger
-                          onClick={handleReminderRemove}
-                        >
-                          Remover
-                        </Button>
-                      </Space>
-                    ) : (
-                      <Button type="link" onClick={handleReminderOpen}>
-                        Adicionar lembrete
-                      </Button>
-                    )}
-                    <Typography.Paragraph
-                      type="secondary"
-                      style={{ marginBottom: 0 }}
-                    >
-                      O lembrete aparece no banner de resultados e na
-                      finalização.
-                    </Typography.Paragraph>
-                  </div>
                 </Space>
               </Col>
 
@@ -1834,25 +1762,6 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
           nextLabel={calculateQuotes.isPending ? "Calculando..." : "Próximo"}
         />
       </Form>
-
-      <Modal
-        title="Adicionar lembrete"
-        open={reminderModalOpen}
-        onCancel={() => setReminderModalOpen(false)}
-        onOk={handleReminderSave}
-        okText="Salvar"
-        cancelText="Cancelar"
-      >
-        <Input
-          value={reminderDraft}
-          onChange={(event) => setReminderDraft(event.target.value.slice(0, 40))}
-          maxLength={40}
-          placeholder="Até 40 caracteres"
-        />
-        <Typography.Paragraph type="secondary" style={{ marginTop: 8 }}>
-          Exibido no banner de resultados e na finalização da cotação.
-        </Typography.Paragraph>
-      </Modal>
 
       <AddressModal
         open={addressModalOpen}
