@@ -1,10 +1,22 @@
 import { NextResponse } from 'next/server';
-import { destroySession } from '@/lib/auth/session';
+import { destroySession, getSession } from '@/lib/auth/session';
+import { prisma } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST() {
   try {
+    // Obter sessão atual para invalidar tokens
+    const session = await getSession();
+
+    // Incrementar tokenVersion para invalidar todos os tokens existentes
+    if (session?.userId) {
+      await prisma.user.update({
+        where: { id: session.userId },
+        data: { tokenVersion: { increment: 1 } },
+      });
+    }
+
     // Remover cookie de autenticação
     await destroySession();
 

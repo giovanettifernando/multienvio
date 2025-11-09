@@ -6,8 +6,13 @@ import {
   Controller,
   type Control,
   type FieldArrayWithId,
+  useFormContext,
+  useWatch,
 } from "react-hook-form";
+import { useEffect, useRef, useState } from "react";
 import type { QuoteFormValues } from "./QuoteForm";
+import { MinhasEmbalagensSelect } from "@/components/cotacoes/MinhasEmbalagensSelect";
+import type { PackagingTemplate } from "@/hooks/usePackaging";
 
 export const DEFAULT_CUBAGE_FACTOR = 6000;
 
@@ -39,40 +44,115 @@ const computeCubage = (
   return (length * width * height) / fator;
 };
 
-export function VolumesGrid({
+// Componente interno para gerenciar um volume individual
+function VolumeItem({
+  index,
+  field,
   control,
-  fields,
-  values,
-  onAdd,
+  volumeValue,
+  canRemove,
   onRemove,
-  maxCount,
-  totals,
-  disableRemove,
-}: VolumesGridProps) {
-  const addDisabled = fields.length >= maxCount;
+}: {
+  index: number;
+  field: FieldArrayWithId<QuoteFormValues, "volumes", "id">;
+  control: Control<QuoteFormValues>;
+  volumeValue: QuoteFormValues["volumes"][number];
+  canRemove: boolean;
+  onRemove: () => void;
+}) {
+  const { setValue } = useFormContext<QuoteFormValues>();
+  const [selectedPackagingId, setSelectedPackagingId] = useState<string | undefined>();
+  const [packagingSnapshot, setPackagingSnapshot] = useState<{
+    lengthCm: number;
+    widthCm: number;
+    heightCm: number;
+  } | null>(null);
+
+  // Observar mudanças nos campos de medida
+  const comprimentoCm = useWatch({ control, name: `volumes.${index}.comprimentoCm` });
+  const larguraCm = useWatch({ control, name: `volumes.${index}.larguraCm` });
+  const alturaCm = useWatch({ control, name: `volumes.${index}.alturaCm` });
+
+  // Comparar valores arredondados (2 casas decimais)
+  const round = (val: number | undefined) => {
+    if (val === undefined || val === null) return 0;
+    return Math.round(Number(val) * 100) / 100;
+  };
+
+  // Verificar se o usuário editou manualmente alguma medida
+  useEffect(() => {
+    if (!packagingSnapshot || !selectedPackagingId) return;
+
+    const currentLength = round(comprimentoCm);
+    const currentWidth = round(larguraCm);
+    const currentHeight = round(alturaCm);
+
+    const snapshotLength = round(packagingSnapshot.lengthCm);
+    const snapshotWidth = round(packagingSnapshot.widthCm);
+    const snapshotHeight = round(packagingSnapshot.heightCm);
+
+    // Se qualquer valor diferir do snapshot, desassociar
+    if (
+      currentLength !== snapshotLength ||
+      currentWidth !== snapshotWidth ||
+      currentHeight !== snapshotHeight
+    ) {
+      setSelectedPackagingId(undefined);
+      setPackagingSnapshot(null);
+    }
+  }, [comprimentoCm, larguraCm, alturaCm, packagingSnapshot, selectedPackagingId]);
+
+  const handlePackagingSelect = (value: string | undefined, template: PackagingTemplate | undefined) => {
+    if (template) {
+      // Preencher os campos do volume com as dimensões da embalagem
+      setValue(`volumes.${index}.comprimentoCm`, template.lengthCm, { shouldDirty: true });
+      setValue(`volumes.${index}.larguraCm`, template.widthCm, { shouldDirty: true });
+      setValue(`volumes.${index}.alturaCm`, template.heightCm, { shouldDirty: true });
+
+      // Salvar snapshot para detectar edições manuais
+      setPackagingSnapshot({
+        lengthCm: template.lengthCm,
+        widthCm: template.widthCm,
+        heightCm: template.heightCm,
+      });
+      setSelectedPackagingId(value);
+    } else {
+      // Limpar seleção
+      setSelectedPackagingId(undefined);
+      setPackagingSnapshot(null);
+    }
+  };
+
+  const cubageKg = computeCubage(volumeValue, DEFAULT_CUBAGE_FACTOR);
 
   return (
-    <Space direction="vertical" size={16} style={{ width: "100%" }}>
-      {fields.map((field, index) => {
-        const volumeValue = values?.[index];
-        const cubageKg = computeCubage(volumeValue, DEFAULT_CUBAGE_FACTOR);
-        const canRemove = !disableRemove && fields.length > 1;
-        return (
-          <Card
-            key={field.id}
-            title={`Volume ${index + 1}`}
-            size="small"
-            extra={
-              <Button
-                type="text"
-                danger
-                icon={<DeleteOutlined />}
-                disabled={!canRemove}
-                onClick={() => onRemove(index)}
-              />
-            }
-          >
-            <Row gutter={[16, 12]}>
+    <Card
+      key={field.id}
+      title={`Volume ${index + 1}`}
+      size="small"
+      extra={
+        <Button
+          type="text"
+          danger
+          icon={<DeleteOutlined />}
+          disabled={!canRemove}
+          onClick={onRemove}
+        />
+      }
+    >
+      <Space direction="vertical" size={16} style={{ width: "100%" }}>
+        <Form.Item
+          label="Minhas embalagens"
+          style={{ marginBottom: 0, fontSize: 12, fontWeight: 500 }}
+        >
+          <MinhasEmbalagensSelect
+            value={selectedPackagingId}
+            placeholder="Selecione uma embalagem salva"
+            onChange={handlePackagingSelect}
+          />
+        </Form.Item>
+
+              <Row gutter={[16, 12]}>
               <Col xs={12} md={6}>
                 <Controller
                   control={control}
@@ -201,14 +281,46 @@ export function VolumesGrid({
                   }}
                 />
               </Col>
-            </Row>
-            <div>
-              <Typography.Text type="secondary">
-                Peso cubado:
-              </Typography.Text>{" "}
-              <strong>{formatNumber(cubageKg)} kg</strong>
-            </div>
-          </Card>
+        </Row>
+
+        <div>
+          <Typography.Text type="secondary">
+            Peso cubado:
+          </Typography.Text>{" "}
+          <strong>{formatNumber(cubageKg)} kg</strong>
+        </div>
+      </Space>
+    </Card>
+  );
+}
+
+export function VolumesGrid({
+  control,
+  fields,
+  values,
+  onAdd,
+  onRemove,
+  maxCount,
+  totals,
+  disableRemove,
+}: VolumesGridProps) {
+  const addDisabled = fields.length >= maxCount;
+
+  return (
+    <Space direction="vertical" size={16} style={{ width: "100%" }}>
+      {fields.map((field, index) => {
+        const volumeValue = values?.[index];
+        const canRemove = !disableRemove && fields.length > 1;
+        return (
+          <VolumeItem
+            key={field.id}
+            index={index}
+            field={field}
+            control={control}
+            volumeValue={volumeValue}
+            canRemove={canRemove}
+            onRemove={() => onRemove(index)}
+          />
         );
       })}
 
