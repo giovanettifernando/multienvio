@@ -54,14 +54,9 @@ export function PostingUnitPicker() {
   const setCheckoutPickupPoint = useCheckoutStore((s) => s.setPickupPoint);
   const subscribeExternal = usePontosStore((s) => s.subscribeExternal);
 
-  // Buscar pontos da API do banco de dados
-  // Pontos de coleta devem estar próximos à ORIGEM (onde o cliente postará o envio)
-  const origemCidade = results?.resumo?.origemCidade;
-  const origemUf = results?.resumo?.origemUf;
-  const { data: apiPickupPoints, isLoading: isLoadingPickupPoints } = usePickupPoints({
-    cidade: origemCidade,
-    uf: origemUf,
-  });
+  // Buscar todos os pontos de coleta ativos (sem filtro de localização)
+  // O usuário pode escolher qualquer ponto cadastrado no sistema
+  const { data: apiPickupPoints, isLoading: isLoadingPickupPoints } = usePickupPoints({});
 
   // Popul ar store com pontos do banco quando carregarem
   useEffect(() => {
@@ -105,18 +100,18 @@ export function PostingUnitPicker() {
     return () => unsubscribe();
   }, [subscribeExternal]);
 
-  // Obter coordenadas da origem
+  // Obter coordenadas da origem para cálculo de distância
   const originCoords = useMemo(() => {
-    const uf = results?.resumo.origemUf;
+    const uf = results?.resumo?.origemUf;
     if (!uf) return null;
     return getUFCoordinates(uf);
-  }, [results?.resumo.origemUf]);
+  }, [results?.resumo?.origemUf]);
 
   // Filtrar, calcular distâncias e ordenar pontos
   const unidades = useMemo(() => {
     // Filtrar apenas ativos
     let filtered: PickupPointWithDistance[] = points
-      .filter((p) => p.status === 'active')
+      .filter((p) => p.status === PickupPointStatus.ACTIVE)
       .map((p) => {
         let distance: number | undefined;
 
@@ -173,7 +168,7 @@ export function PostingUnitPicker() {
   }, [points, searchQuery, originCoords]);
 
   const unidadesDisponiveis = unidades.length;
-  const totalPontosAtivos = points.filter((p) => p.status === 'active').length;
+  const totalPontosAtivos = points.filter((p) => p.status === PickupPointStatus.ACTIVE).length;
 
   const handleSelect = (pointId: string) => {
     const point = unidades.find((item) => item.id === pointId);

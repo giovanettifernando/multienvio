@@ -1,200 +1,45 @@
-// Test script for Pickup Points API
-const testPoint = {
-  razaoSocial: "Ponto de Coleta Teste LTDA",
-  nomeFantasia: "Ponto Teste Central",
-  cnpj: "12345678000100",
-  ie: "123456789",
-  email: "contato@pontoteste.com.br",
-  telefone: "11999887766",
-  cep: "01310100",
-  logradouro: "Avenida Paulista",
-  numero: "1000",
-  complemento: "Loja 5",
-  bairro: "Bela Vista",
-  cidade: "São Paulo",
-  uf: "SP",
-  geo: {
-    lat: -23.5617,
-    lng: -46.6561
-  },
-  paymentMethod: {
-    kind: "pix",
-    pixType: "cnpj",
-    pixKey: "12345678000100"
-  },
-  payoutDay: 15,
-  minPayoutAmount: 100.00,
-  commissionPerItem: 2.50,
-  capacityPerDay: 50
-};
+/**
+ * Teste da API de pontos de coleta
+ */
 
-async function login() {
-  const response = await fetch('http://localhost:3000/api/admin/auth/login', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      email: 'admin@enviolegal.com',
-      password: 'admin123',
-    }),
-  });
+async function testPickupPointsAPI() {
+  const baseURL = 'http://localhost:3000';
 
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(`Login failed: ${error.message}`);
-  }
+  console.log('🧪 Testando API de pontos de coleta...\n');
 
-  const cookie = response.headers.get('set-cookie');
-  if (!cookie) {
-    throw new Error('No cookie received');
-  }
-
-  const tokenMatch = cookie.match(/admin_auth=([^;]+)/);
-  if (!tokenMatch) {
-    throw new Error('Token not found in cookie');
-  }
-
-  return tokenMatch[1];
-}
-
-async function createPickupPoint(token) {
-  console.log('\n🔵 Creating pickup point...');
-  const response = await fetch('http://localhost:3000/api/admin/pickup-points', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Cookie': `admin_auth=${token}`,
-    },
-    body: JSON.stringify(testPoint),
-  });
-
-  if (!response.ok) {
-    const error = await response.json();
-    console.error('❌ Failed to create:', error);
-    throw new Error(`Create failed: ${error.message}`);
-  }
-
-  const data = await response.json();
-  console.log('✅ Created:', data.point);
-  return data.point;
-}
-
-async function listPickupPoints(token) {
-  console.log('\n🔵 Listing pickup points...');
-  const response = await fetch('http://localhost:3000/api/admin/pickup-points', {
-    headers: {
-      'Cookie': `admin_auth=${token}`,
-    },
-  });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(`List failed: ${error.message}`);
-  }
-
-  const data = await response.json();
-  console.log(`✅ Found ${data.total} points`);
-  console.log('Items:', data.items);
-  return data;
-}
-
-async function updatePickupPoint(token, id) {
-  console.log('\n🔵 Updating pickup point...');
-  const response = await fetch(`http://localhost:3000/api/admin/pickup-points/${id}`, {
-    method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-      'Cookie': `admin_auth=${token}`,
-    },
-    body: JSON.stringify({
-      nomeFantasia: "Ponto Teste Atualizado",
-      capacityPerDay: 100,
-    }),
-  });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(`Update failed: ${error.message}`);
-  }
-
-  const data = await response.json();
-  console.log('✅ Updated:', data.point);
-  return data.point;
-}
-
-async function toggleStatus(token, id) {
-  console.log('\n🔵 Toggling status...');
-  const response = await fetch(`http://localhost:3000/api/admin/pickup-points/${id}/status`, {
-    method: 'POST',
-    headers: {
-      'Cookie': `admin_auth=${token}`,
-    },
-  });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(`Toggle failed: ${error.message}`);
-  }
-
-  const data = await response.json();
-  console.log('✅ Toggled:', data.point);
-  return data.point;
-}
-
-async function deletePickupPoint(token, id) {
-  console.log('\n🔵 Deleting pickup point...');
-  const response = await fetch(`http://localhost:3000/api/admin/pickup-points/${id}`, {
-    method: 'DELETE',
-    headers: {
-      'Cookie': `admin_auth=${token}`,
-    },
-  });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(`Delete failed: ${error.message}`);
-  }
-
-  const data = await response.json();
-  console.log('✅ Deleted:', data.message);
-}
-
-async function runTests() {
+  // Teste 1: Buscar todos os pontos
+  console.log('1️⃣ GET /api/pickup-points (todos os pontos)');
   try {
-    console.log('🚀 Starting Pickup Points API tests...\n');
-
-    // Login
-    console.log('🔵 Logging in...');
-    const token = await login();
-    console.log('✅ Logged in successfully');
-
-    // Create
-    const created = await createPickupPoint(token);
-
-    // List
-    await listPickupPoints(token);
-
-    // Update
-    await updatePickupPoint(token, created.id);
-
-    // Toggle status
-    await toggleStatus(token, created.id);
-
-    // List again
-    await listPickupPoints(token);
-
-    // Delete
-    await deletePickupPoint(token, created.id);
-
-    // List final
-    await listPickupPoints(token);
-
-    console.log('\n✅ All tests passed!');
+    const res1 = await fetch(`${baseURL}/api/pickup-points`);
+    const data1 = await res1.json();
+    console.log('   Status:', res1.status);
+    console.log('   Pontos retornados:', data1.length);
+    console.log('   Dados:', JSON.stringify(data1, null, 2));
   } catch (error) {
-    console.error('\n❌ Test failed:', error.message);
-    process.exit(1);
+    console.error('   Erro:', error.message);
+  }
+
+  console.log('\n2️⃣ GET /api/pickup-points?cidade=Curitiba&uf=PR');
+  try {
+    const res2 = await fetch(`${baseURL}/api/pickup-points?cidade=Curitiba&uf=PR`);
+    const data2 = await res2.json();
+    console.log('   Status:', res2.status);
+    console.log('   Pontos retornados:', data2.length);
+    console.log('   Dados:', JSON.stringify(data2, null, 2));
+  } catch (error) {
+    console.error('   Erro:', error.message);
+  }
+
+  console.log('\n3️⃣ GET /api/pickup-points?uf=PR');
+  try {
+    const res3 = await fetch(`${baseURL}/api/pickup-points?uf=PR`);
+    const data3 = await res3.json();
+    console.log('   Status:', res3.status);
+    console.log('   Pontos retornados:', data3.length);
+    console.log('   Dados:', JSON.stringify(data3, null, 2));
+  } catch (error) {
+    console.error('   Erro:', error.message);
   }
 }
 
-runTests();
+testPickupPointsAPI().catch(console.error);

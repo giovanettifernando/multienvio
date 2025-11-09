@@ -82,9 +82,10 @@ export default function FinalizeQuotePage() {
 
   useEffect(() => {
     if (!results || !selection) {
-      router.replace("/cotacoes/resultados");
+      message.warning("Selecione uma cotação para continuar.");
+      router.replace("/cotacoes");
     }
-  }, [results, router, selection]);
+  }, [results, router, selection, message]);
 
   const defaultValues: FinalizeFormValues = useMemo(
     () => {

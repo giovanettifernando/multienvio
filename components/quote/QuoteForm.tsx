@@ -45,6 +45,7 @@ import { useQuoteStore } from "@/store/useQuoteStore";
 import type {
   QuoteCalculateResponse,
   QuoteRequestPayload,
+  QuoteResultItem,
   QuoteSummary,
   QuoteVolume,
 } from "@/types/quote";
@@ -59,13 +60,11 @@ import type { Recipient } from "@/types/account";
 import { useAddresses, useAccountRecipients } from "@/hooks/useAccount";
 import { useQuoteDraft } from "@/lib/state/quoteDraft";
 import { RouteModeTag } from "@/components/shipping/RouteModeTag";
-import {
-  RouteSummaryBar,
-  type RouteSummary,
-} from "@/components/shipping/RouteSummaryBar";
 import { RouteCards } from "@/components/shipping/RouteCards";
 import { OriginCard } from "@/components/shipping/OriginCard";
 import { DestinationCard } from "@/components/shipping/DestinationCard";
+import { VolumesTotalizer } from "@/components/quote/VolumesTotalizer";
+import { QuoteResultsSection } from "@/components/quote/QuoteResultsSection";
 import {
   swapRouteValues as swapRouteFormValues,
   type RouteValues as SwapRouteValues,
@@ -470,6 +469,10 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
   );
   const reverseAlertTimer = useRef<number | null>(null);
 
+  // Estado para resultados da cotação
+  const [quoteResults, setQuoteResults] = useState<QuoteResultItem[] | null>(null);
+  const [quoteError, setQuoteError] = useState<string | null>(null);
+
   useEffect(() => {
     return () => {
       if (reverseAlertTimer.current) {
@@ -583,107 +586,13 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
   const origemAddress = origemAddressValue as CompanyAddress | undefined;
   const destinoAddress = destinoAddressValue as CompanyAddress | undefined;
 
-  const formatSummary = useCallback(
-    ({
-      name,
-      city,
-      state,
-      cep,
-      fallback,
-    }: {
-      name?: string | null;
-      city?: string | null;
-      state?: string | null;
-      cep?: string | null;
-      fallback: string;
-    }): RouteSummary => {
-      const trimmedName = name?.trim() || "";
-      const trimmedCity = city?.trim() || "";
-      const trimmedState = state?.trim() || "";
-      const trimmedCep = cep?.trim() || "";
-
-      const location =
-        trimmedCity && trimmedState
-          ? `${trimmedCity} / ${trimmedState}`
-          : "";
-
-      let primary = "";
-      if (trimmedName && location) {
-        primary = `${trimmedName} (${location})`;
-      } else if (trimmedName) {
-        primary = trimmedName;
-      } else if (location) {
-        primary = location;
-      } else if (trimmedCep) {
-        primary = `CEP ${trimmedCep}`;
-      } else {
-        primary = fallback;
-      }
-
-      const secondary = trimmedCep ? `CEP ${trimmedCep}` : undefined;
-
-      return {
-        primary,
-        secondary,
-      };
-    },
-    [],
-  );
-
-  const summaryOrigin = useMemo(
-    () =>
-      formatSummary({
-        name: origemAddress?.nome ?? (isReverse ? "Cliente" : "Empresa"),
-        city:
-          origemAddress?.cidade ??
-          (isReverse ? destinoInfo?.cidade ?? null : origemInfo?.cidade ?? null),
-        state:
-          origemAddress?.uf ??
-          (isReverse ? destinoInfo?.uf ?? null : origemInfo?.uf ?? null),
-        cep: isReverse ? destinoInfo?.cep ?? null : origemInfo?.cep ?? null,
-        fallback: isReverse
-          ? "Origem (cliente não definida)"
-          : "Origem (empresa não definida)",
-      }),
-    [
-      destinoInfo,
-      formatSummary,
-      isReverse,
-      origemAddress,
-      origemInfo,
-    ],
-  );
-
-  const summaryDestination = useMemo(
-    () =>
-      formatSummary({
-        name: destinoAddress?.nome ?? (isReverse ? "Empresa" : "Cliente"),
-        city:
-          destinoAddress?.cidade ??
-          (isReverse ? origemInfo?.cidade ?? null : destinoInfo?.cidade ?? null),
-        state:
-          destinoAddress?.uf ??
-          (isReverse ? origemInfo?.uf ?? null : destinoInfo?.uf ?? null),
-        cep: isReverse ? origemInfo?.cep ?? null : destinoInfo?.cep ?? null,
-        fallback: isReverse
-          ? "Destino (empresa não definido)"
-          : "Destino (cliente não definido)",
-      }),
-    [
-      destinoAddress,
-      destinoInfo,
-      formatSummary,
-      isReverse,
-      origemInfo,
-    ],
-  );
 
   const canSubmit =
     !calculateQuotes.isPending &&
-    selectedOriginId && // Verificar se remetente foi selecionado
-    (destinationMode === "manual" || selectedRecipientId) && // Verificar se destinatário foi selecionado (quando não manual)
-    cepStatus.origem &&
-    cepStatus.destino;
+    Boolean(selectedOriginId) && // Verificar se remetente foi selecionado
+    (destinationMode === "manual" || Boolean(selectedRecipientId)) && // Verificar se destinatário foi selecionado (quando não manual)
+    Boolean(cepStatus.origem) &&
+    Boolean(cepStatus.destino);
 
   // Debug: log canSubmit status
   console.log('[DEBUG canSubmit]', {
@@ -1337,6 +1246,8 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
 
       if (!normalized.results.length) {
         console.warn(`[FORM][${formRequestId}] Nenhum resultado retornado!`);
+        setQuoteResults([]);
+        setQuoteError(null);
         message.warning(
           "Nenhum serviço disponível para os parâmetros informados.",
         );
@@ -1360,6 +1271,10 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
       });
       console.log(`[FORM][${formRequestId}] Store atualizado!`);
 
+      // Atualizar estado local para exibir resultados
+      setQuoteResults(normalized.results);
+      setQuoteError(null);
+
       dispatchTelemetry("quote_form_submit", {
         quoteId,
         volumesCount: values.volumes.length,
@@ -1370,9 +1285,8 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
         hasInsuranceValue: Boolean(payload.seguro),
       });
 
-      console.log(`[FORM][${formRequestId}] Redirecionando para /cotacoes/resultados?quoteId=${quoteId}`);
-      router.push(`/cotacoes/resultados?quoteId=${quoteId}`);
       console.log(`[FORM][${formRequestId}] ========== FIM DO SUBMIT (SUCESSO) ==========`);
+      message.success(`${normalized.results.length} ${normalized.results.length === 1 ? "cotação encontrada" : "cotações encontradas"}`);
     } catch (error) {
       console.error(`[FORM][${formRequestId}] ========== ERRO CAPTURADO ==========`);
       console.error(`[FORM][${formRequestId}] Error:`, error);
@@ -1383,6 +1297,9 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
 
       // Mostrar mensagem de erro específica se disponível
       const errorMessage = error instanceof Error ? error.message : String(error);
+
+      setQuoteResults(null);
+      setQuoteError(errorMessage);
 
       if (errorMessage.includes("Validação falhou:")) {
         // Erro de validação - mostrar detalhes
@@ -1502,19 +1419,49 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
       title={companyCardTitle}
       info={isReverse ? destinoInfo : origemInfo}
     >
-      <Form.Item
-        label="Endereço selecionado"
-        required
-        colon={false}
-        style={{ marginBottom: 0 }}
-      >
-        <AddressSelect
-          value={selectedOriginId}
-          onChange={handleAddressChange}
-          onAddAddress={handleAddressModalOpen}
-          placeholder={origemPlaceholder}
-        />
-      </Form.Item>
+      <Space direction="vertical" size={16} style={{ width: "100%" }}>
+        <Form.Item
+          label="Endereço selecionado"
+          required
+          colon={false}
+          style={{ marginBottom: 0 }}
+        >
+          <AddressSelect
+            value={selectedOriginId}
+            onChange={handleAddressChange}
+            onAddAddress={handleAddressModalOpen}
+            placeholder={origemPlaceholder}
+          />
+        </Form.Item>
+
+        {!isReverse && (
+          <Controller
+            control={control}
+            name="coleta"
+            render={({ field }) => (
+              <Flex align="center" gap={12}>
+                <Switch
+                  checked={field.value}
+                  onChange={(checked) => {
+                    field.onChange(checked);
+                    setPickupAtOrigin(checked);
+                  }}
+                  disabled={calculateQuotes.isPending}
+                />
+                <div>
+                  <Typography.Text>
+                    Solicitar coleta na origem
+                  </Typography.Text>
+                  <br />
+                  <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                    Disponível para CEPs com cobertura de coleta
+                  </Typography.Text>
+                </div>
+              </Flex>
+            )}
+          />
+        )}
+      </Space>
     </OriginCard>
   );
 
@@ -1609,52 +1556,48 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
   return (
     <FormProvider {...formMethods}>
       <Form layout="vertical" onFinish={handleSubmit(onSubmit)}>
-        <Card>
-          <Space direction="vertical" size={32} style={{ width: "100%" }}>
-            <RouteSummaryBar
-              origin={summaryOrigin}
-              destination={summaryDestination}
-              isReverse={isReverse}
-              extra={reverseToggle}
+        <Space direction="vertical" size={24} style={{ width: "100%" }}>
+          {reverseAlertVisible && reverseAlertMessage ? (
+            <Alert
+              type="info"
+              showIcon
+              message={reverseAlertMessage}
             />
+          ) : null}
 
-            {reverseAlertVisible && reverseAlertMessage ? (
-              <Alert
-                type="info"
-                showIcon
-                message={reverseAlertMessage}
-              />
-            ) : null}
-
-            <RouteModeTag isReverse={isReverse}>
-              <Space direction="vertical" size={24} style={{ width: "100%" }}>
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    flexWrap: "wrap",
-                    gap: 16,
-                  }}
-                >
-                  <Steps
-                    size="small"
-                    items={routeStepsItems}
-                    current={routeStepsItems.length - 1}
+          <Card>
+            <Space direction="vertical" size={24} style={{ width: "100%" }}>
+              <Flex align="center" justify="space-between" wrap gap={16}>
+                <Typography.Title level={5} style={{ margin: 0 }}>
+                  Configurar envio
+                </Typography.Title>
+                <Space size={8} align="center">
+                  <Switch
+                    checked={isReverse}
+                    onChange={handleReverseToggle}
+                    checkedChildren="Reversa"
+                    unCheckedChildren="Envio"
+                    disabled={calculateQuotes.isPending}
+                    aria-label="Alternar Logística Reversa"
                   />
-                </div>
+                  <Typography.Text strong>Logística Reversa</Typography.Text>
+                </Space>
+              </Flex>
 
+              <RouteModeTag isReverse={isReverse}>
                 <RouteCards
                   isReverse={isReverse}
                   originCard={originCardNode}
                   destinationCard={destinationCardNode}
                 />
-              </Space>
-            </RouteModeTag>
+              </RouteModeTag>
+            </Space>
+          </Card>
 
-            <Row gutter={[32, 24]}>
-              <Col xs={24} lg={10}>
-                <Space direction="vertical" size={24} style={{ width: "100%" }}>
+          <Row gutter={[24, 24]}>
+            <Col xs={24} lg={12}>
+              <Space direction="vertical" size={16} style={{ width: "100%" }}>
+                <Card size="small">
                   <Controller
                     control={control}
                     name="seguroValor"
@@ -1663,6 +1606,7 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
                         label="Valor do seguro (R$)"
                         validateStatus={fieldState.error ? "error" : undefined}
                         help={fieldState.error?.message}
+                        style={{ marginBottom: 0 }}
                       >
                         <InputNumber
                           {...field}
@@ -1676,91 +1620,53 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
                       </Form.Item>
                     )}
                   />
+                </Card>
 
-                  <div>
-                    <Typography.Title level={5}>Preferências</Typography.Title>
-                    <Space
-                      direction="vertical"
-                      size={12}
-                      style={{ width: "100%" }}
-                    >
-                      <Controller
-                        control={control}
-                        name="coleta"
-                        render={({ field }) => (
-                          <Flex align="center" gap={12}>
-                            <Switch
-                              checked={field.value}
-                              onChange={(checked) => {
-                                field.onChange(checked);
-                                setPickupAtOrigin(checked);
-                              }}
-                              disabled={calculateQuotes.isPending}
-                            />
-                            <div>
-                              <Typography.Text>
-                                Solicitar coleta na origem
-                              </Typography.Text>
-                              <br />
-                              <Typography.Text type="secondary">
-                                Disponível para CEPs com cobertura de coleta
-                              </Typography.Text>
-                            </div>
-                          </Flex>
-                        )}
-                      />
-                    </Space>
-                  </div>
-                </Space>
-              </Col>
+                <VolumesTotalizer
+                  volumeCount={fields.length}
+                  totalPesoCubadoKg={totals.pesoCubadoKg}
+                />
 
-              <Col xs={24} lg={14}>
-                <Space direction="vertical" size={24} style={{ width: "100%" }}>
-                  <div>
-                    <Typography.Title level={4} style={{ marginBottom: 4 }}>
-                      Volumes do envio
-                    </Typography.Title>
-                    <Typography.Text type="secondary">
-                      Informe medidas internas e peso de cada volume
-                    </Typography.Text>
-                  </div>
+                <Card>
+                  <Space direction="vertical" size={16} style={{ width: "100%" }}>
+                    <div>
+                      <Typography.Title level={5} style={{ marginBottom: 4 }}>
+                        Volumes do envio
+                      </Typography.Title>
+                      <Typography.Text type="secondary">
+                        Informe medidas internas e peso de cada volume
+                      </Typography.Text>
+                    </div>
 
-                  <VolumesGrid
-                    control={control}
-                    fields={fields}
-                    values={volumesValues}
-                    onAdd={handleAddVolume}
-                    onRemove={handleRemoveVolume}
-                    maxCount={MAX_VOLUMES}
-                    totals={totals}
-                    disableRemove={calculateQuotes.isPending}
-                  />
-                </Space>
-              </Col>
-            </Row>
+                    <VolumesGrid
+                      control={control}
+                      fields={fields}
+                      values={volumesValues}
+                      onAdd={handleAddVolume}
+                      onRemove={handleRemoveVolume}
+                      maxCount={MAX_VOLUMES}
+                      totals={totals}
+                      disableRemove={calculateQuotes.isPending}
+                    />
+                  </Space>
+                </Card>
+              </Space>
+            </Col>
 
-            <Divider />
-
-            <Flex align="center" justify="flex-start" wrap gap={16}>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 16 }}>
-                <div>
-                  Volumes: <strong>{fields.length}</strong>
-                </div>
-              </div>
-            </Flex>
-          </Space>
-        </Card>
-
-        <QuoteNavigationButtons
-          onNext={handleSubmit(onSubmit, (errors) => {
-            console.error('[FORM VALIDATION ERROR]', errors);
-            console.error('[FORM VALIDATION ERROR] formState.errors:', formState.errors);
-            message.error('Preencha todos os campos obrigatórios corretamente.');
-          })}
-          disableNext={!canSubmit}
-          loadingNext={calculateQuotes.isPending}
-          nextLabel={calculateQuotes.isPending ? "Calculando..." : "Próximo"}
-        />
+            <Col xs={24} lg={12}>
+              <QuoteResultsSection
+                results={quoteResults}
+                loading={calculateQuotes.isPending}
+                error={quoteError}
+                onCalculate={handleSubmit(onSubmit, (errors) => {
+                  console.error('[FORM VALIDATION ERROR]', errors);
+                  message.error('Preencha todos os campos obrigatórios corretamente.');
+                })}
+                canCalculate={canSubmit}
+              />
+            </Col>
+          </Row>
+        </Space>
       </Form>
 
       <AddressModal
