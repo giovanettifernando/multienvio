@@ -1,0 +1,47 @@
+/* Resumo de volumes e peso cubado */
+.resultsBanner {
+  background-color: #f8fafc !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 6px !important;
+  padding: 8px 12px !important;
+}
+
+.resultsBannerTitle {
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  color: #0f172a !important;
+}
+
+.resultsBannerValue {
+  font-weight: 600 !important;
+  color: #1e40af !important;
+}
+
+.resultsBannerWeight {
+  font-weight: 600 !important;
+}
+
+/* Cards de volumes individuais (declaração de conteúdo) */
+.volumeCard {
+  background: #fff !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 8px !important;
+  padding: 16px !important;
+  transition: all 0.2s ease !important;
+}
+
+.volumeCard:hover {
+  border-color: #93c5fd !important;
+  box-shadow: 0 0 4px rgba(59, 130, 246, 0.15) !important;
+}
+
+.volumeHeader {
+  font-weight: 600 !important;
+  font-size: 15px !important;
+  color: #1e3a8a !important;
+  margin-bottom: 8px !important;
+}
+
+.fieldLabelSm {
+  font-size: 13px !important;
+}

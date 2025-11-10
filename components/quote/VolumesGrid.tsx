@@ -13,6 +13,7 @@ import { useEffect, useRef, useState } from "react";
 import type { QuoteFormValues } from "./QuoteForm";
 import { MinhasEmbalagensSelect } from "@/components/cotacoes/MinhasEmbalagensSelect";
 import type { PackagingTemplate } from "@/hooks/usePackaging";
+import styles from "@/app/(dashboard)/cotacoes/cotacoes.module.css";
 
 export const DEFAULT_CUBAGE_FACTOR = 6000;
 
@@ -128,7 +129,11 @@ function VolumeItem({
   return (
     <Card
       key={field.id}
-      title={`Volume ${index + 1}`}
+      className={styles.volumeCard}
+      data-testid={`volume-card-${index}`}
+      title={
+        <span className={styles.volumeHeader}>Volume {index + 1}</span>
+      }
       size="small"
       extra={
         <Button
@@ -139,11 +144,14 @@ function VolumeItem({
           onClick={onRemove}
         />
       }
+      styles={{
+        body: { padding: 12 },
+      }}
     >
       <Space direction="vertical" size={16} style={{ width: "100%" }}>
         <Form.Item
-          label="Minhas embalagens"
-          style={{ marginBottom: 0, fontSize: 12, fontWeight: 500 }}
+          label={<span className={styles.fieldLabelSm}>Minhas embalagens</span>}
+          style={{ marginBottom: 0 }}
         >
           <MinhasEmbalagensSelect
             value={selectedPackagingId}
@@ -163,7 +171,7 @@ function VolumeItem({
                       (fieldState.isDirty || fieldState.isTouched);
                     return (
                       <Form.Item
-                        label="Comprimento (cm)"
+                        label={<span className={styles.fieldLabelSm}>Comprimento (cm)</span>}
                         validateStatus={showError ? "error" : undefined}
                         help={showError ? fieldState.error?.message : undefined}
                       >
@@ -195,7 +203,7 @@ function VolumeItem({
                       (fieldState.isDirty || fieldState.isTouched);
                     return (
                       <Form.Item
-                        label="Largura (cm)"
+                        label={<span className={styles.fieldLabelSm}>Largura (cm)</span>}
                         validateStatus={showError ? "error" : undefined}
                         help={showError ? fieldState.error?.message : undefined}
                       >
@@ -227,7 +235,7 @@ function VolumeItem({
                       (fieldState.isDirty || fieldState.isTouched);
                     return (
                       <Form.Item
-                        label="Altura (cm)"
+                        label={<span className={styles.fieldLabelSm}>Altura (cm)</span>}
                         validateStatus={showError ? "error" : undefined}
                         help={showError ? fieldState.error?.message : undefined}
                       >
@@ -259,7 +267,7 @@ function VolumeItem({
                       (fieldState.isDirty || fieldState.isTouched);
                     return (
                       <Form.Item
-                        label="Peso (kg)"
+                        label={<span className={styles.fieldLabelSm}>Peso (kg)</span>}
                         validateStatus={showError ? "error" : undefined}
                         help={showError ? fieldState.error?.message : undefined}
                       >

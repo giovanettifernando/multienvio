@@ -18,6 +18,7 @@ import {
   useFormContext,
 } from "react-hook-form";
 import type { FinalizeFormValues } from "@/types/quoteFinalize";
+import styles from "@/app/(dashboard)/cotacoes/cotacoes.module.css";
 
 const currency = new Intl.NumberFormat("pt-BR", {
   style: "currency",
@@ -54,7 +55,13 @@ export function DeclarationItems() {
         <Card
           key={field.id}
           size="small"
-          title={`Item ${index + 1}`}
+          className={styles.volumeCard}
+          data-testid="declaration-items"
+          title={
+            <span className={styles.volumeHeader}>
+              Item {index + 1}
+            </span>
+          }
           extra={
             fields.length > 1 ? (
               <Button
@@ -65,17 +72,23 @@ export function DeclarationItems() {
               />
             ) : null
           }
+          styles={{
+            body: { padding: 12 },
+          }}
         >
-          <Row gutter={16}>
+          <Row gutter={12}>
             <Col xs={24} md={12}>
               <Controller
                 control={control}
                 name={`document.declarationItems.${index}.descricao`}
                 render={({ field: controllerField, fieldState }) => (
                   <Form.Item
-                    label="Descrição do item"
+                    label={
+                      <span className={styles.fieldLabelSm}>Descrição do item</span>
+                    }
                     validateStatus={fieldState.error ? "error" : undefined}
                     help={fieldState.error?.message}
+                    style={{ marginBottom: 12 }}
                   >
                     <Input
                       {...controllerField}
@@ -91,9 +104,12 @@ export function DeclarationItems() {
                 name={`document.declarationItems.${index}.valorUnitario`}
                 render={({ field: controllerField, fieldState }) => (
                   <Form.Item
-                    label="Valor unitário (R$)"
+                    label={
+                      <span className={styles.fieldLabelSm}>Valor unitário (R$)</span>
+                    }
                     validateStatus={fieldState.error ? "error" : undefined}
                     help={fieldState.error?.message}
+                    style={{ marginBottom: 12 }}
                   >
                     <InputNumber
                       {...controllerField}
@@ -115,9 +131,10 @@ export function DeclarationItems() {
                 name={`document.declarationItems.${index}.quantidade`}
                 render={({ field: controllerField, fieldState }) => (
                   <Form.Item
-                    label="Quantidade"
+                    label={<span className={styles.fieldLabelSm}>Quantidade</span>}
                     validateStatus={fieldState.error ? "error" : undefined}
                     help={fieldState.error?.message}
+                    style={{ marginBottom: 12 }}
                   >
                     <InputNumber
                       {...controllerField}

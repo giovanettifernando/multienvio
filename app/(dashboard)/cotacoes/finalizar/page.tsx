@@ -397,10 +397,7 @@ export default function FinalizeQuotePage() {
     <FormProvider {...formMethods}>
       <form>
         <Flex vertical gap={24}>
-          <ResultsBanner
-            summary={summary!}
-            onEditVolumes={() => router.push("/cotacoes")}
-          />
+          <ResultsBanner summary={summary!} />
 
           <Row gutter={[24, 24]}>
             <Col xs={24} lg={16}>
