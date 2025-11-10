@@ -90,7 +90,7 @@ export function RecipientForm() {
           Os dados de endereço foram pré-preenchidos com base na cotação.
         </Typography.Text>
 
-        {/* Campos editáveis */}
+        {/* 1. Nome completo */}
         <Controller
           control={control}
           name="recipient.manual.nome"
@@ -100,12 +100,14 @@ export function RecipientForm() {
               validateStatus={fieldState.error ? "error" : undefined}
               help={fieldState.error?.message}
               required
+              style={{ marginBottom: 12 }}
             >
               <Input {...field} placeholder="Nome do destinatário" prefix={<UserOutlined />} />
             </Form.Item>
           )}
         />
 
+        {/* 2. Telefone */}
         <Controller
           control={control}
           name="recipient.manual.telefone"
@@ -115,6 +117,7 @@ export function RecipientForm() {
               validateStatus={fieldState.error ? "error" : undefined}
               help={fieldState.error?.message}
               required
+              style={{ marginBottom: 12 }}
             >
               <Input
                 {...field}
@@ -128,6 +131,7 @@ export function RecipientForm() {
           )}
         />
 
+        {/* 3. E-mail */}
         <Controller
           control={control}
           name="recipient.manual.email"
@@ -137,12 +141,14 @@ export function RecipientForm() {
               validateStatus={fieldState.error ? "error" : undefined}
               help={fieldState.error?.message}
               required
+              style={{ marginBottom: 12 }}
             >
-              <Input {...field} placeholder="email@exemplo.com" prefix={<MailOutlined />} />
+              <Input {...field} type="email" placeholder="email@exemplo.com" prefix={<MailOutlined />} />
             </Form.Item>
           )}
         />
 
+        {/* 4. CPF/CNPJ */}
         <Controller
           control={control}
           name="recipient.manual.documento"
@@ -152,6 +158,7 @@ export function RecipientForm() {
               validateStatus={fieldState.error ? "error" : undefined}
               help={fieldState.error?.message}
               required
+              style={{ marginBottom: 12 }}
             >
               <Input
                 {...field}
@@ -168,83 +175,7 @@ export function RecipientForm() {
           )}
         />
 
-        {/* Campos bloqueados */}
-        <Controller
-          control={control}
-          name="recipient.manual.cep"
-          render={({ field, fieldState }) => (
-            <Form.Item
-              label="CEP"
-              validateStatus={fieldState.error ? "error" : undefined}
-              help={fieldState.error?.message || "Campo bloqueado - definido na cotação"}
-              required
-            >
-              <Input {...field} disabled />
-            </Form.Item>
-          )}
-        />
-
-        <Controller
-          control={control}
-          name="recipient.manual.logradouro"
-          render={({ field, fieldState }) => (
-            <Form.Item
-              label="Logradouro"
-              validateStatus={fieldState.error ? "error" : undefined}
-              help={fieldState.error?.message || "Campo bloqueado - definido na cotação"}
-              required
-            >
-              <Input {...field} disabled />
-            </Form.Item>
-          )}
-        />
-
-        <Controller
-          control={control}
-          name="recipient.manual.bairro"
-          render={({ field, fieldState }) => (
-            <Form.Item
-              label="Bairro"
-              validateStatus={fieldState.error ? "error" : undefined}
-              help={fieldState.error?.message || "Campo bloqueado - definido na cotação"}
-              required
-            >
-              <Input {...field} disabled />
-            </Form.Item>
-          )}
-        />
-
-        <Controller
-          control={control}
-          name="recipient.manual.cidade"
-          render={({ field, fieldState }) => (
-            <Form.Item
-              label="Cidade"
-              validateStatus={fieldState.error ? "error" : undefined}
-              help={fieldState.error?.message || "Campo bloqueado - definido na cotação"}
-              required
-            >
-              <Input {...field} disabled />
-            </Form.Item>
-          )}
-        />
-
-        <Controller
-          control={control}
-          name="recipient.manual.uf"
-          render={({ field, fieldState }) => (
-            <Form.Item
-              label="UF"
-              validateStatus={fieldState.error ? "error" : undefined}
-              help={fieldState.error?.message || "Campo bloqueado - definido na cotação"}
-              required
-            >
-              <Input {...field} disabled maxLength={2} />
-            </Form.Item>
-          )}
-        />
-
-        {/* Campos editáveis */}
+        {/* 5. Número */}
         <Controller
           control={control}
           name="recipient.manual.numero"
@@ -254,32 +185,120 @@ export function RecipientForm() {
               validateStatus={fieldState.error ? "error" : undefined}
               help={fieldState.error?.message}
               required
+              style={{ marginBottom: 12 }}
             >
               <Input {...field} placeholder="Número" />
             </Form.Item>
           )}
         />
 
+        {/* 6. Complemento (opcional) */}
         <Controller
           control={control}
           name="recipient.manual.complemento"
           render={({ field }) => (
-            <Form.Item label="Complemento">
+            <Form.Item label="Complemento" style={{ marginBottom: 12 }}>
               <Input {...field} placeholder="Apartamento, bloco, etc." />
             </Form.Item>
           )}
         />
 
+        {/* 7. Observações (opcional) */}
         <Controller
           control={control}
           name="recipient.manual.observacoes"
           render={({ field }) => (
-            <Form.Item label="Observações">
+            <Form.Item label="Observações" style={{ marginBottom: 12 }}>
               <Input.TextArea
                 {...field}
                 placeholder="Referências de entrega, horários, etc."
                 rows={3}
               />
+            </Form.Item>
+          )}
+        />
+
+        {/* 8. CEP (bloqueado) */}
+        <Controller
+          control={control}
+          name="recipient.manual.cep"
+          render={({ field, fieldState }) => (
+            <Form.Item
+              label="CEP"
+              validateStatus={fieldState.error ? "error" : undefined}
+              help={fieldState.error?.message}
+              required
+              style={{ marginBottom: 12 }}
+            >
+              <Input {...field} disabled />
+            </Form.Item>
+          )}
+        />
+
+        {/* 9. Logradouro (bloqueado) */}
+        <Controller
+          control={control}
+          name="recipient.manual.logradouro"
+          render={({ field, fieldState }) => (
+            <Form.Item
+              label="Logradouro"
+              validateStatus={fieldState.error ? "error" : undefined}
+              help={fieldState.error?.message}
+              required
+              style={{ marginBottom: 12 }}
+            >
+              <Input {...field} disabled />
+            </Form.Item>
+          )}
+        />
+
+        {/* 10. Bairro (bloqueado) */}
+        <Controller
+          control={control}
+          name="recipient.manual.bairro"
+          render={({ field, fieldState }) => (
+            <Form.Item
+              label="Bairro"
+              validateStatus={fieldState.error ? "error" : undefined}
+              help={fieldState.error?.message}
+              required
+              style={{ marginBottom: 12 }}
+            >
+              <Input {...field} disabled />
+            </Form.Item>
+          )}
+        />
+
+        {/* 11. Cidade (bloqueado) */}
+        <Controller
+          control={control}
+          name="recipient.manual.cidade"
+          render={({ field, fieldState }) => (
+            <Form.Item
+              label="Cidade"
+              validateStatus={fieldState.error ? "error" : undefined}
+              help={fieldState.error?.message}
+              required
+              style={{ marginBottom: 12 }}
+            >
+              <Input {...field} disabled />
+            </Form.Item>
+          )}
+        />
+
+        {/* 12. UF (bloqueado) */}
+        <Controller
+          control={control}
+          name="recipient.manual.uf"
+          render={({ field, fieldState }) => (
+            <Form.Item
+              label="UF"
+              validateStatus={fieldState.error ? "error" : undefined}
+              help={fieldState.error?.message}
+              required
+              style={{ marginBottom: 12 }}
+            >
+              <Input {...field} disabled maxLength={2} />
             </Form.Item>
           )}
         />

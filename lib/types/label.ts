@@ -1,5 +1,7 @@
 export type LabelStatus = 'pending' | 'paid' | 'issued' | 'canceled' | 'error';
 
+export type PrintStatus = 'printed' | 'not_printed' | 'all';
+
 export interface LabelFile {
   // preferencialmente uma URL (quando existir). Se vier base64, marcar contentType.
   url?: string;           // ex.: "/api/labels/{id}/pdf" (mock no FE)
@@ -14,8 +16,14 @@ export interface LabelItem {
   carrier: string;           // ex.: "Correios", "Jadlog"
   service: string;           // ex.: "Sedex", "43523 - Expresso"
   status: LabelStatus;
-  price: number;             // em centavos ou reais? use number em reais para exibição simples
+  price: number;             // em REAIS para exibição
   currency: 'BRL';
+  trackingCode?: string | null;
+  isPrinted: boolean;        // Status de impressão
+  printedAt?: string | null; // ISO
+  // Dados do shipment
+  originCep: string;
+  destinationCep: string;
   recipient: {
     name: string;            // **OBRIGATÓRIO EXIBIR NA LISTA**
     document?: string | null; // CPF/CNPJ
@@ -25,17 +33,13 @@ export interface LabelItem {
   createdAt: string;         // ISO
   updatedAt?: string;
   file?: LabelFile | null;   // PDF metadata (emitida -> disponível)
-  trackingCode?: string | null;
 }
 
 export interface LabelsQuery {
   page?: number;
   pageSize?: number;
-  q?: string;
-  status?: LabelStatus | 'all';
-  carrier?: string | 'all';
-  dateStart?: string; // ISO
-  dateEnd?: string;   // ISO
+  q?: string;                // Busca por código/ID do envio
+  printStatus?: PrintStatus; // Filtro de status de impressão
 }
 
 export interface LabelsResponse {

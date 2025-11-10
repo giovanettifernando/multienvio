@@ -19,6 +19,8 @@ const parseQuoteResponse = (data: unknown): QuoteCalculateResponse => {
     if (Array.isArray(candidate.results)) {
       return {
         quoteId: candidate.quoteId,
+        createdAt: candidate.createdAt,
+        expiresAt: candidate.expiresAt,
         results: candidate.results,
         pontosParceiros: candidate.pontosParceiros,
       };
@@ -114,7 +116,17 @@ export const useQuoteSelection = () =>
         headers: { "Content-Type": "application/json" },
       });
       if (!res.ok) {
-        throw new Error("Erro ao confirmar seleção");
+        // Try to get detailed error message from API
+        let errorMessage = "Erro ao confirmar seleção";
+        try {
+          const errorData = await res.json();
+          if (errorData?.message) {
+            errorMessage = errorData.message;
+          }
+        } catch {
+          // Ignore JSON parse errors
+        }
+        throw new Error(errorMessage);
       }
       return (await res.json()) as QuoteSelectionResponse;
     },

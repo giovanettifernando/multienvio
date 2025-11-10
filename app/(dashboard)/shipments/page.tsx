@@ -10,6 +10,7 @@ import {
   Segmented,
   Space,
   Tooltip,
+  App,
 } from "antd";
 import {
   PrinterOutlined,
@@ -43,12 +44,39 @@ const STATUS_COLORS: Record<ShipmentStatus, string> = {
 };
 
 export default function ShipmentsPage() {
+  const { message } = App.useApp();
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<ShipmentStatus | "Todos">("Todos");
   const { data, isLoading, refetch } = useShipments({ q: query, status });
   const cancelMut = useShipmentCancel();
 
   const items = data?.items ?? [];
+
+  // Função para imprimir etiqueta e marcar como impressa
+  const handlePrintLabel = async (shipmentId: string, labelUrl: string) => {
+    try {
+      // Abrir etiqueta para impressão
+      window.open(labelUrl, "_blank");
+
+      // Buscar ID da label associada ao shipment
+      const response = await fetch(`/api/labels?q=${shipmentId}`);
+      if (response.ok) {
+        const data = await response.json();
+        const label = data.items?.find((item: any) => item.shipmentId === shipmentId);
+
+        if (label) {
+          // Marcar como impressa
+          await fetch(`/api/labels?id=${label.id}`, {
+            method: 'PATCH',
+          });
+          message.success('Etiqueta marcada como impressa');
+          refetch();
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao imprimir etiqueta:', error);
+    }
+  };
 
   const columns: ColumnsType<Shipment> = useMemo(
     () => [
@@ -108,7 +136,7 @@ export default function ShipmentsPage() {
                   icon={<PrinterOutlined />}
                   disabled={!row.labelUrl}
                   onClick={() => {
-                    if (row.labelUrl) window.open(row.labelUrl, "_blank");
+                    if (row.labelUrl) handlePrintLabel(row.id, row.labelUrl);
                   }}
                 />
               </span>

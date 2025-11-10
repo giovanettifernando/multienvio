@@ -61,11 +61,14 @@ export async function POST(request: Request) {
     // Return response matching frontend contract
     const response = {
       quoteId: result.quoteId,
+      createdAt: result.createdAt,
+      expiresAt: result.expiresAt,
       results: result.results,
       pontosParceiros: result.pontosParceiros,
     };
     console.log(`[API][${requestId}] Enviando resposta (status 201):`, {
       quoteId: response.quoteId,
+      expiresAt: response.expiresAt,
       resultsCount: response.results.length,
       firstResult: response.results[0],
     });

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   Alert,
@@ -84,10 +84,11 @@ export function QuoteResultsSection({
   const { message } = App.useApp();
   const selectMutation = useQuoteSelection();
 
-  const { results: storeResults, setSelection } = useQuoteStore(
+  const { results: storeResults, setSelection, clearResults } = useQuoteStore(
     useShallow((state) => ({
       results: state.results,
       setSelection: state.setSelection,
+      clearResults: state.clearResults,
     })),
   );
 
@@ -99,6 +100,38 @@ export function QuoteResultsSection({
   const [pendingSelection, setPendingSelection] =
     useState<PendingSelection | null>(null);
   const [declarationModalOpen, setDeclarationModalOpen] = useState(false);
+  const [timeRemaining, setTimeRemaining] = useState<string | null>(null);
+  const [isExpiringSoon, setIsExpiringSoon] = useState(false);
+
+  // Calculate time remaining and update every second
+  useEffect(() => {
+    if (!storeResults?.expiresAt) {
+      setTimeRemaining(null);
+      return;
+    }
+
+    const updateTimer = () => {
+      const now = new Date().getTime();
+      const expires = new Date(storeResults.expiresAt).getTime();
+      const diff = expires - now;
+
+      if (diff <= 0) {
+        setTimeRemaining("expirado");
+        setIsExpiringSoon(true);
+        return;
+      }
+
+      const minutes = Math.floor(diff / 60000);
+      const seconds = Math.floor((diff % 60000) / 1000);
+      setTimeRemaining(`${minutes}:${seconds.toString().padStart(2, "0")}`);
+      setIsExpiringSoon(minutes < 5); // Warning when less than 5 minutes
+    };
+
+    updateTimer();
+    const interval = setInterval(updateTimer, 1000);
+
+    return () => clearInterval(interval);
+  }, [storeResults?.expiresAt]);
 
   const needsInsuranceValue = (
     result: QuoteResultItem,
@@ -130,40 +163,10 @@ export function QuoteResultsSection({
     router.push(`/cotacoes/finalizar?selectionId=${selectionId}&doc=${docType}`);
   };
 
-  const handleSelectionResponse = (
-    result: QuoteResultItem,
-    selectionId: string,
-    exigeDocumento: boolean,
-    exigeSeguro: boolean,
-    seguroValor: number | null,
-  ) => {
-    const preference = getDeclarationPreference(result.carrier);
-    if (!exigeDocumento || preference?.docType) {
-      const docType = preference?.docType ?? "DECLARACAO";
-      finalizeSelection(
-        result,
-        selectionId,
-        docType,
-        seguroValor,
-        exigeDocumento,
-        exigeSeguro,
-      );
-      return;
-    }
-
-    setPendingSelection({
-      result,
-      selectionId,
-      exigeDocumento,
-      exigeSeguro,
-      seguroValor,
-    });
-    setDeclarationModalOpen(true);
-  };
-
   const confirmSelection = async (
     result: QuoteResultItem,
     insuranceValue: number | null,
+    docType?: DocumentType,
   ) => {
     if (!storeResults) return;
     try {
@@ -172,16 +175,67 @@ export function QuoteResultsSection({
         serviceId: result.id,
         seguro: insuranceValue ?? undefined,
       });
-      handleSelectionResponse(
+
+      // If we already have the document type (from modal or preference), finalize immediately
+      if (docType) {
+        finalizeSelection(
+          result,
+          response.selectionId,
+          docType,
+          insuranceValue,
+          response.exigeDocumento,
+          response.exigeSeguro,
+        );
+        return;
+      }
+
+      // Check if we need to ask for document type
+      const preference = getDeclarationPreference(result.carrier);
+      if (!response.exigeDocumento || preference?.docType) {
+        const finalDocType = preference?.docType ?? "DECLARACAO";
+        finalizeSelection(
+          result,
+          response.selectionId,
+          finalDocType,
+          insuranceValue,
+          response.exigeDocumento,
+          response.exigeSeguro,
+        );
+        return;
+      }
+
+      // Open modal to ask for document type
+      setPendingSelection({
         result,
-        response.selectionId,
-        response.exigeDocumento,
-        response.exigeSeguro,
-        insuranceValue,
-      );
+        selectionId: response.selectionId,
+        exigeDocumento: response.exigeDocumento,
+        exigeSeguro: response.exigeSeguro,
+        seguroValor: insuranceValue,
+      });
+      setDeclarationModalOpen(true);
     } catch (error) {
       console.error("Erro ao confirmar seleção", error);
-      message.error("Não foi possível confirmar a seleção. Tente novamente.");
+
+      // Check if it's an expiration error
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (errorMessage.includes("expirada") || errorMessage.includes("não pode mais ser selecionada")) {
+        Modal.warning({
+          title: "Cotação Expirada",
+          content: (
+            <div>
+              <p>Os valores de frete expiraram (válidos por 30 minutos).</p>
+              <p>Por favor, recalcule a cotação para obter valores atualizados.</p>
+            </div>
+          ),
+          okText: "Entendi",
+          onOk: () => {
+            // Reset quote results to force user to recalculate
+            clearResults();
+          },
+        });
+      } else {
+        message.error("Não foi possível confirmar a seleção. Tente novamente.");
+      }
     } finally {
       setSelectedResult(null);
       setInsuranceModalOpen(false);
@@ -247,6 +301,8 @@ export function QuoteResultsSection({
   };
 
   const handleDeclarationClose = () => {
+    // Just close the modal - user can select again if needed
+    // The backend now allows re-selection (SELECTED status is valid)
     setPendingSelection(null);
     setDeclarationModalOpen(false);
   };
@@ -399,7 +455,11 @@ export function QuoteResultsSection({
       title: "Ação",
       key: "action",
       render: (_: unknown, record: QuoteResultItem) => (
-        <Button type="primary" onClick={() => handleSelectClick(record)}>
+        <Button
+          type="primary"
+          onClick={() => handleSelectClick(record)}
+          disabled={timeRemaining === "expirado"}
+        >
           Escolher
         </Button>
       ),
@@ -418,6 +478,31 @@ export function QuoteResultsSection({
         style={{ height: "100%" }}
       >
         <Space direction="vertical" size={16} style={{ width: "100%" }}>
+          {/* Expiration warning */}
+          {timeRemaining && (
+            <Alert
+              message={
+                timeRemaining === "expirado"
+                  ? "Cotação expirada"
+                  : `Tempo restante: ${timeRemaining}`
+              }
+              description={
+                timeRemaining === "expirado"
+                  ? "Os valores de frete expiraram. Por favor, recalcule a cotação."
+                  : "Os valores são válidos por 30 minutos."
+              }
+              type={
+                timeRemaining === "expirado"
+                  ? "error"
+                  : isExpiringSoon
+                    ? "warning"
+                    : "info"
+              }
+              showIcon
+              icon={<ClockCircleOutlined />}
+            />
+          )}
+
           <Alert
             message={`${results?.length || 0} ${results?.length === 1 ? "cotação encontrada" : "cotações encontradas"}`}
             type="success"

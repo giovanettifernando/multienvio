@@ -133,10 +133,10 @@ export function formatCep(cep: string): string {
   return cep;
 }
 
-// Helper function to calculate quote expiration (24 hours from now)
+// Helper function to calculate quote expiration (30 minutes from now)
 export function calculateQuoteExpiration(): Date {
   const now = new Date();
-  return new Date(now.getTime() + 24 * 60 * 60 * 1000); // 24 hours
+  return new Date(now.getTime() + 30 * 60 * 1000); // 30 minutes
 }
 
 // Business rules validation

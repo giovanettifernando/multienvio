@@ -60,6 +60,9 @@ export async function GET(request: NextRequest) {
 
     const shipments = await prisma.shipment.findMany({
       where,
+      include: {
+        label: true, // Incluir dados da etiqueta
+      },
       orderBy: { createdAt: 'desc' },
       take: 100, // Limitar resultados
     });
@@ -79,8 +82,8 @@ export async function GET(request: NextRequest) {
       freightValue: s.freightCost || 0,
       status: STATUS_MAP[s.status] || s.status,
       createdAt: s.createdAt.toISOString(),
-      labelUrl: undefined, // TODO: implementar geração de etiquetas
-      trackingUrl: undefined, // TODO: implementar URL de rastreamento
+      labelUrl: s.label?.fileUrl || (s.label?.fileBase64 ? `data:${s.label.contentType};base64,${s.label.fileBase64}` : undefined),
+      trackingUrl: s.publicTrackingId ? `/rastreio/${s.publicTrackingId}` : undefined,
     }));
 
     return NextResponse.json({ items });

@@ -1,31 +1,70 @@
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 import { NextRequest, NextResponse } from "next/server";
-import type { Shipment, ShipmentStatus } from "@/src/types/shipments";
+import { prisma } from "@/lib/db";
+import { getUserSessionFromRequest } from "@/lib/auth/user-session";
 
-declare global {
-  var __envioShipmentsStore: Shipment[] | undefined;
-}
-
-const getStore = (): Shipment[] => globalThis.__envioShipmentsStore ?? [];
-const setStore = (items: Shipment[]) => {
-  globalThis.__envioShipmentsStore = items;
-};
-
+/**
+ * POST /api/shipments/[id]/cancel
+ * Cancela um shipment e atualiza o status da etiqueta para 'canceled'
+ */
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
-  const store = getStore();
-  const index = store.findIndex((item) => item.id === id);
-  if (index === -1) {
-    return NextResponse.json({ mensagem: "Envio não encontrado" }, { status: 404 });
+  try {
+    // Autenticar usuário
+    const session = await getUserSessionFromRequest(request);
+    if (!session) {
+      return NextResponse.json({ message: 'Não autenticado' }, { status: 401 });
+    }
+
+    const { id } = await params;
+
+    // Verificar se o shipment pertence ao usuário
+    const shipment = await prisma.shipment.findUnique({
+      where: { id },
+      include: { label: true },
+    });
+
+    if (!shipment) {
+      return NextResponse.json({ message: "Envio não encontrado" }, { status: 404 });
+    }
+
+    if (shipment.senderId !== session.userId) {
+      return NextResponse.json({ message: 'Acesso negado' }, { status: 403 });
+    }
+
+    // Verificar se já está cancelado ou entregue
+    if (shipment.status === 'cancelled' || shipment.status === 'delivered') {
+      return NextResponse.json(
+        { message: 'Não é possível cancelar este envio' },
+        { status: 400 }
+      );
+    }
+
+    // Cancelar shipment e label em uma transação
+    await prisma.$transaction(async (tx) => {
+      // Atualizar status do shipment
+      await tx.shipment.update({
+        where: { id },
+        data: { status: 'cancelled' },
+      });
+
+      // Se houver label associada, marcar como cancelada
+      if (shipment.label) {
+        await tx.label.update({
+          where: { id: shipment.label.id },
+          data: { status: 'canceled' },
+        });
+      }
+    });
+
+    return NextResponse.json({
+      ok: true,
+      message: 'Envio cancelado com sucesso',
+    });
+  } catch (error) {
+    console.error('[SHIPMENT_CANCEL]', error);
+    const message = error instanceof Error ? error.message : 'Erro ao cancelar envio';
+    return NextResponse.json({ message }, { status: 500 });
   }
-
-  const updated: Shipment = {
-    ...store[index],
-    status: "Cancelado" as ShipmentStatus,
-  };
-
-  const next = [...store];
-  next[index] = updated;
-  setStore(next);
-
-  return NextResponse.json({ ok: true, shipment: updated });
 }

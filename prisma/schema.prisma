@@ -211,6 +211,7 @@ model Shipment {
   recipient               User?           @relation("RecipientShipments", fields: [recipientId], references: [id])
   sender                  User            @relation("SenderShipments", fields: [senderId], references: [id])
   trackingEvents          TrackingEvent[]
+  label                   Label?
 
   @@index([trackingCode])
   @@index([senderId])
@@ -218,6 +219,32 @@ model Shipment {
   @@index([status])
   @@index([publicTrackingId])
   @@map("shipments")
+}
+
+model Label {
+  id           String   @id @default(uuid())
+  shipmentId   String   @unique
+  carrier      String
+  service      String
+  status       String   @default("pending") // pending, paid, issued, canceled, error
+  priceCents   Int      // Preço em centavos
+  currency     String   @default("BRL")
+  trackingCode String?
+  fileUrl      String?  // URL do PDF da etiqueta
+  fileBase64   String?  @db.Text // Base64 do PDF (se aplicável)
+  contentType  String?  @default("application/pdf")
+  sizeBytes    Int?
+  isPrinted    Boolean  @default(false) // Status de impressão
+  printedAt    DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  shipment     Shipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+
+  @@index([shipmentId])
+  @@index([status])
+  @@index([isPrinted])
+  @@index([createdAt])
+  @@map("labels")
 }
 
 model TrackingEvent {

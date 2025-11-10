@@ -1264,7 +1264,8 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
       console.log(`[FORM][${formRequestId}] Salvando no store...`);
       setResults({
         quoteId,
-        createdAt: new Date().toISOString(),
+        createdAt: normalized.createdAt || new Date().toISOString(),
+        expiresAt: normalized.expiresAt || new Date(Date.now() + 30 * 60 * 1000).toISOString(),
         resumo,
         results: normalized.results,
         pontosParceiros: normalized.pontosParceiros,

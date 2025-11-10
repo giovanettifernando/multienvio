@@ -13,6 +13,7 @@ import {
   Select,
   Skeleton,
   Space,
+  Tooltip,
   Typography,
 } from "antd";
 import {
@@ -148,8 +149,9 @@ export default function FinalizeQuotePage() {
 
   const {
     handleSubmit,
-    formState: { isSubmitting, errors },
+    formState: { isSubmitting, errors, dirtyFields, touchedFields },
     watch,
+    getValues,
   } = formMethods;
 
   // Debug: log form errors
@@ -158,6 +160,22 @@ export default function FinalizeQuotePage() {
       console.log('[FORM_ERRORS]', errors);
     }
   }, [errors]);
+
+  // Watch destination mode and manual fields for validation
+  const destino = useQuoteDraft((s) => s.destination);
+
+  // Watch all recipient fields to trigger re-validation
+  const recipientMode = watch("recipient.mode");
+  const recipientNome = watch("recipient.manual.nome");
+  const recipientTelefone = watch("recipient.manual.telefone");
+  const recipientEmail = watch("recipient.manual.email");
+  const recipientDocumento = watch("recipient.manual.documento");
+  const recipientNumero = watch("recipient.manual.numero");
+  const recipientCep = watch("recipient.manual.cep");
+  const recipientLogradouro = watch("recipient.manual.logradouro");
+  const recipientBairro = watch("recipient.manual.bairro");
+  const recipientCidade = watch("recipient.manual.cidade");
+  const recipientUf = watch("recipient.manual.uf");
 
   // Pré-condições para habilitar botão "Pagar agora"
   const preconditionsOk = useMemo(() => {
@@ -169,14 +187,70 @@ export default function FinalizeQuotePage() {
       pickupPoint: pickupAtOrigin || !!pickupPointId,
     };
 
-    console.log('[PRECONDITIONS]', checks, { pickupAtOrigin, pickupPointId });
+    // Check if recipient is valid
+    const hasRecurringRecipient = destino?.mode === "recipient" && !!destino.recipientId;
+
+    // Check manual recipient validity
+    const isRecipientFormValid =
+      recipientMode === "manual" &&
+      !!recipientNome && recipientNome.trim().length > 0 &&
+      !!recipientTelefone && recipientTelefone.trim().length > 0 &&
+      !!recipientEmail && recipientEmail.trim().length > 0 &&
+      !!recipientDocumento && recipientDocumento.trim().length > 0 &&
+      !!recipientNumero && recipientNumero.trim().length > 0 &&
+      !!recipientCep && recipientCep.trim().length > 0 &&
+      !!recipientLogradouro && recipientLogradouro.trim().length > 0 &&
+      !!recipientBairro && recipientBairro.trim().length > 0 &&
+      !!recipientCidade && recipientCidade.trim().length > 0 &&
+      !!recipientUf && recipientUf.trim().length > 0;
+
+    const canProceed = hasRecurringRecipient || isRecipientFormValid;
+
+    console.log('[PRECONDITIONS]', {
+      ...checks,
+      hasRecurringRecipient,
+      isRecipientFormValid,
+      canProceed,
+      recipientMode,
+      fields: {
+        nome: recipientNome,
+        telefone: recipientTelefone,
+        email: recipientEmail,
+        documento: recipientDocumento,
+        numero: recipientNumero,
+        cep: recipientCep,
+        logradouro: recipientLogradouro,
+        bairro: recipientBairro,
+        cidade: recipientCidade,
+        uf: recipientUf,
+      },
+    });
 
     if (!checks.selection || !checks.results || !checks.summary) return false;
     if (!checks.volumes) return false;
     if (!checks.pickupPoint) return false;
+    if (!canProceed) return false;
 
     return true;
-  }, [selection, results, summary, pickupAtOrigin, pickupPointId]);
+  }, [
+    selection,
+    results,
+    summary,
+    pickupAtOrigin,
+    pickupPointId,
+    destino,
+    recipientMode,
+    recipientNome,
+    recipientTelefone,
+    recipientEmail,
+    recipientDocumento,
+    recipientNumero,
+    recipientCep,
+    recipientLogradouro,
+    recipientBairro,
+    recipientCidade,
+    recipientUf,
+  ]);
 
   // Handler que não depende da validação completa do formulário
   const onAddToCartClick = async (e: React.MouseEvent) => {
@@ -418,40 +492,50 @@ export default function FinalizeQuotePage() {
                 <Card title="Pagamento">
                   <Space direction="vertical" size={16} style={{ width: "100%" }}>
                     <Space direction="vertical" style={{ width: "100%" }}>
-                      <Button
-                        type="default"
-                        htmlType="button"
-                        block
-                        loading={cartAdd.isPending}
-                        disabled={!selectedService}
-                        onClick={onAddToCartClick}
+                      <Tooltip
+                        title={!preconditionsOk ? "Informe os dados obrigatórios do destinatário para continuar." : ""}
                       >
-                        Adicionar ao carrinho
-                      </Button>
-                      <Button
-                        type="primary"
-                        htmlType="button"
-                        block
-                        loading={isSubmitting}
-                        disabled={isSubmitting || !preconditionsOk}
-                        onClick={(e) => {
-                          console.log('[BUTTON_CLICK]', {
-                            isSubmitting,
-                            preconditionsOk,
-                            disabled: isSubmitting || !preconditionsOk,
-                            formErrors: errors
-                          });
-                          handleSubmit(
-                            handlePayNow,
-                            (validationErrors) => {
-                              console.log('[FORM_VALIDATION_FAILED]', validationErrors);
-                              message.error('Por favor, preencha todos os campos obrigatórios.');
-                            }
-                          )(e);
-                        }}
+                        <Button
+                          type="default"
+                          htmlType="button"
+                          block
+                          loading={cartAdd.isPending}
+                          disabled={!selectedService || !preconditionsOk}
+                          onClick={onAddToCartClick}
+                          style={{ width: "100%" }}
+                        >
+                          Adicionar ao carrinho
+                        </Button>
+                      </Tooltip>
+                      <Tooltip
+                        title={!preconditionsOk ? "Informe os dados obrigatórios do destinatário para continuar." : ""}
                       >
-                        Pagar agora
-                      </Button>
+                        <Button
+                          type="primary"
+                          htmlType="button"
+                          block
+                          loading={isSubmitting}
+                          disabled={isSubmitting || !preconditionsOk}
+                          onClick={(e) => {
+                            console.log('[BUTTON_CLICK]', {
+                              isSubmitting,
+                              preconditionsOk,
+                              disabled: isSubmitting || !preconditionsOk,
+                              formErrors: errors
+                            });
+                            handleSubmit(
+                              handlePayNow,
+                              (validationErrors) => {
+                                console.log('[FORM_VALIDATION_FAILED]', validationErrors);
+                                message.error('Por favor, preencha todos os campos obrigatórios.');
+                              }
+                            )(e);
+                          }}
+                          style={{ width: "100%" }}
+                        >
+                          Pagar agora
+                        </Button>
+                      </Tooltip>
                     </Space>
                     <Typography.Text type="secondary">
                       Após o pagamento, a etiqueta ficará disponível em Meus envios.

@@ -154,10 +154,24 @@ export async function POST(request: Request) {
         },
       });
 
+      // Criar etiqueta automaticamente vinculada ao shipment
+      const label = await tx.label.create({
+        data: {
+          shipmentId: shipment.id,
+          carrier: data.carrier,
+          service: data.service,
+          status: 'pending', // pending até o pagamento ser confirmado
+          priceCents: Math.round(data.freightCost * 100), // Converter para centavos
+          currency: 'BRL',
+          trackingCode: trackingCode,
+          isPrinted: false,
+        },
+      });
+
       // Nota: A transação financeira será criada pelo /api/wallet/debit
       // quando o usuário confirmar o pagamento no modal
 
-      return { shipment };
+      return { shipment, label };
     });
 
     // Verificar se há integração de pagamento configurada

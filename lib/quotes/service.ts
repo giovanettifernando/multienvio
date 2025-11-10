@@ -31,6 +31,8 @@ import {
 
 export type CreateQuoteResult = {
   quoteId: string;
+  createdAt: string;
+  expiresAt: string;
   resumo: QuoteSummary;
   results: QuoteResultItem[];
   pontosParceiros?: PartnerPoint[];
@@ -282,6 +284,8 @@ export async function createQuote(
 
   return {
     quoteId: quote.id,
+    createdAt: quote.createdAt.toISOString(),
+    expiresAt: quote.expiresAt.toISOString(),
     resumo,
     results,
     pontosParceiros: [], // TODO: Implement partner points lookup
@@ -316,8 +320,28 @@ export async function selectQuoteOption(
   }
 
   // Validate business rules
-  if (!validateQuoteBusinessRules.canSelectQuote(quote.status, quote.expiresAt)) {
-    throw new Error('Esta cotação não pode mais ser selecionada (expirada ou já confirmada)');
+  // Allow SELECTED status (user might be changing their selection after closing the modal)
+  const validStatuses = ['DRAFT', 'SELECTED'];
+  const isValidStatus = validStatuses.includes(quote.status);
+  const isNotExpired = validateQuoteBusinessRules.isQuoteValid(quote.expiresAt);
+
+  if (!isValidStatus || !isNotExpired) {
+    const now = new Date();
+    const isExpired = now >= quote.expiresAt;
+    console.error('[COTACOES_SELECIONAR] Validation failed:', {
+      quoteId: quote.id,
+      status: quote.status,
+      expiresAt: quote.expiresAt,
+      now,
+      isExpired,
+      statusValid: isValidStatus,
+      timeValid: !isExpired,
+    });
+
+    if (isExpired) {
+      throw new Error('Esta cotação expirou. Por favor, recalcule para obter novos valores.');
+    }
+    throw new Error('Esta cotação não pode mais ser selecionada (já foi confirmada ou cancelada)');
   }
 
   // Find the selected option

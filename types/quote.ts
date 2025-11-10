@@ -69,6 +69,7 @@ export type QuoteSummary = {
 export type QuoteResultsState = {
   quoteId: string;
   createdAt: string;
+  expiresAt: string;
   resumo: QuoteSummary;
   results: QuoteResultItem[];
   pontosParceiros?: PartnerPoint[];
@@ -169,6 +170,8 @@ export type QuoteTelemetry = {
 
 export type QuoteCalculateResponse = {
   quoteId?: string; // ID retornado pela API (opcional para compatibilidade)
+  createdAt?: string;
+  expiresAt?: string;
   results: QuoteResultItem[];
   pontosParceiros?: PartnerPoint[];
 };

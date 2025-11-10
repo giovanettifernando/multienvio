@@ -7,9 +7,12 @@ export function labelFromShipment(s: Shipment): LabelItem {
     shipmentId: s.id,
     carrier: s.carrier,
     service: s.service,
-    status: 'pending',            // ainda sem PDF; pode virar 'issued' quando houver file
+    status: 'pending',
     price: s.price,
     currency: 'BRL',
+    isPrinted: false,
+    originCep: '',
+    destinationCep: '',
     recipient: {
       name: s.recipient?.name ?? 'Destinatário',
       document: s.recipient?.document ?? null,
@@ -18,6 +21,6 @@ export function labelFromShipment(s: Shipment): LabelItem {
     },
     createdAt: s.createdAt || new Date().toISOString(),
     trackingCode: s.trackingCode ?? null,
-    file: null,                   // sem PDF no front; preview fica desativado
+    file: null,
   };
 }
