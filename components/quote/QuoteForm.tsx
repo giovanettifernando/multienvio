@@ -1440,25 +1440,35 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
             control={control}
             name="coleta"
             render={({ field }) => (
-              <Flex align="center" gap={12}>
-                <Switch
-                  checked={field.value}
-                  onChange={(checked) => {
-                    field.onChange(checked);
-                    setPickupAtOrigin(checked);
-                  }}
-                  disabled={calculateQuotes.isPending}
-                />
-                <div>
-                  <Typography.Text>
-                    Solicitar coleta na origem
-                  </Typography.Text>
-                  <br />
-                  <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                    Disponível para CEPs com cobertura de coleta
-                  </Typography.Text>
-                </div>
-              </Flex>
+              <Space direction="vertical" style={{ width: "100%" }}>
+                <Flex align="center" gap={12}>
+                  <Switch
+                    checked={field.value}
+                    onChange={(checked) => {
+                      field.onChange(checked);
+                      setPickupAtOrigin(checked);
+                    }}
+                    disabled={calculateQuotes.isPending}
+                  />
+                  <div>
+                    <Typography.Text>
+                      Solicitar coleta na origem
+                    </Typography.Text>
+                    <br />
+                    <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                      Disponível para CEPs com cobertura de coleta
+                    </Typography.Text>
+                  </div>
+                </Flex>
+                {field.value && (
+                  <Alert
+                    type="info"
+                    showIcon
+                    message="Coleta na origem será solicitada ao finalizar"
+                    description="Uma solicitação de coleta será criada automaticamente quando você concluir o pagamento."
+                  />
+                )}
+              </Space>
             )}
           />
         )}

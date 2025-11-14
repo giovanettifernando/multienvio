@@ -22,7 +22,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     // Verificar se o shipment pertence ao usuário
     const shipment = await prisma.shipment.findUnique({
       where: { id },
-      include: { label: true },
+      include: {
+        label: true,
+        pickupRequest: true,
+      },
     });
 
     if (!shipment) {
@@ -41,7 +44,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       );
     }
 
-    // Cancelar shipment e label em uma transação
+    // Cancelar shipment, label e pickup em uma transação
     await prisma.$transaction(async (tx) => {
       // Atualizar status do shipment
       await tx.shipment.update({
@@ -54,6 +57,14 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         await tx.label.update({
           where: { id: shipment.label.id },
           data: { status: 'canceled' },
+        });
+      }
+
+      // Se houver pickup request associado, marcar como cancelado
+      if (shipment.pickupRequest) {
+        await tx.pickupRequest.update({
+          where: { id: shipment.pickupRequest.id },
+          data: { status: 'CANCELED' },
         });
       }
     });

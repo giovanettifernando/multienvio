@@ -382,7 +382,7 @@ export default function FinalizeQuotePage() {
 
     // Validar pickup point se não houver coleta na origem
     if (!pickupAtOrigin && !pickupPointId) {
-      message.error("Selecione um ponto de coleta.");
+      message.error("Selecione um ponto de coleta ou ative a opção de coleta na origem.");
       return;
     }
 
@@ -425,9 +425,12 @@ export default function FinalizeQuotePage() {
         carrier: selectedService.carrier,
         service: selectedService.modalidade,
         originCep: summary.origemCep || "",
+        originCidade: summary.origemCidade,
+        originUf: summary.origemUf,
         destinationCep: summary.destinoCep || "",
         estimatedDays: selectedService.prazoDias,
         freightCost: selectedService.preco,
+        solicitarColeta: pickupAtOrigin, // Usar pickupAtOrigin do quoteDraft
       };
 
       // Criar shipment via API

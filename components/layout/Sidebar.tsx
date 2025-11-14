@@ -1,15 +1,14 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { Layout, Menu, Button, Flex, Avatar, Drawer, Typography, Skeleton } from 'antd';
+import { Layout, Menu, Flex } from 'antd';
 import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
-  LogoutOutlined,
 } from '@ant-design/icons';
-import { useAuthStore } from '@/stores/auth';
 import { sidebarItems } from './sidebar-items';
+import { UserPanel } from './UserPanel';
 import type { MenuProps } from 'antd';
 
 const { Sider } = Layout;
@@ -19,15 +18,6 @@ type MenuItem = Required<MenuProps>['items'][number];
 interface SidebarProps {
   collapsed: boolean;
   onCollapse: (collapsed: boolean) => void;
-}
-
-function getInitials(name: string) {
-  return name
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? '')
-    .join('');
 }
 
 function keyFromPath(pathname: string): string {
@@ -48,17 +38,7 @@ function keyFromPath(pathname: string): string {
 export function Sidebar({ collapsed, onCollapse }: SidebarProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const usuario = useAuthStore((s) => s.user);
-  const clearSession = useAuthStore((s) => s.logout);
-
-  const displayName = useMemo(() => usuario?.name ?? 'Usuário', [usuario]);
-  const avatarInitials = useMemo(() => getInitials(displayName), [displayName]);
   const selectedKey = useMemo(() => keyFromPath(pathname || '/'), [pathname]);
-
-  const handleLogout = () => {
-    clearSession();
-    router.replace('/login');
-  };
 
   // Build menu items with proper icon support for collapsed state
   const menuItems: MenuItem[] = sidebarItems.map((item) => {
@@ -92,6 +72,9 @@ export function Sidebar({ collapsed, onCollapse }: SidebarProps) {
         {collapsed ? 'EL' : 'Envio Legal'}
       </div>
 
+      {/* User Panel - MOVED TO TOP */}
+      <UserPanel collapsed={collapsed} />
+
       {/* Menu */}
       <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
         <Menu
@@ -106,87 +89,6 @@ export function Sidebar({ collapsed, onCollapse }: SidebarProps) {
             background: '#0A2955',
           }}
         />
-      </div>
-
-      {/* Footer */}
-      <div
-        className="sidebar-footer"
-        style={{
-          position: 'sticky',
-          bottom: 0,
-          padding: 12,
-          background: 'rgba(0, 0, 0, 0.15)',
-          borderTop: '1px solid rgba(255, 255, 255, 0.1)',
-        }}
-      >
-        {!usuario ? (
-          // Loading skeleton
-          <Flex align="center" gap={12}>
-            <Skeleton.Avatar active size={32} />
-            {!collapsed && <Skeleton.Input active size="small" style={{ width: 120 }} />}
-          </Flex>
-        ) : (
-          // User info + Logout
-          <Flex
-            align="center"
-            gap={12}
-            className="sidebar-user"
-            style={{
-              justifyContent: collapsed ? 'center' : 'flex-start',
-            }}
-          >
-            <Avatar
-              size={32}
-              style={{ flexShrink: 0, backgroundColor: '#1677ff' }}
-            >
-              {avatarInitials}
-            </Avatar>
-            {!collapsed && (
-              <Flex vertical style={{ flex: 1, minWidth: 0 }}>
-                <div
-                  style={{
-                    fontSize: 14,
-                    fontWeight: 600,
-                    color: '#E6EEF7',
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                  }}
-                >
-                  {displayName}
-                </div>
-                {usuario.email && (
-                  <Typography.Text
-                    style={{
-                      fontSize: 12,
-                      color: 'rgba(255, 255, 255, 0.65)',
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                    }}
-                  >
-                    {usuario.email}
-                  </Typography.Text>
-                )}
-                <Button
-                  type="text"
-                  size="small"
-                  icon={<LogoutOutlined />}
-                  onClick={handleLogout}
-                  className="sidebar-logout"
-                  style={{
-                    padding: 0,
-                    height: 'auto',
-                    fontSize: 12,
-                    marginTop: 4,
-                  }}
-                >
-                  Sair
-                </Button>
-              </Flex>
-            )}
-          </Flex>
-        )}
       </div>
     </Flex>
   );
@@ -324,31 +226,18 @@ export function Sidebar({ collapsed, onCollapse }: SidebarProps) {
           border-top: 1px solid rgba(255, 255, 255, 0.1);
         }
 
-        /* Footer user section */
-        .sidebar-footer {
-          position: sticky;
-          bottom: 0;
-        }
-
-        .sidebar-user {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          color: #E6EEF7;
-        }
-
-        /* Red logout button */
-        .sidebar-logout {
+        /* Red logout button in UserPanel */
+        .user-panel-logout {
           color: #ff4d4f !important;
           padding: 0;
         }
 
-        .sidebar-logout:hover {
+        .user-panel-logout:hover {
           color: #ff7875 !important;
           background: transparent !important;
         }
 
-        .sidebar-logout:focus {
+        .user-panel-logout:focus {
           color: #ff4d4f !important;
         }
       `}</style>

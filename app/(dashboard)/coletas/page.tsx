@@ -1,109 +1,194 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { App } from "antd";
-import { PageShell } from "@/components/shared/PageShell";
-import { SearchFilters } from "@/components/shared/SearchFilters";
-import { ColetasTable } from "@/components/coletas/ColetasTable";
-import { useColetas } from "@/hooks/useColetas";
-import { useColetasStore } from "@/stores/coletas";
+import React, { useState } from "react";
 import {
-  CollectionStatus,
-  COLLECTION_STATUS_LABELS,
-} from "@/types/contracts";
-import type { Coleta, ColetaStatus } from "@/lib/coletas/types";
-import { subscribeCheckoutEvents } from "@/lib/checkout/orchestrator";
+  Typography,
+  Table,
+  Tag,
+  Space,
+  Input,
+  DatePicker,
+  Select,
+  Button,
+  Card,
+} from "antd";
+import { SearchOutlined, CarOutlined } from "@ant-design/icons";
+import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
+import type { ColumnsType } from "antd/es/table";
+import type { PickupRequestWithShipment, PickupStatus } from "@/lib/types/pickup";
+import dayjs, { type Dayjs } from "dayjs";
+
+const { RangePicker } = DatePicker;
+
+const STATUS_OPTIONS: Array<{ label: string; value: PickupStatus | "all" }> = [
+  { label: "Todos", value: "all" },
+  { label: "Pendente", value: "PENDING" },
+  { label: "Agendada", value: "SCHEDULED" },
+  { label: "Falhou", value: "FAILED" },
+  { label: "Cancelada", value: "CANCELED" },
+  { label: "Concluída", value: "COMPLETED" },
+];
+
+const STATUS_COLORS: Record<PickupStatus, string> = {
+  PENDING: "orange",
+  SCHEDULED: "blue",
+  FAILED: "red",
+  CANCELED: "default",
+  COMPLETED: "green",
+};
+
+const STATUS_LABELS: Record<PickupStatus, string> = {
+  PENDING: "Pendente",
+  SCHEDULED: "Agendada",
+  FAILED: "Falhou",
+  CANCELED: "Cancelada",
+  COMPLETED: "Concluída",
+};
 
 export default function ColetasPage() {
-  const { message } = App.useApp();
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<ColetaStatus | "all">("all");
-  const subscribeExternal = useColetasStore((s) => s.subscribeExternal);
+  const [status, setStatus] = useState<PickupStatus | "all">("all");
+  const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null]>([null, null]);
 
-  // Subscribe to external changes (other tabs/checkout)
-  useEffect(() => {
-    const unsubscribe = subscribeExternal();
-    return () => unsubscribe();
-  }, [subscribeExternal]);
+  // Fetch pickups with filters
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ["pickups", searchQuery, status, dateRange],
+    queryFn: async () => {
+      const params = new URLSearchParams();
 
-  // Subscribe to checkout events
-  useEffect(() => {
-    const unsubscribe = subscribeCheckoutEvents((event, data) => {
-      if (event === "collection_created") {
-        message.success(
-          `Nova coleta criada para envio ${data.shipmentId}`,
-          3
-        );
+      if (searchQuery) params.append("q", searchQuery);
+      if (status !== "all") params.append("status", status);
+      if (dateRange[0]) params.append("dateStart", dateRange[0].toISOString());
+      if (dateRange[1]) params.append("dateEnd", dateRange[1].toISOString());
+
+      const response = await fetch(`/api/coletas?${params.toString()}`);
+      if (!response.ok) {
+        throw new Error("Erro ao buscar coletas");
       }
-    });
-
-    return () => unsubscribe();
-  }, [message]);
-
-  const coletasResult = useColetas({
-    q: searchQuery,
-    status: statusFilter,
-    pageSize: 20, // 20 items per page
+      return response.json();
+    },
   });
 
-  const coletas = coletasResult.items;
+  const items = data?.items ?? [];
 
-  const handleSearch = (q: string) => {
-    setSearchQuery(q);
-  };
-
-  const handleStatusFilter = (status: string) => {
-    setStatusFilter(status as ColetaStatus | "all");
-  };
-
-  const handleReset = () => {
-    setSearchQuery("");
-    setStatusFilter("all");
-  };
+  const columns: ColumnsType<PickupRequestWithShipment> = [
+    {
+      title: "Código de rastreio",
+      dataIndex: ["shipment", "trackingCode"],
+      render: (trackingCode: string, record) => (
+        <Link href={`/shipments/${record.shipmentId}`}>
+          {trackingCode}
+        </Link>
+      ),
+    },
+    {
+      title: "Transportadora",
+      dataIndex: ["shipment", "carrier"],
+      render: (carrier: string | null | undefined, record) =>
+        carrier || record.shipment?.service || "—",
+    },
+    {
+      title: "CEP Origem",
+      dataIndex: "originCep",
+    },
+    {
+      title: "Cidade/UF",
+      render: (_value, row) => {
+        if (row.originCity && row.originUf) {
+          return `${row.originCity}/${row.originUf}`;
+        }
+        if (row.originCity) return row.originCity;
+        if (row.originUf) return row.originUf;
+        return "—";
+      },
+    },
+    {
+      title: "Janela de Coleta",
+      render: (_value, row) => {
+        if (row.windowStart && row.windowEnd) {
+          return (
+            <Space direction="vertical" size={0}>
+              <Typography.Text style={{ fontSize: 12 }}>
+                {dayjs(row.windowStart).format("DD/MM/YYYY HH:mm")}
+              </Typography.Text>
+              <Typography.Text style={{ fontSize: 12 }}>
+                até {dayjs(row.windowEnd).format("DD/MM/YYYY HH:mm")}
+              </Typography.Text>
+            </Space>
+          );
+        }
+        if (row.windowStart) {
+          return dayjs(row.windowStart).format("DD/MM/YYYY HH:mm");
+        }
+        return "Não definida";
+      },
+    },
+    {
+      title: "Status",
+      dataIndex: "status",
+      render: (value: PickupStatus) => (
+        <Tag color={STATUS_COLORS[value] ?? "default"}>
+          {STATUS_LABELS[value] ?? value}
+        </Tag>
+      ),
+    },
+    {
+      title: "Criado em",
+      dataIndex: "createdAt",
+      render: (value: string) => dayjs(value).format("DD/MM/YYYY HH:mm"),
+    },
+  ];
 
   return (
-    <PageShell
-      title="Coletas"
-      description="Gerencie as coletas criadas automaticamente após o checkout"
-    >
-      <SearchFilters
-        searchValue={searchQuery}
-        onSearchChange={handleSearch}
-        searchPlaceholder="Buscar por ID do envio, cidade ou UF..."
-        filters={[
-          {
-            value: statusFilter || "all",
-            onChange: handleStatusFilter,
-            options: [
-              { label: "Todos os Status", value: "all" },
-              {
-                label: COLLECTION_STATUS_LABELS[CollectionStatus.ABERTA],
-                value: CollectionStatus.ABERTA,
-              },
-              {
-                label: COLLECTION_STATUS_LABELS[CollectionStatus.AGENDADA],
-                value: CollectionStatus.AGENDADA,
-              },
-              {
-                label: COLLECTION_STATUS_LABELS[CollectionStatus.EM_ANDAMENTO],
-                value: CollectionStatus.EM_ANDAMENTO,
-              },
-              {
-                label: COLLECTION_STATUS_LABELS[CollectionStatus.CONCLUIDA],
-                value: CollectionStatus.CONCLUIDA,
-              },
-              {
-                label: COLLECTION_STATUS_LABELS[CollectionStatus.CANCELADA],
-                value: CollectionStatus.CANCELADA,
-              },
-            ],
-            placeholder: "Status",
-          },
-        ]}
-        onReset={handleReset}
-      />
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <div>
+        <Typography.Title level={2} style={{ marginBottom: 4 }}>
+          <CarOutlined style={{ marginRight: 8 }} />
+          Solicitações de Coleta
+        </Typography.Title>
+        <Typography.Paragraph type="secondary">
+          Gerencie as solicitações de coleta criadas automaticamente ao finalizar envios.
+        </Typography.Paragraph>
+      </div>
 
-      <ColetasTable data={coletas} loading={false} />
-    </PageShell>
+      <Card>
+        <Space direction="vertical" size={16} style={{ width: "100%" }}>
+          <Space wrap>
+            <Input
+              allowClear
+              style={{ width: 280 }}
+              placeholder="Buscar por código de rastreio ou CEP"
+              prefix={<SearchOutlined />}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+            <Select
+              style={{ width: 160 }}
+              value={status}
+              onChange={setStatus}
+              options={STATUS_OPTIONS}
+            />
+            <RangePicker
+              format="DD/MM/YYYY"
+              placeholder={["Data início", "Data fim"]}
+              value={dateRange}
+              onChange={(dates) => setDateRange(dates as [Dayjs | null, Dayjs | null])}
+            />
+            <Button onClick={() => refetch()} disabled={isLoading}>
+              Atualizar
+            </Button>
+          </Space>
+
+          <Table<PickupRequestWithShipment>
+            rowKey="id"
+            loading={isLoading}
+            dataSource={items}
+            pagination={{ pageSize: 20 }}
+            columns={columns}
+          />
+        </Space>
+      </Card>
+    </div>
   );
 }

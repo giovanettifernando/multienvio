@@ -31,7 +31,7 @@ export const useCheckoutStore = create<CheckoutState & CheckoutActions>()(
     {
       name: 'envio-legal-checkout',
       storage: createJSONStorage(() => localStorage),
-      version: 1,
+      version: 3, // Increment version to remove solicitarColeta field
     }
   )
 );

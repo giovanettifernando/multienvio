@@ -62,6 +62,7 @@ export async function GET(request: NextRequest) {
       where,
       include: {
         label: true, // Incluir dados da etiqueta
+        pickupRequest: true, // Incluir dados da coleta
       },
       orderBy: { createdAt: 'desc' },
       take: 100, // Limitar resultados
@@ -84,6 +85,10 @@ export async function GET(request: NextRequest) {
       createdAt: s.createdAt.toISOString(),
       labelUrl: s.label?.fileUrl || (s.label?.fileBase64 ? `data:${s.label.contentType};base64,${s.label.fileBase64}` : undefined),
       trackingUrl: s.publicTrackingId ? `/rastreio/${s.publicTrackingId}` : undefined,
+      pickupRequest: s.pickupRequest ? {
+        id: s.pickupRequest.id,
+        status: s.pickupRequest.status,
+      } : null,
     }));
 
     return NextResponse.json({ items });

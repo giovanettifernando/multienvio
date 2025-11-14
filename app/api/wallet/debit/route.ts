@@ -139,6 +139,38 @@ export async function POST(request: Request) {
           },
         });
 
+        // 7) Se for pagamento de shipment, atualizar status e emitir etiqueta
+        if (shipmentId) {
+          // Atualizar status do shipment para ready_for_posting
+          await tx.shipment.update({
+            where: { id: shipmentId },
+            data: {
+              status: 'ready_for_posting',
+              paymentMethod: 'WALLET',
+            },
+          });
+
+          // Buscar e atualizar a label associada
+          const label = await tx.label.findUnique({
+            where: { shipmentId },
+          });
+
+          if (label) {
+            // Gerar PDF mock da etiqueta (base64)
+            const mockPdfBase64 = 'JVBERi0xLjQKJeLjz9MKMSAwIG9iago8PC9UeXBlL0NhdGFsb2cvUGFnZXMgMiAwIFI+PgplbmRvYmoKMiAwIG9iago8PC9UeXBlL1BhZ2VzL0tpZHNbMyAwIFJdL0NvdW50IDE+PgplbmRvYmoKMyAwIG9iago8PC9UeXBlL1BhZ2UvTWVkaWFCb3hbMCAwIDYxMiA3OTJdL1BhcmVudCAyIDAgUi9SZXNvdXJjZXM8PC9Gb250PDwvRjEgNCAwIFI+Pj4+L0NvbnRlbnRzIDUgMCBSPj4KZW5kb2JqCjQgMCBvYmoKPDwvVHlwZS9Gb250L1N1YnR5cGUvVHlwZTEvQmFzZUZvbnQvVGltZXMtUm9tYW4+PgplbmRvYmoKNSAwIG9iago8PC9MZW5ndGggNDQ+PgpzdHJlYW0KQlQKL0YxIDI0IFRmCjEwMCA3MDAgVGQKKEV0aXF1ZXRhIFRlc3RlKSBUagpFVAplbmRzdHJlYW0KZW5kb2JqCnhyZWYKMCA2CjAwMDAwMDAwMDAgNjU1MzUgZiAKMDAwMDAwMDAxNSAwMDAwMCBuIAowMDAwMDAwMDY0IDAwMDAwIG4gCjAwMDAwMDAxMTUgMDAwMDAgbiAKMDAwMDAwMDI0NSAwMDAwMCBuIAowMDAwMDAwMzI4IDAwMDAwIG4gCnRyYWlsZXIKPDwvU2l6ZSA2L1Jvb3QgMSAwIFI+PgpzdGFydHhyZWYKNDIwCiUlRU9GCg==';
+
+            await tx.label.update({
+              where: { id: label.id },
+              data: {
+                status: 'issued',
+                fileBase64: mockPdfBase64,
+                contentType: 'application/pdf',
+                sizeBytes: 420,
+              },
+            });
+          }
+        }
+
         return {
           ok: true,
           idempotent: false,

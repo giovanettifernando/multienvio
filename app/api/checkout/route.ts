@@ -42,9 +42,12 @@ const checkoutSchema = z.object({
   carrier: z.string(),
   service: z.string(),
   originCep: z.string(),
+  originCidade: z.string().optional(),
+  originUf: z.string().optional(),
   destinationCep: z.string(),
   estimatedDays: z.number(),
   freightCost: z.number(),
+  solicitarColeta: z.boolean().optional().default(false), // Solicitar coleta na origem
 });
 
 type CheckoutPayload = z.infer<typeof checkoutSchema>;
@@ -164,14 +167,44 @@ export async function POST(request: Request) {
           priceCents: Math.round(data.freightCost * 100), // Converter para centavos
           currency: 'BRL',
           trackingCode: trackingCode,
+          recipientName: data.recipient.nome, // Nome do destinatário denormalizado
           isPrinted: false,
         },
       });
 
+      // Se solicitarColeta estiver ativado, criar PickupRequest
+      let pickupRequest = null;
+      if (data.solicitarColeta) {
+        // Verificar se já existe coleta para este shipment (idempotência)
+        const existingPickup = await tx.pickupRequest.findUnique({
+          where: { shipmentId: shipment.id },
+        });
+
+        if (!existingPickup) {
+          // Para coleta normal: usar dados de ORIGEM
+          // Para logística reversa: usar dados de DESTINO (onde será feita a coleta)
+          // Por enquanto, assumimos coleta normal (pickup na origem)
+          pickupRequest = await tx.pickupRequest.create({
+            data: {
+              userId: session.userId,
+              shipmentId: shipment.id,
+              originCep: data.originCep,
+              originAddress: null, // Endereço completo não disponível no payload
+              originCity: data.originCidade || null,
+              originUf: data.originUf || null,
+              status: 'PENDING',
+              notes: null,
+            },
+          });
+        } else {
+          pickupRequest = existingPickup;
+        }
+      }
+
       // Nota: A transação financeira será criada pelo /api/wallet/debit
       // quando o usuário confirmar o pagamento no modal
 
-      return { shipment, label };
+      return { shipment, label, pickupRequest };
     });
 
     // Verificar se há integração de pagamento configurada

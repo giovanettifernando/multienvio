@@ -56,6 +56,7 @@ model User {
   packagingTemplates     PackagingTemplate[]
   role                   Role?                @relation(fields: [roleId], references: [id])
   wallet                 Wallet?
+  pickupRequests         PickupRequest[]
 
   @@index([email])
   @@index([emailVerificationToken])
@@ -212,6 +213,7 @@ model Shipment {
   sender                  User            @relation("SenderShipments", fields: [senderId], references: [id])
   trackingEvents          TrackingEvent[]
   label                   Label?
+  pickupRequest           PickupRequest?
 
   @@index([trackingCode])
   @@index([senderId])
@@ -222,29 +224,56 @@ model Shipment {
 }
 
 model Label {
-  id           String   @id @default(uuid())
-  shipmentId   String   @unique
-  carrier      String
-  service      String
-  status       String   @default("pending") // pending, paid, issued, canceled, error
-  priceCents   Int      // Preço em centavos
-  currency     String   @default("BRL")
-  trackingCode String?
-  fileUrl      String?  // URL do PDF da etiqueta
-  fileBase64   String?  @db.Text // Base64 do PDF (se aplicável)
-  contentType  String?  @default("application/pdf")
-  sizeBytes    Int?
-  isPrinted    Boolean  @default(false) // Status de impressão
-  printedAt    DateTime?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  shipment     Shipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  id            String   @id @default(uuid())
+  shipmentId    String   @unique
+  carrier       String
+  service       String
+  status        String   @default("pending") // pending, paid, issued, canceled, error
+  priceCents    Int      // Preço em centavos
+  currency      String   @default("BRL")
+  trackingCode  String?
+  recipientName String?  // Nome do destinatário (denormalizado)
+  fileUrl       String?  // URL do PDF da etiqueta
+  fileBase64    String?  @db.Text // Base64 do PDF (se aplicável)
+  contentType   String?  @default("application/pdf")
+  sizeBytes     Int?
+  isPrinted     Boolean  @default(false) // Status de impressão
+  printedAt     DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  shipment      Shipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
 
   @@index([shipmentId])
   @@index([status])
   @@index([isPrinted])
   @@index([createdAt])
   @@map("labels")
+}
+
+model PickupRequest {
+  id            String    @id @default(cuid())
+  companyId     String?   // ID da empresa (se aplicável)
+  userId        String    // Usuário que solicitou a coleta
+  shipmentId    String    @unique // Garantir 1 coleta por shipment
+  originCep     String
+  originAddress String?
+  originCity    String?
+  originUf      String?   @db.VarChar(2)
+  windowStart   DateTime? // Início da janela de coleta
+  windowEnd     DateTime? // Fim da janela de coleta
+  status        String    @default("PENDING") // PENDING, SCHEDULED, FAILED, CANCELED, COMPLETED
+  notes         String?   @db.Text
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  shipment      Shipment  @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([shipmentId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([originCep])
+  @@map("pickup_requests")
 }
 
 model TrackingEvent {

@@ -18,11 +18,14 @@ import {
   EyeOutlined,
   StopOutlined,
   GlobalOutlined,
+  CarOutlined,
 } from "@ant-design/icons";
 import Link from "next/link";
 import { useShipments, useShipmentCancel } from "@/hooks/useShipments";
 import type { Shipment, ShipmentStatus } from "@/src/types/shipments";
+import type { LabelItem } from "@/lib/types/label";
 import type { ColumnsType } from "antd/es/table";
+import type { PickupStatus } from "@/lib/types/pickup";
 
 const STATUS_OPTIONS: Array<ShipmentStatus | "Todos"> = [
   "Todos",
@@ -62,7 +65,7 @@ export default function ShipmentsPage() {
       const response = await fetch(`/api/labels?q=${shipmentId}`);
       if (response.ok) {
         const data = await response.json();
-        const label = data.items?.find((item: any) => item.shipmentId === shipmentId);
+        const label = data.items?.find((item: LabelItem) => item.shipmentId === shipmentId);
 
         if (label) {
           // Marcar como impressa
@@ -102,8 +105,15 @@ export default function ShipmentsPage() {
       {
         title: "Status",
         dataIndex: "status",
-        render: (value: ShipmentStatus) => (
-          <Tag color={STATUS_COLORS[value] ?? "default"}>{value}</Tag>
+        render: (value: ShipmentStatus, row: Shipment) => (
+          <Space direction="vertical" size={4}>
+            <Tag color={STATUS_COLORS[value] ?? "default"}>{value}</Tag>
+            {row.pickupRequest && row.pickupRequest.status !== 'CANCELED' && row.pickupRequest.status !== 'COMPLETED' && (
+              <Tag color={row.pickupRequest.status === 'PENDING' ? 'orange' : 'blue'} style={{ fontSize: 11 }}>
+                Coleta: {row.pickupRequest.status === 'PENDING' ? 'Pendente' : row.pickupRequest.status === 'SCHEDULED' ? 'Agendada' : row.pickupRequest.status}
+              </Tag>
+            )}
+          </Space>
         ),
       },
       {
@@ -153,6 +163,13 @@ export default function ShipmentsPage() {
                 />
               </span>
             </Tooltip>
+            {row.pickupRequest && (
+              <Tooltip title="Ver coleta">
+                <Link href={`/coletas?shipmentId=${row.id}`}>
+                  <Button size="small" icon={<CarOutlined />} />
+                </Link>
+              </Tooltip>
+            )}
             <Tooltip title="Cancelar envio">
               <Button
                 size="small"

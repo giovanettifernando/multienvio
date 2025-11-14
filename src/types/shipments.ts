@@ -20,4 +20,8 @@ export type Shipment = {
   createdAt: string;          // ISO
   labelUrl?: string;          // URL da etiqueta (stub)
   trackingUrl?: string;       // URL de rastreio externo (stub)
+  pickupRequest?: {           // Informações da coleta (se houver)
+    id: string;
+    status: string;           // PENDING, SCHEDULED, FAILED, CANCELED, COMPLETED
+  } | null;
 };

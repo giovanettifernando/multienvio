@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getUserSessionFromRequest } from "@/lib/auth/user-session";
 import type { LabelItem, LabelsResponse, PrintStatus } from "@/lib/types/label";
+import type { Prisma } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
 
@@ -24,7 +25,7 @@ export async function GET(request: Request) {
     const printStatus = (searchParams.get('printStatus') ?? 'all') as PrintStatus | 'all';
 
     // Construir filtros
-    const where: any = {
+    const where: Prisma.LabelWhereInput = {
       shipment: {
         senderId: session.userId,
         status: {
@@ -79,7 +80,7 @@ export async function GET(request: Request) {
       shipmentId: label.shipmentId,
       carrier: label.carrier,
       service: label.service,
-      status: label.status as any,
+      status: label.status as LabelItem['status'],
       price: label.priceCents / 100, // Converter centavos para reais
       currency: label.currency as 'BRL',
       trackingCode: label.trackingCode ?? undefined,
@@ -88,7 +89,8 @@ export async function GET(request: Request) {
       originCep: label.shipment.originCep,
       destinationCep: label.shipment.destinationCep,
       recipient: {
-        name: label.shipment.recipientName || 'Não informado',
+        // Priorizar recipientName do label (denormalizado), fallback para shipment
+        name: label.recipientName || label.shipment.recipientName || 'Não informado',
         document: label.shipment.recipientDocument ?? undefined,
         city: label.shipment.destinationCity ?? undefined,
         state: label.shipment.destinationState ?? undefined,
