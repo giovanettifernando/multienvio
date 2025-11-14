@@ -7,6 +7,8 @@ import { InboxOutlined } from "@ant-design/icons";
 import { useFieldArray, useFormContext } from "react-hook-form";
 import type { FinalizeFormValues } from "@/types/quoteFinalize";
 import { useQuoteStore } from "@/store/useQuoteStore";
+import { useInvoiceItems } from "@/hooks/useInvoiceItems";
+import { InvoiceItemsTable } from "@/components/quote/InvoiceItemsTable";
 
 const { Dragger } = Upload;
 
@@ -54,8 +56,18 @@ type NFeRow = { chave: string };
 export function NFeGrid() {
   const { message } = App.useApp();
   const { control, setValue, getValues, watch, formState: { errors } } = useFormContext<FinalizeFormValues>();
+  const { data: invoiceData, loading: loadingItems, error: itemsError, parseXml, reset: resetItems } = useInvoiceItems();
 
   const packagesCount = useMemo(() => getPackagesCount(), []);
+
+  // Atualizar itens no formulário quando invoiceData mudar
+  useEffect(() => {
+    if (invoiceData?.items) {
+      setValue("document.nfeItems", invoiceData.items, {
+        shouldDirty: true,
+      });
+    }
+  }, [invoiceData, setValue]);
 
   // Gerencia o array de chaves
   const { replace } = useFieldArray({
@@ -129,6 +141,8 @@ export function NFeGrid() {
         const ok = fillNextEmpty(chave);
         if (ok) {
           message.success(`${file.name}: chave adicionada.`);
+          // Parse do XML para obter itens
+          parseXml(text);
         }
       } catch {
         message.error(`${file.name}: erro ao processar arquivo.`);
@@ -211,6 +225,14 @@ export function NFeGrid() {
           }
         </p>
       </Dragger>
+
+      {/* Tabela de itens da NF-e */}
+      <InvoiceItemsTable
+        items={invoiceData?.items || null}
+        loading={loadingItems}
+        error={itemsError}
+        onRetry={resetItems}
+      />
     </Space>
   );
 }

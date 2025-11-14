@@ -1,7 +1,7 @@
 "use client";
 
-import { NFeGrid } from "@/components/quote/NFeGrid";
+import { NFeGridPerPackage } from "@/components/quote/NFeGridPerPackage";
 
 export function NFeForm() {
-  return <NFeGrid />;
+  return <NFeGridPerPackage />;
 }

@@ -96,6 +96,13 @@ export default function FinalizeQuotePage() {
           type: initialDoc,
           nfeKey: "",
           nfeXml: null,
+          // Novo formato: NF por pacote
+          packages: initialDoc === "NFE" ? Array.from({ length: volumesCount }, () => ({
+            chave: "",
+            xmlId: null,
+            items: [],
+          })) : undefined,
+          // Campos legados
           nfeKeys: initialDoc === "NFE" ? Array.from({ length: volumesCount }, () => ({ chave: "" })) : undefined,
           declarationItems: initialDoc === "DECLARACAO" ? [
             {
@@ -411,7 +418,11 @@ export default function FinalizeQuotePage() {
         },
         document: {
           type: values.document.type,
+          // Novo formato: NF por pacote
+          packages: values.document.type === "NFE" ? values.document.packages : undefined,
+          // Campos legados para retrocompatibilidade
           nfeKeys: values.document.type === "NFE" ? values.document.nfeKeys : undefined,
+          nfeItems: values.document.type === "NFE" ? values.document.nfeItems : undefined,
           declarationItems: values.document.type === "DECLARACAO" ? values.document.declarationItems : undefined,
         },
         volumes: summary.volumes.map((v) => ({

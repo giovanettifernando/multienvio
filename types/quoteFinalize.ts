@@ -15,6 +15,31 @@ const declarationItemSchema = z.object({
 
 export type DeclarationFormItem = z.infer<typeof declarationItemSchema>;
 
+// Schema para itens da NF-e
+const invoiceItemSchema = z.object({
+  id: z.string(),
+  sku: z.string().nullable().optional(),
+  descricao: z.string(),
+  ncm: z.string().nullable().optional(),
+  cfop: z.string().nullable().optional(),
+  quantidade: z.number(),
+  pesoLiquido: z.number().nullable().optional(),
+  valorUnitario: z.number(),
+  valorTotal: z.number(),
+});
+
+export type InvoiceFormItem = z.infer<typeof invoiceItemSchema>;
+
+// Schema para NF-e de um pacote específico
+const packageInvoiceSchema = z.object({
+  chave: z.string().regex(/^\d{44}$/, "A chave deve ter 44 dígitos."),
+  xmlId: z.string().nullable().optional(),
+  items: z.array(invoiceItemSchema).default([]),
+});
+
+export type PackageInvoiceForm = z.infer<typeof packageInvoiceSchema>;
+
+// Schema legado para retrocompatibilidade
 const nfeKeySchema = z.object({
   chave: z.string().regex(/^\d{44}$/, "A chave deve ter 44 dígitos."),
 });
@@ -61,9 +86,13 @@ export const finalizeFormSchema = z
   .object({
     document: z.object({
       type: z.enum(["NFE", "DECLARACAO"] as [DocumentType, DocumentType]),
+      // Campos legados para retrocompatibilidade
       nfeKey: z.string().optional(),
       nfeXml: z.string().optional().nullable(),
       nfeKeys: z.array(nfeKeySchema).optional(),
+      nfeItems: z.array(invoiceItemSchema).optional(),
+      // Novo formato: NF por pacote
+      packages: z.array(packageInvoiceSchema).optional(),
       declarationItems: z.array(declarationItemSchema).optional(),
     }),
     postingUnit: postingUnitSchema,
@@ -78,8 +107,20 @@ export const finalizeFormSchema = z
   })
   .superRefine((values, ctx) => {
     if (values.document.type === "NFE") {
-      // Validação para o array de chaves (novo formato)
-      if (values.document.nfeKeys) {
+      // Validação para NF por pacote (novo formato preferencial)
+      if (values.document.packages && values.document.packages.length > 0) {
+        values.document.packages.forEach((pkg, idx) => {
+          if (!pkg.chave || !/^\d{44}$/.test(pkg.chave)) {
+            ctx.addIssue({
+              path: ["document", "packages", idx, "chave"],
+              code: z.ZodIssueCode.custom,
+              message: "Informe a chave da NF-e com 44 dígitos.",
+            });
+          }
+        });
+      }
+      // Validação para o array de chaves (formato intermediário - retrocompatibilidade)
+      else if (values.document.nfeKeys) {
         const keys = values.document.nfeKeys;
         if (!keys.length) {
           ctx.addIssue({

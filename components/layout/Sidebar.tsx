@@ -2,6 +2,7 @@
 
 import { useMemo } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { Layout, Menu, Flex } from 'antd';
 import {
   MenuFoldOutlined,
@@ -61,15 +62,33 @@ export function Sidebar({ collapsed, onCollapse }: SidebarProps) {
           display: 'flex',
           alignItems: 'center',
           justifyContent: collapsed ? 'center' : 'flex-start',
-          padding: collapsed ? '0' : '0 24px',
-          color: '#fff',
-          fontWeight: 700,
-          fontSize: collapsed ? 18 : 20,
-          letterSpacing: 2,
+          padding: collapsed ? '0 12px' : '0 24px',
           borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
         }}
       >
-        {collapsed ? 'EL' : 'Envio Legal'}
+        {collapsed ? (
+          <div
+            style={{
+              color: '#fff',
+              fontWeight: 700,
+              fontSize: 18,
+              letterSpacing: 2,
+            }}
+          >
+            EL
+          </div>
+        ) : (
+          <Image
+            src="/assets/logo-envio-legal-branca.svg"
+            alt="Envio Legal"
+            width={160}
+            height={40}
+            style={{
+              objectFit: 'contain',
+            }}
+            priority
+          />
+        )}
       </div>
 
       {/* User Panel - MOVED TO TOP */}
