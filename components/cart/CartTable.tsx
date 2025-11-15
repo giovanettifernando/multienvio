@@ -1,11 +1,10 @@
 import { useMemo } from "react";
-import { Button, InputNumber, Space, Table, Tag, Typography } from "antd";
+import { Button, Space, Table, Tag, Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import type { CartItem } from "@/types/cart";
 
 type CartTableProps = {
   items: CartItem[];
-  onChangeQty: (itemId: string, quantidade: number) => void;
   onRemove: (item: CartItem) => void;
 };
 
@@ -14,7 +13,7 @@ const currencyFormatter = new Intl.NumberFormat("pt-BR", {
   currency: "BRL",
 });
 
-export function CartTable({ items, onChangeQty, onRemove }: CartTableProps) {
+export function CartTable({ items, onRemove }: CartTableProps) {
   const columns = useMemo<ColumnsType<CartItem>>(
     () => [
       {
@@ -70,32 +69,8 @@ export function CartTable({ items, onChangeQty, onRemove }: CartTableProps) {
         dataIndex: "preco",
         key: "preco",
         render: (value: number) => (
-          <Typography.Text>
+          <Typography.Text strong style={{ whiteSpace: "nowrap" }}>
             {currencyFormatter.format(value)}
-          </Typography.Text>
-        ),
-      },
-      {
-        title: "Qtd",
-        dataIndex: "quantidade",
-        key: "quantidade",
-        render: (_value, record) => (
-          <InputNumber
-            min={1}
-            value={record.quantidade}
-            onChange={(val) => {
-              const nextValue = typeof val === "number" ? val : 1;
-              onChangeQty(record.id, Math.max(1, nextValue));
-            }}
-          />
-        ),
-      },
-      {
-        title: "Subtotal",
-        key: "subtotal",
-        render: (_value, record) => (
-          <Typography.Text strong>
-            {currencyFormatter.format(record.preco * record.quantidade)}
           </Typography.Text>
         ),
       },
@@ -111,7 +86,7 @@ export function CartTable({ items, onChangeQty, onRemove }: CartTableProps) {
         ),
       },
     ],
-    [onChangeQty, onRemove],
+    [onRemove],
   );
 
   return (

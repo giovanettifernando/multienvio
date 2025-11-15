@@ -1,11 +1,17 @@
+"use client";
+
 import {
   Button,
   Card,
+  Col,
   Divider,
   Flex,
+  Row,
   Space,
   Typography,
 } from "antd";
+import { useRouter } from "next/navigation";
+import { useQuoteStore } from "@/store/useQuoteStore";
 import type { Cart } from "@/types/cart";
 
 type CartSummaryProps = {
@@ -26,6 +32,15 @@ export function CartSummary({
   onClear,
   onCheckout,
 }: CartSummaryProps) {
+  const router = useRouter();
+  const resetQuote = useQuoteStore((state) => state.reset);
+
+  const handleNewQuote = () => {
+    // Limpar todo o estado do formulário de cotações
+    resetQuote();
+    // Redirecionar para a tela de cotações
+    router.push("/cotacoes");
+  };
 
   return (
     <Card title="Resumo do carrinho" styles={{ body: { paddingTop: 16 } }}>
@@ -60,20 +75,35 @@ export function CartSummary({
         </Flex>
 
         <Space direction="vertical" size={12} style={{ width: "100%" }}>
-          <Button
-            type="default"
-            danger
-            onClick={onClear}
-            disabled={cart.items.length === 0}
-            loading={isClearing}
-          >
-            Limpar carrinho
-          </Button>
+          <Row gutter={8}>
+            <Col xs={24} sm={12}>
+              <Button
+                type="default"
+                onClick={handleNewQuote}
+                style={{ width: "100%" }}
+              >
+                Novo envio
+              </Button>
+            </Col>
+            <Col xs={24} sm={12}>
+              <Button
+                type="default"
+                danger
+                onClick={onClear}
+                disabled={cart.items.length === 0}
+                loading={isClearing}
+                style={{ width: "100%" }}
+              >
+                Limpar carrinho
+              </Button>
+            </Col>
+          </Row>
           <Button
             type="primary"
             size="large"
             onClick={onCheckout}
             disabled={cart.items.length === 0}
+            block
           >
             Finalizar pagamento
           </Button>

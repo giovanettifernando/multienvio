@@ -15,6 +15,14 @@ const declarationItemSchema = z.object({
 
 export type DeclarationFormItem = z.infer<typeof declarationItemSchema>;
 
+// Schema para declaração de conteúdo de um volume específico
+const volumeDeclarationSchema = z.object({
+  volumeIndex: z.number(),
+  items: z.array(declarationItemSchema).min(1, "Adicione ao menos um item para este volume."),
+});
+
+export type VolumeDeclarationForm = z.infer<typeof volumeDeclarationSchema>;
+
 // Schema para itens da NF-e
 const invoiceItemSchema = z.object({
   id: z.string(),
@@ -34,7 +42,7 @@ export type InvoiceFormItem = z.infer<typeof invoiceItemSchema>;
 const packageInvoiceSchema = z.object({
   chave: z.string().regex(/^\d{44}$/, "A chave deve ter 44 dígitos."),
   xmlId: z.string().nullable().optional(),
-  items: z.array(invoiceItemSchema).default([]),
+  items: z.array(invoiceItemSchema),
 });
 
 export type PackageInvoiceForm = z.infer<typeof packageInvoiceSchema>;
@@ -93,7 +101,10 @@ export const finalizeFormSchema = z
       nfeItems: z.array(invoiceItemSchema).optional(),
       // Novo formato: NF por pacote
       packages: z.array(packageInvoiceSchema).optional(),
+      // Legado: declaração única (retrocompatibilidade)
       declarationItems: z.array(declarationItemSchema).optional(),
+      // Novo formato: declaração por volume
+      volumeDeclarations: z.array(volumeDeclarationSchema).optional(),
     }),
     postingUnit: postingUnitSchema,
     recipient: z.object({
@@ -159,7 +170,65 @@ export const finalizeFormSchema = z
         }
       }
     } else if (values.document.type === "DECLARACAO") {
-      if (!values.document.declarationItems?.length) {
+      // Novo formato: declaração por volume
+      if (values.document.volumeDeclarations && values.document.volumeDeclarations.length > 0) {
+        values.document.volumeDeclarations.forEach((volDecl, idx) => {
+          // Verificar se há itens
+          if (!volDecl.items || volDecl.items.length === 0) {
+            ctx.addIssue({
+              path: ["document", "volumeDeclarations", idx, "items"],
+              code: z.ZodIssueCode.custom,
+              message: `Adicione ao menos um item na declaração do Volume ${idx + 1}.`,
+            });
+            return;
+          }
+
+          // Verificar se há pelo menos um item válido (com descrição preenchida)
+          const hasValidItem = volDecl.items.some(item =>
+            item.descricao &&
+            item.descricao.trim().length >= 3 &&
+            item.valorUnitario > 0 &&
+            item.quantidade > 0
+          );
+
+          if (!hasValidItem) {
+            ctx.addIssue({
+              path: ["document", "volumeDeclarations", idx, "items", 0, "descricao"],
+              code: z.ZodIssueCode.custom,
+              message: `Preencha ao menos um item válido para o Volume ${idx + 1}.`,
+            });
+          }
+
+          // Validar cada item individualmente
+          volDecl.items.forEach((item, itemIdx) => {
+            if (item.descricao && item.descricao.trim().length > 0 && item.descricao.trim().length < 3) {
+              ctx.addIssue({
+                path: ["document", "volumeDeclarations", idx, "items", itemIdx, "descricao"],
+                code: z.ZodIssueCode.custom,
+                message: "Descrição deve ter pelo menos 3 caracteres.",
+              });
+            }
+
+            if (item.valorUnitario !== undefined && item.valorUnitario !== null && item.valorUnitario <= 0) {
+              ctx.addIssue({
+                path: ["document", "volumeDeclarations", idx, "items", itemIdx, "valorUnitario"],
+                code: z.ZodIssueCode.custom,
+                message: "Valor deve ser maior que zero.",
+              });
+            }
+
+            if (item.quantidade !== undefined && item.quantidade !== null && item.quantidade <= 0) {
+              ctx.addIssue({
+                path: ["document", "volumeDeclarations", idx, "items", itemIdx, "quantidade"],
+                code: z.ZodIssueCode.custom,
+                message: "Quantidade deve ser maior que zero.",
+              });
+            }
+          });
+        });
+      }
+      // Formato legado: declaração única (retrocompatibilidade)
+      else if (!values.document.declarationItems?.length) {
         ctx.addIssue({
           path: ["document", "declarationItems"],
           code: z.ZodIssueCode.custom,

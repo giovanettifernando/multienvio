@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
     if (q && q.trim().length > 0) {
       where.OR = [
         { originCep: { contains: q, mode: 'insensitive' } },
-        { shipment: { trackingCode: { contains: q, mode: 'insensitive' } } },
+        { shipment: { platformTrackingCode: { contains: q, mode: 'insensitive' } } },
       ];
     }
 
@@ -76,7 +76,7 @@ export async function GET(request: NextRequest) {
         shipment: {
           select: {
             id: true,
-            trackingCode: true,
+            platformTrackingCode: true,
             carrier: true,
             service: true,
           },
@@ -105,7 +105,7 @@ export async function GET(request: NextRequest) {
       updatedAt: pickup.updatedAt.toISOString(),
       shipment: {
         id: pickup.shipment.id,
-        trackingCode: pickup.shipment.trackingCode,
+        trackingCode: pickup.shipment.platformTrackingCode, // Expor apenas código da plataforma
         carrier: pickup.shipment.carrier,
         service: pickup.shipment.service,
       },
@@ -194,7 +194,7 @@ export async function POST(request: NextRequest) {
         shipment: {
           select: {
             id: true,
-            trackingCode: true,
+            platformTrackingCode: true,
             carrier: true,
             service: true,
           },

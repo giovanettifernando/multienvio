@@ -30,7 +30,7 @@ interface PickupPointWithDistance extends PickupPoint {
 
 // Normalizar pontos para markers
 function toMarkers(points: Array<Record<string, unknown> | PickupPointWithDistance>): Marker[] {
-  return points
+  const markers = points
     .map((p) => {
       const geo = p.geo as { lat?: number | string; lng?: number | string } | undefined | null;
       const fallbackLat = 'lat' in p ? (p as Record<string, unknown>).lat : undefined;
@@ -39,14 +39,28 @@ function toMarkers(points: Array<Record<string, unknown> | PickupPointWithDistan
       const latValue = typeof geo?.lat === "string" ? parseFloat(geo.lat) : (geo?.lat ?? fallbackLat) as number;
       const lngValue = typeof geo?.lng === "string" ? parseFloat(geo.lng) : (geo?.lng ?? fallbackLng) as number;
 
-      return {
+      const marker = {
         id: String(p.id),
         name: (p.nomeFantasia ?? ('name' in p ? p.name : undefined) ?? p.razaoSocial ?? ('alias' in p ? (p as Record<string, unknown>).alias : undefined) ?? "Unidade") as string,
         lat: latValue,
         lng: lngValue,
       };
+
+      // Warning: log pontos sem coordenadas (útil para debug)
+      if (!Number.isFinite(marker.lat) || !Number.isFinite(marker.lng)) {
+        console.warn('[MapModal] Ponto de coleta sem coordenadas válidas:', {
+          id: p.id,
+          name: marker.name,
+          cep: ('cep' in p ? p.cep : undefined),
+          cidade: ('cidade' in p ? p.cidade : undefined),
+        });
+      }
+
+      return marker;
     })
     .filter((m) => Number.isFinite(m.lat) && Number.isFinite(m.lng));
+
+  return markers;
 }
 
 interface MapModalProps {

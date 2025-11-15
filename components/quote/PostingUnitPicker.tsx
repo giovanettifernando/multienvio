@@ -25,6 +25,7 @@ import { matchesSearch } from "@/lib/utils/string";
 import { calculateDistance, getUFCoordinates, formatDistance } from "@/lib/utils/geo";
 import { MapModal } from "./MapModal";
 import { usePickupPoints } from "@/hooks/usePickupPoints";
+import { useGeocode } from "@/hooks/useGeocode";
 import { PickupPointStatus } from "@/types/contracts";
 
 interface PickupPointWithDistance extends PickupPoint {
@@ -57,6 +58,10 @@ export function PostingUnitPicker() {
   // Buscar todos os pontos de coleta ativos (sem filtro de localização)
   // O usuário pode escolher qualquer ponto cadastrado no sistema
   const { data: apiPickupPoints, isLoading: isLoadingPickupPoints } = usePickupPoints({});
+
+  // Geocodificar CEP de origem para obter coordenadas precisas
+  const originCep = results?.resumo?.origemCep;
+  const { data: originGeocode } = useGeocode(originCep);
 
   // Popul ar store com pontos do banco quando carregarem
   useEffect(() => {
@@ -102,10 +107,16 @@ export function PostingUnitPicker() {
 
   // Obter coordenadas da origem para cálculo de distância
   const originCoords = useMemo(() => {
+    // Prioridade 1: usar geocodificação real do CEP
+    if (originGeocode?.coordinates) {
+      return originGeocode.coordinates;
+    }
+
+    // Fallback: usar coordenadas da capital do estado
     const uf = results?.resumo?.origemUf;
     if (!uf) return null;
     return getUFCoordinates(uf);
-  }, [results?.resumo?.origemUf]);
+  }, [originGeocode, results?.resumo?.origemUf]);
 
   // Filtrar, calcular distâncias e ordenar pontos
   const unidades = useMemo(() => {

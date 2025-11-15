@@ -19,13 +19,22 @@ function getInitials(name: string) {
     .join('');
 }
 
+function getFirstAndLastName(name: string) {
+  const parts = name.split(' ').filter(Boolean);
+  if (parts.length === 0) return 'Usuário';
+  if (parts.length === 1) return parts[0];
+  return `${parts[0]} ${parts[parts.length - 1]}`;
+}
+
 export function UserPanel({ collapsed }: UserPanelProps) {
   const router = useRouter();
   const usuario = useAuthStore((s) => s.user);
   const clearSession = useAuthStore((s) => s.logout);
 
-  const displayName = useMemo(() => usuario?.name ?? 'Usuário', [usuario]);
-  const avatarInitials = useMemo(() => getInitials(displayName), [displayName]);
+  const fullName = useMemo(() => usuario?.name ?? 'Usuário', [usuario]);
+  const displayName = useMemo(() => getFirstAndLastName(fullName), [fullName]);
+  const avatarInitials = useMemo(() => getInitials(fullName), [fullName]);
+  const avatarUrl = useMemo(() => usuario?.avatarUrl ?? null, [usuario]);
 
   const handleLogout = () => {
     clearSession();
@@ -63,7 +72,7 @@ export function UserPanel({ collapsed }: UserPanelProps) {
         <Tooltip
           title={
             <Flex vertical gap={4}>
-              <div style={{ fontWeight: 600 }}>{displayName}</div>
+              <div style={{ fontWeight: 600 }}>{fullName}</div>
               {usuario.email && (
                 <div style={{ fontSize: 12, opacity: 0.85 }}>{usuario.email}</div>
               )}
@@ -89,14 +98,16 @@ export function UserPanel({ collapsed }: UserPanelProps) {
         >
           <Avatar
             size={40}
+            src={avatarUrl}
             style={{
               backgroundColor: '#1677ff',
               cursor: 'pointer',
               border: '2px solid rgba(255, 255, 255, 0.2)',
+              objectFit: 'cover',
             }}
-            icon={!avatarInitials ? <UserOutlined /> : undefined}
+            icon={!avatarUrl && !avatarInitials ? <UserOutlined /> : undefined}
           >
-            {avatarInitials}
+            {!avatarUrl && avatarInitials}
           </Avatar>
         </Tooltip>
       </div>
@@ -115,28 +126,32 @@ export function UserPanel({ collapsed }: UserPanelProps) {
       <Flex align="center" gap={12}>
         <Avatar
           size={40}
+          src={avatarUrl}
           style={{
             flexShrink: 0,
             backgroundColor: '#1677ff',
             border: '2px solid rgba(255, 255, 255, 0.2)',
+            objectFit: 'cover',
           }}
-          icon={!avatarInitials ? <UserOutlined /> : undefined}
+          icon={!avatarUrl && !avatarInitials ? <UserOutlined /> : undefined}
         >
-          {avatarInitials}
+          {!avatarUrl && avatarInitials}
         </Avatar>
         <Flex vertical style={{ flex: 1, minWidth: 0 }}>
-          <div
-            style={{
-              fontSize: 14,
-              fontWeight: 600,
-              color: '#E6EEF7',
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-            }}
-          >
-            {displayName}
-          </div>
+          <Tooltip title={fullName} placement="right">
+            <div
+              style={{
+                fontSize: 14,
+                fontWeight: 600,
+                color: '#E6EEF7',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+              }}
+            >
+              {displayName}
+            </div>
+          </Tooltip>
           {usuario.email && (
             <Typography.Text
               style={{

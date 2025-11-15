@@ -476,6 +476,7 @@ export function QuoteResultsSection({
           </Button>
         }
         style={{ height: "100%" }}
+        styles={{ body: { padding: "16px 12px" } }}
       >
         <Space direction="vertical" size={16} style={{ width: "100%" }}>
           {/* Expiration warning */}
@@ -515,7 +516,7 @@ export function QuoteResultsSection({
             rowKey="id"
             pagination={false}
             size="small"
-            scroll={{ x: 800 }}
+            scroll={{ x: 700 }}
           />
         </Space>
       </Card>

@@ -1606,7 +1606,7 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
           </Card>
 
           <Row gutter={[24, 24]}>
-            <Col xs={24} lg={12}>
+            <Col xs={24} lg={10}>
               <Space direction="vertical" size={16} style={{ width: "100%" }}>
                 <Card size="small">
                   <Controller
@@ -1664,7 +1664,7 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
               </Space>
             </Col>
 
-            <Col xs={24} lg={12}>
+            <Col xs={24} lg={14}>
               <QuoteResultsSection
                 results={quoteResults}
                 loading={calculateQuotes.isPending}

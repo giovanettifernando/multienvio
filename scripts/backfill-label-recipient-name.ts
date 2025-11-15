@@ -20,7 +20,7 @@ async function backfillLabelRecipientNames() {
         select: {
           id: true,
           recipientName: true,
-          trackingCode: true,
+          platformTrackingCode: true,
           status: true,
         },
       },
@@ -35,7 +35,7 @@ async function backfillLabelRecipientNames() {
 
   for (const label of labels) {
     console.log(`\nProcessing label ${label.id}`);
-    console.log(`  Shipment: ${label.shipment.trackingCode}`);
+    console.log(`  Shipment: ${label.shipment.platformTrackingCode}`);
     console.log(`  Status: ${label.shipment.status}`);
 
     // Verificar se o shipment tem recipientName

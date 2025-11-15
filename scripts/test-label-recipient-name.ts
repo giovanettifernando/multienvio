@@ -13,7 +13,7 @@ async function testLabelRecipientName() {
       shipment: {
         select: {
           id: true,
-          trackingCode: true,
+          platformTrackingCode: true,
           recipientName: true,
           status: true,
         },
@@ -35,7 +35,7 @@ async function testLabelRecipientName() {
     const namesMatch = label.recipientName === label.shipment.recipientName;
 
     console.log(`Label ${label.id}:`);
-    console.log(`  Tracking: ${label.shipment.trackingCode}`);
+    console.log(`  Tracking: ${label.shipment.platformTrackingCode}`);
     console.log(`  Shipment status: ${label.shipment.status}`);
     console.log(`  Label recipientName: ${label.recipientName || 'NULL'}`);
     console.log(`  Shipment recipientName: ${label.shipment.recipientName || 'NULL'}`);

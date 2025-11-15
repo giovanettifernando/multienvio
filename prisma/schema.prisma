@@ -180,7 +180,8 @@ model CartItem {
 
 model Shipment {
   id                      String          @id @default(uuid())
-  trackingCode            String          @unique
+  platformTrackingCode    String          @unique // Código interno Envio Legal (customer-facing)
+  carrierTrackingCode     String?         // Código da transportadora (para etiquetas)
   senderId                String
   recipientId             String?
   recipientName           String?
@@ -215,7 +216,8 @@ model Shipment {
   label                   Label?
   pickupRequest           PickupRequest?
 
-  @@index([trackingCode])
+  @@index([platformTrackingCode])
+  @@index([carrierTrackingCode])
   @@index([senderId])
   @@index([recipientId])
   @@index([status])
@@ -974,6 +976,7 @@ model Collector {
   pfBairro                 String?
   pfCidade                 String?
   pfUf                     String?              @db.VarChar(2)
+  pfGeo                    Json?                // Coordenadas PF: { lat, lng }
   pjRazaoSocial            String
   pjCnpj                   String               @unique
   pjCep                    String?
@@ -983,6 +986,7 @@ model Collector {
   pjBairro                 String?
   pjCidade                 String?
   pjUf                     String?              @db.VarChar(2)
+  pjGeo                    Json?                // Coordenadas PJ: { lat, lng }
   vehiclePlate             String
   vehicleBrand             String
   vehicleModel             String?
@@ -990,6 +994,9 @@ model Collector {
   commissionKind           CommissionKind
   commissionAmount         Float?
   commissionAmountPerKm    Float?
+  pickupFeeType            PickupFeeType        @default(FIXED) // Tipo de taxa de coleta
+  pickupFixedFee           Float?               // Taxa fixa de coleta
+  pickupFeePerKm           Float?               // Taxa de coleta por km
   bankMethodKind           BankMethodKind
   bankPixType              PixKeyType?
   bankPixKey               String?
@@ -1244,4 +1251,11 @@ enum BankMethodKind {
   TRANSFER
 
   @@map("bank_method_kind")
+}
+
+enum PickupFeeType {
+  FIXED
+  PER_KM
+
+  @@map("pickup_fee_type")
 }

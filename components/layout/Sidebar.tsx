@@ -61,8 +61,8 @@ export function Sidebar({ collapsed, onCollapse }: SidebarProps) {
           height: 64,
           display: 'flex',
           alignItems: 'center',
-          justifyContent: collapsed ? 'center' : 'flex-start',
-          padding: collapsed ? '0 12px' : '0 24px',
+          justifyContent: 'center',
+          padding: '16px 24px',
           borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
         }}
       >
@@ -82,9 +82,10 @@ export function Sidebar({ collapsed, onCollapse }: SidebarProps) {
             src="/assets/logo-envio-legal-branca.svg"
             alt="Envio Legal"
             width={160}
-            height={40}
+            height={32}
             style={{
               objectFit: 'contain',
+              maxHeight: '40px',
             }}
             priority
           />

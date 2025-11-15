@@ -237,6 +237,7 @@ export interface User {
   name: string;
   email: string;
   phone?: string | null;
+  avatarUrl?: string | null;
   status: UserStatus;
   roles: AuthRole[];
   lastLoginAt?: string | null;

@@ -11,20 +11,14 @@ import {
   useCart,
   useCartClear as useCartClearMutation,
   useCartRemove,
-  useCartUpdate,
 } from "@/hooks/useCart";
 import type { CartItem } from "@/types/cart";
-
-type PendingUpdate = { id: string; quantidade: number };
 
 export default function CarrinhoPage() {
   const cartQuery = useCart();
 
   const [removeModalOpen, setRemoveModalOpen] = useState(false);
   const [itemToRemove, setItemToRemove] = useState<CartItem | null>(null);
-  const [pendingUpdate, setPendingUpdate] = useState<PendingUpdate | null>(
-    null,
-  );
   const [pendingRemoveId, setPendingRemoveId] = useState<string | null>(null);
   const [checkoutModalOpen, setCheckoutModalOpen] = useState(false);
   const [createdShipments, setCreatedShipments] = useState<{
@@ -33,32 +27,8 @@ export default function CarrinhoPage() {
     totalAmount: number;
   } | null>(null);
 
-  const updateMutation = useCartUpdate(pendingUpdate?.id ?? "");
   const removeMutation = useCartRemove(pendingRemoveId ?? "");
   const clearMutation = useCartClearMutation();
-
-  useEffect(() => {
-    if (!pendingUpdate?.id) return;
-
-    updateMutation.mutate(
-      { quantidade: pendingUpdate.quantidade },
-      {
-        onSuccess: () => {
-          message.success("Quantidade atualizada");
-        },
-        onError: (error) => {
-          message.error(
-            error instanceof Error
-              ? error.message
-              : "Falha ao atualizar quantidade",
-          );
-        },
-        onSettled: () => {
-          setPendingUpdate(null);
-        },
-      },
-    );
-  }, [pendingUpdate, updateMutation, message]);
 
   useEffect(() => {
     if (!pendingRemoveId) return;
@@ -78,7 +48,7 @@ export default function CarrinhoPage() {
         setPendingRemoveId(null);
       },
     });
-  }, [pendingRemoveId, removeMutation, message]);
+  }, [pendingRemoveId, removeMutation]);
 
   const cart = cartQuery.data;
   const isLoading = cartQuery.isLoading;
@@ -87,10 +57,6 @@ export default function CarrinhoPage() {
     () => (cart?.items?.length ?? 0) > 0,
     [cart?.items?.length],
   );
-
-  const handleChangeQuantity = (itemId: string, quantidade: number) => {
-    setPendingUpdate({ id: itemId, quantidade });
-  };
 
   const handleRemove = (item: CartItem) => {
     setItemToRemove(item);
@@ -185,7 +151,6 @@ export default function CarrinhoPage() {
         <Col xs={24} lg={16}>
           <CartTable
             items={cart.items}
-            onChangeQty={handleChangeQuantity}
             onRemove={handleRemove}
           />
         </Col>

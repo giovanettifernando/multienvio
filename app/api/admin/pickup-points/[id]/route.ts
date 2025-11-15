@@ -9,6 +9,7 @@ import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
 import { AdminPermission, Prisma } from '@prisma/client';
 import { canAccess } from '@/lib/auth/permissions';
 import { Decimal } from '@prisma/client/runtime/library';
+import { geocodeCEP } from '@/lib/services/geocoding';
 
 const pixMethodSchema = z.object({
   kind: z.literal('pix'),
@@ -223,6 +224,33 @@ export async function PATCH(
       updateData.commissionPerItem = data.commissionPerItem ? new Decimal(data.commissionPerItem) : null;
     }
     if (data.capacityPerDay !== undefined) updateData.capacityPerDay = data.capacityPerDay;
+
+    // Geocodificar CEP automaticamente se:
+    // 1. CEP foi alterado E coordenadas não foram fornecidas explicitamente
+    // 2. OU coordenadas não existem e há CEP disponível
+    const cepChanged = data.cep !== undefined && data.cep !== existing.cep;
+    const hasGeo = existing.geo && typeof existing.geo === 'object' &&
+                   'lat' in existing.geo && 'lng' in existing.geo;
+    const shouldGeocode = (cepChanged || !hasGeo) && data.geo === undefined;
+
+    if (shouldGeocode) {
+      const cepToGeocode = data.cep !== undefined ? data.cep : existing.cep;
+
+      if (cepToGeocode) {
+        try {
+          const geocodeResult = await geocodeCEP(cepToGeocode);
+          if (geocodeResult.success && geocodeResult.coordinates) {
+            updateData.geo = geocodeResult.coordinates;
+            console.log(`[ADMIN_PICKUP_POINT_UPDATE] Geocodificado CEP ${cepToGeocode}:`, geocodeResult.coordinates);
+          } else {
+            console.warn(`[ADMIN_PICKUP_POINT_UPDATE] Não foi possível geocodificar CEP ${cepToGeocode}:`, geocodeResult.error);
+          }
+        } catch (geocodeError) {
+          console.error(`[ADMIN_PICKUP_POINT_UPDATE] Erro ao geocodificar CEP ${cepToGeocode}:`, geocodeError);
+          // Não bloquear atualização se geocodificação falhar
+        }
+      }
+    }
 
     const point = await prisma.pickupPoint.update({
       where: { id },

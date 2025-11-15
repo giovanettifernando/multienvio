@@ -49,7 +49,7 @@ export async function GET(
     // Retornar snapshot completo do shipment
     return NextResponse.json({
       id: shipment.id,
-      trackingCode: shipment.trackingCode,
+      trackingCode: shipment.platformTrackingCode, // Expor apenas código da plataforma
       publicTrackingId: shipment.publicTrackingId,
       status: shipment.status,
       paymentMethod: shipment.paymentMethod,

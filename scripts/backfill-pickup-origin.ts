@@ -36,7 +36,7 @@ async function backfillPickupOrigins() {
           originCep: true,
           destinationCity: true,
           destinationState: true,
-          trackingCode: true,
+          platformTrackingCode: true,
         },
       },
     },

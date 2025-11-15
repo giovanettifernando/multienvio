@@ -51,7 +51,7 @@ export async function PATCH(
         shipment: {
           select: {
             id: true,
-            trackingCode: true,
+            platformTrackingCode: true,
             carrier: true,
             service: true,
           },
@@ -99,7 +99,7 @@ export async function GET(
         shipment: {
           select: {
             id: true,
-            trackingCode: true,
+            platformTrackingCode: true,
             carrier: true,
             service: true,
             originCep: true,

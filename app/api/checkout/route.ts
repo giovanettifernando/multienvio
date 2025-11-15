@@ -30,6 +30,15 @@ const checkoutSchema = z.object({
       valorUnitario: z.number(),
       quantidade: z.number(),
     })).optional(),
+    volumeDeclarations: z.array(z.object({
+      volumeIndex: z.number(),
+      items: z.array(z.object({
+        id: z.string(),
+        descricao: z.string(),
+        valorUnitario: z.number(),
+        quantidade: z.number(),
+      })),
+    })).optional(),
   }),
   volumes: z.array(z.object({
     peso: z.number(),
@@ -82,28 +91,55 @@ export async function POST(request: Request) {
 
     // Calcular peso e valor total
     const totalWeight = data.volumes.reduce((sum, vol) => sum + vol.peso, 0);
-    const declaredValue = data.insuranceValue ?? (
-      data.document.type === 'DECLARACAO' && data.document.declarationItems
-        ? data.document.declarationItems.reduce((sum, item) => sum + (item.valorUnitario * item.quantidade), 0)
-        : 0
-    );
 
-    // Gerar tracking code único
-    const trackingCode = `BR${Date.now()}${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
+    // Calcular valor declarado
+    let declaredValue = data.insuranceValue ?? 0;
+
+    if (data.document.type === 'DECLARACAO') {
+      // Novo formato: declaração por volume
+      if (data.document.volumeDeclarations && data.document.volumeDeclarations.length > 0) {
+        declaredValue = data.document.volumeDeclarations.reduce((totalSum, volDecl) => {
+          const volumeTotal = volDecl.items.reduce((itemSum, item) =>
+            itemSum + (item.valorUnitario * item.quantidade), 0
+          );
+          return totalSum + volumeTotal;
+        }, 0);
+      }
+      // Formato legado: declaração única
+      else if (data.document.declarationItems) {
+        declaredValue = data.document.declarationItems.reduce((sum, item) =>
+          sum + (item.valorUnitario * item.quantidade), 0
+        );
+      }
+    }
+
+    // Gerar tracking code único (plataforma - customer-facing)
+    const platformTrackingCode = `BR${Date.now()}${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
 
     // Preparar documento (priorizar NFE se ambos estiverem preenchidos)
     const documentData: {
       type: string;
       nfeKeys?: string[];
       declarationItems?: Array<{ descricao: string; valorUnitario: number; quantidade: number }>;
+      volumeDeclarations?: Array<{
+        volumeIndex: number;
+        items: Array<{ id: string; descricao: string; valorUnitario: number; quantidade: number }>;
+      }>;
     } = {
       type: data.document.type,
     };
 
     if (data.document.type === 'NFE' && data.document.nfeKeys && data.document.nfeKeys.length > 0) {
       documentData.nfeKeys = data.document.nfeKeys.map(k => k.chave);
-    } else if (data.document.type === 'DECLARACAO' && data.document.declarationItems) {
-      documentData.declarationItems = data.document.declarationItems;
+    } else if (data.document.type === 'DECLARACAO') {
+      // Novo formato: declaração por volume (preferencial)
+      if (data.document.volumeDeclarations && data.document.volumeDeclarations.length > 0) {
+        documentData.volumeDeclarations = data.document.volumeDeclarations;
+      }
+      // Formato legado: declaração única (retrocompatibilidade)
+      else if (data.document.declarationItems) {
+        documentData.declarationItems = data.document.declarationItems;
+      }
     }
 
     // Criar shipment dentro de uma transação
@@ -126,7 +162,8 @@ export async function POST(request: Request) {
       // Criar envio
       const shipment = await tx.shipment.create({
         data: {
-          trackingCode,
+          platformTrackingCode,
+          carrierTrackingCode: null, // Será preenchido pela integração da transportadora
           sender: {
             connect: { id: session.userId },
           },
@@ -166,7 +203,7 @@ export async function POST(request: Request) {
           status: 'pending', // pending até o pagamento ser confirmado
           priceCents: Math.round(data.freightCost * 100), // Converter para centavos
           currency: 'BRL',
-          trackingCode: trackingCode,
+          trackingCode: platformTrackingCode, // Temporariamente usar código da plataforma
           recipientName: data.recipient.nome, // Nome do destinatário denormalizado
           isPrinted: false,
         },
@@ -216,7 +253,7 @@ export async function POST(request: Request) {
 
       return NextResponse.json({
         shipmentId: result.shipment.id,
-        trackingCode: result.shipment.trackingCode,
+        trackingCode: result.shipment.platformTrackingCode, // Retornar código da plataforma
         paymentUrl,
         source: 'gateway',
       });
@@ -228,7 +265,7 @@ export async function POST(request: Request) {
     // Outros métodos: retornar info do envio
     return NextResponse.json({
       shipmentId: result.shipment.id,
-      trackingCode: result.shipment.trackingCode,
+      trackingCode: result.shipment.platformTrackingCode, // Retornar código da plataforma
       publicTrackingId: result.shipment.publicTrackingId,
       trackingUrl: `/rastreio/${result.shipment.publicTrackingId}`,
       source: 'mock',

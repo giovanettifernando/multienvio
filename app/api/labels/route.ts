@@ -38,7 +38,7 @@ export async function GET(request: Request) {
     if (q && q.trim().length > 0) {
       where.OR = [
         { trackingCode: { contains: q, mode: 'insensitive' } },
-        { shipment: { trackingCode: { contains: q, mode: 'insensitive' } } },
+        { shipment: { platformTrackingCode: { contains: q, mode: 'insensitive' } } },
       ];
     }
 
@@ -59,7 +59,8 @@ export async function GET(request: Request) {
         shipment: {
           select: {
             id: true,
-            trackingCode: true,
+            platformTrackingCode: true,
+            carrierTrackingCode: true,
             originCep: true,
             destinationCep: true,
             recipientName: true,
@@ -83,7 +84,8 @@ export async function GET(request: Request) {
       status: label.status as LabelItem['status'],
       price: label.priceCents / 100, // Converter centavos para reais
       currency: label.currency as 'BRL',
-      trackingCode: label.trackingCode ?? undefined,
+      // Expor apenas platformTrackingCode aos clientes
+      trackingCode: label.shipment.platformTrackingCode ?? label.trackingCode ?? undefined,
       isPrinted: label.isPrinted,
       printedAt: label.printedAt?.toISOString() ?? undefined,
       originCep: label.shipment.originCep,

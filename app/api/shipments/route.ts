@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
     // Filtro de busca por texto
     if (q) {
       where.OR = [
-        { trackingCode: { contains: q, mode: 'insensitive' } },
+        { platformTrackingCode: { contains: q, mode: 'insensitive' } },
         { recipientName: { contains: q, mode: 'insensitive' } },
         { destinationCity: { contains: q, mode: 'insensitive' } },
         { carrier: { contains: q, mode: 'insensitive' } },
@@ -71,7 +71,7 @@ export async function GET(request: NextRequest) {
     // Mapear para o formato esperado pela UI
     const items = shipments.map((s) => ({
       id: s.id,
-      trackingCode: s.trackingCode,
+      trackingCode: s.platformTrackingCode, // Expor apenas código da plataforma
       recipientName: s.recipientName || 'Não informado',
       recipientCityUf: s.destinationCity && s.destinationState
         ? `${s.destinationCity}/${s.destinationState}`

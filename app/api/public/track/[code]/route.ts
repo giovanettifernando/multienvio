@@ -28,7 +28,7 @@ export async function GET(
       where: { publicTrackingId: code },
       select: {
         id: true,
-        trackingCode: true,
+        platformTrackingCode: true,
         status: true,
         carrier: true,
         service: true,
@@ -70,7 +70,7 @@ export async function GET(
 
     // Sanitizar dados - não retornar informações sensíveis
     const sanitizedData = {
-      trackingCode: shipment.trackingCode,
+      trackingCode: shipment.platformTrackingCode, // Expor apenas código da plataforma
       status: shipment.status,
       carrier: shipment.carrier || 'Não informado',
       service: shipment.service || 'Não informado',

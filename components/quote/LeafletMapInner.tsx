@@ -149,16 +149,44 @@ export default function LeafletMapInner({
     group.addTo(map);
     layerRef.current = group;
 
-    // Fit bounds to show all markers
+    // Fit bounds to show all markers INCLUDING origin
     if (markers.length > 0) {
-      const bounds = L.latLngBounds(
-        markers.map((m) => [m.lat, m.lng] as [number, number])
-      );
-      map.fitBounds(bounds, { padding: [20, 20] });
+      // Incluir TODOS os pontos: origem + todos os markers
+      const allPoints: [number, number][] = [
+        [originCenter.lat, originCenter.lng], // Origem
+        ...markers.map((m) => [m.lat, m.lng] as [number, number]), // Pontos de coleta
+      ];
+
+      const bounds = L.latLngBounds(allPoints);
+
+      // Ajustar padding baseado na quantidade de pontos
+      const padding: [number, number] = markers.length === 1 ? [50, 50] : [30, 30];
+
+      map.fitBounds(bounds, {
+        padding,
+        maxZoom: markers.length === 1 ? 13 : undefined, // Limitar zoom se for só 1 ponto
+      });
     } else if (originCenter) {
-      map.setView([originCenter.lat, originCenter.lng], 8);
+      // Fallback: sem pontos de coleta, mostrar apenas origem
+      map.setView([originCenter.lat, originCenter.lng], 12);
     }
   }, [mapRef.current, JSON.stringify(markers), selectedPointId, originCenter, onPointClick]);
+
+  // Center map on selected point when it changes
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !selectedPointId) return;
+
+    // Find the selected marker
+    const selectedMarker = markers.find((m) => m.id === selectedPointId);
+    if (selectedMarker) {
+      // Animate to the selected point with appropriate zoom
+      map.setView([selectedMarker.lat, selectedMarker.lng], 13, {
+        animate: true,
+        duration: 0.5,
+      });
+    }
+  }, [selectedPointId, markers]);
 
   // Global function for popup button
   useEffect(() => {

@@ -9,6 +9,7 @@ import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
 import { AdminPermission, PickupPointStatus, Prisma } from '@prisma/client';
 import { canAccess } from '@/lib/auth/permissions';
 import { Decimal } from '@prisma/client/runtime/library';
+import { geocodeCEP } from '@/lib/services/geocoding';
 
 // Schema de validação
 const pixMethodSchema = z.object({
@@ -250,6 +251,24 @@ export async function POST(request: Request) {
       passwordHash = await bcrypt.hash(data.password, 10);
     }
 
+    // Geocodificar CEP automaticamente se coordenadas não foram fornecidas
+    let geoData: { lat: number; lng: number } | null = data.geo || null;
+
+    if (!geoData && data.cep) {
+      try {
+        const geocodeResult = await geocodeCEP(data.cep);
+        if (geocodeResult.success && geocodeResult.coordinates) {
+          geoData = geocodeResult.coordinates;
+          console.log(`[ADMIN_PICKUP_POINTS_CREATE] Geocodificado CEP ${data.cep}:`, geoData);
+        } else {
+          console.warn(`[ADMIN_PICKUP_POINTS_CREATE] Não foi possível geocodificar CEP ${data.cep}:`, geocodeResult.error);
+        }
+      } catch (geocodeError) {
+        console.error(`[ADMIN_PICKUP_POINTS_CREATE] Erro ao geocodificar CEP ${data.cep}:`, geocodeError);
+        // Não bloquear criação do ponto se geocodificação falhar
+      }
+    }
+
     const point = await prisma.pickupPoint.create({
       data: {
         razaoSocial: data.razaoSocial,
@@ -266,7 +285,7 @@ export async function POST(request: Request) {
         bairro: data.bairro || null,
         cidade: data.cidade || null,
         uf: data.uf || null,
-        geo: data.geo ? data.geo : Prisma.JsonNull,
+        geo: geoData ? geoData : Prisma.JsonNull,
         paymentMethod: data.paymentMethod as unknown as Prisma.InputJsonValue,
         payoutDay: data.payoutDay || null,
         minPayoutAmount: data.minPayoutAmount ? new Decimal(data.minPayoutAmount) : null,

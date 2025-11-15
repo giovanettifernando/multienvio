@@ -67,15 +67,18 @@ export async function PATCH(request: Request) {
       },
     });
 
-    // Atualizar todos os shipments em transação
+    // Atualizar todos os shipments e suas etiquetas em transação
     const result = await prisma.$transaction(async (tx) => {
       // Atualizar cada shipment individualmente para mesclar o meta no document JSON
-      const updates = shipments.map((shipment) => {
+      const updates = shipments.map(async (shipment) => {
         const currentDoc = (shipment.document as Record<string, unknown>) || {};
-        return tx.shipment.update({
+
+        // Atualizar shipment
+        await tx.shipment.update({
           where: { id: shipment.id },
           data: {
             paymentMethod: method,
+            status: status === 'approved' ? 'ready_for_posting' : 'pending_payment',
             document: {
               ...currentDoc,
               payment: {
@@ -87,6 +90,26 @@ export async function PATCH(request: Request) {
             updatedAt: new Date(),
           },
         });
+
+        // Atualizar etiqueta associada ao shipment (se existir)
+        const label = await tx.label.findUnique({
+          where: { shipmentId: shipment.id },
+        });
+
+        if (label && status === 'approved') {
+          // Gerar PDF mock da etiqueta (base64) - mesmo usado em /api/wallet/debit
+          const mockPdfBase64 = 'JVBERi0xLjQKJeLjz9MKMSAwIG9iago8PC9UeXBlL0NhdGFsb2cvUGFnZXMgMiAwIFI+PgplbmRvYmoKMiAwIG9iago8PC9UeXBlL1BhZ2VzL0tpZHNbMyAwIFJdL0NvdW50IDE+PgplbmRvYmoKMyAwIG9iago8PC9UeXBlL1BhZ2UvTWVkaWFCb3hbMCAwIDYxMiA3OTJdL1BhcmVudCAyIDAgUi9SZXNvdXJjZXM8PC9Gb250PDwvRjEgNCAwIFI+Pj4+L0NvbnRlbnRzIDUgMCBSPj4KZW5kb2JqCjQgMCBvYmoKPDwvVHlwZS9Gb250L1N1YnR5cGUvVHlwZTEvQmFzZUZvbnQvVGltZXMtUm9tYW4+PgplbmRvYmoKNSAwIG9iago8PC9MZW5ndGggNDQ+PgpzdHJlYW0KQlQKL0YxIDI0IFRmCjEwMCA3MDAgVGQKKEV0aXF1ZXRhIFRlc3RlKSBUagpFVAplbmRzdHJlYW0KZW5kb2JqCnhyZWYKMCA2CjAwMDAwMDAwMDAgNjU1MzUgZiAKMDAwMDAwMDAxNSAwMDAwMCBuIAowMDAwMDAwMDY0IDAwMDAwIG4gCjAwMDAwMDAxMTUgMDAwMDAgbiAKMDAwMDAwMDI0NSAwMDAwMCBuIAowMDAwMDAwMzI4IDAwMDAwIG4gCnRyYWlsZXIKPDwvU2l6ZSA2L1Jvb3QgMSAwIFI+PgpzdGFydHhyZWYKNDIwCiUlRU9GCg==';
+
+          await tx.label.update({
+            where: { id: label.id },
+            data: {
+              status: 'issued',
+              fileBase64: mockPdfBase64,
+              contentType: 'application/pdf',
+              sizeBytes: 420,
+            },
+          });
+        }
       });
 
       await Promise.all(updates);

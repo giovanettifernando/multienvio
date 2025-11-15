@@ -46,6 +46,7 @@ import { useQuoteDraft } from "@/lib/state/quoteDraft";
 import { executeCheckout } from "@/lib/checkout/orchestrator";
 import { useCheckoutStore } from "@/stores/checkout";
 import { CheckoutModal } from "@/components/payments/CheckoutModal";
+import { usePickupFee } from "@/hooks/usePickupFee";
 
 const dispatchTelemetry = (event: string, detail?: Record<string, unknown>) => {
   if (typeof window === "undefined") return;
@@ -81,6 +82,13 @@ export default function FinalizeQuotePage() {
   const selectedService = selection?.result ?? null;
   const initialDoc = (searchParams.get("doc") as DocumentType) ?? selection?.documento ?? "DECLARACAO";
 
+  // Calcular taxa de coleta se pickupAtOrigin estiver ativo
+  const { data: pickupFeeData } = usePickupFee(
+    pickupAtOrigin ? summary?.origemCep : null,
+    pickupAtOrigin ? selectedService?.preco : null,
+    pickupAtOrigin
+  );
+
   useEffect(() => {
     if (!results || !selection) {
       message.warning("Selecione uma cotação para continuar.");
@@ -112,6 +120,18 @@ export default function FinalizeQuotePage() {
               quantidade: 1,
             },
           ] : undefined,
+          // Novo formato: declaração por volume
+          volumeDeclarations: initialDoc === "DECLARACAO" ? Array.from({ length: volumesCount }, (_, idx) => ({
+            volumeIndex: idx,
+            items: [
+              {
+                id: crypto.randomUUID(),
+                descricao: "",
+                valorUnitario: 0,
+                quantidade: 1,
+              },
+            ],
+          })) : undefined,
         },
         postingUnit: {
           selected: null,
@@ -279,6 +299,10 @@ export default function FinalizeQuotePage() {
       return sum + cubicWeight;
     }, 0);
 
+    // Calcular total incluindo taxa de coleta se aplicável
+    const pickupFeeAmount = pickupFeeData && pickupFeeData.success ? pickupFeeData.feeAmount : 0;
+    const totalAmount = selectedService.preco + pickupFeeAmount;
+
     try {
       // Obter dados do destinatário (manual ou salvo)
       const recipientData = values.recipient.mode === 'manual'
@@ -310,11 +334,16 @@ export default function FinalizeQuotePage() {
         },
         volumes: summary.volumes,
         preferences: {
-          pickupRequested: summary.coleta || false,
+          pickupRequested: pickupAtOrigin,
           reverse: summary.devolucao || false,
         },
         insuranceValue: summary.seguroValor || undefined,
         pickupPoint: pickupPointId ? { id: pickupPointId } : undefined,
+        pickupFee: pickupFeeData && pickupFeeData.success ? {
+          collectorId: pickupFeeData.collector.id,
+          feeAmount: pickupFeeData.feeAmount,
+          distanceKm: pickupFeeData.distanceKm,
+        } : undefined,
         selectedQuote: {
           carrier: selectedService.carrier,
           serviceCode: selectedService.modalidade,
@@ -324,8 +353,9 @@ export default function FinalizeQuotePage() {
           source: 'mock' as const,
         },
         totals: {
-          total: selectedService.preco,
+          total: totalAmount,
           subtotal: selectedService.preco,
+          pickupFee: pickupFeeAmount,
           moeda: 'BRL',
         },
       };
@@ -336,6 +366,7 @@ export default function FinalizeQuotePage() {
         selectionId: selection.selectionId,
         action: "ADICIONAR_AO_CARRINHO",
         docType: values.document?.type ?? "DECLARACAO",
+        hasPickupFee: pickupFeeAmount > 0,
       });
       dispatchTelemetry("cart_add", {
         selectionId: selection.selectionId,
@@ -393,11 +424,16 @@ export default function FinalizeQuotePage() {
       return;
     }
 
+    // Calcular total incluindo taxa de coleta se aplicável
+    const pickupFeeAmount = pickupFeeData && pickupFeeData.success ? pickupFeeData.feeAmount : 0;
+    const totalAmount = selectedService.preco + pickupFeeAmount;
+
     try {
       dispatchTelemetry("quote_finalize_submit", {
         selectionId: selection.selectionId,
         action: "PAGAR_AGORA",
         docType: values.document.type,
+        hasPickupFee: pickupFeeAmount > 0,
       });
 
       // Montar payload do checkout
@@ -433,6 +469,11 @@ export default function FinalizeQuotePage() {
         })),
         insuranceValue: summary.seguroValor || 0,
         pickupPointId: pickupAtOrigin ? null : pickupPointId,
+        pickupFee: pickupFeeData && pickupFeeData.success ? {
+          collectorId: pickupFeeData.collector.id,
+          feeAmount: pickupFeeData.feeAmount,
+          distanceKm: pickupFeeData.distanceKm,
+        } : undefined,
         carrier: selectedService.carrier,
         service: selectedService.modalidade,
         originCep: summary.origemCep || "",
@@ -441,6 +482,7 @@ export default function FinalizeQuotePage() {
         destinationCep: summary.destinoCep || "",
         estimatedDays: selectedService.prazoDias,
         freightCost: selectedService.preco,
+        totalCost: totalAmount,
         solicitarColeta: pickupAtOrigin, // Usar pickupAtOrigin do quoteDraft
       };
 
@@ -462,7 +504,7 @@ export default function FinalizeQuotePage() {
       setCreatedShipment({
         id: out.shipmentId,
         trackingCode: out.trackingCode,
-        totalAmount: selectedService.preco,
+        totalAmount: totalAmount,
       });
       setCheckoutModalOpen(true);
 
@@ -502,6 +544,15 @@ export default function FinalizeQuotePage() {
                   modalidade={selectedService?.modalidade ?? ""}
                   prazoDias={selectedService?.prazoDias ?? 0}
                   preco={selectedService?.preco ?? 0}
+                  pickupFee={
+                    pickupFeeData && pickupFeeData.success
+                      ? {
+                          collectorName: pickupFeeData.collector.pfNome || pickupFeeData.collector.pjRazaoSocial,
+                          distanceKm: pickupFeeData.distanceKm,
+                          feeAmount: pickupFeeData.feeAmount,
+                        }
+                      : null
+                  }
                 />
                 <Card title="Pagamento">
                   <Space direction="vertical" size={16} style={{ width: "100%" }}>
@@ -562,8 +613,8 @@ export default function FinalizeQuotePage() {
         </Flex>
 
         <QuoteNavigationButtons
-          onBack={() => router.push("/cotacoes/resultados")}
-          backLabel="Ver outros serviços"
+          onBack={() => router.back()}
+          backLabel="Voltar"
         />
       </form>
 

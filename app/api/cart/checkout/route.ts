@@ -120,13 +120,14 @@ export async function POST(request: Request) {
         // Valor declarado
         const declaredValue = item.insuranceValue ? Number(item.insuranceValue) : 0;
 
-        // Gerar tracking code único
-        const trackingCode = `BR${Date.now()}${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
+        // Gerar tracking code único (plataforma - customer-facing)
+        const platformTrackingCode = `BR${Date.now()}${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
 
         // Criar shipment
         const shipment = await tx.shipment.create({
           data: {
-            trackingCode,
+            platformTrackingCode,
+            carrierTrackingCode: null, // Será preenchido pela integração
             senderId: session.userId,
             // Destinatário
             recipientName: destination.nome || destination.apelido || 'Destinatário',
@@ -163,6 +164,22 @@ export async function POST(request: Request) {
             // Status inicial
             status: 'pending_payment',
             paymentMethod: null,
+          },
+        });
+
+        // Criar etiqueta automaticamente vinculada ao shipment
+        // (mesma lógica do /api/checkout)
+        await tx.label.create({
+          data: {
+            shipmentId: shipment.id,
+            carrier: selectedQuote.carrier,
+            service: selectedQuote.serviceName || selectedQuote.serviceCode || '',
+            status: 'pending', // pending até o pagamento ser confirmado
+            priceCents: Math.round(selectedQuote.price * 100), // Converter para centavos
+            currency: 'BRL',
+            trackingCode: platformTrackingCode, // Usar código da plataforma
+            recipientName: destination.nome || destination.apelido || 'Destinatário', // Nome do destinatário denormalizado
+            isPrinted: false,
           },
         });
 

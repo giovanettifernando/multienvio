@@ -46,6 +46,7 @@ export async function GET() {
       name: dbUser.name,
       email: dbUser.email,
       phone: dbUser.phone,
+      avatarUrl: dbUser.avatarUrl,
       status: dbUser.status as UserStatus,
       roles: dbUser.role?.name === 'admin' ? [AuthRole.ADMIN] : [],
       lastLoginAt: dbUser.lastLoginAt?.toISOString() || null,

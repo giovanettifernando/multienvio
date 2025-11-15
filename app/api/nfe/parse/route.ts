@@ -37,7 +37,7 @@ function extractBlocks(xml: string, tag: string): string[] {
     const searchFrom = startPos + match[0].length;
     const closeMatch = xml.substring(searchFrom).match(closeTag);
 
-    if (closeMatch) {
+    if (closeMatch && closeMatch.index !== undefined) {
       const endPos = searchFrom + closeMatch.index + closeMatch[0].length;
       blocks.push(xml.substring(startPos, endPos));
       currentPos = endPos;

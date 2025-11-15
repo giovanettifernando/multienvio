@@ -14,7 +14,7 @@ async function testPickupCreation() {
     },
     select: {
       id: true,
-      trackingCode: true,
+      platformTrackingCode: true,
       originCep: true,
       destinationCity: true,
       destinationState: true,
@@ -30,7 +30,7 @@ async function testPickupCreation() {
 
   console.log('📦 Shipment encontrado:');
   console.log(`  ID: ${shipment.id}`);
-  console.log(`  Tracking: ${shipment.trackingCode}`);
+  console.log(`  Tracking: ${shipment.platformTrackingCode}`);
   console.log(`  Origin CEP: ${shipment.originCep}`);
   console.log(`  Destination: ${shipment.destinationCity}/${shipment.destinationState}\n`);
 
