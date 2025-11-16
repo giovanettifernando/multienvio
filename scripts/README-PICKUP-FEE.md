@@ -30,27 +30,28 @@ Os coletores podem ter dois tipos de taxa de coleta:
 
 O sistema **sempre** seleciona o coletor mais próximo:
 
-1. Geocodifica o CEP de origem (remetente)
-2. Busca todos os coletores ATIVOS com coordenadas válidas
-3. Calcula a distância em km usando fórmula de Haversine
-4. Seleciona o coletor com menor distância
-5. Aplica a regra de cobrança configurada para esse coletor (FIXED ou PER_KM)
+1. Obtém CEP de origem (remetente)
+2. Busca todos os coletores ATIVOS com CEPs cadastrados
+3. Usa PostGIS para calcular distância precisa (ST_Distance com geography WGS84)
+4. Coordenadas vêm de `cep_locations` (cache de geocoding)
+5. Seleciona o coletor com menor distância via KNN search
+6. Aplica a regra de cobrança configurada para esse coletor (FIXED ou PER_KM)
 
-**Não há seleção manual** - a escolha é sempre baseada em proximidade.
+**Não há seleção manual** - a escolha é sempre baseada em proximidade geográfica precisa.
 
 ## Modelo de Dados
 
 ### Collector
 
-Campos adicionados ao modelo `Collector`:
+Campos relacionados à taxa de coleta no modelo `Collector`:
 
 ```typescript
 model Collector {
   // ... campos existentes ...
 
-  // Coordenadas geográficas
-  pfGeo              Json?         // { lat, lng } - PF
-  pjGeo              Json?         // { lat, lng } - PJ
+  // CEPs (fonte das coordenadas via cep_locations)
+  pfCep              String?       // CEP PF
+  pjCep              String?       // CEP PJ
 
   // Configuração de taxa de coleta
   pickupFeeType      PickupFeeType @default(FIXED)
@@ -64,12 +65,14 @@ enum PickupFeeType {
 }
 ```
 
-### Geocodificação Automática
+### Geocodificação via CEP
 
-O sistema geocodifica automaticamente:
-- **PF**: Usa `pfCep` + endereço completo PF
-- **PJ**: Usa `pjCep` + endereço completo PJ
-- **Prioridade**: O cálculo de distância usa coordenadas PF primeiro, depois PJ
+O sistema usa **apenas CEPs** para obter coordenadas:
+- Coordenadas vêm da tabela `cep_locations` (cache de geocoding PostGIS)
+- **PF**: Usa `pfCep` para buscar coordenadas
+- **PJ**: Usa `pjCep` para buscar coordenadas
+- **Prioridade**: O cálculo de distância usa CEP PF primeiro, depois CEP PJ
+- **Não armazena** lat/lng no cadastro do coletor - sempre lookup via CEP
 
 ## Arquitetura
 
@@ -112,39 +115,29 @@ const { data } = usePickupFee(originCep, freightCost, enabled);
 
 ## Scripts Utilitários
 
-### 1. Diagnóstico de Coletores
+### 1. Geocodificação de CEPs de Coletores
 
 ```bash
-DATABASE_URL="postgresql://user:pass@host:port/db" node scripts/test-collectors-geo.js
+DATABASE_URL="postgresql://user:pass@host:port/db" npx tsx scripts/geocode-collectors.ts
 ```
 
-Verifica:
-- Quais coletores têm coordenadas válidas
-- Status das configurações de taxa
-- Resumo de cobertura
+Geocodifica automaticamente CEPs de coletores:
+- Popula tabela `cep_locations` com coordenadas de `pfCep` e `pjCep`
+- Não armazena coordenadas no cadastro do coletor (usa cache PostGIS)
+- Exibe precisão do geocoding (address, zipcode, city, city_fallback, state_fallback)
 
-### 2. Geocodificação de Coletores
-
-```bash
-DATABASE_URL="postgresql://user:pass@host:port/db" node scripts/geocode-collectors.js
-```
-
-Geocodifica automaticamente:
-- Coletores sem coordenadas PF
-- Coletores sem coordenadas PJ
-- Usa BrasilAPI + OpenStreetMap Nominatim
-
-### 3. Teste de Cálculo de Taxa
+### 2. Teste de Cálculo de Taxa
 
 ```bash
-DATABASE_URL="postgresql://user:pass@host:port/db" node scripts/test-pickup-fee-calculation.js
+DATABASE_URL="postgresql://user:pass@host:port/db" npx tsx scripts/test-pickup-fee-calculation.ts
 ```
 
 Simula cálculo de taxa:
-- Teste com origem em João Pessoa/PB
-- Calcula distâncias para todos os coletores
-- Exibe qual seria selecionado
-- Mostra simulação de cotação completa
+- Teste com CEP de origem em João Pessoa/PB (58035-100)
+- Usa PostGIS para calcular distâncias (ST_Distance)
+- Exibe qual coletor seria selecionado
+- Mostra simulação de cotação completa com precisão do geocoding
+- Avisa sobre imprecisões (city_fallback, state_fallback)
 
 ## Fluxo Completo
 
@@ -231,19 +224,32 @@ O payload de checkout inclui:
 
 ## Geocodificação
 
+### Sistema PostGIS (Nova Arquitetura)
+
+**Serviço centralizado**: `lib/services/postgis.ts`
+
+- Usa PostGIS (ST_Distance com geography WGS84) para precisão métrica
+- Coordenadas armazenadas **apenas** em `cep_locations` (cache)
+- Geocoding em camadas com fallback:
+  1. **address**: Endereço completo (mais preciso)
+  2. **zipcode**: Centro do CEP
+  3. **city**: Centro da cidade
+  4. **city_fallback**: Centro da cidade (alternativa)
+  5. **state_fallback**: Capital do estado (menos preciso)
+
 ### CEP de Origem
 
-- Usa serviço centralizado: `lib/services/geocoding.ts`
-- BrasilAPI para buscar endereço
+- Lookup em `cep_locations` via `getCoordinatesForCep()`
+- BrasilAPI para buscar dados do CEP
 - OpenStreetMap Nominatim para coordenadas
-- Cache de 24 horas no frontend (React Query)
+- Re-geocoding automático para entradas com baixa precisão (>7 dias)
 
 ### CEP de Coletores
 
-- Geocodifica PF e PJ separadamente
-- Persiste em `pfGeo` e `pjGeo` (JSON)
-- Script bulk para processar coletores existentes
-- Aguarda 1 segundo entre requisições (rate limiting)
+- Usa `pfCep` e `pjCep` como identificadores geográficos
+- Coordenadas obtidas via lookup em `cep_locations`
+- **Não armazena** lat/lng no model Collector
+- Script `geocode-collectors.ts` popula cache para CEPs de coletores
 
 ## Próximos Passos
 
@@ -267,8 +273,9 @@ Funcionalidades desejadas:
 
 ## Referências
 
-- **Fórmula de Haversine**: `lib/utils/geo.ts`
-- **Geocodificação**: `lib/services/geocoding.ts`
-- **Tipos TypeScript**: `lib/services/pickupFee.ts`
+- **PostGIS Distance**: `lib/services/postgis.ts` (ST_Distance, KNN search)
+- **Distance Service**: `lib/services/distance.ts` (validação e precisão)
+- **Pickup Fee Calculation**: `lib/services/pickupFee.ts`
 - **Hook React**: `hooks/usePickupFee.ts`
-- **Testes**: `scripts/test-pickup-fee-calculation.js`
+- **Testes**: `scripts/test-pickup-fee-calculation.ts`
+- **Geocoding Scripts**: `scripts/geocode-collectors.ts`

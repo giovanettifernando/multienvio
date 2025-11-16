@@ -51,7 +51,6 @@ function toApiPickupPoint(point: {
   bairro: string | null;
   cidade: string | null;
   uf: string | null;
-  geo: unknown;
   paymentMethod: unknown;
   payoutDay: number | null;
   minPayoutAmount: Decimal | null;
@@ -77,7 +76,7 @@ function toApiPickupPoint(point: {
     bairro: point.bairro,
     cidade: point.cidade,
     uf: point.uf,
-    geo: point.geo,
+    // geo removido - usar CEP para geolocalização
     paymentMethod: point.paymentMethod,
     payoutDay: point.payoutDay,
     minPayoutAmount: point.minPayoutAmount ? parseFloat(point.minPayoutAmount.toString()) : null,

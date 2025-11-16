@@ -1,8 +1,19 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Desabilitar geração estática para evitar bug do AntD Registry com Next.js 15
+  // Revert to standalone output
   output: 'standalone',
+
+  // Skip trailing slash to avoid 404 generation issues
+  skipTrailingSlashRedirect: true,
+
+  // Transpile Ant Design packages
+  transpilePackages: ['antd', '@ant-design', 'rc-util', 'rc-pagination', 'rc-picker'],
+
+  // Experimental: optimize package imports
+  experimental: {
+    optimizePackageImports: ['antd', '@ant-design/icons'],
+  },
 
   modularizeImports: {
     antd: {

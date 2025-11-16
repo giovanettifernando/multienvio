@@ -1,6 +1,6 @@
 "use client";
 
-import { Card, Divider, Space, Typography } from "antd";
+import { Card, Divider, Space, Typography, Spin } from "antd";
 
 type PickupFeeInfo = {
   collectorName: string;
@@ -14,6 +14,7 @@ type LabelPreviewProps = {
   prazoDias: number;
   preco: number;
   pickupFee?: PickupFeeInfo | null;
+  isLoadingPickupFee?: boolean;
 };
 
 const currency = new Intl.NumberFormat("pt-BR", {
@@ -27,9 +28,25 @@ export function LabelPreview({
   prazoDias,
   preco,
   pickupFee,
+  isLoadingPickupFee = false,
 }: LabelPreviewProps) {
+  // Debug logging
+  console.log('[LABEL_PREVIEW] Props received:', JSON.stringify({
+    carrier,
+    modalidade,
+    prazoDias,
+    preco,
+    pickupFee,
+    isLoadingPickupFee,
+  }, null, 2));
+
   const hasPickupFee = pickupFee && pickupFee.feeAmount > 0;
   const total = hasPickupFee ? preco + pickupFee.feeAmount : preco;
+
+  console.log('[LABEL_PREVIEW] Computed values:', JSON.stringify({
+    hasPickupFee,
+    total,
+  }, null, 2));
 
   return (
     <Card size="small" title="Resumo do serviço">
@@ -56,28 +73,26 @@ export function LabelPreview({
           </Typography.Title>
         </div>
 
-        {hasPickupFee && (
+        {isLoadingPickupFee && (
+          <>
+            <Divider style={{ margin: "8px 0" }} />
+            <div style={{ textAlign: 'center', padding: '16px 0' }}>
+              <Spin size="small" />
+              <Typography.Text type="secondary" style={{ display: 'block', marginTop: 8 }}>
+                Calculando taxa de coleta...
+              </Typography.Text>
+            </div>
+          </>
+        )}
+
+        {!isLoadingPickupFee && hasPickupFee && (
           <>
             <Divider style={{ margin: "8px 0" }} />
             <div>
-              <Typography.Text type="secondary" strong>
-                Coleta na origem
-              </Typography.Text>
-              <div style={{ marginTop: 8 }}>
-                <Typography.Text>
-                  Coletor: {pickupFee.collectorName}
-                </Typography.Text>
-              </div>
-              <div>
-                <Typography.Text type="secondary">
-                  Distância: {pickupFee.distanceKm.toFixed(1)} km
-                </Typography.Text>
-              </div>
-              <div style={{ marginTop: 4 }}>
-                <Typography.Text strong>
-                  Taxa de coleta: {currency.format(pickupFee.feeAmount)}
-                </Typography.Text>
-              </div>
+              <Typography.Text type="secondary">Taxa de coleta</Typography.Text>
+              <Typography.Title level={5} style={{ margin: "4px 0" }}>
+                {currency.format(pickupFee.feeAmount)}
+              </Typography.Title>
             </div>
             <Divider style={{ margin: "8px 0" }} />
             <div>

@@ -9,7 +9,6 @@ import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
 import { AdminPermission, Prisma } from '@prisma/client';
 import { canAccess } from '@/lib/auth/permissions';
 import { Decimal } from '@prisma/client/runtime/library';
-import { geocodeCEP } from '@/lib/services/geocoding';
 
 const pixMethodSchema = z.object({
   kind: z.literal('pix'),
@@ -46,10 +45,6 @@ const updatePickupPointSchema = z.object({
   bairro: z.string().optional().or(z.literal('')),
   cidade: z.string().optional().or(z.literal('')),
   uf: z.string().length(2).optional().or(z.literal('')),
-  geo: z.object({
-    lat: z.number(),
-    lng: z.number(),
-  }).nullable().optional(),
   paymentMethod: paymentMethodSchema.optional(),
   payoutDay: z.number().min(1).max(31).optional().nullable(),
   minPayoutAmount: z.number().optional().nullable(),
@@ -100,7 +95,6 @@ function toApiPickupPoint(point: {
   bairro: string | null;
   cidade: string | null;
   uf: string | null;
-  geo: unknown;
   paymentMethod: unknown;
   payoutDay: number | null;
   minPayoutAmount: Decimal | null;
@@ -126,7 +120,7 @@ function toApiPickupPoint(point: {
     bairro: point.bairro,
     cidade: point.cidade,
     uf: point.uf,
-    geo: point.geo,
+    // geo removido - usar CEP para geolocalização
     paymentMethod: point.paymentMethod,
     payoutDay: point.payoutDay,
     minPayoutAmount: point.minPayoutAmount ? parseFloat(point.minPayoutAmount.toString()) : null,
@@ -214,7 +208,6 @@ export async function PATCH(
     if (data.bairro !== undefined) updateData.bairro = data.bairro;
     if (data.cidade !== undefined) updateData.cidade = data.cidade;
     if (data.uf !== undefined) updateData.uf = data.uf;
-    if (data.geo !== undefined) updateData.geo = data.geo ? data.geo : Prisma.JsonNull;
     if (data.paymentMethod !== undefined) updateData.paymentMethod = data.paymentMethod as unknown as Prisma.InputJsonValue;
     if (data.payoutDay !== undefined) updateData.payoutDay = data.payoutDay;
     if (data.minPayoutAmount !== undefined) {
@@ -225,32 +218,6 @@ export async function PATCH(
     }
     if (data.capacityPerDay !== undefined) updateData.capacityPerDay = data.capacityPerDay;
 
-    // Geocodificar CEP automaticamente se:
-    // 1. CEP foi alterado E coordenadas não foram fornecidas explicitamente
-    // 2. OU coordenadas não existem e há CEP disponível
-    const cepChanged = data.cep !== undefined && data.cep !== existing.cep;
-    const hasGeo = existing.geo && typeof existing.geo === 'object' &&
-                   'lat' in existing.geo && 'lng' in existing.geo;
-    const shouldGeocode = (cepChanged || !hasGeo) && data.geo === undefined;
-
-    if (shouldGeocode) {
-      const cepToGeocode = data.cep !== undefined ? data.cep : existing.cep;
-
-      if (cepToGeocode) {
-        try {
-          const geocodeResult = await geocodeCEP(cepToGeocode);
-          if (geocodeResult.success && geocodeResult.coordinates) {
-            updateData.geo = geocodeResult.coordinates;
-            console.log(`[ADMIN_PICKUP_POINT_UPDATE] Geocodificado CEP ${cepToGeocode}:`, geocodeResult.coordinates);
-          } else {
-            console.warn(`[ADMIN_PICKUP_POINT_UPDATE] Não foi possível geocodificar CEP ${cepToGeocode}:`, geocodeResult.error);
-          }
-        } catch (geocodeError) {
-          console.error(`[ADMIN_PICKUP_POINT_UPDATE] Erro ao geocodificar CEP ${cepToGeocode}:`, geocodeError);
-          // Não bloquear atualização se geocodificação falhar
-        }
-      }
-    }
 
     const point = await prisma.pickupPoint.update({
       where: { id },

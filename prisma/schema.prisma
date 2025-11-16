@@ -471,7 +471,7 @@ model PickupPoint {
   bairro            String?
   cidade            String?
   uf                String?           @db.VarChar(2)
-  geo               Json?
+  // geo removido - usar apenas CEP para geolocalização
   paymentMethod     Json
   payoutDay         Int?
   minPayoutAmount   Decimal?          @db.Decimal(10, 2)
@@ -976,7 +976,7 @@ model Collector {
   pfBairro                 String?
   pfCidade                 String?
   pfUf                     String?              @db.VarChar(2)
-  pfGeo                    Json?                // Coordenadas PF: { lat, lng }
+  // pfGeo removido - usar apenas pfCep para geolocalização
   pjRazaoSocial            String
   pjCnpj                   String               @unique
   pjCep                    String?
@@ -986,7 +986,7 @@ model Collector {
   pjBairro                 String?
   pjCidade                 String?
   pjUf                     String?              @db.VarChar(2)
-  pjGeo                    Json?                // Coordenadas PJ: { lat, lng }
+  // pjGeo removido - usar apenas pjCep para geolocalização
   vehiclePlate             String
   vehicleBrand             String
   vehicleModel             String?
@@ -1258,4 +1258,19 @@ enum PickupFeeType {
   PER_KM
 
   @@map("pickup_fee_type")
+}
+
+// Cache de coordenadas geocodificadas por CEP usando PostGIS
+model CepLocation {
+  cep                   String   @id
+  latitude              Float
+  longitude             Float
+  precision             String?
+  provider              String?
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @default(now()) @map("updated_at")
+  manualOverride        Boolean  @default(false) @map("manual_override")
+  manualOverrideReason  String?  @map("manual_override_reason")
+
+  @@map("cep_locations")
 }

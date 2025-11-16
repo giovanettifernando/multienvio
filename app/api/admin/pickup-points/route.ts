@@ -9,7 +9,6 @@ import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
 import { AdminPermission, PickupPointStatus, Prisma } from '@prisma/client';
 import { canAccess } from '@/lib/auth/permissions';
 import { Decimal } from '@prisma/client/runtime/library';
-import { geocodeCEP } from '@/lib/services/geocoding';
 
 // Schema de validação
 const pixMethodSchema = z.object({
@@ -45,10 +44,6 @@ const createPickupPointSchema = z.object({
   bairro: z.string().optional().or(z.literal('')),
   cidade: z.string().optional().or(z.literal('')),
   uf: z.string().length(2).optional().or(z.literal('')),
-  geo: z.object({
-    lat: z.number(),
-    lng: z.number(),
-  }).nullable().optional(),
   paymentMethod: paymentMethodSchema,
   payoutDay: z.number().min(1).max(31).optional().nullable(),
   minPayoutAmount: z.number().optional().nullable(),
@@ -99,7 +94,6 @@ function toApiPickupPoint(point: {
   bairro: string | null;
   cidade: string | null;
   uf: string | null;
-  geo: unknown;
   paymentMethod: unknown;
   payoutDay: number | null;
   minPayoutAmount: Decimal | null;
@@ -125,7 +119,7 @@ function toApiPickupPoint(point: {
     bairro: point.bairro,
     cidade: point.cidade,
     uf: point.uf,
-    geo: point.geo,
+    // geo removido - usar CEP para geolocalização
     paymentMethod: point.paymentMethod,
     payoutDay: point.payoutDay,
     minPayoutAmount: point.minPayoutAmount ? parseFloat(point.minPayoutAmount.toString()) : null,
@@ -251,24 +245,6 @@ export async function POST(request: Request) {
       passwordHash = await bcrypt.hash(data.password, 10);
     }
 
-    // Geocodificar CEP automaticamente se coordenadas não foram fornecidas
-    let geoData: { lat: number; lng: number } | null = data.geo || null;
-
-    if (!geoData && data.cep) {
-      try {
-        const geocodeResult = await geocodeCEP(data.cep);
-        if (geocodeResult.success && geocodeResult.coordinates) {
-          geoData = geocodeResult.coordinates;
-          console.log(`[ADMIN_PICKUP_POINTS_CREATE] Geocodificado CEP ${data.cep}:`, geoData);
-        } else {
-          console.warn(`[ADMIN_PICKUP_POINTS_CREATE] Não foi possível geocodificar CEP ${data.cep}:`, geocodeResult.error);
-        }
-      } catch (geocodeError) {
-        console.error(`[ADMIN_PICKUP_POINTS_CREATE] Erro ao geocodificar CEP ${data.cep}:`, geocodeError);
-        // Não bloquear criação do ponto se geocodificação falhar
-      }
-    }
-
     const point = await prisma.pickupPoint.create({
       data: {
         razaoSocial: data.razaoSocial,
@@ -285,7 +261,6 @@ export async function POST(request: Request) {
         bairro: data.bairro || null,
         cidade: data.cidade || null,
         uf: data.uf || null,
-        geo: geoData ? geoData : Prisma.JsonNull,
         paymentMethod: data.paymentMethod as unknown as Prisma.InputJsonValue,
         payoutDay: data.payoutDay || null,
         minPayoutAmount: data.minPayoutAmount ? new Decimal(data.minPayoutAmount) : null,

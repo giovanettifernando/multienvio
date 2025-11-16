@@ -10,6 +10,7 @@
     "test": "node --test --require ./tests/register.js tests/**/*.test.ts",
     "lint:fix": "eslint --fix .",
     "audit:forms": "ts-node --transpile-only scripts/audit-forms.ts",
+    "geocode:collectors": "npx tsx scripts/geocode-collectors.ts",
     "db:push": "npx prisma db push",
     "db:migrate": "npx prisma migrate dev --name init",
     "db:seed": "npx prisma db seed",

@@ -82,12 +82,34 @@ export default function FinalizeQuotePage() {
   const selectedService = selection?.result ?? null;
   const initialDoc = (searchParams.get("doc") as DocumentType) ?? selection?.documento ?? "DECLARACAO";
 
+  // Log inicial para debug
+  console.log('[FINALIZAR_DEBUG] Initial state:', JSON.stringify({
+    pickupAtOrigin,
+    hasOrigemCep: !!summary?.origemCep,
+    origemCep: summary?.origemCep,
+    hasPreco: !!selectedService?.preco,
+    preco: selectedService?.preco,
+  }, null, 2));
+
   // Calcular taxa de coleta se pickupAtOrigin estiver ativo
-  const { data: pickupFeeData } = usePickupFee(
+  const { data: pickupFeeData, isLoading: isLoadingPickupFee, error: pickupFeeError } = usePickupFee(
     pickupAtOrigin ? summary?.origemCep : null,
     pickupAtOrigin ? selectedService?.preco : null,
     pickupAtOrigin
   );
+
+  // Debug: Log pickup fee data
+  useEffect(() => {
+    console.log('[PICKUP_FEE_DEBUG] State changed:', JSON.stringify({
+      pickupAtOrigin,
+      originCep: summary?.origemCep,
+      freightCost: selectedService?.preco,
+      isLoading: isLoadingPickupFee,
+      hasData: !!pickupFeeData,
+      pickupFeeData,
+      error: pickupFeeError ? String(pickupFeeError) : null,
+    }, null, 2));
+  }, [pickupAtOrigin, summary?.origemCep, selectedService?.preco, isLoadingPickupFee, pickupFeeData, pickupFeeError]);
 
   useEffect(() => {
     if (!results || !selection) {
@@ -544,6 +566,7 @@ export default function FinalizeQuotePage() {
                   modalidade={selectedService?.modalidade ?? ""}
                   prazoDias={selectedService?.prazoDias ?? 0}
                   preco={selectedService?.preco ?? 0}
+                  isLoadingPickupFee={pickupAtOrigin && isLoadingPickupFee}
                   pickupFee={
                     pickupFeeData && pickupFeeData.success
                       ? {

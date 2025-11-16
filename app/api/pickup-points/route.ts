@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { getCoordinatesForCep } from '@/lib/services/postgis';
 
 /**
  * GET /api/pickup-points
@@ -60,7 +61,7 @@ export async function GET(request: Request) {
         bairro: true,
         cidade: true,
         uf: true,
-        geo: true,
+        // geo removido - obter coordenadas do CEP via cep_locations
       },
       orderBy: [
         { cidade: 'asc' },
@@ -69,22 +70,39 @@ export async function GET(request: Request) {
     });
 
     // Mapear para formato simplificado
-    const result = pickupPoints.map((point) => {
-      const geo = point.geo as { lat?: number; lng?: number } | null;
-      return {
-        id: point.id,
-        name: point.nomeFantasia,
-        alias: point.razaoSocial,
-        address: point.logradouro || '',
-        number: point.numero || '',
-        neighborhood: point.bairro || '',
-        city: point.cidade || '',
-        uf: point.uf || '',
-        cep: point.cep || '',
-        lat: geo?.lat || null,
-        lng: geo?.lng || null,
-      };
-    });
+    // Obter coordenadas dos CEPs em paralelo
+    const result = await Promise.all(
+      pickupPoints.map(async (point) => {
+        let lat: number | null = null;
+        let lng: number | null = null;
+
+        // Obter coordenadas do CEP se disponível
+        if (point.cep) {
+          try {
+            const coords = await getCoordinatesForCep(point.cep);
+            lat = coords.lat;
+            lng = coords.lng;
+          } catch (error) {
+            console.warn(`[PICKUP_POINTS] Failed to get coords for CEP ${point.cep}:`, error);
+            // lat/lng permanecem null
+          }
+        }
+
+        return {
+          id: point.id,
+          name: point.nomeFantasia,
+          alias: point.razaoSocial,
+          address: point.logradouro || '',
+          number: point.numero || '',
+          neighborhood: point.bairro || '',
+          city: point.cidade || '',
+          uf: point.uf || '',
+          cep: point.cep || '',
+          lat,
+          lng,
+        };
+      })
+    );
 
     return NextResponse.json(result);
   } catch (error) {

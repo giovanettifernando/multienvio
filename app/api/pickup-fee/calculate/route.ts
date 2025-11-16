@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server';
 import { calculatePickupFee } from '@/lib/services/pickupFee';
-import { getUserSession } from '@/lib/auth/session';
+import { getSession } from '@/lib/auth/session';
 
 /**
  * POST /api/pickup-fee/calculate
@@ -34,7 +34,7 @@ import { getUserSession } from '@/lib/auth/session';
 export async function POST(request: Request) {
   try {
     // Verificar autenticação
-    const session = await getUserSession();
+    const session = await getSession();
 
     if (!session) {
       return NextResponse.json(
