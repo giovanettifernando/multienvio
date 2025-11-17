@@ -169,8 +169,23 @@ export default function AdminLayout({
         />
       </Layout.Sider>
       <Layout style={{ marginLeft: 240, transition: "margin-left 0.2s" }}>
-        <Layout.Content style={{ padding: spacing.xl, overflow: "auto" }}>
-          {children}
+        <Layout.Content
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            height: "100vh",
+            overflow: "hidden",
+          }}
+        >
+          <div
+            style={{
+              flex: 1,
+              overflowY: "auto",
+              padding: spacing.xl,
+            }}
+          >
+            {children}
+          </div>
         </Layout.Content>
       </Layout>
       <style jsx global>{`

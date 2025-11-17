@@ -289,25 +289,28 @@ export default function PersonalForm() {
     [fullNameValue],
   );
 
-  return (
-    <Card loading={profileQuery.isLoading} bordered={false}>
-      <form onSubmit={handleSubmit} noValidate>
-        <Space direction="vertical" size={24} style={{ width: "100%" }}>
-          <Typography.Title level={4} style={{ margin: 0 }}>
-            
-          </Typography.Title>
+  if (profileQuery.isLoading) {
+    return <Spin size="large" style={{ display: "block", textAlign: "center", padding: 40 }} />;
+  }
 
-          <Controller
-            name="avatarDataUrl"
-            control={form.control}
-            render={({ field, fieldState }) => (
-              <Flex
-                align="center"
-                justify="center"
-                vertical
-                gap={8}
-                style={{ width: "100%" }}
-              >
+  return (
+    <form onSubmit={handleSubmit} noValidate>
+      <Space direction="vertical" size={24} style={{ width: "100%" }}>
+        <Typography.Title level={4} style={{ margin: 0 }}>
+          Dados Pessoais
+        </Typography.Title>
+
+        <Controller
+          name="avatarDataUrl"
+          control={form.control}
+          render={({ field, fieldState }) => (
+            <Flex
+              align="center"
+              justify="center"
+              vertical
+              gap={16}
+              style={{ width: "100%", padding: "16px 0" }}
+            >
                 <input
                   type="file"
                   accept={ALLOWED_AVATAR_TYPES.join(",")}
@@ -342,9 +345,8 @@ export default function PersonalForm() {
                           style={{
                             width: "100%",
                             height: "100%",
-                            objectFit: "contain",
+                            objectFit: "cover",
                             objectPosition: "center",
-                            imageRendering: "auto",
                           }}
                           draggable={false}
                         />
@@ -497,10 +499,10 @@ export default function PersonalForm() {
 
           <Card
             size="small"
-            title="Dados da empresa"
             bordered
             style={{ borderRadius: 12 }}
-            extra={
+          >
+            <Space direction="vertical" size={16} style={{ width: "100%" }}>
               <Flex align="center" gap={8}>
                 <Typography.Text>Adicionar dados de empresa</Typography.Text>
                 <Switch
@@ -509,65 +511,55 @@ export default function PersonalForm() {
                   aria-label="Adicionar dados de empresa"
                 />
               </Flex>
-            }
-          >
-            {hasCompany ? (
-              <Row gutter={[16, 16]}>
-                <Col xs={24} md={12}>
-                <Controller
-                  name="cnpj"
-                  control={form.control}
-                  render={({ field, fieldState }) => (
-                    <Form.Item
-                      label="CNPJ"
-                      required
-                      validateStatus={fieldState.error ? "error" : ""}
-                      help={fieldState.error?.message}
-                    >
-                      <Input
-                        {...field}
-                        inputMode="numeric"
-                        placeholder="00.000.000/0000-00"
-                        aria-invalid={fieldState.invalid}
-                        onChange={(event) => field.onChange(maskCNPJ(event.target.value))}
-                      />
-                    </Form.Item>
-                  )}
-                />
-                </Col>
-                <Col xs={24} md={12}>
-                  <Controller
-                    name="razaoSocial"
-                    control={form.control}
-                    render={({ field, fieldState }) => (
-                      <Form.Item
-                        label="Razão social"
-                        required
-                        validateStatus={fieldState.error ? "error" : ""}
-                        help={fieldState.error?.message}
-                      >
-                        <Input
-                          {...field}
-                          placeholder="Nome empresarial"
-                          aria-invalid={fieldState.invalid}
-                        />
-                      </Form.Item>
-                    )}
-                  />
-                </Col>
-              </Row>
-            ) : (
-              <Typography.Text type="secondary">
-                Ative o alternador para complementar com dados da empresa (CNPJ).
-              </Typography.Text>
-            )}
-          </Card>
 
-          <Flex justify="flex-end">
-            <Typography.Text type="secondary" style={{ marginBottom: 8 }}>
-              Gerencie seus endereços na aba <Link href="/minha-conta#addresses">Endereços</Link>.
-            </Typography.Text>
-          </Flex>
+              {hasCompany && (
+                <Row gutter={[16, 16]}>
+                  <Col xs={24} md={12}>
+                    <Controller
+                      name="cnpj"
+                      control={form.control}
+                      render={({ field, fieldState }) => (
+                        <Form.Item
+                          label="CNPJ"
+                          required
+                          validateStatus={fieldState.error ? "error" : ""}
+                          help={fieldState.error?.message}
+                        >
+                          <Input
+                            {...field}
+                            inputMode="numeric"
+                            placeholder="00.000.000/0000-00"
+                            aria-invalid={fieldState.invalid}
+                            onChange={(event) => field.onChange(maskCNPJ(event.target.value))}
+                          />
+                        </Form.Item>
+                      )}
+                    />
+                  </Col>
+                  <Col xs={24} md={12}>
+                    <Controller
+                      name="razaoSocial"
+                      control={form.control}
+                      render={({ field, fieldState }) => (
+                        <Form.Item
+                          label="Razão social"
+                          required
+                          validateStatus={fieldState.error ? "error" : ""}
+                          help={fieldState.error?.message}
+                        >
+                          <Input
+                            {...field}
+                            placeholder="Nome empresarial"
+                            aria-invalid={fieldState.invalid}
+                          />
+                        </Form.Item>
+                      )}
+                    />
+                  </Col>
+                </Row>
+              )}
+            </Space>
+          </Card>
 
           <Flex justify="flex-end" gap={12} wrap>
             <Button
@@ -587,6 +579,5 @@ export default function PersonalForm() {
           </Flex>
         </Space>
       </form>
-    </Card>
   );
 }

@@ -66,13 +66,22 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         )}
         <Content
           style={{
-            padding: 24,
+            display: 'flex',
+            flexDirection: 'column',
             background: token.colorBgLayout,
-            minHeight: '100vh',
-            overflow: 'auto',
+            height: isMobile ? 'calc(100vh - 64px)' : '100vh',
+            overflow: 'hidden',
           }}
         >
-          {children}
+          <div
+            style={{
+              flex: 1,
+              overflowY: 'auto',
+              padding: 24,
+            }}
+          >
+            {children}
+          </div>
         </Content>
       </Layout>
     </Layout>

@@ -167,17 +167,25 @@ export default function CollectorLayout({ children }: { children: React.ReactNod
             style={{ height: '100%', borderRight: 0 }}
           />
         </Sider>
-        <Layout style={{ marginLeft: 240, padding: '24px', transition: 'margin-left 0.2s' }}>
+        <Layout style={{ marginLeft: 240, transition: 'margin-left 0.2s' }}>
           <Content
             style={{
+              display: 'flex',
+              flexDirection: 'column',
               background: '#fff',
-              padding: 24,
-              margin: 0,
-              minHeight: 280,
-              overflow: 'auto',
+              height: 'calc(100vh - 64px)',
+              overflow: 'hidden',
             }}
           >
-            {children}
+            <div
+              style={{
+                flex: 1,
+                overflowY: 'auto',
+                padding: 24,
+              }}
+            >
+              {children}
+            </div>
           </Content>
         </Layout>
       </Layout>
