@@ -12,7 +12,7 @@ import { WalletRecent } from "@/components/dashboard/WalletRecent";
 import { WalletCard } from "@/components/dashboard/WalletCard";
 import { SupportQuickView } from "@/components/dashboard/SupportQuickView";
 import { PickupSchedule } from "@/components/dashboard/PickupSchedule";
-import { AlertsPanel } from "@/components/dashboard/AlertsPanel";
+import { PendingPickupPointShipments } from "@/components/dashboard/PendingPickupPointShipments";
 import { DashboardFooterLinks } from "@/components/dashboard/DashboardFooterLinks";
 import { computeDashboardKpis } from "@/lib/dashboard/stats";
 import type { Order } from "@/types/order";
@@ -136,13 +136,13 @@ export default function OverviewPage() {
         </Col>
       </Row>
 
-      {/* Row 5: Coletas agendadas + Alertas */}
+      {/* Row 5: Coletas agendadas + Envios pendentes em pontos de coleta */}
       <Row gutter={[12, 12]}>
         <Col xs={24} sm={24} md={12} lg={12} xl={12}>
           <PickupSchedule />
         </Col>
         <Col xs={24} sm={24} md={12} lg={12} xl={12}>
-          <AlertsPanel />
+          <PendingPickupPointShipments />
         </Col>
       </Row>
 

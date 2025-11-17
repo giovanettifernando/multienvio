@@ -49,7 +49,7 @@ const STATUS_LABELS: Record<PickupStatus, string> = {
 
 export default function ColetasPage() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [status, setStatus] = useState<PickupStatus | "all">("all");
+  const [status, setStatus] = useState<PickupStatus | "all">("PENDING"); // Padrão: apenas pendentes
   const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null]>([null, null]);
 
   // Fetch pickups with filters
@@ -77,57 +77,39 @@ export default function ColetasPage() {
     {
       title: "Código de rastreio",
       dataIndex: ["shipment", "trackingCode"],
+      width: 180,
       render: (trackingCode: string, record) => (
-        <Link href={`/shipments/${record.shipmentId}`}>
+        <Link href={`/shipments/${record.shipmentId}`} style={{ fontWeight: 500 }}>
           {trackingCode}
         </Link>
       ),
     },
     {
-      title: "Transportadora",
-      dataIndex: ["shipment", "carrier"],
-      render: (carrier: string | null | undefined, record) =>
-        carrier || record.shipment?.service || "—",
-    },
-    {
-      title: "CEP Origem",
-      dataIndex: "originCep",
-    },
-    {
-      title: "Cidade/UF",
+      title: "Nome do Coletor",
+      key: "collector",
+      width: 200,
       render: (_value, row) => {
-        if (row.originCity && row.originUf) {
-          return `${row.originCity}/${row.originUf}`;
+        if (row.collector) {
+          return row.collector.name;
         }
-        if (row.originCity) return row.originCity;
-        if (row.originUf) return row.originUf;
-        return "—";
+        return <span style={{ color: '#8c8c8c' }}>Não atribuído</span>;
       },
     },
     {
-      title: "Janela de Coleta",
-      render: (_value, row) => {
-        if (row.windowStart && row.windowEnd) {
-          return (
-            <Space direction="vertical" size={0}>
-              <Typography.Text style={{ fontSize: 12 }}>
-                {dayjs(row.windowStart).format("DD/MM/YYYY HH:mm")}
-              </Typography.Text>
-              <Typography.Text style={{ fontSize: 12 }}>
-                até {dayjs(row.windowEnd).format("DD/MM/YYYY HH:mm")}
-              </Typography.Text>
-            </Space>
-          );
+      title: "Data e hora agendadas",
+      dataIndex: "scheduleAt",
+      width: 180,
+      render: (value: string | null) => {
+        if (value) {
+          return dayjs(value).format("DD/MM/YYYY HH:mm");
         }
-        if (row.windowStart) {
-          return dayjs(row.windowStart).format("DD/MM/YYYY HH:mm");
-        }
-        return "Não definida";
+        return <span style={{ color: '#8c8c8c' }}>Não agendado</span>;
       },
     },
     {
       title: "Status",
       dataIndex: "status",
+      width: 130,
       render: (value: PickupStatus) => (
         <Tag color={STATUS_COLORS[value] ?? "default"}>
           {STATUS_LABELS[value] ?? value}
@@ -135,21 +117,31 @@ export default function ColetasPage() {
       ),
     },
     {
-      title: "Criado em",
-      dataIndex: "createdAt",
-      render: (value: string) => dayjs(value).format("DD/MM/YYYY HH:mm"),
+      title: "Tentativas de Coleta",
+      dataIndex: "attemptCount",
+      width: 150,
+      align: "center",
+      render: (count: number) => {
+        if (count === 0) {
+          return "0";
+        } else if (count === 1) {
+          return "1 tentativa";
+        } else {
+          return `${count} tentativas`;
+        }
+      },
     },
   ];
 
   return (
-    <PageShell title="Solicitações de Coleta" gap="md">
+    <PageShell title="Minhas Coletas Pendentes" gap="md">
       <Card>
         <Space direction="vertical" size={16} style={{ width: "100%" }}>
           <Space wrap>
             <Input
               allowClear
               style={{ width: 280 }}
-              placeholder="Buscar por código de rastreio ou CEP"
+              placeholder="Buscar por código de rastreio"
               prefix={<SearchOutlined />}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -159,6 +151,7 @@ export default function ColetasPage() {
               value={status}
               onChange={setStatus}
               options={STATUS_OPTIONS}
+              placeholder="Filtrar por status"
             />
             <RangePicker
               format="DD/MM/YYYY"

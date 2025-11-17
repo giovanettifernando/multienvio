@@ -4,6 +4,7 @@ export interface PickupRequest {
   id: string;
   companyId?: string | null;
   userId: string;
+  collectorId?: string | null;
   shipmentId: string;
   originCep: string;
   originAddress?: string | null;
@@ -13,6 +14,8 @@ export interface PickupRequest {
   windowEnd?: string | null; // ISO date string
   status: PickupStatus;
   notes?: string | null;
+  scheduleAt?: string | null; // ISO date string - data/hora agendada pelo coletor
+  attemptCount: number; // Número de tentativas de coleta
   createdAt: string; // ISO date string
   updatedAt: string; // ISO date string
 }
@@ -24,6 +27,10 @@ export interface PickupRequestWithShipment extends PickupRequest {
     carrier?: string | null;
     service?: string | null;
   };
+  collector?: {
+    id: string;
+    name: string;
+  } | null;
 }
 
 export interface PickupRequestsQuery {

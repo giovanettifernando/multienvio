@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') ?? '1', 10);
     const pageSize = parseInt(searchParams.get('pageSize') ?? '10', 10);
-    const status = (searchParams.get('status') ?? 'all') as PickupStatus | 'all';
+    const status = (searchParams.get('status') ?? 'PENDING') as PickupStatus | 'all'; // Padrão: apenas PENDING
     const dateStart = searchParams.get('dateStart');
     const dateEnd = searchParams.get('dateEnd');
     const city = searchParams.get('city');
@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
       userId: session.userId,
     };
 
-    // Filtro por status
+    // Filtro por status - padrão PENDING se não especificado
     if (status && status !== 'all') {
       where.status = status;
     }
@@ -81,8 +81,17 @@ export async function GET(request: NextRequest) {
             service: true,
           },
         },
+        collector: {
+          select: {
+            id: true,
+            pfNome: true,
+          },
+        },
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: [
+        { scheduleAt: { sort: 'asc', nulls: 'last' } }, // Data agendada primeiro (nulls no final)
+        { createdAt: 'desc' }, // Fallback: mais recentes primeiro
+      ],
       skip: (page - 1) * pageSize,
       take: pageSize,
     });
@@ -92,6 +101,7 @@ export async function GET(request: NextRequest) {
       id: pickup.id,
       companyId: pickup.companyId,
       userId: pickup.userId,
+      collectorId: pickup.collectorId,
       shipmentId: pickup.shipmentId,
       originCep: pickup.originCep,
       originAddress: pickup.originAddress,
@@ -101,6 +111,8 @@ export async function GET(request: NextRequest) {
       windowEnd: pickup.windowEnd?.toISOString() ?? null,
       status: pickup.status as PickupStatus,
       notes: pickup.notes,
+      scheduleAt: pickup.scheduleAt?.toISOString() ?? null,
+      attemptCount: pickup.attemptCount,
       createdAt: pickup.createdAt.toISOString(),
       updatedAt: pickup.updatedAt.toISOString(),
       shipment: {
@@ -109,6 +121,10 @@ export async function GET(request: NextRequest) {
         carrier: pickup.shipment.carrier,
         service: pickup.shipment.service,
       },
+      collector: pickup.collector ? {
+        id: pickup.collector.id,
+        name: pickup.collector.pfNome,
+      } : null,
     }));
 
     const response: PickupRequestsResponse = {

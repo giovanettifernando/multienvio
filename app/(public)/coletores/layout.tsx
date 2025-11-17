@@ -2,13 +2,14 @@
 
 import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { Layout, Menu, Button, Dropdown, Spin, App as AntdApp } from 'antd';
+import { Layout, Menu, Button, Dropdown, Spin, App as AntdApp, Drawer } from 'antd';
 import {
   DashboardOutlined,
   InboxOutlined,
   CustomerServiceOutlined,
   LogoutOutlined,
   UserOutlined,
+  MenuOutlined,
 } from '@ant-design/icons';
 import { useColetorSession } from '@/stores/useColetorSession';
 
@@ -22,6 +23,20 @@ export default function ColetoresLayout({ children }: { children: React.ReactNod
   const router = useRouter();
   const { coletor, setColetor, clearColetor } = useColetorSession();
   const [loading, setLoading] = useState(true);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Detectar tamanho da tela
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 1024);
+    };
+
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   useEffect(() => {
     const isPublicPath = publicPaths.includes(pathname);
@@ -120,6 +135,24 @@ export default function ColetoresLayout({ children }: { children: React.ReactNod
     },
   ];
 
+  const handleMenuClick = ({ key }: { key: string }) => {
+    router.push(key);
+    // Fechar menu mobile após navegar
+    if (isMobile) {
+      setMobileMenuOpen(false);
+    }
+  };
+
+  const menuComponent = (
+    <Menu
+      mode="inline"
+      selectedKeys={[pathname]}
+      items={menuItems}
+      onClick={handleMenuClick}
+      style={{ height: '100%', borderRight: 0 }}
+    />
+  );
+
   return (
     <Layout style={{ minHeight: '100vh' }}>
       <Header
@@ -127,34 +160,66 @@ export default function ColetoresLayout({ children }: { children: React.ReactNod
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: '0 24px',
+          padding: '0 16px',
           background: '#001529',
+          position: 'sticky',
+          top: 0,
+          zIndex: 10,
         }}
       >
-        <div style={{ color: 'white', fontSize: 18, fontWeight: 'bold' }}>
-          Envio Legal • Coletor Autônomo
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          {/* Botão hambúrguer em mobile */}
+          {isMobile && (
+            <Button
+              type="text"
+              icon={<MenuOutlined />}
+              onClick={() => setMobileMenuOpen(true)}
+              style={{ color: 'white', fontSize: 20 }}
+            />
+          )}
+          <div style={{ color: 'white', fontSize: isMobile ? 14 : 18, fontWeight: 'bold' }}>
+            {isMobile ? 'Envio Legal' : 'Envio Legal • Coletor Autônomo'}
+          </div>
         </div>
         <Dropdown menu={{ items: userMenuItems }} placement="bottomRight">
-          <Button type="text" icon={<UserOutlined />} style={{ color: 'white' }}>
-            {coletor.pfNome}
+          <Button
+            type="text"
+            icon={<UserOutlined />}
+            style={{ color: 'white', fontSize: isMobile ? 12 : 14 }}
+          >
+            {isMobile ? '' : coletor.pfNome}
           </Button>
         </Dropdown>
       </Header>
+
       <Layout>
-        <Sider width={240} style={{ background: '#fff' }}>
-          <Menu
-            mode="inline"
-            selectedKeys={[pathname]}
-            items={menuItems}
-            onClick={({ key }) => router.push(key)}
-            style={{ height: '100%', borderRight: 0 }}
-          />
-        </Sider>
-        <Layout style={{ padding: '24px' }}>
+        {/* Sidebar Desktop */}
+        {!isMobile && (
+          <Sider width={240} style={{ background: '#fff' }}>
+            {menuComponent}
+          </Sider>
+        )}
+
+        {/* Drawer Mobile */}
+        {isMobile && (
+          <Drawer
+            title="Menu"
+            placement="left"
+            onClose={() => setMobileMenuOpen(false)}
+            open={mobileMenuOpen}
+            width={280}
+            styles={{ body: { padding: 0 } }}
+          >
+            {menuComponent}
+          </Drawer>
+        )}
+
+        {/* Conteúdo */}
+        <Layout style={{ padding: isMobile ? '12px' : '24px' }}>
           <Content
             style={{
               background: '#fff',
-              padding: 24,
+              padding: isMobile ? 16 : 24,
               margin: 0,
               minHeight: 280,
             }}
