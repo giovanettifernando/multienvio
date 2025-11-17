@@ -5,9 +5,10 @@ import { Tabs } from "antd";
 import AddressesList from "./AddressesList";
 import CardsList from "./CardsList";
 import RecipientsList from "./RecipientsList";
+import RecurringItemsList from "./RecurringItemsList";
 import SecurityForm from "./SecurityForm";
 
-type TabKey = "addresses" | "cards" | "recipients" | "security";
+type TabKey = "addresses" | "cards" | "recipients" | "recurring-items" | "security";
 
 export default function AccountTabs() {
   const [activeKey, setActiveKey] = useState<TabKey>("addresses");
@@ -54,7 +55,8 @@ export default function AccountTabs() {
       items={[
         { key: "addresses", label: "Endereços", children: <AddressesList /> },
         { key: "cards", label: "Cartões", children: <CardsList /> },
-        { key: "recipients", label: "Destinatários", children: <RecipientsList /> },
+        { key: "recipients", label: "Destinatários recorrentes", children: <RecipientsList /> },
+        { key: "recurring-items", label: "Itens recorrentes", children: <RecurringItemsList /> },
         { key: "security", label: "Segurança", children: <SecurityForm /> },
       ]}
     />

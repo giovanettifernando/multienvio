@@ -5,12 +5,9 @@ export const cepRegex = /^\d{5}-\d{3}$/;
 
 const declarationItemSchema = z.object({
   id: z.string(),
-  descricao: z.string().min(3, "Informe a descrição."),
-  valorUnitario: z.number().gt(0, "Valor deve ser maior que zero."),
-  quantidade: z
-    .number()
-    .int("Quantidade deve ser inteira.")
-    .gt(0, "Quantidade deve ser maior que zero."),
+  descricao: z.string().optional(),
+  valorUnitario: z.number().optional(),
+  quantidade: z.number().optional(),
 });
 
 export type DeclarationFormItem = z.infer<typeof declarationItemSchema>;
@@ -18,7 +15,7 @@ export type DeclarationFormItem = z.infer<typeof declarationItemSchema>;
 // Schema para declaração de conteúdo de um volume específico
 const volumeDeclarationSchema = z.object({
   volumeIndex: z.number(),
-  items: z.array(declarationItemSchema).min(1, "Adicione ao menos um item para este volume."),
+  items: z.array(declarationItemSchema).optional(),
 });
 
 export type VolumeDeclarationForm = z.infer<typeof volumeDeclarationSchema>;
@@ -170,71 +167,8 @@ export const finalizeFormSchema = z
         }
       }
     } else if (values.document.type === "DECLARACAO") {
-      // Novo formato: declaração por volume
-      if (values.document.volumeDeclarations && values.document.volumeDeclarations.length > 0) {
-        values.document.volumeDeclarations.forEach((volDecl, idx) => {
-          // Verificar se há itens
-          if (!volDecl.items || volDecl.items.length === 0) {
-            ctx.addIssue({
-              path: ["document", "volumeDeclarations", idx, "items"],
-              code: z.ZodIssueCode.custom,
-              message: `Adicione ao menos um item na declaração do Volume ${idx + 1}.`,
-            });
-            return;
-          }
-
-          // Verificar se há pelo menos um item válido (com descrição preenchida)
-          const hasValidItem = volDecl.items.some(item =>
-            item.descricao &&
-            item.descricao.trim().length >= 3 &&
-            item.valorUnitario > 0 &&
-            item.quantidade > 0
-          );
-
-          if (!hasValidItem) {
-            ctx.addIssue({
-              path: ["document", "volumeDeclarations", idx, "items", 0, "descricao"],
-              code: z.ZodIssueCode.custom,
-              message: `Preencha ao menos um item válido para o Volume ${idx + 1}.`,
-            });
-          }
-
-          // Validar cada item individualmente
-          volDecl.items.forEach((item, itemIdx) => {
-            if (item.descricao && item.descricao.trim().length > 0 && item.descricao.trim().length < 3) {
-              ctx.addIssue({
-                path: ["document", "volumeDeclarations", idx, "items", itemIdx, "descricao"],
-                code: z.ZodIssueCode.custom,
-                message: "Descrição deve ter pelo menos 3 caracteres.",
-              });
-            }
-
-            if (item.valorUnitario !== undefined && item.valorUnitario !== null && item.valorUnitario <= 0) {
-              ctx.addIssue({
-                path: ["document", "volumeDeclarations", idx, "items", itemIdx, "valorUnitario"],
-                code: z.ZodIssueCode.custom,
-                message: "Valor deve ser maior que zero.",
-              });
-            }
-
-            if (item.quantidade !== undefined && item.quantidade !== null && item.quantidade <= 0) {
-              ctx.addIssue({
-                path: ["document", "volumeDeclarations", idx, "items", itemIdx, "quantidade"],
-                code: z.ZodIssueCode.custom,
-                message: "Quantidade deve ser maior que zero.",
-              });
-            }
-          });
-        });
-      }
-      // Formato legado: declaração única (retrocompatibilidade)
-      else if (!values.document.declarationItems?.length) {
-        ctx.addIssue({
-          path: ["document", "declarationItems"],
-          code: z.ZodIssueCode.custom,
-          message: "Adicione ao menos um item na declaração.",
-        });
-      }
+      // Validação de declaração de conteúdo removida do modo inline
+      // A validação será feita apenas no submit através da função validateDeclarationOnSubmit
     }
 
     if (values.recipient.mode === "saved" && !values.recipient.savedId) {
@@ -327,3 +261,88 @@ export function createFinalizeFormSchema(pickupAtOrigin: boolean) {
 }
 
 export type FinalizeFormValues = z.infer<typeof finalizeFormSchema>;
+
+/**
+ * Valida a declaração de conteúdo apenas no momento do submit
+ * Retorna um objeto com os erros encontrados
+ */
+export function validateDeclarationOnSubmit(values: FinalizeFormValues): {
+  isValid: boolean;
+  errors: Array<{ path: string; message: string; volumeIndex?: number }>;
+} {
+  const errors: Array<{ path: string; message: string; volumeIndex?: number }> = [];
+
+  if (values.document.type !== "DECLARACAO") {
+    return { isValid: true, errors: [] };
+  }
+
+  // Novo formato: declaração por volume
+  if (values.document.volumeDeclarations && values.document.volumeDeclarations.length > 0) {
+    values.document.volumeDeclarations.forEach((volDecl, idx) => {
+      // Verificar se há itens
+      if (!volDecl.items || volDecl.items.length === 0) {
+        errors.push({
+          path: `document.volumeDeclarations.${idx}.items`,
+          message: `Adicione ao menos um item na declaração do Volume ${idx + 1}.`,
+          volumeIndex: idx,
+        });
+        return;
+      }
+
+      // Verificar se há pelo menos um item válido (com descrição preenchida)
+      const hasValidItem = volDecl.items.some(item =>
+        item.descricao &&
+        item.descricao.trim().length >= 3 &&
+        (item.valorUnitario ?? 0) > 0 &&
+        (item.quantidade ?? 0) > 0
+      );
+
+      if (!hasValidItem) {
+        errors.push({
+          path: `document.volumeDeclarations.${idx}.items.0.descricao`,
+          message: `Preencha ao menos um item válido para o Volume ${idx + 1}.`,
+          volumeIndex: idx,
+        });
+      }
+
+      // Validar cada item individualmente
+      volDecl.items.forEach((item, itemIdx) => {
+        if (item.descricao && item.descricao.trim().length > 0 && item.descricao.trim().length < 3) {
+          errors.push({
+            path: `document.volumeDeclarations.${idx}.items.${itemIdx}.descricao`,
+            message: "Descrição deve ter pelo menos 3 caracteres.",
+            volumeIndex: idx,
+          });
+        }
+
+        if (item.valorUnitario !== undefined && item.valorUnitario !== null && item.valorUnitario <= 0) {
+          errors.push({
+            path: `document.volumeDeclarations.${idx}.items.${itemIdx}.valorUnitario`,
+            message: "Valor deve ser maior que zero.",
+            volumeIndex: idx,
+          });
+        }
+
+        if (item.quantidade !== undefined && item.quantidade !== null && item.quantidade <= 0) {
+          errors.push({
+            path: `document.volumeDeclarations.${idx}.items.${itemIdx}.quantidade`,
+            message: "Quantidade deve ser maior que zero.",
+            volumeIndex: idx,
+          });
+        }
+      });
+    });
+  }
+  // Formato legado: declaração única (retrocompatibilidade)
+  else if (!values.document.declarationItems?.length) {
+    errors.push({
+      path: "document.declarationItems",
+      message: "Adicione ao menos um item na declaração.",
+    });
+  }
+
+  return {
+    isValid: errors.length === 0,
+    errors,
+  };
+}

@@ -10,7 +10,6 @@ import {
   InputNumber,
   Row,
   Space,
-  Typography,
 } from "antd";
 import {
   Controller,
@@ -19,30 +18,18 @@ import {
 } from "react-hook-form";
 import type { FinalizeFormValues } from "@/types/quoteFinalize";
 import styles from "@/app/(dashboard)/cotacoes/cotacoes.module.css";
-
-const currency = new Intl.NumberFormat("pt-BR", {
-  style: "currency",
-  currency: "BRL",
-  minimumFractionDigits: 2,
-});
+import { RecurringItemAutocompleteInput } from "./RecurringItemAutocompleteInput";
 
 type VolumeDeclarationItemsProps = {
   volumeIndex: number;
 };
 
 export function VolumeDeclarationItems({ volumeIndex }: VolumeDeclarationItemsProps) {
-  const { control, watch } = useFormContext<FinalizeFormValues>();
+  const { control, setValue } = useFormContext<FinalizeFormValues>();
   const { fields, append, remove } = useFieldArray({
     control,
     name: `document.volumeDeclarations.${volumeIndex}.items`,
   });
-
-  const items = watch(`document.volumeDeclarations.${volumeIndex}.items`);
-  const total = items?.reduce((acc, item) => {
-    const unit = Number(item.valorUnitario) || 0;
-    const quantity = Number(item.quantidade) || 0;
-    return acc + unit * quantity;
-  }, 0) ?? 0;
 
   const handleAddItem = () => {
     append({
@@ -94,8 +81,16 @@ export function VolumeDeclarationItems({ volumeIndex }: VolumeDeclarationItemsPr
                     help={fieldState.error?.message}
                     style={{ marginBottom: 12 }}
                   >
-                    <Input
-                      {...controllerField}
+                    <RecurringItemAutocompleteInput
+                      value={controllerField.value}
+                      onChange={controllerField.onChange}
+                      onSelect={(descricao, valorUnitario) => {
+                        controllerField.onChange(descricao);
+                        setValue(
+                          `document.volumeDeclarations.${volumeIndex}.items.${index}.valorUnitario`,
+                          valorUnitario
+                        );
+                      }}
                       placeholder="Ex.: Camiseta algodão"
                     />
                   </Form.Item>
@@ -161,10 +156,6 @@ export function VolumeDeclarationItems({ volumeIndex }: VolumeDeclarationItemsPr
       <Button type="dashed" icon={<PlusOutlined />} onClick={handleAddItem}>
         Adicionar item
       </Button>
-
-      <Typography.Text strong>
-        Total da declaração deste volume: {currency.format(total)}
-      </Typography.Text>
     </Space>
   );
 }

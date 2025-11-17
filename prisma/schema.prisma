@@ -42,6 +42,7 @@ model User {
   passwordUpdatedAt      DateTime?
   passwordHistory        Json?
   tokenVersion           Int                  @default(0)
+  defaultPostingUnitId   String?
   addresses              Address[]
   cards                  Card[]
   carts                  Cart[]
@@ -54,6 +55,7 @@ model User {
   supportTickets         SupportTicket[]
   securityEvents         UserSecurityEvent[]
   packagingTemplates     PackagingTemplate[]
+  recurringItems         RecurringItem[]
   role                   Role?                @relation(fields: [roleId], references: [id])
   wallet                 Wallet?
   pickupRequests         PickupRequest[]
@@ -1273,4 +1275,18 @@ model CepLocation {
   manualOverrideReason  String?  @map("manual_override_reason")
 
   @@map("cep_locations")
+}
+
+model RecurringItem {
+  id             String   @id @default(uuid())
+  userId         String   @map("user_id")
+  descricao      String
+  valorUnitario  Float    @map("valor_unitario")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("recurring_items")
 }

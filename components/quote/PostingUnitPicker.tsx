@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { EnvironmentOutlined, SearchOutlined } from "@ant-design/icons";
 import {
   Alert,
+  App,
   Button,
   Card,
   Input,
@@ -33,12 +34,15 @@ interface PickupPointWithDistance extends PickupPoint {
 }
 
 export function PostingUnitPicker() {
+  const { message } = App.useApp();
   const { pickupAtOrigin, hydrated } = useQuoteDraft(
     useShallow((s) => ({ pickupAtOrigin: s.pickupAtOrigin, hydrated: s._hasHydrated }))
   );
   const results = useQuoteStore((state) => state.results);
   const [searchQuery, setSearchQuery] = useState("");
   const [mapModalOpen, setMapModalOpen] = useState(false);
+  const [isLoadingPreferences, setIsLoadingPreferences] = useState(true);
+  const [hasFetchedPreferences, setHasFetchedPreferences] = useState(false);
 
   const {
     watch,
@@ -104,6 +108,53 @@ export function PostingUnitPicker() {
     const unsubscribe = subscribeExternal();
     return () => unsubscribe();
   }, [subscribeExternal]);
+
+  // Carregar unidade padrão do usuário ao montar o componente
+  useEffect(() => {
+    if (!hasFetchedPreferences && apiPickupPoints && apiPickupPoints.length > 0) {
+      const fetchDefaultUnit = async () => {
+        try {
+          setIsLoadingPreferences(true);
+          const response = await fetch("/api/user/preferences");
+          if (response.ok) {
+            const result = await response.json();
+            const defaultUnitId = result.data?.defaultPostingUnitId;
+
+            if (defaultUnitId) {
+              // Procurar a unidade padrão nos pontos disponíveis
+              const defaultUnit = apiPickupPoints.find((p) => p.id === defaultUnitId);
+              if (defaultUnit) {
+                // Pré-selecionar a unidade
+                setValue(
+                  "postingUnit.selected",
+                  {
+                    id: defaultUnit.id,
+                    nome: defaultUnit.name,
+                    endereco: `${defaultUnit.address}${defaultUnit.number ? `, ${defaultUnit.number}` : ""}`,
+                    cidade: defaultUnit.city || "",
+                    uf: defaultUnit.uf || "",
+                    cep: defaultUnit.cep || "",
+                  },
+                  { shouldDirty: false }
+                );
+                // Ativar o toggle
+                setValue("postingUnit.definirComoPadrao", true, { shouldDirty: false });
+                // Atualizar checkout store
+                setCheckoutPickupPoint(defaultUnit.id);
+              }
+            }
+          }
+        } catch (error) {
+          console.error("Erro ao carregar unidade padrão:", error);
+        } finally {
+          setIsLoadingPreferences(false);
+          setHasFetchedPreferences(true);
+        }
+      };
+
+      fetchDefaultUnit();
+    }
+  }, [apiPickupPoints, hasFetchedPreferences, setValue, setCheckoutPickupPoint]);
 
   // Obter coordenadas da origem para cálculo de distância
   const originCoords = useMemo(() => {
@@ -212,12 +263,34 @@ export function PostingUnitPicker() {
     }, 100);
   };
 
-  // Aplicar padrão quando checkbox muda
+  // Persistir unidade padrão quando toggle muda
   useEffect(() => {
-    if (definirComoPadrao && selectedUnit) {
-      setDefaultPoint(selectedUnit.id);
+    // Não executar durante carregamento inicial
+    if (isLoadingPreferences || !hasFetchedPreferences) {
+      return;
     }
-  }, [definirComoPadrao, selectedUnit, setDefaultPoint]);
+
+    const updateDefaultUnit = async () => {
+      try {
+        const defaultUnitId = definirComoPadrao && selectedUnit ? selectedUnit.id : null;
+
+        const response = await fetch("/api/user/preferences", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ defaultPostingUnitId: defaultUnitId }),
+        });
+
+        if (!response.ok) {
+          message.error("Não foi possível salvar a preferência");
+        }
+      } catch (error) {
+        console.error("Erro ao salvar unidade padrão:", error);
+        message.error("Erro ao salvar a preferência");
+      }
+    };
+
+    updateDefaultUnit();
+  }, [definirComoPadrao, selectedUnit, isLoadingPreferences, hasFetchedPreferences, message]);
 
   // Aguarde hidratação antes de renderizar
   if (!hydrated) {
@@ -330,7 +403,7 @@ export function PostingUnitPicker() {
               aria-label="Definir unidade como padrão"
             />
             <Typography.Text style={{ opacity: selectedUnit ? 1 : 0.5 }}>
-              Definir essa unidade como padrão na calculadora
+              Definir como unidade padrão
             </Typography.Text>
           </Space>
 

@@ -186,8 +186,9 @@ export function CheckoutCartModal({
       // Limpar carrinho
       await fetch('/api/carrinho', { method: 'DELETE' });
 
-      // Invalidar cache do carrinho
+      // Invalidar cache do carrinho e dos envios
       queryClient.invalidateQueries({ queryKey: ['cart'] });
+      queryClient.invalidateQueries({ queryKey: ['shipments'] });
 
       // Fechar modal e redirecionar
       onClose();

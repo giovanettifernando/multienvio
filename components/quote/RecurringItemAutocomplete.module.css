@@ -1,0 +1,48 @@
+.autocompleteWrapper {
+  position: relative;
+  width: 100%;
+}
+
+.suggestionsDropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  background: white;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.suggestionItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  gap: 12px;
+}
+
+.suggestionItem:hover {
+  background-color: #f5f5f5;
+}
+
+.suggestionItem:not(:last-child) {
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.suggestionText {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.suggestionPrice {
+  flex-shrink: 0;
+  font-size: 0.9em;
+}
