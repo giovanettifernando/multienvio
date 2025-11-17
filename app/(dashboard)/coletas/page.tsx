@@ -2,7 +2,6 @@
 
 import React, { useState } from "react";
 import {
-  Typography,
   Table,
   Tag,
   Space,
@@ -11,13 +10,15 @@ import {
   Select,
   Button,
   Card,
+  Typography,
 } from "antd";
-import { SearchOutlined, CarOutlined } from "@ant-design/icons";
+import { SearchOutlined } from "@ant-design/icons";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import type { ColumnsType } from "antd/es/table";
 import type { PickupRequestWithShipment, PickupStatus } from "@/lib/types/pickup";
 import dayjs, { type Dayjs } from "dayjs";
+import { PageShell } from "@/components/shared/PageShell";
 
 const { RangePicker } = DatePicker;
 
@@ -141,17 +142,7 @@ export default function ColetasPage() {
   ];
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <div>
-        <Typography.Title level={2} style={{ marginBottom: 4 }}>
-          <CarOutlined style={{ marginRight: 8 }} />
-          Solicitações de Coleta
-        </Typography.Title>
-        <Typography.Paragraph type="secondary">
-          Gerencie as solicitações de coleta criadas automaticamente ao finalizar envios.
-        </Typography.Paragraph>
-      </div>
-
+    <PageShell title="Solicitações de Coleta" gap="md">
       <Card>
         <Space direction="vertical" size={16} style={{ width: "100%" }}>
           <Space wrap>
@@ -189,6 +180,6 @@ export default function ColetasPage() {
           />
         </Space>
       </Card>
-    </div>
+    </PageShell>
   );
 }

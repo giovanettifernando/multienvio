@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Alert, Card, Flex, Space, Typography, Row, Col, Grid } from "antd";
+import { PageShell } from "@/components/shared/PageShell";
 import { QuickCalculator } from "@/components/dashboard/QuickCalculator";
 import { KpiCards } from "@/components/dashboard/KpiCards";
 import { ShipmentsStatusBoard } from "@/components/dashboard/ShipmentsStatusBoard";
@@ -69,16 +70,7 @@ export default function OverviewPage() {
   const allKpis = [...kpiItems];
 
   return (
-    <Flex vertical gap={12}>
-      <Space direction="vertical" size={4}>
-        <Typography.Title level={2} style={{ margin: 0 }}>
-          Painel de Controle
-        </Typography.Title>
-        <Typography.Paragraph type="secondary" style={{ margin: 0 }}>
-          Acompanhe suas métricas, envios e operações em tempo real
-        </Typography.Paragraph>
-      </Space>
-
+    <PageShell title="Painel de Controle" gap="md">
       {/* Errors Display */}
       {ordersQuery.isError && (
         <Alert
@@ -156,6 +148,6 @@ export default function OverviewPage() {
 
       {/* Footer Links */}
       <DashboardFooterLinks />
-    </Flex>
+    </PageShell>
   );
 }

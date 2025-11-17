@@ -8,6 +8,7 @@ import { listShipments } from '@/lib/admin/ops/api';
 import ShipmentsTable from '@/components/admin/ops/ShipmentsTable';
 import PoCTable from '@/components/admin/ops/PoCTable';
 import EventsTable from '@/components/admin/ops/EventsTable';
+import { PageShell } from '@/components/shared/PageShell';
 
 const { RangePicker } = DatePicker;
 
@@ -141,109 +142,107 @@ export default function AdminOperacoesPage() {
   ];
 
   return (
-    <div style={{ padding: 24 }}>
-      <Flex vertical gap={24}>
-        {/* Header */}
-        <Flex justify="space-between" align="center">
-          <h1 style={{ margin: 0 }}>Operações</h1>
-          <Flex gap={12} align="center">
-            <Select
-              value={periodPreset}
-              onChange={(v) => {
-                setPeriodPreset(v);
-                if (v !== 'custom') {
-                  setCustomRange(null);
+    <PageShell
+      title="Operações"
+      gap="md"
+      extra={
+        <Flex gap={12} align="center">
+          <Select
+            value={periodPreset}
+            onChange={(v) => {
+              setPeriodPreset(v);
+              if (v !== 'custom') {
+                setCustomRange(null);
+              }
+            }}
+            style={{ width: 150 }}
+            options={[
+              { label: 'Hoje', value: 'today' },
+              { label: 'Últimos 7 dias', value: '7d' },
+              { label: 'Últimos 30 dias', value: '30d' },
+              { label: 'Mês atual', value: 'month' },
+              { label: 'Personalizado', value: 'custom' },
+            ]}
+          />
+          {periodPreset === 'custom' && (
+            <RangePicker
+              value={customRange}
+              onChange={(dates) => {
+                if (dates && dates[0] && dates[1]) {
+                  setCustomRange([dates[0], dates[1]]);
                 }
               }}
-              style={{ width: 150 }}
-              options={[
-                { label: 'Hoje', value: 'today' },
-                { label: 'Últimos 7 dias', value: '7d' },
-                { label: 'Últimos 30 dias', value: '30d' },
-                { label: 'Mês atual', value: 'month' },
-                { label: 'Personalizado', value: 'custom' },
-              ]}
+              format="DD/MM/YYYY"
             />
-            {periodPreset === 'custom' && (
-              <RangePicker
-                value={customRange}
-                onChange={(dates) => {
-                  if (dates && dates[0] && dates[1]) {
-                    setCustomRange([dates[0], dates[1]]);
-                  }
-                }}
-                format="DD/MM/YYYY"
-              />
-            )}
-          </Flex>
+          )}
         </Flex>
-
-        {/* KPIs */}
-        {kpisLoading ? (
-          <Card>
-            <Skeleton active />
-          </Card>
-        ) : (
-          <Card title="Visão Geral da Operação" size="small">
-            <Row gutter={[16, 16]}>
-              <Col xs={24} sm={12} lg={6} xl={3}>
-                <Statistic
-                  title="Em Backlog"
-                  value={kpis.backlog}
-                  valueStyle={{ color: kpis.backlog > 10 ? '#cf1322' : '#000' }}
-                />
-              </Col>
-              <Col xs={24} sm={12} lg={6} xl={3}>
-                <Statistic
-                  title="Em Coleta"
-                  value={kpis.inPickup}
-                  valueStyle={{ color: '#1890ff' }}
-                />
-              </Col>
-              <Col xs={24} sm={12} lg={6} xl={3}>
-                <Statistic
-                  title="No PoC"
-                  value={kpis.atPoC}
-                  valueStyle={{ color: '#faad14' }}
-                />
-              </Col>
-              <Col xs={24} sm={12} lg={6} xl={3}>
-                <Statistic
-                  title="Em Trânsito"
-                  value={kpis.inTransit}
-                  valueStyle={{ color: '#1890ff' }}
-                />
-              </Col>
-              <Col xs={24} sm={12} lg={6} xl={3}>
-                <Statistic
-                  title="Exceções"
-                  value={kpis.exceptions}
-                  valueStyle={{ color: kpis.exceptions > 0 ? '#cf1322' : '#52c41a' }}
-                />
-              </Col>
-              <Col xs={24} sm={12} lg={6} xl={3}>
-                <Statistic
-                  title="Entregues"
-                  value={kpis.delivered}
-                  valueStyle={{ color: '#52c41a' }}
-                />
-              </Col>
-              <Col xs={24} sm={12} lg={6} xl={3}>
-                <Statistic
-                  title="SLAs em Risco"
-                  value={kpis.slaRisk}
-                  valueStyle={{ color: kpis.slaRisk > 0 ? '#cf1322' : '#52c41a' }}
-                />
-              </Col>
-            </Row>
-          </Card>
-        )}
-
-        {/* Tabs */}
-        <Card size="small" style={{ minHeight: 400 }}>
-          <Tabs items={tabItems} />
+      }
+    >
+      {/* KPIs */}
+      {kpisLoading ? (
+        <Card>
+          <Skeleton active />
         </Card>
-      </Flex>
-    </div>
+      ) : (
+        <Card title="Visão Geral da Operação" size="small">
+          <Row gutter={[16, 16]}>
+            <Col xs={24} sm={12} lg={6} xl={3}>
+              <Statistic
+                title="Em Backlog"
+                value={kpis.backlog}
+                valueStyle={{ color: kpis.backlog > 10 ? '#cf1322' : '#000' }}
+              />
+            </Col>
+            <Col xs={24} sm={12} lg={6} xl={3}>
+              <Statistic
+                title="Em Coleta"
+                value={kpis.inPickup}
+                valueStyle={{ color: '#1890ff' }}
+              />
+            </Col>
+            <Col xs={24} sm={12} lg={6} xl={3}>
+              <Statistic
+                title="No PoC"
+                value={kpis.atPoC}
+                valueStyle={{ color: '#faad14' }}
+              />
+            </Col>
+            <Col xs={24} sm={12} lg={6} xl={3}>
+              <Statistic
+                title="Em Trânsito"
+                value={kpis.inTransit}
+                valueStyle={{ color: '#1890ff' }}
+              />
+            </Col>
+            <Col xs={24} sm={12} lg={6} xl={3}>
+              <Statistic
+                title="Exceções"
+                value={kpis.exceptions}
+                valueStyle={{ color: kpis.exceptions > 0 ? '#cf1322' : '#52c41a' }}
+              />
+            </Col>
+            <Col xs={24} sm={12} lg={6} xl={3}>
+              <Statistic
+                title="Entregues"
+                value={kpis.delivered}
+                valueStyle={{ color: '#52c41a' }}
+              />
+            </Col>
+            <Col xs={24} sm={12} lg={6} xl={3}>
+              <Statistic
+                title="SLAs em Risco"
+                value={kpis.slaRisk}
+                valueStyle={{ color: kpis.slaRisk > 0 ? '#cf1322' : '#52c41a' }}
+              />
+            </Col>
+          </Row>
+        </Card>
+      )}
+
+      {/* Tabs */}
+      <Card size="small" style={{ minHeight: 400 }}>
+        <Tabs items={tabItems} />
+      </Card>
+    </PageShell>
   );
 }

@@ -133,6 +133,13 @@ export default function AdminLayout({
         style={{
           background: "#FFFFFF",
           borderRight: "1px solid var(--color-border)",
+          position: "fixed",
+          left: 0,
+          top: 0,
+          bottom: 0,
+          height: "100vh",
+          zIndex: 1000,
+          overflow: "auto",
         }}
       >
         <Flex
@@ -161,11 +168,33 @@ export default function AdminLayout({
           style={{ borderRight: 0 }}
         />
       </Layout.Sider>
-      <Layout>
-        <Layout.Content style={{ padding: spacing.xl }}>
+      <Layout style={{ marginLeft: 240, transition: "margin-left 0.2s" }}>
+        <Layout.Content style={{ padding: spacing.xl, overflow: "auto" }}>
           {children}
         </Layout.Content>
       </Layout>
+      <style jsx global>{`
+        /* Responsive sidebar adjustments for admin */
+        @media (max-width: 767px) {
+          .ant-layout {
+            margin-left: 0 !important;
+          }
+          .ant-layout-sider {
+            position: relative !important;
+          }
+        }
+
+        @media (min-width: 768px) {
+          .ant-layout-sider {
+            position: fixed !important;
+            left: 0 !important;
+            top: 0 !important;
+            bottom: 0 !important;
+            height: 100vh !important;
+            z-index: 1000 !important;
+          }
+        }
+      `}</style>
     </Layout>
   );
 }

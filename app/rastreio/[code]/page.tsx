@@ -15,6 +15,7 @@ import {
 import { ArrowLeftOutlined, CopyOutlined } from "@ant-design/icons";
 import { TrackingTimeline, type TrackingEvent } from "@/components/track/TrackingTimeline";
 import { App } from "antd";
+import { PageShell } from "@/components/shared/PageShell";
 
 const STATUS_LABELS: Record<string, string> = {
   criado: "Criado",
@@ -117,24 +118,18 @@ export default function PublicTrackingPage() {
 
   return (
     <div style={{ maxWidth: 1200, margin: "0 auto", padding: 24 }}>
-      <Space direction="vertical" size={24} style={{ width: "100%" }}>
-        {/* Header */}
-        <div>
+      <PageShell
+        title="Rastreamento de Envio"
+        gap="md"
+        extra={
           <Button
             icon={<ArrowLeftOutlined />}
             onClick={() => router.push("/")}
-            style={{ marginBottom: 16 }}
           >
             Voltar
           </Button>
-          <Typography.Title level={2} style={{ margin: 0 }}>
-            Rastreamento de Envio
-          </Typography.Title>
-          <Typography.Text type="secondary">
-            Acompanhe o status e histórico do seu envio em tempo real
-          </Typography.Text>
-        </div>
-
+        }
+      >
         {/* Status Card */}
         <Card>
           <Space direction="vertical" size={16} style={{ width: "100%" }}>
@@ -221,7 +216,7 @@ export default function PublicTrackingPage() {
 
         {/* Timeline */}
         <TrackingTimeline events={data.events} />
-      </Space>
+      </PageShell>
     </div>
   );
 }

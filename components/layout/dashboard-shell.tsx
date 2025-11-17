@@ -37,7 +37,12 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   return (
     <Layout style={{ minHeight: '100dvh' }}>
       <Sidebar collapsed={collapsed} onCollapse={setCollapsed} />
-      <Layout>
+      <Layout
+        style={{
+          marginLeft: isMobile ? 0 : collapsed ? 80 : 280,
+          transition: 'margin-left 0.2s',
+        }}
+      >
         {/* Mobile Header with hamburger */}
         {isMobile && (
           <Header
@@ -64,6 +69,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             padding: 24,
             background: token.colorBgLayout,
             minHeight: '100vh',
+            overflow: 'auto',
           }}
         >
           {children}

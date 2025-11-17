@@ -1,10 +1,11 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { Flex, Skeleton, Typography } from "antd";
+import { Skeleton, Typography } from "antd";
 import type { CompanyWizardData } from "@/lib/validation/company";
 import type { Shipment } from "@/types/shipment";
 import { PickupWizard } from "@/components/pickups/PickupWizard";
+import { PageShell } from "@/components/shared/PageShell";
 
 async function fetchCompany(): Promise<CompanyWizardData | null> {
   const response = await fetch("/api/account/company");
@@ -39,14 +40,7 @@ export default function NovaColetaPage() {
   const shipments = shipmentsQuery.data ?? [];
 
   return (
-    <Flex vertical gap={24}>
-      <Typography.Title level={2} style={{ margin: 0 }}>
-        Solicitar coleta
-      </Typography.Title>
-      <Typography.Paragraph type="secondary" style={{ margin: 0 }}>
-        Agende a retirada dos seus envios com poucos passos.
-      </Typography.Paragraph>
-
+    <PageShell title="Solicitar coleta" gap="md">
       {companyQuery.isLoading || shipmentsQuery.isLoading ? (
         <Skeleton active paragraph={{ rows: 6 }} />
       ) : !company ? (
@@ -56,6 +50,6 @@ export default function NovaColetaPage() {
       ) : (
         <PickupWizard sender={company} shipments={shipments} />
       )}
-    </Flex>
+    </PageShell>
   );
 }

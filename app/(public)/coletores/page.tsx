@@ -10,6 +10,7 @@ import {
   FallOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
+import { PageShell } from '@/components/shared/PageShell';
 
 interface KPIData {
   pending: { value: number; label: string };
@@ -119,9 +120,7 @@ export default function ColetoresDashboardPage() {
   ];
 
   return (
-    <div>
-      <h1 style={{ marginBottom: 24 }}>Dashboard</h1>
-
+    <PageShell title="Dashboard" gap="md">
       <Row gutter={[16, 16]}>
         <Col xs={24} sm={12} lg={6}>
           <Card>
@@ -201,7 +200,7 @@ export default function ColetoresDashboardPage() {
         </Col>
       </Row>
 
-      <Card title="Últimas Coletas" style={{ marginTop: 24 }}>
+      <Card title="Últimas Coletas">
         <Table
           columns={columns}
           dataSource={data.recentCollections}
@@ -210,6 +209,6 @@ export default function ColetoresDashboardPage() {
           size="small"
         />
       </Card>
-    </div>
+    </PageShell>
   );
 }

@@ -2,7 +2,6 @@
 
 import React, { useMemo, useState } from "react";
 import {
-  Typography,
   Button,
   Tag,
   Table,
@@ -25,7 +24,7 @@ import { useShipments, useShipmentCancel } from "@/hooks/useShipments";
 import type { Shipment, ShipmentStatus } from "@/src/types/shipments";
 import type { LabelItem } from "@/lib/types/label";
 import type { ColumnsType } from "antd/es/table";
-import type { PickupStatus } from "@/lib/types/pickup";
+import { PageShell } from "@/components/shared/PageShell";
 
 const STATUS_OPTIONS: Array<ShipmentStatus | "Todos"> = [
   "Todos",
@@ -188,16 +187,7 @@ export default function ShipmentsPage() {
   );
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <div>
-        <Typography.Title level={2} style={{ marginBottom: 4 }}>
-          Gestão de envios
-        </Typography.Title>
-        <Typography.Paragraph type="secondary">
-          Monitore o status de cada pedido e atue rapidamente em casos críticos.
-        </Typography.Paragraph>
-      </div>
-
+    <PageShell title="Gestão de envios" gap="md">
       <Space wrap>
         <Input
           allowClear
@@ -225,6 +215,6 @@ export default function ShipmentsPage() {
         pagination={{ pageSize: 10 }}
         columns={columns}
       />
-    </div>
+    </PageShell>
   );
 }

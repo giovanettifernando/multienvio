@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Button, Card, Flex, InputNumber, Modal, Space, Table, Typography, message } from "antd";
+import { Button, Card, InputNumber, Modal, Table, message } from "antd";
+import { PageShell } from "@/components/shared/PageShell";
 import type { Invoice } from "@/types/billing";
 
 async function fetchInvoices(): Promise<Invoice[]> {
@@ -49,7 +50,7 @@ export default function InvoicesPage() {
   });
 
   return (
-    <Flex vertical gap={24}>
+    <>
       <Modal
         title="Gerar fatura"
         open={modalOpen}
@@ -66,54 +67,47 @@ export default function InvoicesPage() {
         />
       </Modal>
 
-      <Space direction="vertical" size={4}>
-        <Typography.Title level={2} style={{ margin: 0 }}>
-          Faturas e recibos
-        </Typography.Title>
-        <Typography.Paragraph type="secondary" style={{ margin: 0 }}>
-          Gerencie seus documentos fiscais e recibos de consumo.
-        </Typography.Paragraph>
-      </Space>
+      <PageShell title="Faturas e recibos" gap="md">
+        <Button type="primary" onClick={() => setModalOpen(true)}>
+          Gerar nova fatura
+        </Button>
 
-      <Button type="primary" onClick={() => setModalOpen(true)}>
-        Gerar nova fatura
-      </Button>
-
-      <Card variant="borderless">
-        <Table
-          rowKey="id"
-          loading={isLoading}
-          dataSource={data ?? []}
-          columns={[
-            {
-              title: "Número",
-              dataIndex: "number",
-            },
-            {
-              title: "Valor",
-              dataIndex: "amount",
-              render: (value: number) =>
-                value.toLocaleString("pt-BR", {
-                  style: "currency",
-                  currency: "BRL",
-                }),
-            },
-            {
-              title: "Gerada em",
-              dataIndex: "createdAt",
-              render: (value: string) => new Date(value).toLocaleString("pt-BR"),
-            },
-            {
-              title: "Ações",
-              render: (_, record: Invoice) => (
-                <Button type="link" href={record.pdfUrl} target="_blank">
-                  Baixar PDF
-                </Button>
-              ),
-            },
-          ]}
-        />
-      </Card>
-    </Flex>
+        <Card variant="borderless">
+          <Table
+            rowKey="id"
+            loading={isLoading}
+            dataSource={data ?? []}
+            columns={[
+              {
+                title: "Número",
+                dataIndex: "number",
+              },
+              {
+                title: "Valor",
+                dataIndex: "amount",
+                render: (value: number) =>
+                  value.toLocaleString("pt-BR", {
+                    style: "currency",
+                    currency: "BRL",
+                  }),
+              },
+              {
+                title: "Gerada em",
+                dataIndex: "createdAt",
+                render: (value: string) => new Date(value).toLocaleString("pt-BR"),
+              },
+              {
+                title: "Ações",
+                render: (_, record: Invoice) => (
+                  <Button type="link" href={record.pdfUrl} target="_blank">
+                    Baixar PDF
+                  </Button>
+                ),
+              },
+            ]}
+          />
+        </Card>
+      </PageShell>
+    </>
   );
 }

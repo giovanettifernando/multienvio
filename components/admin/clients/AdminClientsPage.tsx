@@ -1,10 +1,11 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { App, Flex, Typography } from 'antd';
+import { App } from 'antd';
 import type { AccountStatus, AdminClient } from '@/lib/admin/types';
 import { ClientsTable } from './ClientsTable';
 import { ClientDrawer } from './ClientDrawer';
+import { PageShell } from '@/components/shared/PageShell';
 
 interface AdminClientsPageProps {
   clients: AdminClient[];
@@ -33,16 +34,7 @@ export function AdminClientsPage({ clients: initialClients }: AdminClientsPagePr
 
   return (
     <App>
-      <Flex vertical gap={16}>
-        <div>
-          <Typography.Title level={2} style={{ marginBottom: 0 }}>
-            Contas de clientes
-          </Typography.Title>
-          <Typography.Paragraph type="secondary">
-            Gerencie contas de clientes (PF/PJ), aprove KYC, bloqueie/desbloqueie e edite limites
-          </Typography.Paragraph>
-        </div>
-
+      <PageShell title="Contas de clientes" gap="md">
         <ClientsTable
           clients={clients}
           onViewClient={handleViewClient}
@@ -55,7 +47,7 @@ export function AdminClientsPage({ clients: initialClients }: AdminClientsPagePr
           onClose={handleCloseDrawer}
           onStatusChange={handleStatusChange}
         />
-      </Flex>
+      </PageShell>
     </App>
   );
 }

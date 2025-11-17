@@ -13,12 +13,11 @@ import {
   Input,
   Radio,
   App,
-  Typography,
 } from 'antd';
 import { CheckOutlined, WarningOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
+import { PageShell } from '@/components/shared/PageShell';
 
-const { Title } = Typography;
 const { TextArea } = Input;
 
 interface Reception {
@@ -212,29 +211,26 @@ export default function ReceptionsPage() {
   ];
 
   return (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 24 }}>
-        <Title level={2} style={{ margin: 0 }}>
-          Fila de Recepções
-        </Title>
-        <Space>
-          <Select
-            value={statusFilter}
-            onChange={(value) => {
-              setStatusFilter(value);
-              loadData(1);
-            }}
-            style={{ width: 180 }}
-          >
-            <Select.Option value="all">Todos</Select.Option>
-            <Select.Option value="PENDING">Aguardando</Select.Option>
-            <Select.Option value="RECEIVED">Recebidos</Select.Option>
-            <Select.Option value="ISSUE_REPORTED">Com Problema</Select.Option>
-            <Select.Option value="PROCESSED">Processados</Select.Option>
-          </Select>
-        </Space>
-      </div>
-
+    <PageShell
+      title="Fila de Recepções"
+      gap="md"
+      extra={
+        <Select
+          value={statusFilter}
+          onChange={(value) => {
+            setStatusFilter(value);
+            loadData(1);
+          }}
+          style={{ width: 180 }}
+        >
+          <Select.Option value="all">Todos</Select.Option>
+          <Select.Option value="PENDING">Aguardando</Select.Option>
+          <Select.Option value="RECEIVED">Recebidos</Select.Option>
+          <Select.Option value="ISSUE_REPORTED">Com Problema</Select.Option>
+          <Select.Option value="PROCESSED">Processados</Select.Option>
+        </Select>
+      }
+    >
       <Card>
         <Table
           columns={columns}
@@ -330,6 +326,6 @@ export default function ReceptionsPage() {
           </Form.Item>
         </Form>
       </Modal>
-    </div>
+    </PageShell>
   );
 }

@@ -405,26 +405,52 @@ export default function FinalizeQuotePage() {
   const handlePayNow: SubmitHandler<FinalizeFormValues> = async (values) => {
     console.log('[HANDLE_PAY_NOW] Iniciando checkout', { selection, results: !!results, summary: !!summary, selectedService: !!selectedService });
 
+    console.log('[DEBUG_CHECKPOINT_1] Antes do if de validação');
+
     if (!selection || !results || !summary || !selectedService) {
+      console.log('[DEBUG_CHECKPOINT_2] ENTRANDO no if - falta dados!', {
+        selection: !!selection,
+        results: !!results,
+        summary: !!summary,
+        selectedService: !!selectedService,
+      });
       message.error("Nenhuma seleção de serviço ativa.");
       return;
     }
 
+    console.log('[DEBUG_CHECKPOINT_3] Passou pelo if de validação!');
+
     // Determinar dados do destinatário
     let recipientData: FinalizeFormValues['recipient']['manual'] | undefined;
 
+    console.log('[DEBUG_CHECKPOINT_4] Declarou recipientData');
+
+    console.log('[RECIPIENT_DEBUG] values.recipient:', JSON.stringify(values.recipient, null, 2));
+    console.log('[RECIPIENT_DEBUG] values.recipient.mode:', values.recipient.mode);
+    console.log('[RECIPIENT_DEBUG] destino:', destino);
+
     if (values.recipient.mode === "manual") {
+      console.log('[RECIPIENT_DEBUG] Modo MANUAL detectado');
       recipientData = values.recipient.manual;
+      console.log('[RECIPIENT_DEBUG] recipientData copiado:', JSON.stringify(recipientData, null, 2));
 
       // Validar dados mínimos do destinatário manual
       if (!recipientData?.cidade || !recipientData?.uf || !recipientData?.cep) {
+        console.log('[RECIPIENT_DEBUG] ERRO: Dados incompletos', {
+          cidade: recipientData?.cidade,
+          uf: recipientData?.uf,
+          cep: recipientData?.cep,
+        });
         message.error("Dados do destinatário incompletos. Informe ao menos CEP, cidade e UF.");
         return;
       }
+      console.log('[RECIPIENT_DEBUG] Validação MANUAL passou!');
     } else if (values.recipient.mode === "saved" && values.recipient.savedId) {
+      console.log('[RECIPIENT_DEBUG] Modo SAVED detectado');
       // Buscar destinatário salvo (TODO: implementar API para buscar)
       // Por enquanto, usar dados do summary
       if (!summary.destinoCidade || !summary.destinoUf) {
+        console.log('[RECIPIENT_DEBUG] ERRO: Dados de destino incompletos');
         message.error("Dados de destino incompletos.");
         return;
       }
@@ -435,10 +461,17 @@ export default function FinalizeQuotePage() {
         uf: summary.destinoUf,
         salvarRecorrente: false,
       };
+      console.log('[RECIPIENT_DEBUG] Validação SAVED passou!');
     } else {
+      console.log('[RECIPIENT_DEBUG] ERRO: Modo desconhecido ou não implementado', {
+        mode: values.recipient.mode,
+        savedId: values.recipient.savedId,
+      });
       message.error("Selecione ou preencha os dados do destinatário.");
       return;
     }
+
+    console.log('[RECIPIENT_DEBUG] recipientData final:', JSON.stringify(recipientData, null, 2));
 
     // Validar pickup point se não houver coleta na origem
     if (!pickupAtOrigin && !pickupPointId) {
@@ -459,6 +492,9 @@ export default function FinalizeQuotePage() {
       });
 
       // Montar payload do checkout
+      console.log('[CHECKOUT_FRONTEND] recipientData.salvarRecorrente:', recipientData.salvarRecorrente);
+      console.log('[CHECKOUT_FRONTEND] recipientData completo:', recipientData);
+
       const payload = {
         quoteId: selection.selectionId,
         recipient: {
@@ -473,6 +509,8 @@ export default function FinalizeQuotePage() {
           bairro: recipientData.bairro,
           cidade: recipientData.cidade,
           uf: recipientData.uf,
+          observacoes: recipientData.observacoes,
+          salvarRecorrente: recipientData.salvarRecorrente || false,
         },
         document: {
           type: values.document.type,
@@ -507,6 +545,9 @@ export default function FinalizeQuotePage() {
         totalCost: totalAmount,
         solicitarColeta: pickupAtOrigin, // Usar pickupAtOrigin do quoteDraft
       };
+
+      console.log('[CHECKOUT_FRONTEND] Payload completo sendo enviado:', JSON.stringify(payload, null, 2));
+      console.log('[CHECKOUT_FRONTEND] payload.recipient.salvarRecorrente:', payload.recipient.salvarRecorrente);
 
       // Criar shipment via API
       const res = await fetch("/api/checkout", {

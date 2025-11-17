@@ -21,6 +21,8 @@ const checkoutSchema = z.object({
     bairro: z.string().optional(),
     cidade: z.string(),
     uf: z.string(),
+    observacoes: z.string().optional(),
+    salvarRecorrente: z.boolean().optional().default(false),
   }),
   document: z.object({
     type: z.enum(['NFE', 'DECLARACAO']),
@@ -142,6 +144,60 @@ export async function POST(request: Request) {
       }
     }
 
+    // Função auxiliar para salvar destinatário recorrente
+    async function saveRecipientIfRequested() {
+      console.log('[CHECKOUT] saveRecipientIfRequested - salvarRecorrente:', data.recipient.salvarRecorrente);
+      console.log('[CHECKOUT] saveRecipientIfRequested - recipient data:', JSON.stringify(data.recipient, null, 2));
+
+      if (!data.recipient.salvarRecorrente) {
+        console.log('[CHECKOUT] salvarRecorrente = false, pulando salvamento');
+        return;
+      }
+
+      if (!session) {
+        console.error('[CHECKOUT] Session não encontrada, não é possível salvar destinatário');
+        return;
+      }
+
+      // Normalizar CEP (remover hífen)
+      const cepNormalized = data.recipient.cep.replace(/\D/g, '');
+
+      // Normalizar documento (remover pontuação)
+      const docNormalized = data.recipient.documento?.replace(/\D/g, '') || null;
+
+      // Criar nameSearch (lowercase para busca case-insensitive)
+      const nameSearch = data.recipient.nome.toLowerCase().trim();
+
+      try {
+        // Sempre criar novo destinatário recorrente
+        // O usuário pode ter múltiplos endereços no mesmo CEP ou múltiplos destinatários
+        const newRecipient = await prisma.recipient.create({
+          data: {
+            userId: session.userId,
+            name: data.recipient.nome,
+            nameSearch: nameSearch,
+            email: data.recipient.email || null,
+            phone: data.recipient.telefone || null,
+            document: docNormalized,
+            cep: cepNormalized,
+            logradouro: data.recipient.logradouro || '',
+            numero: data.recipient.numero || '',
+            complemento: data.recipient.complemento || null,
+            bairro: data.recipient.bairro || '',
+            cidade: data.recipient.cidade,
+            uf: data.recipient.uf,
+            notes: data.recipient.observacoes || null,
+            isDefault: false,
+          },
+        });
+
+        console.log(`[CHECKOUT] Destinatário recorrente criado: ${newRecipient.id}`);
+      } catch (error) {
+        // Log do erro mas não falha o checkout por causa disso
+        console.error('[CHECKOUT] Erro ao salvar destinatário recorrente:', error);
+      }
+    }
+
     // Criar shipment dentro de uma transação
     const result = await prisma.$transaction(async (tx) => {
       // Obter ou criar carteira do usuário
@@ -243,6 +299,9 @@ export async function POST(request: Request) {
 
       return { shipment, label, pickupRequest };
     });
+
+    // Salvar destinatário recorrente se solicitado
+    await saveRecipientIfRequested();
 
     // Verificar se há integração de pagamento configurada
     const paymentGatewayEnabled = process.env.PAYMENT_GATEWAY_ENABLED === 'true';

@@ -7,14 +7,13 @@ import {
   Button,
   Card,
   Descriptions,
-  Flex,
   Skeleton,
   Space,
-  Typography,
 } from "antd";
 import { ShareAltOutlined, CopyOutlined } from "@ant-design/icons";
 import { useQuery } from "@tanstack/react-query";
-import { TrackingTimeline, type TrackingEvent } from "@/components/track/TrackingTimeline";
+import { TrackingTimeline } from "@/components/track/TrackingTimeline";
+import { PageShell } from "@/components/shared/PageShell";
 
 const STATUS_LABELS: Record<string, string> = {
   "pending_payment": "Aguardando pagamento",
@@ -64,11 +63,10 @@ export default function ShipmentDetailPage() {
   };
 
   return (
-    <Flex vertical gap={24}>
-      <Space align="center" style={{ justifyContent: "space-between" }}>
-        <Typography.Title level={2} style={{ margin: 0 }}>
-          Detalhes do envio
-        </Typography.Title>
+    <PageShell
+      title="Detalhes do envio"
+      gap="md"
+      extra={
         <Space>
           <Button onClick={() => router.push("/shipments")}>Voltar</Button>
           {shipment?.publicTrackingId && (
@@ -89,7 +87,8 @@ export default function ShipmentDetailPage() {
             </>
           )}
         </Space>
-      </Space>
+      }
+    >
 
       {isLoading ? (
         <Skeleton active paragraph={{ rows: 6 }} />
@@ -164,6 +163,6 @@ export default function ShipmentDetailPage() {
           )}
         </>
       )}
-    </Flex>
+    </PageShell>
   );
 }

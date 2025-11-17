@@ -1,7 +1,14 @@
 "use client";
 
+import { PageShell } from "@/components/shared/PageShell";
 import { Typography } from "antd";
 
 export default function AdminDashboardPage() {
-  return <Typography.Title level={2}>Visão geral</Typography.Title>;
+  return (
+    <PageShell title="Visão geral" gap="md">
+      <Typography.Text type="secondary">
+        Dashboard administrativo em desenvolvimento
+      </Typography.Text>
+    </PageShell>
+  );
 }

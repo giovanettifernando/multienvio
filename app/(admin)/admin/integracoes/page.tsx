@@ -76,10 +76,7 @@ export default function IntegrationsPage() {
   ];
 
   return (
-    <PageShell
-      title="Integrações"
-      description="Gerencie integrações com transportadoras e gateways de pagamento"
-    >
+    <PageShell title="Integrações" gap="md">
       <Tabs
         items={tabItems}
         defaultActiveKey="carriers"

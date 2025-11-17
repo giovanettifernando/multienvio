@@ -18,6 +18,7 @@ import {
 import type { Pickup, PickupStatus } from "@/types/pickup";
 import { PickupStatusTag } from "@/components/ui/PickupStatusTag";
 import { PickupTimeline } from "@/components/ui/PickupTimeline";
+import { PageShell } from "@/components/shared/PageShell";
 
 async function fetchPickup(id: string): Promise<Pickup> {
   const response = await fetch(`/api/pickups/${id}`);
@@ -126,16 +127,7 @@ export default function PickupDetailPage() {
   }
 
   return (
-    <Flex vertical gap={24}>
-      <Space direction="vertical" size={4}>
-        <Typography.Title level={2} style={{ margin: 0 }}>
-          Coleta {pickup.id}
-        </Typography.Title>
-        <Typography.Paragraph type="secondary" style={{ margin: 0 }}>
-          Acompanhe os eventos e documentos desta coleta.
-        </Typography.Paragraph>
-      </Space>
-
+    <PageShell title={`Coleta ${pickup.id}`} gap="md">
       <Card variant="borderless">
         <Descriptions column={2} bordered size="small">
           <Descriptions.Item label="Status">
@@ -222,6 +214,6 @@ export default function PickupDetailPage() {
           </Card>
         </Space>
       </Flex>
-    </Flex>
+    </PageShell>
   );
 }

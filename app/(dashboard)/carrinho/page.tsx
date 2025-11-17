@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Col, Flex, Row, Skeleton, Typography, message } from "antd";
+import { Col, Row, Skeleton, message } from "antd";
 import { EmptyCart } from "@/components/cart/EmptyCart";
 import { CartTable } from "@/components/cart/CartTable";
 import { CartSummary } from "@/components/cart/CartSummary";
@@ -13,6 +13,7 @@ import {
   useCartRemove,
 } from "@/hooks/useCart";
 import type { CartItem } from "@/types/cart";
+import { PageShell } from "@/components/shared/PageShell";
 
 export default function CarrinhoPage() {
   const cartQuery = useCart();
@@ -123,12 +124,9 @@ export default function CarrinhoPage() {
 
   if (isLoading) {
     return (
-      <Flex vertical gap={16}>
-        <Typography.Title level={2} style={{ marginBottom: 0 }}>
-          Carrinho
-        </Typography.Title>
+      <PageShell title="Carrinho" gap="md">
         <Skeleton active />
-      </Flex>
+      </PageShell>
     );
   }
 
@@ -138,16 +136,8 @@ export default function CarrinhoPage() {
 
   return (
     <>
-      <Flex vertical gap={16}>
-        <Typography.Title level={2} style={{ marginBottom: 0 }}>
-          Carrinho
-        </Typography.Title>
-        <Typography.Paragraph type="secondary" style={{ marginBottom: 0 }}>
-          Revise seus envios antes de finalizar a compra.
-        </Typography.Paragraph>
-      </Flex>
-
-      <Row gutter={[24, 24]} style={{ marginTop: 16 }}>
+      <PageShell title="Carrinho" gap="md">
+        <Row gutter={[24, 24]}>
         <Col xs={24} lg={16}>
           <CartTable
             items={cart.items}
@@ -162,26 +152,27 @@ export default function CarrinhoPage() {
             onCheckout={handlePayCart}
           />
         </Col>
-      </Row>
+        </Row>
 
-      <RemoveItemModal
+        <RemoveItemModal
         open={removeModalOpen}
         item={itemToRemove}
         confirmLoading={removeMutation.isPending}
         onCancel={() => setRemoveModalOpen(false)}
         onConfirm={confirmRemove}
-      />
-
-      {/* Modal de escolha de pagamento */}
-      {createdShipments && createdShipments.shipmentIds.length > 0 && (
-        <CheckoutCartModal
-          open={checkoutModalOpen}
-          onClose={() => setCheckoutModalOpen(false)}
-          cartId={createdShipments.cartId}
-          shipmentIds={createdShipments.shipmentIds}
-          totalAmount={createdShipments.totalAmount}
         />
-      )}
+
+        {/* Modal de escolha de pagamento */}
+        {createdShipments && createdShipments.shipmentIds.length > 0 && (
+          <CheckoutCartModal
+            open={checkoutModalOpen}
+            onClose={() => setCheckoutModalOpen(false)}
+            cartId={createdShipments.cartId}
+            shipmentIds={createdShipments.shipmentIds}
+            totalAmount={createdShipments.totalAmount}
+          />
+        )}
+      </PageShell>
     </>
   );
 }

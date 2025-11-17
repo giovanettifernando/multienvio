@@ -99,7 +99,7 @@ export default function AdminUsersPage() {
   return (
     <PageShell
       title="Usuários Administrativos"
-      description="Gerencie usuários e permissões do painel administrativo"
+      gap="md"
       extra={
         <Button type="primary" icon={<PlusOutlined />} onClick={handleAddUser}>
           Adicionar Usuário

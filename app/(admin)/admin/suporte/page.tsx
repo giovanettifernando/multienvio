@@ -1,10 +1,11 @@
 'use client';
 
 import { Suspense, useEffect, useState } from 'react';
-import { Space, Typography, Grid, Skeleton } from 'antd';
+import { Grid, Skeleton } from 'antd';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { NewTicketList } from '@/components/support/NewTicketList';
 import { TicketDetailsDrawer } from '@/components/support/TicketDetailsDrawer';
+import { PageShell } from '@/components/shared/PageShell';
 
 export default function AdminSupportPage() {
   return (
@@ -63,16 +64,7 @@ function AdminSupportPageContent() {
   };
 
   return (
-    <Space direction="vertical" size={24} style={{ width: '100%', padding: 24 }}>
-      <Space direction="vertical" size={4}>
-        <Typography.Title level={2} style={{ margin: 0 }}>
-          Suporte
-        </Typography.Title>
-        <Typography.Text type="secondary">
-          Acompanhe os chamados abertos pelos clientes e responda rapidamente.
-        </Typography.Text>
-      </Space>
-
+    <PageShell title="Suporte" gap="md">
       <NewTicketList
         onTicketClick={handleSelectTicket}
         audience="admin"
@@ -87,15 +79,14 @@ function AdminSupportPageContent() {
         userRole="admin"
         onComposingChange={setIsComposing}
       />
-    </Space>
+    </PageShell>
   );
 }
 
 function AdminSupportPageSkeleton() {
   return (
-    <Space direction="vertical" size={24} style={{ width: '100%', padding: 24 }}>
-      <Skeleton active title paragraph={{ rows: 1 }} />
+    <PageShell title="Suporte" gap="md">
       <Skeleton active paragraph={{ rows: 6 }} />
-    </Space>
+    </PageShell>
   );
 }

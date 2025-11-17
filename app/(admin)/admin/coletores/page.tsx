@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Card, Button, Flex, Typography } from 'antd';
+import { Card, Button } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import SearchFilters from '@/components/collectors/SearchFilters';
 import CollectorsTable from '@/components/collectors/CollectorsTable';
@@ -14,8 +14,7 @@ import {
   useToggleCollectorStatus,
 } from '@/lib/collectors/hooks';
 import type { Collector, CollectorFilters, CollectorFormData } from '@/lib/collectors/types';
-
-const { Title } = Typography;
+import { PageShell } from '@/components/shared/PageShell';
 
 export default function ColetoresPage() {
   const [filters, setFilters] = useState<CollectorFilters>({
@@ -83,16 +82,15 @@ export default function ColetoresPage() {
   };
 
   return (
-    <div style={{ padding: 24 }}>
-      <Flex justify="space-between" align="center" style={{ marginBottom: 24 }}>
-        <Title level={2} style={{ margin: 0 }}>
-          Coletores
-        </Title>
+    <PageShell
+      title="Coletores"
+      gap="md"
+      extra={
         <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
           Adicionar Coletor
         </Button>
-      </Flex>
-
+      }
+    >
       <Card>
         <SearchFilters onChange={handleFiltersChange} />
         <CollectorsTable
@@ -112,6 +110,6 @@ export default function ColetoresPage() {
         loading={createCollector.isPending || updateCollector.isPending}
         editCollector={editingCollector}
       />
-    </div>
+    </PageShell>
   );
 }

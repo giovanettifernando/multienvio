@@ -6,16 +6,15 @@ import { useQueries } from "@tanstack/react-query";
 import {
   Button,
   Card,
-  Flex,
   Input,
   Space,
   Table,
   Tag,
-  Typography,
 } from "antd";
 import type { Shipment } from "@/types/shipment";
 import type { Tracking } from "@/types/tracking";
 import { TrackingStatusTag } from "@/components/ui/TrackingStatusTag";
+import { PageShell } from "@/components/shared/PageShell";
 
 async function fetchShipments(): Promise<{ dados: Shipment[] }> {
   const response = await fetch("/api/shipments");
@@ -100,38 +99,31 @@ export default function TrackingListPage() {
   }, [shipmentsResult.data?.dados, search, statusFilter, trackingMap]);
 
   return (
-    <Flex vertical gap={24}>
-      <Space direction="vertical" size={4}>
-        <Typography.Title level={2} style={{ margin: 0 }}>
-          Rastreamento
-        </Typography.Title>
-        <Typography.Paragraph type="secondary" style={{ margin: 0 }}>
-          Consulte o status de cada envio e os eventos mais recentes.
-        </Typography.Paragraph>
-      </Space>
-
+    <PageShell title="Rastreamento" gap="md">
       <Card variant="borderless">
-        <Flex gap={16} wrap align="center">
-          <Input.Search
-            placeholder="Buscar por ID do envio"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            style={{ width: 280 }}
-          />
+        <Space direction="vertical" size={16} style={{ width: "100%" }}>
+          <Space wrap align="center">
+            <Input.Search
+              placeholder="Buscar por ID do envio"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              style={{ width: 280 }}
+            />
 
-          <Space>
-            {STATUS_FILTERS.map((filter) => (
-              <Tag
-                key={filter.value}
-                color={statusFilter === filter.value ? "blue" : undefined}
-                onClick={() => setStatusFilter(filter.value)}
-                style={{ cursor: "pointer" }}
-              >
-                {filter.label}
-              </Tag>
-            ))}
+            <Space>
+              {STATUS_FILTERS.map((filter) => (
+                <Tag
+                  key={filter.value}
+                  color={statusFilter === filter.value ? "blue" : undefined}
+                  onClick={() => setStatusFilter(filter.value)}
+                  style={{ cursor: "pointer" }}
+                >
+                  {filter.label}
+                </Tag>
+              ))}
+            </Space>
           </Space>
-        </Flex>
+        </Space>
       </Card>
 
       <Card variant="borderless">
@@ -181,6 +173,6 @@ export default function TrackingListPage() {
           ]}
         />
       </Card>
-    </Flex>
+    </PageShell>
   );
 }

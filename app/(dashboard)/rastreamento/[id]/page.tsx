@@ -15,12 +15,12 @@ import {
   Row,
   Select,
   Space,
-  Typography,
 } from "antd";
 import type { Shipment } from "@/types/shipment";
 import type { Tracking, TrackingEventType } from "@/types/tracking";
 import { TrackingTimeline } from "@/components/ui/TrackingTimeline";
 import { TrackingStatusTag } from "@/components/ui/TrackingStatusTag";
+import { PageShell } from "@/components/shared/PageShell";
 
 async function fetchShipment(id: string): Promise<Shipment> {
   const response = await fetch(`/api/shipments?id=${id}`);
@@ -123,20 +123,9 @@ const webhookMutation = useMutation<void, Error, {
   const tracking = trackingQuery.data;
 
   return (
-    <Flex vertical gap={24}>
-      <Space direction="vertical" size={4}>
-        <Typography.Title level={2} style={{ margin: 0 }}>
-          Rastreamento do envio
-        </Typography.Title>
-        <Typography.Paragraph type="secondary" style={{ margin: 0 }}>
-          Acompanhe os eventos registrados para este envio.
-        </Typography.Paragraph>
-      </Space>
-
+    <PageShell title="Rastreamento do envio" gap="md">
       {shipmentQuery.isLoading || trackingQuery.isLoading ? (
-        <Card variant="borderless">
-          <Typography.Text>Carregando dados…</Typography.Text>
-        </Card>
+        <Card variant="borderless">Carregando dados...</Card>
       ) : shipment && tracking ? (
         <>
           <Card variant="borderless">
@@ -274,6 +263,6 @@ const webhookMutation = useMutation<void, Error, {
           description="Verifique se o identificador está correto e tente novamente."
         />
       )}
-    </Flex>
+    </PageShell>
   );
 }

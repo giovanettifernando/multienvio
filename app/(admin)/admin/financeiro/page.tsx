@@ -14,6 +14,7 @@ import { PayoutsTable } from '@/components/admin/finance/PayoutsTable';
 import { CommissionsTable } from '@/components/admin/finance/CommissionsTable';
 import { FeesView } from '@/components/admin/finance/FeesView';
 import { Reports } from '@/components/admin/finance/Reports';
+import { PageShell } from '@/components/shared/PageShell';
 
 const { RangePicker } = DatePicker;
 
@@ -108,132 +109,130 @@ export default function AdminFinanceiroPage() {
   ];
 
   return (
-    <div style={{ padding: 24 }}>
-      <Flex vertical gap={24}>
-        {/* Header */}
-        <Flex justify="space-between" align="center">
-          <h1 style={{ margin: 0 }}>Financeiro</h1>
-          <Flex gap={12} align="center">
-            <Select
-              value={periodPreset}
-              onChange={(v) => {
-                setPeriodPreset(v);
-                if (v !== 'custom') {
-                  setCustomRange(null);
+    <PageShell
+      title="Financeiro"
+      gap="md"
+      extra={
+        <Flex gap={12} align="center">
+          <Select
+            value={periodPreset}
+            onChange={(v) => {
+              setPeriodPreset(v);
+              if (v !== 'custom') {
+                setCustomRange(null);
+              }
+            }}
+            style={{ width: 150 }}
+            options={[
+              { label: 'Hoje', value: 'today' },
+              { label: 'Últimos 7 dias', value: '7d' },
+              { label: 'Últimos 30 dias', value: '30d' },
+              { label: 'Mês atual', value: 'month' },
+              { label: 'Personalizado', value: 'custom' },
+            ]}
+          />
+          {periodPreset === 'custom' && (
+            <RangePicker
+              value={customRange}
+              onChange={(dates) => {
+                if (dates && dates[0] && dates[1]) {
+                  setCustomRange([dates[0], dates[1]]);
                 }
               }}
-              style={{ width: 150 }}
-              options={[
-                { label: 'Hoje', value: 'today' },
-                { label: 'Últimos 7 dias', value: '7d' },
-                { label: 'Últimos 30 dias', value: '30d' },
-                { label: 'Mês atual', value: 'month' },
-                { label: 'Personalizado', value: 'custom' },
-              ]}
+              format="DD/MM/YYYY"
             />
-            {periodPreset === 'custom' && (
-              <RangePicker
-                value={customRange}
-                onChange={(dates) => {
-                  if (dates && dates[0] && dates[1]) {
-                    setCustomRange([dates[0], dates[1]]);
-                  }
-                }}
-                format="DD/MM/YYYY"
-              />
-            )}
-          </Flex>
+          )}
         </Flex>
-
-        {/* KPIs */}
-        {summaryLoading ? (
-          <Card>
-            <Skeleton active />
-          </Card>
-        ) : (
-          <Card title="Resumo do Período" size="small">
-            <Row gutter={[16, 16]}>
-              <Col xs={24} sm={12} lg={6}>
-                <Statistic
-                  title="Receita Bruta"
-                  value={summary?.grossRevenue || 0}
-                  precision={2}
-                  prefix="R$"
-                  valueStyle={{ color: '#3f8600' }}
-                />
-              </Col>
-              <Col xs={24} sm={12} lg={6}>
-                <Statistic
-                  title="Taxas Plataforma"
-                  value={summary?.platformFees || 0}
-                  precision={2}
-                  prefix="R$"
-                />
-              </Col>
-              <Col xs={24} sm={12} lg={6}>
-                <Statistic
-                  title="Repasses Transportadoras"
-                  value={summary?.carrierPayouts || 0}
-                  precision={2}
-                  prefix="R$"
-                  valueStyle={{ color: '#cf1322' }}
-                />
-              </Col>
-              <Col xs={24} sm={12} lg={6}>
-                <Statistic
-                  title="Comissões"
-                  value={summary?.partnerCommissions || 0}
-                  precision={2}
-                  prefix="R$"
-                />
-              </Col>
-              <Col xs={24} sm={12} lg={6}>
-                <Statistic
-                  title="Estornos"
-                  value={summary?.refunds || 0}
-                  precision={2}
-                  prefix="R$"
-                  valueStyle={{ color: '#cf1322' }}
-                />
-              </Col>
-              <Col xs={24} sm={12} lg={6}>
-                <Statistic
-                  title="Chargebacks"
-                  value={summary?.chargebacks || 0}
-                  precision={2}
-                  prefix="R$"
-                  valueStyle={{ color: '#cf1322' }}
-                />
-              </Col>
-              <Col xs={24} sm={12} lg={6}>
-                <Statistic
-                  title="Saldo em Carteira (Clientes)"
-                  value={summary?.customersWalletBalance || 0}
-                  precision={2}
-                  prefix="R$"
-                />
-              </Col>
-              <Col xs={24} sm={12} lg={6}>
-                <Statistic
-                  title="Resultado Operacional"
-                  value={summary?.platformOperationalBalance || 0}
-                  precision={2}
-                  prefix="R$"
-                  valueStyle={{
-                    color: (summary?.platformOperationalBalance || 0) >= 0 ? '#3f8600' : '#cf1322',
-                    fontWeight: 'bold',
-                  }}
-                />
-              </Col>
-            </Row>
-          </Card>
-        )}
-
-        {/* Tabs */}
-        <Card size="small" style={{ minHeight: 600 }}>
-          <Tabs items={tabItems} />
+      }
+    >
+      {/* KPIs */}
+      {summaryLoading ? (
+        <Card>
+          <Skeleton active />
         </Card>
-      </Flex>
-    </div>
+      ) : (
+        <Card title="Resumo do Período" size="small">
+          <Row gutter={[16, 16]}>
+            <Col xs={24} sm={12} lg={6}>
+              <Statistic
+                title="Receita Bruta"
+                value={summary?.grossRevenue || 0}
+                precision={2}
+                prefix="R$"
+                valueStyle={{ color: '#3f8600' }}
+              />
+            </Col>
+            <Col xs={24} sm={12} lg={6}>
+              <Statistic
+                title="Taxas Plataforma"
+                value={summary?.platformFees || 0}
+                precision={2}
+                prefix="R$"
+              />
+            </Col>
+            <Col xs={24} sm={12} lg={6}>
+              <Statistic
+                title="Repasses Transportadoras"
+                value={summary?.carrierPayouts || 0}
+                precision={2}
+                prefix="R$"
+                valueStyle={{ color: '#cf1322' }}
+              />
+            </Col>
+            <Col xs={24} sm={12} lg={6}>
+              <Statistic
+                title="Comissões"
+                value={summary?.partnerCommissions || 0}
+                precision={2}
+                prefix="R$"
+              />
+            </Col>
+            <Col xs={24} sm={12} lg={6}>
+              <Statistic
+                title="Estornos"
+                value={summary?.refunds || 0}
+                precision={2}
+                prefix="R$"
+                valueStyle={{ color: '#cf1322' }}
+              />
+            </Col>
+            <Col xs={24} sm={12} lg={6}>
+              <Statistic
+                title="Chargebacks"
+                value={summary?.chargebacks || 0}
+                precision={2}
+                prefix="R$"
+                valueStyle={{ color: '#cf1322' }}
+              />
+            </Col>
+            <Col xs={24} sm={12} lg={6}>
+              <Statistic
+                title="Saldo em Carteira (Clientes)"
+                value={summary?.customersWalletBalance || 0}
+                precision={2}
+                prefix="R$"
+              />
+            </Col>
+            <Col xs={24} sm={12} lg={6}>
+              <Statistic
+                title="Resultado Operacional"
+                value={summary?.platformOperationalBalance || 0}
+                precision={2}
+                prefix="R$"
+                valueStyle={{
+                  color: (summary?.platformOperationalBalance || 0) >= 0 ? '#3f8600' : '#cf1322',
+                  fontWeight: 'bold',
+                }}
+              />
+            </Col>
+          </Row>
+        </Card>
+      )}
+
+      {/* Tabs */}
+      <Card size="small" style={{ minHeight: 600 }}>
+        <Tabs items={tabItems} />
+      </Card>
+    </PageShell>
   );
 }

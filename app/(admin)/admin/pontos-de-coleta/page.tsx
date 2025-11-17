@@ -1,15 +1,14 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Card, Button, Flex, Typography, App } from 'antd';
+import { Card, Button, App } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import SearchFilters from '@/components/pickup/SearchFilters';
 import PointsTable from '@/components/pickup/PointsTable';
 import PointDrawer from '@/components/pickup/PointDrawer';
 import { usePickupPointsAPI } from '@/hooks/usePickupPointsAPI';
 import type { PickupPointFilters, PickupPoint, PickupPointFormData, PickupPointListResponse } from '@/lib/pickup/types';
-
-const { Title } = Typography;
+import { PageShell } from '@/components/shared/PageShell';
 
 export default function PontosDeColetaPage() {
   const { message } = App.useApp();
@@ -104,16 +103,15 @@ export default function PontosDeColetaPage() {
   };
 
   return (
-    <div style={{ padding: 24 }}>
-      <Flex justify="space-between" align="center" style={{ marginBottom: 24 }}>
-        <Title level={2} style={{ margin: 0 }}>
-          Pontos de Coleta
-        </Title>
+    <PageShell
+      title="Pontos de Coleta"
+      gap="md"
+      extra={
         <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
           Adicionar Ponto
         </Button>
-      </Flex>
-
+      }
+    >
       <Card>
         <SearchFilters onChange={handleFiltersChange} />
         <PointsTable
@@ -133,6 +131,6 @@ export default function PontosDeColetaPage() {
         loading={api.loading}
         editPoint={editingPoint}
       />
-    </div>
+    </PageShell>
   );
 }

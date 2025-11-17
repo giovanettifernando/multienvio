@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from 'react';
 import { PlusOutlined } from '@ant-design/icons';
-import { Button, Card, Flex, Space, Typography } from 'antd';
+import { Button, Card, Space } from 'antd';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { NewTicketList } from '@/components/support/NewTicketList';
 import { TicketDetailsDrawer } from '@/components/support/TicketDetailsDrawer';
+import { PageShell } from '@/components/shared/PageShell';
 
 export default function SupportPage() {
   const router = useRouter();
@@ -36,16 +37,10 @@ export default function SupportPage() {
   };
 
   return (
-    <Space direction="vertical" style={{ width: '100%', padding: 24 }} size={24}>
-      <Flex justify="space-between" align="center" wrap gap={16}>
-        <Space direction="vertical" size={0}>
-          <Typography.Title level={2} style={{ margin: 0 }}>
-            Central de Suporte
-          </Typography.Title>
-          <Typography.Text type="secondary">
-            Acompanhe seus chamados e interaja com nossa equipe.
-          </Typography.Text>
-        </Space>
+    <PageShell
+      title="Central de Suporte"
+      gap="md"
+      extra={
         <Button
           type="primary"
           variant="solid"
@@ -54,8 +49,8 @@ export default function SupportPage() {
         >
           Abrir ticket
         </Button>
-      </Flex>
-
+      }
+    >
       <Card variant="borderless" styles={{ body: { padding: 24 } }}>
         <NewTicketList onTicketClick={handleOpenTicket} isComposing={isComposing} />
       </Card>
@@ -67,6 +62,6 @@ export default function SupportPage() {
         userRole="cliente"
         onComposingChange={setIsComposing}
       />
-    </Space>
+    </PageShell>
   );
 }

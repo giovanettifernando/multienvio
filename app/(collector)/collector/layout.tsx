@@ -129,6 +129,11 @@ export default function CollectorLayout({ children }: { children: React.ReactNod
           justifyContent: 'space-between',
           padding: '0 24px',
           background: '#001529',
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          zIndex: 1001,
         }}
       >
         <div style={{ color: 'white', fontSize: 18, fontWeight: 'bold' }}>
@@ -140,8 +145,20 @@ export default function CollectorLayout({ children }: { children: React.ReactNod
           </Button>
         </Dropdown>
       </Header>
-      <Layout>
-        <Sider width={240} style={{ background: '#fff' }}>
+      <Layout style={{ marginTop: 64 }}>
+        <Sider
+          width={240}
+          style={{
+            background: '#fff',
+            position: 'fixed',
+            left: 0,
+            top: 64,
+            bottom: 0,
+            height: 'calc(100vh - 64px)',
+            zIndex: 1000,
+            overflow: 'auto',
+          }}
+        >
           <Menu
             mode="inline"
             selectedKeys={[pathname]}
@@ -150,19 +167,51 @@ export default function CollectorLayout({ children }: { children: React.ReactNod
             style={{ height: '100%', borderRight: 0 }}
           />
         </Sider>
-        <Layout style={{ padding: '24px' }}>
+        <Layout style={{ marginLeft: 240, padding: '24px', transition: 'margin-left 0.2s' }}>
           <Content
             style={{
               background: '#fff',
               padding: 24,
               margin: 0,
               minHeight: 280,
+              overflow: 'auto',
             }}
           >
             {children}
           </Content>
         </Layout>
       </Layout>
+      <style jsx global>{`
+        /* Responsive adjustments for collector layout */
+        @media (max-width: 767px) {
+          /* Remove fixed positioning on mobile */
+          .ant-layout-header {
+            position: relative !important;
+          }
+          .ant-layout-sider {
+            position: relative !important;
+            top: 0 !important;
+            height: auto !important;
+          }
+          /* Remove margins on mobile */
+          .ant-layout {
+            margin-top: 0 !important;
+            margin-left: 0 !important;
+          }
+        }
+
+        @media (min-width: 768px) {
+          /* Fixed positioning on desktop */
+          .ant-layout-sider {
+            position: fixed !important;
+            left: 0 !important;
+            top: 64px !important;
+            bottom: 0 !important;
+            height: calc(100vh - 64px) !important;
+            z-index: 1000 !important;
+          }
+        }
+      `}</style>
     </Layout>
   );
 }

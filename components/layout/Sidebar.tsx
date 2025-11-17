@@ -144,10 +144,35 @@ export function Sidebar({ collapsed, onCollapse }: SidebarProps) {
         background: '#0A2955',
         borderRight: '1px solid rgba(255, 255, 255, 0.1)',
         overflow: 'hidden',
+        position: 'fixed',
+        left: 0,
+        top: 0,
+        bottom: 0,
+        height: '100vh',
+        zIndex: 1000,
       }}
     >
       {sidebarContent}
       <style jsx global>{`
+        /* Fixed sidebar on desktop */
+        @media (min-width: 768px) {
+          .ant-layout-sider {
+            position: fixed !important;
+            left: 0 !important;
+            top: 0 !important;
+            bottom: 0 !important;
+            height: 100vh !important;
+            z-index: 1000 !important;
+          }
+        }
+
+        /* Mobile sidebar (not fixed) */
+        @media (max-width: 767px) {
+          .ant-layout-sider {
+            position: relative !important;
+          }
+        }
+
         /* Blue theme for dark menu */
         .ant-layout-sider {
           background: #0A2955 !important;

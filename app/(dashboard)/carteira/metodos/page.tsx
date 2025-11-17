@@ -10,9 +10,9 @@ import {
   InputNumber,
   Modal,
   Space,
-  Typography,
   message,
 } from "antd";
+import { PageShell } from "@/components/shared/PageShell";
 import AddFundsModal from "@/components/wallet/AddFundsModal";
 import type { CardMethod } from "@/types/billing";
 import { PaymentMethodCard } from "@/components/wallet/PaymentMethodCard";
@@ -135,16 +135,7 @@ export default function PaymentMethodsPage() {
         </Form>
       </Modal>
 
-      <Flex vertical gap={24}>
-        <Space direction="vertical" size={4}>
-          <Typography.Title level={2} style={{ margin: 0 }}>
-            Métodos de pagamento
-          </Typography.Title>
-          <Typography.Paragraph type="secondary" style={{ margin: 0 }}>
-            Gerencie os cartões utilizados para recarga automática e cobranças.
-          </Typography.Paragraph>
-        </Space>
-
+      <PageShell title="Métodos de pagamento" gap="md">
         <Space>
           <Button type="primary" onClick={() => setModalOpen(true)}>
             Adicionar cartão
@@ -162,7 +153,8 @@ export default function PaymentMethodsPage() {
             />
           ))}
         </Flex>
-      </Flex>
+      </PageShell>
+
       <AddFundsModal
         open={addBalanceOpen}
         onClose={() => setAddBalanceOpen(false)}

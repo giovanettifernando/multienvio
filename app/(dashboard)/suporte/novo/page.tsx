@@ -1,10 +1,9 @@
 'use client';
 
-import { Card, Space, Typography } from 'antd';
+import { Card } from 'antd';
 import { useRouter } from 'next/navigation';
 import { SupportForm } from '@/components/support/SupportForm';
-
-const { Title, Text } = Typography;
+import { PageShell } from '@/components/shared/PageShell';
 
 export default function NovoTicketPage() {
   const router = useRouter();
@@ -14,19 +13,12 @@ export default function NovoTicketPage() {
   };
 
   return (
-    <div style={{ padding: 24, maxWidth: 800, margin: '0 auto' }}>
-      <Space direction="vertical" style={{ width: '100%' }} size="large">
-        <div>
-          <Title level={2}>Abrir Novo Chamado</Title>
-          <Text type="secondary">
-            Preencha o formulário abaixo para abrir um novo chamado de suporte.
-          </Text>
-        </div>
-
+    <div style={{ maxWidth: 800, margin: '0 auto' }}>
+      <PageShell title="Abrir Novo Chamado" gap="md">
         <Card>
           <SupportForm onSuccess={handleSuccess} />
         </Card>
-      </Space>
+      </PageShell>
     </div>
   );
 }
