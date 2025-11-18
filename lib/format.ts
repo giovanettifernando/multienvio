@@ -41,3 +41,19 @@ export function formatSignedCurrency(value: number, isCredit: boolean): string {
   const sign = isCredit ? '+' : '-';
   return `${sign} ${formatted}`;
 }
+
+/**
+ * Formata a descrição de uma transação da carteira
+ * @param raw - Descrição bruta da transação
+ * @returns Descrição formatada para exibição
+ */
+export function formatWalletDescription(raw: string | null): string {
+  if (!raw) return '';
+
+  // Substituir descrições técnicas por texto amigável
+  if (raw.includes('cart_payment')) {
+    return 'Pagamento de multiplos envios pelo carrinho';
+  }
+
+  return raw;
+}

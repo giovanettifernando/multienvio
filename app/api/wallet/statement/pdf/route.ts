@@ -13,7 +13,7 @@ import {
   getTransactionTypeLabel,
   formatTransactionAmount,
 } from '@/lib/wallet/transaction-direction';
-import { formatNumberBR } from '@/lib/format';
+import { formatNumberBR, formatWalletDescription } from '@/lib/format';
 
 export const dynamic = 'force-dynamic';
 
@@ -166,7 +166,7 @@ function generateStatementHTML(params: {
           <td style="padding: 12px 8px; border-bottom: 1px solid #f0f0f0; text-align: right; color: ${color}; font-weight: 600;">
             ${formattedAmount}
           </td>
-          <td style="padding: 12px 8px; border-bottom: 1px solid #f0f0f0;">${tx.title || typeLabel}</td>
+          <td style="padding: 12px 8px; border-bottom: 1px solid #f0f0f0;">${formatWalletDescription(tx.title) || typeLabel}</td>
         </tr>
       `;
     })

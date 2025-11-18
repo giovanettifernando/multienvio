@@ -14,6 +14,7 @@ import {
   getTransactionTypeLabel,
   formatTransactionAmount,
 } from '@/lib/wallet/transaction-direction';
+import { formatWalletDescription } from '@/lib/format';
 import type { WalletBalanceResponse } from '@/types/wallet-statement';
 
 export const dynamic = 'force-dynamic';
@@ -93,7 +94,7 @@ export async function GET() {
         direction,
         formattedAmount: formatTransactionAmount(tx.amountCents, direction),
         title: tx.title,
-        description: tx.title || typeLabel,
+        description: formatWalletDescription(tx.title) || typeLabel,
         referenceId: tx.referenceId,
         createdAt: tx.createdAt.toISOString(),
         confirmedAt: tx.confirmedAt?.toISOString() || null,

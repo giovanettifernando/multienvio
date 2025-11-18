@@ -13,7 +13,7 @@ import {
   getTransactionTypeLabel,
   formatTransactionAmount,
 } from '@/lib/wallet/transaction-direction';
-import { formatNumberBR } from '@/lib/format';
+import { formatNumberBR, formatWalletDescription } from '@/lib/format';
 import puppeteer from 'puppeteer';
 
 export const dynamic = 'force-dynamic';
@@ -127,7 +127,7 @@ export async function GET(request: Request) {
             <td>${date}</td>
             <td>${typeLabel}</td>
             <td style="color: ${color}; font-weight: 600; text-align: right;">${formattedAmount}</td>
-            <td>${tx.title || typeLabel}</td>
+            <td>${formatWalletDescription(tx.title) || typeLabel}</td>
           </tr>
         `;
       })
