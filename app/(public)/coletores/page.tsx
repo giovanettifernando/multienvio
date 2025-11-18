@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Card, Row, Col, Statistic, Table, Tag, App, Spin } from 'antd';
+import { Card, Row, Col, Statistic, App, Spin } from 'antd';
 import {
   InboxOutlined,
   CheckCircleOutlined,
@@ -9,7 +9,6 @@ import {
   RiseOutlined,
   FallOutlined,
 } from '@ant-design/icons';
-import type { ColumnsType } from 'antd/es/table';
 import { PageShell } from '@/components/shared/PageShell';
 
 interface KPIData {
@@ -19,33 +18,9 @@ interface KPIData {
   commission: { value: number; change: number; label: string };
 }
 
-interface RecentCollection {
-  id: string;
-  trackingCode: string;
-  senderName: string;
-  status: string;
-  collectedAt: string | null;
-  createdAt: string;
-}
-
 interface DashboardData {
   kpis: KPIData;
-  recentCollections: RecentCollection[];
 }
-
-const statusColors: Record<string, string> = {
-  PENDING: 'orange',
-  COLLECTED: 'green',
-  ISSUE_REPORTED: 'red',
-  DELIVERED: 'blue',
-};
-
-const statusLabels: Record<string, string> = {
-  PENDING: 'Aguardando',
-  COLLECTED: 'Coletado',
-  ISSUE_REPORTED: 'Com Problema',
-  DELIVERED: 'Entregue',
-};
 
 export default function ColetoresDashboardPage() {
   const { message } = App.useApp();
@@ -86,38 +61,6 @@ export default function ColetoresDashboardPage() {
   if (!data) {
     return <div>Erro ao carregar dados</div>;
   }
-
-  const columns: ColumnsType<RecentCollection> = [
-    {
-      title: 'Código',
-      dataIndex: 'trackingCode',
-      key: 'trackingCode',
-      width: 150,
-    },
-    {
-      title: 'Remetente',
-      dataIndex: 'senderName',
-      key: 'senderName',
-    },
-    {
-      title: 'Status',
-      dataIndex: 'status',
-      key: 'status',
-      width: 140,
-      render: (status: string) => (
-        <Tag color={statusColors[status]}>{statusLabels[status] || status}</Tag>
-      ),
-    },
-    {
-      title: 'Data',
-      key: 'date',
-      width: 180,
-      render: (_, record) => {
-        const date = record.collectedAt || record.createdAt;
-        return new Date(date).toLocaleString('pt-BR');
-      },
-    },
-  ];
 
   return (
     <PageShell title="Dashboard" gap="md">
@@ -199,16 +142,6 @@ export default function ColetoresDashboardPage() {
           </Card>
         </Col>
       </Row>
-
-      <Card title="Últimas Coletas">
-        <Table
-          columns={columns}
-          dataSource={data.recentCollections}
-          rowKey="id"
-          pagination={false}
-          size="small"
-        />
-      </Card>
     </PageShell>
   );
 }

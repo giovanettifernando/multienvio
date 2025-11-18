@@ -33,6 +33,10 @@ export async function GET(request: NextRequest) {
     // Buscar shipments do banco de dados
     const where: Prisma.ShipmentWhereInput = {
       senderId: session.userId,
+      // FILTRO CRÍTICO: Apenas shipments que TÊM volumes
+      packages: {
+        some: {}, // Deve ter pelo menos 1 volume
+      },
     };
 
     // Filtro de busca por texto

@@ -58,6 +58,7 @@ export async function GET(request: NextRequest) {
         id: collector.id,
         status: collector.status.toLowerCase(),
         pfNome: collector.pfNome,
+        pfEmail: collector.pfEmail,
         pfCelular: collector.pfCelular,
         pjRazaoSocial: collector.pjRazaoSocial,
         pjCnpj: collector.pjCnpj,

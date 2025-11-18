@@ -5,6 +5,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { getUserSessionFromRequest } from '@/lib/auth/user-session';
+import { createShipmentWithVolumes } from '@/lib/shipments/create-with-volumes';
 
 // Schema de validação do checkout
 const checkoutSchema = z.object({
@@ -215,14 +216,12 @@ export async function POST(request: Request) {
         });
       }
 
-      // Criar envio
-      const shipment = await tx.shipment.create({
-        data: {
+      // Criar envio COM VOLUMES usando serviço centralizado
+      const { shipment, packages } = await createShipmentWithVolumes(tx, {
+        shipment: {
           platformTrackingCode,
-          carrierTrackingCode: null, // Será preenchido pela integração da transportadora
-          sender: {
-            connect: { id: session.userId },
-          },
+          carrierTrackingCode: null,
+          senderId: session.userId,
           recipientName: data.recipient.nome,
           recipientPhone: data.recipient.telefone ?? null,
           recipientEmail: data.recipient.email ?? null,
@@ -237,7 +236,6 @@ export async function POST(request: Request) {
           destinationNeighborhood: data.recipient.bairro ?? null,
           destinationCity: data.recipient.cidade,
           destinationState: data.recipient.uf,
-          weight: totalWeight,
           declaredValue,
           carrier: data.carrier,
           service: data.service,
@@ -245,9 +243,15 @@ export async function POST(request: Request) {
           freightCost: data.freightCost,
           pickupPointId: data.pickupPointId,
           document: documentData,
-          status: 'pending_payment', // aguardando pagamento
-          paymentMethod: null, // Será preenchido após pagamento
+          status: 'pending_payment',
+          paymentMethod: null,
         },
+        volumes: data.volumes.map((vol) => ({
+          peso: vol.peso,
+          altura: vol.altura,
+          largura: vol.largura,
+          comprimento: vol.comprimento,
+        })),
       });
 
       // Criar etiqueta automaticamente vinculada ao shipment
@@ -297,7 +301,7 @@ export async function POST(request: Request) {
       // Nota: A transação financeira será criada pelo /api/wallet/debit
       // quando o usuário confirmar o pagamento no modal
 
-      return { shipment, label, pickupRequest };
+      return { shipment, packages, label, pickupRequest };
     });
 
     // Salvar destinatário recorrente se solicitado

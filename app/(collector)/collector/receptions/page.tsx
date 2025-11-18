@@ -1,131 +1,158 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Card,
   Table,
-  Tag,
   Button,
-  Select,
-  Space,
+  Input,
   Modal,
   Form,
-  Input,
-  Radio,
   App,
+  Tag,
+  Space,
+  Select,
+  InputNumber,
+  Descriptions,
 } from 'antd';
-import { CheckOutlined, WarningOutlined } from '@ant-design/icons';
+import {
+  InboxOutlined,
+  CameraOutlined,
+  WarningOutlined,
+  CheckCircleOutlined,
+} from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { PageShell } from '@/components/shared/PageShell';
 
 const { TextArea } = Input;
 
-interface Reception {
+interface Package {
+  id: string;
+  packageNumber: number;
+  width: number;
+  height: number;
+  length: number;
+  weight: number;
+  hasDivergence: boolean;
+  divergenceType: string | null;
+  divergenceNotes: string | null;
+  divergenceWidth: number | null;
+  divergenceHeight: number | null;
+  divergenceLength: number | null;
+  divergenceWeight: number | null;
+  checkedAt: string | null;
+  checkedBy: string | null;
+}
+
+interface Shipment {
   id: string;
   trackingCode: string;
-  senderName: string;
-  recipientName: string;
-  weight?: number | null;
-  declaredValue?: number | null;
+  carrierTrackingCode: string | null;
+  sender: {
+    name: string;
+    phone: string;
+  };
+  recipient: {
+    name: string;
+  };
+  destination: string;
+  destinationCity: string;
+  destinationState: string;
+  weight: number;
   status: string;
-  expectedAt?: string | null;
-  receivedAt?: string | null;
-  issueType?: string | null;
-  issueDetails?: string | null;
-  commissionReais: number;
-  createdAt: string;
+  postedAt: string | null;
+  packages: Package[];
 }
 
-interface ReceptionListResponse {
-  items: Reception[];
-  total: number;
-  page: number;
-  pageSize: number;
-  totalPages: number;
+interface ShipmentsResponse {
+  shipments: Shipment[];
+  pagination: {
+    page: number;
+    pageSize: number;
+    total: number;
+    totalPages: number;
+  };
 }
 
-const statusColors: Record<string, string> = {
-  PENDING: 'orange',
-  RECEIVED: 'green',
-  ISSUE_REPORTED: 'red',
-  PROCESSED: 'blue',
-};
-
-const statusLabels: Record<string, string> = {
-  PENDING: 'Aguardando',
-  RECEIVED: 'Recebido',
-  ISSUE_REPORTED: 'Com Problema',
-  PROCESSED: 'Processado',
-};
-
-const issueTypeLabels: Record<string, string> = {
-  damaged: 'Danificado',
-  incomplete: 'Incompleto',
-  wrong_address: 'Endereço Errado',
-  other: 'Outro',
-};
+interface DivergenceFormValues {
+  divergenceType: 'DIMENSAO' | 'PESO' | 'DIMENSAO_E_PESO';
+  newWidth?: number;
+  newHeight?: number;
+  newLength?: number;
+  newWeight?: number;
+  notes?: string;
+}
 
 export default function ReceptionsPage() {
   const { message } = App.useApp();
-  const [data, setData] = useState<ReceptionListResponse>({
-    items: [],
-    total: 0,
-    page: 1,
-    pageSize: 10,
-    totalPages: 0,
-  });
-  const [loading, setLoading] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [modalOpen, setModalOpen] = useState(false);
-  const [selectedReception, setSelectedReception] = useState<Reception | null>(null);
   const [form] = Form.useForm();
+  const [divergenceForm] = Form.useForm();
+  
+  const [shipments, setShipments] = useState<Shipment[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [total, setTotal] = useState(0);
+  const [search, setSearch] = useState('');
+  
+  // Modals
+  const [entryModalOpen, setEntryModalOpen] = useState(false);
+  const [divergenceModalOpen, setDivergenceModalOpen] = useState(false);
+  const [selectedShipment, setSelectedShipment] = useState<Shipment | null>(null);
+  const [selectedPackage, setSelectedPackage] = useState<Package | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
-  const loadData = useCallback(
-    async (page = 1) => {
-      try {
-        setLoading(true);
-        const params = new URLSearchParams({
-          status: statusFilter,
-          page: page.toString(),
-          pageSize: data.pageSize.toString(),
-        });
+  const loadShipments = async () => {
+    try {
+      setLoading(true);
+      const params = new URLSearchParams({
+        page: page.toString(),
+        pageSize: pageSize.toString(),
+        search,
+      });
 
-        const response = await fetch(`/api/collector/receptions?${params}`);
-
-        if (!response.ok) {
-          throw new Error('Erro ao carregar recepções');
-        }
-
-        const result = await response.json();
-        setData(result);
-      } catch (error) {
-        console.error('Receptions error:', error);
-        message.error('Erro ao carregar recepções');
-      } finally {
-        setLoading(false);
+      const response = await fetch(`/api/collector/receptions?${params}`);
+      
+      if (!response.ok) {
+        throw new Error('Erro ao carregar envios');
       }
-    },
-    [statusFilter, data.pageSize, message]
-  );
 
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
-
-  const handleReceive = (reception: Reception) => {
-    setSelectedReception(reception);
-    form.resetFields();
-    setModalOpen(true);
+      const data: ShipmentsResponse = await response.json();
+      console.log('[RECEPTIONS] Loaded shipments:', {
+        total: data.pagination.total,
+        count: data.shipments.length,
+        page: data.pagination.page,
+      });
+      setShipments(data.shipments);
+      setTotal(data.pagination.total);
+    } catch (error) {
+      console.error('[RECEPTIONS] Error loading shipments:', error);
+      message.error('Erro ao carregar envios');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleModalOk = async () => {
+  useEffect(() => {
+    loadShipments();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, pageSize, search]);
+
+  const handleOpenEntryModal = (shipment: Shipment) => {
+    setSelectedShipment(shipment);
+    form.setFieldsValue({
+      trackingCode: shipment.trackingCode,
+    });
+    setEntryModalOpen(true);
+  };
+
+  const handleRegisterEntry = async (values: { trackingCode: string }) => {
+    if (!selectedShipment) return;
+
     try {
-      const values = await form.validateFields();
-
-      if (!selectedReception) return;
-
+      setSubmitting(true);
       const response = await fetch(
-        `/api/collector/receptions/${selectedReception.id}/receive`,
+        `/api/collector/receptions/${selectedShipment.id}/register-entry`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -135,196 +162,472 @@ export default function ReceptionsPage() {
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.message || 'Erro ao processar recepção');
+        throw new Error(error.message || 'Erro ao registrar entrada');
       }
 
-      message.success('Recepção processada com sucesso');
-      setModalOpen(false);
-      setSelectedReception(null);
-      await loadData(data.page);
+      message.success('Entrada registrada com sucesso!');
+      setEntryModalOpen(false);
+      form.resetFields();
+      setSelectedShipment(null);
+      loadShipments();
     } catch (error) {
-      console.error('Receive error:', error);
-      message.error(error instanceof Error ? error.message : 'Erro ao processar recepção');
+      console.error('Error registering entry:', error);
+      message.error(error instanceof Error ? error.message : 'Erro ao registrar entrada');
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  const columns: ColumnsType<Reception> = [
+  const handleOpenDivergenceModal = (pkg: Package) => {
+    setSelectedPackage(pkg);
+    divergenceForm.setFieldsValue({
+      divergenceType: 'DIMENSAO_E_PESO',
+    });
+    setDivergenceModalOpen(true);
+  };
+
+  const handleRegisterDivergence = async (values: DivergenceFormValues) => {
+    if (!selectedPackage) return;
+
+    try {
+      setSubmitting(true);
+      const response = await fetch(
+        `/api/collector/receptions/volumes/${selectedPackage.id}/divergence`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(values),
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Erro ao registrar divergência');
+      }
+
+      message.success('Divergência registrada com sucesso!');
+      setDivergenceModalOpen(false);
+      divergenceForm.resetFields();
+      setSelectedPackage(null);
+      loadShipments();
+    } catch (error) {
+      console.error('Error registering divergence:', error);
+      message.error(error instanceof Error ? error.message : 'Erro ao registrar divergência');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleCheckPackage = async (pkg: Package) => {
+    try {
+      const response = await fetch(
+        `/api/collector/receptions/volumes/${pkg.id}/check`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Erro ao conferir volume');
+      }
+
+      message.success('Volume conferido com sucesso!');
+      loadShipments();
+    } catch (error) {
+      console.error('Error checking package:', error);
+      message.error(error instanceof Error ? error.message : 'Erro ao conferir volume');
+    }
+  };
+
+  const handleScanCode = () => {
+    message.info('Funcionalidade de leitura de código em desenvolvimento');
+    // TODO: Implementar leitura de código de barras via câmera
+  };
+
+  const packageColumns: ColumnsType<Package> = [
     {
-      title: 'Código',
-      dataIndex: 'trackingCode',
-      key: 'trackingCode',
+      title: 'Volume',
+      dataIndex: 'packageNumber',
+      key: 'packageNumber',
+      width: 80,
+      render: (num) => `#${num}`,
+    },
+    {
+      title: 'Dimensões (cm)',
+      key: 'dimensions',
       width: 150,
-    },
-    {
-      title: 'Remetente',
-      dataIndex: 'senderName',
-      key: 'senderName',
-    },
-    {
-      title: 'Destinatário',
-      dataIndex: 'recipientName',
-      key: 'recipientName',
+      render: (_, pkg) => `${pkg.width} × ${pkg.height} × ${pkg.length}`,
     },
     {
       title: 'Peso (kg)',
       dataIndex: 'weight',
       key: 'weight',
       width: 100,
-      render: (weight) => weight?.toFixed(2) || '-',
+      align: 'right',
+      render: (weight) => weight.toFixed(1),
     },
     {
-      title: 'Comissão',
-      dataIndex: 'commissionReais',
-      key: 'commissionReais',
-      width: 100,
-      render: (value) =>
-        new Intl.NumberFormat('pt-BR', {
-          style: 'currency',
-          currency: 'BRL',
-        }).format(value),
+      title: 'Status',
+      key: 'status',
+      width: 120,
+      render: (_, pkg) => {
+        if (pkg.checkedAt) {
+          return <Tag color="green" icon={<CheckCircleOutlined />}>Conferido</Tag>;
+        }
+        if (pkg.hasDivergence) {
+          return <Tag color="orange" icon={<WarningOutlined />}>Divergência</Tag>;
+        }
+        return <Tag color="default">Pendente</Tag>;
+      },
+    },
+    {
+      title: 'Ações',
+      key: 'actions',
+      width: 200,
+      align: 'right',
+      render: (_, pkg) => (
+        <Space size="small">
+          <Button
+            size="small"
+            icon={<WarningOutlined />}
+            onClick={() => handleOpenDivergenceModal(pkg)}
+            disabled={!!pkg.hasDivergence || !!pkg.checkedAt}
+          >
+            Divergência
+          </Button>
+          <Button
+            size="small"
+            type="primary"
+            icon={<CheckCircleOutlined />}
+            onClick={() => handleCheckPackage(pkg)}
+            disabled={!!pkg.checkedAt}
+          >
+            {pkg.checkedAt ? 'Conferido' : 'Conferir'}
+          </Button>
+        </Space>
+      ),
+    },
+  ];
+
+  const getStatusColor = (status: string): string => {
+    const statusMap: Record<string, string> = {
+      ready_for_posting: 'default',
+      postado: 'geekblue',
+      em_transito: 'blue',
+      coletado: 'gold',
+      aguardando_recebimento: 'orange',
+      recebido: 'green',
+    };
+    return statusMap[status] || 'default';
+  };
+
+  const getStatusLabel = (status: string): string => {
+    const labelMap: Record<string, string> = {
+      ready_for_posting: 'Pronto para postagem',
+      postado: 'Postado',
+      em_transito: 'Em trânsito',
+      coletado: 'Coletado',
+      aguardando_recebimento: 'Aguardando recebimento',
+      recebido: 'Recebido',
+    };
+    return labelMap[status] || status;
+  };
+
+  const columns: ColumnsType<Shipment> = [
+    {
+      title: 'Código de rastreio',
+      dataIndex: 'trackingCode',
+      key: 'trackingCode',
+      width: 160,
+    },
+    {
+      title: 'Remetente',
+      key: 'sender',
+      render: (_, record) => (
+        <span>
+          {record.sender.name}
+          {record.sender.phone && (
+            <span style={{ color: '#888', fontSize: '0.9em', marginLeft: 4 }}>
+              · {record.sender.phone}
+            </span>
+          )}
+        </span>
+      ),
+    },
+    {
+      title: 'Destinatário',
+      key: 'recipient',
+      render: (_, record) => (
+        <span>
+          {record.recipient.name}
+          {record.destination && (
+            <span style={{ color: '#888', fontSize: '0.9em', marginLeft: 4 }}>
+              · {record.destination}
+            </span>
+          )}
+        </span>
+      ),
+    },
+    {
+      title: 'Peso Total',
+      dataIndex: 'weight',
+      key: 'weight',
+      width: 110,
+      align: 'right',
+      render: (weight) => `${weight.toFixed(1)} kg`,
     },
     {
       title: 'Status',
       dataIndex: 'status',
       key: 'status',
-      width: 140,
-      render: (status: string) => (
-        <Tag color={statusColors[status]}>{statusLabels[status] || status}</Tag>
-      ),
+      width: 160,
+      render: (status) => <Tag color={getStatusColor(status)}>{getStatusLabel(status)}</Tag>,
     },
     {
       title: 'Ações',
       key: 'actions',
-      width: 120,
-      render: (_, record) =>
-        record.status === 'PENDING' ? (
-          <Button
-            type="primary"
-            size="small"
-            icon={<CheckOutlined />}
-            onClick={() => handleReceive(record)}
-          >
-            Receber
-          </Button>
-        ) : null,
+      width: 150,
+      align: 'right',
+      render: (_, record) => (
+        <Button
+          size="small"
+          type="primary"
+          icon={<InboxOutlined />}
+          onClick={() => handleOpenEntryModal(record)}
+        >
+          Registrar
+        </Button>
+      ),
     },
   ];
 
   return (
-    <PageShell
-      title="Fila de Recepções"
-      gap="md"
-      extra={
-        <Select
-          value={statusFilter}
-          onChange={(value) => {
-            setStatusFilter(value);
-            loadData(1);
-          }}
-          style={{ width: 180 }}
-        >
-          <Select.Option value="all">Todos</Select.Option>
-          <Select.Option value="PENDING">Aguardando</Select.Option>
-          <Select.Option value="RECEIVED">Recebidos</Select.Option>
-          <Select.Option value="ISSUE_REPORTED">Com Problema</Select.Option>
-          <Select.Option value="PROCESSED">Processados</Select.Option>
-        </Select>
-      }
-    >
+    <PageShell title="Recepção de Envios" gap="md">
       <Card>
-        <Table
-          columns={columns}
-          dataSource={data.items}
-          rowKey="id"
-          loading={loading}
-          pagination={{
-            current: data.page,
-            pageSize: data.pageSize,
-            total: data.total,
-            onChange: loadData,
-            showSizeChanger: false,
-            showTotal: (total) => `Total: ${total} recepções`,
-          }}
-        />
+        <Space direction="vertical" style={{ width: '100%' }} size="middle">
+          <Input.Search
+            placeholder="Buscar por código, remetente ou destinatário..."
+            allowClear
+            onSearch={setSearch}
+            style={{ maxWidth: 400 }}
+          />
+
+          <Table
+            columns={columns}
+            dataSource={shipments}
+            rowKey="id"
+            loading={loading}
+            expandable={{
+              expandedRowRender: (record) => (
+                <div style={{
+                  margin: '8px 0',
+                  padding: '12px 16px',
+                  backgroundColor: '#fafafa',
+                  borderRadius: '4px',
+                }}>
+                  <div style={{
+                    marginBottom: 8,
+                    fontSize: '13px',
+                    fontWeight: 500,
+                    color: '#595959',
+                  }}>
+                    Volumes do Envio
+                  </div>
+                  <Table
+                    columns={packageColumns}
+                    dataSource={record.packages}
+                    rowKey="id"
+                    pagination={false}
+                    size="small"
+                    bordered={false}
+                  />
+                </div>
+              ),
+              rowExpandable: (record) => record.packages.length > 0,
+            }}
+            pagination={{
+              current: page,
+              pageSize,
+              total,
+              onChange: (newPage, newPageSize) => {
+                setPage(newPage);
+                setPageSize(newPageSize || 20);
+              },
+              showSizeChanger: true,
+              showTotal: (total) => `Total: ${total} envios`,
+            }}
+          />
+        </Space>
       </Card>
 
+      {/* Modal Registrar Entrada */}
       <Modal
-        title="Confirmar Recebimento"
-        open={modalOpen}
-        onOk={handleModalOk}
+        title="Registrar Entrada do Envio"
+        open={entryModalOpen}
         onCancel={() => {
-          setModalOpen(false);
-          setSelectedReception(null);
+          setEntryModalOpen(false);
+          form.resetFields();
+          setSelectedShipment(null);
         }}
+        footer={null}
         width={600}
-        okText="Confirmar"
-        cancelText="Cancelar"
       >
-        {selectedReception && (
-          <div style={{ marginBottom: 16 }}>
-            <p>
-              <strong>Código:</strong> {selectedReception.trackingCode}
-            </p>
-            <p>
-              <strong>Remetente:</strong> {selectedReception.senderName}
-            </p>
-            <p>
-              <strong>Destinatário:</strong> {selectedReception.recipientName}
-            </p>
-          </div>
+        {selectedShipment && (
+          <>
+            <Descriptions column={1} bordered size="small" style={{ marginBottom: 16 }}>
+              <Descriptions.Item label="Código">
+                {selectedShipment.trackingCode}
+              </Descriptions.Item>
+              <Descriptions.Item label="Remetente">
+                {selectedShipment.sender.name}
+              </Descriptions.Item>
+              <Descriptions.Item label="Destino">
+                {selectedShipment.destination}
+              </Descriptions.Item>
+            </Descriptions>
+
+            <Form form={form} layout="vertical" onFinish={handleRegisterEntry}>
+              <Form.Item
+                name="trackingCode"
+                label="Código de Rastreio"
+                rules={[{ required: true, message: 'Código é obrigatório' }]}
+              >
+                <Input
+                  placeholder="Digite ou escaneie o código"
+                  suffix={
+                    <Button
+                      type="link"
+                      icon={<CameraOutlined />}
+                      onClick={handleScanCode}
+                      size="small"
+                    >
+                      Ler Código
+                    </Button>
+                  }
+                />
+              </Form.Item>
+
+              <Form.Item style={{ marginBottom: 0, textAlign: 'right' }}>
+                <Space>
+                  <Button onClick={() => setEntryModalOpen(false)}>Cancelar</Button>
+                  <Button type="primary" htmlType="submit" loading={submitting}>
+                    Confirmar Entrada
+                  </Button>
+                </Space>
+              </Form.Item>
+            </Form>
+          </>
         )}
+      </Modal>
 
-        <Form form={form} layout="vertical" initialValues={{ hasIssue: false }}>
-          <Form.Item
-            name="hasIssue"
-            label="O item foi recebido com algum problema?"
-            rules={[{ required: true }]}
-          >
-            <Radio.Group>
-              <Radio value={false}>
-                <CheckOutlined /> Não, recebido corretamente
-              </Radio>
-              <Radio value={true}>
-                <WarningOutlined /> Sim, reportar problema
-              </Radio>
-            </Radio.Group>
-          </Form.Item>
+      {/* Modal Registrar Divergência */}
+      <Modal
+        title="Registrar Divergência do Volume"
+        open={divergenceModalOpen}
+        onCancel={() => {
+          setDivergenceModalOpen(false);
+          divergenceForm.resetFields();
+          setSelectedPackage(null);
+        }}
+        footer={null}
+        width={600}
+      >
+        {selectedPackage && (
+          <>
+            <Descriptions column={1} bordered size="small" style={{ marginBottom: 16 }}>
+              <Descriptions.Item label="Volume">#{selectedPackage.packageNumber}</Descriptions.Item>
+              <Descriptions.Item label="Dimensões Registradas">
+                {selectedPackage.width} x {selectedPackage.height} x {selectedPackage.length} cm
+              </Descriptions.Item>
+              <Descriptions.Item label="Peso Registrado">
+                {selectedPackage.weight} kg
+              </Descriptions.Item>
+            </Descriptions>
 
-          <Form.Item noStyle shouldUpdate={(prev, curr) => prev.hasIssue !== curr.hasIssue}>
-            {({ getFieldValue }) =>
-              getFieldValue('hasIssue') ? (
-                <>
-                  <Form.Item
-                    name="issueType"
-                    label="Tipo de Problema"
-                    rules={[{ required: true, message: 'Selecione o tipo de problema' }]}
-                  >
-                    <Select placeholder="Selecione">
-                      {Object.entries(issueTypeLabels).map(([key, label]) => (
-                        <Select.Option key={key} value={key}>
-                          {label}
-                        </Select.Option>
-                      ))}
-                    </Select>
-                  </Form.Item>
+            <Form form={divergenceForm} layout="vertical" onFinish={handleRegisterDivergence}>
+              <Form.Item
+                name="divergenceType"
+                label="Tipo de Divergência"
+                rules={[{ required: true }]}
+              >
+                <Select
+                  options={[
+                    { value: 'DIMENSAO', label: 'Dimensão' },
+                    { value: 'PESO', label: 'Peso' },
+                    { value: 'DIMENSAO_E_PESO', label: 'Dimensão e Peso' },
+                  ]}
+                />
+              </Form.Item>
 
-                  <Form.Item
-                    name="issueDetails"
-                    label="Detalhes do Problema"
-                    rules={[
-                      {
-                        required: true,
-                        message: 'Descreva o problema encontrado',
-                      },
-                    ]}
-                  >
-                    <TextArea rows={4} placeholder="Descreva o problema em detalhes..." />
-                  </Form.Item>
-                </>
-              ) : null
-            }
-          </Form.Item>
-        </Form>
+              <Form.Item dependencies={['divergenceType']} noStyle>
+                {({ getFieldValue }) => {
+                  const type = getFieldValue('divergenceType');
+                  const showDimensions = type === 'DIMENSAO' || type === 'DIMENSAO_E_PESO';
+                  const showWeight = type === 'PESO' || type === 'DIMENSAO_E_PESO';
+
+                  return (
+                    <>
+                      {showDimensions && (
+                        <>
+                          <Form.Item label="Novas Dimensões (cm)">
+                            <Space.Compact style={{ width: '100%' }}>
+                              <Form.Item
+                                name="newWidth"
+                                noStyle
+                                rules={[{ required: true, message: 'Obrigatório' }]}
+                              >
+                                <InputNumber placeholder="Largura" style={{ width: '33%' }} min={0} />
+                              </Form.Item>
+                              <Form.Item
+                                name="newHeight"
+                                noStyle
+                                rules={[{ required: true, message: 'Obrigatório' }]}
+                              >
+                                <InputNumber placeholder="Altura" style={{ width: '33%' }} min={0} />
+                              </Form.Item>
+                              <Form.Item
+                                name="newLength"
+                                noStyle
+                                rules={[{ required: true, message: 'Obrigatório' }]}
+                              >
+                                <InputNumber placeholder="Comprimento" style={{ width: '34%' }} min={0} />
+                              </Form.Item>
+                            </Space.Compact>
+                          </Form.Item>
+                        </>
+                      )}
+
+                      {showWeight && (
+                        <Form.Item
+                          name="newWeight"
+                          label="Novo Peso (kg)"
+                          rules={[{ required: true, message: 'Peso é obrigatório' }]}
+                        >
+                          <InputNumber placeholder="Peso em kg" style={{ width: '100%' }} min={0} step={0.01} />
+                        </Form.Item>
+                      )}
+                    </>
+                  );
+                }}
+              </Form.Item>
+
+              <Form.Item name="notes" label="Observações">
+                <TextArea rows={3} placeholder="Descreva a divergência encontrada" maxLength={500} showCount />
+              </Form.Item>
+
+              <Form.Item style={{ marginBottom: 0, textAlign: 'right' }}>
+                <Space>
+                  <Button onClick={() => setDivergenceModalOpen(false)}>Cancelar</Button>
+                  <Button type="primary" htmlType="submit" loading={submitting}>
+                    Salvar Divergência
+                  </Button>
+                </Space>
+              </Form.Item>
+            </Form>
+          </>
+        )}
       </Modal>
     </PageShell>
   );

@@ -5,6 +5,7 @@ import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth/session';
 import { prisma } from '@/lib/db';
 import { checkoutCartSchema } from '@/lib/validation/cart';
+import { createShipmentWithVolumes } from '@/lib/shipments/create-with-volumes';
 import crypto from 'crypto';
 import type { Prisma } from '@prisma/client';
 
@@ -114,27 +115,22 @@ export async function POST(request: Request) {
         const selectedQuote = item.selectedQuote as { carrier: string; serviceName?: string; serviceCode?: string; deadlineDays: number; price: number; [key: string]: unknown };
         const totals = item.totals as Prisma.JsonValue;
 
-        // Calcular peso total
-        const totalWeight = volumes.reduce((sum, vol) => sum + (vol.pesoKg || 0), 0);
-
         // Valor declarado
         const declaredValue = item.insuranceValue ? Number(item.insuranceValue) : 0;
 
         // Gerar tracking code único (plataforma - customer-facing)
         const platformTrackingCode = `BR${Date.now()}${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
 
-        // Criar shipment
-        const shipment = await tx.shipment.create({
-          data: {
+        // Criar shipment COM VOLUMES usando serviço centralizado
+        const { shipment, packages } = await createShipmentWithVolumes(tx, {
+          shipment: {
             platformTrackingCode,
-            carrierTrackingCode: null, // Será preenchido pela integração
+            carrierTrackingCode: null,
             senderId: session.userId,
-            // Destinatário
             recipientName: destination.nome || destination.apelido || 'Destinatário',
             recipientPhone: destination.telefone,
             recipientEmail: destination.email,
             recipientDocument: destination.documento,
-            // Endereço destino
             originCep: originAddress.cep,
             destinationCep: destination.cep,
             destinationAddress: [destination.logradouro, destination.numero, destination.complemento]
@@ -143,16 +139,12 @@ export async function POST(request: Request) {
             destinationNeighborhood: destination.bairro,
             destinationCity: destination.cidade,
             destinationState: destination.uf,
-            // Dados do envio
-            weight: totalWeight,
             declaredValue,
             carrier: selectedQuote.carrier,
             service: selectedQuote.serviceName || selectedQuote.serviceCode,
             estimatedDays: selectedQuote.deadlineDays,
             freightCost: selectedQuote.price,
-            // Pickup point
             pickupPointId: item.pickupPoint ? (item.pickupPoint as { id?: string | null; [key: string]: unknown }).id : null,
-            // Documento e snapshots
             document: {
               originAddress: item.originAddress,
               destination: item.destination,
@@ -161,10 +153,15 @@ export async function POST(request: Request) {
               selectedQuote: item.selectedQuote,
               totals: item.totals,
             } as Prisma.InputJsonValue,
-            // Status inicial
             status: 'pending_payment',
             paymentMethod: null,
           },
+          volumes: volumes.map((vol) => ({
+            peso: vol.pesoKg || 0,
+            altura: (vol as { alturaEm?: number }).alturaEm || 0,
+            largura: (vol as { larguraEm?: number }).larguraEm || 0,
+            comprimento: (vol as { comprimentoEm?: number }).comprimentoEm || 0,
+          })),
         });
 
         // Criar etiqueta automaticamente vinculada ao shipment

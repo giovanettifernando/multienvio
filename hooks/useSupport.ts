@@ -16,7 +16,7 @@ import {
   type SupportTicket,
 } from "@/lib/validation/support";
 
-type Audience = "user" | "admin" | "collector";
+type Audience = "user" | "admin" | "collector" | "autonomous_collector";
 
 type TicketFilters = {
   status?: Status[];
@@ -87,6 +87,7 @@ function buildQueryParams({ filters, page, pageSize }: Omit<TicketsQueryOptions,
 function getTicketsEndpoint(audience: Audience): string {
   if (audience === "admin") return "/api/admin/support/tickets";
   if (audience === "collector") return "/api/collector/tickets";
+  if (audience === "autonomous_collector") return "/api/coletores/suporte";
   return "/api/support/tickets";
 }
 
@@ -101,6 +102,9 @@ function getMessageEndpoint(audience: Audience, ticketId: string): string {
   }
   if (audience === "collector") {
     return `/api/collector/tickets/${ticketId}/messages`;
+  }
+  if (audience === "autonomous_collector") {
+    return `/api/coletores/suporte/${ticketId}/mensagens`;
   }
   return `/api/support/tickets/${ticketId}/messages`;
 }

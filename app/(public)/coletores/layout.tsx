@@ -120,6 +120,11 @@ export default function ColetoresLayout({ children }: { children: React.ReactNod
       label: 'Fila de Coletas',
     },
     {
+      key: '/coletores/coletas-realizadas',
+      icon: <InboxOutlined />,
+      label: 'Coletas realizadas',
+    },
+    {
       key: '/coletores/suporte',
       icon: <CustomerServiceOutlined />,
       label: 'Suporte',
