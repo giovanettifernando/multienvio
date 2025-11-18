@@ -1,8 +1,8 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import type { Wallet } from "@/types/wallet";
+import type { WalletBalanceResponse } from "@/types/wallet-statement";
 
 export function useWallet() {
-  return useQuery<Wallet>({
+  return useQuery<WalletBalanceResponse>({
     queryKey: ["wallet"],
     queryFn: async () => {
       const response = await fetch("/api/wallet");

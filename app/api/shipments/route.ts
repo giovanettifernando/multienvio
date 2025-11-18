@@ -8,8 +8,10 @@ import type { Prisma } from '@prisma/client';
 
 // Mapeamento de status do banco para os status da UI
 const STATUS_MAP: Record<string, string> = {
-  'pending_payment': 'Aguardando coleta',
-  'ready_for_posting': 'Aguardando coleta',
+  'pending_payment': 'Aguardando pagamento',
+  'awaiting_pickup': 'Aguardando coleta', // Coleta na origem
+  'awaiting_posting': 'Aguardando postagem', // Ponto de coleta
+  'ready_for_posting': 'Pronto para postagem', // Legacy (deprecated)
   'posted': 'Postado',
   'in_transit': 'Em trânsito',
   'out_for_delivery': 'Em rota de entrega',

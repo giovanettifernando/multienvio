@@ -6,6 +6,7 @@ import { getSession } from '@/lib/auth/session';
 import { prisma } from '@/lib/db';
 import { checkoutCartSchema } from '@/lib/validation/cart';
 import { createShipmentWithVolumes } from '@/lib/shipments/create-with-volumes';
+import { createInitialTrackingEvent } from '@/lib/tracking/create-event';
 import crypto from 'crypto';
 import type { Prisma } from '@prisma/client';
 
@@ -121,6 +122,19 @@ export async function POST(request: Request) {
         // Gerar tracking code único (plataforma - customer-facing)
         const platformTrackingCode = `BR${Date.now()}${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
 
+        // Determinar status inicial baseado no tipo de coleta
+        const pickupPointId = item.pickupPoint ? (item.pickupPoint as { id?: string | null; [key: string]: unknown }).id : null;
+        const hasPickupRequest = (preferences as { pickupAtOrigin?: boolean })?.pickupAtOrigin === true;
+
+        let initialStatus: string;
+        if (hasPickupRequest) {
+          initialStatus = 'awaiting_pickup';
+        } else if (pickupPointId) {
+          initialStatus = 'awaiting_posting';
+        } else {
+          initialStatus = 'awaiting_posting';
+        }
+
         // Criar shipment COM VOLUMES usando serviço centralizado
         const { shipment, packages } = await createShipmentWithVolumes(tx, {
           shipment: {
@@ -144,7 +158,7 @@ export async function POST(request: Request) {
             service: selectedQuote.serviceName || selectedQuote.serviceCode,
             estimatedDays: selectedQuote.deadlineDays,
             freightCost: selectedQuote.price,
-            pickupPointId: item.pickupPoint ? (item.pickupPoint as { id?: string | null; [key: string]: unknown }).id : null,
+            pickupPointId,
             document: {
               originAddress: item.originAddress,
               destination: item.destination,
@@ -153,7 +167,7 @@ export async function POST(request: Request) {
               selectedQuote: item.selectedQuote,
               totals: item.totals,
             } as Prisma.InputJsonValue,
-            status: 'pending_payment',
+            status: initialStatus,
             paymentMethod: null,
           },
           volumes: volumes.map((vol) => ({
@@ -179,6 +193,9 @@ export async function POST(request: Request) {
             isPrinted: false,
           },
         });
+
+        // Criar evento inicial de rastreamento
+        await createInitialTrackingEvent(tx, shipment.id, initialStatus, new Date());
 
         shipmentIds.push(shipment.id);
         totalAmount += selectedQuote.price || 0;

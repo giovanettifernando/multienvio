@@ -4,22 +4,26 @@ import { useParams, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import {
   Card,
-  Descriptions,
   Typography,
   Button,
   Space,
   Skeleton,
   Alert,
   Tag,
+  Row,
+  Col,
 } from "antd";
-import { ArrowLeftOutlined, CopyOutlined } from "@ant-design/icons";
+import { CopyOutlined } from "@ant-design/icons";
 import { TrackingTimeline, type TrackingEvent } from "@/components/track/TrackingTimeline";
 import { App } from "antd";
-import { PageShell } from "@/components/shared/PageShell";
+
+const { Text, Title } = Typography;
 
 const STATUS_LABELS: Record<string, string> = {
   criado: "Criado",
   pending_payment: "Aguardando pagamento",
+  awaiting_pickup: "Aguardando coleta",
+  awaiting_posting: "Aguardando postagem",
   ready_for_posting: "Pronto para postagem",
   posted: "Postado",
   in_transit: "Em trânsito",
@@ -32,6 +36,8 @@ const STATUS_LABELS: Record<string, string> = {
 const STATUS_COLORS: Record<string, string> = {
   criado: "default",
   pending_payment: "warning",
+  awaiting_pickup: "processing",
+  awaiting_posting: "default",
   ready_for_posting: "processing",
   posted: "blue",
   in_transit: "blue",
@@ -92,7 +98,7 @@ export default function PublicTrackingPage() {
 
   if (isLoading) {
     return (
-      <div style={{ maxWidth: 1200, margin: "0 auto", padding: 24 }}>
+      <div style={{ maxWidth: 800, margin: "0 auto", padding: 16 }}>
         <Skeleton active paragraph={{ rows: 8 }} />
       </div>
     );
@@ -100,123 +106,119 @@ export default function PublicTrackingPage() {
 
   if (error || !data) {
     return (
-      <div style={{ maxWidth: 1200, margin: "0 auto", padding: 24 }}>
+      <div style={{ maxWidth: 800, margin: "0 auto", padding: 16 }}>
         <Alert
           type="error"
           message="Envio não encontrado"
           description="Verifique se o código de rastreamento está correto e tente novamente."
           showIcon
-          action={
-            <Button onClick={() => router.push("/")}>
-              Voltar para página inicial
-            </Button>
-          }
         />
       </div>
     );
   }
 
   return (
-    <div style={{ maxWidth: 1200, margin: "0 auto", padding: 24 }}>
-      <PageShell
-        title="Rastreamento de Envio"
-        gap="md"
-        extra={
-          <Button
-            icon={<ArrowLeftOutlined />}
-            onClick={() => router.push("/")}
-          >
-            Voltar
-          </Button>
-        }
-      >
-        {/* Status Card */}
-        <Card>
-          <Space direction="vertical" size={16} style={{ width: "100%" }}>
-            <div>
-              <Typography.Text strong style={{ fontSize: 16 }}>
-                Status atual:
-              </Typography.Text>{" "}
+    <div style={{ maxWidth: 800, margin: "0 auto", padding: "16px" }}>
+      <Space direction="vertical" size={16} style={{ width: "100%" }}>
+        {/* BLOCO 1: Status Atual + Código (compacto) */}
+        <Card
+          style={{
+            backgroundColor: "#fafafa",
+            border: "1px solid #d9d9d9",
+          }}
+          bodyStyle={{ padding: "12px 16px" }}
+        >
+          <Space direction="vertical" size={8} style={{ width: "100%" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+              <Text strong style={{ fontSize: 14 }}>Status:</Text>
               <Tag
                 color={STATUS_COLORS[data.status] || "default"}
-                style={{ fontSize: 14 }}
+                style={{ fontSize: 13, margin: 0 }}
               >
                 {STATUS_LABELS[data.status] || data.status}
               </Tag>
             </div>
-            <div>
-              <Space>
-                <Typography.Text strong>Código de rastreamento:</Typography.Text>
-                <Typography.Text code>{data.trackingCode}</Typography.Text>
-                <Button
-                  size="small"
-                  icon={<CopyOutlined />}
-                  onClick={handleCopyTrackingCode}
-                >
-                  Copiar
-                </Button>
-              </Space>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+              <Text style={{ fontSize: 13 }}>Código:</Text>
+              <Text code style={{ fontSize: 12 }}>{data.trackingCode}</Text>
+              <Button
+                size="small"
+                type="text"
+                icon={<CopyOutlined />}
+                onClick={handleCopyTrackingCode}
+                style={{ padding: "0 8px", height: 24 }}
+              >
+                Copiar
+              </Button>
             </div>
           </Space>
         </Card>
 
-        {/* Shipment Details */}
-        <Card title="Detalhes do envio">
-          <Descriptions column={2} bordered>
-            <Descriptions.Item label="Transportadora">
-              {data.carrier}
-            </Descriptions.Item>
-            <Descriptions.Item label="Serviço">
-              {data.service}
-            </Descriptions.Item>
-            <Descriptions.Item label="CEP origem">
-              {data.origin.cep}
-            </Descriptions.Item>
-            <Descriptions.Item label="CEP destino">
-              {data.destination.cep}
-            </Descriptions.Item>
-            <Descriptions.Item label="Cidade/UF destino" span={2}>
-              {data.destination.city}/{data.destination.state}
-            </Descriptions.Item>
+        {/* BLOCO 2: Detalhes Essenciais */}
+        <Card title="Detalhes do envio" bodyStyle={{ padding: "16px" }}>
+          <Row gutter={[16, 12]}>
+            <Col xs={24} sm={12}>
+              <div>
+                <Text type="secondary" style={{ fontSize: 12 }}>Transportadora</Text>
+                <div><Text strong>{data.carrier}</Text></div>
+              </div>
+            </Col>
+            <Col xs={24} sm={12}>
+              <div>
+                <Text type="secondary" style={{ fontSize: 12 }}>Serviço</Text>
+                <div><Text strong>{data.service}</Text></div>
+              </div>
+            </Col>
+            <Col xs={24} sm={12}>
+              <div>
+                <Text type="secondary" style={{ fontSize: 12 }}>Origem</Text>
+                <div><Text>{data.origin.cep}</Text></div>
+              </div>
+            </Col>
+            <Col xs={24} sm={12}>
+              <div>
+                <Text type="secondary" style={{ fontSize: 12 }}>Destino</Text>
+                <div><Text>{data.destination.city}/{data.destination.state} - {data.destination.cep}</Text></div>
+              </div>
+            </Col>
             {data.estimatedDays && (
-              <Descriptions.Item label="Prazo estimado">
-                {data.estimatedDays} dias
-              </Descriptions.Item>
+              <Col xs={24} sm={12}>
+                <div>
+                  <Text type="secondary" style={{ fontSize: 12 }}>Prazo estimado</Text>
+                  <div><Text>{data.estimatedDays} dias úteis</Text></div>
+                </div>
+              </Col>
             )}
             {data.weight && (
-              <Descriptions.Item label="Peso">
-                {data.weight} kg
-              </Descriptions.Item>
+              <Col xs={24} sm={12}>
+                <div>
+                  <Text type="secondary" style={{ fontSize: 12 }}>Peso</Text>
+                  <div><Text>{data.weight} kg</Text></div>
+                </div>
+              </Col>
             )}
-            {data.declaredValue && (
-              <Descriptions.Item label="Valor declarado">
-                R$ {data.declaredValue.toFixed(2)}
-              </Descriptions.Item>
-            )}
-            {data.freightCost && (
-              <Descriptions.Item label="Valor do frete">
-                R$ {data.freightCost.toFixed(2)}
-              </Descriptions.Item>
-            )}
-            <Descriptions.Item label="Data de criação">
-              {new Date(data.createdAt).toLocaleString("pt-BR")}
-            </Descriptions.Item>
             {data.postedAt && (
-              <Descriptions.Item label="Data de postagem">
-                {new Date(data.postedAt).toLocaleString("pt-BR")}
-              </Descriptions.Item>
+              <Col xs={24} sm={12}>
+                <div>
+                  <Text type="secondary" style={{ fontSize: 12 }}>Data de postagem</Text>
+                  <div><Text>{new Date(data.postedAt).toLocaleDateString("pt-BR")}</Text></div>
+                </div>
+              </Col>
             )}
             {data.deliveredAt && (
-              <Descriptions.Item label="Data de entrega">
-                {new Date(data.deliveredAt).toLocaleString("pt-BR")}
-              </Descriptions.Item>
+              <Col xs={24} sm={12}>
+                <div>
+                  <Text type="secondary" style={{ fontSize: 12 }}>Data de entrega</Text>
+                  <div><Text>{new Date(data.deliveredAt).toLocaleDateString("pt-BR")}</Text></div>
+                </div>
+              </Col>
             )}
-          </Descriptions>
+          </Row>
         </Card>
 
-        {/* Timeline */}
-        <TrackingTimeline events={data.events} />
-      </PageShell>
+        {/* BLOCO 3: Timeline de Eventos */}
+        <TrackingTimeline events={data.events} title="Histórico de rastreamento" />
+      </Space>
     </div>
   );
 }

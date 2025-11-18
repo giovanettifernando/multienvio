@@ -313,7 +313,10 @@ export default function ReceptionsPage() {
 
   const getStatusColor = (status: string): string => {
     const statusMap: Record<string, string> = {
-      ready_for_posting: 'default',
+      pending_payment: 'orange',
+      awaiting_pickup: 'blue', // Aguardando coleta
+      awaiting_posting: 'default', // Aguardando postagem
+      ready_for_posting: 'default', // Legacy
       postado: 'geekblue',
       em_transito: 'blue',
       coletado: 'gold',
@@ -325,7 +328,10 @@ export default function ReceptionsPage() {
 
   const getStatusLabel = (status: string): string => {
     const labelMap: Record<string, string> = {
-      ready_for_posting: 'Pronto para postagem',
+      pending_payment: 'Aguardando pagamento',
+      awaiting_pickup: 'Aguardando coleta', // Coleta na origem
+      awaiting_posting: 'Aguardando postagem', // Ponto de coleta
+      ready_for_posting: 'Pronto para postagem', // Legacy
       postado: 'Postado',
       em_transito: 'Em trânsito',
       coletado: 'Coletado',

@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { getUserSessionFromRequest } from '@/lib/auth/user-session';
 import { createShipmentWithVolumes } from '@/lib/shipments/create-with-volumes';
+import { createInitialTrackingEvent } from '@/lib/tracking/create-event';
 
 // Schema de validação do checkout
 const checkoutSchema = z.object({
@@ -216,6 +217,26 @@ export async function POST(request: Request) {
         });
       }
 
+      // Determinar status inicial baseado no tipo de coleta
+      // REGRA DE NEGÓCIO:
+      // - Coleta na origem (solicitarColeta = true) → 'awaiting_pickup' (Aguardando coleta)
+      // - Ponto de coleta (pickupPointId != null) → 'awaiting_posting' (Aguardando postagem)
+      // - Outros casos → 'awaiting_posting' (Aguardando postagem)
+      let initialStatus: string;
+      if (data.solicitarColeta === true) {
+        initialStatus = 'awaiting_pickup';
+      } else if (data.pickupPointId) {
+        initialStatus = 'awaiting_posting';
+      } else {
+        initialStatus = 'awaiting_posting'; // Fallback padrão
+      }
+
+      console.log('[CHECKOUT] Status inicial determinado:', {
+        solicitarColeta: data.solicitarColeta,
+        pickupPointId: data.pickupPointId,
+        initialStatus,
+      });
+
       // Criar envio COM VOLUMES usando serviço centralizado
       const { shipment, packages } = await createShipmentWithVolumes(tx, {
         shipment: {
@@ -243,7 +264,7 @@ export async function POST(request: Request) {
           freightCost: data.freightCost,
           pickupPointId: data.pickupPointId,
           document: documentData,
-          status: 'pending_payment',
+          status: initialStatus, // Status dinâmico baseado no tipo de coleta
           paymentMethod: null,
         },
         volumes: data.volumes.map((vol) => ({
@@ -298,10 +319,25 @@ export async function POST(request: Request) {
         }
       }
 
+      // Criar evento inicial de rastreamento
+      // Garante que a timeline nunca fique vazia
+      const trackingEvent = await createInitialTrackingEvent(
+        tx,
+        shipment.id,
+        initialStatus,
+        new Date() // Usar data/hora atual
+      );
+
+      console.log('[CHECKOUT] Evento inicial criado:', {
+        shipmentId: shipment.id,
+        eventType: trackingEvent.type,
+        eventDescription: trackingEvent.description,
+      });
+
       // Nota: A transação financeira será criada pelo /api/wallet/debit
       // quando o usuário confirmar o pagamento no modal
 
-      return { shipment, packages, label, pickupRequest };
+      return { shipment, packages, label, pickupRequest, trackingEvent };
     });
 
     // Salvar destinatário recorrente se solicitado

@@ -1,78 +1,133 @@
 "use client";
 
-import React from "react";
-import { Card, Button, Table, Tag } from "antd";
+import React, { useState } from "react";
+import { Card, Button, Row, Col, DatePicker, Input, Space } from "antd";
+import { PrinterOutlined, SearchOutlined, ArrowLeftOutlined } from "@ant-design/icons";
+import { useRouter } from "next/navigation";
+import dayjs, { Dayjs } from "dayjs";
 import { useWalletTransactions } from "@/hooks/useWalletTransactions";
-import type { WalletTx } from "@/types/wallet";
+import PeriodSummaryCard from "@/components/wallet/PeriodSummaryCard";
+import StatementTable from "@/components/wallet/StatementTable";
+import StatementPDFModal from "@/components/wallet/StatementPDFModal";
 
-const typeLabels: Record<string, string> = {
-  TOPUP: "Recarga",
-  PURCHASE: "Compra",
-  REFUND: "Reembolso",
-  WITHDRAW: "Saque",
-  ADJUSTMENT: "Ajuste",
-};
-
-const statusColors: Record<string, string> = {
-  PENDING: "warning",
-  CONFIRMED: "success",
-  FAILED: "error",
-  CANCELED: "default",
-};
+const { RangePicker } = DatePicker;
+const { Search } = Input;
 
 export default function ExtratoPage() {
-  const { data, isLoading } = useWalletTransactions(100);
-  const rows = data?.transactions ?? [];
+  const router = useRouter();
+  // Default: últimos 30 dias
+  const [dateRange, setDateRange] = useState<[Dayjs, Dayjs]>([
+    dayjs().subtract(30, 'days'),
+    dayjs(),
+  ]);
+  const [search, setSearch] = useState<string>("");
+  const [page, setPage] = useState<number>(1);
+  const [pdfModalOpen, setPdfModalOpen] = useState<boolean>(false);
+
+  const { data, isLoading } = useWalletTransactions({
+    dateFrom: dateRange[0].format('YYYY-MM-DD'),
+    dateTo: dateRange[1].format('YYYY-MM-DD'),
+    search: search || undefined,
+    page,
+    limit: 20,
+  });
+
+  const transactions = data?.transactions ?? [];
+  const summary = data?.summary;
+  const pagination = data?.pagination;
+
+  const handlePrintPDF = () => {
+    setPdfModalOpen(true);
+  };
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      {/* Filtros */}
+      <Card>
+        <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+          <Row gutter={[16, 16]}>
+            <Col xs={24} md={12}>
+              <RangePicker
+                value={dateRange}
+                onChange={(dates) => {
+                  if (dates && dates[0] && dates[1]) {
+                    setDateRange([dates[0], dates[1]]);
+                    setPage(1); // Reset para primeira página
+                  }
+                }}
+                format="DD/MM/YYYY"
+                style={{ width: '100%' }}
+                placeholder={['Data inicial', 'Data final']}
+              />
+            </Col>
+            <Col xs={24} md={12}>
+              <Search
+                placeholder="Buscar por descrição, tipo ou referência..."
+                allowClear
+                enterButton={<SearchOutlined />}
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                onSearch={() => setPage(1)} // Reset para primeira página
+                style={{ width: '100%' }}
+              />
+            </Col>
+          </Row>
+        </Space>
+      </Card>
+
+      {/* Resumo do período */}
+      {summary && (
+        <PeriodSummaryCard summary={summary} loading={isLoading} />
+      )}
+
+      {/* Tabela de transações */}
       <Card
-        title="Extrato da carteira"
-        extra={<Button onClick={() => window.print()}>Imprimir</Button>}
+        title="Transações"
+        extra={
+          <Space>
+            <Button
+              icon={<ArrowLeftOutlined />}
+              onClick={() => router.push("/carteira")}
+            >
+              Voltar para a carteira
+            </Button>
+            <Button
+              type="primary"
+              icon={<PrinterOutlined />}
+              onClick={handlePrintPDF}
+              disabled={!transactions.length}
+            >
+              Imprimir / PDF
+            </Button>
+          </Space>
+        }
       >
-        <Table<WalletTx>
-          rowKey="id"
+        <StatementTable
+          transactions={transactions}
           loading={isLoading}
-          dataSource={rows}
-          pagination={{ pageSize: 20 }}
-          columns={[
-            {
-              title: "Data",
-              dataIndex: "createdAt",
-              render: (v: string) => new Date(v).toLocaleString("pt-BR"),
-            },
-            {
-              title: "Tipo",
-              dataIndex: "type",
-              render: (type: string) => typeLabels[type] || type,
-            },
-            {
-              title: "Status",
-              dataIndex: "status",
-              render: (status: string) => (
-                <Tag color={statusColors[status]}>{status}</Tag>
-              ),
-            },
-            {
-              title: "Valor",
-              dataIndex: "amountReais",
-              render: (v: number, record: WalletTx) => {
-                const isCredit = record.amountCents > 0;
-                return (
-                  <span style={{ color: isCredit ? "#52c41a" : "#ff4d4f" }}>
-                    {isCredit ? "+" : "-"} R$ {Math.abs(v).toFixed(2)}
-                  </span>
-                );
-              },
-            },
-            {
-              title: "Descrição",
-              dataIndex: "title",
-              render: (title: string | null) => title || "-",
-            },
-          ]}
+          pagination={
+            pagination
+              ? {
+                  current: pagination.page,
+                  pageSize: pagination.limit,
+                  total: pagination.total,
+                  onChange: (newPage) => setPage(newPage),
+                  showSizeChanger: false,
+                  showTotal: (total: number) => `Total: ${total} transações`,
+                }
+              : undefined
+          }
         />
       </Card>
+
+      {/* Modal de visualização de PDF */}
+      <StatementPDFModal
+        open={pdfModalOpen}
+        onClose={() => setPdfModalOpen(false)}
+        dateFrom={dateRange[0].format('YYYY-MM-DD')}
+        dateTo={dateRange[1].format('YYYY-MM-DD')}
+        search={search}
+      />
     </div>
   );
 }

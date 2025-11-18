@@ -36,7 +36,9 @@ export async function GET(request: NextRequest) {
 
     // Status considerados "pendentes de recepção"
     const pendingReceptionStatuses = [
-      'ready_for_posting',
+      'awaiting_pickup', // Aguardando coleta na origem
+      'awaiting_posting', // Aguardando postagem no ponto de coleta
+      'ready_for_posting', // Legacy (deprecated)
       'postado',
       'em_transito',
       'coletado',

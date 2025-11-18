@@ -2,14 +2,27 @@
 
 import React from "react";
 import { Table, Empty } from "antd";
-import { useWallet } from "@/hooks/useWallet";
 import type { WalletTransactionDTO } from "@/types/wallet-statement";
 
-export default function TransactionsTable() {
-  const { data, isLoading } = useWallet();
-  const rows = data?.latestTransactions ?? [];
+interface StatementTableProps {
+  transactions: WalletTransactionDTO[];
+  loading?: boolean;
+  pagination?: {
+    current: number;
+    pageSize: number;
+    total: number;
+    onChange: (page: number, pageSize: number) => void;
+    showSizeChanger?: boolean;
+    showTotal?: (total: number) => string;
+  };
+}
 
-  if (!rows.length && !isLoading) {
+export default function StatementTable({
+  transactions,
+  loading = false,
+  pagination
+}: StatementTableProps) {
+  if (!transactions.length && !loading) {
     return (
       <div style={{ padding: 24, textAlign: "center", background: "#fff", borderRadius: 8 }}>
         <Empty description="Nenhuma transação encontrada" />
@@ -21,9 +34,10 @@ export default function TransactionsTable() {
     <Table<WalletTransactionDTO>
       size="small"
       rowKey="id"
-      loading={isLoading}
-      dataSource={rows}
-      pagination={false}
+      loading={loading}
+      dataSource={transactions}
+      pagination={pagination}
+      scroll={{ x: 800 }}
       columns={[
         {
           title: "Data",

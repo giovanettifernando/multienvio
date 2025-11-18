@@ -1,11 +1,28 @@
 import { useQuery } from "@tanstack/react-query";
-import type { WalletTransactionsResponse } from "@/types/wallet";
+import type { StatementResponse } from "@/types/wallet-statement";
 
-export function useWalletTransactions(limit = 20) {
-  return useQuery<WalletTransactionsResponse>({
-    queryKey: ["wallet", "transactions", limit],
+export interface WalletTransactionsFilters {
+  dateFrom?: string;
+  dateTo?: string;
+  search?: string;
+  page?: number;
+  limit?: number;
+}
+
+export function useWalletTransactions(filters: WalletTransactionsFilters = {}) {
+  const { dateFrom, dateTo, search, page = 1, limit = 20 } = filters;
+
+  const params = new URLSearchParams();
+  if (dateFrom) params.set('dateFrom', dateFrom);
+  if (dateTo) params.set('dateTo', dateTo);
+  if (search) params.set('search', search);
+  params.set('page', page.toString());
+  params.set('limit', limit.toString());
+
+  return useQuery<StatementResponse>({
+    queryKey: ["wallet", "transactions", dateFrom, dateTo, search, page, limit],
     queryFn: async () => {
-      const response = await fetch(`/api/wallet/transactions?limit=${limit}`);
+      const response = await fetch(`/api/wallet/transactions?${params.toString()}`);
       if (!response.ok) {
         const error = await response.json().catch(() => ({}));
         console.error('[useWalletTransactions] Error:', response.status, error);

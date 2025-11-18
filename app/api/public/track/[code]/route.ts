@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { getPublicStatusMessage } from '@/lib/tracking/status-messages';
 
 /**
  * GET /api/public/track/[code]
@@ -68,6 +69,28 @@ export async function GET(
       );
     }
 
+    // Preparar eventos de rastreamento
+    let events = shipment.trackingEvents.map((event) => ({
+      type: event.type,
+      description: event.description,
+      city: event.city,
+      uf: event.uf,
+      occurredAt: event.occurredAt.toISOString(),
+    }));
+
+    // FALLBACK: Se não houver eventos registrados, criar evento sintético baseado no status atual
+    // Isso garante que a timeline nunca fique vazia
+    if (events.length === 0) {
+      const syntheticEvent = {
+        type: shipment.status.toUpperCase(),
+        description: getPublicStatusMessage(shipment.status),
+        city: null,
+        uf: null,
+        occurredAt: shipment.createdAt.toISOString(), // Usar data de criação
+      };
+      events = [syntheticEvent];
+    }
+
     // Sanitizar dados - não retornar informações sensíveis
     const sanitizedData = {
       trackingCode: shipment.platformTrackingCode, // Expor apenas código da plataforma
@@ -89,14 +112,8 @@ export async function GET(
       postedAt: shipment.postedAt?.toISOString(),
       deliveredAt: shipment.deliveredAt?.toISOString(),
       createdAt: shipment.createdAt.toISOString(),
-      // Eventos de rastreamento
-      events: shipment.trackingEvents.map((event) => ({
-        type: event.type,
-        description: event.description,
-        city: event.city,
-        uf: event.uf,
-        occurredAt: event.occurredAt.toISOString(),
-      })),
+      // Eventos de rastreamento (garantido ao menos 1)
+      events,
     };
 
     return NextResponse.json(sanitizedData);
