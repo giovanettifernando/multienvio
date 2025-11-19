@@ -81,6 +81,7 @@ interface DivergenceFormValues {
   newLength?: number;
   newWeight?: number;
   notes?: string;
+  photo?: string; // Base64 da foto
 }
 
 export default function ReceptionsPage() {
@@ -101,6 +102,8 @@ export default function ReceptionsPage() {
   const [selectedShipment, setSelectedShipment] = useState<Shipment | null>(null);
   const [selectedPackage, setSelectedPackage] = useState<Package | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [photoBase64, setPhotoBase64] = useState<string | null>(null);
 
   const loadShipments = async () => {
     try {
@@ -183,7 +186,45 @@ export default function ReceptionsPage() {
     divergenceForm.setFieldsValue({
       divergenceType: 'DIMENSAO_E_PESO',
     });
+    setPhotoPreview(null);
+    setPhotoBase64(null);
     setDivergenceModalOpen(true);
+  };
+
+  const handlePhotoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validar tipo
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      message.error('Tipo de arquivo não permitido. Use JPEG, PNG ou WebP.');
+      return;
+    }
+
+    // Validar tamanho (5MB)
+    const maxSize = 5 * 1024 * 1024;
+    if (file.size > maxSize) {
+      message.error('Arquivo muito grande. Tamanho máximo: 5MB');
+      return;
+    }
+
+    // Ler arquivo e converter para base64
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64 = reader.result as string;
+      setPhotoBase64(base64);
+      setPhotoPreview(base64);
+    };
+    reader.onerror = () => {
+      message.error('Erro ao ler o arquivo');
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemovePhoto = () => {
+    setPhotoPreview(null);
+    setPhotoBase64(null);
   };
 
   const handleRegisterDivergence = async (values: DivergenceFormValues) => {
@@ -191,12 +232,19 @@ export default function ReceptionsPage() {
 
     try {
       setSubmitting(true);
+
+      // Adicionar foto se fornecida
+      const payload = {
+        ...values,
+        photo: photoBase64 || undefined,
+      };
+
       const response = await fetch(
         `/api/collector/receptions/volumes/${selectedPackage.id}/divergence`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(values),
+          body: JSON.stringify(payload),
         }
       );
 
@@ -209,6 +257,8 @@ export default function ReceptionsPage() {
       setDivergenceModalOpen(false);
       divergenceForm.resetFields();
       setSelectedPackage(null);
+      setPhotoPreview(null);
+      setPhotoBase64(null);
       loadShipments();
     } catch (error) {
       console.error('Error registering divergence:', error);
@@ -536,6 +586,8 @@ export default function ReceptionsPage() {
           setDivergenceModalOpen(false);
           divergenceForm.resetFields();
           setSelectedPackage(null);
+          setPhotoPreview(null);
+          setPhotoBase64(null);
         }}
         footer={null}
         width={600}
@@ -621,6 +673,53 @@ export default function ReceptionsPage() {
 
               <Form.Item name="notes" label="Observações">
                 <TextArea rows={3} placeholder="Descreva a divergência encontrada" maxLength={500} showCount />
+              </Form.Item>
+
+              <Form.Item label="Foto da divergência (opcional)">
+                <Space direction="vertical" style={{ width: '100%' }}>
+                  {!photoPreview ? (
+                    <div>
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        onChange={handlePhotoChange}
+                        style={{ display: 'none' }}
+                        id="photo-upload"
+                      />
+                      <Button
+                        icon={<CameraOutlined />}
+                        onClick={() => document.getElementById('photo-upload')?.click()}
+                      >
+                        Selecionar foto
+                      </Button>
+                      <div style={{ marginTop: 8, fontSize: 12, color: '#8c8c8c' }}>
+                        Formatos aceitos: JPEG, PNG, WebP | Tamanho máximo: 5MB
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <div style={{ marginBottom: 8 }}>
+                        <img
+                          src={photoPreview}
+                          alt="Preview"
+                          style={{
+                            maxWidth: '100%',
+                            maxHeight: 200,
+                            borderRadius: 4,
+                            border: '1px solid #d9d9d9',
+                          }}
+                        />
+                      </div>
+                      <Button
+                        danger
+                        size="small"
+                        onClick={handleRemovePhoto}
+                      >
+                        Remover foto
+                      </Button>
+                    </div>
+                  )}
+                </Space>
               </Form.Item>
 
               <Form.Item style={{ marginBottom: 0, textAlign: 'right' }}>

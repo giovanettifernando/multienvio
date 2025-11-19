@@ -69,33 +69,45 @@ export async function GET(request: NextRequest) {
       include: {
         label: true, // Incluir dados da etiqueta
         pickupRequest: true, // Incluir dados da coleta
+        packages: {
+          select: {
+            id: true,
+            hasDivergence: true,
+          },
+        },
       },
       orderBy: { createdAt: 'desc' },
       take: 100, // Limitar resultados
     });
 
     // Mapear para o formato esperado pela UI
-    const items = shipments.map((s) => ({
-      id: s.id,
-      trackingCode: s.platformTrackingCode, // Expor apenas código da plataforma
-      recipientName: s.recipientName || 'Não informado',
-      recipientCityUf: s.destinationCity && s.destinationState
-        ? `${s.destinationCity}/${s.destinationState}`
-        : 'Não informado',
-      carrierName: s.carrier || 'Não informado',
-      serviceName: s.service || 'Não informado',
-      etaDays: s.estimatedDays || 0,
-      expectedDeliveryDate: s.deliveredAt?.toISOString() || undefined,
-      freightValue: s.freightCost || 0,
-      status: STATUS_MAP[s.status] || s.status,
-      createdAt: s.createdAt.toISOString(),
-      labelUrl: s.label?.fileUrl || (s.label?.fileBase64 ? `data:${s.label.contentType};base64,${s.label.fileBase64}` : undefined),
-      trackingUrl: s.publicTrackingId ? `/rastreio/${s.publicTrackingId}` : undefined,
-      pickupRequest: s.pickupRequest ? {
-        id: s.pickupRequest.id,
-        status: s.pickupRequest.status,
-      } : null,
-    }));
+    const items = shipments.map((s) => {
+      // Verificar se algum volume tem divergência
+      const hasVolumeDivergence = s.packages.some((pkg) => pkg.hasDivergence);
+
+      return {
+        id: s.id,
+        trackingCode: s.platformTrackingCode, // Expor apenas código da plataforma
+        recipientName: s.recipientName || 'Não informado',
+        recipientCityUf: s.destinationCity && s.destinationState
+          ? `${s.destinationCity}/${s.destinationState}`
+          : 'Não informado',
+        carrierName: s.carrier || 'Não informado',
+        serviceName: s.service || 'Não informado',
+        etaDays: s.estimatedDays || 0,
+        expectedDeliveryDate: s.deliveredAt?.toISOString() || undefined,
+        freightValue: s.freightCost || 0,
+        status: STATUS_MAP[s.status] || s.status,
+        createdAt: s.createdAt.toISOString(),
+        labelUrl: s.label?.fileUrl || (s.label?.fileBase64 ? `data:${s.label.contentType};base64,${s.label.fileBase64}` : undefined),
+        trackingUrl: s.publicTrackingId ? `/rastreio/${s.publicTrackingId}` : undefined,
+        hasVolumeDivergence, // Flag para alerta de divergência
+        pickupRequest: s.pickupRequest ? {
+          id: s.pickupRequest.id,
+          status: s.pickupRequest.status,
+        } : null,
+      };
+    });
 
     return NextResponse.json({ items });
   } catch (error) {

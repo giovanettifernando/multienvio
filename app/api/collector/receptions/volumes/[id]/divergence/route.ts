@@ -9,6 +9,7 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { z } from 'zod';
+import { saveBase64Image, validateBase64Image } from '@/lib/upload/file-upload';
 
 const DivergenceSchema = z.object({
   divergenceType: z.enum(['DIMENSAO', 'PESO', 'DIMENSAO_E_PESO']),
@@ -17,6 +18,7 @@ const DivergenceSchema = z.object({
   newLength: z.number().positive().optional(),
   newWeight: z.number().positive().optional(),
   notes: z.string().optional(),
+  photo: z.string().optional(), // Base64 da foto (opcional)
 });
 
 /**
@@ -64,6 +66,34 @@ export async function POST(
       );
     }
 
+    // Processar foto se fornecida
+    let photoUrl: string | null = null;
+    if (validatedData.photo) {
+      // Validar foto
+      const validation = validateBase64Image(validatedData.photo);
+      if (!validation.valid) {
+        return NextResponse.json(
+          { message: validation.error || 'Foto inválida' },
+          { status: 400 }
+        );
+      }
+
+      try {
+        // Salvar foto
+        const uploadedFile = await saveBase64Image(
+          validatedData.photo,
+          `divergence-pkg-${packageItem.id}`
+        );
+        photoUrl = uploadedFile.url;
+      } catch (error) {
+        console.error('[DIVERGENCE_PHOTO_UPLOAD]', error);
+        return NextResponse.json(
+          { message: error instanceof Error ? error.message : 'Erro ao fazer upload da foto' },
+          { status: 400 }
+        );
+      }
+    }
+
     // Registrar divergência
     const updatedPackage = await prisma.package.update({
       where: { id },
@@ -75,6 +105,7 @@ export async function POST(
         divergenceLength: validatedData.newLength,
         divergenceWeight: validatedData.newWeight,
         divergenceNotes: validatedData.notes,
+        divergencePhotoUrl: photoUrl,
         divergenceRegisteredAt: new Date(),
         divergenceRegisteredBy: 'collector-user', // TODO: Pegar ID do usuário autenticado
       },

@@ -45,6 +45,7 @@ export async function GET(
         deliveredAt: true,
         createdAt: true,
         updatedAt: true,
+        document: true,
         // Relacionamento com eventos
         trackingEvents: {
           select: {
@@ -57,6 +58,16 @@ export async function GET(
           },
           orderBy: {
             occurredAt: 'desc',
+          },
+        },
+        // Relacionamento com packages/volumes
+        packages: {
+          select: {
+            id: true,
+            packageNumber: true,
+          },
+          orderBy: {
+            packageNumber: 'asc',
           },
         },
       },
@@ -91,6 +102,137 @@ export async function GET(
       events = [syntheticEvent];
     }
 
+    // Processar volumes e itens
+    type PublicVolume = {
+      index: number;
+      documentType: 'DECLARATION' | 'NF';
+      nfKey?: string;
+      items: Array<{
+        description: string;
+        quantity: number;
+        unitValue?: number;
+        subtotal?: number;
+      }>;
+    };
+
+    const volumes: PublicVolume[] = [];
+
+    // Processar document para obter itens
+    type DocumentItem = {
+      descricao?: string;
+      description?: string;
+      produto?: string;
+      quantidade?: number;
+      quantity?: number;
+      valorUnitario?: number;
+      unitValue?: number;
+      valor?: number;
+      subtotal?: number;
+      total?: number;
+    };
+
+    type VolumeDeclaration = {
+      volumeIndex?: number;
+      items?: DocumentItem[];
+    };
+
+    interface ShipmentDocument {
+      type?: string;
+      nfeKeys?: string[];
+      nfKey?: string;
+      items?: DocumentItem[];
+      volumeDeclarations?: VolumeDeclaration[];
+      declarationItems?: DocumentItem[];
+    }
+
+    const doc = (shipment.document as unknown) as ShipmentDocument | null;
+    const packageVolumes = shipment.packages || [];
+
+    console.log('[PUBLIC_TRACK] Processando volumes:', {
+      hasDocument: !!doc,
+      documentType: doc?.type,
+      hasVolumeDeclarations: !!doc?.volumeDeclarations,
+      hasDeclarationItems: !!doc?.declarationItems,
+      hasItems: !!doc?.items,
+      packagesCount: packageVolumes.length,
+    });
+
+    if (doc) {
+      const documentType = doc.type || 'DECLARACAO';
+
+      if (documentType === 'NFE') {
+        // NF-e
+        const docNfeKey = (doc as { nfKey?: string }).nfKey;
+        const nfeKeys = doc.nfeKeys || (docNfeKey ? [docNfeKey] : []);
+        const nfeItems = doc.items || [];
+
+        if (nfeItems.length > 0) {
+          if (packageVolumes.length > 0) {
+            // Criar um volume para cada package (todos com os mesmos itens da NF)
+            packageVolumes.forEach((pkg) => {
+              volumes.push({
+                index: pkg.packageNumber,
+                documentType: 'NF',
+                nfKey: nfeKeys[0], // Usar primeira chave
+                items: nfeItems.map((item: DocumentItem) => ({
+                  description: item.descricao || item.description || item.produto || 'Item',
+                  quantity: item.quantidade || item.quantity || 1,
+                  unitValue: item.valorUnitario || item.unitValue || item.valor,
+                  subtotal: item.subtotal || item.total,
+                })),
+              });
+            });
+          } else {
+            // Sem packages, criar volume único
+            volumes.push({
+              index: 1,
+              documentType: 'NF',
+              nfKey: nfeKeys[0],
+              items: nfeItems.map((item: DocumentItem) => ({
+                description: item.descricao || item.description || item.produto || 'Item',
+                quantity: item.quantidade || item.quantity || 1,
+                unitValue: item.valorUnitario || item.unitValue || item.valor,
+                subtotal: item.subtotal || item.total,
+              })),
+            });
+          }
+        }
+      } else {
+        // Declaração de conteúdo
+        // Novo formato: volumeDeclarations
+        if (doc.volumeDeclarations && Array.isArray(doc.volumeDeclarations)) {
+          doc.volumeDeclarations.forEach((volDecl: VolumeDeclaration) => {
+            const items = volDecl.items || [];
+            volumes.push({
+              index: volDecl.volumeIndex || 1,
+              documentType: 'DECLARATION',
+              items: items.map((item: DocumentItem) => ({
+                description: item.descricao || item.description || item.produto || 'Item',
+                quantity: item.quantidade || item.quantity || 1,
+                unitValue: item.valorUnitario || item.unitValue || item.valor,
+                subtotal: item.subtotal || item.total,
+              })),
+            });
+          });
+        }
+        // Formato legado: declarationItems
+        else if (doc.declarationItems && Array.isArray(doc.declarationItems)) {
+          volumes.push({
+            index: 1,
+            documentType: 'DECLARATION',
+            items: doc.declarationItems.map((item: DocumentItem) => ({
+              description: item.descricao || item.description || item.produto || 'Item',
+              quantity: item.quantidade || item.quantity || 1,
+              unitValue: item.valorUnitario || item.unitValue || item.valor,
+              subtotal: item.subtotal || item.total,
+            })),
+          });
+        }
+      }
+    }
+
+    console.log('[PUBLIC_TRACK] Volumes processados:', volumes.length);
+
     // Sanitizar dados - não retornar informações sensíveis
     const sanitizedData = {
       trackingCode: shipment.platformTrackingCode, // Expor apenas código da plataforma
@@ -114,6 +256,8 @@ export async function GET(
       createdAt: shipment.createdAt.toISOString(),
       // Eventos de rastreamento (garantido ao menos 1)
       events,
+      // Volumes e itens
+      volumes,
     };
 
     return NextResponse.json(sanitizedData);

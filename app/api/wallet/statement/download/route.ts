@@ -15,6 +15,7 @@ import {
 } from '@/lib/wallet/transaction-direction';
 import { formatNumberBR, formatWalletDescription } from '@/lib/format';
 import puppeteer from 'puppeteer';
+import type { Prisma } from '@prisma/client';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60; // 60 segundos para gerar o PDF
@@ -80,7 +81,7 @@ export async function GET(request: Request) {
     }
 
     // Construir filtro de busca
-    const whereClause: any = {
+    const whereClause: Prisma.WalletTransactionWhereInput = {
       walletId: wallet.id,
       status: 'CONFIRMED',
       confirmedAt: {
@@ -92,7 +93,6 @@ export async function GET(request: Request) {
     if (searchQuery && searchQuery.trim()) {
       whereClause.OR = [
         { title: { contains: searchQuery.trim(), mode: 'insensitive' } },
-        { type: { contains: searchQuery.trim(), mode: 'insensitive' } },
         { referenceId: { contains: searchQuery.trim(), mode: 'insensitive' } },
       ];
     }

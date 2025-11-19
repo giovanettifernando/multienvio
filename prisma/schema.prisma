@@ -272,6 +272,7 @@ model Package {
   divergenceHeight      Float?              // Nova altura (se houver divergência)
   divergenceLength      Float?              // Novo comprimento (se houver divergência)
   divergenceWeight      Float?              // Novo peso (se houver divergência)
+  divergencePhotoUrl    String?             // URL da foto da divergência (opcional)
   divergenceRegisteredAt DateTime?
   divergenceRegisteredBy String?            // ID do usuário que registrou
   checkedAt             DateTime?

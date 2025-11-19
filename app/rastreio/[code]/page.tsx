@@ -15,9 +15,10 @@ import {
 } from "antd";
 import { CopyOutlined } from "@ant-design/icons";
 import { TrackingTimeline, type TrackingEvent } from "@/components/track/TrackingTimeline";
+import { PublicShipmentItems, type PublicVolume } from "@/components/track/PublicShipmentItems";
 import { App } from "antd";
 
-const { Text, Title } = Typography;
+const { Text } = Typography;
 
 const STATUS_LABELS: Record<string, string> = {
   criado: "Criado",
@@ -68,12 +69,12 @@ type TrackingData = {
   deliveredAt: string | null;
   createdAt: string;
   events: TrackingEvent[];
+  volumes: PublicVolume[];
 };
 
 export default function PublicTrackingPage() {
   const { message } = App.useApp();
   const params = useParams<{ code: string }>();
-  const router = useRouter();
   const code = params?.code;
 
   const { data, isLoading, error } = useQuery<TrackingData>({
@@ -117,6 +118,12 @@ export default function PublicTrackingPage() {
     );
   }
 
+  console.log('[PublicTrackingPage] Data recebida:', {
+    hasVolumes: !!data.volumes,
+    volumesCount: data.volumes?.length,
+    volumes: data.volumes
+  });
+
   return (
     <div style={{ maxWidth: 800, margin: "0 auto", padding: "16px" }}>
       <Space direction="vertical" size={16} style={{ width: "100%" }}>
@@ -154,7 +161,10 @@ export default function PublicTrackingPage() {
           </Space>
         </Card>
 
-        {/* BLOCO 2: Detalhes Essenciais */}
+        {/* BLOCO 2: Timeline de Eventos */}
+        <TrackingTimeline events={data.events} title="Histórico de rastreamento" />
+
+        {/* BLOCO 3: Detalhes Essenciais */}
         <Card title="Detalhes do envio" bodyStyle={{ padding: "16px" }}>
           <Row gutter={[16, 12]}>
             <Col xs={24} sm={12}>
@@ -216,8 +226,8 @@ export default function PublicTrackingPage() {
           </Row>
         </Card>
 
-        {/* BLOCO 3: Timeline de Eventos */}
-        <TrackingTimeline events={data.events} title="Histórico de rastreamento" />
+        {/* BLOCO 4: Itens do Envio */}
+        <PublicShipmentItems volumes={data.volumes} />
       </Space>
     </div>
   );

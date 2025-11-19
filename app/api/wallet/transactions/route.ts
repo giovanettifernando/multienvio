@@ -15,6 +15,7 @@ import {
 } from '@/lib/wallet/transaction-direction';
 import { formatWalletDescription } from '@/lib/format';
 import type { StatementResponse } from '@/types/wallet-statement';
+import type { Prisma } from '@prisma/client';
 
 export const dynamic = 'force-dynamic';
 
@@ -65,7 +66,7 @@ export async function GET(request: Request) {
     }
 
     // Construir filtro WHERE
-    const whereClause: any = {
+    const whereClause: Prisma.WalletTransactionWhereInput = {
       walletId: wallet.id,
       status: 'CONFIRMED', // Apenas transações confirmadas
       confirmedAt: {
@@ -78,7 +79,6 @@ export async function GET(request: Request) {
     if (search && search.trim()) {
       whereClause.OR = [
         { title: { contains: search.trim(), mode: 'insensitive' } },
-        { type: { contains: search.trim(), mode: 'insensitive' } },
         { referenceId: { contains: search.trim(), mode: 'insensitive' } },
       ];
     }
