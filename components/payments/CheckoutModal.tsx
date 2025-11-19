@@ -22,8 +22,14 @@ interface CheckoutModalProps {
 }
 
 interface WalletData {
-  balance: number;
-  currency: string;
+  balance: {
+    availableReais: number;
+    availableCents: number;
+    pendingReais: number;
+    pendingCents: number;
+  };
+  monthlySummary?: unknown;
+  latestTransactions?: unknown[];
 }
 
 interface Card {
@@ -92,7 +98,7 @@ export function CheckoutModal({
     enabled: open,
   });
 
-  const balance = walletData?.balance ?? 0;
+  const balance = walletData?.balance?.availableReais ?? 0;
   const hasInsufficientBalance = balance < totalAmount;
 
   const isWalletDisabled = hasInsufficientBalance;

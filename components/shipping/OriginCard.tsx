@@ -55,17 +55,6 @@ export function OriginCard({
           {subtitle ? (
             <Typography.Text type="secondary">{subtitle}</Typography.Text>
           ) : null}
-          {info?.cidade && info?.uf ? (
-            <Typography.Text type="secondary">
-              {info.cidade} / {info.uf}
-              {info.label ? ` · ${info.label}` : ""}
-            </Typography.Text>
-          ) : null}
-          {info?.isDefault ? (
-            <Tag color="blue" bordered={false} style={{ width: "fit-content" }}>
-              Endereço padrão da empresa
-            </Tag>
-          ) : null}
         </Space>
       </Space>
 

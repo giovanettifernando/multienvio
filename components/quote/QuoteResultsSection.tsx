@@ -479,29 +479,57 @@ export function QuoteResultsSection({
         styles={{ body: { padding: "16px 12px" } }}
       >
         <Space direction="vertical" size={16} style={{ width: "100%" }}>
-          {/* Expiration warning */}
+          {/* Expiration warning - compact style */}
           {timeRemaining && (
-            <Alert
-              message={
-                timeRemaining === "expirado"
-                  ? "Cotação expirada"
-                  : `Tempo restante: ${timeRemaining}`
-              }
-              description={
-                timeRemaining === "expirado"
-                  ? "Os valores de frete expiraram. Por favor, recalcule a cotação."
-                  : "Os valores são válidos por 30 minutos."
-              }
-              type={
-                timeRemaining === "expirado"
-                  ? "error"
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                padding: '6px 12px',
+                borderRadius: 6,
+                background: timeRemaining === "expirado"
+                  ? '#fff2f0'
                   : isExpiringSoon
-                    ? "warning"
-                    : "info"
-              }
-              showIcon
-              icon={<ClockCircleOutlined />}
-            />
+                    ? '#fffbe6'
+                    : '#fafafa',
+                border: `1px solid ${
+                  timeRemaining === "expirado"
+                    ? '#ffccc7'
+                    : isExpiringSoon
+                      ? '#ffe58f'
+                      : '#e8e8e8'
+                }`,
+              }}
+            >
+              <ClockCircleOutlined
+                style={{
+                  fontSize: 14,
+                  color: timeRemaining === "expirado"
+                    ? '#ff4d4f'
+                    : isExpiringSoon
+                      ? '#faad14'
+                      : '#8c8c8c'
+                }}
+              />
+              <Typography.Text
+                style={{
+                  fontSize: 13,
+                  margin: 0,
+                  color: timeRemaining === "expirado"
+                    ? '#ff4d4f'
+                    : '#595959'
+                }}
+              >
+                {timeRemaining === "expirado" ? (
+                  <>Cotação expirada – recalcule para obter valores atualizados</>
+                ) : (
+                  <>
+                    Tempo restante: <Typography.Text strong style={{ fontSize: 13 }}>{timeRemaining}</Typography.Text> – valores válidos por 30 minutos
+                  </>
+                )}
+              </Typography.Text>
+            </div>
           )}
 
           <Alert

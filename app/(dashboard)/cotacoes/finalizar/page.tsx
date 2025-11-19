@@ -21,6 +21,7 @@ import {
   FormProvider,
   SubmitHandler,
   useForm,
+  useWatch,
 } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useShallow } from "zustand/react/shallow";
@@ -64,6 +65,7 @@ export default function FinalizeQuotePage() {
     })),
   );
   const pickupAtOrigin = useQuoteDraft((s) => s.pickupAtOrigin);
+  const destino = useQuoteDraft((s) => s.destination);
   const pickupPointId = useCheckoutStore((s) => s.pickupPointId);
   const cartAdd = useCartAdd();
   const recipientSave = useRecipientSave();
@@ -77,6 +79,9 @@ export default function FinalizeQuotePage() {
     trackingCode: string;
     totalAmount: number;
   } | null>(null);
+
+  // Estado adicional para evitar múltiplos cliques
+  const [isProcessingCheckout, setIsProcessingCheckout] = useState(false);
 
   const summary = results?.resumo ?? null;
   const selectedService = selection?.result ?? null;
@@ -137,8 +142,8 @@ export default function FinalizeQuotePage() {
           declarationItems: initialDoc === "DECLARACAO" ? [
             {
               id: crypto.randomUUID(),
-              descricao: "Produto",
-              valorUnitario: 100,
+              descricao: "", // Vazio para forçar preenchimento
+              valorUnitario: 0,
               quantidade: 1,
             },
           ] : undefined,
@@ -162,8 +167,9 @@ export default function FinalizeQuotePage() {
           definirComoPadrao: false,
         },
         recipient: {
-          mode: "manual",
-          savedId: undefined,
+          // Se há um destinatário recorrente selecionado, usar mode: "saved"
+          mode: (destino?.mode === "recipient" && destino?.recipientId) ? "saved" : "manual",
+          savedId: (destino?.mode === "recipient" && destino?.recipientId) ? destino.recipientId : undefined,
           manual: {
             nome: "",
             telefone: "",
@@ -185,7 +191,7 @@ export default function FinalizeQuotePage() {
         },
       };
     },
-    [initialDoc, summary?.destinoCep, summary?.destinoCidade, summary?.destinoUf, summary?.volumes?.length],
+    [initialDoc, summary?.destinoCep, summary?.destinoCidade, summary?.destinoUf, summary?.volumes?.length, destino?.mode, destino?.recipientId],
   );
 
   const formMethods = useForm<FinalizeFormValues>({
@@ -197,6 +203,7 @@ export default function FinalizeQuotePage() {
   });
 
   const {
+    control,
     handleSubmit,
     formState: { isSubmitting, errors, dirtyFields, touchedFields },
     watch,
@@ -209,9 +216,6 @@ export default function FinalizeQuotePage() {
       console.log('[FORM_ERRORS]', errors);
     }
   }, [errors]);
-
-  // Watch destination mode and manual fields for validation
-  const destino = useQuoteDraft((s) => s.destination);
 
   // Watch all recipient fields to trigger re-validation
   const recipientMode = watch("recipient.mode");
@@ -226,6 +230,93 @@ export default function FinalizeQuotePage() {
   const recipientCidade = watch("recipient.manual.cidade");
   const recipientUf = watch("recipient.manual.uf");
 
+  // Watch document fields to validate items
+  // Using useWatch for better reactivity with nested fields
+  const documentType = useWatch({ control, name: "document.type" });
+  const declarationItems = useWatch({ control, name: "document.declarationItems" });
+  const volumeDeclarations = useWatch({ control, name: "document.volumeDeclarations" });
+  const nfePackages = useWatch({ control, name: "document.packages" });
+  const nfeItems = useWatch({ control, name: "document.nfeItems" });
+
+  // Helper: verificar se há pelo menos 1 item válido no documento
+  const hasAtLeastOneDocumentItem = useMemo(() => {
+    let hasContentItems = false;
+    let hasInvoiceItems = false;
+
+    if (documentType === "DECLARACAO") {
+      // Formato novo: volumeDeclarations (por volume)
+      if (volumeDeclarations && Array.isArray(volumeDeclarations)) {
+        hasContentItems = volumeDeclarations.some((volDecl) =>
+          volDecl.items && Array.isArray(volDecl.items) && volDecl.items.length > 0 &&
+          volDecl.items.some((item) => item.descricao && item.descricao.trim().length > 0)
+        );
+      }
+      // Formato legado: declarationItems (lista única)
+      if (!hasContentItems && declarationItems && Array.isArray(declarationItems)) {
+        hasContentItems = declarationItems.some((item) => item.descricao && item.descricao.trim().length > 0);
+      }
+
+      console.log('[DEBUG DOC ITEMS - DECLARACAO]', {
+        documentType,
+        hasContentItems,
+        volumeDeclarationsCount: volumeDeclarations?.length ?? 0,
+        volumeDeclarationsDetails: volumeDeclarations?.map((volDecl, idx) => ({
+          volumeIndex: idx,
+          itemsCount: volDecl.items?.length ?? 0,
+          items: volDecl.items?.map(item => ({
+            descricao: item.descricao,
+            quantidade: item.quantidade,
+            valorUnitario: item.valorUnitario,
+            isEmpty: !item.descricao || item.descricao.trim().length === 0,
+          })),
+        })),
+        declarationItemsCount: declarationItems?.length ?? 0,
+        declarationItemsDetails: declarationItems?.map(item => ({
+          descricao: item.descricao,
+          isEmpty: !item.descricao || item.descricao.trim().length === 0,
+        })),
+      });
+
+      return hasContentItems;
+    } else if (documentType === "NFE") {
+      // Formato novo: packages (NF por pacote)
+      if (nfePackages && Array.isArray(nfePackages)) {
+        hasInvoiceItems = nfePackages.some((pkg) =>
+          pkg.items && Array.isArray(pkg.items) && pkg.items.length > 0
+        );
+      }
+      // Formato legado: nfeItems (lista única)
+      if (!hasInvoiceItems && nfeItems && Array.isArray(nfeItems)) {
+        hasInvoiceItems = nfeItems.length > 0;
+      }
+
+      console.log('[DEBUG DOC ITEMS - NFE]', {
+        documentType,
+        hasInvoiceItems,
+        nfePackagesCount: nfePackages?.length ?? 0,
+        nfeItemsCount: nfeItems?.length ?? 0,
+      });
+
+      return hasInvoiceItems;
+    }
+
+    console.log('[DEBUG DOC ITEMS - NONE]', {
+      documentType,
+      hasContentItems: false,
+      hasInvoiceItems: false,
+    });
+
+    return false;
+  }, [documentType, declarationItems, volumeDeclarations, nfePackages, nfeItems]);
+
+  // Debug: log whenever hasAtLeastOneDocumentItem changes
+  useEffect(() => {
+    console.log('[DEBUG DOC ITEMS - FINAL]', {
+      hasAtLeastOneDocumentItem,
+      documentType,
+    });
+  }, [hasAtLeastOneDocumentItem, documentType]);
+
   // Pré-condições para habilitar botão "Pagar agora"
   const preconditionsOk = useMemo(() => {
     const checks = {
@@ -234,6 +325,7 @@ export default function FinalizeQuotePage() {
       summary: !!summary,
       volumes: !!(summary?.volumes && summary.volumes.length > 0),
       pickupPoint: pickupAtOrigin || !!pickupPointId,
+      documentItems: hasAtLeastOneDocumentItem,
     };
 
     // Check if recipient is valid
@@ -278,6 +370,7 @@ export default function FinalizeQuotePage() {
     if (!checks.selection || !checks.results || !checks.summary) return false;
     if (!checks.volumes) return false;
     if (!checks.pickupPoint) return false;
+    if (!checks.documentItems) return false;
     if (!canProceed) return false;
 
     return true;
@@ -285,6 +378,58 @@ export default function FinalizeQuotePage() {
     selection,
     results,
     summary,
+    pickupAtOrigin,
+    pickupPointId,
+    destino,
+    recipientMode,
+    recipientNome,
+    recipientTelefone,
+    recipientEmail,
+    recipientDocumento,
+    recipientNumero,
+    recipientCep,
+    recipientLogradouro,
+    recipientBairro,
+    recipientCidade,
+    recipientUf,
+    hasAtLeastOneDocumentItem,
+  ]);
+
+  // Mensagem de tooltip para botões desabilitados
+  const disabledTooltip = useMemo(() => {
+    if (preconditionsOk) return "";
+
+    if (!hasAtLeastOneDocumentItem) {
+      return "Informe ao menos um item no documento do envio (Declaração de conteúdo ou Nota Fiscal).";
+    }
+
+    if (!pickupAtOrigin && !pickupPointId) {
+      return "Selecione um ponto de coleta ou ative a opção de coleta na origem.";
+    }
+
+    // Verificar dados do destinatário
+    const hasRecurringRecipient = destino?.mode === "recipient" && !!destino.recipientId;
+    const isRecipientFormValid =
+      recipientMode === "manual" &&
+      !!recipientNome && recipientNome.trim().length > 0 &&
+      !!recipientTelefone && recipientTelefone.trim().length > 0 &&
+      !!recipientEmail && recipientEmail.trim().length > 0 &&
+      !!recipientDocumento && recipientDocumento.trim().length > 0 &&
+      !!recipientNumero && recipientNumero.trim().length > 0 &&
+      !!recipientCep && recipientCep.trim().length > 0 &&
+      !!recipientLogradouro && recipientLogradouro.trim().length > 0 &&
+      !!recipientBairro && recipientBairro.trim().length > 0 &&
+      !!recipientCidade && recipientCidade.trim().length > 0 &&
+      !!recipientUf && recipientUf.trim().length > 0;
+
+    if (!hasRecurringRecipient && !isRecipientFormValid) {
+      return "Informe os dados obrigatórios do destinatário para continuar.";
+    }
+
+    return "Preencha todos os campos obrigatórios para continuar.";
+  }, [
+    preconditionsOk,
+    hasAtLeastOneDocumentItem,
     pickupAtOrigin,
     pickupPointId,
     destino,
@@ -403,22 +548,30 @@ export default function FinalizeQuotePage() {
   };
 
   const handlePayNow: SubmitHandler<FinalizeFormValues> = async (values) => {
-    console.log('[HANDLE_PAY_NOW] Iniciando checkout', { selection, results: !!results, summary: !!summary, selectedService: !!selectedService });
-
-    console.log('[DEBUG_CHECKPOINT_1] Antes do if de validação');
-
-    if (!selection || !results || !summary || !selectedService) {
-      console.log('[DEBUG_CHECKPOINT_2] ENTRANDO no if - falta dados!', {
-        selection: !!selection,
-        results: !!results,
-        summary: !!summary,
-        selectedService: !!selectedService,
-      });
-      message.error("Nenhuma seleção de serviço ativa.");
+    // Proteção contra múltiplos cliques
+    if (isProcessingCheckout) {
+      console.log('[HANDLE_PAY_NOW] ⚠️ Checkout já está em progresso, ignorando clique duplicado');
       return;
     }
 
-    console.log('[DEBUG_CHECKPOINT_3] Passou pelo if de validação!');
+    setIsProcessingCheckout(true);
+    console.log('[HANDLE_PAY_NOW] 🔒 Iniciando checkout (lock ativado)', { selection, results: !!results, summary: !!summary, selectedService: !!selectedService });
+
+    try {
+      console.log('[DEBUG_CHECKPOINT_1] Antes do if de validação');
+
+      if (!selection || !results || !summary || !selectedService) {
+        console.log('[DEBUG_CHECKPOINT_2] ENTRANDO no if - falta dados!', {
+          selection: !!selection,
+          results: !!results,
+          summary: !!summary,
+          selectedService: !!selectedService,
+        });
+        message.error("Nenhuma seleção de serviço ativa.");
+        return;
+      }
+
+      console.log('[DEBUG_CHECKPOINT_3] Passou pelo if de validação!');
 
     // Determinar dados do destinatário
     let recipientData: FinalizeFormValues['recipient']['manual'] | undefined;
@@ -447,21 +600,42 @@ export default function FinalizeQuotePage() {
       console.log('[RECIPIENT_DEBUG] Validação MANUAL passou!');
     } else if (values.recipient.mode === "saved" && values.recipient.savedId) {
       console.log('[RECIPIENT_DEBUG] Modo SAVED detectado');
-      // Buscar destinatário salvo (TODO: implementar API para buscar)
-      // Por enquanto, usar dados do summary
-      if (!summary.destinoCidade || !summary.destinoUf) {
-        console.log('[RECIPIENT_DEBUG] ERRO: Dados de destino incompletos');
-        message.error("Dados de destino incompletos.");
+      // Buscar destinatário salvo via API
+      try {
+        const response = await fetch(`/api/account/recipients/${values.recipient.savedId}`);
+
+        if (!response.ok) {
+          console.log('[RECIPIENT_DEBUG] ERRO: Falha ao buscar destinatário');
+          message.error("Erro ao buscar dados do destinatário selecionado.");
+          return;
+        }
+
+        const result = await response.json();
+        const recipient = result.data;
+
+        // Mapear dados do destinatário recorrente
+        recipientData = {
+          nome: recipient.name,
+          telefone: recipient.phone,
+          email: recipient.email,
+          documento: recipient.document,
+          cep: recipient.cep,
+          logradouro: recipient.logradouro,
+          numero: recipient.numero,
+          complemento: recipient.complemento,
+          bairro: recipient.bairro,
+          cidade: recipient.cidade,
+          uf: recipient.uf,
+          observacoes: recipient.notes,
+          salvarRecorrente: false, // Não salvar novamente
+        };
+
+        console.log('[RECIPIENT_DEBUG] Destinatário carregado:', recipientData.nome);
+      } catch (error) {
+        console.error('[RECIPIENT_DEBUG] Exceção ao buscar destinatário:', error);
+        message.error("Erro ao buscar dados do destinatário.");
         return;
       }
-      recipientData = {
-        nome: "Destinatário Salvo",
-        cep: summary.destinoCep,
-        cidade: summary.destinoCidade,
-        uf: summary.destinoUf,
-        salvarRecorrente: false,
-      };
-      console.log('[RECIPIENT_DEBUG] Validação SAVED passou!');
     } else {
       console.log('[RECIPIENT_DEBUG] ERRO: Modo desconhecido ou não implementado', {
         mode: values.recipient.mode,
@@ -479,11 +653,10 @@ export default function FinalizeQuotePage() {
       return;
     }
 
-    // Calcular total incluindo taxa de coleta se aplicável
-    const pickupFeeAmount = pickupFeeData && pickupFeeData.success ? pickupFeeData.feeAmount : 0;
-    const totalAmount = selectedService.preco + pickupFeeAmount;
+      // Calcular total incluindo taxa de coleta se aplicável
+      const pickupFeeAmount = pickupFeeData && pickupFeeData.success ? pickupFeeData.feeAmount : 0;
+      const totalAmount = selectedService.preco + pickupFeeAmount;
 
-    try {
       dispatchTelemetry("quote_finalize_submit", {
         selectionId: selection.selectionId,
         action: "PAGAR_AGORA",
@@ -498,7 +671,7 @@ export default function FinalizeQuotePage() {
       const payload = {
         quoteId: selection.selectionId,
         recipient: {
-          nome: recipientData.nome || "Cliente",
+          nome: recipientData.nome || "",
           telefone: recipientData.telefone,
           email: recipientData.email,
           documento: recipientData.documento,
@@ -520,6 +693,8 @@ export default function FinalizeQuotePage() {
           nfeKeys: values.document.type === "NFE" ? values.document.nfeKeys : undefined,
           nfeItems: values.document.type === "NFE" ? values.document.nfeItems : undefined,
           declarationItems: values.document.type === "DECLARACAO" ? values.document.declarationItems : undefined,
+          // Novo formato: declaração por volume
+          volumeDeclarations: values.document.type === "DECLARACAO" ? values.document.volumeDeclarations : undefined,
         },
         volumes: summary.volumes.map((v) => ({
           peso: v.pesoKg,
@@ -579,6 +754,10 @@ export default function FinalizeQuotePage() {
       console.error("Erro ao processar pagamento", error);
       const errorMessage = error instanceof Error ? error.message : "Não foi possível iniciar o pagamento.";
       message.error(errorMessage);
+    } finally {
+      // Sempre desbloquear no final, independente de sucesso ou erro
+      setIsProcessingCheckout(false);
+      console.log('[HANDLE_PAY_NOW] 🔓 Checkout finalizado (lock liberado)');
     }
   };
 
@@ -621,9 +800,7 @@ export default function FinalizeQuotePage() {
                 <Card title="Pagamento">
                   <Space direction="vertical" size={16} style={{ width: "100%" }}>
                     <Space direction="vertical" style={{ width: "100%" }}>
-                      <Tooltip
-                        title={!preconditionsOk ? "Informe os dados obrigatórios do destinatário para continuar." : ""}
-                      >
+                      <Tooltip title={disabledTooltip}>
                         <Button
                           type="default"
                           htmlType="button"
@@ -636,20 +813,19 @@ export default function FinalizeQuotePage() {
                           Adicionar ao carrinho
                         </Button>
                       </Tooltip>
-                      <Tooltip
-                        title={!preconditionsOk ? "Informe os dados obrigatórios do destinatário para continuar." : ""}
-                      >
+                      <Tooltip title={disabledTooltip}>
                         <Button
                           type="primary"
                           htmlType="button"
                           block
-                          loading={isSubmitting}
-                          disabled={isSubmitting || !preconditionsOk}
+                          loading={isSubmitting || isProcessingCheckout}
+                          disabled={isSubmitting || isProcessingCheckout || !preconditionsOk}
                           onClick={(e) => {
                             console.log('[BUTTON_CLICK]', {
                               isSubmitting,
+                              isProcessingCheckout,
                               preconditionsOk,
-                              disabled: isSubmitting || !preconditionsOk,
+                              disabled: isSubmitting || isProcessingCheckout || !preconditionsOk,
                               formErrors: errors
                             });
                             handleSubmit(
@@ -657,6 +833,7 @@ export default function FinalizeQuotePage() {
                               (validationErrors) => {
                                 console.log('[FORM_VALIDATION_FAILED]', validationErrors);
                                 message.error('Por favor, preencha todos os campos obrigatórios.');
+                                setIsProcessingCheckout(false); // Liberar lock em caso de erro de validação
                               }
                             )(e);
                           }}

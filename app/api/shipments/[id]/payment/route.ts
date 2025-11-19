@@ -56,21 +56,20 @@ export async function PATCH(
     }
 
     // Determinar novo status do shipment baseado no status do pagamento
-    let newShipmentStatus = shipment.status;
-    if (status === 'approved') {
-      newShipmentStatus = 'ready_for_posting'; // Pronto para postagem
-    } else if (status === 'failed') {
-      newShipmentStatus = 'payment_failed'; // Falha no pagamento
+    // Nota: Só alteramos status se pagamento falhar. Status aprovado mantém o status atual do fluxo.
+    const dataToUpdate: { paymentMethod: string; status?: string } = {
+      paymentMethod: method,
+    };
+
+    if (status === 'failed') {
+      dataToUpdate.status = 'CANCELLED_BEFORE_HANDOFF'; // Cancelado por falha no pagamento
     }
+    // Se status === 'approved', mantém o status atual (não sobrescreve)
 
     // Atualizar envio
     const updatedShipment = await prisma.shipment.update({
       where: { id: shipmentId },
-      data: {
-        paymentMethod: method,
-        status: newShipmentStatus,
-        // Podemos adicionar mais campos conforme necessário
-      },
+      data: dataToUpdate,
     });
 
     // Se o pagamento foi aprovado e temos uma transação de wallet, confirmar

@@ -76,10 +76,10 @@ export async function GET(request: NextRequest) {
       return {
         id: s.id,
         trackingCode: s.platformTrackingCode, // Expor apenas código da plataforma
-        recipientName: s.recipientName || 'Não informado',
+        recipientName: s.recipientName || null,
         recipientCityUf: s.destinationCity && s.destinationState
           ? `${s.destinationCity}/${s.destinationState}`
-          : 'Não informado',
+          : null,
         carrierName: s.carrier || 'Não informado',
         serviceName: s.service || 'Não informado',
         etaDays: s.estimatedDays || 0,

@@ -5,6 +5,7 @@ import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth/session';
 import { prisma } from '@/lib/db';
 import { z } from 'zod';
+import type { Prisma } from '@prisma/client';
 
 const paymentBatchSchema = z.object({
   shipmentIds: z.array(z.string()).min(1, 'Pelo menos um shipment é necessário'),
@@ -73,22 +74,34 @@ export async function PATCH(request: Request) {
       const updates = shipments.map(async (shipment) => {
         const currentDoc = (shipment.document as Record<string, unknown>) || {};
 
-        // Atualizar shipment
+        // Atualizar shipment (mantém status atual se aprovado, cancela se falhou)
+        const updateData: {
+          paymentMethod: string;
+          status?: string;
+          document: Prisma.InputJsonValue;
+          updatedAt: Date;
+        } = {
+          paymentMethod: method,
+          document: {
+            ...currentDoc,
+            payment: {
+              status,
+              method,
+              ...meta,
+            },
+          },
+          updatedAt: new Date(),
+        };
+
+        // Só altera status se pagamento falhar
+        if (status === 'failed') {
+          updateData.status = 'CANCELLED_BEFORE_HANDOFF';
+        }
+        // Se approved, mantém o status atual do fluxo
+
         await tx.shipment.update({
           where: { id: shipment.id },
-          data: {
-            paymentMethod: method,
-            status: status === 'approved' ? 'ready_for_posting' : 'pending_payment',
-            document: {
-              ...currentDoc,
-              payment: {
-                status,
-                method,
-                ...meta,
-              },
-            },
-            updatedAt: new Date(),
-          },
+          data: updateData,
         });
 
         // Atualizar etiqueta associada ao shipment (se existir)

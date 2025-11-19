@@ -306,12 +306,6 @@ export function PostingUnitPicker() {
     <>
       <Card title="Unidade de postagem">
         <Space direction="vertical" size={16} style={{ width: "100%" }}>
-          <Alert
-            type="info"
-            showIcon
-            message="Selecione a unidade onde o envio será postado."
-          />
-
           {/* Barra de pesquisa */}
           <Input
             placeholder="Busque por nome, bairro ou cidade"

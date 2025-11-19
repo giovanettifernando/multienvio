@@ -3,37 +3,65 @@ export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
+import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import { getUserSessionFromRequest } from '@/lib/auth/user-session';
 import { createShipmentWithVolumes } from '@/lib/shipments/create-with-volumes';
 import { createInitialTrackingEvent } from '@/lib/tracking/create-event';
+import { ShipmentStatus } from '@/lib/shipments/shipment-status';
+import crypto from 'crypto';
 
 // Schema de validação do checkout
 const checkoutSchema = z.object({
   quoteId: z.string(),
   recipient: z.object({
     nome: z.string(),
-    telefone: z.string().optional(),
-    email: z.string().optional(),
-    documento: z.string().optional(),
+    telefone: z.string().nullish(),
+    email: z.string().nullish(),
+    documento: z.string().nullish(),
     cep: z.string(),
-    logradouro: z.string().optional(),
-    numero: z.string().optional(),
-    complemento: z.string().optional(),
-    bairro: z.string().optional(),
+    logradouro: z.string().nullish(),
+    numero: z.string().nullish(),
+    complemento: z.string().nullish(),
+    bairro: z.string().nullish(),
     cidade: z.string(),
     uf: z.string(),
-    observacoes: z.string().optional(),
+    observacoes: z.string().nullish(),
     salvarRecorrente: z.boolean().optional().default(false),
   }),
   document: z.object({
     type: z.enum(['NFE', 'DECLARACAO']),
+    // Novo formato NFE: packages (NF por pacote com items)
+    packages: z.array(z.object({
+      chave: z.string(),
+      xmlId: z.string().nullable().optional(),
+      items: z.array(z.object({
+        id: z.string(),
+        sku: z.string().optional().nullable(),
+        descricao: z.string(),
+        ncm: z.string().optional().nullable(),
+        cfop: z.string().optional().nullable(),
+        quantidade: z.number(),
+        pesoLiquido: z.number().optional().nullable(),
+        valorUnitario: z.number(),
+        valorTotal: z.number(),
+      })),
+    })).optional(),
+    // Formato legado NFE: nfeKeys + nfeItems separados
     nfeKeys: z.array(z.object({ chave: z.string() })).optional(),
+    nfeItems: z.array(z.object({
+      descricao: z.string(),
+      valorUnitario: z.number(),
+      valorTotal: z.number().optional(),
+      quantidade: z.number(),
+    })).optional(),
+    // Formato legado DECLARACAO: declarationItems (lista única)
     declarationItems: z.array(z.object({
       descricao: z.string(),
       valorUnitario: z.number(),
       quantidade: z.number(),
     })).optional(),
+    // Novo formato DECLARACAO: volumeDeclarations (por volume)
     volumeDeclarations: z.array(z.object({
       volumeIndex: z.number(),
       items: z.array(z.object({
@@ -93,6 +121,46 @@ export async function POST(request: Request) {
 
     const data: CheckoutPayload = parsed.data;
 
+    // Validar se há pelo menos 1 item no documento
+    let hasDocumentItems = false;
+
+    if (data.document.type === 'DECLARACAO') {
+      // Formato novo: volumeDeclarations
+      if (data.document.volumeDeclarations && data.document.volumeDeclarations.length > 0) {
+        hasDocumentItems = data.document.volumeDeclarations.some((volDecl) =>
+          volDecl.items && volDecl.items.length > 0 &&
+          volDecl.items.some((item) => item.descricao && item.descricao.trim().length > 0)
+        );
+      }
+      // Formato legado: declarationItems
+      else if (data.document.declarationItems && data.document.declarationItems.length > 0) {
+        hasDocumentItems = data.document.declarationItems.some(
+          (item) => item.descricao && item.descricao.trim().length > 0
+        );
+      }
+    } else if (data.document.type === 'NFE') {
+      // Formato novo: packages (NF por pacote com items)
+      if (data.document.packages && data.document.packages.length > 0) {
+        hasDocumentItems = data.document.packages.some((pkg) =>
+          pkg.items && pkg.items.length > 0
+        );
+      }
+      // Formato legado: nfeKeys (apenas chaves)
+      else if (data.document.nfeKeys && data.document.nfeKeys.length > 0) {
+        hasDocumentItems = data.document.nfeKeys.some((k) => k.chave && k.chave.trim().length > 0);
+      }
+    }
+
+    if (!hasDocumentItems) {
+      return NextResponse.json(
+        {
+          message: 'Informe ao menos um item no documento do envio antes de continuar.',
+          code: 'MISSING_DOCUMENT_ITEMS',
+        },
+        { status: 400 }
+      );
+    }
+
     // Calcular peso e valor total
     const totalWeight = data.volumes.reduce((sum, vol) => sum + vol.peso, 0);
 
@@ -115,6 +183,22 @@ export async function POST(request: Request) {
           sum + (item.valorUnitario * item.quantidade), 0
         );
       }
+    } else if (data.document.type === 'NFE') {
+      // Novo formato: packages (NF por pacote)
+      if (data.document.packages && data.document.packages.length > 0) {
+        declaredValue = data.document.packages.reduce((totalSum, pkg) => {
+          const packageTotal = pkg.items.reduce((itemSum, item) =>
+            itemSum + (item.valorTotal || (item.valorUnitario * item.quantidade)), 0
+          );
+          return totalSum + packageTotal;
+        }, 0);
+      }
+      // Formato legado: nfeItems
+      else if (data.document.nfeItems && data.document.nfeItems.length > 0) {
+        declaredValue = data.document.nfeItems.reduce((sum, item) =>
+          sum + (item.valorTotal || (item.valorUnitario * item.quantidade)), 0
+        );
+      }
     }
 
     // Gerar tracking code único (plataforma - customer-facing)
@@ -123,7 +207,13 @@ export async function POST(request: Request) {
     // Preparar documento (priorizar NFE se ambos estiverem preenchidos)
     const documentData: {
       type: string;
+      packages?: Array<{
+        chave: string;
+        xmlId?: string | null;
+        items: Array<unknown>;
+      }>;
       nfeKeys?: string[];
+      nfeItems?: Array<unknown>;
       declarationItems?: Array<{ descricao: string; valorUnitario: number; quantidade: number }>;
       volumeDeclarations?: Array<{
         volumeIndex: number;
@@ -133,8 +223,19 @@ export async function POST(request: Request) {
       type: data.document.type,
     };
 
-    if (data.document.type === 'NFE' && data.document.nfeKeys && data.document.nfeKeys.length > 0) {
-      documentData.nfeKeys = data.document.nfeKeys.map(k => k.chave);
+    if (data.document.type === 'NFE') {
+      // Novo formato: packages (NF por pacote - preferencial)
+      if (data.document.packages && data.document.packages.length > 0) {
+        documentData.packages = data.document.packages;
+      }
+      // Formato legado: nfeKeys (apenas chaves - retrocompatibilidade)
+      else if (data.document.nfeKeys && data.document.nfeKeys.length > 0) {
+        documentData.nfeKeys = data.document.nfeKeys.map(k => k.chave);
+      }
+      // Formato legado: nfeItems (itens sem agrupamento por pacote)
+      if (data.document.nfeItems && data.document.nfeItems.length > 0) {
+        documentData.nfeItems = data.document.nfeItems;
+      }
     } else if (data.document.type === 'DECLARACAO') {
       // Novo formato: declaração por volume (preferencial)
       if (data.document.volumeDeclarations && data.document.volumeDeclarations.length > 0) {
@@ -146,13 +247,12 @@ export async function POST(request: Request) {
       }
     }
 
+    // Limpar valores undefined do documentData (Prisma JSON não aceita undefined)
+    const cleanDocumentData = JSON.parse(JSON.stringify(documentData)) as Prisma.InputJsonValue;
+
     // Função auxiliar para salvar destinatário recorrente
     async function saveRecipientIfRequested() {
-      console.log('[CHECKOUT] saveRecipientIfRequested - salvarRecorrente:', data.recipient.salvarRecorrente);
-      console.log('[CHECKOUT] saveRecipientIfRequested - recipient data:', JSON.stringify(data.recipient, null, 2));
-
       if (!data.recipient.salvarRecorrente) {
-        console.log('[CHECKOUT] salvarRecorrente = false, pulando salvamento');
         return;
       }
 
@@ -193,15 +293,59 @@ export async function POST(request: Request) {
           },
         });
 
-        console.log(`[CHECKOUT] Destinatário recorrente criado: ${newRecipient.id}`);
       } catch (error) {
-        // Log do erro mas não falha o checkout por causa disso
         console.error('[CHECKOUT] Erro ao salvar destinatário recorrente:', error);
       }
     }
 
     // Criar shipment dentro de uma transação
     const result = await prisma.$transaction(async (tx) => {
+      // ====================================
+      // IDEMPOTÊNCIA: Verificar se já existe um shipment para este checkout
+      // ====================================
+      const checkoutFingerprint = crypto
+        .createHash('sha256')
+        .update(`${session.userId}-${data.quoteId}`)
+        .digest('hex')
+        .substring(0, 16);
+
+      // Buscar shipments criados recentemente (últimos 5 minutos) com dados idênticos
+      const recentShipments = await tx.shipment.findMany({
+        where: {
+          senderId: session.userId,
+          carrier: data.carrier,
+          service: data.service,
+          originCep: data.originCep,
+          destinationCep: data.destinationCep,
+          freightCost: data.freightCost,
+          createdAt: {
+            gte: new Date(Date.now() - 5 * 60 * 1000), // Últimos 5 minutos
+          },
+        },
+        include: {
+          label: true,
+          pickupRequest: true,
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+        take: 1,
+      });
+
+      if (recentShipments.length > 0) {
+        const existingShipment = recentShipments[0];
+        console.log('[CHECKOUT] Idempotência: Shipment já existe, retornando existente');
+
+        return {
+          shipment: existingShipment,
+          packages: [], // Não precisamos retornar packages para idempotência
+          label: existingShipment.label,
+          pickupRequest: existingShipment.pickupRequest,
+          trackingEvent: null,
+          isIdempotent: true,
+        };
+      }
+
       // Obter ou criar carteira do usuário
       let wallet = await tx.wallet.findUnique({
         where: { userId: session.userId },
@@ -219,25 +363,18 @@ export async function POST(request: Request) {
 
       // Determinar status inicial baseado no tipo de coleta
       // REGRA DE NEGÓCIO:
-      // - Coleta na origem (solicitarColeta = true) → 'awaiting_pickup' (Aguardando coleta)
-      // - Ponto de coleta (pickupPointId != null) → 'awaiting_posting' (Aguardando postagem)
-      // - Outros casos → 'awaiting_posting' (Aguardando postagem)
-      let initialStatus: string;
+      // - Coleta na origem (solicitarColeta = true) → ShipmentStatus.PICKUP_REQUESTED
+      // - Ponto de coleta (pickupPointId != null) → ShipmentStatus.AWAITING_DROP_OFF_AT_POINT
+      // - Outros casos → ShipmentStatus.AWAITING_DROP_OFF_AT_POINT (Fallback padrão)
+      let initialStatus: ShipmentStatus;
       if (data.solicitarColeta === true) {
-        initialStatus = 'awaiting_pickup';
+        initialStatus = ShipmentStatus.PICKUP_REQUESTED;
       } else if (data.pickupPointId) {
-        initialStatus = 'awaiting_posting';
+        initialStatus = ShipmentStatus.AWAITING_DROP_OFF_AT_POINT;
       } else {
-        initialStatus = 'awaiting_posting'; // Fallback padrão
+        initialStatus = ShipmentStatus.AWAITING_DROP_OFF_AT_POINT; // Fallback padrão
       }
 
-      console.log('[CHECKOUT] Status inicial determinado:', {
-        solicitarColeta: data.solicitarColeta,
-        pickupPointId: data.pickupPointId,
-        initialStatus,
-      });
-
-      // Criar envio COM VOLUMES usando serviço centralizado
       const { shipment, packages } = await createShipmentWithVolumes(tx, {
         shipment: {
           platformTrackingCode,
@@ -263,7 +400,7 @@ export async function POST(request: Request) {
           estimatedDays: data.estimatedDays,
           freightCost: data.freightCost,
           pickupPointId: data.pickupPointId,
-          document: documentData,
+          document: cleanDocumentData,
           status: initialStatus, // Status dinâmico baseado no tipo de coleta
           paymentMethod: null,
         },
@@ -328,16 +465,10 @@ export async function POST(request: Request) {
         new Date() // Usar data/hora atual
       );
 
-      console.log('[CHECKOUT] Evento inicial criado:', {
-        shipmentId: shipment.id,
-        eventType: trackingEvent.type,
-        eventDescription: trackingEvent.description,
-      });
-
       // Nota: A transação financeira será criada pelo /api/wallet/debit
       // quando o usuário confirmar o pagamento no modal
 
-      return { shipment, packages, label, pickupRequest, trackingEvent };
+      return { shipment, packages, label, pickupRequest, trackingEvent, isIdempotent: false };
     });
 
     // Salvar destinatário recorrente se solicitado

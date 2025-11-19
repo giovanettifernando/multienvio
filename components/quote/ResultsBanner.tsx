@@ -79,8 +79,8 @@ export function ResultsBanner({ summary }: ResultsBannerProps) {
       styles={{ body: { padding: 16 } }}
     >
       <Row gutter={[16, 12]}>
-        {/* Seção A - Origem */}
-        <Col xs={24} md={12} lg={8}>
+        {/* Coluna 1 - Origem */}
+        <Col xs={24} sm={12} lg={6}>
           <Space direction="vertical" size={4}>
             <Typography.Text
               type="secondary"
@@ -113,8 +113,8 @@ export function ResultsBanner({ summary }: ResultsBannerProps) {
           </Space>
         </Col>
 
-        {/* Seção B - Destino */}
-        <Col xs={24} md={12} lg={8}>
+        {/* Coluna 2 - Destino */}
+        <Col xs={24} sm={12} lg={6}>
           <Space direction="vertical" size={4}>
             <Typography.Text
               type="secondary"
@@ -140,31 +140,35 @@ export function ResultsBanner({ summary }: ResultsBannerProps) {
           </Space>
         </Col>
 
-        {/* Seção C - Seguro + Volumes */}
-        <Col xs={24} lg={8}>
-          <Space direction="vertical" size={8} style={{ width: "100%" }}>
-            {/* Seguro */}
-            <div>
-              <Typography.Text
-                type="secondary"
-                style={{ fontSize: 12, fontWeight: 600 }}
-              >
-                Seguro declarado
-              </Typography.Text>
+        {/* Coluna 3 - Seguro declarado */}
+        <Col xs={24} sm={12} lg={6}>
+          <Space direction="vertical" size={4}>
+            <Typography.Text
+              type="secondary"
+              style={{ fontSize: 12, fontWeight: 600 }}
+            >
+              Seguro declarado
+            </Typography.Text>
+            <Space align="start" size={8}>
+              <SafetyOutlined style={{ fontSize: 16, marginTop: 2 }} />
               <div>
-                <Space align="center" size={8}>
-                  <SafetyOutlined style={{ fontSize: 14 }} />
-                  <Typography.Text strong style={{ fontSize: 16 }}>
-                    {formatCurrency(summary.seguroValor ?? null)}
-                  </Typography.Text>
-                </Space>
+                <Typography.Text strong style={{ fontSize: 16 }}>
+                  {formatCurrency(summary.seguroValor ?? null)}
+                </Typography.Text>
               </div>
-            </div>
+            </Space>
+          </Space>
+        </Col>
 
-            {/* Divisor opcional */}
-            <div style={{ height: 1, backgroundColor: "#d6e4ff" }} />
-
-            {/* Volumes - Bloco com destaque */}
+        {/* Coluna 4 - Volumes */}
+        <Col xs={24} sm={12} lg={6}>
+          <Space direction="vertical" size={4}>
+            <Typography.Text
+              type="secondary"
+              style={{ fontSize: 12, fontWeight: 600 }}
+            >
+              Volumes
+            </Typography.Text>
             <div
               className={styles.resultsBanner}
               data-testid="results-banner"

@@ -1,6 +1,7 @@
 import { ApiError } from "@/lib/api/errors";
 import { withApiHandler } from "@/lib/api/handler";
 import {
+  getRecipient,
   deleteRecipient,
   updateRecipient,
 } from "@/lib/services/account-recipients.service";
@@ -15,6 +16,24 @@ import {
 } from "../helpers";
 
 export const dynamic = "force-dynamic";
+
+export const GET = withApiHandler(async (context) => {
+  const { req, params, logger } = context;
+  const userId = await requireUserId(req);
+
+  const { id } = await params;
+
+  try {
+    const recipient = await getRecipient(userId, id, { logger });
+
+    return {
+      data: recipient,
+      meta: { tags: ["account", "recipients"] },
+    };
+  } catch (error) {
+    handleRecipientDataStoreError(error);
+  }
+});
 
 export const PUT = withApiHandler(async (context) => {
   const { req, params, logger } = context;

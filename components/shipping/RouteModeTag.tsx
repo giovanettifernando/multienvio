@@ -24,9 +24,6 @@ export function RouteModeTag({ isReverse, children }: RouteModeTagProps) {
     : "Envio → Destinatário";
 
   const ribbonColor = isReverse ? token.colorWarning : token.colorInfo;
-  const containerBackground = isReverse
-    ? token.colorWarningBg
-    : token.colorInfoBg;
 
   return (
     <Badge.Ribbon
@@ -50,7 +47,6 @@ export function RouteModeTag({ isReverse, children }: RouteModeTagProps) {
     >
       <div
         style={{
-          background: containerBackground,
           borderRadius: token.borderRadiusLG,
           padding: token.paddingLG,
         }}

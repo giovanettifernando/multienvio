@@ -139,13 +139,12 @@ export async function POST(request: Request) {
           },
         });
 
-        // 7) Se for pagamento de shipment, atualizar status e emitir etiqueta
+        // 7) Se for pagamento de shipment, registrar método de pagamento e emitir etiqueta
         if (shipmentId) {
-          // Atualizar status do shipment para ready_for_posting
+          // Atualizar método de pagamento (sem alterar o status - ele é gerenciado pelo fluxo de rastreamento)
           await tx.shipment.update({
             where: { id: shipmentId },
             data: {
-              status: 'ready_for_posting',
               paymentMethod: 'WALLET',
             },
           });

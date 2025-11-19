@@ -58,13 +58,6 @@ export function DestinationCard({
           {subtitle ? (
             <Typography.Text type="secondary">{subtitle}</Typography.Text>
           ) : null}
-          {info?.cidade && info?.uf ? (
-            <Typography.Text type="secondary">
-              {info.cidade} / {info.uf}
-              {info.label ? ` · ${info.label}` : ""}
-            </Typography.Text>
-          ) : null}
-          {tag ? tag : null}
         </Space>
       </Space>
 

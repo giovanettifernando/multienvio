@@ -7,6 +7,7 @@ import { prisma } from '@/lib/db';
 import { checkoutCartSchema } from '@/lib/validation/cart';
 import { createShipmentWithVolumes } from '@/lib/shipments/create-with-volumes';
 import { createInitialTrackingEvent } from '@/lib/tracking/create-event';
+import { ShipmentStatus } from '@/lib/shipments/shipment-status';
 import crypto from 'crypto';
 import type { Prisma } from '@prisma/client';
 
@@ -126,13 +127,13 @@ export async function POST(request: Request) {
         const pickupPointId = item.pickupPoint ? (item.pickupPoint as { id?: string | null; [key: string]: unknown }).id : null;
         const hasPickupRequest = (preferences as { pickupAtOrigin?: boolean })?.pickupAtOrigin === true;
 
-        let initialStatus: string;
+        let initialStatus: ShipmentStatus;
         if (hasPickupRequest) {
-          initialStatus = 'awaiting_pickup';
+          initialStatus = ShipmentStatus.PICKUP_REQUESTED;
         } else if (pickupPointId) {
-          initialStatus = 'awaiting_posting';
+          initialStatus = ShipmentStatus.AWAITING_DROP_OFF_AT_POINT;
         } else {
-          initialStatus = 'awaiting_posting';
+          initialStatus = ShipmentStatus.AWAITING_DROP_OFF_AT_POINT;
         }
 
         // Criar shipment COM VOLUMES usando serviço centralizado

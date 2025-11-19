@@ -268,6 +268,26 @@ export async function createRecipient(
   });
 }
 
+export async function getRecipient(
+  userId: string,
+  recipientId: string,
+  overrides?: Partial<ServiceDeps>,
+): Promise<AccountRecipientDto> {
+  const { prisma: db } = getDeps(overrides);
+
+  const recipient = await db.recipient.findUnique({ where: { id: recipientId } });
+
+  if (!recipient || recipient.userId !== userId) {
+    throw new ApiError({
+      code: "recipient_not_found",
+      message: "Destinatário não encontrado.",
+      status: 404,
+    });
+  }
+
+  return mapToDto(recipient);
+}
+
 export async function updateRecipient(
   userId: string,
   recipientId: string,
