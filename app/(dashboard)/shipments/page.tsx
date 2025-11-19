@@ -14,7 +14,6 @@ import {
   Descriptions,
   Image,
   Typography,
-  Alert,
 } from "antd";
 import {
   PrinterOutlined,
@@ -89,21 +88,6 @@ export default function ShipmentsPage() {
 
   const items = data?.items ?? [];
 
-  // DEBUG: Log para verificar se hasVolumeDivergence está chegando
-  React.useEffect(() => {
-    if (items.length > 0) {
-      const itemsWithDivergence = items.filter(item => item.hasVolumeDivergence);
-      console.log('[SHIPMENTS_PAGE] Total items:', items.length);
-      console.log('[SHIPMENTS_PAGE] Items com divergência:', itemsWithDivergence.length);
-      if (itemsWithDivergence.length > 0) {
-        console.log('[SHIPMENTS_PAGE] Divergências encontradas:', itemsWithDivergence.map(i => ({
-          trackingCode: i.trackingCode,
-          hasVolumeDivergence: i.hasVolumeDivergence,
-        })));
-      }
-    }
-  }, [items]);
-
   // Query para buscar divergências quando modal abrir
   const { data: divergencesData, isLoading: divergencesLoading } = useQuery<{
     divergences: ShipmentVolumeDivergence[];
@@ -162,7 +146,7 @@ export default function ShipmentsPage() {
         dataIndex: "trackingCode",
         render: (trackingCode: string, row: Shipment) => (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <Text>{trackingCode}</Text>
+            <Text style={{ fontSize: 14, fontWeight: 600 }}>{trackingCode}</Text>
             {row.hasVolumeDivergence && (
               <button
                 type="button"
@@ -192,7 +176,7 @@ export default function ShipmentsPage() {
                 }}
               >
                 <WarningOutlined style={{ fontSize: 13, opacity: 0.9 }} />
-                <span>Divergência registrada – Clique aqui</span>
+                <span>Divergência registrada</span>
               </button>
             )}
           </div>
@@ -221,9 +205,28 @@ export default function ShipmentsPage() {
         dataIndex: "status",
         render: (value: ShipmentStatus, row: Shipment) => (
           <Space direction="vertical" size={4}>
-            <Tag color={STATUS_COLORS[value] ?? "default"}>{value}</Tag>
+            <Tag
+              color={STATUS_COLORS[value] ?? "default"}
+              style={{
+                borderRadius: 9999,
+                fontSize: 11,
+                fontWeight: 500,
+                padding: '2px 10px',
+                border: 'none',
+              }}
+            >
+              {value}
+            </Tag>
             {row.pickupRequest && row.pickupRequest.status !== 'CANCELED' && row.pickupRequest.status !== 'COMPLETED' && (
-              <Tag color={row.pickupRequest.status === 'PENDING' ? 'orange' : 'blue'} style={{ fontSize: 11 }}>
+              <Tag
+                color={row.pickupRequest.status === 'PENDING' ? 'orange' : 'blue'}
+                style={{
+                  fontSize: 10,
+                  borderRadius: 9999,
+                  padding: '1px 8px',
+                  border: 'none',
+                }}
+              >
                 Coleta: {row.pickupRequest.status === 'PENDING' ? 'Pendente' : row.pickupRequest.status === 'SCHEDULED' ? 'Agendada' : row.pickupRequest.status}
               </Tag>
             )}
@@ -242,59 +245,165 @@ export default function ShipmentsPage() {
       {
         title: "Valor do frete",
         dataIndex: "freightValue",
-        render: (value: number) => `R$ ${Number(value ?? 0).toFixed(2)}`,
+        align: "right" as const,
+        render: (value: number) => {
+          const formatted = Number(value ?? 0).toLocaleString('pt-BR', {
+            style: 'currency',
+            currency: 'BRL',
+          });
+          return <span style={{ fontWeight: 500 }}>{formatted}</span>;
+        },
       },
       {
         title: "Ações",
+        align: "center" as const,
         render: (_value, row) => (
-          <Space>
-            <Tooltip title="Detalhes do envio">
+          <div style={{ display: 'flex', gap: 6, justifyContent: 'center', alignItems: 'center' }}>
+            {/* Visualizar detalhes - Verde */}
+            <Tooltip title="Ver detalhes">
               <Link href={`/shipments/${row.id}`}>
-                <Button size="small" icon={<EyeOutlined />} />
+                <button
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: 28,
+                    height: 28,
+                    borderRadius: 9999,
+                    backgroundColor: '#dcfce7',
+                    border: 'none',
+                    cursor: 'pointer',
+                    transition: 'background-color 0.2s',
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#bbf7d0'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#dcfce7'; }}
+                >
+                  <EyeOutlined style={{ fontSize: 14, color: '#16a34a' }} />
+                </button>
               </Link>
             </Tooltip>
+
+            {/* Imprimir etiqueta - Cinza escuro */}
             <Tooltip title="Imprimir etiqueta">
-              <span>
-                <Button
-                  size="small"
-                  icon={<PrinterOutlined />}
-                  disabled={!row.labelUrl}
-                  onClick={() => {
-                    if (row.labelUrl) handlePrintLabel(row.id, row.labelUrl);
-                  }}
-                />
-              </span>
+              <button
+                disabled={!row.labelUrl}
+                onClick={() => {
+                  if (row.labelUrl) handlePrintLabel(row.id, row.labelUrl);
+                }}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: 28,
+                  height: 28,
+                  borderRadius: 9999,
+                  backgroundColor: row.labelUrl ? '#374151' : '#e5e7eb',
+                  border: 'none',
+                  cursor: row.labelUrl ? 'pointer' : 'not-allowed',
+                  transition: 'background-color 0.2s',
+                  opacity: row.labelUrl ? 1 : 0.5,
+                }}
+                onMouseEnter={(e) => {
+                  if (row.labelUrl) e.currentTarget.style.backgroundColor = '#1f2937';
+                }}
+                onMouseLeave={(e) => {
+                  if (row.labelUrl) e.currentTarget.style.backgroundColor = '#374151';
+                }}
+              >
+                <PrinterOutlined style={{ fontSize: 14, color: row.labelUrl ? '#fff' : '#9ca3af' }} />
+              </button>
             </Tooltip>
-            <Tooltip title="Rastrear entrega">
-              <span>
-                <Button
-                  size="small"
-                  icon={<GlobalOutlined />}
-                  disabled={!row.trackingUrl}
-                  onClick={() => {
-                    if (row.trackingUrl) window.open(row.trackingUrl, "_blank");
-                  }}
-                />
-              </span>
+
+            {/* Rastreio público - Roxo */}
+            <Tooltip title="Abrir rastreio">
+              <button
+                disabled={!row.trackingUrl}
+                onClick={() => {
+                  if (row.trackingUrl) window.open(row.trackingUrl, "_blank");
+                }}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: 28,
+                  height: 28,
+                  borderRadius: 9999,
+                  backgroundColor: row.trackingUrl ? '#7c3aed' : '#e5e7eb',
+                  border: 'none',
+                  cursor: row.trackingUrl ? 'pointer' : 'not-allowed',
+                  transition: 'background-color 0.2s',
+                  opacity: row.trackingUrl ? 1 : 0.5,
+                }}
+                onMouseEnter={(e) => {
+                  if (row.trackingUrl) e.currentTarget.style.backgroundColor = '#6d28d9';
+                }}
+                onMouseLeave={(e) => {
+                  if (row.trackingUrl) e.currentTarget.style.backgroundColor = '#7c3aed';
+                }}
+              >
+                <GlobalOutlined style={{ fontSize: 14, color: row.trackingUrl ? '#fff' : '#9ca3af' }} />
+              </button>
             </Tooltip>
+
+            {/* Ver coleta - Amarelo (condicional) */}
             {row.pickupRequest && (
               <Tooltip title="Ver coleta">
                 <Link href={`/coletas?shipmentId=${row.id}`}>
-                  <Button size="small" icon={<CarOutlined />} />
+                  <button
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: 28,
+                      height: 28,
+                      borderRadius: 9999,
+                      backgroundColor: '#fef08a',
+                      border: 'none',
+                      cursor: 'pointer',
+                      transition: 'background-color 0.2s',
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#fde047'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#fef08a'; }}
+                  >
+                    <CarOutlined style={{ fontSize: 14, color: '#854d0e' }} />
+                  </button>
                 </Link>
               </Tooltip>
             )}
+
+            {/* Cancelar envio - Vermelho */}
             <Tooltip title="Cancelar envio">
-              <Button
-                size="small"
-                danger
-                icon={<StopOutlined />}
-                disabled={row.status === "Cancelado" || row.status === "Entregue"}
-                loading={cancelMut.isPending}
+              <button
+                disabled={row.status === "Cancelado" || row.status === "Entregue" || cancelMut.isPending}
                 onClick={() => cancelMut.mutate(row.id)}
-              />
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: 28,
+                  height: 28,
+                  borderRadius: 9999,
+                  backgroundColor: (row.status === "Cancelado" || row.status === "Entregue") ? '#e5e7eb' : '#dc2626',
+                  border: 'none',
+                  cursor: (row.status === "Cancelado" || row.status === "Entregue") ? 'not-allowed' : 'pointer',
+                  transition: 'background-color 0.2s',
+                  opacity: (row.status === "Cancelado" || row.status === "Entregue") ? 0.5 : 1,
+                }}
+                onMouseEnter={(e) => {
+                  if (row.status !== "Cancelado" && row.status !== "Entregue") {
+                    e.currentTarget.style.backgroundColor = '#b91c1c';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (row.status !== "Cancelado" && row.status !== "Entregue") {
+                    e.currentTarget.style.backgroundColor = '#dc2626';
+                  }
+                }}
+              >
+                <StopOutlined style={{ fontSize: 14, color: (row.status === "Cancelado" || row.status === "Entregue") ? '#9ca3af' : '#fff' }} />
+              </button>
             </Tooltip>
-          </Space>
+          </div>
         ),
       },
     ],
@@ -329,7 +438,47 @@ export default function ShipmentsPage() {
         dataSource={items}
         pagination={{ pageSize: 10 }}
         columns={columns}
+        className="modern-shipments-table"
+        style={{
+          backgroundColor: '#fff',
+          borderRadius: 8,
+          overflow: 'hidden',
+        }}
       />
+
+      <style jsx global>{`
+        .modern-shipments-table .ant-table {
+          font-size: 13px;
+        }
+
+        .modern-shipments-table .ant-table-thead > tr > th {
+          background-color: #f9fafb !important;
+          font-weight: 600;
+          font-size: 12px;
+          text-transform: uppercase;
+          letter-spacing: 0.025em;
+          color: #6b7280;
+          border-bottom: 2px solid #e5e7eb;
+          padding: 14px 16px;
+        }
+
+        .modern-shipments-table .ant-table-tbody > tr {
+          transition: background-color 0.2s;
+        }
+
+        .modern-shipments-table .ant-table-tbody > tr:hover {
+          background-color: #f9fafb !important;
+        }
+
+        .modern-shipments-table .ant-table-tbody > tr > td {
+          padding: 16px;
+          border-bottom: 1px solid #f3f4f6;
+        }
+
+        .modern-shipments-table .ant-table-tbody > tr:last-child > td {
+          border-bottom: none;
+        }
+      `}</style>
 
       {/* Modal de Divergências */}
       <Modal
