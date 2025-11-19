@@ -9,6 +9,7 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { Prisma } from '@prisma/client';
+import { ShipmentStatus } from '@/lib/shipments/shipment-status';
 
 /**
  * GET /api/collector/receptions
@@ -34,15 +35,18 @@ export async function GET(request: NextRequest) {
 
     const skip = (page - 1) * pageSize;
 
-    // Status considerados "pendentes de recepção"
+    // Status considerados "pendentes de recepção" (novos status padronizados)
     const pendingReceptionStatuses = [
-      'awaiting_pickup', // Aguardando coleta na origem
-      'awaiting_posting', // Aguardando postagem no ponto de coleta
-      'ready_for_posting', // Legacy (deprecated)
-      'postado',
-      'em_transito',
-      'coletado',
-      'aguardando_recebimento',
+      // Fase A - Origem (Coleta)
+      ShipmentStatus.COLLECTED_FROM_SENDER,
+      ShipmentStatus.IN_TRANSIT_TO_CARRIER_HUB,
+      // Fase A - Origem (Ponto de Coleta)
+      ShipmentStatus.DROPPED_OFF_AT_POINT,
+      ShipmentStatus.AWAITING_CARRIER_PICKUP_AT_POINT,
+      ShipmentStatus.COLLECTED_FROM_POINT,
+      // Fase B - Transporte
+      ShipmentStatus.IN_TRANSFER,
+      ShipmentStatus.IN_TRANSIT_TO_DESTINATION,
     ];
 
     // Filtros: envios ainda não recebidos no hub

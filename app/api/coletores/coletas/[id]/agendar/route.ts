@@ -4,6 +4,7 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getAutonomousCollectorSession } from '@/lib/auth/autonomous-collector-session';
+import { ShipmentStatus } from '@/lib/shipments/shipment-status';
 
 interface SchedulePickupBody {
   scheduleAt: string; // ISO 8601 datetime string
@@ -138,32 +139,48 @@ export async function PATCH(
       );
     }
 
-    // Atualizar pickup request
-    const updatedPickupRequest = await prisma.pickupRequest.update({
-      where: { id },
-      data: {
-        scheduleAt,
-        updatedAt: new Date(),
-      },
-      select: {
-        id: true,
-        scheduleAt: true,
-        status: true,
-      },
+    // Atualizar pickup request e shipment status em uma transação
+    const result = await prisma.$transaction(async (tx) => {
+      // 1. Atualizar PickupRequest com scheduleAt e status SCHEDULED
+      const updatedPickupRequest = await tx.pickupRequest.update({
+        where: { id },
+        data: {
+          scheduleAt,
+          status: 'SCHEDULED',
+          updatedAt: new Date(),
+        },
+        select: {
+          id: true,
+          scheduleAt: true,
+          status: true,
+          shipmentId: true,
+        },
+      });
+
+      // 2. Atualizar Shipment.status para PICKUP_SCHEDULED
+      await tx.shipment.update({
+        where: { id: updatedPickupRequest.shipmentId },
+        data: {
+          status: ShipmentStatus.PICKUP_SCHEDULED,
+        },
+      });
+
+      return updatedPickupRequest;
     });
 
     console.log('[AGENDAR_COLETA] Coleta agendada:', {
       pickupId: id,
       collectorId: session.coletorId,
       scheduleAt: scheduleAt.toISOString(),
+      shipmentStatus: ShipmentStatus.PICKUP_SCHEDULED,
     });
 
     return NextResponse.json({
       message: 'Coleta agendada com sucesso',
       pickup: {
-        id: updatedPickupRequest.id,
-        scheduleAt: updatedPickupRequest.scheduleAt?.toISOString(),
-        status: updatedPickupRequest.status,
+        id: result.id,
+        scheduleAt: result.scheduleAt?.toISOString(),
+        status: result.status,
       },
     }, { status: 200 });
   } catch (error) {

@@ -4,6 +4,7 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getAutonomousCollectorSession } from '@/lib/auth/autonomous-collector-session';
+import { ShipmentStatus } from '@/lib/shipments/shipment-status';
 
 interface RegisterAttemptBody {
   notes?: string;
@@ -54,8 +55,8 @@ export async function POST(
       );
     }
 
-    // Validar que a coleta está pendente
-    if (pickupRequest.status !== 'PENDING') {
+    // Validar que a coleta está pendente ou agendada
+    if (!['PENDING', 'SCHEDULED'].includes(pickupRequest.status)) {
       return NextResponse.json(
         { message: `Coleta já foi processada (status: ${pickupRequest.status})` },
         { status: 400 }
@@ -69,8 +70,10 @@ export async function POST(
       ? pickupRequest.attemptNotes
       : [];
 
+    const newAttemptCount = pickupRequest.attemptCount + 1;
+
     const newAttempt = {
-      attemptNumber: pickupRequest.attemptCount + 1,
+      attemptNumber: newAttemptCount,
       attemptedAt: now.toISOString(),
       notes: notes?.trim() || null,
       collectorId: session.coletorId,
@@ -79,37 +82,64 @@ export async function POST(
 
     const updatedAttempts = [...currentAttempts, newAttempt];
 
-    // Atualizar pickup request
-    const updatedPickupRequest = await prisma.pickupRequest.update({
-      where: { id },
-      data: {
-        attemptCount: { increment: 1 },
-        attemptNotes: updatedAttempts,
-        updatedAt: now,
-      },
-      select: {
-        id: true,
-        status: true,
-        attemptCount: true,
-        attemptNotes: true,
-      },
+    // Definir limite de tentativas antes de marcar como FAILED
+    const MAX_ATTEMPTS = 3;
+    const shouldMarkAsFailed = newAttemptCount >= MAX_ATTEMPTS;
+
+    // Atualizar pickup request e shipment em uma transação
+    const result = await prisma.$transaction(async (tx) => {
+      // 1. Atualizar PickupRequest
+      const updatedPickupRequest = await tx.pickupRequest.update({
+        where: { id },
+        data: {
+          attemptCount: newAttemptCount,
+          attemptNotes: updatedAttempts,
+          status: shouldMarkAsFailed ? 'FAILED' : pickupRequest.status,
+          updatedAt: now,
+        },
+        select: {
+          id: true,
+          status: true,
+          attemptCount: true,
+          attemptNotes: true,
+          shipmentId: true,
+        },
+      });
+
+      // 2. Se atingiu limite de tentativas, atualizar Shipment.status para PICKUP_FAILED
+      if (shouldMarkAsFailed) {
+        await tx.shipment.update({
+          where: { id: updatedPickupRequest.shipmentId },
+          data: {
+            status: ShipmentStatus.PICKUP_FAILED,
+          },
+        });
+      }
+
+      return updatedPickupRequest;
     });
 
     console.log('[REGISTRAR_TENTATIVA] Tentativa de coleta registrada:', {
       pickupId: id,
       collectorId: session.coletorId,
-      attemptNumber: updatedPickupRequest.attemptCount,
+      attemptNumber: result.attemptCount,
       notes: notes || '(sem observação)',
       attemptedAt: now.toISOString(),
+      markedAsFailed: shouldMarkAsFailed,
+      shipmentStatus: shouldMarkAsFailed ? ShipmentStatus.PICKUP_FAILED : 'unchanged',
     });
 
+    const message = shouldMarkAsFailed
+      ? `Tentativa ${result.attemptCount} registrada. Coleta marcada como falhou após ${MAX_ATTEMPTS} tentativas.`
+      : 'Tentativa de coleta registrada com sucesso';
+
     return NextResponse.json({
-      message: 'Tentativa de coleta registrada com sucesso',
+      message,
       pickup: {
-        id: updatedPickupRequest.id,
-        status: updatedPickupRequest.status,
-        attemptCount: updatedPickupRequest.attemptCount,
-        attemptNotes: updatedPickupRequest.attemptNotes,
+        id: result.id,
+        status: result.status,
+        attemptCount: result.attemptCount,
+        attemptNotes: result.attemptNotes,
       },
     }, { status: 200 });
   } catch (error) {

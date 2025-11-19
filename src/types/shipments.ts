@@ -1,10 +1,16 @@
+/**
+ * Status simplificados para UI
+ * Alinhado com UIShipmentStatus de lib/shipments/status-labels-map.ts
+ */
 export type ShipmentStatus =
   | "Aguardando coleta"
+  | "Aguardando postagem"
   | "Postado"
   | "Em trânsito"
   | "Em rota de entrega"
   | "Entregue"
-  | "Cancelado";
+  | "Cancelado"
+  | "Devolvido";
 
 export type Shipment = {
   id: string;                 // internal id

@@ -6,7 +6,7 @@ import {
   Tag,
   Table,
   Input,
-  Segmented,
+  Select,
   Space,
   Tooltip,
   App,
@@ -37,20 +37,24 @@ const { Text } = Typography;
 const STATUS_OPTIONS: Array<ShipmentStatus | "Todos"> = [
   "Todos",
   "Aguardando coleta",
+  "Aguardando postagem",
   "Postado",
   "Em trânsito",
   "Em rota de entrega",
   "Entregue",
   "Cancelado",
+  "Devolvido",
 ];
 
 const STATUS_COLORS: Record<ShipmentStatus, string> = {
   "Aguardando coleta": "default",
+  "Aguardando postagem": "default",
   Postado: "geekblue",
   "Em trânsito": "blue",
   "Em rota de entrega": "gold",
   Entregue: "green",
   Cancelado: "red",
+  Devolvido: "orange",
 };
 
 type ShipmentVolumeDivergence = {
@@ -144,6 +148,7 @@ export default function ShipmentsPage() {
       {
         title: "Código de rastreio",
         dataIndex: "trackingCode",
+        sorter: (a, b) => a.trackingCode.localeCompare(b.trackingCode),
         render: (trackingCode: string, row: Shipment) => (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             <Text style={{ fontSize: 14, fontWeight: 600 }}>{trackingCode}</Text>
@@ -184,6 +189,7 @@ export default function ShipmentsPage() {
       },
       {
         title: "Destinatário",
+        sorter: (a, b) => (a.recipientName || '').localeCompare(b.recipientName || ''),
         render: (_value, row) => {
           const name = row.recipientName ?? "";
           const locality = row.recipientCityUf ?? "";
@@ -198,11 +204,26 @@ export default function ShipmentsPage() {
       },
       {
         title: "Transportadora",
+        sorter: (a, b) => (a.carrierName || a.serviceName || '').localeCompare(b.carrierName || b.serviceName || ''),
         render: (_value, row) => row.carrierName ?? row.serviceName ?? "—",
       },
       {
         title: "Status",
         dataIndex: "status",
+        sorter: (a, b) => {
+          // Ordenar por ordem de prioridade dos status
+          const statusOrder: Record<ShipmentStatus, number> = {
+            "Aguardando coleta": 1,
+            "Aguardando postagem": 2,
+            "Postado": 3,
+            "Em trânsito": 4,
+            "Em rota de entrega": 5,
+            "Entregue": 6,
+            "Cancelado": 7,
+            "Devolvido": 8,
+          };
+          return (statusOrder[a.status] || 0) - (statusOrder[b.status] || 0);
+        },
         render: (value: ShipmentStatus, row: Shipment) => (
           <Space direction="vertical" size={4}>
             <Tag
@@ -234,7 +255,31 @@ export default function ShipmentsPage() {
         ),
       },
       {
+        title: "Data de criação",
+        dataIndex: "createdAt",
+        sorter: (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+        render: (value: string) => {
+          const date = new Date(value);
+          return date.toLocaleDateString('pt-BR', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+          });
+        },
+      },
+      {
         title: "Data prevista de entrega",
+        sorter: (a, b) => {
+          const dateA = a.expectedDeliveryDate
+            ? new Date(a.expectedDeliveryDate)
+            : new Date(new Date(a.createdAt).getTime() + a.etaDays * 86_400_000);
+          const dateB = b.expectedDeliveryDate
+            ? new Date(b.expectedDeliveryDate)
+            : new Date(new Date(b.createdAt).getTime() + b.etaDays * 86_400_000);
+          return dateA.getTime() - dateB.getTime();
+        },
         render: (_value, row) => {
           const baseDate = row.expectedDeliveryDate
             ? new Date(row.expectedDeliveryDate)
@@ -246,6 +291,7 @@ export default function ShipmentsPage() {
         title: "Valor do frete",
         dataIndex: "freightValue",
         align: "right" as const,
+        sorter: (a, b) => (a.freightValue || 0) - (b.freightValue || 0),
         render: (value: number) => {
           const formatted = Number(value ?? 0).toLocaleString('pt-BR', {
             style: 'currency',
@@ -345,9 +391,9 @@ export default function ShipmentsPage() {
               </button>
             </Tooltip>
 
-            {/* Ver coleta - Amarelo (condicional) */}
-            {row.pickupRequest && (
-              <Tooltip title="Ver coleta">
+            {/* Ver coleta - Amarelo (sempre renderizado) */}
+            <Tooltip title={row.pickupRequest ? "Ver coleta" : "Coleta não disponível para este envio"}>
+              {row.pickupRequest ? (
                 <Link href={`/coletas?shipmentId=${row.id}`}>
                   <button
                     style={{
@@ -368,41 +414,68 @@ export default function ShipmentsPage() {
                     <CarOutlined style={{ fontSize: 14, color: '#854d0e' }} />
                   </button>
                 </Link>
-              </Tooltip>
-            )}
+              ) : (
+                <button
+                  disabled
+                  aria-disabled="true"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: 28,
+                    height: 28,
+                    borderRadius: 9999,
+                    backgroundColor: '#e5e7eb',
+                    border: 'none',
+                    cursor: 'not-allowed',
+                    opacity: 0.5,
+                  }}
+                >
+                  <CarOutlined style={{ fontSize: 14, color: '#9ca3af' }} />
+                </button>
+              )}
+            </Tooltip>
 
             {/* Cancelar envio - Vermelho */}
-            <Tooltip title="Cancelar envio">
-              <button
-                disabled={row.status === "Cancelado" || row.status === "Entregue" || cancelMut.isPending}
-                onClick={() => cancelMut.mutate(row.id)}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: 28,
-                  height: 28,
-                  borderRadius: 9999,
-                  backgroundColor: (row.status === "Cancelado" || row.status === "Entregue") ? '#e5e7eb' : '#dc2626',
-                  border: 'none',
-                  cursor: (row.status === "Cancelado" || row.status === "Entregue") ? 'not-allowed' : 'pointer',
-                  transition: 'background-color 0.2s',
-                  opacity: (row.status === "Cancelado" || row.status === "Entregue") ? 0.5 : 1,
-                }}
-                onMouseEnter={(e) => {
-                  if (row.status !== "Cancelado" && row.status !== "Entregue") {
-                    e.currentTarget.style.backgroundColor = '#b91c1c';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (row.status !== "Cancelado" && row.status !== "Entregue") {
-                    e.currentTarget.style.backgroundColor = '#dc2626';
-                  }
-                }}
-              >
-                <StopOutlined style={{ fontSize: 14, color: (row.status === "Cancelado" || row.status === "Entregue") ? '#9ca3af' : '#fff' }} />
-              </button>
-            </Tooltip>
+            {(() => {
+              // Status finais que não podem ser cancelados
+              const finalStatuses: ShipmentStatus[] = ["Entregue", "Cancelado", "Devolvido"];
+              const isFinalStatus = finalStatuses.includes(row.status);
+
+              return (
+                <Tooltip title={isFinalStatus ? "Não é possível cancelar" : "Cancelar envio"}>
+                  <button
+                    disabled={isFinalStatus || cancelMut.isPending}
+                    onClick={() => cancelMut.mutate(row.id)}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: 28,
+                      height: 28,
+                      borderRadius: 9999,
+                      backgroundColor: isFinalStatus ? '#e5e7eb' : '#dc2626',
+                      border: 'none',
+                      cursor: isFinalStatus ? 'not-allowed' : 'pointer',
+                      transition: 'background-color 0.2s',
+                      opacity: isFinalStatus ? 0.5 : 1,
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!isFinalStatus) {
+                        e.currentTarget.style.backgroundColor = '#b91c1c';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isFinalStatus) {
+                        e.currentTarget.style.backgroundColor = '#dc2626';
+                      }
+                    }}
+                  >
+                    <StopOutlined style={{ fontSize: 14, color: isFinalStatus ? '#9ca3af' : '#fff' }} />
+                  </button>
+                </Tooltip>
+              );
+            })()}
           </div>
         ),
       },
@@ -412,25 +485,29 @@ export default function ShipmentsPage() {
 
   return (
     <PageShell title="Gestão de envios" gap="md">
-      <Space wrap>
+      <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
         <Input
           allowClear
-          style={{ width: 320 }}
+          style={{ flex: 1, minWidth: 280 }}
           placeholder="Buscar por ID, rastreio, nome ou data (YYYY-MM-DD)"
           prefix={<SearchOutlined />}
           value={query}
           onChange={(event) => setQuery(event.target.value)}
         />
-        <Segmented
-          size="middle"
+        <Select
+          style={{ width: 200 }}
+          placeholder="Filtrar por status"
           value={status}
           onChange={(value) => setStatus(value as ShipmentStatus | "Todos")}
-          options={STATUS_OPTIONS}
+          options={STATUS_OPTIONS.map((opt) => ({
+            label: opt,
+            value: opt,
+          }))}
         />
         <Button onClick={() => refetch()} disabled={isLoading}>
           Atualizar
         </Button>
-      </Space>
+      </div>
 
       <Table<Shipment>
         rowKey="id"

@@ -5,20 +5,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSession } from '@/lib/auth/session';
 import { prisma } from '@/lib/db';
 import type { Prisma } from '@prisma/client';
-
-// Mapeamento de status do banco para os status da UI
-const STATUS_MAP: Record<string, string> = {
-  'pending_payment': 'Aguardando pagamento',
-  'awaiting_pickup': 'Aguardando coleta', // Coleta na origem
-  'awaiting_posting': 'Aguardando postagem', // Ponto de coleta
-  'ready_for_posting': 'Pronto para postagem', // Legacy (deprecated)
-  'posted': 'Postado',
-  'in_transit': 'Em trânsito',
-  'out_for_delivery': 'Em rota de entrega',
-  'delivered': 'Entregue',
-  'cancelled': 'Cancelado',
-  'payment_failed': 'Cancelado',
-};
+import { ShipmentStatus } from '@/lib/shipments/shipment-status';
+import { mapToUIStatus, getBackendStatusesForUIFilter, type UIShipmentStatus } from '@/lib/shipments/status-labels-map';
 
 export async function GET(request: NextRequest) {
   try {
@@ -54,13 +42,13 @@ export async function GET(request: NextRequest) {
 
     // Filtro de status
     if (statusParam && statusParam !== "Todos") {
-      // Converter status da UI para status do banco
-      const dbStatus = Object.entries(STATUS_MAP).find(
-        ([_, uiStatus]) => uiStatus === statusParam
-      )?.[0];
+      // Converter status da UI para lista de status do backend
+      const backendStatuses = getBackendStatusesForUIFilter(statusParam as UIShipmentStatus);
 
-      if (dbStatus) {
-        where.status = dbStatus;
+      if (backendStatuses.length > 0) {
+        where.status = {
+          in: backendStatuses,
+        };
       }
     }
 
@@ -97,7 +85,7 @@ export async function GET(request: NextRequest) {
         etaDays: s.estimatedDays || 0,
         expectedDeliveryDate: s.deliveredAt?.toISOString() || undefined,
         freightValue: s.freightCost || 0,
-        status: STATUS_MAP[s.status] || s.status,
+        status: mapToUIStatus(s.status as ShipmentStatus),
         createdAt: s.createdAt.toISOString(),
         labelUrl: s.label?.fileUrl || (s.label?.fileBase64 ? `data:${s.label.contentType};base64,${s.label.fileBase64}` : undefined),
         trackingUrl: s.publicTrackingId ? `/rastreio/${s.publicTrackingId}` : undefined,

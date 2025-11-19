@@ -88,7 +88,7 @@ interface ShipmentDetail {
   recipientEmail: string | null;
   recipientDocument: string | null;
   pickupPointId: string | null;
-  document: any;
+  document: Record<string, unknown> | null;
   postedAt: string | null;
   deliveredAt: string | null;
   createdAt: string;

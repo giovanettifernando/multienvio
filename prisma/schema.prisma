@@ -196,7 +196,7 @@ model Shipment {
   destinationState        String
   weight                  Float
   declaredValue           Float
-  status                  String          @default("criado")
+  status                  String          @default("PICKUP_REQUESTED") /// @ShipmentStatus - Deve seguir enum ShipmentStatus (UPPER_SNAKE_CASE)
   carrier                 String?
   service                 String?
   originCep               String

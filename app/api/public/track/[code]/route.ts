@@ -3,7 +3,8 @@ export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { getPublicStatusMessage } from '@/lib/tracking/status-messages';
+import { generatePublicTimeline, mapToPublicTrackingStatus, PublicStatusMessages } from '@/lib/shipments/public-tracking-status';
+import { ShipmentStatus } from '@/lib/shipments/shipment-status';
 
 /**
  * GET /api/public/track/[code]
@@ -80,27 +81,25 @@ export async function GET(
       );
     }
 
-    // Preparar eventos de rastreamento
-    let events = shipment.trackingEvents.map((event) => ({
-      type: event.type,
-      description: event.description,
-      city: event.city,
-      uf: event.uf,
-      occurredAt: event.occurredAt.toISOString(),
-    }));
+    // Gerar timeline pública com mensagens neutras e amigáveis
+    // Nota: Origem será extraída do documento mais adiante
+    const publicTimeline = generatePublicTimeline({
+      createdAt: shipment.createdAt,
+      status: shipment.status,
+      originCity: undefined, // Será preenchido do documento se disponível
+      originState: undefined,
+      destinationCity: shipment.destinationCity || undefined,
+      destinationState: shipment.destinationState || undefined,
+    });
 
-    // FALLBACK: Se não houver eventos registrados, criar evento sintético baseado no status atual
-    // Isso garante que a timeline nunca fique vazia
-    if (events.length === 0) {
-      const syntheticEvent = {
-        type: shipment.status.toUpperCase(),
-        description: getPublicStatusMessage(shipment.status),
-        city: null,
-        uf: null,
-        occurredAt: shipment.createdAt.toISOString(), // Usar data de criação
-      };
-      events = [syntheticEvent];
-    }
+    // Converter para formato de eventos
+    const events = publicTimeline.map((event) => ({
+      status: event.status,
+      title: event.title,
+      description: event.description,
+      location: event.location || null,
+      occurredAt: event.timestamp.toISOString(),
+    }));
 
     // Processar volumes e itens
     type PublicVolume = {
@@ -233,10 +232,17 @@ export async function GET(
 
     console.log('[PUBLIC_TRACK] Volumes processados:', volumes.length);
 
+    // Mapear status interno para status público
+    const publicStatus = mapToPublicTrackingStatus(shipment.status as ShipmentStatus);
+    const publicStatusInfo = PublicStatusMessages[publicStatus];
+
     // Sanitizar dados - não retornar informações sensíveis
     const sanitizedData = {
       trackingCode: shipment.platformTrackingCode, // Expor apenas código da plataforma
-      status: shipment.status,
+      status: shipment.status, // Status interno (mantido para compatibilidade)
+      publicStatus: publicStatus, // Status público simplificado
+      publicStatusTitle: publicStatusInfo.title,
+      publicStatusDescription: publicStatusInfo.description,
       carrier: shipment.carrier || 'Não informado',
       service: shipment.service || 'Não informado',
       origin: {

@@ -4,6 +4,7 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getAutonomousCollectorSession } from '@/lib/auth/autonomous-collector-session';
+import { ShipmentStatus } from '@/lib/shipments/shipment-status';
 
 interface RegisterCollectionBody {
   scannedCode: string;
@@ -63,8 +64,8 @@ export async function POST(
       );
     }
 
-    // Validar que a coleta está pendente
-    if (pickupRequest.status !== 'PENDING') {
+    // Validar que a coleta está pendente ou agendada
+    if (!['PENDING', 'SCHEDULED'].includes(pickupRequest.status)) {
       return NextResponse.json(
         { message: `Coleta já foi processada (status: ${pickupRequest.status})` },
         { status: 400 }
@@ -75,17 +76,37 @@ export async function POST(
     // Aqui apenas registramos o que foi informado
     const now = new Date();
 
-    // Atualizar pickup request
-    // Status "COLLECTED" = Coletado, aguardando entrega para transportadora
-    const updatedPickupRequest = await prisma.pickupRequest.update({
-      where: { id },
-      data: {
-        status: 'COLLECTED',
-        collectedAt: now,
-        collectedBy: collectedBy.trim(),
-        scannedCode: scannedCode.trim(),
-        updatedAt: now,
-      },
+    // Atualizar pickup request e shipment status em uma transação
+    const result = await prisma.$transaction(async (tx) => {
+      // 1. Atualizar PickupRequest como COMPLETED
+      const updatedPickupRequest = await tx.pickupRequest.update({
+        where: { id },
+        data: {
+          status: 'COMPLETED',
+          collectedAt: now,
+          collectedBy: collectedBy.trim(),
+          scannedCode: scannedCode.trim(),
+          updatedAt: now,
+        },
+        select: {
+          id: true,
+          status: true,
+          collectedAt: true,
+          collectedBy: true,
+          scannedCode: true,
+          shipmentId: true,
+        },
+      });
+
+      // 2. Atualizar Shipment.status para COLLECTED_FROM_SENDER
+      await tx.shipment.update({
+        where: { id: updatedPickupRequest.shipmentId },
+        data: {
+          status: ShipmentStatus.COLLECTED_FROM_SENDER,
+        },
+      });
+
+      return updatedPickupRequest;
     });
 
     console.log('[REGISTRAR_COLETA] Coleta registrada:', {
@@ -94,16 +115,17 @@ export async function POST(
       collectedBy,
       scannedCode,
       collectedAt: now.toISOString(),
+      shipmentStatus: ShipmentStatus.COLLECTED_FROM_SENDER,
     });
 
     return NextResponse.json({
       message: 'Coleta registrada com sucesso',
       pickup: {
-        id: updatedPickupRequest.id,
-        status: updatedPickupRequest.status,
-        collectedAt: updatedPickupRequest.collectedAt?.toISOString(),
-        collectedBy: updatedPickupRequest.collectedBy,
-        scannedCode: updatedPickupRequest.scannedCode,
+        id: result.id,
+        status: result.status,
+        collectedAt: result.collectedAt?.toISOString(),
+        collectedBy: result.collectedBy,
+        scannedCode: result.scannedCode,
       },
     }, { status: 200 });
   } catch (error) {

@@ -5,6 +5,36 @@ import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth/session';
 import { prisma } from '@/lib/db';
 
+// Type definitions for document structure
+interface DocumentItem {
+  id?: string;
+  descricao?: string;
+  description?: string;
+  produto?: string;
+  quantidade?: number;
+  quantity?: number;
+  valorUnitario?: number;
+  unitValue?: number;
+  valor?: number;
+  subtotal?: number;
+  total?: number;
+  volumeIndex?: number;
+}
+
+interface VolumeDeclaration {
+  volumeIndex: number;
+  items?: DocumentItem[];
+}
+
+interface ShipmentDocument {
+  type?: string;
+  nfeKeys?: string[];
+  nfKey?: string;
+  items?: DocumentItem[];
+  volumeDeclarations?: VolumeDeclaration[];
+  declarationItems?: DocumentItem[];
+}
+
 /**
  * GET /api/shipments/:id
  * Retorna detalhes completos do shipment por ID
@@ -52,11 +82,11 @@ export async function GET(
     }
 
     // Extrair informações do documento
-    const document = shipment.document as any;
+    const document = shipment.document as unknown as ShipmentDocument | null;
     const documentType = document?.type || 'DECLARACAO';
 
     // Extrair itens da declaração ou NF
-    let items: any[] = [];
+    let items: DocumentItem[] = [];
     let nfeKeys: string[] = [];
 
     if (documentType === 'NFE') {
@@ -69,8 +99,8 @@ export async function GET(
       // Novo formato: declaração por volume
       if (document?.volumeDeclarations && Array.isArray(document.volumeDeclarations)) {
         // Concatenar todos os itens de todos os volumes
-        items = document.volumeDeclarations.flatMap((volDecl: any) =>
-          (volDecl.items || []).map((item: any) => ({
+        items = document.volumeDeclarations.flatMap((volDecl: VolumeDeclaration) =>
+          (volDecl.items || []).map((item: DocumentItem) => ({
             ...item,
             volumeIndex: volDecl.volumeIndex,
           }))
@@ -84,11 +114,11 @@ export async function GET(
 
     // Organizar itens por volume para expansão
     // Mapeamento: volumeIndex -> itens
-    const itemsByVolume = new Map<number, any[]>();
+    const itemsByVolume = new Map<number, DocumentItem[]>();
 
     if (documentType === 'DECLARACAO' && document?.volumeDeclarations) {
       // Novo formato: usar volumeDeclarations diretamente
-      document.volumeDeclarations.forEach((volDecl: any) => {
+      document.volumeDeclarations.forEach((volDecl: VolumeDeclaration) => {
         itemsByVolume.set(volDecl.volumeIndex, volDecl.items || []);
       });
     } else if (documentType === 'DECLARACAO' && document?.declarationItems) {
@@ -144,7 +174,7 @@ export async function GET(
           hasDivergence: pkg.hasDivergence,
           divergenceNotes: pkg.divergenceNotes,
           // Itens deste volume (declaração)
-          items: volumeItems.map((item: any) => ({
+          items: volumeItems.map((item: DocumentItem) => ({
             id: item.id,
             descricao: item.descricao,
             quantidade: item.quantidade,
@@ -156,7 +186,7 @@ export async function GET(
       // Itens (declaração ou NF-e)
       documentType,
       nfeKeys,
-      items: items.map((item: any) => ({
+      items: items.map((item: DocumentItem) => ({
         id: item.id,
         descricao: item.descricao,
         quantidade: item.quantidade,

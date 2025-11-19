@@ -3,7 +3,8 @@
  * INVARIÁVEL DE DOMÍNIO: Todo Shipment deve ter pelo menos 1 volume
  */
 
-import { PrismaClient, Prisma } from '@prisma/client';
+import { PrismaClient, Prisma, Shipment, Package } from '@prisma/client';
+import { getInitialShipmentStatus } from './status-migration';
 
 export interface VolumeInput {
   peso: number; // kg
@@ -64,7 +65,7 @@ export interface CreateShipmentWithVolumesInput {
 export async function createShipmentWithVolumes(
   tx: Omit<PrismaClient, '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'>,
   input: CreateShipmentWithVolumesInput
-): Promise<{ shipment: any; packages: any[] }> {
+): Promise<{ shipment: Shipment; packages: Package[] }> {
   // VALIDAÇÃO: Garantir que há pelo menos 1 volume
   if (!input.volumes || input.volumes.length === 0) {
     throw new Error('SHIPMENT_REQUIRES_VOLUMES: Um envio deve ter pelo menos 1 volume');
@@ -91,12 +92,18 @@ export async function createShipmentWithVolumes(
     declaredWeight: totalWeight, // Agora sempre calculado
   });
 
+  // Determinar status inicial baseado no contexto
+  const initialStatus = input.shipment.status || getInitialShipmentStatus({
+    hasPickupPoint: !!input.shipment.pickupPointId,
+    hasPickupRequest: false, // Será criado depois se necessário
+  });
+
   // Criar shipment com peso calculado
   const shipment = await tx.shipment.create({
     data: {
       ...input.shipment,
       weight: totalWeight, // SEMPRE usar peso calculado dos volumes
-      status: input.shipment.status || 'pending_payment',
+      status: initialStatus,
     },
   });
 
