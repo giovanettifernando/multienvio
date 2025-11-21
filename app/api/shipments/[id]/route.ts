@@ -62,7 +62,7 @@ export async function GET(
     }
 
     // Parse document JSON para extrair dados estruturados
-    const document = shipment.document as any;
+    const document = shipment.document as Record<string, unknown>;
     const documentType = document?.type || 'DECLARACAO';
 
     // Extrair nfeKeys (do novo formato packages ou do formato legado nfeKeys)
@@ -71,7 +71,7 @@ export async function GET(
       if (document?.packages && Array.isArray(document.packages)) {
         // Novo formato: NF por pacote
         nfeKeys = document.packages
-          .map((pkg: any) => pkg.chave)
+          .map((pkg: Record<string, unknown>) => pkg.chave as string)
           .filter((chave: string) => chave && chave.trim().length > 0);
       } else if (document?.nfeKeys && Array.isArray(document.nfeKeys)) {
         // Formato legado: apenas chaves
@@ -80,7 +80,7 @@ export async function GET(
     }
 
     // Extrair items gerais (para exibir no card de declaração/NF)
-    let items: any[] = [];
+    let items: unknown[] = [];
     if (documentType === 'DECLARACAO') {
       if (document?.declarationItems && Array.isArray(document.declarationItems)) {
         items = document.declarationItems;
@@ -113,11 +113,11 @@ export async function GET(
       // Renomear packages para volumes (terminologia da UI)
       volumes: packages.map((pkg, idx) => {
         // Buscar items específicos deste volume (se houver)
-        let volumeItems: any[] = [];
+        let volumeItems: unknown[] = [];
 
         if (documentType === 'DECLARACAO' && document?.volumeDeclarations && Array.isArray(document.volumeDeclarations)) {
           // Novo formato: declaração por volume
-          const volDecl = document.volumeDeclarations.find((vd: any) => vd.volumeIndex === idx);
+          const volDecl = document.volumeDeclarations.find((vd: Record<string, unknown>) => vd.volumeIndex === idx);
           if (volDecl && volDecl.items) {
             volumeItems = volDecl.items;
           }

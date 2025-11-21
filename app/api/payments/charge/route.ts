@@ -1,70 +1,44 @@
+/**
+ * ❌ ENDPOINT DESATIVADO - Use /api/wallet/debit
+ *
+ * Este endpoint foi desativado para evitar divergência de estado entre
+ * o store in-memory (BillingStore) e o banco de dados real (Prisma).
+ *
+ * Use o endpoint real do Prisma:
+ * - POST /api/wallet/debit - Debitar da carteira (com transação atômica)
+ *
+ * O endpoint real já suporta:
+ * - Validação de saldo antes de criar recursos
+ * - Transações atômicas (débito + confirmação de pagamento)
+ * - Idempotência via referenceId
+ * - Rollback automático em caso de falha
+ *
+ * Ver implementação em: /app/api/wallet/debit/route.ts
+ */
+
 import { NextResponse } from "next/server";
-import { applyLedgerEntry, getBillingStore, getDefaultCard } from "@/lib/billing/store";
 
 export const dynamic = "force-dynamic";
 
-export async function POST(request: Request) {
-  const payload = await request.json();
-  const amountRaw = payload?.amount;
-  const amount = typeof amountRaw === "number" ? Number(amountRaw.toFixed(2)) : NaN;
-  const reason = payload?.reason as "LABEL" | "ORDER" | undefined;
-  const ref = payload?.ref as Record<string, string> | undefined;
-
-  if (!Number.isFinite(amount) || amount <= 0 || !reason) {
-    return NextResponse.json(
-      { mensagem: "Dados inválidos" },
-      { status: 400 },
-    );
-  }
-
-  const store = getBillingStore();
-
-  if (store.wallet.balance >= amount) {
-    const entry = applyLedgerEntry({
-      id: `charge_${reason}_${Date.now()}`,
-      occurredAt: new Date().toISOString(),
-      type: "DEBIT",
-      source: reason === "LABEL" ? "SHIPMENT_LABEL" : "ORDER",
-      amount: -amount,
-      currency: "BRL",
-      description: reason === "LABEL" ? "Cobrança de etiqueta" : "Cobrança de pedido",
-      ref,
-    });
-    return NextResponse.json({ entry });
-  }
-
-  const card = getDefaultCard();
-  if (!card) {
-    return NextResponse.json(
-      {
-        codigo: "INSUFFICIENT_FUNDS",
-        mensagem: "Saldo insuficiente. Adicione saldo ou cadastre um cartão.",
+export async function POST() {
+  return NextResponse.json(
+    {
+      error: "ENDPOINT_DEPRECATED",
+      message: "Este endpoint foi desativado. Use /api/wallet/debit para débitos de carteira.",
+      documentation: {
+        debit: "POST /api/wallet/debit",
+        wallet: "GET /api/wallet",
+        transactions: "GET /api/wallet/transactions",
       },
-      { status: 422 },
-    );
-  }
-
-  applyLedgerEntry({
-    id: `auto_topup_${Date.now()}`,
-    occurredAt: new Date().toISOString(),
-    type: "CREDIT",
-    source: "TOPUP_CARD",
-    amount,
-    currency: "BRL",
-    description: `Recarga automática cartão **** ${card.last4}`,
-    ref: { topupId: card.id },
-  });
-
-  const entry = applyLedgerEntry({
-    id: `charge_${reason}_${Date.now()}`,
-    occurredAt: new Date().toISOString(),
-    type: "DEBIT",
-    source: reason === "LABEL" ? "SHIPMENT_LABEL" : "ORDER",
-    amount: -amount,
-    currency: "BRL",
-    description: reason === "LABEL" ? "Cobrança de etiqueta" : "Cobrança de pedido",
-    ref,
-  });
-
-  return NextResponse.json({ entry });
+      migration_guide: "O novo endpoint suporta transações atômicas e idempotência via referenceId.",
+    },
+    {
+      status: 410, // 410 Gone - recurso permanentemente indisponível
+      headers: {
+        'X-Endpoint-Status': 'DEPRECATED',
+        'X-Warning': 'Este endpoint foi desativado para evitar divergência de estado',
+        'X-Redirect-To': '/api/wallet/debit',
+      },
+    }
+  );
 }

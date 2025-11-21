@@ -56,9 +56,9 @@ export async function GET(request: Request) {
     let periodEnd: Date;
 
     if (dateFrom && dateTo) {
-      periodStart = new Date(dateFrom);
-      periodEnd = new Date(dateTo);
-      periodEnd.setHours(23, 59, 59, 999); // Incluir todo o dia final
+      // Criar datas em UTC para evitar problemas de timezone
+      periodStart = new Date(dateFrom + 'T00:00:00.000Z');
+      periodEnd = new Date(dateTo + 'T23:59:59.999Z'); // Incluir todo o dia final em UTC
     } else {
       const range = getLastNDaysRange(30);
       periodStart = range.start;
@@ -94,20 +94,57 @@ export async function GET(request: Request) {
       take: limit,
     });
 
-    // Buscar TODAS as transações do período para calcular resumo (sem paginação)
-    const allPeriodTransactions = await prisma.walletTransaction.findMany({
-      where: {
-        walletId: wallet.id,
-        status: 'CONFIRMED',
-        confirmedAt: {
-          gte: periodStart,
-          lte: periodEnd,
-        },
+    // Calcular resumo do período usando agregações do Prisma (otimizado)
+    const periodWhereBase = {
+      walletId: wallet.id,
+      status: 'CONFIRMED' as const,
+      confirmedAt: {
+        gte: periodStart,
+        lte: periodEnd,
       },
+    };
+
+    // Agregar créditos: TOPUP, REFUND, ADJUSTMENT positivo
+    const creditsAgg = await prisma.walletTransaction.aggregate({
+      where: {
+        ...periodWhereBase,
+        OR: [
+          { type: 'TOPUP' },
+          { type: 'REFUND' },
+          { type: 'ADJUSTMENT', amountCents: { gte: 0 } },
+        ],
+      },
+      _sum: { amountCents: true },
+      _count: true,
     });
 
-    // Calcular resumo do período
-    const summary = calculatePeriodSummary(allPeriodTransactions, periodStart, periodEnd);
+    // Agregar débitos: PURCHASE, WITHDRAW, ADJUSTMENT negativo
+    const debitsAgg = await prisma.walletTransaction.aggregate({
+      where: {
+        ...periodWhereBase,
+        OR: [
+          { type: 'PURCHASE' },
+          { type: 'WITHDRAW' },
+          { type: 'ADJUSTMENT', amountCents: { lt: 0 } },
+        ],
+      },
+      _sum: { amountCents: true },
+      _count: true,
+    });
+
+    // Calcular totais
+    const totalCreditsCents = creditsAgg._sum.amountCents || 0;
+    const totalDebitsCents = Math.abs(debitsAgg._sum.amountCents || 0);
+    const transactionCount = creditsAgg._count + debitsAgg._count;
+
+    const summary = {
+      periodStart: periodStart.toISOString(),
+      periodEnd: periodEnd.toISOString(),
+      totalCredits: totalCreditsCents / 100,
+      totalDebits: totalDebitsCents / 100,
+      netAmount: (totalCreditsCents - totalDebitsCents) / 100,
+      transactionCount,
+    };
 
     // Formatar transações para DTO
     const transactionsDTO = transactions.map((tx) => {

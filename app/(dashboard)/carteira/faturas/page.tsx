@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Button, Card, InputNumber, Modal, Table, message } from "antd";
+import { Button, Card, InputNumber, Modal, Table, message, Alert } from "antd";
 import { PageShell } from "@/components/shared/PageShell";
 import type { Invoice } from "@/types/billing";
 
@@ -68,6 +68,15 @@ export default function InvoicesPage() {
       </Modal>
 
       <PageShell title="Faturas e recibos" gap="md">
+        <Alert
+          message="⚠️ Modo de Demonstração"
+          description="Esta seção está usando dados simulados (mock). A funcionalidade de faturas será implementada quando a integração com o gateway de pagamento estiver completa."
+          type="info"
+          showIcon
+          closable
+          style={{ marginBottom: 16 }}
+        />
+
         <Button type="primary" onClick={() => setModalOpen(true)}>
           Gerar nova fatura
         </Button>

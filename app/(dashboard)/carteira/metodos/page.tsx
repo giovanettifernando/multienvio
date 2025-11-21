@@ -11,6 +11,7 @@ import {
   Modal,
   Space,
   message,
+  Alert,
 } from "antd";
 import { PageShell } from "@/components/shared/PageShell";
 import AddFundsModal from "@/components/wallet/AddFundsModal";
@@ -18,12 +19,15 @@ import type { CardMethod } from "@/types/billing";
 import { PaymentMethodCard } from "@/components/wallet/PaymentMethodCard";
 
 async function fetchCards(): Promise<CardMethod[]> {
-  const response = await fetch("/api/payments/methods");
+  // ✅ Migrado para endpoint real (Prisma) ao invés de mock
+  // Usando /api/cards que já faz o mapeamento holderName → holder
+  const response = await fetch("/api/cards");
   if (!response.ok) {
-    throw new Error("Não foi possível carregar métodos");
+    throw new Error("Não foi possível carregar cartões");
   }
   const data = await response.json();
-  return data.cards ?? [];
+  // O endpoint /api/cards retorna array direto com o mapeamento correto
+  return Array.isArray(data) ? data : [];
 }
 
 export default function PaymentMethodsPage() {
@@ -40,17 +44,24 @@ export default function PaymentMethodsPage() {
 
   const addCardMutation = useMutation<CardMethod, Error, { holder: string; number: string; expMonth: number; expYear: number; cvc: string }>({
     mutationFn: async (values) => {
-      const response = await fetch("/api/payments/methods", {
+      // ✅ Migrado para endpoint real (Prisma) ao invés de mock
+      const response = await fetch("/api/account/cards", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(values),
       });
       if (!response.ok) {
         const body = await response.json().catch(() => undefined);
-        throw new Error(body?.mensagem ?? "Não foi possível adicionar o cartão");
+        throw new Error(body?.message ?? body?.mensagem ?? "Não foi possível adicionar o cartão");
       }
-      const card = (await response.json()) as CardMethod;
-      return card;
+      const result = await response.json();
+      // O endpoint real retorna { data: card } com holderName, mapear para holder
+      const card = result.data ?? result;
+      return {
+        ...card,
+        holder: card.holderName || card.holder,
+        brand: card.brand?.toLowerCase(),
+      };
     },
     onSuccess: () => {
       messageApi.success("Cartão adicionado");
@@ -66,14 +77,14 @@ export default function PaymentMethodsPage() {
 
   const setDefaultMutation = useMutation<void, Error, string>({
     mutationFn: async (cardId) => {
-      const res = await fetch("/api/payments/methods", {
+      // ✅ Migrado para endpoint real (Prisma) ao invés de mock
+      const res = await fetch(`/api/account/cards/${cardId}/make-default`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: cardId, isDefault: true }),
       });
       if (!res.ok) {
         const body = await res.json().catch(() => undefined);
-        throw new Error(body?.mensagem ?? "Falha ao definir como padrão");
+        throw new Error(body?.message ?? body?.mensagem ?? "Falha ao definir como padrão");
       }
     },
     onSuccess: () => {
@@ -83,12 +94,13 @@ export default function PaymentMethodsPage() {
 
   const removeMutation = useMutation<void, Error, string>({
     mutationFn: async (cardId) => {
-      const res = await fetch(`/api/payments/methods?id=${cardId}`, {
+      // ✅ Migrado para endpoint real (Prisma) ao invés de mock
+      const res = await fetch(`/api/account/cards/${cardId}`, {
         method: "DELETE",
       });
       if (!res.ok) {
         const body = await res.json().catch(() => undefined);
-        throw new Error(body?.mensagem ?? "Falha ao remover o cartão");
+        throw new Error(body?.message ?? body?.mensagem ?? "Falha ao remover o cartão");
       }
     },
     onSuccess: () => {
@@ -136,6 +148,15 @@ export default function PaymentMethodsPage() {
       </Modal>
 
       <PageShell title="Métodos de pagamento" gap="md">
+        <Alert
+          message="ℹ️ Integração em Desenvolvimento"
+          description="Os cartões são salvos no banco de dados, mas ainda não processam pagamentos reais. A integração completa com o gateway de pagamento será implementada em breve."
+          type="warning"
+          showIcon
+          closable
+          style={{ marginBottom: 16 }}
+        />
+
         <Space>
           <Button type="primary" onClick={() => setModalOpen(true)}>
             Adicionar cartão

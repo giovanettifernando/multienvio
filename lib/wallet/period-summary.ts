@@ -39,25 +39,28 @@ export function calculatePeriodSummary(
 }
 
 /**
- * Obter datas do mês atual (primeiro e último dia)
+ * Obter datas do mês atual (primeiro e último dia) em UTC
  */
 export function getCurrentMonthRange(): { start: Date; end: Date } {
   const now = new Date();
-  const start = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
-  const end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+  const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 0, 0, 0, 0));
+  const end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0, 23, 59, 59, 999));
 
   return { start, end };
 }
 
 /**
- * Obter datas dos últimos N dias
+ * Obter datas dos últimos N dias em UTC
  */
 export function getLastNDaysRange(days: number): { start: Date; end: Date } {
+  const now = new Date();
   const end = new Date();
   const start = new Date();
-  start.setDate(start.getDate() - days);
-  start.setHours(0, 0, 0, 0);
-  end.setHours(23, 59, 59, 999);
+
+  // Trabalhar em UTC para evitar problemas de timezone
+  start.setUTCDate(now.getUTCDate() - days);
+  start.setUTCHours(0, 0, 0, 0);
+  end.setUTCHours(23, 59, 59, 999);
 
   return { start, end };
 }

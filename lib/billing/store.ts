@@ -1,3 +1,21 @@
+/**
+ * ⚠️ DEPRECATED: BillingStore usa armazenamento in-memory (não persiste entre restarts)
+ *
+ * Este módulo é legado e deve ser substituído pelos endpoints reais do Prisma:
+ *
+ * MIGRAÇÃO COMPLETA:
+ * ✅ Cards: Use /api/account/cards (Prisma) - Frontend já migrado
+ * ✅ Wallet: Use /api/wallet/* endpoints (Prisma)
+ * ✅ Transações: Use /api/wallet/transactions (Prisma)
+ * ⚠️  Invoices: /api/invoices ainda usa mock (aguardando integração com gateway)
+ *
+ * Endpoints que ainda usam este store (com avisos de depreciação):
+ * - /api/payments/methods (deprecated - use /api/account/cards)
+ * - /api/payments/charge (deprecated - use /api/wallet/debit)
+ * - /api/webhooks/pix (deprecated - use /api/wallet/topups/confirm)
+ * - /api/invoices (mock - aguardando gateway de pagamento)
+ */
+
 import type { CardMethod, Invoice, LedgerEntry, PixTopup, Wallet } from "@/types/billing";
 
 export type BillingStore = {

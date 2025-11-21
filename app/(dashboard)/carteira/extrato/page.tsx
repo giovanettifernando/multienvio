@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Card, Button, Row, Col, DatePicker, Input, Space } from "antd";
+import { Card, Button, Row, Col, DatePicker, Input, Space, App } from "antd";
 import { PrinterOutlined, SearchOutlined, ArrowLeftOutlined } from "@ant-design/icons";
 import { useRouter } from "next/navigation";
 import dayjs, { Dayjs } from "dayjs";
@@ -13,8 +13,13 @@ import StatementPDFModal from "@/components/wallet/StatementPDFModal";
 const { RangePicker } = DatePicker;
 const { Search } = Input;
 
+// Limite máximo de meses para o período de busca
+const MAX_MONTHS_RANGE = 12;
+
 export default function ExtratoPage() {
   const router = useRouter();
+  const { message } = App.useApp();
+
   // Default: últimos 30 dias
   const [dateRange, setDateRange] = useState<[Dayjs, Dayjs]>([
     dayjs().subtract(30, 'days'),
@@ -51,7 +56,22 @@ export default function ExtratoPage() {
                 value={dateRange}
                 onChange={(dates) => {
                   if (dates && dates[0] && dates[1]) {
-                    setDateRange([dates[0], dates[1]]);
+                    // Validar limite máximo de meses
+                    const monthsDiff = dates[1].diff(dates[0], 'months', true);
+
+                    if (monthsDiff > MAX_MONTHS_RANGE) {
+                      message.warning(
+                        `O período máximo permitido é de ${MAX_MONTHS_RANGE} meses. ` +
+                        `Ajustando data final para ${dates[0].add(MAX_MONTHS_RANGE, 'months').format('DD/MM/YYYY')}.`
+                      );
+
+                      // Ajustar data final para o máximo permitido
+                      const adjustedEndDate = dates[0].add(MAX_MONTHS_RANGE, 'months');
+                      setDateRange([dates[0], adjustedEndDate]);
+                    } else {
+                      setDateRange([dates[0], dates[1]]);
+                    }
+
                     setPage(1); // Reset para primeira página
                   }
                 }}

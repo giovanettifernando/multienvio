@@ -74,6 +74,35 @@ export async function POST(request: Request) {
         throw new Error('NO_ITEMS_SELECTED');
       }
 
+      // 🛡️ VALIDAÇÃO CRÍTICA: Verificar saldo da carteira ANTES de criar shipments
+      // (apenas se método de pagamento for carteira)
+      if (data.paymentMethod === 'wallet') {
+        // Calcular total do carrinho
+        let totalAmountPreview = 0;
+        for (const item of itemsToCheckout) {
+          const itemTotals = item.totals as { total?: number };
+          const itemTotal = itemTotals?.total;
+
+          if (!itemTotal || itemTotal <= 0) {
+            throw new Error(`INVALID_ITEM_TOTAL: Item ${item.id} has invalid total: ${itemTotal}`);
+          }
+
+          totalAmountPreview += itemTotal;
+        }
+
+        // Buscar saldo da carteira
+        const wallet = await tx.wallet.findUnique({
+          where: { userId: session.userId },
+        });
+
+        // Se não tem carteira, criar uma com saldo zero (será validado abaixo)
+        const availableCents = wallet?.availableCents ?? 0;
+
+        if (availableCents < totalAmountPreview * 100) {
+          throw new Error('INSUFFICIENT_WALLET_BALANCE');
+        }
+      }
+
       // Gerar fingerprint para idempotência
       const itemsHash = crypto
         .createHash('sha256')
@@ -284,6 +313,13 @@ export async function POST(request: Request) {
         return NextResponse.json(
           { message: 'Nenhum item selecionado para checkout' },
           { status: 400 }
+        );
+      }
+
+      if (error.message === 'INSUFFICIENT_WALLET_BALANCE') {
+        return NextResponse.json(
+          { message: 'Saldo insuficiente na carteira para processar o checkout' },
+          { status: 402 } // 402 Payment Required
         );
       }
     }

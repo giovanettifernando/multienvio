@@ -1,3 +1,17 @@
+/**
+ * ⚠️ MOCK ENDPOINT: Este endpoint usa dados simulados (BillingStore in-memory)
+ *
+ * Este é um endpoint de demonstração que será substituído quando a integração
+ * com o gateway de pagamento estiver completa.
+ *
+ * O frontend já exibe um aviso sobre isto em /app/(dashboard)/carteira/faturas/page.tsx
+ *
+ * Funcionalidade futura:
+ * - Integração com gateway de pagamento real
+ * - Geração de PDFs de faturas reais
+ * - Sincronização com sistema contábil
+ */
+
 import { NextResponse } from "next/server";
 import { nanoid } from "nanoid";
 import { applyLedgerEntry, getBillingStore } from "@/lib/billing/store";
@@ -6,10 +20,20 @@ import { topupSchema } from "@/lib/validation/billing";
 
 export const dynamic = "force-dynamic";
 
+// Headers de aviso para clientes externos
+const DEPRECATION_HEADERS = {
+  'X-Endpoint-Status': 'MOCK',
+  'X-Warning': 'Este endpoint usa dados simulados. Não usar em produção.',
+  'X-Deprecation': 'Este endpoint será removido quando a integração com gateway estiver completa',
+};
+
 export async function GET() {
   await new Promise((resolve) => setTimeout(resolve, 250));
   const store = getBillingStore();
-  return NextResponse.json({ invoices: Array.from(store.invoices.values()) });
+  return NextResponse.json(
+    { invoices: Array.from(store.invoices.values()) },
+    { headers: DEPRECATION_HEADERS }
+  );
 }
 
 export async function POST(request: Request) {
@@ -20,7 +44,7 @@ export async function POST(request: Request) {
   if (!amountParsed.success || amount <= 0) {
     return NextResponse.json(
       { mensagem: "Valor inválido" },
-      { status: 400 },
+      { status: 400, headers: DEPRECATION_HEADERS }
     );
   }
 
@@ -47,5 +71,5 @@ export async function POST(request: Request) {
     ref: { invoiceId: invoice.id },
   });
 
-  return NextResponse.json(invoice, { status: 201 });
+  return NextResponse.json(invoice, { status: 201, headers: DEPRECATION_HEADERS });
 }

@@ -97,7 +97,21 @@ export function recomputeCartTotals(cart: Cart) {
   globalThis.__envioCart = { ...cart, subtotal, descontos, taxas, total };
 }
 
-// Legacy Wallet Store (não usar em código novo - migrar para /api/wallet)
+/**
+ * ⚠️ DEPRECATED: Legacy Wallet Store - NÃO USAR EM CÓDIGO NOVO
+ *
+ * Este store usa armazenamento in-memory e não persiste entre restarts.
+ *
+ * MIGRE PARA OS ENDPOINTS REAIS DO PRISMA:
+ * - GET /api/wallet - Obter saldo da carteira
+ * - POST /api/wallet/debit - Debitar da carteira
+ * - POST /api/wallet/topups/pix - Criar topup PIX
+ * - POST /api/wallet/topups/confirm - Confirmar topup
+ * - GET /api/wallet/transactions - Listar transações
+ *
+ * Endpoint que ainda usa este store:
+ * - /api/payments/topups/pix (deprecated - use /api/wallet/topups/pix)
+ */
 declare global {
   var __envioWallet: LegacyWallet | undefined;
 }

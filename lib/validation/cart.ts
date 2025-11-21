@@ -101,6 +101,7 @@ export type UpdateCartItemInput = z.infer<typeof updateCartItemSchema>;
 // Schema para checkout
 export const checkoutCartSchema = z.object({
   itemIds: z.array(z.string()).optional(), // Se vazio, usa todos os itens
+  paymentMethod: z.enum(['wallet', 'pix', 'card']).optional(), // Método de pagamento escolhido
 });
 
 export type CheckoutCartInput = z.infer<typeof checkoutCartSchema>;

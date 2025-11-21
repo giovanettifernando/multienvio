@@ -5,7 +5,7 @@
  */
 
 import { NextResponse } from 'next/server';
-import { getBalance } from '@/lib/wallet/wallet.service';
+import { getOrCreateWallet, centsToReais } from '@/lib/wallet/wallet.service';
 import { getSession } from '@/lib/auth/session';
 import { prisma } from '@/lib/db';
 import { getCurrentMonthRange, calculatePeriodSummary } from '@/lib/wallet/period-summary';
@@ -31,20 +31,8 @@ export async function GET() {
       );
     }
 
-    // Buscar saldo
-    const balance = await getBalance(session.userId);
-
-    // Buscar carteira do usuário
-    const wallet = await prisma.wallet.findUnique({
-      where: { userId: session.userId },
-    });
-
-    if (!wallet) {
-      return NextResponse.json(
-        { message: 'Carteira não encontrada' },
-        { status: 404 }
-      );
-    }
+    // Buscar ou criar carteira (evita race condition)
+    const wallet = await getOrCreateWallet(session.userId);
 
     // Obter intervalo do mês atual
     const { start: monthStart, end: monthEnd } = getCurrentMonthRange();
@@ -103,10 +91,10 @@ export async function GET() {
 
     const response: WalletBalanceResponse = {
       balance: {
-        availableReais: balance.availableReais,
-        availableCents: balance.availableCents,
-        pendingReais: balance.pendingReais,
-        pendingCents: balance.pendingCents,
+        availableReais: centsToReais(wallet.availableCents),
+        availableCents: wallet.availableCents,
+        pendingReais: centsToReais(wallet.pendingCents),
+        pendingCents: wallet.pendingCents,
       },
       monthlySummary,
       latestTransactions: transactionsDTO,

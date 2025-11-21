@@ -219,13 +219,22 @@ export function AddFundsModal({
         <Form.Item
           label="Valor da recarga"
           required
-          help={!topUpAmount || topUpAmount <= 0 ? "Digite um valor maior que zero" : undefined}
-          validateStatus={!topUpAmount || topUpAmount <= 0 ? "error" : undefined}
+          help={
+            !topUpAmount || topUpAmount <= 0
+              ? "Digite um valor maior que zero"
+              : topUpAmount > 10000
+              ? "O valor máximo é R$ 10.000,00"
+              : "Valor mínimo: R$ 1,00 | Valor máximo: R$ 10.000,00"
+          }
+          validateStatus={
+            !topUpAmount || topUpAmount <= 0 || topUpAmount > 10000 ? "error" : undefined
+          }
         >
           <InputNumber
             value={topUpAmount}
             onChange={(value) => setTopUpAmount(value || 0)}
             min={1}
+            max={10000}
             step={10}
             placeholder="R$ 0,00"
             style={{ width: '100%' }}

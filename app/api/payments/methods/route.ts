@@ -1,113 +1,57 @@
+/**
+ * ❌ ENDPOINT DESATIVADO - Use /api/account/cards
+ *
+ * Este endpoint foi desativado para evitar divergência de estado entre
+ * o store in-memory (BillingStore) e o banco de dados real (Prisma).
+ *
+ * Use os endpoints reais do Prisma:
+ * - GET /api/account/cards - Listar cartões
+ * - POST /api/account/cards - Adicionar cartão
+ * - PATCH /api/account/cards/[id]/make-default - Definir como padrão
+ * - DELETE /api/account/cards/[id] - Remover cartão
+ *
+ * O frontend já foi migrado para usar /api/account/cards
+ */
+
 import { NextResponse } from "next/server";
-import { nanoid } from "nanoid";
-import { cardSchema } from "@/lib/validation/billing";
-import { getBillingStore } from "@/lib/billing/store";
-import type { CardMethod } from "@/types/billing";
 
 export const dynamic = "force-dynamic";
 
-function detectBrand(number: string): CardMethod["brand"] {
-  if (/^4/.test(number)) return "visa";
-  if (/^5[1-5]/.test(number)) return "mastercard";
-  if (/^3[47]/.test(number)) return "amex";
-  if (/^6/.test(number)) return "hiper";
-  return "other";
+function createGoneResponse(method: string) {
+  return NextResponse.json(
+    {
+      error: "ENDPOINT_DEPRECATED",
+      message: `Este endpoint foi desativado. Use /api/account/cards para ${method} cartões.`,
+      documentation: {
+        list: "GET /api/account/cards",
+        create: "POST /api/account/cards",
+        setDefault: "PATCH /api/account/cards/[id]/make-default",
+        delete: "DELETE /api/account/cards/[id]",
+      },
+    },
+    {
+      status: 410, // 410 Gone - recurso permanentemente indisponível
+      headers: {
+        'X-Endpoint-Status': 'DEPRECATED',
+        'X-Warning': 'Este endpoint foi desativado para evitar divergência de estado',
+        'X-Redirect-To': '/api/account/cards',
+      },
+    }
+  );
 }
 
 export async function GET() {
-  await new Promise((resolve) => setTimeout(resolve, 200));
-  const store = getBillingStore();
-  return NextResponse.json({
-    cards: Array.from(store.cards.values()),
-  });
+  return createGoneResponse("listar");
 }
 
-export async function POST(request: Request) {
-  try {
-    const payload = await request.json();
-    const data = cardSchema.parse(payload);
-    const token = `tok_${nanoid(12)}`;
-    const brand = detectBrand(data.number);
-    const last4 = data.number.slice(-4);
-
-    const method: CardMethod = {
-      id: `card_${nanoid(8)}`,
-      brand,
-      last4,
-      expMonth: data.expMonth,
-      expYear: data.expYear,
-      holder: data.holder,
-      token,
-    };
-
-    const store = getBillingStore();
-    if (store.cards.size === 0) {
-      method.isDefault = true;
-    }
-    store.cards.set(method.id, method);
-
-    return NextResponse.json(method, { status: 201 });
-  } catch {
-    return NextResponse.json(
-      { mensagem: "Dados do cartão inválidos" },
-      { status: 400 },
-    );
-  }
+export async function POST() {
+  return createGoneResponse("adicionar");
 }
 
-export async function PATCH(request: Request) {
-  const payload = await request.json();
-  const id = payload?.id as string | undefined;
-  if (!id) {
-    return NextResponse.json(
-      { mensagem: "Informe o cartão" },
-      { status: 400 },
-    );
-  }
-
-  const store = getBillingStore();
-  const card = store.cards.get(id);
-  if (!card) {
-    return NextResponse.json(
-      { mensagem: "Cartão não encontrado" },
-      { status: 404 },
-    );
-  }
-
-  if (payload.isDefault) {
-    store.cards.forEach((value) => {
-      value.isDefault = value.id === card.id;
-    });
-  }
-
-  return NextResponse.json({ cards: Array.from(store.cards.values()) });
+export async function PATCH() {
+  return createGoneResponse("atualizar");
 }
 
-export async function DELETE(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const id = searchParams.get("id");
-
-  if (!id) {
-    return NextResponse.json(
-      { mensagem: "Informe o cartão" },
-      { status: 400 },
-    );
-  }
-
-  const store = getBillingStore();
-  const existed = store.cards.delete(id);
-
-  if (!existed) {
-    return NextResponse.json(
-      { mensagem: "Cartão não encontrado" },
-      { status: 404 },
-    );
-  }
-
-  if (store.cards.size > 0 && !Array.from(store.cards.values()).some((card) => card.isDefault)) {
-    const first = store.cards.values().next().value;
-    if (first) first.isDefault = true;
-  }
-
-  return NextResponse.json({ cards: Array.from(store.cards.values()) });
+export async function DELETE() {
+  return createGoneResponse("remover");
 }

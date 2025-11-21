@@ -1,36 +1,43 @@
-import { NextRequest, NextResponse } from "next/server";
-import { pushTx, getWalletStore } from "@/lib/api/stores";
+/**
+ * ❌ ENDPOINT DESATIVADO - Use /api/wallet/topups/pix
+ *
+ * Este endpoint foi desativado para evitar divergência de estado entre
+ * o store in-memory (LegacyWallet) e o banco de dados real (Prisma).
+ *
+ * Use o endpoint real do Prisma:
+ * - POST /api/wallet/topups/pix - Criar topup PIX pendente
+ *
+ * O endpoint real já retorna:
+ * - QR Code para pagamento
+ * - Transação pendente no banco de dados (Prisma)
+ * - referenceId único para idempotência
+ *
+ * Ver implementação em: /app/api/wallet/topups/pix/route.ts
+ */
 
-export async function POST(req: NextRequest) {
-  const body = await req.json().catch(() => ({}));
-  const amount = Number(body?.amount ?? 0);
-  if (!amount || amount <= 0) {
-    return NextResponse.json(
-      { mensagem: "Informe um valor válido." },
-      { status: 400 },
-    );
-  }
+import { NextResponse } from "next/server";
 
-  const transaction = pushTx({
-    type: "TOPUP_PIX",
-    origin: "PIX",
-    amount,
-    description: "Recarga de saldo (PIX)",
-  });
+export const dynamic = "force-dynamic";
 
-  const topup = {
-    id: `pix_${Date.now()}`,
-    amount,
-    currency: getWalletStore().currency,
-    status: "CONFIRMED" as const,
-    qrCode: "000201010211...STUB...",
-    expiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
-  };
-
-  return NextResponse.json({
-    ok: true,
-    wallet: getWalletStore(),
-    transaction,
-    topup,
-  });
+export async function POST() {
+  return NextResponse.json(
+    {
+      error: "ENDPOINT_DEPRECATED",
+      message: "Este endpoint foi desativado. Use /api/wallet/topups/pix para criar topups PIX.",
+      documentation: {
+        create: "POST /api/wallet/topups/pix",
+        confirm: "POST /api/wallet/topups/confirm",
+        wallet: "GET /api/wallet",
+      },
+      migration_guide: "O novo endpoint usa Prisma para persistência real e retorna QR Code gerado.",
+    },
+    {
+      status: 410, // 410 Gone - recurso permanentemente indisponível
+      headers: {
+        'X-Endpoint-Status': 'DEPRECATED',
+        'X-Warning': 'Este endpoint foi desativado para evitar divergência de estado',
+        'X-Redirect-To': '/api/wallet/topups/pix',
+      },
+    }
+  );
 }

@@ -125,7 +125,7 @@ export function CheckoutCartModal({
       const checkoutRes = await fetch('/api/cart/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({}),
+        body: JSON.stringify({ paymentMethod: selectedMethod }),
       });
 
       if (!checkoutRes.ok) {
@@ -140,42 +140,83 @@ export function CheckoutCartModal({
 
       // PASSO 2: Processar pagamento de acordo com o método selecionado
       if (selectedMethod === 'wallet') {
-        // Debitar da carteira (idempotente por cartId)
-        const debitRes = await fetch('/api/wallet/debit', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            referenceId: `cart:${cartId}`,
-            amount: totalAmount,
-            reason: 'cart_payment',
-            metadata: {
-              shipmentIds,
-              itemCount,
-            },
-          }),
-        });
+        try {
+          // Debitar da carteira (idempotente por cartId)
+          // ✅ AGORA ATÔMICO: débito + confirmação + emissão de etiqueta em uma transação
+          const debitRes = await fetch('/api/wallet/debit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              referenceId: `cart:${cartId}`,
+              amount: totalAmount,
+              reason: 'cart_payment',
+              metadata: {
+                shipmentIds,
+                itemCount,
+              },
+            }),
+          });
 
-        if (!debitRes.ok) {
-          const error = await debitRes.json();
-          if (!error.message?.includes('P2002') && !error.message?.includes('já foi debitado')) {
-            throw new Error(error.message || 'Erro ao debitar da carteira');
+          if (!debitRes.ok) {
+            const error = await debitRes.json();
+            // Ignorar erros de idempotência (já foi processado)
+            if (error.message?.includes('P2002') || error.message?.includes('já foi debitado')) {
+              console.log('[CHECKOUT_CART] Pagamento já processado (idempotente)');
+            } else {
+              throw new Error(error.message || 'Erro ao debitar da carteira');
+            }
           }
+
+          // ✅ REMOVIDO: Não é mais necessário chamar payment-batch separadamente
+          // O endpoint /api/wallet/debit agora faz tudo atomicamente:
+          // - Debita carteira
+          // - Confirma pagamento dos shipments
+          // - Emite etiquetas
+          // Isso evita inconsistências se uma das chamadas falhar
+
+          queryClient.invalidateQueries({ queryKey: ['wallet'] });
+          message.success('Pagamento com carteira aprovado!');
+        } catch (paymentError) {
+          // 🔄 ROLLBACK AUTOMÁTICO: Cancelar shipments se pagamento falhar
+          console.error('[CHECKOUT_CART] Pagamento falhou, iniciando rollback...', paymentError);
+
+          try {
+            // Cancelar todos os shipments criados
+            await Promise.all(
+              shipmentIds.map(async (id: string) => {
+                const cancelRes = await fetch(`/api/shipments/${id}/cancel`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ reason: 'payment_failed' }),
+                });
+
+                if (!cancelRes.ok) {
+                  console.error(`[CHECKOUT_CART] Falha ao cancelar shipment ${id}`);
+                }
+              })
+            );
+
+            console.log('[CHECKOUT_CART] Rollback concluído - shipments cancelados');
+
+            // 🔓 DESTRAVAR CARRINHO: Após cancelar shipments, destravar o carrinho para permitir novo checkout
+            const unlockRes = await fetch(`/api/cart/${cartId}/unlock`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+            });
+
+            if (unlockRes.ok) {
+              console.log('[CHECKOUT_CART] Carrinho destravado com sucesso');
+            } else {
+              console.error('[CHECKOUT_CART] Falha ao destravar carrinho, mas rollback foi concluído');
+            }
+          } catch (rollbackError) {
+            console.error('[CHECKOUT_CART] Erro durante rollback:', rollbackError);
+            // Continuar mesmo se rollback falhar - o erro de pagamento é mais importante
+          }
+
+          // Re-throw o erro original de pagamento
+          throw paymentError;
         }
-
-        // Atualizar pagamento dos shipments
-        await fetch('/api/shipments/payment-batch', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            shipmentIds,
-            method: 'wallet',
-            status: 'approved',
-            meta: { amount: totalAmount },
-          }),
-        });
-
-        queryClient.invalidateQueries({ queryKey: ['wallet'] });
-        message.success('Pagamento com carteira aprovado!');
 
       } else if (selectedMethod === 'pix') {
         // Aprovar pagamento PIX (simulado)
@@ -219,8 +260,74 @@ export function CheckoutCartModal({
       router.push('/shipments');
     } catch (error) {
       console.error('[CHECKOUT_CART_ERROR]', error);
-      const errorMessage = error instanceof Error ? error.message : 'Erro ao processar pagamento';
-      message.error(errorMessage);
+
+      // Tratamento específico de erros com mensagens detalhadas
+      let errorMessage = 'Erro ao processar pagamento';
+      let errorDescription: string | undefined;
+
+      if (error instanceof Error) {
+        const msg = error.message.toLowerCase();
+
+        // Erro de saldo insuficiente
+        if (msg.includes('saldo insuficiente') || msg.includes('insufficient')) {
+          errorMessage = 'Saldo insuficiente na carteira';
+          errorDescription = `Você precisa de ${formatCurrency(totalAmount)} mas tem apenas ${formatCurrency(balance)} disponível. Adicione fundos e tente novamente.`;
+        }
+        // Erro de carrinho não encontrado
+        else if (msg.includes('carrinho não encontrado') || msg.includes('cart not found')) {
+          errorMessage = 'Carrinho não encontrado';
+          errorDescription = 'Seu carrinho expirou ou já foi processado. Tente criar uma nova cotação.';
+        }
+        // Erro de carrinho vazio
+        else if (msg.includes('carrinho vazio') || msg.includes('cart empty')) {
+          errorMessage = 'Carrinho vazio';
+          errorDescription = 'Não há itens no carrinho para processar. Adicione cotações ao carrinho primeiro.';
+        }
+        // Erro de nenhum item selecionado
+        else if (msg.includes('nenhum item selecionado') || msg.includes('no items selected')) {
+          errorMessage = 'Nenhum item selecionado';
+          errorDescription = 'Selecione pelo menos um item do carrinho para prosseguir com o checkout.';
+        }
+        // Erro de carteira não encontrada
+        else if (msg.includes('carteira não encontrada') || msg.includes('wallet not found')) {
+          errorMessage = 'Carteira não disponível';
+          errorDescription = 'Sua carteira ainda não foi criada. Tente recarregar a página ou escolha outro método de pagamento.';
+        }
+        // Erro de total inválido
+        else if (msg.includes('invalid_item_total')) {
+          errorMessage = 'Valor do item inválido';
+          errorDescription = 'Um ou mais itens do carrinho tem valor inválido. Remova o item e crie uma nova cotação.';
+        }
+        // Erro de timeout
+        else if (msg.includes('timeout') || msg.includes('timed out')) {
+          errorMessage = 'Tempo esgotado';
+          errorDescription = 'A operação demorou muito. Verifique se o pagamento foi processado antes de tentar novamente.';
+        }
+        // Erro de rede
+        else if (msg.includes('failed to fetch') || msg.includes('network')) {
+          errorMessage = 'Erro de conexão';
+          errorDescription = 'Não foi possível conectar ao servidor. Verifique sua internet e tente novamente.';
+        }
+        // Erro genérico com mensagem do servidor
+        else {
+          errorMessage = error.message || 'Erro ao processar pagamento';
+        }
+      }
+
+      // Exibir mensagem de erro com descrição se disponível
+      if (errorDescription) {
+        message.error({
+          content: (
+            <div>
+              <strong>{errorMessage}</strong>
+              <div style={{ marginTop: 8, fontSize: 13 }}>{errorDescription}</div>
+            </div>
+          ),
+          duration: 8,
+        });
+      } else {
+        message.error(errorMessage);
+      }
     } finally {
       setLoading(false);
     }
