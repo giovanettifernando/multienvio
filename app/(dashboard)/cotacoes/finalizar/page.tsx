@@ -66,6 +66,7 @@ export default function FinalizeQuotePage() {
   );
   const pickupAtOrigin = useQuoteDraft((s) => s.pickupAtOrigin);
   const destino = useQuoteDraft((s) => s.destination);
+  const setDestination = useQuoteDraft((s) => s.setDestination);
   const pickupPointId = useCheckoutStore((s) => s.pickupPointId);
   const cartAdd = useCartAdd();
   const recipientSave = useRecipientSave();
@@ -94,13 +95,20 @@ export default function FinalizeQuotePage() {
     origemCep: summary?.origemCep,
     hasPreco: !!selectedService?.preco,
     preco: selectedService?.preco,
+    destino,
+    hasDestino: !!destino,
+    destinoMode: destino?.mode,
+    destinoRecipientId: destino?.recipientId,
+    destinoCep: destino?.cep,
+    summaryDestinoCep: summary?.destinoCep,
   }, null, 2));
 
   // Calcular taxa de coleta se pickupAtOrigin estiver ativo
+  // Hook params: (originCep, freightCost, enabled)
   const { data: pickupFeeData, isLoading: isLoadingPickupFee, error: pickupFeeError } = usePickupFee(
-    pickupAtOrigin ? summary?.origemCep : null,
-    pickupAtOrigin ? selectedService?.preco : null,
-    pickupAtOrigin
+    summary?.origemCep ?? null,
+    selectedService?.preco ?? null,
+    pickupAtOrigin  // enabled only when pickup is requested
   );
 
   // Debug: Log pickup fee data
@@ -115,6 +123,21 @@ export default function FinalizeQuotePage() {
       error: pickupFeeError ? String(pickupFeeError) : null,
     }, null, 2));
   }, [pickupAtOrigin, summary?.origemCep, selectedService?.preco, isLoadingPickupFee, pickupFeeData, pickupFeeError]);
+
+  // Inicializar destination se estiver vazio mas houver CEP no summary
+  // Isso só deve acontecer quando o usuário usou modo manual (sem destinatário recorrente)
+  useEffect(() => {
+    if (!destino && summary?.destinoCep) {
+      console.log('[FINALIZAR] Inicializando destination com dados do summary (modo manual)');
+      setDestination({
+        mode: "manual",
+        cep: summary.destinoCep,
+        city: summary.destinoCidade,
+        state: summary.destinoUf,
+      });
+    }
+    // Não sobrescrever se destino já existe (pode ser recipient mode)
+  }, [destino, summary, setDestination]);
 
   useEffect(() => {
     if (!results || !selection) {
@@ -408,7 +431,13 @@ export default function FinalizeQuotePage() {
     }
 
     // Verificar dados do destinatário
+    // Alinhado com a lógica de /cotacoes: destinatário é válido se:
+    // - há um destinatário recorrente selecionado OU
+    // - há CEP de destino válido (modo manual)
     const hasRecurringRecipient = destino?.mode === "recipient" && !!destino.recipientId;
+    const hasManualDestination = !!summary?.destinoCep && summary.destinoCep.length > 0;
+
+    // Para finalizar, além do CEP, precisamos dos dados completos do destinatário
     const isRecipientFormValid =
       recipientMode === "manual" &&
       !!recipientNome && recipientNome.trim().length > 0 &&
@@ -422,6 +451,20 @@ export default function FinalizeQuotePage() {
       !!recipientCidade && recipientCidade.trim().length > 0 &&
       !!recipientUf && recipientUf.trim().length > 0;
 
+    console.log('[RECIPIENT_VALIDATION]', {
+      hasRecurringRecipient,
+      hasManualDestination,
+      isRecipientFormValid,
+      recipientMode,
+      destino,
+      recipientNome,
+      recipientCep,
+      recipientCidade,
+      recipientUf,
+    });
+
+    // Validação: precisa ter destinatário recorrente OU formulário completo
+    // (não basta apenas CEP para finalizar, diferente da cotação)
     if (!hasRecurringRecipient && !isRecipientFormValid) {
       return "Informe os dados obrigatórios do destinatário para continuar.";
     }
@@ -475,6 +518,33 @@ export default function FinalizeQuotePage() {
       const recipientData = values.recipient.mode === 'manual'
         ? values.recipient.manual
         : null; // TODO: buscar dados do destinatário salvo se necessário
+
+      // Salvar destinatário recorrente se a flag estiver marcada
+      if (values.recipient.mode === 'manual' && values.recipient.manual?.salvarRecorrente) {
+        try {
+          console.log('[CART_ADD] Salvando destinatário recorrente...');
+          await recipientSave.mutateAsync({
+            nome: recipientData!.nome,
+            email: recipientData!.email,
+            telefone: recipientData!.telefone,
+            documento: recipientData!.documento,
+            cep: summary.destinoCep,
+            logradouro: recipientData!.logradouro || '',
+            numero: recipientData!.numero || '',
+            complemento: recipientData!.complemento,
+            bairro: recipientData!.bairro || '',
+            cidade: summary.destinoCidade || '',
+            uf: summary.destinoUf || '',
+            observacoes: recipientData!.observacoes,
+          });
+          console.log('[CART_ADD] Destinatário salvo com sucesso');
+          message.success('Destinatário salvo com sucesso!');
+        } catch (error) {
+          console.error('[CART_ADD] Erro ao salvar destinatário:', error);
+          // Não bloquear a adição ao carrinho se o salvamento falhar
+          message.warning('Cotação adicionada, mas não foi possível salvar o destinatário.');
+        }
+      }
 
       // Construir payload no novo formato esperado pelo backend
       const payload = {
@@ -646,6 +716,33 @@ export default function FinalizeQuotePage() {
     }
 
     console.log('[RECIPIENT_DEBUG] recipientData final:', JSON.stringify(recipientData, null, 2));
+
+    // Salvar destinatário recorrente se a flag estiver marcada (apenas para modo manual)
+    if (values.recipient.mode === 'manual' && values.recipient.manual?.salvarRecorrente && recipientData) {
+      try {
+        console.log('[CHECKOUT] Salvando destinatário recorrente...');
+        await recipientSave.mutateAsync({
+          nome: recipientData.nome || '',
+          email: recipientData.email,
+          telefone: recipientData.telefone || '',
+          documento: recipientData.documento || '',
+          cep: recipientData.cep || '',
+          logradouro: recipientData.logradouro || '',
+          numero: recipientData.numero || '',
+          complemento: recipientData.complemento,
+          bairro: recipientData.bairro || '',
+          cidade: recipientData.cidade || '',
+          uf: recipientData.uf || '',
+          observacoes: recipientData.observacoes,
+        });
+        console.log('[CHECKOUT] Destinatário salvo com sucesso');
+        message.success('Destinatário salvo com sucesso!');
+      } catch (error) {
+        console.error('[CHECKOUT] Erro ao salvar destinatário:', error);
+        // Não bloquear o checkout se o salvamento falhar
+        message.warning('Continuando checkout, mas não foi possível salvar o destinatário.');
+      }
+    }
 
     // Validar pickup point se não houver coleta na origem
     if (!pickupAtOrigin && !pickupPointId) {

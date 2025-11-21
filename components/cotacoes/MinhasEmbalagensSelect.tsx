@@ -19,6 +19,7 @@ export function MinhasEmbalagensSelect({ value, onChange, placeholder }: MinhasE
   const deletePackaging = useDeletePackaging();
   const [modalOpen, setModalOpen] = useState(false);
   const [internalValue, setInternalValue] = useState<string | undefined>(value);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   // Sincronizar valor interno com prop externa
   useEffect(() => {
@@ -76,7 +77,7 @@ export function MinhasEmbalagensSelect({ value, onChange, placeholder }: MinhasE
     onChange?.(undefined, undefined);
   };
 
-  // Criar options com formatação e botão de excluir
+  // Criar options com formatação e botão de excluir (somente quando dropdown está aberto)
   const options = [
     ...(templates || []).map((template) => {
       const label = formatPackagingName({
@@ -97,15 +98,17 @@ export function MinhasEmbalagensSelect({ value, onChange, placeholder }: MinhasE
             }}
           >
             <span title={label}>{label}</span>
-            <Button
-              type="text"
-              size="small"
-              danger
-              icon={<DeleteOutlined />}
-              onClick={(e) => handleDelete(template.id, e)}
-              loading={deletePackaging.isPending}
-              style={{ marginLeft: 8 }}
-            />
+            {isDropdownOpen && (
+              <Button
+                type="text"
+                size="small"
+                danger
+                icon={<DeleteOutlined />}
+                onClick={(e) => handleDelete(template.id, e)}
+                loading={deletePackaging.isPending}
+                style={{ marginLeft: 8 }}
+              />
+            )}
           </div>
         ),
         value: template.id,
@@ -162,6 +165,7 @@ export function MinhasEmbalagensSelect({ value, onChange, placeholder }: MinhasE
         options={options}
         onChange={handleChange}
         onClear={handleClear}
+        onDropdownVisibleChange={setIsDropdownOpen}
         loading={isLoading}
         notFoundContent={isLoading ? <Spin size="small" /> : 'Nenhuma embalagem encontrada'}
         style={{ width: '100%' }}

@@ -1,0 +1,247 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - complementary [ref=e4]:
+      - generic [ref=e6]:
+        - img "Envio Legal" [ref=e8]
+        - generic [ref=e10]:
+          - generic [ref=e12]: UP
+          - generic [ref=e13]:
+            - generic [ref=e14]: Usuário Playwright
+            - generic [ref=e15]: playwright@example.com
+            - button "logout Sair" [ref=e16] [cursor=pointer]:
+              - img "logout" [ref=e18]:
+                - img [ref=e19]
+              - generic [ref=e21]: Sair
+        - menu [ref=e23]:
+          - menuitem "home Visão geral" [ref=e24] [cursor=pointer]:
+            - img "home" [ref=e25]:
+              - img [ref=e26]
+            - generic [ref=e28]: Visão geral
+          - menuitem "search Cotar envio" [ref=e29] [cursor=pointer]:
+            - img "search" [ref=e30]:
+              - img [ref=e31]
+            - generic [ref=e33]: Cotar envio
+          - menuitem "shopping-cart Carrinho" [ref=e34] [cursor=pointer]:
+            - img "shopping-cart" [ref=e35]:
+              - img [ref=e36]
+            - generic [ref=e38]: Carrinho
+          - menuitem "file-add Etiquetas" [ref=e39] [cursor=pointer]:
+            - img "file-add" [ref=e40]:
+              - img [ref=e41]
+            - generic [ref=e43]: Etiquetas
+          - menuitem "reconciliation Gestão de envios" [ref=e44] [cursor=pointer]:
+            - img "reconciliation" [ref=e45]:
+              - img [ref=e46]
+            - generic [ref=e48]: Gestão de envios
+          - menuitem "calendar Coletas" [ref=e49] [cursor=pointer]:
+            - img "calendar" [ref=e50]:
+              - img [ref=e51]
+            - generic [ref=e53]: Coletas
+          - menuitem "wallet Carteira" [ref=e54] [cursor=pointer]:
+            - img "wallet" [ref=e55]:
+              - img [ref=e56]
+            - generic [ref=e58]: Carteira
+          - menuitem "customer-service Suporte" [ref=e59] [cursor=pointer]:
+            - img "customer-service" [ref=e60]:
+              - img [ref=e61]
+            - generic [ref=e63]: Suporte
+          - menuitem "setting Minha conta" [ref=e64] [cursor=pointer]:
+            - img "setting" [ref=e65]:
+              - img [ref=e66]
+            - generic [ref=e68]: Minha conta
+      - img "menu-fold" [ref=e71] [cursor=pointer]:
+        - img [ref=e72]
+    - main [ref=e75]:
+      - generic [ref=e77]:
+        - heading "Cotar envio" [level=3] [ref=e80]
+        - generic [ref=e84]:
+          - generic [ref=e88]:
+            - generic [ref=e90]:
+              - heading "Configurar envio" [level=5] [ref=e91]
+              - generic [ref=e92]:
+                - switch "Alternar Logística Reversa" [ref=e94] [cursor=pointer]:
+                  - generic [ref=e96]:
+                    - generic: Reversa
+                    - generic: Envio
+                - strong [ref=e99]: Logística Reversa
+            - generic [ref=e101]:
+              - generic [ref=e103]:
+                - generic [ref=e107]:
+                  - generic [ref=e108]:
+                    - img "bank" [ref=e111]:
+                      - img [ref=e112]
+                    - heading "1) Origem" [level=5] [ref=e117]
+                  - generic [ref=e118]:
+                    - generic [ref=e121]:
+                      - generic "Endereço selecionado" [ref=e123]: "* Endereço selecionado"
+                      - generic "Selecionar endereço de remetente" [ref=e127] [cursor=pointer]:
+                        - generic [ref=e129]:
+                          - combobox "Selecionar endereço de remetente" [ref=e131]
+                          - generic "Matriz - Av. Paulista, 1000 - Bela Vista - São Paulo/SP" [ref=e132]
+                        - generic:
+                          - img:
+                            - img
+                        - img [ref=e134]:
+                          - img [ref=e135]
+                    - generic [ref=e140]:
+                      - switch [ref=e141] [cursor=pointer]
+                      - generic [ref=e144]:
+                        - text: Solicitar coleta na origem
+                        - text: Disponível para CEPs com cobertura de coleta
+                - img [ref=e146]:
+                  - img [ref=e147]
+                - generic [ref=e152]:
+                  - generic [ref=e153]:
+                    - img "environment" [ref=e156]:
+                      - img [ref=e157]
+                    - heading "2) Destino" [level=5] [ref=e162]
+                  - generic [ref=e164]:
+                    - strong [ref=e167]: Como deseja informar o destino?
+                    - generic [ref=e169]:
+                      - generic [ref=e170] [cursor=pointer]:
+                        - radio "Informar manualmente o CEP" [checked] [ref=e172]
+                        - generic [ref=e174]: Informar manualmente o CEP
+                      - generic [ref=e175] [cursor=pointer]:
+                        - radio "Selecionar destinatário recorrente" [ref=e177]
+                        - generic [ref=e179]: Selecionar destinatário recorrente
+                  - generic [ref=e181]:
+                    - generic "CEP de destino" [ref=e183]
+                    - generic [ref=e184]:
+                      - textbox "00000-000" [ref=e187]
+                      - generic [ref=e190]: Informe o CEP de quem receberá o envio.
+              - status [ref=e193]:
+                - img "swap-right" [ref=e195]:
+                  - img [ref=e196]
+                - generic [ref=e198]: Envio → Destinatário
+          - generic [ref=e201]:
+            - generic [ref=e203]:
+              - generic [ref=e208]:
+                - generic "Valor do seguro (R$)" [ref=e210]
+                - generic [ref=e214]:
+                  - generic:
+                    - button "Increase Value" [ref=e215] [cursor=pointer]:
+                      - img "up" [ref=e216]:
+                        - img [ref=e217]
+                    - button "Decrease Value" [ref=e219] [cursor=pointer]:
+                      - img "down" [ref=e220]:
+                        - img [ref=e221]
+                  - spinbutton "Opcional" [ref=e224]
+              - generic [ref=e227]:
+                - generic [ref=e230]:
+                  - img "inbox" [ref=e232]:
+                    - img [ref=e233]
+                  - generic [ref=e235]: "Volumes:"
+                  - generic [ref=e236]: "1"
+                - generic [ref=e239]:
+                  - img "function" [ref=e241]:
+                    - img [ref=e242]
+                  - generic [ref=e244]: "Peso cubado total:"
+                  - generic [ref=e246]: 0,00 kg
+              - generic [ref=e250]:
+                - generic [ref=e252]:
+                  - heading "Volumes do envio" [level=5] [ref=e253]
+                  - text: Informe medidas internas e peso de cada volume
+                - generic [ref=e255]:
+                  - generic [ref=e257]:
+                    - generic [ref=e259]:
+                      - generic [ref=e261]: Volume 1
+                      - button "delete" [disabled] [ref=e263]:
+                        - generic:
+                          - img "delete":
+                            - img
+                    - generic [ref=e265]:
+                      - generic [ref=e268]:
+                        - generic [ref=e271]: Minhas embalagens
+                        - generic [ref=e275] [cursor=pointer]:
+                          - generic [ref=e277]:
+                            - combobox [ref=e279]
+                            - generic: Selecione uma embalagem salva
+                          - generic:
+                            - img:
+                              - img
+                      - generic [ref=e281]:
+                        - generic [ref=e284]:
+                          - generic [ref=e287]:
+                            - generic [ref=e288]: Comprimento
+                            - text: cm
+                          - generic [ref=e292]:
+                            - generic:
+                              - button "Increase Value" [ref=e293] [cursor=pointer]:
+                                - img "up" [ref=e294]:
+                                  - img [ref=e295]
+                              - button "Decrease Value" [disabled] [ref=e297]:
+                                - img "down" [ref=e298]:
+                                  - img [ref=e299]
+                            - spinbutton "0" [ref=e302]
+                        - generic [ref=e305]:
+                          - generic [ref=e308]:
+                            - generic [ref=e309]: Largura
+                            - text: cm
+                          - generic [ref=e313]:
+                            - generic:
+                              - button "Increase Value" [ref=e314] [cursor=pointer]:
+                                - img "up" [ref=e315]:
+                                  - img [ref=e316]
+                              - button "Decrease Value" [disabled] [ref=e318]:
+                                - img "down" [ref=e319]:
+                                  - img [ref=e320]
+                            - spinbutton "0" [ref=e323]
+                        - generic [ref=e326]:
+                          - generic [ref=e329]:
+                            - generic [ref=e330]: Altura
+                            - text: cm
+                          - generic [ref=e334]:
+                            - generic:
+                              - button "Increase Value" [ref=e335] [cursor=pointer]:
+                                - img "up" [ref=e336]:
+                                  - img [ref=e337]
+                              - button "Decrease Value" [disabled] [ref=e339]:
+                                - img "down" [ref=e340]:
+                                  - img [ref=e341]
+                            - spinbutton "0" [ref=e344]
+                        - generic [ref=e347]:
+                          - generic [ref=e350]:
+                            - generic [ref=e351]: Peso
+                            - text: kg
+                          - generic [ref=e355]:
+                            - generic:
+                              - button "Increase Value" [ref=e356] [cursor=pointer]:
+                                - img "up" [ref=e357]:
+                                  - img [ref=e358]
+                              - button "Decrease Value" [disabled] [ref=e360]:
+                                - img "down" [ref=e361]:
+                                  - img [ref=e362]
+                            - spinbutton "0,00" [ref=e365]: "0.00"
+                      - generic [ref=e367]:
+                        - text: "Peso cubado:"
+                        - strong [ref=e368]: 0,00 kg
+                  - button "plus Adicionar volume" [ref=e371] [cursor=pointer]:
+                    - img "plus" [ref=e373]:
+                      - img [ref=e374]
+                    - generic [ref=e377]: Adicionar volume
+            - generic [ref=e379]:
+              - generic [ref=e382]: Resultados da cotação
+              - generic [ref=e384]:
+                - generic [ref=e385]:
+                  - img "Não há dados" [ref=e387]
+                  - generic [ref=e393]: Preencha os dados e clique em Calcular para ver as cotações
+                - button "Calcular" [disabled] [ref=e394]:
+                  - generic: Calcular
+  - generic [ref=e399] [cursor=pointer]:
+    - button "Open Next.js Dev Tools" [ref=e400]:
+      - img [ref=e401]
+    - generic [ref=e404]:
+      - button "Open issues overlay" [ref=e405]:
+        - generic [ref=e406]:
+          - generic [ref=e407]: "3"
+          - generic [ref=e408]: "4"
+        - generic [ref=e409]:
+          - text: Issue
+          - generic [ref=e410]: s
+      - button "Collapse issues badge" [ref=e411]:
+        - img [ref=e412]
+  - alert [ref=e414]
+```

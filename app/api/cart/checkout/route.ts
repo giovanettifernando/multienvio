@@ -173,9 +173,9 @@ export async function POST(request: Request) {
           },
           volumes: volumes.map((vol) => ({
             peso: vol.pesoKg || 0,
-            altura: (vol as { alturaEm?: number }).alturaEm || 0,
-            largura: (vol as { larguraEm?: number }).larguraEm || 0,
-            comprimento: (vol as { comprimentoEm?: number }).comprimentoEm || 0,
+            altura: (vol as { alturaCm?: number }).alturaCm || 0,
+            largura: (vol as { larguraCm?: number }).larguraCm || 0,
+            comprimento: (vol as { comprimentoCm?: number }).comprimentoCm || 0,
           })),
         });
 

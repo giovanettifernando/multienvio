@@ -135,9 +135,11 @@ export const useQuoteStore = create<QuoteStoreState>()(
           return { form: fromSummary(currentSummary) };
         }),
       setResults: (payload) =>
-        set(() => ({
+        set((state) => ({
           results: payload,
-          form: fromSummary(payload.resumo),
+          form: state.form
+            ? { ...fromSummary(payload.resumo), updatedAt: state.form.updatedAt } // Preservar updatedAt existente
+            : fromSummary(payload.resumo),
           lastDestination: payload.resumo.destinoCep
             ? {
                 cep: payload.resumo.destinoCep,
@@ -160,18 +162,51 @@ export const useQuoteStore = create<QuoteStoreState>()(
       setSelection: (selection) => set(() => ({ selection })),
       clearSelection: () => set(() => ({ selection: null })),
       reset: (options) =>
-        set((state) => ({
-          form: options?.keepForm
-            ? state.form
-              ? fromSummary(toSummary(state.form))
-              : emptyForm()
-            : emptyForm(),
-          results: null,
-          selection: null,
-          lastDestination: options?.keepForm
-            ? state.lastDestination
-            : null,
-        })),
+        set((state) => {
+          console.log('[useQuoteStore] reset() chamado com options:', options);
+          console.log('[useQuoteStore] Estado ANTES do reset:', JSON.stringify({
+            form: state.form ? {
+              destinoCep: state.form.destinoCep,
+              coleta: state.form.coleta,
+              volumesCount: state.form.volumes?.length,
+            } : null,
+            results: state.results ? { quoteId: state.results.quoteId } : null,
+            selection: state.selection,
+            lastDestination: state.lastDestination,
+          }, null, 2));
+
+          const newState = {
+            form: options?.keepForm
+              ? state.form
+                ? fromSummary(toSummary(state.form))
+                : emptyForm()
+              : emptyForm(),
+            results: null,
+            selection: null,
+            lastDestination: options?.keepForm
+              ? state.lastDestination
+              : null,
+          };
+
+          console.log('[useQuoteStore] Novo estado após reset:', JSON.stringify({
+            form: newState.form ? {
+              destinoCep: newState.form.destinoCep,
+              coleta: newState.form.coleta,
+              volumesCount: newState.form.volumes?.length,
+            } : null,
+            results: newState.results,
+            selection: newState.selection,
+            lastDestination: newState.lastDestination,
+          }, null, 2));
+
+          console.log('[useQuoteStore] emptyForm() retorna:', JSON.stringify({
+            destinoCep: emptyForm().destinoCep,
+            coleta: emptyForm().coleta,
+            volumesCount: emptyForm().volumes.length,
+          }, null, 2));
+
+          return newState;
+        }),
     }),
     {
       name: "quote-flow",

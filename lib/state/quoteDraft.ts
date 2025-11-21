@@ -24,12 +24,29 @@ type DraftStore = {
 
 export const useQuoteDraft = create<DraftStore>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       destination: undefined,
       pickupAtOrigin: false,
-      setDestination: (d) => set({ destination: d }),
-      setPickupAtOrigin: (pickup) => set({ pickupAtOrigin: pickup }),
-      clear: () => set({ destination: undefined, pickupAtOrigin: false }),
+      setDestination: (d) => {
+        console.log('[useQuoteDraft] setDestination() chamado:', JSON.stringify(d, null, 2));
+        set({ destination: d });
+      },
+      setPickupAtOrigin: (pickup) => {
+        console.log('[useQuoteDraft] setPickupAtOrigin() chamado:', pickup);
+        set({ pickupAtOrigin: pickup });
+      },
+      clear: () => {
+        console.log('[useQuoteDraft] clear() chamado');
+        console.log('[useQuoteDraft] Estado ANTES do clear:', JSON.stringify({
+          destination: get().destination,
+          pickupAtOrigin: get().pickupAtOrigin,
+        }, null, 2));
+        set({ destination: undefined, pickupAtOrigin: false });
+        console.log('[useQuoteDraft] Estado APÓS clear:', JSON.stringify({
+          destination: get().destination,
+          pickupAtOrigin: get().pickupAtOrigin,
+        }, null, 2));
+      },
       _hasHydrated: false,
     }),
     {

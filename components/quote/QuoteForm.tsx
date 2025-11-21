@@ -231,17 +231,37 @@ type QuoteFormProps = {
 };
 
 export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
+  console.log('[QuoteForm] ========== COMPONENT RENDER ==========');
+
   const router = useRouter();
   const queryClient = useQueryClient();
   const { message } = App.useApp();
   const calculateQuotes = useQuoteCalculate();
 
-  const { form: storedForm, setResults } = useQuoteStore(
+  const { form: storedForm, setResults, reset } = useQuoteStore(
     useShallow((state) => ({
       form: state.form,
       setResults: state.setResults,
+      reset: state.reset,
     })),
   );
+
+  const quoteDraft = useQuoteDraft();
+
+  console.log('[QuoteForm] Estado atual dos stores:', JSON.stringify({
+    storedForm: storedForm ? {
+      origemCep: storedForm.origemCep,
+      destinoCep: storedForm.destinoCep,
+      coleta: storedForm.coleta,
+      devolucao: storedForm.devolucao,
+      volumesCount: storedForm.volumes?.length || 0,
+      seguroValor: storedForm.seguroValor,
+    } : null,
+    quoteDraft: {
+      destination: quoteDraft.destination,
+      pickupAtOrigin: quoteDraft.pickupAtOrigin,
+    },
+  }, null, 2));
 
   // Buscar endereços via React Query (mesma fonte que AddressSelect)
   const addressesQuery = useAddresses();
@@ -331,6 +351,28 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
   const defaultVolumes = storedForm?.volumes?.length
     ? storedForm.volumes.map((item) => ({ ...item }))
     : [createEmptyVolume()];
+
+  console.log('[QuoteForm] Calculando defaultValues para useForm:', JSON.stringify({
+    storedOriginAddress: storedOriginAddress ? { cep: storedOriginAddress.cep } : null,
+    storedDestinationAddress: storedDestinationAddress ? { cep: storedDestinationAddress.cep } : null,
+    defaultCompanyAddress: defaultCompanyAddress ? { cep: defaultCompanyAddress.cep } : null,
+    defaultVolumesCount: defaultVolumes.length,
+    computedDefaults: {
+      origemCep: storedForm?.origemCep
+        ? maskCEP(storedForm.origemCep)
+        : defaultCompanyAddress?.cep
+        ? maskCEP(defaultCompanyAddress.cep)
+        : "",
+      destinoCep: storedForm?.destinoCep
+        ? maskCEP(storedForm.destinoCep)
+        : storedDestinationAddress?.cep
+        ? maskCEP(storedDestinationAddress.cep)
+        : "",
+      coleta: storedForm?.coleta ?? false,
+      devolucao: storedForm?.devolucao ?? false,
+      seguroValor: storedForm?.seguroValor ?? undefined,
+    },
+  }, null, 2));
 
   const formMethods = useForm<QuoteFormValues>({
     resolver: zodResolver(quoteFormSchema),
@@ -456,6 +498,81 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
   const [selectedRecipientId, setSelectedRecipientId] = useState<string | null>(
     destination?.recipientId ?? null
   );
+
+  // Sincronizar estados locais quando destination do store for limpo
+  useEffect(() => {
+    console.log('[QuoteForm] EFFECT: Verificando destination...', JSON.stringify({ destination }, null, 2));
+    if (!destination) {
+      console.log('[QuoteForm] EFFECT: Destination limpo, resetando estados locais');
+      setDestinationMode("manual");
+      setSelectedRecipientId(null);
+    } else {
+      console.log('[QuoteForm] EFFECT: Destination presente, não resetando');
+    }
+  }, [destination]);
+
+  // Ref para rastrear o updatedAt do storedForm anterior
+  // Isso permite detectar quando o store foi resetado (mudou de dados -> vazio)
+  const previousUpdatedAt = useRef<string | null>(storedForm?.updatedAt || null);
+
+  // Resetar TODO o formulário (incluindo volumes) quando storedForm for RESETADO
+  // Detecta quando o store muda de "tem dados" para "vazio"
+  useEffect(() => {
+    const currentUpdatedAt = storedForm?.updatedAt || null;
+    const isStoreEmpty = !storedForm || (!storedForm.destinoCep && !storedForm.coleta && storedForm.volumes.length === 0);
+
+    console.log('[QuoteForm] EFFECT: Verificando mudanças no storedForm...', JSON.stringify({
+      previousUpdatedAt: previousUpdatedAt.current,
+      currentUpdatedAt,
+      isStoreEmpty,
+      storedForm: storedForm ? {
+        destinoCep: storedForm.destinoCep,
+        coleta: storedForm.coleta,
+        volumesLength: storedForm.volumes?.length,
+      } : null,
+    }, null, 2));
+
+    // Detectar se o store foi resetado (updatedAt mudou OU store ficou vazio)
+    const storeWasReset = previousUpdatedAt.current !== currentUpdatedAt && isStoreEmpty;
+
+    if (storeWasReset) {
+      console.log('[QuoteForm] EFFECT: Store foi RESETADO! Limpando formulário completamente...');
+      console.log('[QuoteForm] EFFECT: Valores atuais ANTES do reset:', {
+        destinoCep: getValues('destinoCep'),
+        coleta: getValues('coleta'),
+        volumes: getValues('volumes'),
+      });
+
+      // Resetar o formulário completamente para os valores padrão
+      formMethods.reset({
+        origem: (storedOriginAddress ?? defaultCompanyAddress ?? {}) as CompanyAddress,
+        destino: {} as CompanyAddress,
+        modoOrigem: "manual",
+        modoDestino: "manual",
+        remetenteRecorrenteId: null,
+        destinatarioRecorrenteId: null,
+        origemCep: defaultCompanyAddress?.cep ? maskCEP(defaultCompanyAddress.cep) : "",
+        destinoCep: "",
+        coleta: false,
+        devolucao: false,
+        seguroValor: undefined,
+        volumes: [createEmptyVolume()],
+      });
+
+      console.log('[QuoteForm] EFFECT: Formulário resetado! Valores após reset:', {
+        destinoCep: getValues('destinoCep'),
+        coleta: getValues('coleta'),
+        volumes: getValues('volumes'),
+      });
+    } else if (isStoreEmpty && previousUpdatedAt.current === null) {
+      console.log('[QuoteForm] EFFECT: Montagem inicial com store vazio - usando defaultValues');
+    } else {
+      console.log('[QuoteForm] EFFECT: Store não foi resetado, mantendo valores do formulário');
+    }
+
+    // Atualizar a ref com o valor atual
+    previousUpdatedAt.current = currentUpdatedAt;
+  }, [storedForm, formMethods, storedOriginAddress, defaultCompanyAddress, getValues]);
 
   // Buscar recipients via React Query (mesma fonte que RecipientSelect)
   const recipientsQuery = useAccountRecipients({ page: 1, pageSize: 1000 });

@@ -13,17 +13,23 @@ import {
 
 const { Text } = Typography;
 
+import type { Cart } from '@/types/cart';
+
 interface CheckoutCartModalProps {
   open: boolean;
   onClose: () => void;
-  cartId: string;
-  shipmentIds: string[];
-  totalAmount: number;
+  cart: Cart;
 }
 
 interface WalletData {
-  balance: number;
-  currency: string;
+  balance: {
+    availableReais: number;
+    availableCents: number;
+    pendingReais: number;
+    pendingCents: number;
+  };
+  monthlySummary?: unknown;
+  latestTransactions?: unknown[];
 }
 
 interface Card {
@@ -50,9 +56,7 @@ const BRAND_LABELS: Record<string, string> = {
 export function CheckoutCartModal({
   open,
   onClose,
-  cartId,
-  shipmentIds,
-  totalAmount,
+  cart,
 }: CheckoutCartModalProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -62,7 +66,10 @@ export function CheckoutCartModal({
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  console.debug('[CHECKOUT_CART] cartId=', cartId, 'shipmentIds=', shipmentIds);
+  const totalAmount = cart.total;
+  const itemCount = cart.items.length;
+
+  console.debug('[CHECKOUT_CART] cart items=', itemCount, 'total=', totalAmount);
 
   // Buscar saldo da carteira
   const {
@@ -92,7 +99,7 @@ export function CheckoutCartModal({
     enabled: open,
   });
 
-  const balance = walletData?.balance ?? 0;
+  const balance = walletData?.balance?.availableReais ?? 0;
   const hasInsufficientBalance = balance < totalAmount;
 
   const isWalletDisabled = hasInsufficientBalance;
@@ -113,6 +120,25 @@ export function CheckoutCartModal({
     setLoading(true);
 
     try {
+      // PASSO 1: Criar shipments a partir do carrinho
+      console.log('[CHECKOUT_CART] Criando shipments...');
+      const checkoutRes = await fetch('/api/cart/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+
+      if (!checkoutRes.ok) {
+        const error = await checkoutRes.json();
+        throw new Error(error.message || 'Erro ao criar shipments');
+      }
+
+      const checkoutData = await checkoutRes.json();
+      const { cartId, shipmentIds } = checkoutData;
+
+      console.log('[CHECKOUT_CART] Shipments criados:', shipmentIds);
+
+      // PASSO 2: Processar pagamento de acordo com o método selecionado
       if (selectedMethod === 'wallet') {
         // Debitar da carteira (idempotente por cartId)
         const debitRes = await fetch('/api/wallet/debit', {
@@ -124,14 +150,13 @@ export function CheckoutCartModal({
             reason: 'cart_payment',
             metadata: {
               shipmentIds,
-              itemCount: shipmentIds.length,
+              itemCount,
             },
           }),
         });
 
         if (!debitRes.ok) {
           const error = await debitRes.json();
-          // Se for P2002 (duplicate), é idempotente - continuar
           if (!error.message?.includes('P2002') && !error.message?.includes('já foi debitado')) {
             throw new Error(error.message || 'Erro ao debitar da carteira');
           }
@@ -149,10 +174,9 @@ export function CheckoutCartModal({
           }),
         });
 
-        // Invalidar cache da carteira
         queryClient.invalidateQueries({ queryKey: ['wallet'] });
-
         message.success('Pagamento com carteira aprovado!');
+
       } else if (selectedMethod === 'pix') {
         // Aprovar pagamento PIX (simulado)
         await fetch('/api/shipments/payment-batch', {
@@ -167,6 +191,7 @@ export function CheckoutCartModal({
         });
 
         message.success('Pagamento PIX aprovado (simulado)!');
+
       } else if (selectedMethod === 'card') {
         // Aprovar pagamento com cartão (simulado)
         await fetch('/api/shipments/payment-batch', {
@@ -183,14 +208,13 @@ export function CheckoutCartModal({
         message.success('Pagamento com cartão aprovado (simulado)!');
       }
 
-      // Limpar carrinho
+      // PASSO 3: Limpar carrinho
       await fetch('/api/carrinho', { method: 'DELETE' });
 
-      // Invalidar cache do carrinho e dos envios
+      // PASSO 4: Invalidar cache e redirecionar
       queryClient.invalidateQueries({ queryKey: ['cart'] });
       queryClient.invalidateQueries({ queryKey: ['shipments'] });
 
-      // Fechar modal e redirecionar
       onClose();
       router.push('/shipments');
     } catch (error) {
@@ -232,7 +256,7 @@ export function CheckoutCartModal({
 
         <div>
           <Text type="secondary">
-            Você está pagando {shipmentIds.length} {shipmentIds.length === 1 ? 'envio' : 'envios'}
+            Você está pagando {itemCount} {itemCount === 1 ? 'envio' : 'envios'}
           </Text>
         </div>
 

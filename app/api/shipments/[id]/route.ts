@@ -5,43 +5,13 @@ import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth/session';
 import { prisma } from '@/lib/db';
 
-// Type definitions for document structure
-interface DocumentItem {
-  id?: string;
-  descricao?: string;
-  description?: string;
-  produto?: string;
-  quantidade?: number;
-  quantity?: number;
-  valorUnitario?: number;
-  unitValue?: number;
-  valor?: number;
-  subtotal?: number;
-  total?: number;
-  volumeIndex?: number;
-}
-
-interface VolumeDeclaration {
-  volumeIndex: number;
-  items?: DocumentItem[];
-}
-
-interface ShipmentDocument {
-  type?: string;
-  nfeKeys?: string[];
-  nfKey?: string;
-  items?: DocumentItem[];
-  volumeDeclarations?: VolumeDeclaration[];
-  declarationItems?: DocumentItem[];
-}
-
 /**
- * GET /api/shipments/:id
- * Retorna detalhes completos do shipment por ID
+ * DELETE /api/shipments/[id]
+ * Deleta um shipment (apenas se ainda não foi pago/processado)
  */
-export async function GET(
+export async function DELETE(
   request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
     const session = await getSession();
@@ -50,164 +20,59 @@ export async function GET(
       return NextResponse.json({ message: 'Não autorizado' }, { status: 401 });
     }
 
-    const { id: shipmentId } = await params;
+    const { id: shipmentId } = params;
 
-    console.debug('[DETAIL] params.id=', shipmentId);
-
-    // Buscar shipment por ID (escopo do usuário)
-    const shipment = await prisma.shipment.findFirst({
-      where: {
-        id: shipmentId,
-        senderId: session.userId, // Verificar que pertence ao usuário
-      },
-      include: {
-        trackingEvents: {
-          orderBy: {
-            occurredAt: 'desc',
-          },
-        },
-        packages: {
-          orderBy: {
-            packageNumber: 'asc',
-          },
-        },
-      },
+    // Buscar shipment
+    const shipment = await prisma.shipment.findUnique({
+      where: { id: shipmentId },
     });
 
     if (!shipment) {
+      return NextResponse.json({ message: 'Shipment não encontrado' }, { status: 404 });
+    }
+
+    // Verificar se o shipment pertence ao usuário
+    if (shipment.senderId !== session.userId) {
+      return NextResponse.json({ message: 'Não autorizado' }, { status: 403 });
+    }
+
+    // Verificar se o shipment pode ser deletado
+    // Permitir deletar apenas se não tem método de pagamento definido
+    if (shipment.paymentMethod) {
       return NextResponse.json(
-        { code: 'NOT_FOUND', message: 'Envio não encontrado' },
-        { status: 404 }
+        { message: 'Não é possível deletar um shipment que já foi pago' },
+        { status: 400 }
       );
     }
 
-    // Extrair informações do documento
-    const document = shipment.document as unknown as ShipmentDocument | null;
-    const documentType = document?.type || 'DECLARACAO';
-
-    // Extrair itens da declaração ou NF
-    let items: DocumentItem[] = [];
-    let nfeKeys: string[] = [];
-
-    if (documentType === 'NFE') {
-      // NF-e: extrair chaves e itens se disponíveis
-      nfeKeys = document?.nfeKeys || [];
-      // Itens podem não estar disponíveis para NF-e
-      items = document?.items || [];
-    } else {
-      // Declaração: extrair itens
-      // Novo formato: declaração por volume
-      if (document?.volumeDeclarations && Array.isArray(document.volumeDeclarations)) {
-        // Concatenar todos os itens de todos os volumes
-        items = document.volumeDeclarations.flatMap((volDecl: VolumeDeclaration) =>
-          (volDecl.items || []).map((item: DocumentItem) => ({
-            ...item,
-            volumeIndex: volDecl.volumeIndex,
-          }))
-        );
-      }
-      // Formato legado: declaração única
-      else if (document?.declarationItems && Array.isArray(document.declarationItems)) {
-        items = document.declarationItems;
-      }
-    }
-
-    // Organizar itens por volume para expansão
-    // Mapeamento: volumeIndex -> itens
-    const itemsByVolume = new Map<number, DocumentItem[]>();
-
-    if (documentType === 'DECLARACAO' && document?.volumeDeclarations) {
-      // Novo formato: usar volumeDeclarations diretamente
-      document.volumeDeclarations.forEach((volDecl: VolumeDeclaration) => {
-        itemsByVolume.set(volDecl.volumeIndex, volDecl.items || []);
-      });
-    } else if (documentType === 'DECLARACAO' && document?.declarationItems) {
-      // Formato legado: todos os itens no primeiro volume
-      itemsByVolume.set(0, document.declarationItems);
-    } else if (documentType === 'NFE') {
-      // NF-e: itens não são organizados por volume (exibir chaves apenas)
-      // Não fazer nada - itens serão exibidos globalmente
-    }
-
-    // Retornar snapshot completo do shipment
-    return NextResponse.json({
-      id: shipment.id,
-      trackingCode: shipment.platformTrackingCode, // Expor apenas código da plataforma
-      publicTrackingId: shipment.publicTrackingId,
-      status: shipment.status,
-      paymentMethod: shipment.paymentMethod,
-      carrier: shipment.carrier,
-      service: shipment.service,
-      freightCost: shipment.freightCost,
-      estimatedDays: shipment.estimatedDays,
-      declaredValue: shipment.declaredValue,
-      weight: shipment.weight,
-      originCep: shipment.originCep,
-      destinationCep: shipment.destinationCep,
-      destinationCity: shipment.destinationCity,
-      destinationState: shipment.destinationState,
-      destinationAddress: shipment.destinationAddress,
-      destinationNeighborhood: shipment.destinationNeighborhood,
-      recipientName: shipment.recipientName,
-      recipientPhone: shipment.recipientPhone,
-      recipientEmail: shipment.recipientEmail,
-      recipientDocument: shipment.recipientDocument,
-      pickupPointId: shipment.pickupPointId,
-      document: shipment.document, // Snapshot completo (originAddress, destination, volumes, preferences, etc)
-      postedAt: shipment.postedAt,
-      deliveredAt: shipment.deliveredAt,
-      createdAt: shipment.createdAt,
-      updatedAt: shipment.updatedAt,
-      // Volumes (packages)
-      volumes: shipment.packages.map((pkg, idx) => {
-        // Buscar itens deste volume (packageNumber - 1 = volumeIndex)
-        const volumeIndex = pkg.packageNumber - 1;
-        const volumeItems = itemsByVolume.get(volumeIndex) || [];
-
-        return {
-          id: pkg.id,
-          packageNumber: pkg.packageNumber,
-          weight: pkg.weight,
-          width: pkg.width,
-          height: pkg.height,
-          length: pkg.length,
-          hasDivergence: pkg.hasDivergence,
-          divergenceNotes: pkg.divergenceNotes,
-          // Itens deste volume (declaração)
-          items: volumeItems.map((item: DocumentItem) => ({
-            id: item.id,
-            descricao: item.descricao,
-            quantidade: item.quantidade,
-            valorUnitario: item.valorUnitario,
-            subtotal: (item.quantidade || 0) * (item.valorUnitario || 0),
-          })),
-        };
+    // Deletar em transação (cascata: volumes, labels, tracking events)
+    await prisma.$transaction([
+      // Deletar volumes
+      prisma.package.deleteMany({
+        where: { shipmentId },
       }),
-      // Itens (declaração ou NF-e)
-      documentType,
-      nfeKeys,
-      items: items.map((item: DocumentItem) => ({
-        id: item.id,
-        descricao: item.descricao,
-        quantidade: item.quantidade,
-        valorUnitario: item.valorUnitario,
-        subtotal: (item.quantidade || 0) * (item.valorUnitario || 0),
-        volumeIndex: item.volumeIndex,
-      })),
-      // Eventos de rastreamento
-      trackingEvents: shipment.trackingEvents.map((event) => ({
-        type: event.type,
-        description: event.description,
-        city: event.city,
-        uf: event.uf,
-        occurredAt: event.occurredAt.toISOString(),
-      })),
-    });
+      // Deletar etiquetas
+      prisma.label.deleteMany({
+        where: { shipmentId },
+      }),
+      // Deletar eventos de rastreamento
+      prisma.trackingEvent.deleteMany({
+        where: { shipmentId },
+      }),
+      // Deletar shipment
+      prisma.shipment.delete({
+        where: { id: shipmentId },
+      }),
+    ]);
 
+    return NextResponse.json({
+      message: 'Shipment deletado com sucesso',
+      shipmentId,
+    });
   } catch (error) {
-    console.error('[SHIPMENT_GET]', error);
+    console.error('[SHIPMENT_DELETE]', error);
     return NextResponse.json(
-      { message: 'Erro ao buscar envio' },
+      { message: 'Erro ao deletar shipment' },
       { status: 500 }
     );
   }

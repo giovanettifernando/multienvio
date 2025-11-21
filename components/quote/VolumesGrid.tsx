@@ -61,13 +61,17 @@ function VolumeItem({
   canRemove: boolean;
   onRemove: () => void;
 }) {
-  const { setValue } = useFormContext<QuoteFormValues>();
+  const { setValue, trigger } = useFormContext<QuoteFormValues>();
   const [selectedPackagingId, setSelectedPackagingId] = useState<string | undefined>();
   const [packagingSnapshot, setPackagingSnapshot] = useState<{
     lengthCm: number;
     widthCm: number;
     heightCm: number;
   } | null>(null);
+
+  // Ref para dar foco no campo de peso após selecionar embalagem
+  // InputNumber expõe um elemento com método focus()
+  const pesoInputRef = useRef<HTMLInputElement>(null);
 
   // Observar mudanças nos campos de medida
   const comprimentoCm = useWatch({ control, name: `volumes.${index}.comprimentoCm` });
@@ -117,6 +121,11 @@ function VolumeItem({
         heightCm: template.heightCm,
       });
       setSelectedPackagingId(value);
+
+      // Dar foco no campo de peso após aplicar dimensões
+      setTimeout(() => {
+        pesoInputRef.current?.focus();
+      }, 100);
     } else {
       // Limpar seleção
       setSelectedPackagingId(undefined);
@@ -171,7 +180,14 @@ function VolumeItem({
                       (fieldState.isDirty || fieldState.isTouched);
                     return (
                       <Form.Item
-                        label={<span className={styles.fieldLabelSm}>Comprimento (cm)</span>}
+                        label={
+                          <div style={{ lineHeight: "1.2" }}>
+                            <div className={styles.fieldLabelSm}>Comprimento</div>
+                            <Typography.Text type="secondary" style={{ fontSize: "11px" }}>
+                              cm
+                            </Typography.Text>
+                          </div>
+                        }
                         validateStatus={showError ? "error" : undefined}
                         help={showError ? fieldState.error?.message : undefined}
                       >
@@ -203,7 +219,14 @@ function VolumeItem({
                       (fieldState.isDirty || fieldState.isTouched);
                     return (
                       <Form.Item
-                        label={<span className={styles.fieldLabelSm}>Largura (cm)</span>}
+                        label={
+                          <div style={{ lineHeight: "1.2" }}>
+                            <div className={styles.fieldLabelSm}>Largura</div>
+                            <Typography.Text type="secondary" style={{ fontSize: "11px" }}>
+                              cm
+                            </Typography.Text>
+                          </div>
+                        }
                         validateStatus={showError ? "error" : undefined}
                         help={showError ? fieldState.error?.message : undefined}
                       >
@@ -235,7 +258,14 @@ function VolumeItem({
                       (fieldState.isDirty || fieldState.isTouched);
                     return (
                       <Form.Item
-                        label={<span className={styles.fieldLabelSm}>Altura (cm)</span>}
+                        label={
+                          <div style={{ lineHeight: "1.2" }}>
+                            <div className={styles.fieldLabelSm}>Altura</div>
+                            <Typography.Text type="secondary" style={{ fontSize: "11px" }}>
+                              cm
+                            </Typography.Text>
+                          </div>
+                        }
                         validateStatus={showError ? "error" : undefined}
                         help={showError ? fieldState.error?.message : undefined}
                       >
@@ -267,12 +297,20 @@ function VolumeItem({
                       (fieldState.isDirty || fieldState.isTouched);
                     return (
                       <Form.Item
-                        label={<span className={styles.fieldLabelSm}>Peso (kg)</span>}
+                        label={
+                          <div style={{ lineHeight: "1.2" }}>
+                            <div className={styles.fieldLabelSm}>Peso</div>
+                            <Typography.Text type="secondary" style={{ fontSize: "11px" }}>
+                              kg
+                            </Typography.Text>
+                          </div>
+                        }
                         validateStatus={showError ? "error" : undefined}
                         help={showError ? fieldState.error?.message : undefined}
                       >
                         <InputNumber
                           {...controllerField}
+                          ref={pesoInputRef}
                           value={controllerField.value ?? undefined}
                           min={0}
                           step={0.1}
@@ -282,6 +320,18 @@ function VolumeItem({
                           onChange={(value) =>
                             controllerField.onChange(value ?? undefined)
                           }
+                          onFocus={(e) => {
+                            // Selecionar todo o texto ao receber foco para facilitar digitação
+                            e.target.select();
+                          }}
+                          onBlur={async () => {
+                            // Forçar recálculo do peso cubado ao sair do campo
+                            controllerField.onBlur();
+
+                            // Trigger para forçar recálculo dos totais
+                            // Isso garante que o watch() no componente pai detecte a mudança
+                            await trigger(`volumes.${index}.pesoKg`);
+                          }}
                           style={{ width: "100%" }}
                         />
                       </Form.Item>

@@ -22,11 +22,6 @@ export default function CarrinhoPage() {
   const [itemToRemove, setItemToRemove] = useState<CartItem | null>(null);
   const [pendingRemoveId, setPendingRemoveId] = useState<string | null>(null);
   const [checkoutModalOpen, setCheckoutModalOpen] = useState(false);
-  const [createdShipments, setCreatedShipments] = useState<{
-    cartId: string;
-    shipmentIds: string[];
-    totalAmount: number;
-  } | null>(null);
 
   const removeMutation = useCartRemove(pendingRemoveId ?? "");
   const clearMutation = useCartClearMutation();
@@ -85,41 +80,15 @@ export default function CarrinhoPage() {
     });
   };
 
-  const handlePayCart = async () => {
+  const handlePayCart = () => {
     if (!cart?.items?.length) {
       message.error("Carrinho vazio.");
       return;
     }
 
-    try {
-      // Fazer checkout do carrinho (criar shipments)
-      const response = await fetch("/api/cart/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}), // Checkout de todos os itens
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || "Erro ao processar checkout");
-      }
-
-      const result = await response.json();
-
-      // Guardar informações dos shipments e abrir modal de pagamento
-      setCreatedShipments({
-        cartId: result.cartId,
-        shipmentIds: result.shipmentIds,
-        totalAmount: result.totalAmount,
-      });
-      setCheckoutModalOpen(true);
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : "Não foi possível iniciar o pagamento.";
-      message.error(errorMessage);
-    }
+    // Simplesmente abrir modal de pagamento
+    // Shipments serão criados APÓS pagamento ser confirmado
+    setCheckoutModalOpen(true);
   };
 
   if (isLoading) {
@@ -163,13 +132,11 @@ export default function CarrinhoPage() {
         />
 
         {/* Modal de escolha de pagamento */}
-        {createdShipments && createdShipments.shipmentIds.length > 0 && (
+        {cart && (
           <CheckoutCartModal
             open={checkoutModalOpen}
             onClose={() => setCheckoutModalOpen(false)}
-            cartId={createdShipments.cartId}
-            shipmentIds={createdShipments.shipmentIds}
-            totalAmount={createdShipments.totalAmount}
+            cart={cart}
           />
         )}
       </PageShell>
