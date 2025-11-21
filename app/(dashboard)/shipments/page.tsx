@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState, useCallback } from "react";
+import React, { useMemo, useState, useCallback, useEffect } from "react";
 import {
   Button,
   Tag,
@@ -84,13 +84,21 @@ export default function ShipmentsPage() {
   const { message } = App.useApp();
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<ShipmentStatus | "Todos">("Todos");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [selectedShipmentId, setSelectedShipmentId] = useState<string | null>(null);
   const [divergenceModalOpen, setDivergenceModalOpen] = useState(false);
 
-  const { data, isLoading, refetch } = useShipments({ q: query, status });
+  const { data, isLoading, refetch } = useShipments({ q: query, status, page, limit: pageSize });
   const cancelMut = useShipmentCancel();
 
   const items = data?.items ?? [];
+  const pagination = data?.pagination;
+
+  // Reset page to 1 when filters change
+  useEffect(() => {
+    setPage(1);
+  }, [query, status]);
 
   // Query para buscar divergências quando modal abrir
   const { data: divergencesData, isLoading: divergencesLoading } = useQuery<{
@@ -489,7 +497,7 @@ export default function ShipmentsPage() {
         <Input
           allowClear
           style={{ flex: 1, minWidth: 280 }}
-          placeholder="Buscar por ID, rastreio, nome ou data (YYYY-MM-DD)"
+          placeholder="Buscar por rastreio, nome do destinatário, cidade, transportadora ou serviço"
           prefix={<SearchOutlined />}
           value={query}
           onChange={(event) => setQuery(event.target.value)}
@@ -513,7 +521,21 @@ export default function ShipmentsPage() {
         rowKey="id"
         loading={isLoading}
         dataSource={items}
-        pagination={{ pageSize: 10 }}
+        pagination={{
+          current: page,
+          pageSize: pageSize,
+          total: pagination?.total ?? 0,
+          showSizeChanger: true,
+          showTotal: (total, range) => `${range[0]}-${range[1]} de ${total} envios`,
+          pageSizeOptions: ['10', '20', '50', '100'],
+          onChange: (newPage, newPageSize) => {
+            setPage(newPage);
+            if (newPageSize !== pageSize) {
+              setPageSize(newPageSize);
+              setPage(1); // Reset to first page when changing page size
+            }
+          },
+        }}
         columns={columns}
         className="modern-shipments-table"
         style={{

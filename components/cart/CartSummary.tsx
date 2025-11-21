@@ -12,6 +12,8 @@ import {
 } from "antd";
 import { useRouter } from "next/navigation";
 import { useQuoteStore } from "@/store/useQuoteStore";
+import { useQuoteDraft } from "@/lib/state/quoteDraft";
+import { useCheckoutStore } from "@/stores/checkout";
 import type { Cart } from "@/types/cart";
 
 type CartSummaryProps = {
@@ -34,10 +36,14 @@ export function CartSummary({
 }: CartSummaryProps) {
   const router = useRouter();
   const resetQuote = useQuoteStore((state) => state.reset);
+  const clearDraft = useQuoteDraft((state) => state.clear);
+  const clearCheckout = useCheckoutStore((state) => state.clearCheckout);
 
   const handleNewQuote = () => {
     // Limpar todo o estado do formulário de cotações
     resetQuote();
+    clearDraft();
+    clearCheckout();
     // Redirecionar para a tela de cotações
     router.push("/cotacoes");
   };

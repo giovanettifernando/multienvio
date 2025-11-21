@@ -58,10 +58,11 @@ export default function FinalizeQuotePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { message } = App.useApp();
-  const { results, selection } = useQuoteStore(
+  const { results, selection, clearIfExpired } = useQuoteStore(
     useShallow((state) => ({
       results: state.results,
       selection: state.selection,
+      clearIfExpired: state.clearIfExpired,
     })),
   );
   const pickupAtOrigin = useQuoteDraft((s) => s.pickupAtOrigin);
@@ -72,6 +73,15 @@ export default function FinalizeQuotePage() {
   const recipientSave = useRecipientSave();
   const createShipment = useShipmentCreate();
   const cartClear = useShipmentsCartClear();
+
+  // Verificar e limpar cotação expirada ao montar o componente
+  useEffect(() => {
+    const wasExpired = clearIfExpired();
+    if (wasExpired) {
+      message.warning("Sua cotação expirou. Por favor, faça uma nova cotação.");
+      router.push("/cotacoes");
+    }
+  }, [clearIfExpired, message, router]);
 
   // Estados para o modal de checkout
   const [checkoutModalOpen, setCheckoutModalOpen] = useState(false);
@@ -494,6 +504,14 @@ export default function FinalizeQuotePage() {
     e.preventDefault();
     e.stopPropagation();
 
+    // Verificar se a cotação expirou antes de adicionar ao carrinho
+    const wasExpired = clearIfExpired();
+    if (wasExpired) {
+      message.warning("Sua cotação expirou. Por favor, faça uma nova cotação.");
+      router.push("/cotacoes");
+      return;
+    }
+
     if (!selection || !results || !summary || !selectedService) {
       message.warning("Informações da cotação incompletas.");
       return;
@@ -515,19 +533,72 @@ export default function FinalizeQuotePage() {
 
     try {
       // Obter dados do destinatário (manual ou salvo)
-      const recipientData = values.recipient.mode === 'manual'
-        ? values.recipient.manual
-        : null; // TODO: buscar dados do destinatário salvo se necessário
+      let recipientData: typeof values.recipient.manual | undefined;
 
-      // Salvar destinatário recorrente se a flag estiver marcada
+      if (values.recipient.mode === 'manual') {
+        recipientData = values.recipient.manual;
+      } else if (values.recipient.mode === 'saved' && values.recipient.savedId) {
+        // Buscar destinatário salvo via API
+        try {
+          console.log('[CART_ADD] Buscando destinatário salvo:', values.recipient.savedId);
+          const response = await fetch(`/api/account/recipients/${values.recipient.savedId}`);
+
+          if (!response.ok) {
+            message.error('Erro ao buscar dados do destinatário selecionado.');
+            return;
+          }
+
+          const result = await response.json();
+          const recipient = result.data;
+
+          // Mapear dados do destinatário recorrente
+          recipientData = {
+            nome: recipient.name,
+            telefone: recipient.phone || '',
+            email: recipient.email || undefined,
+            documento: recipient.document || '',
+            cep: recipient.cep,
+            logradouro: recipient.logradouro,
+            numero: recipient.numero,
+            complemento: recipient.complemento || '',
+            bairro: recipient.bairro,
+            cidade: recipient.cidade,
+            uf: recipient.uf,
+            observacoes: recipient.notes || undefined,
+            salvarRecorrente: false, // Não salvar novamente
+          };
+
+          // Validar dados mínimos do destinatário salvo
+          if (!recipientData.cidade || !recipientData.uf || !recipientData.cep) {
+            console.log('[CART_ADD] ERRO: Destinatário salvo com dados incompletos', {
+              cidade: recipientData.cidade,
+              uf: recipientData.uf,
+              cep: recipientData.cep,
+            });
+            message.error('Destinatário selecionado possui dados incompletos. Por favor, atualize o cadastro.');
+            return;
+          }
+
+          console.log('[CART_ADD] Destinatário carregado:', recipientData.nome);
+        } catch (error) {
+          console.error('[CART_ADD] Erro ao buscar destinatário:', error);
+          message.error('Erro ao buscar dados do destinatário.');
+          return;
+        }
+      } else {
+        message.error('Selecione ou preencha os dados do destinatário.');
+        return;
+      }
+
+      // Salvar destinatário recorrente se a flag estiver marcada (apenas modo manual)
       if (values.recipient.mode === 'manual' && values.recipient.manual?.salvarRecorrente) {
         try {
           console.log('[CART_ADD] Salvando destinatário recorrente...');
           await recipientSave.mutateAsync({
-            nome: recipientData!.nome,
+            nome: recipientData!.nome || '',
             email: recipientData!.email,
-            telefone: recipientData!.telefone,
-            documento: recipientData!.documento,
+            telefone: recipientData!.telefone || '',
+            documento: recipientData!.documento || '',
             cep: summary.destinoCep,
             logradouro: recipientData!.logradouro || '',
             numero: recipientData!.numero || '',
@@ -624,6 +695,14 @@ export default function FinalizeQuotePage() {
       return;
     }
 
+    // Verificar se a cotação expirou antes de processar pagamento
+    const wasExpired = clearIfExpired();
+    if (wasExpired) {
+      message.warning("Sua cotação expirou. Por favor, faça uma nova cotação.");
+      router.push("/cotacoes");
+      return;
+    }
+
     setIsProcessingCheckout(true);
     console.log('[HANDLE_PAY_NOW] 🔒 Iniciando checkout (lock ativado)', { selection, results: !!results, summary: !!summary, selectedService: !!selectedService });
 
@@ -686,19 +765,30 @@ export default function FinalizeQuotePage() {
         // Mapear dados do destinatário recorrente
         recipientData = {
           nome: recipient.name,
-          telefone: recipient.phone,
-          email: recipient.email,
-          documento: recipient.document,
+          telefone: recipient.phone || '',
+          email: recipient.email || undefined,
+          documento: recipient.document || '',
           cep: recipient.cep,
           logradouro: recipient.logradouro,
           numero: recipient.numero,
-          complemento: recipient.complemento,
+          complemento: recipient.complemento || '',
           bairro: recipient.bairro,
           cidade: recipient.cidade,
           uf: recipient.uf,
-          observacoes: recipient.notes,
+          observacoes: recipient.notes || undefined,
           salvarRecorrente: false, // Não salvar novamente
         };
+
+        // Validar dados mínimos do destinatário salvo
+        if (!recipientData.cidade || !recipientData.uf || !recipientData.cep) {
+          console.log('[RECIPIENT_DEBUG] ERRO: Destinatário salvo com dados incompletos', {
+            cidade: recipientData.cidade,
+            uf: recipientData.uf,
+            cep: recipientData.cep,
+          });
+          message.error("Destinatário selecionado possui dados incompletos. Por favor, atualize o cadastro.");
+          return;
+        }
 
         console.log('[RECIPIENT_DEBUG] Destinatário carregado:', recipientData.nome);
       } catch (error) {

@@ -125,7 +125,7 @@ export async function POST(request: Request) {
 
         // Determinar status inicial baseado no tipo de coleta
         const pickupPointId = item.pickupPoint ? (item.pickupPoint as { id?: string | null; [key: string]: unknown }).id : null;
-        const hasPickupRequest = (preferences as { pickupAtOrigin?: boolean })?.pickupAtOrigin === true;
+        const hasPickupRequest = (preferences as { pickupRequested?: boolean })?.pickupRequested === true;
 
         let initialStatus: ShipmentStatus;
         if (hasPickupRequest) {
@@ -195,11 +195,47 @@ export async function POST(request: Request) {
           },
         });
 
+        // Se coleta foi solicitada, criar PickupRequest
+        if (hasPickupRequest) {
+          const pickupFee = item.pickupFee as { collectorId?: string } | null;
+          const collectorId = pickupFee?.collectorId || null;
+
+          // Verificar se já existe coleta para este shipment (idempotência)
+          const existingPickup = await tx.pickupRequest.findUnique({
+            where: { shipmentId: shipment.id },
+          });
+
+          if (!existingPickup) {
+            await tx.pickupRequest.create({
+              data: {
+                userId: session.userId,
+                shipmentId: shipment.id,
+                collectorId: collectorId,
+                originCep: originAddress.cep,
+                originAddress: null, // Endereço completo está no shipment.document
+                originCity: typeof originAddress.cidade === 'string' ? originAddress.cidade : null,
+                originUf: typeof originAddress.uf === 'string' ? originAddress.uf : null,
+                status: 'PENDING',
+                notes: null,
+              },
+            });
+          }
+        }
+
         // Criar evento inicial de rastreamento
         await createInitialTrackingEvent(tx, shipment.id, initialStatus, new Date());
 
         shipmentIds.push(shipment.id);
-        totalAmount += selectedQuote.price || 0;
+
+        // Usar totals.total que inclui frete, pickupFee, seguros, etc.
+        const itemTotals = item.totals as { total?: number };
+        const itemTotal = itemTotals?.total;
+
+        if (!itemTotal || itemTotal <= 0) {
+          throw new Error(`INVALID_ITEM_TOTAL: Item ${item.id} has invalid total: ${itemTotal}`);
+        }
+
+        totalAmount += itemTotal;
       }
 
       // Atualizar meta do carrinho com fingerprint e shipmentIds

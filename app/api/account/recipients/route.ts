@@ -23,13 +23,14 @@ export const GET = withApiHandler(async ({ req, logger }) => {
   const q = search.get("q") ?? undefined;
   const city = search.get("city") ?? undefined;
   const uf = search.get("uf") ?? undefined;
+  const cep = search.get("cep") ?? undefined;
   const page = parsePositiveInteger(search.get("page"), 1);
   const pageSize = parsePositiveInteger(search.get("pageSize"), 20);
 
   try {
     const result = await listRecipients(
       userId,
-      { q, city, uf, page, pageSize },
+      { q, city, uf, cep, page, pageSize },
       { logger },
     );
 

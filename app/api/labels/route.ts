@@ -34,11 +34,12 @@ export async function GET(request: Request) {
       },
     };
 
-    // Filtro de busca por tracking code ou shipment ID
+    // Filtro de busca por tracking code, shipment tracking code ou shipment ID
     if (q && q.trim().length > 0) {
       where.OR = [
         { trackingCode: { contains: q, mode: 'insensitive' } },
         { shipment: { platformTrackingCode: { contains: q, mode: 'insensitive' } } },
+        { shipmentId: q }, // ✅ Buscar por shipment ID exato
       ];
     }
 

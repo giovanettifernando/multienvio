@@ -51,6 +51,11 @@ export type CartItemSnapshot = {
     uf?: string;
     cep?: string;
   } | null;
+  pickupFee?: {
+    collectorId: string;
+    feeAmount: number;
+    distanceKm: number;
+  } | null;
   selectedQuote: {
     carrier: string;
     serviceCode?: string;
@@ -63,6 +68,7 @@ export type CartItemSnapshot = {
     subtotal?: number;
     desconto?: number;
     taxas?: number;
+    pickupFee?: number;
     total: number;
     moeda: string;
   };

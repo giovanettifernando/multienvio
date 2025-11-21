@@ -11,7 +11,7 @@ import { prisma } from '@/lib/db';
  */
 export async function POST(
   request: Request,
-  { params }: { params: { id: string } }
+  props: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getSession();
@@ -20,6 +20,7 @@ export async function POST(
       return NextResponse.json({ message: 'Não autorizado' }, { status: 401 });
     }
 
+    const params = await props.params;
     const { id: cartId } = params;
 
     // Buscar carrinho

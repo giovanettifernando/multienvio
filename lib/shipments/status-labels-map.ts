@@ -3,7 +3,7 @@
  * Usado em endpoints de API para traduzir status do banco para labels amigáveis
  */
 
-import { ShipmentStatus, ShipmentStatusLabels } from './shipment-status';
+import { ShipmentStatus, ShipmentStatusLabels, CANCELLABLE_BEFORE_HANDOFF, CANCELLABLE_IN_TRANSIT, FINAL_STATUSES } from './shipment-status';
 
 /**
  * Status simplificados para exibição na UI do frontend
@@ -88,6 +88,14 @@ export function mapToUIStatus(status: ShipmentStatus): UIShipmentStatus {
     return "Entregue";
   }
 
+  // NOTA: Mapeamento simplificado por limitação da UI
+  // Idealmente, estes status teriam suas próprias categorias na UI:
+  // - DELIVERY_ATTEMPT_FAILED (laranja): "Tentativa de entrega falhou" (ex: destinatário ausente)
+  // - DELIVERY_PROBLEM (vermelho): "Problema na entrega" (ex: endereço incorreto)
+  //
+  // Por enquanto, são agrupados em "Em rota de entrega" pois o fluxo de entrega
+  // ainda está ativo (transportadora tentará reentrega). Usuários podem ver
+  // o status detalhado ao clicar no envio.
   if ([
     ShipmentStatus.DELIVERY_ATTEMPT_FAILED,
     ShipmentStatus.DELIVERY_PROBLEM,
@@ -195,4 +203,20 @@ export function getBackendStatusesForUIFilter(uiStatus: UIShipmentStatus): Shipm
     default:
       return [];
   }
+}
+
+/**
+ * Verifica se um shipment pode ser cancelado com base no status completo do backend
+ * @param status Status completo do backend (ShipmentStatus)
+ * @returns true se pode ser cancelado, false caso contrário
+ */
+export function canShipmentBeCancelled(status: ShipmentStatus): boolean {
+  // Status finais não podem ser cancelados
+  if ((FINAL_STATUSES as readonly ShipmentStatus[]).includes(status)) {
+    return false;
+  }
+
+  // Verificar se está nos status canceláveis
+  const allCancellable: readonly ShipmentStatus[] = [...CANCELLABLE_BEFORE_HANDOFF, ...CANCELLABLE_IN_TRANSIT];
+  return allCancellable.includes(status);
 }

@@ -55,9 +55,8 @@ import { AddressSelect } from "@/components/addresses/AddressSelect";
 import { AddressModal, type AddressFormValues } from "@/components/account/AddressModal";
 import { RecipientSelect } from "@/components/recipients/RecipientSelect";
 import { RecipientModal, type RecipientFormValues } from "@/components/recipients/RecipientModal";
-import { useRecipientsStore } from "@/lib/state/recipients";
 import type { Recipient } from "@/types/account";
-import { useAddresses, useAccountRecipients } from "@/hooks/useAccount";
+import { useAddresses, useAccountRecipients, useAddressCreate, useRecipientCreate } from "@/hooks/useAccount";
 import { useQuoteDraft } from "@/lib/state/quoteDraft";
 import { RouteModeTag } from "@/components/shipping/RouteModeTag";
 import { RouteCards } from "@/components/shipping/RouteCards";
@@ -99,7 +98,7 @@ const addressesEqual = (
   return companyAddressKeys.every((key) => (a[key] ?? "") === (b[key] ?? ""));
 };
 
-const MAX_VOLUMES = 30;
+const MAX_VOLUMES = 10;
 const cepRegex = /^\d{5}-?\d{3}$/; // Aceita com ou sem hífen
 
 // Helper para converter endereço em info de header
@@ -271,10 +270,11 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
   const {
     selectedOriginId,
     selectOrigin,
-    add: addAddress,
   } = useAddressStore();
 
-  const { add: addRecipient } = useRecipientsStore();
+  // Hooks de criação via API (substituem stores locais)
+  const createAddress = useAddressCreate();
+  const createRecipient = useRecipientCreate();
 
   const companyAddress = getCompanyDefaultAddress();
 
@@ -723,7 +723,7 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
 
   const handleAddVolume = useCallback(() => {
     if (fields.length >= MAX_VOLUMES) {
-      message.info("Limite máximo de volumes atingido.");
+      message.info(`Limite máximo de ${MAX_VOLUMES} volumes por cotação atingido.`);
       return;
     }
     append(createEmptyVolume());
@@ -996,99 +996,115 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
     setAddressModalOpen(true);
   };
 
-  const handleAddressModalSubmit = (values: AddressFormValues) => {
-    const newAddress = {
-      id: crypto.randomUUID(),
-      apelido: values.label,
-      cep: values.cep,
-      logradouro: values.logradouro,
-      numero: values.numero,
-      complemento: values.complemento,
-      bairro: values.bairro,
-      cidade: values.cidade,
-      uf: values.uf,
-      isDefault: values.isDefault,
-    };
+  const handleAddressModalSubmit = async (values: AddressFormValues) => {
+    try {
+      const payload = {
+        apelido: values.label,
+        cep: values.cep,
+        logradouro: values.logradouro,
+        numero: values.numero,
+        complemento: values.complemento,
+        bairro: values.bairro,
+        cidade: values.cidade,
+        uf: values.uf,
+        isDefault: values.isDefault,
+      };
 
-    addAddress(newAddress, { select: true });
-    setAddressModalOpen(false);
-    message.success("Endereço adicionado com sucesso!");
+      // Salvar via API
+      const response = await createAddress.mutateAsync(payload);
+      const createdAddress = response.data;
+
+      // Selecionar o endereço criado
+      selectOrigin(createdAddress.id);
+
+      setAddressModalOpen(false);
+      message.success("Endereço adicionado com sucesso!");
+    } catch (error) {
+      console.error('[ADDRESS_CREATE_ERROR]', error);
+      message.error("Erro ao adicionar endereço.");
+    }
   };
 
-  const handleRecipientModalSubmit = (values: RecipientFormValues) => {
-    const newRecipient = {
-      id: crypto.randomUUID(),
-      name: values.name,
-      doc: values.doc,
-      phone: values.phone,
-      email: values.email,
-      cep: values.cep,
-      logradouro: values.logradouro,
-      numero: values.numero,
-      complemento: values.complemento,
-      bairro: values.bairro,
-      cidade: values.cidade,
-      uf: values.uf,
-      notes: values.notes,
-    };
+  const handleRecipientModalSubmit = async (values: RecipientFormValues) => {
+    try {
+      const payload = {
+        name: values.name,
+        document: values.doc,
+        phone: values.phone,
+        email: values.email,
+        cep: values.cep,
+        logradouro: values.logradouro,
+        numero: values.numero,
+        complemento: values.complemento,
+        bairro: values.bairro,
+        cidade: values.cidade,
+        uf: values.uf,
+        notes: values.notes,
+      };
 
-    addRecipient(newRecipient);
-    setSelectedRecipientId(newRecipient.id);
-    setValue(
-      (isReverse ? "modoOrigem" : "modoDestino") as
-        | "modoOrigem"
-        | "modoDestino",
-      "recorrente",
-      { shouldDirty: true },
-    );
+      // Salvar via API
+      const createdRecipient = await createRecipient.mutateAsync(payload);
 
-    // Salvar na store de draft
-    setDestination({
-      mode: "recipient",
-      recipientId: newRecipient.id,
-      recipientName: newRecipient.name,
-      cep: newRecipient.cep,
-      city: newRecipient.cidade,
-      state: newRecipient.uf,
-      street: newRecipient.logradouro ?? null,
-      neighborhood: newRecipient.bairro ?? null,
-    });
+      setSelectedRecipientId(createdRecipient.id);
+      setValue(
+        (isReverse ? "modoOrigem" : "modoDestino") as
+          | "modoOrigem"
+          | "modoDestino",
+        "recorrente",
+        { shouldDirty: true },
+      );
 
-    // Preencher o CEP no formulário
-    const formattedCep = formatCep(normalizeCep(newRecipient.cep));
-    const recipientAddress: CompanyAddress = {
-      cep: formattedCep,
-      cidade: newRecipient.cidade,
-      uf: newRecipient.uf,
-      nome: newRecipient.name,
-      logradouro: newRecipient.logradouro ?? undefined,
-      bairro: newRecipient.bairro ?? undefined,
-      numero: newRecipient.numero ?? undefined,
-      complemento: newRecipient.complemento ?? undefined,
-    };
-
-    if (isReverse) {
-      setValue("origem", recipientAddress, { shouldDirty: true });
-      setValue("origemCep", formattedCep, { shouldValidate: true });
-      setOrigemInfo({
-        cidade: newRecipient.cidade,
-        uf: newRecipient.uf,
-        label: newRecipient.name,
-        isDefault: false,
+      // Salvar na store de draft
+      setDestination({
+        mode: "recipient",
+        recipientId: createdRecipient.id,
+        recipientName: createdRecipient.name,
+        cep: createdRecipient.cep,
+        city: createdRecipient.cidade,
+        state: createdRecipient.uf,
+        street: createdRecipient.logradouro ?? null,
+        neighborhood: createdRecipient.bairro ?? null,
       });
-      setCepStatus((status) => ({ ...status, origem: true }));
-    } else {
-      setValue("destino", recipientAddress, { shouldDirty: true });
-      setValue("destinoCep", formattedCep, { shouldValidate: true });
-      setDestinoInfo({
-        cidade: newRecipient.cidade,
-        uf: newRecipient.uf,
-      });
-      setCepStatus((status) => ({ ...status, destino: true }));
+
+      // Preencher o CEP no formulário
+      const formattedCep = formatCep(normalizeCep(createdRecipient.cep));
+      const recipientAddress: CompanyAddress = {
+        cep: formattedCep,
+        cidade: createdRecipient.cidade,
+        uf: createdRecipient.uf,
+        nome: createdRecipient.name,
+        logradouro: createdRecipient.logradouro ?? undefined,
+        bairro: createdRecipient.bairro ?? undefined,
+        numero: createdRecipient.numero ?? undefined,
+        complemento: createdRecipient.complemento ?? undefined,
+      };
+
+      if (isReverse) {
+        setValue("origem", recipientAddress, { shouldDirty: true });
+        setValue("origemCep", formattedCep, { shouldValidate: true });
+        setOrigemInfo({
+          cidade: createdRecipient.cidade,
+          uf: createdRecipient.uf,
+          label: createdRecipient.name,
+          isDefault: false,
+        });
+        setCepStatus((status) => ({ ...status, origem: true }));
+      } else {
+        setValue("destino", recipientAddress, { shouldDirty: true });
+        setValue("destinoCep", formattedCep, { shouldValidate: true });
+        setDestinoInfo({
+          cidade: createdRecipient.cidade,
+          uf: createdRecipient.uf,
+        });
+        setCepStatus((status) => ({ ...status, destino: true }));
+      }
+
+      setRecipientModalOpen(false);
+      message.success("Destinatário adicionado com sucesso!");
+    } catch (error) {
+      console.error('[RECIPIENT_CREATE_ERROR]', error);
+      message.error("Erro ao adicionar destinatário.");
     }
-
-    setRecipientModalOpen(false);
-    message.success("Destinatário adicionado com sucesso!");
   };
 
   const handleRecipientSelect = (recipientId: string | null, recipient?: Recipient | undefined) => {

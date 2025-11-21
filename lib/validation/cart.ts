@@ -48,6 +48,7 @@ export const totalsSnapshotSchema = z.object({
   subtotal: z.number().optional(),
   desconto: z.number().optional(),
   taxas: z.number().optional(),
+  pickupFee: z.number().optional(),
   total: z.number(),
   moeda: z.string().default('BRL'),
 });
@@ -61,6 +62,12 @@ export const pickupPointSnapshotSchema = z.object({
   cep: z.string().optional(),
 }).nullable();
 
+export const pickupFeeSnapshotSchema = z.object({
+  collectorId: z.string(),
+  feeAmount: z.number(),
+  distanceKm: z.number(),
+}).nullable();
+
 // Schema para adicionar item ao carrinho
 export const addCartItemSchema = z.object({
   originAddress: addressSnapshotSchema,
@@ -69,6 +76,7 @@ export const addCartItemSchema = z.object({
   preferences: preferencesSnapshotSchema,
   insuranceValue: z.number().optional(),
   pickupPoint: pickupPointSnapshotSchema.optional(),
+  pickupFee: pickupFeeSnapshotSchema.optional(),
   selectedQuote: selectedQuoteSnapshotSchema,
   totals: totalsSnapshotSchema,
 });
@@ -83,6 +91,7 @@ export const updateCartItemSchema = z.object({
   preferences: preferencesSnapshotSchema.optional(),
   insuranceValue: z.number().optional(),
   pickupPoint: pickupPointSnapshotSchema.optional(),
+  pickupFee: pickupFeeSnapshotSchema.optional(),
   selectedQuote: selectedQuoteSnapshotSchema.optional(),
   totals: totalsSnapshotSchema.optional(),
 });

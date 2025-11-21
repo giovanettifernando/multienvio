@@ -81,25 +81,37 @@ export async function GET(
       );
     }
 
-    // Gerar timeline pública com mensagens neutras e amigáveis
-    // Nota: Origem será extraída do documento mais adiante
-    const publicTimeline = generatePublicTimeline({
-      createdAt: shipment.createdAt,
-      status: shipment.status,
-      originCity: undefined, // Será preenchido do documento se disponível
-      originState: undefined,
-      destinationCity: shipment.destinationCity || undefined,
-      destinationState: shipment.destinationState || undefined,
-    });
+    // Usar eventos reais quando disponíveis, caso contrário gerar timeline fictícia
+    let events;
 
-    // Converter para formato de eventos
-    const events = publicTimeline.map((event) => ({
-      status: event.status,
-      title: event.title,
-      description: event.description,
-      location: event.location || null,
-      occurredAt: event.timestamp.toISOString(),
-    }));
+    if (shipment.trackingEvents && shipment.trackingEvents.length > 0) {
+      // Usar eventos reais do banco de dados
+      events = shipment.trackingEvents.map((event) => ({
+        status: event.type,
+        title: mapToPublicTrackingStatus(event.type as ShipmentStatus),
+        description: event.description,
+        location: event.city && event.uf ? `${event.city}, ${event.uf}` : null,
+        occurredAt: event.occurredAt.toISOString(),
+      }));
+    } else {
+      // Fallback: gerar timeline pública fictícia
+      const publicTimeline = generatePublicTimeline({
+        createdAt: shipment.createdAt,
+        status: shipment.status,
+        originCity: undefined,
+        originState: undefined,
+        destinationCity: shipment.destinationCity || undefined,
+        destinationState: shipment.destinationState || undefined,
+      });
+
+      events = publicTimeline.map((event) => ({
+        status: event.status,
+        title: event.title,
+        description: event.description,
+        location: event.location || null,
+        occurredAt: event.timestamp.toISOString(),
+      }));
+    }
 
     // Processar volumes e itens
     type PublicVolume = {

@@ -26,6 +26,7 @@ type QuoteStoreState = {
   clearSelection: () => void;
   reset: (options?: { keepForm?: boolean }) => void;
   updateSummary: (patch: Partial<QuoteSummary>) => void;
+  clearIfExpired: () => boolean;
 };
 
 const nowIso = () => new Date().toISOString();
@@ -207,6 +208,27 @@ export const useQuoteStore = create<QuoteStoreState>()(
 
           return newState;
         }),
+      clearIfExpired: () => {
+        const state = useQuoteStore.getState();
+        if (!state.results) {
+          return false;
+        }
+
+        const now = new Date();
+        const expiresAt = new Date(state.results.expiresAt);
+
+        if (now >= expiresAt) {
+          console.log('[useQuoteStore] Cotação expirada detectada:', {
+            quoteId: state.results.quoteId,
+            expiresAt: state.results.expiresAt,
+            now: now.toISOString(),
+          });
+          set({ results: null, selection: null });
+          return true;
+        }
+
+        return false;
+      },
     }),
     {
       name: "quote-flow",

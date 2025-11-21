@@ -132,17 +132,80 @@ export const useQuoteSelection = () =>
     },
   });
 
+// Helper functions to map between API and frontend formats
+type ApiRecipient = {
+  id: string;
+  name: string;
+  phone: string | null;
+  email: string | null;
+  document: string | null;
+  cep: string;
+  logradouro: string;
+  numero: string;
+  complemento: string | null;
+  bairro: string;
+  cidade: string;
+  uf: string;
+  notes: string | null;
+  isDefault: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+type ApiRecipientList = {
+  items: ApiRecipient[];
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+};
+
+const mapApiRecipientToFrontend = (api: ApiRecipient): Recipient => ({
+  id: api.id,
+  nome: api.name,
+  telefone: api.phone || '',
+  email: api.email || undefined,
+  documento: api.document || '',
+  cep: api.cep,
+  logradouro: api.logradouro,
+  numero: api.numero,
+  complemento: api.complemento || undefined,
+  bairro: api.bairro,
+  cidade: api.cidade,
+  uf: api.uf,
+  observacoes: api.notes || undefined,
+});
+
+const mapFrontendRecipientToApi = (frontend: RecipientPayload) => ({
+  name: frontend.nome,
+  phone: frontend.telefone || null,
+  email: frontend.email || null,
+  document: frontend.documento || null,
+  cep: frontend.cep,
+  logradouro: frontend.logradouro,
+  numero: frontend.numero,
+  complemento: frontend.complemento || null,
+  bairro: frontend.bairro,
+  cidade: frontend.cidade,
+  uf: frontend.uf,
+  notes: frontend.observacoes || null,
+  isDefault: false,
+});
+
 export const useRecipients = (cep?: string) =>
   useQuery<Recipient[]>({
-    queryKey: ["recipients", cep],
+    queryKey: ["account", "recipients", cep],
     queryFn: async () => {
       const res = await fetch(
-        `/api/recipients${cep ? `?cep=${encodeURIComponent(cep)}` : ""}`,
+        `/api/account/recipients${cep ? `?cep=${encodeURIComponent(cep)}` : ""}`,
       );
       if (!res.ok) {
         throw new Error("Erro ao carregar destinatários.");
       }
-      return (await res.json()) as Recipient[];
+      const data = await res.json();
+      // API returns paginated result, extract items
+      const apiList = data.data as ApiRecipientList;
+      return apiList.items.map(mapApiRecipientToFrontend);
     },
     enabled: Boolean(cep),
     staleTime: 60_000,
@@ -151,15 +214,19 @@ export const useRecipients = (cep?: string) =>
 export const useRecipientSave = () =>
   useMutation({
     mutationFn: async (payload: RecipientPayload) => {
-      const res = await fetch("/api/recipients", {
+      const apiPayload = mapFrontendRecipientToApi(payload);
+      const res = await fetch("/api/account/recipients", {
         method: "POST",
-        body: JSON.stringify(payload),
+        body: JSON.stringify(apiPayload),
         headers: { "Content-Type": "application/json" },
       });
       if (!res.ok) {
-        throw new Error("Erro ao salvar destinatário");
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData?.message || "Erro ao salvar destinatário");
       }
-      return res.json();
+      const data = await res.json();
+      // Map response back to frontend format
+      return mapApiRecipientToFrontend(data.data);
     },
   });
 

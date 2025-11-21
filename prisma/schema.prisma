@@ -170,6 +170,7 @@ model CartItem {
   preferences    Json
   insuranceValue Decimal?
   pickupPoint    Json?
+  pickupFee      Json?
   selectedQuote  Json
   totals         Json
   createdAt      DateTime @default(now())

@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { getUserSessionFromRequest } from "@/lib/auth/user-session";
+import { getSession } from '@/lib/auth/session';
 import { ShipmentStatus, FINAL_STATUSES } from "@/lib/shipments/shipment-status";
 import { canBeCancelled, getNextCancellationStatus } from "@/lib/shipments/status-migration";
 
@@ -16,8 +16,8 @@ import { canBeCancelled, getNextCancellationStatus } from "@/lib/shipments/statu
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     // Autenticar usuário
-    const session = await getUserSessionFromRequest(request);
-    if (!session) {
+    const session = await getSession();
+    if (!session?.userId) {
       return NextResponse.json({ message: 'Não autenticado' }, { status: 401 });
     }
 

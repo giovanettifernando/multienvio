@@ -81,6 +81,7 @@ export async function GET() {
 /**
  * DELETE /api/carrinho (alias para /api/cart)
  * Limpa o carrinho do usuário (remove todos os itens)
+ * Agora aceita carrinho OPEN ou LOCKED e reseta para OPEN
  */
 export async function DELETE() {
   try {
@@ -90,11 +91,11 @@ export async function DELETE() {
       return NextResponse.json({ message: 'Não autorizado' }, { status: 401 });
     }
 
-    // Buscar carrinho OPEN
+    // Buscar carrinho OPEN ou LOCKED do usuário
     const cart = await prisma.cart.findFirst({
       where: {
         userId: session.userId,
-        status: 'OPEN',
+        status: { in: ['OPEN', 'LOCKED'] },
       },
     });
 
@@ -109,11 +110,13 @@ export async function DELETE() {
       },
     });
 
-    // Atualizar totals do carrinho
+    // Resetar carrinho: limpar totals, voltar para OPEN, limpar meta de checkout
     await prisma.cart.update({
       where: { id: cart.id },
       data: {
+        status: 'OPEN',
         totals: { total: 0, moeda: 'BRL' },
+        meta: {}, // Limpar fingerprint e histórico de checkout
         updatedAt: new Date(),
       },
     });

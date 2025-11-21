@@ -210,9 +210,17 @@ export async function applyCarrierEventToShipment(
         },
       });
 
-      // 2. Registrar evento no histórico (se houver tabela de tracking events)
-      // TODO: Se você tiver uma tabela de histórico de eventos, insira aqui
-      // await tx.trackingEvent.create({ ... });
+      // 2. Registrar evento no histórico de tracking
+      await tx.trackingEvent.create({
+        data: {
+          shipmentId,
+          type: newStatus,
+          description: event.description,
+          city: event.location?.city || null,
+          uf: event.location?.state || null,
+          occurredAt: event.occurredAt,
+        },
+      });
     });
 
     console.log('[CARRIER_EVENT] Status atualizado:', {

@@ -20,6 +20,10 @@ export async function GET(request: NextRequest) {
     const q = searchParams.get("q") ?? "";
     const statusParam = searchParams.get("status") ?? "Todos";
 
+    // Paginação
+    const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
+    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "20", 10)));
+
     // Buscar shipments do banco de dados
     const where: Prisma.ShipmentWhereInput = {
       senderId: session.userId,
@@ -52,6 +56,13 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Calcular skip para paginação
+    const skip = (page - 1) * limit;
+
+    // Buscar total de registros (para paginação)
+    const total = await prisma.shipment.count({ where });
+
+    // Buscar shipments com paginação
     const shipments = await prisma.shipment.findMany({
       where,
       include: {
@@ -65,7 +76,8 @@ export async function GET(request: NextRequest) {
         },
       },
       orderBy: { createdAt: 'desc' },
-      take: 100, // Limitar resultados
+      skip,
+      take: limit,
     });
 
     // Mapear para o formato esperado pela UI
@@ -83,7 +95,9 @@ export async function GET(request: NextRequest) {
         carrierName: s.carrier || 'Não informado',
         serviceName: s.service || 'Não informado',
         etaDays: s.estimatedDays || 0,
-        expectedDeliveryDate: s.deliveredAt?.toISOString() || undefined,
+        expectedDeliveryDate: s.deliveredAt
+          ? null // Já foi entregue, não há previsão
+          : (s.estimatedDays ? new Date(s.createdAt.getTime() + s.estimatedDays * 24 * 60 * 60 * 1000).toISOString() : undefined),
         freightValue: s.freightCost || 0,
         status: mapToUIStatus(s.status as ShipmentStatus),
         createdAt: s.createdAt.toISOString(),
@@ -97,7 +111,20 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    return NextResponse.json({ items });
+    // Calcular total de páginas
+    const totalPages = Math.ceil(total / limit);
+
+    return NextResponse.json({
+      items,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1,
+      },
+    });
   } catch (error) {
     console.error('[SHIPMENTS_LIST]', error);
     return NextResponse.json(
