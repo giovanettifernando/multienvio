@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { pushTx, getWalletStore } from "@/lib/api/stores";
-import { getCardsStore } from "@/lib/api/stores";
+import { getSession } from "@/lib/auth/session";
+import { prisma } from "@/lib/db";
+import { createTopupPending, confirmTransaction } from "@/lib/wallet/wallet.service";
 
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}));
@@ -22,8 +23,21 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const card = getCardsStore().find((card) => card.id === cardId);
-    if (!card) {
+    // Verificar autenticação
+    const session = await getSession();
+    if (!session?.userId) {
+      return NextResponse.json(
+        { mensagem: "Não autorizado." },
+        { status: 401 }
+      );
+    }
+
+    // Buscar cartão do banco de dados
+    const card = await prisma.card.findUnique({
+      where: { id: cardId },
+    });
+
+    if (!card || card.userId !== session.userId) {
       return NextResponse.json(
         { mensagem: "Cartão não encontrado." },
         { status: 404 }
@@ -31,27 +45,35 @@ export async function POST(req: NextRequest) {
     }
 
     // 🔐 Aqui você executaria a cobrança/autorização com o provedor
-    // Como é um stub, apenas retornamos OK
-    const tx = pushTx({
-      type: "TOPUP_CARD",
-      origin: `Cartão ${card.brand} •••• ${card.last4}`,
-      amount,
-      description: "Recarga de saldo (cartão)",
-    });
+    // Como é um stub, simulamos aprovação instantânea
+    const amountCents = Math.round(amount * 100);
+
+    // Gerar referenceId único para idempotência
+    const referenceId = `card-topup:${cardId}:${Date.now()}`;
+
+    // Criar topup pendente
+    const topup = await createTopupPending(
+      session.userId,
+      amountCents,
+      referenceId
+    );
+
+    // Confirmar imediatamente (cartão é aprovação instantânea)
+    await confirmTransaction(referenceId);
 
     return NextResponse.json({
       ok: true,
+      message: "Saldo adicionado com sucesso!",
       autorizacao: {
         id: `auth_${Date.now()}`,
         cardBrand: card.brand,
         last4: card.last4,
-        amount,
-        currency: getWalletStore().currency,
+        amountReais: amount,
+        amountCents,
       },
-      wallet: getWalletStore(),
-      transaction: tx,
     });
   } catch (error) {
+    console.error("[TOPUP_CARD_ERROR]", error);
     return NextResponse.json(
       { mensagem: "Erro ao processar pagamento com cartão." },
       { status: 500 }
