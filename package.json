@@ -41,6 +41,7 @@
     "jose": "^6.1.0",
     "jspdf": "^3.0.3",
     "leaflet": "^1.9.4",
+    "mercadopago": "^2.10.0",
     "nanoid": "^5.1.6",
     "next": "15.5.4",
     "nodemailer": "^7.0.10",
