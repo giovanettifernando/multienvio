@@ -23,6 +23,10 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
+import { requirePermission } from '@/lib/auth/permissions';
+import { AdminPermission } from '@prisma/client';
+import { rateLimitByUser, RATE_LIMITS } from '@/lib/rate-limit';
 import { forceRegeocodeCep } from '@/lib/services/cepLocation';
 import { z } from 'zod';
 
@@ -31,12 +35,18 @@ const forceRegeocodeSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
+  const session = await getAdminSessionFromRequest(request);
+  if (!session) {
+    return NextResponse.json({ message: 'Não autenticado' }, { status: 401 });
+  }
+
+  const permissionError = requirePermission(session, AdminPermission.CONFIGURACOES);
+  if (permissionError) return permissionError;
+
+  const rateLimitError = rateLimitByUser(session.staffId, 'cep_regeocode', RATE_LIMITS.WRITE);
+  if (rateLimitError) return rateLimitError;
+
   try {
-    // TODO: Adicionar autenticação admin aqui
-    // const session = await getServerSession();
-    // if (!session?.user?.role === 'ADMIN') {
-    //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    // }
 
     const body = await request.json();
     const parsed = forceRegeocodeSchema.safeParse(body);

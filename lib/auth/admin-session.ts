@@ -1,5 +1,6 @@
 import { SignJWT, jwtVerify } from 'jose';
 import type { AdminPermission } from '@prisma/client';
+import { prisma } from '@/lib/db';
 
 // Configuração do JWT para Admin (separado do cliente)
 const ADMIN_JWT_SECRET = new TextEncoder().encode(
@@ -20,6 +21,7 @@ export interface AdminJWTPayload {
   role?: string;
   isSuperAdmin: boolean;
   permissions: AdminPermission[];
+  tokenVersion: number;
   iss?: string;
   aud?: string;
   iat?: number;
@@ -46,6 +48,7 @@ export async function adminSign(payload: Omit<AdminJWTPayload, 'iss' | 'aud' | '
     role: payload.role,
     isSuperAdmin: payload.isSuperAdmin || false,
     permissions: payload.permissions || [],
+    tokenVersion: payload.tokenVersion,
   };
 
   console.log('[ADMIN_SIGN] JWT payload after conversion:', jwtPayload);
@@ -123,10 +126,35 @@ export function getAdminTokenFromRequest(request: Request): string | null {
 
 /**
  * Obtém a sessão admin a partir de uma Request
+ * Valida o tokenVersion contra o banco de dados
  */
 export async function getAdminSessionFromRequest(request: Request): Promise<AdminJWTPayload | null> {
   const token = getAdminTokenFromRequest(request);
   if (!token) return null;
 
-  return adminVerify(token);
+  const jwtPayload = await adminVerify(token);
+  if (!jwtPayload) return null;
+
+  // Validate tokenVersion against database
+  const staffUser = await prisma.staffUser.findUnique({
+    where: { id: jwtPayload.staffId },
+    select: { tokenVersion: true, status: true },
+  });
+
+  if (!staffUser) {
+    console.log('[ADMIN_SESSION] Staff user not found:', jwtPayload.staffId);
+    return null;
+  }
+
+  if (staffUser.tokenVersion !== jwtPayload.tokenVersion) {
+    console.log('[ADMIN_SESSION] Token version mismatch. Expected:', staffUser.tokenVersion, 'Got:', jwtPayload.tokenVersion);
+    return null;
+  }
+
+  if (staffUser.status !== 'ACTIVE') {
+    console.log('[ADMIN_SESSION] Staff user is not active:', staffUser.status);
+    return null;
+  }
+
+  return jwtPayload;
 }

@@ -65,7 +65,7 @@ export function CollectorTicketList({ onTicketClick, isComposing = false }: Coll
         priorityFilter.forEach(p => params.append('priority', p));
       }
 
-      const response = await fetch(`/api/collector/tickets?${params.toString()}`);
+      const response = await fetch(`/api/pontos-coleta/tickets?${params.toString()}`);
       if (!response.ok) {
         throw new Error('Erro ao carregar chamados');
       }

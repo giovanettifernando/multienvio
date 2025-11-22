@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
+import { requirePermission } from '@/lib/auth/permissions';
+import { AdminPermission } from '@prisma/client';
 import { listTicketsForAdmin } from '@/lib/support/service';
 import type { Priority, Status } from '@/lib/validation/support';
 
@@ -29,6 +31,9 @@ export async function GET(request: Request) {
   if (!session) {
     return NextResponse.json({ message: 'Não autenticado' }, { status: 401 });
   }
+
+  const permissionError = requirePermission(session, AdminPermission.SUPORTE);
+  if (permissionError) return permissionError;
 
   const url = new URL(request.url);
   const params = url.searchParams;

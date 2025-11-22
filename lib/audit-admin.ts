@@ -97,3 +97,131 @@ export async function logStatusChange(
     { oldStatus, newStatus }
   );
 }
+
+/**
+ * Log de reset de senha
+ */
+export async function logPasswordReset(
+  actorId: string,
+  targetUserId: string,
+  entityType: 'StaffUser' | 'User' | 'Collector'
+): Promise<void> {
+  await logAdminAction(
+    actorId,
+    'reset_password',
+    entityType,
+    targetUserId,
+    { timestamp: new Date().toISOString() }
+  );
+}
+
+/**
+ * Log de operação financeira
+ */
+export async function logFinanceOperation(
+  actorId: string,
+  operation: string,
+  entityType: string,
+  entityId: string,
+  amount?: number,
+  additionalData?: Record<string, unknown>
+): Promise<void> {
+  await logAdminAction(
+    actorId,
+    `finance_${operation}`,
+    entityType,
+    entityId,
+    { amount, ...additionalData }
+  );
+}
+
+/**
+ * Log de aprovação de comissão
+ */
+export async function logCommissionApproval(
+  actorId: string,
+  commissionId: string,
+  amount: number
+): Promise<void> {
+  await logFinanceOperation(
+    actorId,
+    'approve_commission',
+    'Commission',
+    commissionId,
+    amount
+  );
+}
+
+/**
+ * Log de pagamento aprovado
+ */
+export async function logPayoutApproval(
+  actorId: string,
+  payoutId: string,
+  amount: number,
+  recipientId: string
+): Promise<void> {
+  await logFinanceOperation(
+    actorId,
+    'approve_payout',
+    'Payout',
+    payoutId,
+    amount,
+    { recipientId }
+  );
+}
+
+/**
+ * Log de ajuste manual no ledger
+ */
+export async function logLedgerAdjustment(
+  actorId: string,
+  userId: string,
+  amount: number,
+  reason: string
+): Promise<void> {
+  await logFinanceOperation(
+    actorId,
+    'ledger_adjustment',
+    'Ledger',
+    userId,
+    amount,
+    { reason }
+  );
+}
+
+/**
+ * Log de bloqueio/desbloqueio de cliente
+ */
+export async function logClientStatusChange(
+  actorId: string,
+  clientId: string,
+  action: 'block' | 'unblock',
+  reason?: string
+): Promise<void> {
+  await logAdminAction(
+    actorId,
+    `client_${action}`,
+    'User',
+    clientId,
+    { reason }
+  );
+}
+
+/**
+ * Log de alteração de permissões
+ */
+export async function logPermissionChange(
+  actorId: string,
+  targetStaffId: string,
+  addedPermissions: string[],
+  removedPermissions: string[]
+): Promise<void> {
+  await logAdminAction(
+    actorId,
+    'update_permissions',
+    'StaffUser',
+    targetStaffId,
+    { addedPermissions, removedPermissions }
+  );
+}

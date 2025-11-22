@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { jwtVerify } from 'jose';
 import { getRouteProtection } from '@/lib/auth/route-protection';
+import { prisma } from '@/lib/db';
 
 // JWT Secrets (customer vs admin)
 const JWT_SECRET = new TextEncoder().encode(
@@ -28,6 +29,7 @@ interface AdminJWTPayload {
   staffId: string;
   email: string;
   role: string;
+  tokenVersion: number;
   iss?: string;
   aud?: string;
   iat?: number;
@@ -108,7 +110,32 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(loginUrl);
     }
 
-    // Is authenticated as staff - allow access
+    // Validate tokenVersion against database
+    try {
+      const staffUser = await prisma.staffUser.findUnique({
+        where: { id: adminPayload!.staffId },
+        select: { tokenVersion: true, status: true },
+      });
+
+      // If user not found, tokenVersion mismatch, or user is not active, redirect to login
+      if (
+        !staffUser ||
+        staffUser.tokenVersion !== adminPayload!.tokenVersion ||
+        staffUser.status !== 'ACTIVE'
+      ) {
+        const loginUrl = new URL('/admin/login', request.url);
+        loginUrl.searchParams.set('next', pathname);
+        return NextResponse.redirect(loginUrl);
+      }
+    } catch (error) {
+      console.error('[MIDDLEWARE] Database error validating tokenVersion:', error);
+      // On database error, redirect to login for security
+      const loginUrl = new URL('/admin/login', request.url);
+      loginUrl.searchParams.set('next', pathname);
+      return NextResponse.redirect(loginUrl);
+    }
+
+    // Is authenticated as staff with valid tokenVersion - allow access
     return NextResponse.next();
   }
 

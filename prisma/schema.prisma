@@ -357,6 +357,7 @@ model StaffUser {
   passwordHash String            @map("passwordHash")
   status       StaffStatus       @default(ACTIVE)
   roleId       String            @map("roleId")
+  tokenVersion Int               @default(0) @map("tokenVersion")
   lastLoginAt  DateTime?         @map("lastLoginAt")
   createdAt    DateTime          @default(now()) @map("createdAt")
   updatedAt    DateTime          @updatedAt @map("updatedAt")

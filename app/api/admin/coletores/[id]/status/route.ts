@@ -4,6 +4,9 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
+import { requirePermission } from '@/lib/auth/permissions';
+import { AdminPermission } from '@prisma/client';
 import { updateCollectorStatus } from '@/lib/collectors/service';
 import { z } from 'zod';
 
@@ -22,6 +25,14 @@ const statusSchema = z.object({
  * Atualiza o status de um coletor
  */
 export async function PATCH(request: NextRequest, context: RouteContext) {
+  const session = await getAdminSessionFromRequest(request);
+  if (!session) {
+    return NextResponse.json({ message: 'Não autenticado' }, { status: 401 });
+  }
+
+  const permissionError = requirePermission(session, AdminPermission.COLETORES);
+  if (permissionError) return permissionError;
+
   try {
     const { id } = await context.params;
     const body = await request.json();

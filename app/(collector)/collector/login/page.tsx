@@ -37,7 +37,7 @@ function CollectorLoginForm() {
       // Remover formatação do CNPJ
       const cnpj = values.cnpj.replace(/\D/g, '');
 
-      const response = await fetch('/api/collector/auth/login', {
+      const response = await fetch('/api/pontos-coleta/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

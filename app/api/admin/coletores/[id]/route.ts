@@ -6,6 +6,9 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
+import { requirePermission } from '@/lib/auth/permissions';
+import { AdminPermission } from '@prisma/client';
 import {
   getCollectorById,
   updateCollector,
@@ -24,6 +27,14 @@ type RouteContext = {
  * Busca um coletor por ID
  */
 export async function GET(request: NextRequest, context: RouteContext) {
+  const session = await getAdminSessionFromRequest(request);
+  if (!session) {
+    return NextResponse.json({ message: 'Não autenticado' }, { status: 401 });
+  }
+
+  const permissionError = requirePermission(session, AdminPermission.COLETORES);
+  if (permissionError) return permissionError;
+
   try {
     const { id } = await context.params;
 
@@ -53,6 +64,11 @@ export async function GET(request: NextRequest, context: RouteContext) {
  * Atualiza um coletor
  */
 export async function PATCH(request: NextRequest, context: RouteContext) {
+  const session = await getAdminSessionFromRequest(request);
+  if (!session) {
+    return NextResponse.json({ message: 'Não autenticado' }, { status: 401 });
+  }
+
   try {
     const { id } = await context.params;
     const body = await request.json();
@@ -102,6 +118,11 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
  * Deleta um coletor
  */
 export async function DELETE(request: NextRequest, context: RouteContext) {
+  const session = await getAdminSessionFromRequest(request);
+  if (!session) {
+    return NextResponse.json({ message: 'Não autenticado' }, { status: 401 });
+  }
+
   try {
     const { id } = await context.params;
 

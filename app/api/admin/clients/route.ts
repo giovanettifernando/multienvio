@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
+import { requirePermission } from '@/lib/auth/permissions';
+import { AdminPermission } from '@prisma/client';
 import type { AdminClient, ClientsResponse } from '@/lib/admin/types';
 
 // Mock data - 25 clientes variados
@@ -331,6 +334,15 @@ const mockClients: AdminClient[] = [
 ];
 
 export async function GET(request: NextRequest) {
+  const session = await getAdminSessionFromRequest(request);
+  if (!session) {
+    return NextResponse.json({ message: 'Não autenticado' }, { status: 401 });
+  }
+
+  // Check permission
+  const permissionError = requirePermission(session, AdminPermission.CONTAS);
+  if (permissionError) return permissionError;
+
   const searchParams = request.nextUrl.searchParams;
   const page = parseInt(searchParams.get('page') || '1');
   const pageSize = parseInt(searchParams.get('pageSize') || '10');

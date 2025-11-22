@@ -86,7 +86,7 @@ function buildQueryParams({ filters, page, pageSize }: Omit<TicketsQueryOptions,
 
 function getTicketsEndpoint(audience: Audience): string {
   if (audience === "admin") return "/api/admin/support/tickets";
-  if (audience === "collector") return "/api/collector/tickets";
+  if (audience === "collector") return "/api/pontos-coleta/tickets";
   if (audience === "autonomous_collector") return "/api/coletores/suporte";
   return "/api/support/tickets";
 }
@@ -101,7 +101,7 @@ function getMessageEndpoint(audience: Audience, ticketId: string): string {
     return `/api/admin/support/tickets/${ticketId}/reply`;
   }
   if (audience === "collector") {
-    return `/api/collector/tickets/${ticketId}/messages`;
+    return `/api/pontos-coleta/tickets/${ticketId}/messages`;
   }
   if (audience === "autonomous_collector") {
     return `/api/coletores/suporte/${ticketId}/mensagens`;

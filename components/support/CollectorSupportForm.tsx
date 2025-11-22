@@ -33,7 +33,7 @@ export function CollectorSupportForm({ onSuccess }: CollectorSupportFormProps) {
       const sanitizedCnpj = collector.cnpj.replace(/[^\d]/g, '');
       const requesterEmail = collector.email || `${sanitizedCnpj}@collector.temp`;
 
-      const response = await fetch('/api/collector/tickets', {
+      const response = await fetch('/api/pontos-coleta/tickets', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

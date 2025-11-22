@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
+import { requirePermission } from '@/lib/auth/permissions';
+import { AdminPermission } from '@prisma/client';
 import { updateTicketStatus } from '@/lib/support/service';
 import { StatusSchema } from '@/lib/validation/support';
 
@@ -18,6 +20,9 @@ export async function PATCH(
   if (!session) {
     return NextResponse.json({ message: 'Não autenticado' }, { status: 401 });
   }
+
+  const permissionError = requirePermission(session, AdminPermission.SUPORTE);
+  if (permissionError) return permissionError;
 
   const { id: ticketId } = await params;
   if (!ticketId) {

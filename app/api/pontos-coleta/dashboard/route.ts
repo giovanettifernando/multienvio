@@ -35,7 +35,7 @@ async function requireCollectorSession(request: Request) {
   return { pointId: point.id, commissionPerItem: point.commissionPerItem };
 }
 
-// GET /api/collector/dashboard - KPIs e estatísticas
+// GET /api/pontos-coleta/dashboard - KPIs e estatísticas
 export async function GET(request: Request) {
   try {
     const { pointId } = await requireCollectorSession(request);

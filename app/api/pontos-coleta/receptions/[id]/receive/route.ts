@@ -42,7 +42,7 @@ async function requireCollectorSession(request: Request) {
   return { pointId: point.id };
 }
 
-// POST /api/collector/receptions/[id]/receive - Marcar como recebido
+// POST /api/pontos-coleta/receptions/[id]/receive - Marcar como recebido
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }

@@ -115,7 +115,7 @@ export default function ReceptionsPage() {
         search,
       });
 
-      const response = await fetch(`/api/collector/receptions?${params}`);
+      const response = await fetch(`/api/pontos-coleta/receptions?${params}`);
       
       if (!response.ok) {
         throw new Error('Erro ao carregar envios');
@@ -156,7 +156,7 @@ export default function ReceptionsPage() {
     try {
       setSubmitting(true);
       const response = await fetch(
-        `/api/collector/receptions/${selectedShipment.id}/register-entry`,
+        `/api/pontos-coleta/receptions/${selectedShipment.id}/register-entry`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -241,7 +241,7 @@ export default function ReceptionsPage() {
       };
 
       const response = await fetch(
-        `/api/collector/receptions/volumes/${selectedPackage.id}/divergence`,
+        `/api/pontos-coleta/receptions/volumes/${selectedPackage.id}/divergence`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -272,7 +272,7 @@ export default function ReceptionsPage() {
   const handleCheckPackage = async (pkg: Package) => {
     try {
       const response = await fetch(
-        `/api/collector/receptions/volumes/${pkg.id}/check`,
+        `/api/pontos-coleta/receptions/volumes/${pkg.id}/check`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

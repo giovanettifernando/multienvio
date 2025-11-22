@@ -2,7 +2,7 @@
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { ZodError } from 'zod';
 import bcrypt from 'bcryptjs';
 import { AdminLoginSchema } from '@/lib/validation/admin-auth';
@@ -10,8 +10,13 @@ import { prisma } from '@/lib/db';
 import { adminSign, createAdminCookieHeader } from '@/lib/auth/admin-session';
 import { logAdminLogin } from '@/lib/audit-admin';
 import { AdminPermission } from '@prisma/client';
+import { rateLimitByIP, RATE_LIMITS } from '@/lib/rate-limit';
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  // Rate limiting por IP para prevenir brute force
+  const rateLimitError = rateLimitByIP(request, 'admin_login', RATE_LIMITS.LOGIN);
+  if (rateLimitError) return rateLimitError;
+
   try {
     // Parse and validate request body
     const payload = await request.json();
@@ -86,6 +91,7 @@ export async function POST(request: Request) {
       role: staffUser.role?.name || 'operator',
       isSuperAdmin: staffUser.isSuperAdmin,
       permissions: staffUser.permissions,
+      tokenVersion: staffUser.tokenVersion,
     });
 
     // Log admin login for audit

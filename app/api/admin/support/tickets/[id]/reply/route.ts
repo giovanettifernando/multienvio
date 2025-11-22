@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
+import { requirePermission } from '@/lib/auth/permissions';
+import { AdminPermission } from '@prisma/client';
 import { addMessageToTicket, getTicket } from '@/lib/support/service';
 import { persistSupportAttachments } from '@/lib/storage/support-attachments';
 
@@ -15,6 +17,9 @@ export async function POST(
   if (!session) {
     return NextResponse.json({ message: 'Não autenticado' }, { status: 401 });
   }
+
+  const permissionError = requirePermission(session, AdminPermission.SUPORTE);
+  if (permissionError) return permissionError;
 
   const { id: ticketId } = await params;
   if (!ticketId) {

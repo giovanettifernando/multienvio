@@ -1,6 +1,6 @@
 /**
  * API Route para recepção de envios no hub do coletor
- * GET /api/collector/receptions - Lista envios pendentes de recepção
+ * GET /api/pontos-coleta/receptions - Lista envios pendentes de recepção
  */
 
 export const runtime = 'nodejs';
@@ -12,7 +12,7 @@ import { Prisma } from '@prisma/client';
 import { ShipmentStatus } from '@/lib/shipments/shipment-status';
 
 /**
- * GET /api/collector/receptions
+ * GET /api/pontos-coleta/receptions
  * Retorna envios pendentes de recepção no hub
  *
  * FONTE DE DADOS: Tabela Shipments (sem tabela separada "receptions")

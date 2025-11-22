@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
+import { requirePermission } from '@/lib/auth/permissions';
+import { AdminPermission } from '@prisma/client';
 import { getTicket } from '@/lib/support/service';
 
 export const dynamic = 'force-dynamic';
@@ -12,6 +14,9 @@ export async function GET(
   if (!session) {
     return NextResponse.json({ message: 'Não autenticado' }, { status: 401 });
   }
+
+  const permissionError = requirePermission(session, AdminPermission.SUPORTE);
+  if (permissionError) return permissionError;
 
   const { id: ticketId } = await params;
   if (!ticketId) {

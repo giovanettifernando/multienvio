@@ -1,14 +1,19 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { ZodError } from 'zod';
 import { ForgotPasswordSchema } from '@/lib/validation/auth';
 import prisma from '@/lib/db';
 import { sendPasswordResetEmail } from '@/lib/email/mailer';
 import crypto from 'crypto';
+import { rateLimitByIP, RATE_LIMITS } from '@/lib/rate-limit';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: Request) {
+  // Rate limiting by IP - 3 attempts per 10 minutes
+  const rateLimitError = rateLimitByIP(request as NextRequest, 'client_forgot_password', RATE_LIMITS.PASSWORD_RESET);
+  if (rateLimitError) return rateLimitError;
+
   try {
     const payload = await request.json();
     const data = ForgotPasswordSchema.parse(payload);

@@ -1,6 +1,6 @@
-import { execFile } from "node:child_process";
-import path from "node:path";
-import { promisify } from "node:util";
+import { execFile } from "child_process";
+import path from "path";
+import { promisify } from "util";
 import { Prisma, PrismaClient } from "@prisma/client";
 import { resolveDatabaseConfig } from "./config/database";
 

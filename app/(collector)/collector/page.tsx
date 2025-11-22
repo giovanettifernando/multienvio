@@ -56,7 +56,7 @@ export default function CollectorDashboardPage() {
     async function loadDashboard() {
       try {
         setLoading(true);
-        const response = await fetch('/api/collector/dashboard');
+        const response = await fetch('/api/pontos-coleta/dashboard');
 
         if (!response.ok) {
           throw new Error('Erro ao carregar dashboard');

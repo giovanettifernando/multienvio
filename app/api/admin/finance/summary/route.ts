@@ -1,7 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
+import { requirePermission } from '@/lib/auth/permissions';
+import { AdminPermission } from '@prisma/client';
 import type { FinanceSummary } from '@/lib/admin/finance/types';
 
 export async function GET(request: NextRequest) {
+  const session = await getAdminSessionFromRequest(request);
+  if (!session) {
+    return NextResponse.json({ message: 'Não autenticado' }, { status: 401 });
+  }
+
+  // Check permission
+  const permissionError = requirePermission(session, AdminPermission.FINANCEIRO);
+  if (permissionError) return permissionError;
+
   const searchParams = request.nextUrl.searchParams;
   const dateStart = searchParams.get('dateStart') || undefined;
   const dateEnd = searchParams.get('dateEnd') || undefined;

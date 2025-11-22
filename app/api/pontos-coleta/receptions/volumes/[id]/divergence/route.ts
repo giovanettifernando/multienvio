@@ -1,6 +1,6 @@
 /**
  * API Route para registrar divergência de volume
- * POST /api/collector/receptions/volumes/[id]/divergence
+ * POST /api/pontos-coleta/receptions/volumes/[id]/divergence
  */
 
 export const runtime = 'nodejs';
@@ -22,7 +22,7 @@ const DivergenceSchema = z.object({
 });
 
 /**
- * POST /api/collector/receptions/volumes/[id]/divergence
+ * POST /api/pontos-coleta/receptions/volumes/[id]/divergence
  * Registra divergência em um volume
  */
 export async function POST(

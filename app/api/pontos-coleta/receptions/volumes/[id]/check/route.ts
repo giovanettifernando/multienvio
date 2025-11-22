@@ -1,6 +1,6 @@
 /**
  * API Route para marcar volume como conferido
- * POST /api/collector/receptions/volumes/[id]/check
+ * POST /api/pontos-coleta/receptions/volumes/[id]/check
  */
 
 export const runtime = 'nodejs';
@@ -10,7 +10,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 
 /**
- * POST /api/collector/receptions/volumes/[id]/check
+ * POST /api/pontos-coleta/receptions/volumes/[id]/check
  * Marca volume como conferido
  */
 export async function POST(

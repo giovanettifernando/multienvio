@@ -5,6 +5,9 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
+import { requirePermission } from '@/lib/auth/permissions';
+import { AdminPermission } from '@prisma/client';
 import { listCollectors, createCollector } from '@/lib/collectors/service';
 import { collectorFormSchema } from '@/lib/collectors/schemas';
 import type { CollectorFilters } from '@/lib/collectors/types';
@@ -14,6 +17,14 @@ import type { CollectorFilters } from '@/lib/collectors/types';
  * Lista coletores com filtros e paginação
  */
 export async function GET(request: NextRequest) {
+  const session = await getAdminSessionFromRequest(request);
+  if (!session) {
+    return NextResponse.json({ message: 'Não autenticado' }, { status: 401 });
+  }
+
+  const permissionError = requirePermission(session, AdminPermission.COLETORES);
+  if (permissionError) return permissionError;
+
   try {
     const { searchParams } = new URL(request.url);
 
@@ -64,6 +75,14 @@ export async function GET(request: NextRequest) {
  * Cria um novo coletor
  */
 export async function POST(request: NextRequest) {
+  const session = await getAdminSessionFromRequest(request);
+  if (!session) {
+    return NextResponse.json({ message: 'Não autenticado' }, { status: 401 });
+  }
+
+  const permissionError = requirePermission(session, AdminPermission.COLETORES);
+  if (permissionError) return permissionError;
+
   try {
     const body = await request.json();
 

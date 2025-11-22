@@ -8,6 +8,8 @@ import { prisma } from '@/lib/db';
 import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
 import { AdminPermission } from '@prisma/client';
 import { canAccess } from '@/lib/auth/permissions';
+import { logPasswordReset } from '@/lib/audit-admin';
+import { rateLimitByUser, RATE_LIMITS } from '@/lib/rate-limit';
 
 async function requireAdminUser(request: Request) {
   const session = await getAdminSessionFromRequest(request);
@@ -46,6 +48,10 @@ export async function POST(
       return NextResponse.json({ message: 'Acesso negado' }, { status: 403 });
     }
 
+    // Rate limiting
+    const rateLimitError = rateLimitByUser(staff.id, 'password_reset', RATE_LIMITS.PASSWORD_RESET);
+    if (rateLimitError) return rateLimitError;
+
     const { id } = await params;
 
     const target = await prisma.staffUser.findUnique({
@@ -62,8 +68,14 @@ export async function POST(
 
     await prisma.staffUser.update({
       where: { id },
-      data: { passwordHash },
+      data: {
+        passwordHash,
+        tokenVersion: { increment: 1 }, // Invalidate all existing sessions
+      },
     });
+
+    // Audit log
+    await logPasswordReset(staff.id, id, 'StaffUser');
 
     return NextResponse.json({
       message: 'Instruções de redefinição de senha enviadas.',

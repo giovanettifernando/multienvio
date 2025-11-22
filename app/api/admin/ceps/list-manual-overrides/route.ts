@@ -22,16 +22,22 @@
  * }
  */
 
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
+import { requirePermission } from '@/lib/auth/permissions';
+import { AdminPermission } from '@prisma/client';
 import { listManualOverrides } from '@/lib/services/cepLocation';
 
-export async function GET() {
-  try {
-    // TODO: Adicionar autenticação admin aqui
-    // const session = await getServerSession();
-    // if (!session?.user?.role === 'ADMIN') {
-    //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    // }
+export async function GET(request: NextRequest) {
+  const session = await getAdminSessionFromRequest(request);
+  if (!session) {
+    return NextResponse.json({ message: 'Não autenticado' }, { status: 401 });
+  }
+
+  const permissionError = requirePermission(session, AdminPermission.CONFIGURACOES);
+  if (permissionError) return permissionError;
+
+  try{
 
     const ceps = await listManualOverrides();
 

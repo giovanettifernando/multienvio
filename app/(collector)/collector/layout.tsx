@@ -33,7 +33,7 @@ export default function CollectorLayout({ children }: { children: React.ReactNod
       }
 
       try {
-        const response = await fetch('/api/collector/auth/me');
+        const response = await fetch('/api/pontos-coleta/auth/me');
 
         if (!response.ok) {
           clearCollector();
@@ -57,7 +57,7 @@ export default function CollectorLayout({ children }: { children: React.ReactNod
 
   async function handleLogout() {
     try {
-      await fetch('/api/collector/auth/logout', { method: 'POST' });
+      await fetch('/api/pontos-coleta/auth/logout', { method: 'POST' });
       clearCollector();
       message.success('Logout realizado com sucesso');
       router.replace('/collector/login');

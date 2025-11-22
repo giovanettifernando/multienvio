@@ -1,6 +1,6 @@
 /**
  * API Route para registrar entrada de envio no hub
- * POST /api/collector/receptions/[id]/register-entry
+ * POST /api/pontos-coleta/receptions/[id]/register-entry
  */
 
 export const runtime = 'nodejs';
@@ -15,7 +15,7 @@ const RegisterEntrySchema = z.object({
 });
 
 /**
- * POST /api/collector/receptions/[id]/register-entry
+ * POST /api/pontos-coleta/receptions/[id]/register-entry
  * Registra entrada do envio no hub
  */
 export async function POST(
