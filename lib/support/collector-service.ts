@@ -228,6 +228,7 @@ export async function createTicketForCollector(
     throw new Error('Ponto de coleta não encontrado');
   }
 
+  const now = new Date();
   const ticket = await prisma.supportTicket.create({
     data: {
       subject: data.subject,
@@ -236,6 +237,7 @@ export async function createTicketForCollector(
       status: DbStatus.OPEN,
       pickupPointId: pointId,
       tags: data.tags ?? [],
+      lastActivityAt: now,
       messages: {
         create: {
           body: data.description,
@@ -312,10 +314,10 @@ export async function addMessageToTicketForCollector(
     },
   });
 
-  // Atualizar data de modificação do ticket
+  // Atualizar lastActivityAt do ticket
   await prisma.supportTicket.update({
     where: { id: ticketId },
-    data: { updatedAt: new Date() },
+    data: { lastActivityAt: new Date() },
   });
 
   return {

@@ -64,6 +64,8 @@ export function NewTicketList({
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<Status[]>([]);
   const [priorityFilter, setPriorityFilter] = useState<Priority[]>([]);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(audience === 'admin' ? 20 : 10);
   const { message } = App.useApp();
 
   const ticketsQuery = useTickets({
@@ -74,7 +76,8 @@ export function NewTicketList({
       priority: priorityFilter.length > 0 ? priorityFilter : undefined,
       requesterEmail: filterByEmail,
     },
-    pageSize: audience === 'admin' ? 50 : undefined,
+    page: audience === 'admin' ? page : undefined,
+    pageSize: audience === 'admin' ? pageSize : undefined,
     refetchInterval: false,
     refetchOnWindowFocus: false,
     enabled: !isComposing,
@@ -89,7 +92,18 @@ export function NewTicketList({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ticketsQuery.isError, ticketsQuery.error]);
 
+  // Reset para primeira página quando filtros mudarem
+  useEffect(() => {
+    if (audience === 'admin') {
+      setPage(1);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query, statusFilter, priorityFilter, filterByEmail]);
+
   const tickets = ticketsQuery.data?.tickets ?? [];
+  const total = ticketsQuery.data?.total ?? tickets.length;
+  const currentPage = ticketsQuery.data?.page ?? page;
+  const currentPageSize = ticketsQuery.data?.pageSize ?? pageSize;
 
   const columns = [
     {
@@ -220,11 +234,28 @@ export function NewTicketList({
         columns={columns}
         rowKey="id"
         loading={ticketsQuery.isLoading || ticketsQuery.isFetching}
-        pagination={{
-          pageSize: 10,
-          showSizeChanger: true,
-          showTotal: (total) => `Total: ${total} chamado${total !== 1 ? 's' : ''}`,
-        }}
+        pagination={
+          audience === 'admin'
+            ? {
+                current: currentPage,
+                pageSize: currentPageSize,
+                total: total,
+                showSizeChanger: true,
+                showTotal: (total) => `Total: ${total} chamado${total !== 1 ? 's' : ''}`,
+                onChange: (newPage, newPageSize) => {
+                  setPage(newPage);
+                  if (newPageSize !== currentPageSize) {
+                    setPageSize(newPageSize);
+                    setPage(1); // Reset para primeira página ao mudar tamanho
+                  }
+                },
+              }
+            : {
+                pageSize: 10,
+                showSizeChanger: true,
+                showTotal: (total) => `Total: ${total} chamado${total !== 1 ? 's' : ''}`,
+              }
+        }
         locale={{
           emptyText: ticketsQuery.isLoading ? 'Carregando...' : 'Nenhum chamado encontrado',
         }}

@@ -29,7 +29,9 @@ export function CollectorSupportForm({ onSuccess }: CollectorSupportFormProps) {
       }
 
       // Construir objeto requester a partir da sessão do coletor
-      const requesterEmail = collector.email || `${collector.cnpj}@collector.temp`;
+      // Sanitizar CNPJ removendo pontuação para usar como email fallback
+      const sanitizedCnpj = collector.cnpj.replace(/[^\d]/g, '');
+      const requesterEmail = collector.email || `${sanitizedCnpj}@collector.temp`;
 
       const response = await fetch('/api/collector/tickets', {
         method: 'POST',

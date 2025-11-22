@@ -35,15 +35,22 @@ export async function GET(request: Request) {
   const statusValues = parseArrayParam(params, 'status') as Status[];
   const priorityValues = parseArrayParam(params, 'priority') as Priority[];
   const query = params.get('q') ?? undefined;
+  const limitParam = params.get('limit');
+  const limit = limitParam ? parseInt(limitParam, 10) : undefined;
 
   try {
-    const tickets = await listTicketsForUser(session.userId, {
+    const allTickets = await listTicketsForUser(session.userId, {
       status: statusValues.length ? statusValues : undefined,
       priority: priorityValues.length ? priorityValues : undefined,
       query,
     });
 
-    return NextResponse.json({ tickets });
+    const total = allTickets.length;
+
+    // Aplicar limit se fornecido
+    const tickets = limit && limit > 0 ? allTickets.slice(0, limit) : allTickets;
+
+    return NextResponse.json({ tickets, total });
   } catch (error) {
     console.error('[SUPPORT_TICKETS_GET]', error);
     return NextResponse.json({ message: 'Erro ao carregar tickets' }, { status: 500 });
