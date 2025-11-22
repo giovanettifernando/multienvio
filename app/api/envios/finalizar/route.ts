@@ -1,6 +1,12 @@
 /**
  * ⚠️ MOCK ROUTE - REMOVE IN PRODUCTION
  * This route returns fake data and should be removed or protected before deployment
+ *
+ * 🚨 SECURITY WARNINGS:
+ * - This endpoint trusts client-controlled payment.action without server-side verification
+ * - It returns "PAGO" status based solely on client input
+ * - NEVER use this in production - it enables payment spoofing
+ * - This is ONLY for frontend development/testing
  */
 
 import { NextResponse } from "next/server";
@@ -16,7 +22,7 @@ export async function POST(req: Request) {
     );
   }
 
-  // ⚠️ WARNING: Mock implementation - returns fake data
+  // 🚨 SECURITY: Block in production
   if (process.env.NODE_ENV === 'production') {
     return NextResponse.json(
       { message: 'Mock route not available in production' },
@@ -24,8 +30,13 @@ export async function POST(req: Request) {
     );
   }
 
+  // ⚠️ WARNING: This accepts client-controlled payment status WITHOUT validation
+  // In production, NEVER trust client input for payment confirmation
   const payload = await req.json().catch(() => ({}));
   const paid = payload?.payment?.action === "PAGAR_AGORA";
+
+  console.warn('⚠️ MOCK ENDPOINT: Returning fake payment status based on client input (NEVER use in production)');
+
   return NextResponse.json({
     shipmentId: "shp_123",
     status: paid ? "PAGO" : "NO_CARRINHO",

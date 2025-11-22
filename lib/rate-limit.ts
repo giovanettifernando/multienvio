@@ -96,7 +96,14 @@ export function rateLimitByIP(
 ): NextResponse | null {
   // Extrair IP do request
   const forwarded = request.headers.get('x-forwarded-for');
-  const ip = forwarded ? forwarded.split(',')[0].trim() : (request.headers.get('x-real-ip') || 'unknown');
+  const ip = forwarded ? forwarded.split(',')[0].trim() : (request.headers.get('x-real-ip') || null);
+
+  // 🔒 SECURITY: Se não conseguir identificar IP, não aplicar rate limiting
+  // para evitar bloquear todos os usuários no mesmo bucket 'unknown'
+  if (!ip) {
+    console.warn(`[RATE_LIMIT] Cannot identify IP for action '${action}', skipping rate limit (security risk in production)`);
+    return null;
+  }
 
   return checkRateLimit(`ip:${ip}:${action}`, config);
 }

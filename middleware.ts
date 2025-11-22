@@ -15,6 +15,14 @@ if (process.env.NODE_ENV === 'production') {
   if (!process.env.ADMIN_JWT_SECRET) {
     throw new Error('🚨 SECURITY: ADMIN_JWT_SECRET required in production');
   }
+} else {
+  // ⚠️ WARNING: Usando secrets padrão em desenvolvimento - NÃO usar em produção
+  if (!process.env.JWT_SECRET) {
+    console.warn('⚠️ SECURITY WARNING: JWT_SECRET not set, using insecure default. Set JWT_SECRET in environment variables.');
+  }
+  if (!process.env.ADMIN_JWT_SECRET) {
+    console.warn('⚠️ SECURITY WARNING: ADMIN_JWT_SECRET not set, using insecure default. Set ADMIN_JWT_SECRET in environment variables.');
+  }
 }
 
 // JWT Secrets (customer vs admin)
@@ -29,6 +37,15 @@ const ADMIN_JWT_SECRET = new TextEncoder().encode(
 // Cookie names
 const AUTH_COOKIE_NAME = 'auth_token'; // Customer auth
 const ADMIN_AUTH_COOKIE_NAME = 'admin_auth'; // Staff/Admin auth
+
+// Cache de tokenVersion (30 segundos) para reduzir DB lookups
+interface TokenVersionCache {
+  tokenVersion: number;
+  status: string;
+  cachedAt: number;
+}
+const tokenVersionCache = new Map<string, TokenVersionCache>();
+const TOKEN_VERSION_CACHE_TTL = 30 * 1000; // 30 segundos
 
 interface JWTPayload {
   userId: string;
@@ -123,12 +140,35 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(loginUrl);
     }
 
-    // Validate tokenVersion against database
+    // Validate tokenVersion against database (with cache)
     try {
-      const staffUser = await prisma.staffUser.findUnique({
-        where: { id: adminPayload!.staffId },
-        select: { tokenVersion: true, status: true },
-      });
+      const staffId = adminPayload!.staffId;
+      const now = Date.now();
+
+      // Verificar cache primeiro
+      const cached = tokenVersionCache.get(staffId);
+      let staffUser: { tokenVersion: number; status: string } | null = null;
+
+      if (cached && (now - cached.cachedAt) < TOKEN_VERSION_CACHE_TTL) {
+        // Usar cache
+        staffUser = { tokenVersion: cached.tokenVersion, status: cached.status };
+      } else {
+        // Buscar no banco de dados
+        const dbStaffUser = await prisma.staffUser.findUnique({
+          where: { id: staffId },
+          select: { tokenVersion: true, status: true },
+        });
+
+        if (dbStaffUser) {
+          staffUser = dbStaffUser;
+          // Atualizar cache
+          tokenVersionCache.set(staffId, {
+            tokenVersion: dbStaffUser.tokenVersion,
+            status: dbStaffUser.status,
+            cachedAt: now,
+          });
+        }
+      }
 
       // If user not found, tokenVersion mismatch, or user is not active, redirect to login
       if (
@@ -136,6 +176,8 @@ export async function middleware(request: NextRequest) {
         staffUser.tokenVersion !== adminPayload!.tokenVersion ||
         staffUser.status !== 'ACTIVE'
       ) {
+        // Invalidar cache em caso de erro de autenticação
+        tokenVersionCache.delete(staffId);
         const loginUrl = new URL('/admin/login', request.url);
         loginUrl.searchParams.set('next', pathname);
         return NextResponse.redirect(loginUrl);

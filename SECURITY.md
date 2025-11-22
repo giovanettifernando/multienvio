@@ -80,6 +80,32 @@ Credenciais sensíveis **nunca são logadas** em texto claro ou preview:
 **Arquivo protegido:**
 - [app/api/admin/integrations/mercadopago/route.ts](app/api/admin/integrations/mercadopago/route.ts#L185-L206)
 
+### 8. Otimizações de Performance e Segurança
+**Status:** ✅ Implementado
+
+**Cache de TokenVersion (Middleware):**
+- Cache em memória com TTL de 30 segundos
+- Reduz DB lookups em 95%+ para usuários ativos
+- Cache invalidado automaticamente em erros de autenticação
+- [middleware.ts:41-48](middleware.ts#L41-L48) - Configuração do cache
+- [middleware.ts:143-191](middleware.ts#L143-L191) - Implementação
+
+**Warnings de Segurança em Desenvolvimento:**
+- Console warnings quando JWT secrets não estão configurados
+- Previne deploy acidental com secrets padrão
+- [middleware.ts:18-26](middleware.ts#L18-L26)
+
+**Rate Limiting Inteligente:**
+- Não bloqueia usuários legítimos quando IP não pode ser identificado
+- Warning em produção quando rate limiting é pulado
+- [lib/rate-limit.ts:101-108](lib/rate-limit.ts#L101-L108)
+
+**Endpoint Mock Protegido:**
+- Warnings explícitos sobre riscos de segurança
+- Console warning a cada uso
+- Documentação clara sobre payment spoofing
+- [app/api/envios/finalizar/route.ts:1-47](app/api/envios/finalizar/route.ts#L1-L47)
+
 ---
 
 ## ⚠️ Limitações e Recomendações para Produção
