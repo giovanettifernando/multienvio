@@ -1,3 +1,6 @@
+// Force Node.js runtime for Prisma database access
+export const runtime = 'nodejs';
+
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { jwtVerify } from 'jose';
