@@ -1,8 +1,9 @@
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-import { NextResponse } from 'next/server';
-import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
+import { NextRequest, NextResponse } from 'next/server';
+import { requireAdminUser } from '@/lib/auth/admin-helpers';
+import { AdminPermission } from '@prisma/client';
 import {
   createCarrier,
   listCarriers,
@@ -12,7 +13,7 @@ import {
   listCarriersQuerySchema,
   type CreateCarrierInput,
 } from '@/lib/validation/integrations-carriers';
-import { checkAdminPermission, logAuditAction } from '../_helpers';
+import { logAuditAction } from '../_helpers';
 
 /**
  * POST /api/admin/integrations/carriers
@@ -20,25 +21,9 @@ import { checkAdminPermission, logAuditAction } from '../_helpers';
  */
 export async function POST(request: Request) {
   try {
-    // Authenticate admin
-    const session = await getAdminSessionFromRequest(request);
-    if (!session) {
-      return NextResponse.json({ message: 'Não autenticado' }, { status: 401 });
-    }
-
-    // Debug log
-    console.log('[CARRIERS_POST] Session:', {
-      staffId: session.staffId,
-      email: session.email,
-      isSuperAdmin: session.isSuperAdmin,
-      permissions: session.permissions,
-    });
-
-    // Check permission
-    if (!checkAdminPermission(session, 'INTEGRACOES')) {
-      console.log('[CARRIERS_POST] Permission denied');
-      return NextResponse.json({ message: 'Sem permissão' }, { status: 403 });
-    }
+    const authResult = await requireAdminUser(request, AdminPermission.INTEGRACOES);
+    if (authResult instanceof NextResponse) return authResult;
+    const { session } = authResult;
 
     // Parse and validate request
     const body = (await request.json()) as Record<string, unknown>;
@@ -82,16 +67,8 @@ export async function POST(request: Request) {
  */
 export async function GET(request: Request) {
   try {
-    // Authenticate admin
-    const session = await getAdminSessionFromRequest(request);
-    if (!session) {
-      return NextResponse.json({ message: 'Não autenticado' }, { status: 401 });
-    }
-
-    // Check permission
-    if (!checkAdminPermission(session, 'INTEGRACOES')) {
-      return NextResponse.json({ message: 'Sem permissão' }, { status: 403 });
-    }
+    const authResult = await requireAdminUser(request, AdminPermission.INTEGRACOES);
+    if (authResult instanceof NextResponse) return authResult;
 
     // Parse query parameters
     const url = new URL(request.url);

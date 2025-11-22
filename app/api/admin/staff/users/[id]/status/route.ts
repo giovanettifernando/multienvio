@@ -1,43 +1,17 @@
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { requireAdminUser } from '@/lib/auth/admin-helpers';
 import { z } from 'zod';
 import { prisma } from '@/lib/db';
-import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
 import { AdminPermission, StaffStatus } from '@prisma/client';
-import { canAccess } from '@/lib/auth/permissions';
 
 const schema = z.object({
   status: z.nativeEnum(StaffStatus),
 });
 
-async function requireAdminUser(request: Request) {
-  const session = await getAdminSessionFromRequest(request);
-  if (!session) {
-    throw NextResponse.json({ message: 'Não autenticado' }, { status: 401 });
-  }
 
-  const staffUser = await prisma.staffUser.findUnique({
-    where: { id: session.staffId },
-    select: {
-      id: true,
-      status: true,
-      isSuperAdmin: true,
-      permissions: true,
-    },
-  });
-
-  if (!staffUser) {
-    throw NextResponse.json({ message: 'Usuário não encontrado' }, { status: 404 });
-  }
-
-  if (staffUser.status !== 'ACTIVE') {
-    throw NextResponse.json({ message: 'Conta inativa ou bloqueada' }, { status: 403 });
-  }
-
-  return staffUser;
-}
 
 function toApiUser(user: {
   id: string;
@@ -79,10 +53,8 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const staff = await requireAdminUser(request);
-    if (!canAccess(staff, AdminPermission.USUARIOS)) {
-      return NextResponse.json({ message: 'Acesso negado' }, { status: 403 });
-    }
+    const authResult = await requireAdminUser(request, AdminPermission.USUARIOS);
+    if (authResult instanceof NextResponse) return authResult;
 
     const { id } = await params;
     const payload = schema.parse(await request.json());

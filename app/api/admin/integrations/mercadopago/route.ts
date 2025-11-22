@@ -8,10 +8,11 @@
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/db';
-import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
+import { requireAdminUser } from '@/lib/auth/admin-helpers';
+import { AdminPermission } from '@prisma/client';
 import { encrypt, decrypt } from '@/lib/integrations/shared/encryption.service';
 import { invalidateConfigCache } from '@/lib/mercadopago';
 
@@ -33,16 +34,8 @@ type MercadoPagoConfigInput = z.infer<typeof mercadoPagoConfigSchema>;
  */
 export async function GET(request: Request) {
   try {
-    // Autenticação
-    const session = await getAdminSessionFromRequest(request);
-    if (!session) {
-      return NextResponse.json({ message: 'Não autenticado' }, { status: 401 });
-    }
-
-    // Verificar permissão
-    if (!session.isSuperAdmin && !session.permissions?.includes('INTEGRACOES')) {
-      return NextResponse.json({ message: 'Sem permissão' }, { status: 403 });
-    }
+    const authResult = await requireAdminUser(request, AdminPermission.INTEGRACOES);
+    if (authResult instanceof NextResponse) return authResult;
 
     // Buscar gateway e credenciais
     const gateway = await prisma.paymentGateway.findFirst({
@@ -120,16 +113,8 @@ export async function GET(request: Request) {
  */
 export async function POST(request: Request) {
   try {
-    // Autenticação
-    const session = await getAdminSessionFromRequest(request);
-    if (!session) {
-      return NextResponse.json({ message: 'Não autenticado' }, { status: 401 });
-    }
-
-    // Verificar permissão
-    if (!session.isSuperAdmin && !session.permissions?.includes('INTEGRACOES')) {
-      return NextResponse.json({ message: 'Sem permissão' }, { status: 403 });
-    }
+    const authResult = await requireAdminUser(request, AdminPermission.INTEGRACOES);
+    if (authResult instanceof NextResponse) return authResult;
 
     // Validar payload
     const body = await request.json();

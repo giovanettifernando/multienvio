@@ -1,9 +1,8 @@
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-import { NextRequest, NextResponse } from 'next/server';
-import { requireAdminUser } from '@/lib/auth/admin-helpers';
-import { AdminPermission } from '@prisma/client';
+import { NextResponse } from 'next/server';
+import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
 import { prisma } from '@/lib/db';
 import {
   getCarrierService,
@@ -24,9 +23,16 @@ export async function GET(
   { params }: { params: Promise<{ id: string; serviceId: string }> }
 ) {
   try {
-    const authResult = await requireAdminUser(request, AdminPermission.INTEGRACOES);
-    if (authResult instanceof NextResponse) return authResult;
-    const { session } = authResult;
+    // Authenticate admin
+    const session = await getAdminSessionFromRequest(request);
+    if (!session) {
+      return NextResponse.json({ message: 'Não autenticado' }, { status: 401 });
+    }
+
+    // Check permission
+    if (!session.permissions.includes('INTEGRACOES') && !session.isSuperAdmin) {
+      return NextResponse.json({ message: 'Sem permissão' }, { status: 403 });
+    }
 
     const { id, serviceId } = await params;
 
@@ -58,9 +64,16 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string; serviceId: string }> }
 ) {
   try {
-    const authResult = await requireAdminUser(request, AdminPermission.INTEGRACOES);
-    if (authResult instanceof NextResponse) return authResult;
-    const { session } = authResult;
+    // Authenticate admin
+    const session = await getAdminSessionFromRequest(request);
+    if (!session) {
+      return NextResponse.json({ message: 'Não autenticado' }, { status: 401 });
+    }
+
+    // Check permission
+    if (!session.permissions.includes('INTEGRACOES') && !session.isSuperAdmin) {
+      return NextResponse.json({ message: 'Sem permissão' }, { status: 403 });
+    }
 
     const { id, serviceId } = await params;
 
@@ -125,9 +138,16 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string; serviceId: string }> }
 ) {
   try {
-    const authResult = await requireAdminUser(request, AdminPermission.INTEGRACOES);
-    if (authResult instanceof NextResponse) return authResult;
-    const { session } = authResult;
+    // Authenticate admin
+    const session = await getAdminSessionFromRequest(request);
+    if (!session) {
+      return NextResponse.json({ message: 'Não autenticado' }, { status: 401 });
+    }
+
+    // Check permission
+    if (!session.permissions.includes('INTEGRACOES') && !session.isSuperAdmin) {
+      return NextResponse.json({ message: 'Sem permissão' }, { status: 403 });
+    }
 
     const { id, serviceId } = await params;
 

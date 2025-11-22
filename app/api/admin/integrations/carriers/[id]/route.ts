@@ -1,8 +1,9 @@
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-import { NextResponse } from 'next/server';
-import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
+import { NextRequest, NextResponse } from 'next/server';
+import { requireAdminUser } from '@/lib/auth/admin-helpers';
+import { AdminPermission } from '@prisma/client';
 import {
   getCarrier,
   updateCarrier,
@@ -12,7 +13,7 @@ import {
   updateCarrierSchema,
   type UpdateCarrierInput,
 } from '@/lib/validation/integrations-carriers';
-import { checkAdminPermission, logAuditAction } from '../../_helpers';
+import { logAuditAction } from '../../_helpers';
 
 /**
  * GET /api/admin/integrations/carriers/[id]
@@ -23,16 +24,8 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Authenticate admin
-    const session = await getAdminSessionFromRequest(request);
-    if (!session) {
-      return NextResponse.json({ message: 'Não autenticado' }, { status: 401 });
-    }
-
-    // Check permission
-    if (!checkAdminPermission(session, 'INTEGRACOES')) {
-      return NextResponse.json({ message: 'Sem permissão' }, { status: 403 });
-    }
+    const authResult = await requireAdminUser(request, AdminPermission.INTEGRACOES);
+    if (authResult instanceof NextResponse) return authResult;
 
     const { id } = await params;
     const carrier = await getCarrier(id);
@@ -58,16 +51,9 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Authenticate admin
-    const session = await getAdminSessionFromRequest(request);
-    if (!session) {
-      return NextResponse.json({ message: 'Não autenticado' }, { status: 401 });
-    }
-
-    // Check permission
-    if (!checkAdminPermission(session, 'INTEGRACOES')) {
-      return NextResponse.json({ message: 'Sem permissão' }, { status: 403 });
-    }
+    const authResult = await requireAdminUser(request, AdminPermission.INTEGRACOES);
+    if (authResult instanceof NextResponse) return authResult;
+    const { session } = authResult;
 
     const { id } = await params;
 
@@ -120,16 +106,9 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Authenticate admin
-    const session = await getAdminSessionFromRequest(request);
-    if (!session) {
-      return NextResponse.json({ message: 'Não autenticado' }, { status: 401 });
-    }
-
-    // Check permission
-    if (!checkAdminPermission(session, 'INTEGRACOES')) {
-      return NextResponse.json({ message: 'Sem permissão' }, { status: 403 });
-    }
+    const authResult = await requireAdminUser(request, AdminPermission.INTEGRACOES);
+    if (authResult instanceof NextResponse) return authResult;
+    const { session } = authResult;
 
     const { id } = await params;
 
