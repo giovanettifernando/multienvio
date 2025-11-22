@@ -3,13 +3,12 @@
 import { useMemo, useState } from "react";
 import { Button, Card, Skeleton, Space, Typography } from "antd";
 import AddFundsModal from "@/components/wallet/AddFundsModal";
-import { useWallet, useWalletInvalidate } from "@/hooks/useWallet";
+import { useWallet } from "@/hooks/useWallet";
 import { useWalletTransactions } from "@/hooks/useWalletTransactions";
 import { formatCurrencyBRL } from "@/lib/format";
 
 export function WalletCard() {
   const [modalOpen, setModalOpen] = useState(false);
-  const invalidateWallet = useWalletInvalidate();
   const { data: wallet, isLoading } = useWallet();
   const { data: txData } = useWalletTransactions({ limit: 30 });
 
@@ -31,7 +30,6 @@ export function WalletCard() {
       <AddFundsModal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
-        onCardTopupSuccess={invalidateWallet}
       />
       <Card
         title="Carteira e créditos"

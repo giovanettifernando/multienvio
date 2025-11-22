@@ -179,9 +179,6 @@ export default function PaymentMethodsPage() {
       <AddFundsModal
         open={addBalanceOpen}
         onClose={() => setAddBalanceOpen(false)}
-        onCardTopupSuccess={() => {
-          queryClient.invalidateQueries({ queryKey: ["wallet"] });
-        }}
       />
     </>
   );

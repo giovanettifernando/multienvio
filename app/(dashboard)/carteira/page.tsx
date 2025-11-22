@@ -7,13 +7,12 @@ import BalanceCard from "@/components/wallet/BalanceCard";
 import MonthlySummaryCard from "@/components/wallet/MonthlySummaryCard";
 import AddFundsModal from "@/components/wallet/AddFundsModal";
 import TransactionsTable from "@/components/wallet/TransactionsTable";
-import { useWallet, useWalletInvalidate } from "@/hooks/useWallet";
+import { useWallet } from "@/hooks/useWallet";
 import { useCards } from "@/hooks/useAccount";
 
 export default function CarteiraPage() {
   const [open, setOpen] = useState(false);
   const { data, isLoading } = useWallet();
-  const invalidate = useWalletInvalidate();
   const router = useRouter();
   const { data: cards } = useCards();
 
@@ -60,7 +59,6 @@ export default function CarteiraPage() {
       <AddFundsModal
         open={open}
         onClose={() => setOpen(false)}
-        onCardTopupSuccess={invalidate}
       />
     </div>
   );

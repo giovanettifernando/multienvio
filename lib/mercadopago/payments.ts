@@ -1,10 +1,17 @@
 /**
  * Serviço de pagamentos via Mercado Pago
  *
- * Responsável por:
+ * Responsável APENAS por:
  * - Criar pagamentos e registrar no banco (PaymentTransaction)
  * - Atualizar status de pagamentos
- * - Aplicar efeitos de domínio (crédito de carteira, etc)
+ * - Integrar com SDK do Mercado Pago
+ *
+ * NÃO É RESPONSÁVEL POR:
+ * - Mexer em Wallet ou WalletTransaction (isso é responsabilidade do wallet service)
+ * - Calcular saldo ou montar extrato
+ *
+ * Efeitos de domínio (ex: creditar carteira) são orquestrados através de
+ * serviços de domínio (lib/wallet/wallet.service.ts)
  */
 
 import { prisma } from '@/lib/db';
@@ -17,6 +24,7 @@ import {
 } from './client';
 import type { CreatePaymentInput, MercadoPagoPaymentResponse } from './types';
 import type { PaymentTransaction } from '@prisma/client';
+import * as walletService from '@/lib/wallet/wallet.service';
 
 /**
  * Resultado da criação de pagamento
@@ -203,9 +211,12 @@ export async function updatePaymentFromMercadoPago(
 /**
  * Aplica efeitos de domínio após pagamento confirmado
  *
+ * IMPORTANTE: Este módulo NÃO mexe diretamente em Wallet/WalletTransaction.
+ * Todos os efeitos de domínio são orquestrados através de serviços dedicados.
+ *
  * Efeitos possíveis:
- * - wallet_topup: Creditar saldo na carteira
- * - checkout_payment: Marcar envios como pagos
+ * - wallet_topup: Creditar saldo na carteira (via walletService)
+ * - checkout_payment: Marcar envios como pagos (TODO: implementar)
  */
 async function applyPaymentEffects(transaction: PaymentTransaction): Promise<void> {
   const metadata = transaction.metadata as Record<string, unknown> | null;
@@ -235,7 +246,10 @@ async function applyPaymentEffects(transaction: PaymentTransaction): Promise<voi
 }
 
 /**
- * Credita saldo na carteira do usuário
+ * Credita saldo na carteira do usuário via wallet service
+ *
+ * LINHA DE CORTE: Este módulo apenas orquestra a chamada ao wallet service.
+ * Toda a lógica de negócio da carteira está em lib/wallet/wallet.service.ts
  */
 async function applyWalletTopup(transaction: PaymentTransaction): Promise<void> {
   const metadata = transaction.metadata as Record<string, unknown> | null;
@@ -246,76 +260,29 @@ async function applyWalletTopup(transaction: PaymentTransaction): Promise<void> 
     return;
   }
 
-  // Verificar se já foi aplicado (idempotência)
-  const existingWalletTx = await prisma.walletTransaction.findUnique({
-    where: { referenceId: transaction.referenceId },
-  });
-
-  if (existingWalletTx && existingWalletTx.status === 'CONFIRMED') {
-    console.log('[MERCADO_PAGO] Topup já aplicado:', transaction.referenceId);
-    return;
-  }
-
-  // Buscar ou criar carteira
-  let wallet = await prisma.wallet.findUnique({
-    where: { userId },
-  });
-
-  if (!wallet) {
-    wallet = await prisma.wallet.create({
-      data: {
-        userId,
-        availableCents: 0,
-        pendingCents: 0,
-      },
+  try {
+    // Chamar wallet service para aplicar crédito
+    await walletService.creditFromGatewayTopup({
+      userId,
+      amountCents: transaction.amountCents,
+      paymentTransactionId: transaction.id,
+      currency: 'BRL',
+      providerPaymentId: transaction.externalId || undefined,
     });
-  }
 
-  // Creditar saldo
-  await prisma.$transaction(async (tx) => {
-    // Criar/atualizar transação de carteira
-    if (existingWalletTx) {
-      await tx.walletTransaction.update({
-        where: { id: existingWalletTx.id },
-        data: {
-          status: 'CONFIRMED',
-          confirmedAt: new Date(),
-        },
-      });
+    console.log('[MERCADO_PAGO] Wallet topup orquestrado com sucesso:', {
+      userId,
+      amountCents: transaction.amountCents,
+      transactionId: transaction.id,
+    });
+  } catch (error) {
+    // Se for erro de idempotência (já aplicado), não logar como erro
+    if (error instanceof Error && error.message.includes('já aplicado')) {
+      console.log('[MERCADO_PAGO] Topup já aplicado (idempotência):', transaction.id);
     } else {
-      await tx.walletTransaction.create({
-        data: {
-          walletId: wallet.id,
-          type: 'TOPUP',
-          status: 'CONFIRMED',
-          amountCents: transaction.amountCents,
-          title: 'Recarga via Mercado Pago',
-          referenceId: transaction.referenceId,
-          confirmedAt: new Date(),
-          meta: {
-            paymentTransactionId: transaction.id,
-            externalId: transaction.externalId,
-          },
-        },
-      });
+      throw error;
     }
-
-    // Atualizar saldo da carteira
-    await tx.wallet.update({
-      where: { id: wallet.id },
-      data: {
-        availableCents: {
-          increment: transaction.amountCents,
-        },
-      },
-    });
-  });
-
-  console.log('[MERCADO_PAGO] Topup aplicado com sucesso:', {
-    userId,
-    amountCents: transaction.amountCents,
-    referenceId: transaction.referenceId,
-  });
+  }
 }
 
 /**

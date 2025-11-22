@@ -68,7 +68,8 @@ export const useQuoteCalculate = () =>
               const fieldErrors = errors.errors.fieldErrors;
               const errorMessages: string[] = [];
 
-              Object.entries(fieldErrors).forEach(([field, messages]) => {
+              // eslint-disable-next-line @typescript-eslint/no-unused-vars
+              Object.entries(fieldErrors).forEach(([_field, messages]) => {
                 if (Array.isArray(messages)) {
                   errorMessages.push(...messages);
                 }

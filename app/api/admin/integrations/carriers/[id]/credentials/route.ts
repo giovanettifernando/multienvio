@@ -1,7 +1,7 @@
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { requireAdminUser } from '@/lib/auth/admin-helpers';
 import { AdminPermission } from '@prisma/client';
 import { prisma } from '@/lib/db';
@@ -92,6 +92,7 @@ export async function GET(
   try {
     const authResult = await requireAdminUser(request, AdminPermission.INTEGRACOES);
     if (authResult instanceof NextResponse) return authResult;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { session } = authResult;
 
     const { id } = await params;

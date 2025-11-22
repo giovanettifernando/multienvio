@@ -8,7 +8,7 @@
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { requireAdminUser } from '@/lib/auth/admin-helpers';
@@ -168,7 +168,8 @@ export async function POST(request: Request) {
       }
 
       // Desativar credenciais antigas
-      const oldCredentials = await tx.paymentCredential.updateMany({
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const _oldCredentials = await tx.paymentCredential.updateMany({
         where: {
           gatewayId: gateway.id,
           isActive: true,

@@ -77,7 +77,8 @@ export function useShipments(filters?: ShipmentFilters) {
 export function useShipmentCreate() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (payload: Partial<Shipment>) => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    mutationFn: async (_payload: Partial<Shipment>) => {
       console.error(
         '❌ ERRO: useShipmentCreate está obsoleto! POST /api/shipments foi removido.\n' +
         'Use os fluxos de checkout apropriados:\n' +

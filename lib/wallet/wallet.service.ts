@@ -27,14 +27,6 @@ export interface WalletTransactionData {
   confirmedAt: Date | null;
 }
 
-export interface CreateTopupResult {
-  transactionId: string;
-  referenceId: string;
-  amountCents: number;
-  qrCode: string;
-  status: WalletTxStatus;
-}
-
 /**
  * Converte centavos para reais
  */
@@ -119,110 +111,6 @@ export async function listTransactions(
     createdAt: tx.createdAt,
     confirmedAt: tx.confirmedAt,
   }));
-}
-
-/**
- * Cria uma recarga (topup) pendente
- * Idempotente por referenceId
- */
-export async function createTopupPending(
-  userId: string,
-  amountCents: number,
-  referenceId: string
-): Promise<CreateTopupResult> {
-  if (amountCents <= 0) {
-    throw new Error('O valor da recarga deve ser positivo');
-  }
-
-  const wallet = await getOrCreateWallet(userId);
-
-  // Verificar se já existe uma transação com esse referenceId (idempotência)
-  const existingTx = await prisma.walletTransaction.findUnique({
-    where: { referenceId },
-  });
-
-  if (existingTx) {
-    // Retornar a transação existente (idempotência)
-    return {
-      transactionId: existingTx.id,
-      referenceId: existingTx.referenceId!,
-      amountCents: existingTx.amountCents,
-      qrCode: generateMockQRCode(existingTx.referenceId!),
-      status: existingTx.status,
-    };
-  }
-
-  // Criar nova transação pendente
-  const transaction = await prisma.walletTransaction.create({
-    data: {
-      walletId: wallet.id,
-      type: WalletTxType.TOPUP,
-      status: WalletTxStatus.PENDING,
-      amountCents,
-      title: `Recarga via PIX - R$ ${centsToReais(amountCents).toFixed(2)}`,
-      referenceId,
-      meta: {
-        method: 'pix',
-      },
-    },
-  });
-
-  // Atualizar saldo pendente
-  await prisma.wallet.update({
-    where: { id: wallet.id },
-    data: {
-      pendingCents: { increment: amountCents },
-    },
-  });
-
-  return {
-    transactionId: transaction.id,
-    referenceId: transaction.referenceId!,
-    amountCents: transaction.amountCents,
-    qrCode: generateMockQRCode(transaction.referenceId!),
-    status: transaction.status,
-  };
-}
-
-/**
- * Confirma uma transação pendente (mock de webhook)
- * Move o saldo de pendente para disponível
- */
-export async function confirmTransaction(referenceId: string): Promise<void> {
-  const transaction = await prisma.walletTransaction.findUnique({
-    where: { referenceId },
-    include: { wallet: true },
-  });
-
-  if (!transaction) {
-    throw new Error('Transação não encontrada');
-  }
-
-  if (transaction.status !== WalletTxStatus.PENDING) {
-    throw new Error('Transação já foi processada');
-  }
-
-  const now = new Date();
-
-  // Usar transação atômica para garantir consistência
-  await prisma.$transaction([
-    // Atualizar status da transação
-    prisma.walletTransaction.update({
-      where: { id: transaction.id },
-      data: {
-        status: WalletTxStatus.CONFIRMED,
-        confirmedAt: now,
-      },
-    }),
-    // Atualizar saldos da carteira (pendente -> disponível)
-    prisma.wallet.update({
-      where: { id: transaction.walletId },
-      data: {
-        availableCents: { increment: transaction.amountCents },
-        pendingCents: { decrement: transaction.amountCents },
-      },
-    }),
-  ]);
 }
 
 /**
@@ -337,11 +225,305 @@ export async function refund(
 }
 
 /**
- * Gera um QR Code PIX mock para testes
- * Em produção, seria integrado com um gateway de pagamento real
+ * ========================================================================
+ * DOMÍNIO: Créditos de Gateway
+ * ========================================================================
+ *
+ * Essas funções são chamadas APENAS por serviços de integração de pagamento
+ * (ex: lib/mercadopago) quando um pagamento externo é confirmado.
+ *
+ * NUNCA devem ser chamadas diretamente por rotas API ou controllers.
  */
-function generateMockQRCode(referenceId: string): string {
-  // Mock: em produção, seria o payload PIX real
-  const pixPayload = `00020126580014br.gov.bcb.pix0136${referenceId}520400005303986540510.005802BR5925ENVIO LEGAL LTDA6009SAO PAULO62070503***6304`;
-  return Buffer.from(pixPayload).toString('base64');
+
+export interface CreditFromGatewayTopupParams {
+  userId: string;
+  amountCents: number;
+  paymentTransactionId: string;
+  currency?: string;
+  providerPaymentId?: string;
+}
+
+/**
+ * Credita saldo na carteira a partir de um pagamento confirmado no gateway
+ *
+ * Regras de negócio:
+ * - Valida se PaymentTransaction existe e está PAID
+ * - Garante idempotência: não aplica crédito duas vezes para o mesmo pagamento
+ * - Cria WalletTransaction com type="TOPUP" e reason="gateway_topup"
+ * - Atualiza saldo da Wallet
+ *
+ * @param params Parâmetros do crédito
+ * @returns Transação de carteira criada
+ * @throws Error se PaymentTransaction não existe ou já foi aplicada
+ */
+export async function creditFromGatewayTopup(
+  params: CreditFromGatewayTopupParams
+): Promise<WalletTransactionData> {
+  const { userId, amountCents, paymentTransactionId, currency = 'BRL', providerPaymentId } = params;
+
+  if (amountCents <= 0) {
+    throw new Error('O valor do crédito deve ser positivo');
+  }
+
+  // 1. Validar se PaymentTransaction existe
+  const paymentTx = await prisma.paymentTransaction.findUnique({
+    where: { id: paymentTransactionId },
+  });
+
+  if (!paymentTx) {
+    throw new Error(`PaymentTransaction não encontrada: ${paymentTransactionId}`);
+  }
+
+  if (paymentTx.status !== 'PAID') {
+    throw new Error(`PaymentTransaction não está PAID: ${paymentTx.status}`);
+  }
+
+  // 2. Verificar idempotência: já existe WalletTransaction para este pagamento?
+  const existingWalletTx = await prisma.walletTransaction.findFirst({
+    where: {
+      meta: {
+        path: ['paymentTransactionId'],
+        equals: paymentTransactionId,
+      },
+      status: WalletTxStatus.CONFIRMED,
+    },
+  });
+
+  if (existingWalletTx) {
+    console.log('[WALLET_SERVICE] Crédito já aplicado (idempotência):', {
+      paymentTransactionId,
+      walletTransactionId: existingWalletTx.id,
+    });
+
+    return {
+      id: existingWalletTx.id,
+      type: existingWalletTx.type,
+      status: existingWalletTx.status,
+      amountCents: existingWalletTx.amountCents,
+      amountReais: centsToReais(Math.abs(existingWalletTx.amountCents)),
+      title: existingWalletTx.title,
+      referenceId: existingWalletTx.referenceId,
+      createdAt: existingWalletTx.createdAt,
+      confirmedAt: existingWalletTx.confirmedAt,
+    };
+  }
+
+  // 3. Buscar ou criar carteira
+  const wallet = await getOrCreateWallet(userId);
+  const now = new Date();
+
+  // 4. Criar transação de crédito + atualizar saldo (transação atômica)
+  const [walletTx] = await prisma.$transaction([
+    // Criar WalletTransaction
+    prisma.walletTransaction.create({
+      data: {
+        walletId: wallet.id,
+        type: WalletTxType.TOPUP,
+        status: WalletTxStatus.CONFIRMED,
+        amountCents,
+        title: `Recarga confirmada - R$ ${centsToReais(amountCents).toFixed(2)}`,
+        referenceId: paymentTx.referenceId,
+        confirmedAt: now,
+        meta: {
+          paymentTransactionId,
+          externalId: providerPaymentId || paymentTx.externalId,
+          currency,
+          source: 'gateway_topup',
+        },
+      },
+    }),
+    // Atualizar saldo da carteira
+    prisma.wallet.update({
+      where: { id: wallet.id },
+      data: {
+        availableCents: { increment: amountCents },
+      },
+    }),
+  ]);
+
+  console.log('[WALLET_SERVICE] Crédito de gateway aplicado:', {
+    userId,
+    walletTransactionId: walletTx.id,
+    amountCents,
+    paymentTransactionId,
+  });
+
+  return {
+    id: walletTx.id,
+    type: walletTx.type,
+    status: walletTx.status,
+    amountCents: walletTx.amountCents,
+    amountReais: centsToReais(Math.abs(walletTx.amountCents)),
+    title: walletTx.title,
+    referenceId: walletTx.referenceId,
+    createdAt: walletTx.createdAt,
+    confirmedAt: walletTx.confirmedAt,
+  };
+}
+
+/**
+ * ========================================================================
+ * DOMÍNIO: Créditos Manuais (Admin)
+ * ========================================================================
+ */
+
+export interface ManualCreditParams {
+  userId: string;
+  amountCents: number;
+  reason?: string;
+  createdByAdminId: string;
+  referenceId?: string;
+}
+
+/**
+ * Credita saldo manualmente na carteira (ajustes, cortesias, compensações)
+ *
+ * Regras de negócio:
+ * - Apenas admins podem fazer créditos manuais
+ * - Não há PaymentTransaction associada (origem manual)
+ * - Cria WalletTransaction com type="TOPUP" e origin="manual"
+ * - Registra quem fez o crédito (createdByAdminId)
+ *
+ * @param params Parâmetros do crédito manual
+ * @returns Transação de carteira criada
+ */
+export async function manualCredit(
+  params: ManualCreditParams
+): Promise<WalletTransactionData> {
+  const { userId, amountCents, reason = 'Crédito manual', createdByAdminId, referenceId } = params;
+
+  if (amountCents <= 0) {
+    throw new Error('O valor do crédito deve ser positivo');
+  }
+
+  const wallet = await getOrCreateWallet(userId);
+  const now = new Date();
+
+  // Criar transação de crédito + atualizar saldo (transação atômica)
+  const [walletTx] = await prisma.$transaction([
+    // Criar WalletTransaction
+    prisma.walletTransaction.create({
+      data: {
+        walletId: wallet.id,
+        type: WalletTxType.TOPUP,
+        status: WalletTxStatus.CONFIRMED,
+        amountCents,
+        title: reason,
+        referenceId,
+        confirmedAt: now,
+        meta: {
+          origin: 'manual',
+          createdByAdminId,
+          reason,
+        },
+      },
+    }),
+    // Atualizar saldo da carteira
+    prisma.wallet.update({
+      where: { id: wallet.id },
+      data: {
+        availableCents: { increment: amountCents },
+      },
+    }),
+  ]);
+
+  console.log('[WALLET_SERVICE] Crédito manual aplicado:', {
+    userId,
+    walletTransactionId: walletTx.id,
+    amountCents,
+    createdByAdminId,
+    reason,
+  });
+
+  return {
+    id: walletTx.id,
+    type: walletTx.type,
+    status: walletTx.status,
+    amountCents: walletTx.amountCents,
+    amountReais: centsToReais(Math.abs(walletTx.amountCents)),
+    title: walletTx.title,
+    referenceId: walletTx.referenceId,
+    createdAt: walletTx.createdAt,
+    confirmedAt: walletTx.confirmedAt,
+  };
+}
+
+/**
+ * Débito manual na carteira (ajustes, correções)
+ *
+ * Usado para ajustes administrativos quando necessário debitar manualmente
+ */
+export interface ManualDebitParams {
+  userId: string;
+  amountCents: number;
+  reason?: string;
+  createdByAdminId: string;
+  referenceId?: string;
+}
+
+export async function manualDebit(
+  params: ManualDebitParams
+): Promise<WalletTransactionData> {
+  const { userId, amountCents, reason = 'Débito manual', createdByAdminId, referenceId } = params;
+
+  if (amountCents <= 0) {
+    throw new Error('O valor do débito deve ser positivo');
+  }
+
+  const wallet = await getOrCreateWallet(userId);
+
+  // Validar saldo disponível
+  if (wallet.availableCents < amountCents) {
+    throw new Error('Saldo insuficiente para débito manual');
+  }
+
+  const now = new Date();
+
+  // Criar transação de débito + atualizar saldo (transação atômica)
+  const [walletTx] = await prisma.$transaction([
+    // Criar WalletTransaction
+    prisma.walletTransaction.create({
+      data: {
+        walletId: wallet.id,
+        type: WalletTxType.PURCHASE,
+        status: WalletTxStatus.CONFIRMED,
+        amountCents: -amountCents, // Negativo para débito
+        title: reason,
+        referenceId,
+        confirmedAt: now,
+        meta: {
+          origin: 'manual',
+          createdByAdminId,
+          reason,
+        },
+      },
+    }),
+    // Atualizar saldo da carteira
+    prisma.wallet.update({
+      where: { id: wallet.id },
+      data: {
+        availableCents: { decrement: amountCents },
+      },
+    }),
+  ]);
+
+  console.log('[WALLET_SERVICE] Débito manual aplicado:', {
+    userId,
+    walletTransactionId: walletTx.id,
+    amountCents,
+    createdByAdminId,
+    reason,
+  });
+
+  return {
+    id: walletTx.id,
+    type: walletTx.type,
+    status: walletTx.status,
+    amountCents: walletTx.amountCents,
+    amountReais: centsToReais(Math.abs(walletTx.amountCents)),
+    title: walletTx.title,
+    referenceId: walletTx.referenceId,
+    createdAt: walletTx.createdAt,
+    confirmedAt: walletTx.confirmedAt,
+  };
 }
