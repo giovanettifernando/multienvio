@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { App, Button, Table, Input, InputNumber, Popconfirm, Upload, Space, Flex } from "antd";
 import { DeleteOutlined, PlusOutlined, UploadOutlined, EditOutlined, SaveOutlined, CloseOutlined } from "@ant-design/icons";
 
@@ -24,12 +24,7 @@ export default function RecurringItemsList() {
     valorUnitario: null,
   });
 
-  // Carregar itens ao montar o componente
-  useEffect(() => {
-    loadItems();
-  }, []);
-
-  const loadItems = async () => {
+  const loadItems = useCallback(async () => {
     try {
       setLoading(true);
       const response = await fetch("/api/recurring-items");
@@ -44,7 +39,12 @@ export default function RecurringItemsList() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [message]);
+
+  // Carregar itens ao montar o componente
+  useEffect(() => {
+    loadItems();
+  }, [loadItems]);
 
   const handleAdd = async () => {
     if (!newItem.descricao.trim() || newItem.valorUnitario === null) {

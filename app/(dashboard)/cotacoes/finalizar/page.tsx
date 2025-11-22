@@ -8,16 +8,13 @@ import {
   Card,
   Col,
   Flex,
-  Form,
   Row,
-  Select,
   Skeleton,
   Space,
   Tooltip,
   Typography,
 } from "antd";
 import {
-  Controller,
   FormProvider,
   SubmitHandler,
   useForm,
@@ -35,16 +32,11 @@ import { useQuoteStore } from "@/store/useQuoteStore";
 import { useCartAdd } from "@/hooks/useCart";
 import { useRecipientSave } from "@/hooks/useQuotes";
 import {
-  useShipmentCreate,
-  useCartClear as useShipmentsCartClear,
-} from "@/hooks/useShipments";
-import {
   createFinalizeFormSchema,
   type FinalizeFormValues,
 } from "@/types/quoteFinalize";
 import type { DocumentType } from "@/types/quote";
 import { useQuoteDraft } from "@/lib/state/quoteDraft";
-import { executeCheckout } from "@/lib/checkout/orchestrator";
 import { useCheckoutStore } from "@/stores/checkout";
 import { CheckoutModal } from "@/components/payments/CheckoutModal";
 import { usePickupFee } from "@/hooks/usePickupFee";
@@ -71,8 +63,6 @@ export default function FinalizeQuotePage() {
   const pickupPointId = useCheckoutStore((s) => s.pickupPointId);
   const cartAdd = useCartAdd();
   const recipientSave = useRecipientSave();
-  const createShipment = useShipmentCreate();
-  const cartClear = useShipmentsCartClear();
 
   // Verificar e limpar cotação expirada ao montar o componente
   useEffect(() => {
@@ -238,9 +228,8 @@ export default function FinalizeQuotePage() {
   const {
     control,
     handleSubmit,
-    formState: { isSubmitting, errors, dirtyFields, touchedFields },
+    formState: { isSubmitting, errors },
     watch,
-    getValues,
   } = formMethods;
 
   // Debug: log form errors
@@ -497,6 +486,7 @@ export default function FinalizeQuotePage() {
     recipientBairro,
     recipientCidade,
     recipientUf,
+    summary?.destinoCep,
   ]);
 
   // Handler que não depende da validação completa do formulário
@@ -519,13 +509,6 @@ export default function FinalizeQuotePage() {
 
     // Busca valores mínimos necessários para adicionar ao carrinho
     const values = formMethods.getValues();
-
-    // Calculate total weight and cubic weight
-    const totalWeight = summary.volumes.reduce((sum, vol) => sum + vol.pesoKg, 0);
-    const totalCubicWeight = summary.volumes.reduce((sum, vol) => {
-      const cubicWeight = (vol.comprimentoCm * vol.larguraCm * vol.alturaCm) / 6000;
-      return sum + cubicWeight;
-    }, 0);
 
     // Calcular total incluindo taxa de coleta se aplicável
     const pickupFeeAmount = pickupFeeData && pickupFeeData.success ? pickupFeeData.feeAmount : 0;

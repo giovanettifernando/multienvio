@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
     const referenceId = `card-topup:${cardId}:${Date.now()}`;
 
     // Criar topup pendente
-    const topup = await createTopupPending(
+    await createTopupPending(
       session.userId,
       amountCents,
       referenceId

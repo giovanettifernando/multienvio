@@ -253,27 +253,43 @@ export function usePostTicketMessage(audience: Audience = "user") {
   return useMutation<SupportMessage, Error, PostMessageInput>({
     mutationFn: async ({ ticketId, text, attachments, internal }) => {
       const endpoint = getMessageEndpoint(audience, ticketId);
-      const formData = new FormData();
       const trimmed = text.trim();
       if (!trimmed) {
         throw new Error("Mensagem obrigatória");
       }
-      formData.append("text", trimmed);
 
-      if (audience === "admin" && internal !== undefined) {
-        formData.append("internal", internal ? "true" : "false");
-      }
+      let response: Response;
 
-      (attachments ?? []).slice(0, 5).forEach((file) => {
-        if (file instanceof File) {
-          formData.append("files", file, file.name);
+      // Autonomous collectors use JSON endpoint (no file uploads for now)
+      if (audience === "autonomous_collector") {
+        response = await fetch(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            content: trimmed,
+            // attachments not supported for autonomous collectors yet
+          }),
+        });
+      } else {
+        // Other audiences use FormData endpoint (with file uploads)
+        const formData = new FormData();
+        formData.append("text", trimmed);
+
+        if (audience === "admin" && internal !== undefined) {
+          formData.append("internal", internal ? "true" : "false");
         }
-      });
 
-      const response = await fetch(endpoint, {
-        method: "POST",
-        body: formData,
-      });
+        (attachments ?? []).slice(0, 5).forEach((file) => {
+          if (file instanceof File) {
+            formData.append("files", file, file.name);
+          }
+        });
+
+        response = await fetch(endpoint, {
+          method: "POST",
+          body: formData,
+        });
+      }
 
       const data = await response.json().catch(() => undefined);
       if (!response.ok) {

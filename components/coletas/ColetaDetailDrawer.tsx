@@ -43,7 +43,7 @@ export function ColetaDetailDrawer({
       update(coleta.id, { observacoes });
       message.success("Observações atualizadas com sucesso");
       setIsEditing(false);
-    } catch (error) {
+    } catch {
       message.error("Erro ao atualizar observações");
     }
   };
@@ -53,7 +53,7 @@ export function ColetaDetailDrawer({
       remove(coleta.id);
       message.success("Coleta removida com sucesso");
       onClose();
-    } catch (error) {
+    } catch {
       message.error("Erro ao remover coleta");
     }
   };

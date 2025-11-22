@@ -51,7 +51,7 @@ function getPackagesCount(): number {
 export function NFeGridPerPackage() {
   const { message } = App.useApp();
   const { setValue, getValues, watch } = useFormContext<FinalizeFormValues>();
-  const { parseXml } = useInvoiceItems();
+  useInvoiceItems();
 
   const packagesCount = useMemo(() => getPackagesCount(), []);
 

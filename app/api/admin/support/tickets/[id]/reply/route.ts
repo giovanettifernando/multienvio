@@ -22,7 +22,8 @@ export async function POST(
   }
 
   try {
-    const ticket = await getTicket(ticketId);
+    // Admin vê mensagens internas
+    const ticket = await getTicket(ticketId, true);
     if (!ticket) {
       return NextResponse.json({ message: 'Ticket não encontrado' }, { status: 404 });
     }

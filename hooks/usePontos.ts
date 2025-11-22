@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { usePontosStore } from '@/stores/pontos';
-import type { PickupPoint, StatusOperacional } from '@/lib/pickup/types';
+import type { StatusOperacional } from '@/lib/pickup/types';
 
 export function usePontos(filter?: {
   status?: StatusOperacional | 'all';
@@ -45,7 +45,7 @@ export function usePontos(filter?: {
 
     // Ordenar por updatedAt desc
     return filtered.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
-  }, [points, JSON.stringify(filter)]);
+  }, [points, filter?.status, filter?.uf, filter?.cidade, filter?.query]);
 }
 
 export function usePonto(id: string | null) {

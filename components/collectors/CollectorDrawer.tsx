@@ -23,8 +23,6 @@ interface CollectorDrawerProps {
   editCollector?: Collector | null;
 }
 
-const allowedUrlPrefixes = ['data:', 'http://', 'https://', '/uploads/'];
-
 const defaultValues: CollectorFormInput = {
   pf: {
     nome: '',
@@ -84,11 +82,6 @@ const defaultValues: CollectorFormInput = {
   },
 };
 
-function isStoredUrl(value: string | null | undefined): value is string {
-  if (!value) return false;
-  return allowedUrlPrefixes.some((prefix) => value.startsWith(prefix));
-}
-
 export default function CollectorDrawer({
   open,
   onClose,
@@ -113,7 +106,6 @@ export default function CollectorDrawer({
     handleSubmit,
     reset,
     setValue,
-    getValues,
   } = formMethods;
 
   useEffect(() => {
@@ -180,25 +172,6 @@ export default function CollectorDrawer({
       setAddressProofFiles([]);
     }
   }, [open, editCollector, reset]);
-
-  const resolveFileUrl = async (files: UploadFile[], fallback?: string | null): Promise<string | null> => {
-    const file = files[0];
-    if (file?.url) return file.url;
-    if (file?.originFileObj) {
-      try {
-        return await upload(file.originFileObj as File);
-      } catch {
-        throw new Error('Erro ao processar arquivo selecionado');
-      }
-    }
-    if (typeof file?.response === 'string') return file.response;
-
-    if (fallback && isStoredUrl(fallback)) {
-      return fallback;
-    }
-
-    return null;
-  };
 
   const processUploads = async () => {
     // Process CNH files

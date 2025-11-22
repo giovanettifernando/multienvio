@@ -163,15 +163,16 @@ function mapCardShape(card: RawCard): Card {
 }
 
 async function throwAccountApiError(response: Response, fallback: string): Promise<never> {
-  let body: any = null;
+  let body: Record<string, unknown> | null = null;
   try {
     body = await response.json();
-  } catch (error) {
+  } catch {
     // ignore JSON parse errors
   }
 
-  const code = body?.error?.code ?? body?.code;
-  let message = body?.error?.message ?? body?.mensagem ?? fallback;
+  const errorObj = body?.error as Record<string, unknown> | undefined;
+  const code = errorObj?.code ?? body?.code;
+  let message = (errorObj?.message as string | undefined) ?? (body?.mensagem as string | undefined) ?? fallback;
 
   if (code === "invalid_exp_month") {
     message = "Mês inválido (01–12).";
@@ -311,24 +312,24 @@ function normalizeRecipientListPayload(payload: unknown): RecipientList {
   };
 }
 
-function mapRecipientDto(dto: any): Recipient {
+function mapRecipientDto(dto: Record<string, unknown>): Recipient {
   return {
-    id: dto.id,
-    name: dto.name,
-    email: dto.email ?? null,
-    document: dto.document ?? null,
-    phone: dto.phone ?? null,
-    notes: dto.notes ?? null,
+    id: dto.id as string,
+    name: dto.name as string,
+    email: (dto.email as string | null | undefined) ?? null,
+    document: (dto.document as string | null | undefined) ?? null,
+    phone: (dto.phone as string | null | undefined) ?? null,
+    notes: (dto.notes as string | null | undefined) ?? null,
     isDefault: Boolean(dto.isDefault),
-    cep: dto.cep,
-    logradouro: dto.logradouro,
-    numero: dto.numero,
-    complemento: dto.complemento ?? null,
-    bairro: dto.bairro,
-    cidade: dto.cidade,
-    uf: dto.uf,
-    createdAt: dto.createdAt,
-    updatedAt: dto.updatedAt,
+    cep: dto.cep as string,
+    logradouro: dto.logradouro as string,
+    numero: dto.numero as string,
+    complemento: (dto.complemento as string | null | undefined) ?? null,
+    bairro: dto.bairro as string,
+    cidade: dto.cidade as string,
+    uf: dto.uf as string,
+    createdAt: dto.createdAt as string,
+    updatedAt: dto.updatedAt as string,
   };
 }
 

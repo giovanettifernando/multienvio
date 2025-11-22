@@ -4,7 +4,6 @@ import type {
   UpdateCarrierInput,
   ListCarriersQuery,
 } from '@/lib/validation/integrations-carriers';
-import { maskCredentials } from '@/lib/validation/integrations-carriers';
 import type { Carrier, IntegrationStatus, IntegrationEnvironment } from '@prisma/client';
 
 /**

@@ -274,10 +274,26 @@ export function useRotateSecret() {
 export function usePaymentGateway() {
   return useQuery({
     queryKey: integrationKeys.paymentGateway(),
-    queryFn: async (): Promise<PaymentGatewayConfig> => {
-      const res = await fetch('/api/integrations/payment-gateway');
+    queryFn: async (): Promise<PaymentGatewayConfig | null> => {
+      const res = await fetch('/api/admin/integrations/mercadopago');
       if (!res.ok) throw new Error('Erro ao carregar gateway de pagamento');
-      return res.json();
+      const result = await res.json();
+
+      // Se não configurado, retornar null
+      if (!result.configured) {
+        return null;
+      }
+
+      // Mapear dados do backend para formato do frontend
+      return {
+        provider: 'mercadoPago' as const,
+        publicKey: result.data.publicKey || '',
+        accessToken: result.data.accessToken || '',
+        webhookUrl: result.data.webhookUrl || '',
+        webhookSecret: result.data.webhookSecret || '',
+        active: !result.data.sandboxMode, // sandboxMode=false significa production (active=true)
+        updatedAt: result.data.lastUpdated,
+      };
     },
   });
 }
@@ -287,12 +303,24 @@ export function useSavePaymentGateway() {
 
   return useMutation({
     mutationFn: async (data: PaymentGatewayFormData): Promise<PaymentGatewayConfig> => {
-      const res = await fetch('/api/integrations/payment-gateway', {
-        method: 'PUT',
+      // Mapear campos do frontend para o formato do backend
+      const payload = {
+        publicKey: data.publicKey,
+        accessToken: data.accessToken,
+        webhookUrl: data.webhookUrl,
+        webhookSecret: data.webhookSecret,
+        sandboxMode: !data.active, // active=true significa production, sandboxMode=false
+      };
+
+      const res = await fetch('/api/admin/integrations/mercadopago', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
+        body: JSON.stringify(payload),
       });
-      if (!res.ok) throw new Error('Erro ao salvar gateway de pagamento');
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || 'Erro ao salvar gateway de pagamento');
+      }
       return res.json();
     },
     onSuccess: () => {

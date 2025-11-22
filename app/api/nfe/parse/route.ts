@@ -13,15 +13,6 @@ function extractTag(xml: string, tag: string): string | null {
 }
 
 /**
- * Extrai todas as ocorrências de uma tag
- */
-function extractAllTags(xml: string, tag: string): string[] {
-  const regex = new RegExp(`<${tag}[^>]*>([^<]*)<\/${tag}>`, 'gi');
-  const matches = xml.matchAll(regex);
-  return Array.from(matches, m => m[1].trim());
-}
-
-/**
  * Extrai blocos completos de uma tag (incluindo tags internas)
  */
 function extractBlocks(xml: string, tag: string): string[] {
@@ -29,7 +20,6 @@ function extractBlocks(xml: string, tag: string): string[] {
   const regex = new RegExp(`<${tag}[^>]*>`, 'gi');
   const closeTag = new RegExp(`<\/${tag}>`, 'i');
 
-  let currentPos = 0;
   let match;
 
   while ((match = regex.exec(xml)) !== null) {
@@ -40,7 +30,6 @@ function extractBlocks(xml: string, tag: string): string[] {
     if (closeMatch && closeMatch.index !== undefined) {
       const endPos = searchFrom + closeMatch.index + closeMatch[0].length;
       blocks.push(xml.substring(startPos, endPos));
-      currentPos = endPos;
     }
   }
 

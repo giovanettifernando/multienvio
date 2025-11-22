@@ -218,7 +218,8 @@ export function maskApiKey(apiKey: string): string {
   return `${apiKey.substring(0, 4)}${'*'.repeat(apiKey.length - 8)}${apiKey.substring(apiKey.length - 4)}`;
 }
 
-export function maskSecret(secret: string): string {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function maskSecret(_value?: string): string {
   return '****** (hidden)';
 }
 

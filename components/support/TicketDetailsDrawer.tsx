@@ -18,7 +18,7 @@ import {
   Upload,
 } from 'antd';
 import { PaperClipOutlined, ReloadOutlined, SendOutlined, UserOutlined } from '@ant-design/icons';
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { RcFile, UploadFile } from 'antd/es/upload/interface';
 import {

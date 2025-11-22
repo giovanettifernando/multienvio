@@ -274,13 +274,13 @@ function RegisterCollectionModal({ pickup, open, onClose, onSuccess }: RegisterC
         const result = await codeReader.decodeOnceFromVideoDevice(undefined, video);
         form.setFieldsValue({ scannedCode: result.getText() });
         message.success('Código de barras lido com sucesso!');
-      } catch (err) {
+      } catch {
         message.warning('Não foi possível ler o código. Digite manualmente.');
       } finally {
         stream.getTracks().forEach(track => track.stop());
         codeReader.reset();
       }
-    } catch (error) {
+    } catch {
       message.error('Não foi possível acessar a câmera. Verifique as permissões.');
     } finally {
       setScanning(false);

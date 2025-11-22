@@ -10,7 +10,6 @@ import {
   Select,
   Button,
   Card,
-  Typography,
 } from "antd";
 import { SearchOutlined } from "@ant-design/icons";
 import Link from "next/link";

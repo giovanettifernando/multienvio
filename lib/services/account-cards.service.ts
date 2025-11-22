@@ -177,7 +177,7 @@ function resolveFingerprintForExpirationChange(
     const { bin, last4 } = parseFingerprint(card.fingerprint);
     const month = String(expMonth).padStart(2, "0");
     return [bin, last4, String(expYear), month].join("-");
-  } catch (error) {
+  } catch {
     return card.fingerprint;
   }
 }

@@ -3,11 +3,6 @@
 import { Card, Descriptions, Button, Modal, Form, Input, InputNumber, Select, App } from 'antd';
 import { useState } from 'react';
 import { PlusOutlined } from '@ant-design/icons';
-import type { PeriodFilter } from '@/lib/admin/finance/types';
-
-interface FeesViewProps {
-  period: PeriodFilter;
-}
 
 // Mock aggregated fees data
 const mockFees = [

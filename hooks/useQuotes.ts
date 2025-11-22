@@ -68,7 +68,7 @@ export const useQuoteCalculate = () =>
               const fieldErrors = errors.errors.fieldErrors;
               const errorMessages: string[] = [];
 
-              Object.entries(fieldErrors).forEach(([field, messages]) => {
+              Object.entries(fieldErrors).forEach(([, messages]) => {
                 if (Array.isArray(messages)) {
                   errorMessages.push(...messages);
                 }

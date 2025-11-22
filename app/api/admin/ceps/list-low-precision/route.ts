@@ -22,10 +22,10 @@
  * }
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { listLowPrecisionCeps } from '@/lib/services/cepLocation';
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     // TODO: Adicionar autenticação admin aqui
     // const session = await getServerSession();

@@ -25,6 +25,19 @@ async function getClient() {
     throw new Error('Mercado Pago não configurado');
   }
 
+  // Debug: verificar se accessToken está presente
+  console.log('[MERCADO_PAGO_CLIENT] Config recuperada:', {
+    hasPublicKey: !!config.publicKey,
+    hasAccessToken: !!config.accessToken,
+    accessTokenLength: config.accessToken?.length || 0,
+    accessTokenPreview: config.accessToken ? `${config.accessToken.substring(0, 15)}...` : 'VAZIO',
+    sandboxMode: config.sandboxMode,
+  });
+
+  if (!config.accessToken || config.accessToken.trim().length === 0) {
+    throw new Error('Access Token não configurado ou vazio');
+  }
+
   const client = new MercadoPagoConfig({
     accessToken: config.accessToken,
     options: {

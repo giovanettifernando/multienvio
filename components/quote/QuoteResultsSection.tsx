@@ -11,15 +11,12 @@ import {
   Space,
   Spin,
   Table,
-  Tag,
   Typography,
   Input,
   App,
 } from "antd";
 import {
-  CheckCircleOutlined,
   ClockCircleOutlined,
-  DollarOutlined,
 } from "@ant-design/icons";
 import type { QuoteResultItem, DocumentType } from "@/types/quote";
 import { ContentDeclarationModal } from "./ContentDeclarationModal";
@@ -92,9 +89,6 @@ export function QuoteResultsSection({
     })),
   );
 
-  const [selectedResult, setSelectedResult] = useState<QuoteResultItem | null>(
-    null,
-  );
   const [insuranceModalOpen, setInsuranceModalOpen] = useState(false);
   const [insuranceInput, setInsuranceInput] = useState<number | null>(null);
   const [pendingSelection, setPendingSelection] =
@@ -237,33 +231,18 @@ export function QuoteResultsSection({
         message.error("Não foi possível confirmar a seleção. Tente novamente.");
       }
     } finally {
-      setSelectedResult(null);
       setInsuranceModalOpen(false);
     }
   };
 
   const handleSelectClick = (result: QuoteResultItem) => {
     if (!storeResults) return;
-
-    setSelectedResult(result);
     if (needsInsuranceValue(result)) {
       setInsuranceInput(storeResults.resumo.seguroValor ?? null);
       setInsuranceModalOpen(true);
       return;
     }
     confirmSelection(result, storeResults.resumo.seguroValor ?? null);
-  };
-
-  const handleInsuranceConfirm = () => {
-    if (!selectedResult) {
-      setInsuranceModalOpen(false);
-      return;
-    }
-    if (!insuranceInput || insuranceInput <= 0) {
-      message.error("Informe um valor válido para o seguro.");
-      return;
-    }
-    confirmSelection(selectedResult, insuranceInput);
   };
 
   const handleDeclarationAgree = ({ remember }: { remember: boolean }) => {
@@ -554,7 +533,6 @@ export function QuoteResultsSection({
         open={insuranceModalOpen}
         onCancel={() => {
           setInsuranceModalOpen(false);
-          setSelectedResult(null);
         }}
         onOk={() => {
           if (!insuranceInput || insuranceInput <= 0) {

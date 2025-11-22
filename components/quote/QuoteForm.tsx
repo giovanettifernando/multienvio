@@ -1,25 +1,20 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   App,
   Alert,
-  Button,
   Card,
   Col,
-  Divider,
   Flex,
   Form,
   Input,
   InputNumber,
-  Modal,
   Radio,
   Row,
   Space,
   Spin,
-  Steps,
   Switch,
   Tag,
   Typography,
@@ -74,7 +69,6 @@ import {
   useAddressStore,
   type Address as StoreAddress,
 } from "@/lib/state/addresses";
-import { QuoteNavigationButtons } from "@/components/quote/QuoteNavigationButtons";
 
 const companyAddressKeys: Array<keyof CompanyAddress> = [
   "cep",
@@ -120,19 +114,6 @@ const volumeSchema = z.object({
   larguraCm: z.number().optional(),
   alturaCm: z.number().optional(),
   pesoKg: z.number().optional(),
-});
-
-const routeAddressSchema = z.object({
-  cep: z.string().optional(),
-  logradouro: z.string().optional(),
-  numero: z.string().optional(),
-  complemento: z.string().optional(),
-  bairro: z.string().optional(),
-  cidade: z.string().optional(),
-  uf: z.string().optional(),
-  nome: z.string().optional(),
-  email: z.string().optional(),
-  telefone: z.string().optional(),
 });
 
 const quoteFormSchema = z.object({
@@ -208,12 +189,6 @@ const computeTotals = (volumes: QuoteFormValues["volumes"] | undefined) => {
   );
 };
 
-const formatKg = (value: number) =>
-  value.toLocaleString("pt-BR", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-
 const dispatchTelemetry = (event: string, detail?: Record<string, unknown>) => {
   if (typeof window === "undefined") return;
   window.dispatchEvent(new CustomEvent(event, { detail }));
@@ -232,16 +207,14 @@ type QuoteFormProps = {
 export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
   console.log('[QuoteForm] ========== COMPONENT RENDER ==========');
 
-  const router = useRouter();
   const queryClient = useQueryClient();
   const { message } = App.useApp();
   const calculateQuotes = useQuoteCalculate();
 
-  const { form: storedForm, setResults, reset } = useQuoteStore(
+  const { form: storedForm, setResults } = useQuoteStore(
     useShallow((state) => ({
       form: state.form,
       setResults: state.setResults,
-      reset: state.reset,
     })),
   );
 
@@ -264,7 +237,7 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
 
   // Buscar endereços via React Query (mesma fonte que AddressSelect)
   const addressesQuery = useAddresses();
-  const addresses = addressesQuery.data ?? [];
+  const addresses = useMemo(() => addressesQuery.data ?? [], [addressesQuery.data]);
 
   // Manter zustand apenas para selectedOriginId (controle de seleção)
   const {
@@ -402,7 +375,7 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
     },
   });
 
-  const { control, handleSubmit, watch, setValue, getValues, trigger, formState } =
+  const { control, handleSubmit, watch, setValue, getValues, trigger } =
     formMethods;
 
   const { fields, append, remove, replace } = useFieldArray({
@@ -576,7 +549,7 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
 
   // Buscar recipients via React Query (mesma fonte que RecipientSelect)
   const recipientsQuery = useAccountRecipients({ page: 1, pageSize: 1000 });
-  const recipients = recipientsQuery.data?.items ?? [];
+  const recipients = useMemo(() => recipientsQuery.data?.items ?? [], [recipientsQuery.data?.items]);
 
   // Estado para logística reversa
   const [isReverse, setIsReverse] = useState(false);
@@ -695,14 +668,6 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
     () => computeTotals(volumesValues),
     [volumesValues],
   );
-
-  const origemCepValue = watch("origemCep");
-  const destinoCepValue = watch("destinoCep");
-  const origemAddressValue = watch("origem");
-  const destinoAddressValue = watch("destino");
-  const origemAddress = origemAddressValue as CompanyAddress | undefined;
-  const destinoAddress = destinoAddressValue as CompanyAddress | undefined;
-
 
   const canSubmit =
     !calculateQuotes.isPending &&
@@ -1462,15 +1427,9 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
   const destinationManualLabel = isReverse
     ? "CEP do remetente"
     : "CEP de destino";
-  const destinationManualPlaceholder = isReverse
-    ? "00000-000"
-    : "00000-000";
   const destinationManualHelper = isReverse
     ? "Informe o CEP de quem enviará a devolução."
     : "Informe o CEP de quem receberá o envio.";
-  const routeStepsItems = isReverse
-    ? [{ title: "Destinatário" }, { title: "Empresa" }]
-    : [{ title: "Origem" }, { title: "Destino" }];
   const companyCardTitle = isReverse ? "2) Destino" : "1) Origem";
   const clientCardTitle = isReverse ? "1) Origem" : "2) Destino";
   const destinationManualRadioLabel = isReverse
@@ -1488,20 +1447,6 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
       : destinoInfo?.uf ?? destination?.state ?? undefined,
     label: isReverse ? origemInfo?.label ?? undefined : destination?.recipientName ?? null,
   };
-
-  const reverseToggle = (
-    <Space size={8} align="center">
-      <Switch
-        checked={isReverse}
-        onChange={handleReverseToggle}
-        checkedChildren="Reversa"
-        unCheckedChildren="Envio"
-        disabled={calculateQuotes.isPending}
-        aria-label="Alternar Logística Reversa"
-      />
-      <Typography.Text strong>Logística Reversa</Typography.Text>
-    </Space>
-  );
 
   const destinationModeSelector = (
     <Space direction="vertical" size={8} style={{ width: "100%" }}>

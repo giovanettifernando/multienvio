@@ -1,14 +1,8 @@
 import { z } from 'zod';
-import type {
-  IntegrationEnvironment,
-  IntegrationStatus,
-  AuthType,
-} from './integrations-carriers';
 import {
   integrationEnvironmentSchema,
   integrationStatusSchema,
   authTypeSchema,
-  healthStatusSchema,
 } from './integrations-carriers';
 
 /**

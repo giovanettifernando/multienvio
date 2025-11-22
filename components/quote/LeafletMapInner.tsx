@@ -170,7 +170,7 @@ export default function LeafletMapInner({
       // Fallback: sem pontos de coleta, mostrar apenas origem
       map.setView([originCenter.lat, originCenter.lng], 12);
     }
-  }, [mapRef.current, JSON.stringify(markers), selectedPointId, originCenter, onPointClick]);
+  }, [markers, selectedPointId, originCenter, onPointClick]);
 
   // Center map on selected point when it changes
   useEffect(() => {

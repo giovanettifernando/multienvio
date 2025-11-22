@@ -112,6 +112,7 @@ export default function SuportePage() {
         priority: values.priority,
         description: values.description,
         tags: [],
+        // Upload de anexos não implementado - aguardando configuração de storage
         attachments: [],
       });
 

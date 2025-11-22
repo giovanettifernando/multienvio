@@ -24,7 +24,6 @@ export function ELCard({
   bodyGap = "md",
   className,
   bodyStyle,
-  title,
   children,
   ...cardProps
 }: ELCardProps) {

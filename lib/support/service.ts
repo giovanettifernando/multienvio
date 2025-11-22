@@ -200,12 +200,20 @@ function mapMessage(
   };
 }
 
-function mapTicketRecord(ticket: TicketRecord, agentNames: Map<string, string>): SupportTicket {
+function mapTicketRecord(
+  ticket: TicketRecord,
+  agentNames: Map<string, string>,
+  includeInternal: boolean = false
+): SupportTicket {
   const tags = normalizeTags(ticket.tags);
   const attachments: UiAttachment[] = [];
 
-  const publicMessages = ticket.messages.filter((msg: MessageRecord) => !msg.isInternal);
-  const messages = publicMessages.map((message: MessageRecord) => {
+  // Admin vê mensagens internas, clientes não
+  const visibleMessages = includeInternal
+    ? ticket.messages
+    : ticket.messages.filter((msg: MessageRecord) => !msg.isInternal);
+
+  const messages = visibleMessages.map((message: MessageRecord) => {
     const mapped = mapMessage(ticket, message, agentNames);
     attachments.push(...mapped.attachments);
     return mapped;
@@ -259,7 +267,10 @@ function mapTicketRecord(ticket: TicketRecord, agentNames: Map<string, string>):
   };
 }
 
-async function mapTickets(records: TicketRecord[]): Promise<SupportTicket[]> {
+async function mapTickets(
+  records: TicketRecord[],
+  includeInternal: boolean = false
+): Promise<SupportTicket[]> {
   const agentIds = new Set<string>();
   for (const ticket of records) {
     for (const message of ticket.messages) {
@@ -273,7 +284,7 @@ async function mapTickets(records: TicketRecord[]): Promise<SupportTicket[]> {
   }
 
   const agentNames = await resolveAgentNames([...agentIds]);
-  return records.map((record) => mapTicketRecord(record, agentNames));
+  return records.map((record) => mapTicketRecord(record, agentNames, includeInternal));
 }
 
 async function fetchTicketRecord(ticketId: string): Promise<TicketRecord | null> {
@@ -297,7 +308,7 @@ export async function listTicketsForUser(userId: string, filters: TicketFilters 
 
   const records = await prisma.supportTicket.findMany({
     where,
-    orderBy: { createdAt: 'desc' },
+    orderBy: { lastActivityAt: 'desc' },
     include: {
       user: { select: { id: true, name: true, email: true, phone: true } },
       pickupPoint: { select: { id: true, nomeFantasia: true, email: true, telefone: true } },
@@ -324,7 +335,7 @@ export async function listTicketsForAdmin(
       where,
       skip,
       take,
-      orderBy: { createdAt: 'desc' },
+      orderBy: { lastActivityAt: 'desc' },
       include: {
         user: { select: { id: true, name: true, email: true, phone: true } },
         pickupPoint: { select: { id: true, nomeFantasia: true, email: true, telefone: true } },
@@ -335,7 +346,8 @@ export async function listTicketsForAdmin(
     prisma.supportTicket.count({ where }),
   ]);
 
-  const items = await mapTickets(records);
+  // Admin vê mensagens internas
+  const items = await mapTickets(records, true);
 
   return {
     items,
@@ -354,10 +366,13 @@ export async function getTicketForUser(userId: string, ticketId: string): Promis
   return ticket;
 }
 
-export async function getTicket(ticketId: string): Promise<SupportTicket | null> {
+export async function getTicket(
+  ticketId: string,
+  includeInternal: boolean = false
+): Promise<SupportTicket | null> {
   const record = await fetchTicketRecord(ticketId);
   if (!record) return null;
-  const [ticket] = await mapTickets([record]);
+  const [ticket] = await mapTickets([record], includeInternal);
   return ticket;
 }
 
@@ -486,11 +501,50 @@ export async function addMessageToTicket(params: {
   };
 }
 
+/**
+ * Máquina de estados: define transições válidas de status
+ * Evita mudanças ilógicas e garante workflow consistente
+ */
+const VALID_STATUS_TRANSITIONS: Record<Status, Status[]> = {
+  aberto: ['em_atendimento', 'fechado'],
+  em_atendimento: ['resolvido', 'aberto', 'fechado'],
+  resolvido: ['fechado', 'em_atendimento'], // pode reabrir se cliente reportar problema
+  fechado: ['aberto'], // reabertura completa se necessário
+};
+
+/**
+ * Valida se a transição de status é permitida
+ */
+function isValidStatusTransition(currentStatus: Status, newStatus: Status): boolean {
+  // Se o status não mudar, sempre permitir
+  if (currentStatus === newStatus) return true;
+
+  const allowedTransitions = VALID_STATUS_TRANSITIONS[currentStatus];
+  return allowedTransitions ? allowedTransitions.includes(newStatus) : false;
+}
+
 export async function updateTicketStatus(ticketId: string, status: Status): Promise<SupportTicket | null> {
   const statusDb = statusToDb[status];
   if (!statusDb) return null;
 
   try {
+    // Buscar ticket atual para validar transição
+    const currentTicket = await prisma.supportTicket.findUnique({
+      where: { id: ticketId },
+      select: { status: true },
+    });
+
+    if (!currentTicket) {
+      throw new Error('Ticket não encontrado');
+    }
+
+    const currentStatus = statusFromDb[currentTicket.status];
+    if (!isValidStatusTransition(currentStatus, status)) {
+      throw new Error(
+        `Transição inválida: não é possível mudar de "${currentStatus}" para "${status}"`
+      );
+    }
+
     const updated = await prisma.supportTicket.update({
       where: { id: ticketId },
       data: {
@@ -517,6 +571,18 @@ export async function updateTicketStatus(ticketId: string, status: Status): Prom
 
 export async function assignTicket(ticketId: string, assignedTo: string | null): Promise<SupportTicket | null> {
   try {
+    // Validar que assignedTo é um staff user válido (se não for null)
+    if (assignedTo) {
+      const staffUser = await prisma.staffUser.findUnique({
+        where: { id: assignedTo },
+        select: { id: true },
+      });
+
+      if (!staffUser) {
+        throw new Error('Staff user não encontrado. Verifique o ID do responsável.');
+      }
+    }
+
     const updated = await prisma.supportTicket.update({
       where: { id: ticketId },
       data: {

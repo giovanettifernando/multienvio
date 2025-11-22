@@ -179,7 +179,31 @@ export async function processWebhook(
     }
 
     // 6. Atualizar transaction a partir do MP
-    await updatePaymentFromMercadoPago(paymentId);
+    try {
+      await updatePaymentFromMercadoPago(paymentId);
+    } catch (updateError: unknown) {
+      const errorObj = updateError as { message?: string };
+      const errorMessage = errorObj.message || 'Erro desconhecido';
+
+      // Se o pagamento não existe (404), marcar como IGNORED e retornar sucesso
+      // Isso é comum em testes de webhook com IDs fictícios
+      if (errorMessage.includes('Payment not found') || errorMessage.includes('not_found')) {
+        await prisma.paymentWebhook.update({
+          where: { id: webhookRecord.id },
+          data: {
+            status: 'IGNORED',
+            errorMessage: `Pagamento não encontrado no Mercado Pago: ${paymentId}`,
+            processedAt: new Date(),
+          },
+        });
+
+        console.log('[MERCADO_PAGO_WEBHOOK] Pagamento não encontrado (teste de webhook):', paymentId);
+        return true; // Retornar sucesso para não reenviar
+      }
+
+      // Outros erros devem ser relançados
+      throw updateError;
+    }
 
     // 7. Marcar webhook como processado
     await prisma.paymentWebhook.update({

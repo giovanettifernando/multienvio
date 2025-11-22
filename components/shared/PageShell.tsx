@@ -24,7 +24,6 @@ interface PageShellProps {
 
 export function PageShell({
   title,
-  description, // deprecated, mas mantido para compatibilidade
   extra,
   children,
   gap = "xl",

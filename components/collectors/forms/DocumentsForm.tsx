@@ -1,6 +1,6 @@
 'use client';
 
-import { Controller, useFormContext } from 'react-hook-form';
+import { useFormContext } from 'react-hook-form';
 import { Form, Upload, Space, Typography, Alert } from 'antd';
 import { UploadOutlined, CheckCircleFilled, CloseCircleFilled } from '@ant-design/icons';
 import type { UploadFile } from 'antd/es/upload/interface';

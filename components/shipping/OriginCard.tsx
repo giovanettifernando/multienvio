@@ -1,25 +1,24 @@
 import { BankOutlined } from "@ant-design/icons";
-import { Space, Tag, Typography, theme } from "antd";
+import { Space, Typography, theme } from "antd";
 import type { ReactNode } from "react";
-
-type OriginInfo = {
-  cidade?: string;
-  uf?: string;
-  label?: string;
-  isDefault?: boolean;
-} | null;
 
 type OriginCardProps = {
   title: string;
   subtitle?: string;
-  info: OriginInfo;
+  /** @deprecated Use subtitle instead */
+  info?: {
+    cidade?: string;
+    uf?: string;
+    label?: string;
+    cep?: string;
+    isDefault?: boolean;
+  } | null;
   children: ReactNode;
 };
 
 export function OriginCard({
   title,
   subtitle,
-  info,
   children,
 }: OriginCardProps) {
   const { token } = theme.useToken();

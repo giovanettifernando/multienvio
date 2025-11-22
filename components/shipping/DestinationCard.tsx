@@ -2,28 +2,26 @@ import { EnvironmentOutlined } from "@ant-design/icons";
 import { Space, Typography, theme } from "antd";
 import type { ReactNode } from "react";
 
-type DestinationInfo = {
-  cidade?: string;
-  uf?: string;
-  label?: string | null;
-} | null;
-
 type DestinationCardProps = {
   title: string;
   subtitle?: string;
-  info: DestinationInfo;
+  /** @deprecated Use subtitle instead */
+  info?: {
+    cidade?: string;
+    uf?: string;
+    label?: string | null;
+  };
   modeSelector: ReactNode;
-  children: ReactNode;
+  /** @deprecated No longer displayed */
   tag?: ReactNode;
+  children: ReactNode;
 };
 
 export function DestinationCard({
   title,
   subtitle,
-  info,
   modeSelector,
   children,
-  tag,
 }: DestinationCardProps) {
   const { token } = theme.useToken();
 

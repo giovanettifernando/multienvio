@@ -55,13 +55,12 @@ export function PostingUnitPicker() {
 
   // Usar store de pontos ao invés de API
   const points = usePontosStore ((s) => s.points);
-  const setDefaultPoint = usePontosStore((s) => s.setDefaultPoint);
   const setCheckoutPickupPoint = useCheckoutStore((s) => s.setPickupPoint);
   const subscribeExternal = usePontosStore((s) => s.subscribeExternal);
 
   // Buscar todos os pontos de coleta ativos (sem filtro de localização)
   // O usuário pode escolher qualquer ponto cadastrado no sistema
-  const { data: apiPickupPoints, isLoading: isLoadingPickupPoints } = usePickupPoints({});
+  const { data: apiPickupPoints } = usePickupPoints({});
 
   // Geocodificar CEP de origem para obter coordenadas precisas
   const originCep = results?.resumo?.origemCep;

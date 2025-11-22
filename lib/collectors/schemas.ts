@@ -12,22 +12,6 @@ const optionalString = (message?: string) =>
     .or(z.null())
     .transform((value) => (value == null || value === '' ? null : value));
 
-const emailSchema = z
-  .string()
-  .email('E-mail inválido')
-  .optional()
-  .or(z.literal(''))
-  .or(z.null())
-  .transform((value) => (value == null || value === '' ? null : value));
-
-const phoneSchema = z
-  .string()
-  .regex(/^\(?\d{2}\)?\s?\d{4,5}-?\d{4}$/, 'Telefone deve ter entre 10 e 11 dígitos')
-  .optional()
-  .or(z.literal(''))
-  .or(z.null())
-  .transform((value) => (value == null || value === '' ? null : value));
-
 const cepSchema = z
   .string()
   .regex(/^\d{5}-?\d{3}$/, 'CEP inválido')

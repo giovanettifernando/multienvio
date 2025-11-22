@@ -68,7 +68,7 @@ function LoginPageContent() {
       } else {
         router.replace('/');
       }
-    } catch (error) {
+    } catch {
       message.error('Erro ao conectar com o servidor');
       setLoading(false);
     }

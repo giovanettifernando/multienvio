@@ -47,7 +47,6 @@ export default function ForgotPasswordPage() {
   const {
     control,
     handleSubmit,
-    setError,
     formState: { errors },
     reset,
   } = useForm<ForgotPasswordAPIInput>({

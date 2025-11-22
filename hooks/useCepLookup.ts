@@ -114,12 +114,15 @@ export function useCepLookup(
       });
     }
 
+    // Capture the controller at effect execution time for cleanup
+    const controller = abortControllerRef.current;
+
     return () => {
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
       }
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
+      if (controller) {
+        controller.abort();
       }
     };
   }, [cep, debounceMs, lookup]);

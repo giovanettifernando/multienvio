@@ -3,7 +3,7 @@
  * GET /api/coletores/auth/me - Retorna dados do coletor autenticado
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { jwtVerify } from 'jose';
 import { prisma } from '@/lib/db';
@@ -16,7 +16,7 @@ const JWT_SECRET = new TextEncoder().encode(
  * GET /api/coletores/auth/me
  * Verifica autenticação e retorna dados do coletor
  */
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const cookieStore = await cookies();
     const token = cookieStore.get('coletor-token');

@@ -13,7 +13,6 @@ import {
 export const dynamic = "force-dynamic";
 
 declare global {
-  // eslint-disable-next-line no-var
   var __envioPickups: Map<string, Pickup> | undefined;
 }
 

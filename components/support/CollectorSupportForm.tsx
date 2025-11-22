@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
 import { Form, Input, Select, Button, App, Space } from 'antd';
 import type { Priority } from '@/lib/validation/support';
 import { useMutation } from '@tanstack/react-query';
+import { useCollectorSession } from '@/stores/useCollectorSession';
 
 const { TextArea } = Input;
 
@@ -20,13 +20,26 @@ interface FormValues {
 export function CollectorSupportForm({ onSuccess }: CollectorSupportFormProps) {
   const [form] = Form.useForm();
   const { message } = App.useApp();
+  const { collector } = useCollectorSession();
 
   const createTicket = useMutation({
     mutationFn: async (data: { subject: string; priority: Priority; description: string }) => {
+      if (!collector) {
+        throw new Error('Sessão do coletor não encontrada');
+      }
+
+      // Construir objeto requester a partir da sessão do coletor
+      const requesterEmail = collector.email || `${collector.cnpj}@collector.temp`;
+
       const response = await fetch('/api/collector/tickets', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          requester: {
+            name: collector.nomeFantasia,
+            email: requesterEmail,
+            phone: collector.telefone || null,
+          },
           subject: data.subject,
           priority: data.priority,
           description: data.description,

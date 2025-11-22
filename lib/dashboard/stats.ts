@@ -12,12 +12,6 @@ export type KpiComputation = {
   suffix?: string;
 };
 
-const ACTIVE_IN_TRANSIT: Shipment["status"][] = [
-  "em_transito",
-  "em_rota_de_entrega",
-  "postado",
-];
-
 function toDate(value: string | undefined | null): Date | null {
   if (!value) return null;
   const isoDate = new Date(value);
@@ -39,12 +33,6 @@ function toDate(value: string | undefined | null): Date | null {
     }
   }
   return null;
-}
-
-function startOfDay(date: Date): Date {
-  const clone = new Date(date);
-  clone.setHours(0, 0, 0, 0);
-  return clone;
 }
 
 function isBetween(date: Date, start: Date, end: Date): boolean {
@@ -75,7 +63,6 @@ export function computeDashboardKpis(
   shipments: Shipment[],
 ): KpiComputation[] {
   const now = new Date();
-  const todayStart = startOfDay(now);
 
   // Current month calculation
   const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -91,60 +78,6 @@ export function computeDashboardKpis(
     const created = toDate(order.createdAt);
     if (!created) return false;
     return created >= previousMonthStart && created <= previousMonthEnd;
-  });
-
-  const inTransitCurrent = shipments.filter((shipment) => {
-    if (!ACTIVE_IN_TRANSIT.includes(shipment.status)) {
-      return false;
-    }
-    const updatedAt = toDate(shipment.atualizadoEm);
-    if (!updatedAt) return true;
-    const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-    return updatedAt >= twentyFourHoursAgo;
-  });
-
-  const inTransitPrevious = shipments.filter((shipment) => {
-    if (!ACTIVE_IN_TRANSIT.includes(shipment.status)) {
-      return false;
-    }
-    const updatedAt = toDate(shipment.atualizadoEm);
-    if (!updatedAt) return false;
-    const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-    const fortyEightHoursAgo = new Date(now.getTime() - 48 * 60 * 60 * 1000);
-    return isBetween(updatedAt, fortyEightHoursAgo, twentyFourHoursAgo);
-  });
-
-  const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-  const fourteenDaysAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
-
-  const deliveredLast7 = shipments.filter((shipment) => {
-    if (shipment.status !== "entregue") return false;
-    const updatedAt = toDate(shipment.atualizadoEm);
-    if (!updatedAt) return false;
-    return updatedAt >= sevenDaysAgo;
-  });
-
-  const deliveredPrev7 = shipments.filter((shipment) => {
-    if (shipment.status !== "entregue") return false;
-    const updatedAt = toDate(shipment.atualizadoEm);
-    if (!updatedAt) return false;
-    return isBetween(updatedAt, fourteenDaysAgo, sevenDaysAgo);
-  });
-
-  const overdueCurrent = shipments.filter((shipment) => {
-    if (shipment.status === "entregue") return false;
-    const dueDate = toDate(shipment.prazoEstimado);
-    if (!dueDate) return false;
-    return dueDate < now;
-  });
-
-  const overduePrevious = shipments.filter((shipment) => {
-    if (shipment.status === "entregue") return false;
-    const dueDate = toDate(shipment.prazoEstimado);
-    if (!dueDate) return false;
-    const sevenDaysBehind = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-    const fourteenDaysBehind = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
-    return isBetween(dueDate, fourteenDaysBehind, sevenDaysBehind);
   });
 
   const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);

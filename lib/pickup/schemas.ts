@@ -10,39 +10,6 @@ const cnpjSchema = z
     return digits.length === 14;
   }, 'CNPJ deve ter 14 dígitos');
 
-// Validação de email
-const emailSchema = z
-  .string()
-  .email('Email inválido')
-  .optional()
-  .or(z.literal(''))
-  .transform((val) => (val === '' ? null : val));
-
-// Validação de telefone (permissiva)
-const telefoneSchema = z
-  .string()
-  .regex(/^\+?\d{10,15}$/, 'Telefone deve ter entre 10 e 15 dígitos')
-  .optional()
-  .or(z.literal(''))
-  .transform((val) => (val === '' ? null : val));
-
-// Validação de CEP
-const cepSchema = z
-  .string()
-  .regex(/^\d{5}-?\d{3}$/, 'CEP inválido')
-  .optional()
-  .or(z.literal(''))
-  .transform((val) => (val === '' ? null : val));
-
-// Validação de UF
-const ufSchema = z
-  .string()
-  .length(2, 'UF deve ter 2 letras')
-  .regex(/^[A-Z]{2}$/, 'UF inválida')
-  .optional()
-  .or(z.literal(''))
-  .transform((val) => (val === '' ? null : val));
-
 // Validação condicional de PIX
 const pixMethodSchema = z.object({
   kind: z.literal('pix'),

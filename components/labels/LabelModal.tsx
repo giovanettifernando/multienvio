@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import { Modal, Descriptions, Space, Button, Tabs, Typography, App, Tag, Flex } from 'antd';
+import { useEffect, useState } from 'react';
+import { Modal, Descriptions, Space, Button, Tabs, Typography, App, Tag } from 'antd';
 import type { LabelItem } from '@/lib/types/label';
 import { createObjectUrlFromLabelFile, printPdfFromIframe, downloadPdf } from '@/lib/utils/pdf';
 import dayjs from 'dayjs';

@@ -1,10 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
 import {
   Controller,
-  FormProvider,
-  useForm,
   type Control,
   type FieldErrors,
 } from "react-hook-form";
@@ -48,19 +45,13 @@ const ufOptions = [
 type Props = {
   control: Control<CompanyWizardData, unknown, CompanyWizardData>;
   errors?: FieldErrors<EnderecoData>;
-  cepLoading?: boolean;
 };
 
 export function CompanyStepEndereco({
   control,
   errors,
-  cepLoading,
 }: Props) {
   const enderecoErrors = errors ?? {};
-  const cepHelp = useMemo(() => {
-    if (cepLoading) return "Consultando CEP...";
-    return enderecoErrors.cep?.message;
-  }, [cepLoading, enderecoErrors.cep?.message]);
 
   return (
     <>

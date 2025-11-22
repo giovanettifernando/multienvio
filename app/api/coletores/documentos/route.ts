@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
     let collectorId: string;
     try {
       collectorId = await getCollectorId();
-    } catch (error) {
+    } catch {
       console.warn('[documentos] UNAUTHORIZED: No valid session');
       return NextResponse.json(
         {

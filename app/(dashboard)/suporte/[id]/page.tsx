@@ -2,7 +2,7 @@
 
 import { ArrowLeftOutlined } from "@ant-design/icons";
 import { use } from "react";
-import { Button, Card, Space } from "antd";
+import { Button, Card } from "antd";
 import { useRouter, useSearchParams } from "next/navigation";
 import { TicketDetailsContent } from "@/components/support/TicketDetailsDrawer";
 import { PageShell } from "@/components/shared/PageShell";

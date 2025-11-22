@@ -9,7 +9,7 @@ import { useQuery } from '@tanstack/react-query';
 import type { ColumnsType } from 'antd/es/table';
 
 const { RangePicker } = DatePicker;
-const { Title, Text } = Typography;
+const { Title } = Typography;
 
 interface SenderAddress {
   id: string;

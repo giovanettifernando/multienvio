@@ -15,7 +15,6 @@ export async function GET() {
       passwordLength: process.env.EMAIL_PASSWORD?.length,
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
     const nodemailer = require('nodemailer');
 
     const user = process.env.EMAIL_USER || 'enviolegal@app.neoera.com.br';

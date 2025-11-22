@@ -144,7 +144,6 @@ export async function POST(request: Request) {
         const volumes = item.volumes as Array<{ pesoKg?: number; [key: string]: unknown }>;
         const preferences = item.preferences as Prisma.JsonValue;
         const selectedQuote = item.selectedQuote as { carrier: string; serviceName?: string; serviceCode?: string; deadlineDays: number; price: number; [key: string]: unknown };
-        const totals = item.totals as Prisma.JsonValue;
 
         // Valor declarado
         const declaredValue = item.insuranceValue ? Number(item.insuranceValue) : 0;
@@ -166,7 +165,7 @@ export async function POST(request: Request) {
         }
 
         // Criar shipment COM VOLUMES usando serviço centralizado
-        const { shipment, packages } = await createShipmentWithVolumes(tx, {
+        const { shipment } = await createShipmentWithVolumes(tx, {
           shipment: {
             platformTrackingCode,
             carrierTrackingCode: null,

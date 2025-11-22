@@ -246,7 +246,6 @@ export function validateCardCreateInput(payload: unknown): NormalizedCardCreateI
   validateExpiryWindow(expMonth, expYear);
 
   if (process.env.NODE_ENV === "development") {
-    // eslint-disable-next-line no-console
     console.debug("[account.cards] normalized-expiry", {
       expMonth,
       expYear,

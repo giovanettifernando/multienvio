@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Table, Space, Button, Input, Select, Flex, App, Skeleton, Empty, Tag } from 'antd';
+import { Table, Space, Button, Input, Select, Flex, Skeleton, Empty, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { fetchLabels } from '@/lib/api/labels';
@@ -12,8 +12,6 @@ export interface LabelsTableProps {
 }
 
 export function LabelsTable({ onOpenLabel }: LabelsTableProps) {
-  const { message } = App.useApp();
-
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [q, setQ] = useState('');

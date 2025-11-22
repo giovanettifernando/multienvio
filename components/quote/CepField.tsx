@@ -49,7 +49,6 @@ export function CepField({
   const lastNotifiedResolved = useRef<string>(
     resolved ? `${resolved.cidade ?? ""}|${resolved.uf ?? ""}` : "",
   );
-  const lastValidatedCep = useRef<string | null>(null);
 
   useEffect(() => {
     const signature = `${initialResolved?.cidade ?? ""}|${initialResolved?.uf ?? ""}`;
@@ -83,14 +82,18 @@ export function CepField({
     },
   });
 
-  const data = cepData
-    ? {
-        valido: true,
-        cep: cepData.cep,
-        cidade: cepData.city,
-        uf: cepData.state,
-      }
-    : null;
+  const data = useMemo(
+    () =>
+      cepData
+        ? {
+            valido: true,
+            cep: cepData.cep,
+            cidade: cepData.city,
+            uf: cepData.state,
+          }
+        : null,
+    [cepData]
+  );
 
   const error = cepError;
 

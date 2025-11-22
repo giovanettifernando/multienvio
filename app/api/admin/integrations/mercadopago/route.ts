@@ -78,7 +78,7 @@ export async function GET(request: Request) {
         maskedAccessToken = decrypted.length > 4
           ? `***${decrypted.slice(-4)}`
           : '***';
-      } catch (error) {
+      } catch {
         maskedAccessToken = '***';
       }
     }
@@ -91,7 +91,7 @@ export async function GET(request: Request) {
         maskedWebhookSecret = decrypted.length > 4
           ? `***${decrypted.slice(-4)}`
           : '***';
-      } catch (error) {
+      } catch {
         maskedWebhookSecret = '***';
       }
     }
@@ -183,7 +183,7 @@ export async function POST(request: Request) {
       }
 
       // Desativar credenciais antigas
-      await tx.paymentCredential.updateMany({
+      const oldCredentials = await tx.paymentCredential.updateMany({
         where: {
           gatewayId: gateway.id,
           isActive: true,
@@ -193,6 +193,58 @@ export async function POST(request: Request) {
         },
       });
 
+      // Detectar se tokens estão mascarados e recuperar valores reais
+      let finalAccessToken = data.accessToken;
+      let finalWebhookSecret = data.webhookSecret;
+
+      console.log('[ADMIN_MERCADOPAGO_POST] Verificando tokens:', {
+        accessTokenIsMasked: data.accessToken.startsWith('***'),
+        accessTokenPreview: data.accessToken.substring(0, 10),
+        webhookSecretIsMasked: data.webhookSecret?.startsWith('***'),
+      });
+
+      // Se o access token está mascarado (começa com ***), recuperar o token real
+      if (data.accessToken.startsWith('***')) {
+        const existingCred = await tx.paymentCredential.findFirst({
+          where: {
+            gatewayId: gateway.id,
+            isActive: false, // Acabamos de desativar
+          },
+          orderBy: { createdAt: 'desc' },
+          select: { accessToken: true },
+        });
+
+        if (existingCred?.accessToken) {
+          // Usar o token criptografado existente (já está criptografado, não criptografar novamente)
+          finalAccessToken = decrypt(existingCred.accessToken); // Descriptografar para re-criptografar depois
+          console.log('[ADMIN_MERCADOPAGO_POST] Token mascarado detectado. Recuperado token existente:', {
+            tokenLength: finalAccessToken.length,
+            tokenPreview: finalAccessToken.substring(0, 15) + '...',
+          });
+        } else {
+          throw new Error('Token mascarado detectado mas não há credencial anterior. Por favor, insira o Access Token completo.');
+        }
+      }
+
+      // Se o webhook secret está mascarado (começa com ***), recuperar o secret real
+      if (finalWebhookSecret && finalWebhookSecret.startsWith('***')) {
+        const existingCred = await tx.paymentCredential.findFirst({
+          where: {
+            gatewayId: gateway.id,
+            isActive: false,
+          },
+          orderBy: { createdAt: 'desc' },
+          select: { secretKey: true },
+        });
+
+        if (existingCred?.secretKey) {
+          finalWebhookSecret = decrypt(existingCred.secretKey); // Descriptografar para re-criptografar depois
+        } else {
+          // Webhook secret é opcional, então não lançar erro
+          finalWebhookSecret = undefined;
+        }
+      }
+
       // Criar nova credencial
       await tx.paymentCredential.create({
         data: {
@@ -200,8 +252,8 @@ export async function POST(request: Request) {
           environment: data.sandboxMode ? 'SANDBOX' : 'PRODUCTION',
           authType: 'BEARER',
           publicKey: data.publicKey,
-          accessToken: encrypt(data.accessToken), // Criptografar
-          secretKey: data.webhookSecret ? encrypt(data.webhookSecret) : null,
+          accessToken: encrypt(finalAccessToken), // Criptografar
+          secretKey: finalWebhookSecret ? encrypt(finalWebhookSecret) : null,
           isActive: true,
         },
       });

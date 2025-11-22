@@ -9,7 +9,6 @@ import { getUserSessionFromRequest } from '@/lib/auth/user-session';
 import { createShipmentWithVolumes } from '@/lib/shipments/create-with-volumes';
 import { createInitialTrackingEvent } from '@/lib/tracking/create-event';
 import { ShipmentStatus } from '@/lib/shipments/shipment-status';
-import crypto from 'crypto';
 
 // Schema de validação do checkout
 const checkoutSchema = z.object({
@@ -161,9 +160,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // Calcular peso e valor total
-    const totalWeight = data.volumes.reduce((sum, vol) => sum + vol.peso, 0);
-
     // Calcular valor declarado
     let declaredValue = data.insuranceValue ?? 0;
 
@@ -273,7 +269,7 @@ export async function POST(request: Request) {
       try {
         // Sempre criar novo destinatário recorrente
         // O usuário pode ter múltiplos endereços no mesmo CEP ou múltiplos destinatários
-        const newRecipient = await prisma.recipient.create({
+        await prisma.recipient.create({
           data: {
             userId: session.userId,
             name: data.recipient.nome,
@@ -303,11 +299,6 @@ export async function POST(request: Request) {
       // ====================================
       // IDEMPOTÊNCIA: Verificar se já existe um shipment para este checkout
       // ====================================
-      const checkoutFingerprint = crypto
-        .createHash('sha256')
-        .update(`${session.userId}-${data.quoteId}`)
-        .digest('hex')
-        .substring(0, 16);
 
       // Buscar shipments criados recentemente (últimos 5 minutos) com dados idênticos
       const recentShipments = await tx.shipment.findMany({

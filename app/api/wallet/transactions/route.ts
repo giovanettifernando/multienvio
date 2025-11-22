@@ -7,7 +7,7 @@
 import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth/session';
 import { prisma } from '@/lib/db';
-import { calculatePeriodSummary, getLastNDaysRange } from '@/lib/wallet/period-summary';
+import { getLastNDaysRange } from '@/lib/wallet/period-summary';
 import {
   getTransactionDirection,
   getTransactionTypeLabel,

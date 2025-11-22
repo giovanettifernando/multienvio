@@ -1,13 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Form, Input, Select, Button, Upload, App, Space, Alert } from 'antd';
-import { PaperClipOutlined, InfoCircleOutlined } from '@ant-design/icons';
-import type { UploadFile } from 'antd';
+import { useEffect } from 'react';
+import { Form, Input, Select, Button, App, Space, Alert } from 'antd';
+import { InfoCircleOutlined } from '@ant-design/icons';
 import { useCreateTicket } from '@/hooks/useSupport';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useCollectorSession } from '@/stores/useCollectorSession';
-import { NewTicketInputSchema, type SupportAttachment, type Priority } from '@/lib/validation/support';
+import { NewTicketInputSchema, type Priority } from '@/lib/validation/support';
 
 const { TextArea } = Input;
 
@@ -38,7 +37,6 @@ export function SupportForm({ onSuccess, audience = 'user', defaultValues }: Sup
   const createTicket = useCreateTicket(audience);
   const { user: usuario } = useCurrentUser();
   const { collector } = useCollectorSession();
-  const [fileList, setFileList] = useState<UploadFile[]>([]);
 
   // Auto-preencher dados do usuário ou coletor logado
   useEffect(() => {
@@ -61,15 +59,6 @@ export function SupportForm({ onSuccess, audience = 'user', defaultValues }: Sup
 
   const handleSubmit = async (values: FormValues) => {
     try {
-      // Convert file list to attachments (metadata only)
-      const attachments: SupportAttachment[] = fileList.map(file => ({
-        id: file.uid,
-        name: file.name,
-        size: file.size || 0,
-        type: file.type || null,
-        url: null, // No actual upload for now
-      }));
-
       // Garantir que usamos os dados do usuário/coletor se estiver logado
       let requesterName: string;
       let requesterEmail: string;
@@ -98,8 +87,8 @@ export function SupportForm({ onSuccess, audience = 'user', defaultValues }: Sup
         subject: values.subject,
         priority: values.priority as Priority,
         description: values.description,
-        tags: [], // Campo removido da UI, sempre enviar array vazio
-        attachments,
+        tags: [],
+        attachments: [], // Upload de anexos disponível apenas ao adicionar comentários
       });
 
       const ticket = await createTicket.mutateAsync(input);
@@ -111,7 +100,6 @@ export function SupportForm({ onSuccess, audience = 'user', defaultValues }: Sup
         description: '',
         priority: 'media',
       });
-      setFileList([]);
 
       if (onSuccess) {
         onSuccess(ticket.id);
@@ -219,17 +207,6 @@ export function SupportForm({ onSuccess, audience = 'user', defaultValues }: Sup
         />
       </Form.Item>
 
-      <Form.Item label="Anexos (opcional)">
-        <Upload
-          fileList={fileList}
-          onChange={({ fileList: newFileList }) => setFileList(newFileList)}
-          beforeUpload={() => false}
-          maxCount={5}
-        >
-          <Button icon={<PaperClipOutlined />}>Adicionar arquivos</Button>
-        </Upload>
-      </Form.Item>
-
       <Form.Item>
         <Space>
           <Button type="primary" htmlType="submit" loading={createTicket.isPending}>
@@ -247,7 +224,6 @@ export function SupportForm({ onSuccess, audience = 'user', defaultValues }: Sup
               // Se não logado, resetar tudo
               form.resetFields();
             }
-            setFileList([]);
           }}>
             Limpar
           </Button>

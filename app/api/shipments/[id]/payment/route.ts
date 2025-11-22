@@ -21,7 +21,7 @@ export async function PATCH(
     }
 
     const body = await request.json();
-    const { method, status, transactionId, meta } = body;
+    const { method, status, meta } = body;
 
     if (!method || !status) {
       return NextResponse.json(

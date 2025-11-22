@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Alert, Card, Flex, Space, Typography, Row, Col, Grid } from "antd";
+import { Alert, Row, Col } from "antd";
 import { PageShell } from "@/components/shared/PageShell";
 import { QuickCalculator } from "@/components/dashboard/QuickCalculator";
 import { KpiCards } from "@/components/dashboard/KpiCards";
@@ -17,8 +17,6 @@ import { DashboardFooterLinks } from "@/components/dashboard/DashboardFooterLink
 import { computeDashboardKpis } from "@/lib/dashboard/stats";
 import type { Order } from "@/types/order";
 import type { Shipment } from "@/types/shipment";
-
-const { useBreakpoint } = Grid;
 
 type OrdersResponse = {
   dados: Order[];
@@ -47,8 +45,6 @@ async function fetchShipments(): Promise<Shipment[]> {
 }
 
 export default function OverviewPage() {
-  const screens = useBreakpoint();
-
   const ordersQuery = useQuery({
     queryKey: ["orders"],
     queryFn: fetchOrders,

@@ -7,7 +7,6 @@ import {
   Button,
   Card,
   Col,
-  Descriptions,
   Row,
   Skeleton,
   Space,
@@ -20,7 +19,7 @@ import { useQuery } from "@tanstack/react-query";
 import { TrackingTimeline } from "@/components/track/TrackingTimeline";
 import { PageShell } from "@/components/shared/PageShell";
 
-const { Title, Text } = Typography;
+const { Text } = Typography;
 
 const STATUS_LABELS: Record<string, string> = {
   "pending_payment": "Aguardando pagamento",

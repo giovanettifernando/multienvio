@@ -12,7 +12,6 @@ import {
   updateCarrierSchema,
   type UpdateCarrierInput,
 } from '@/lib/validation/integrations-carriers';
-import { prisma } from '@/lib/db';
 import { checkAdminPermission, logAuditAction } from '../../_helpers';
 
 /**

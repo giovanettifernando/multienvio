@@ -4,7 +4,6 @@ import type { Pickup, PickupStatus } from "@/types/pickup";
 export const dynamic = "force-dynamic";
 
 declare global {
-  // eslint-disable-next-line no-var
   var __pickups: Map<string, Pickup> | undefined;
 }
 

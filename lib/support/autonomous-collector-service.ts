@@ -172,7 +172,7 @@ export async function listTicketsForAutonomousCollector(
       },
     },
     orderBy: {
-      updatedAt: 'desc',
+      lastActivityAt: 'desc',
     },
   });
 

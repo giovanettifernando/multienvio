@@ -1,7 +1,6 @@
 import { useMemo } from "react";
 import { useColetasStore } from "@/stores/coletas";
-import { CollectionStatus } from "@/types/contracts";
-import type { Coleta, ColetaStatus } from "@/lib/coletas/types";
+import type { ColetaStatus } from "@/lib/coletas/types";
 import { normalizeString } from "@/lib/utils/string";
 
 interface UseColetasFilters {

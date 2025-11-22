@@ -76,14 +76,17 @@ export const paymentGatewaySchema = z.object({
   provider: z.enum(['mercadoPago'], {
     message: 'Provider é obrigatório',
   }),
-  publicKey: z.string().min(1, 'Public Key é obrigatória').optional().or(z.literal('')),
-  accessToken: z.string().min(1, 'Access Token é obrigatório').optional().or(z.literal('')),
+  publicKey: z.string().min(1, 'Public Key é obrigatória'),
+  accessToken: z.string().min(1, 'Access Token é obrigatório'),
   webhookUrl: z
     .string()
-    .url('URL inválida')
+    .refine(
+      (val) => !val || val.startsWith('http'),
+      { message: 'URL do webhook inválida' }
+    )
     .optional()
-    .or(z.literal('')),
-  webhookSecret: z.string().optional().or(z.literal('')),
+    .transform(val => val || ''),
+  webhookSecret: z.string().optional().default(''),
   active: z.boolean().optional().default(false),
 });
 

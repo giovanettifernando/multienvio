@@ -11,6 +11,8 @@ import { z } from 'zod';
 
 const AddMessageSchema = z.object({
   content: z.string().min(1, 'Mensagem não pode estar vazia'),
+  // NOTA: Upload de anexos não está implementado para coletores autônomos
+  // Campo mantido para futura implementação quando houver storage configurado
   attachments: z
     .array(
       z.object({

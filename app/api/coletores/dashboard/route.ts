@@ -6,7 +6,7 @@
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { getAutonomousCollectorSession } from '@/lib/auth/autonomous-collector-session';
 import { prisma } from '@/lib/db';
 
@@ -14,7 +14,7 @@ import { prisma } from '@/lib/db';
  * GET /api/coletores/dashboard
  * Retorna KPIs do coletor logado
  */
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const session = await getAutonomousCollectorSession();
     if (!session) {

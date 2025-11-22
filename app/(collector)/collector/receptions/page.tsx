@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Image from 'next/image';
 import {
   Card,
   Table,
@@ -699,15 +700,18 @@ export default function ReceptionsPage() {
                   ) : (
                     <div>
                       <div style={{ marginBottom: 8 }}>
-                        <img
+                        <Image
                           src={photoPreview}
                           alt="Preview"
+                          width={400}
+                          height={200}
                           style={{
                             maxWidth: '100%',
-                            maxHeight: 200,
+                            height: 'auto',
                             borderRadius: 4,
                             border: '1px solid #d9d9d9',
                           }}
+                          unoptimized
                         />
                       </div>
                       <Button

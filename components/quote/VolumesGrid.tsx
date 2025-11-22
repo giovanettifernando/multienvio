@@ -24,7 +24,8 @@ type VolumesGridProps = {
   onAdd: () => void;
   onRemove: (index: number) => void;
   maxCount: number;
-  totals: { pesoRealKg: number; pesoCubadoKg: number };
+  /** @deprecated No longer used - totals are computed internally */
+  totals?: { pesoRealKg: number; pesoCubadoKg: number };
   disableRemove?: boolean;
 };
 
@@ -359,7 +360,6 @@ export function VolumesGrid({
   onAdd,
   onRemove,
   maxCount,
-  totals,
   disableRemove,
 }: VolumesGridProps) {
   const addDisabled = fields.length >= maxCount;

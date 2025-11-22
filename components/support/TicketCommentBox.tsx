@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Button, Input, Space, Upload, Typography, message } from "antd";
+import { Button, Input, Space, Upload, Typography, message, Checkbox } from "antd";
 import type { RcFile, UploadFile } from "antd/es/upload/interface";
 import { CannedReplySelect } from "@/components/support/CannedReplySelect";
 import { usePostTicketMessage } from "@/hooks/useSupport";
@@ -19,6 +19,7 @@ export function TicketCommentBox({ ticketId, onSubmitted, mode = 'admin' }: Prop
   const [messageText, setMessageText] = useState("");
   const [touched, setTouched] = useState(false);
   const [fileList, setFileList] = useState<UploadFile[]>([]);
+  const [isInternal, setIsInternal] = useState(false);
   const queryClient = useQueryClient();
   const postMessage = usePostTicketMessage(mode === 'admin' ? 'admin' : 'user');
 
@@ -48,13 +49,14 @@ export function TicketCommentBox({ ticketId, onSubmitted, mode = 'admin' }: Prop
         ticketId,
         text: trimmed,
         attachments: attachments.length ? attachments : undefined,
-        internal: mode === 'admin' ? false : undefined,
+        internal: mode === 'admin' ? isInternal : undefined,
       });
     },
       onSuccess: () => {
         message.success("Comentário enviado");
         setMessageText("");
         setFileList([]);
+        setIsInternal(false);
         setTouched(false);
         queryClient.invalidateQueries({ queryKey: ["ticket", ticketId] });
         queryClient.invalidateQueries({ queryKey: ["ticket", ticketId, "attachments"] });
@@ -113,6 +115,16 @@ export function TicketCommentBox({ ticketId, onSubmitted, mode = 'admin' }: Prop
       >
         <Button variant="outlined">Anexar arquivo</Button>
       </Upload>
+      {mode === 'admin' && (
+        <Checkbox
+          checked={isInternal}
+          onChange={(e) => setIsInternal(e.target.checked)}
+        >
+          <Typography.Text type="secondary">
+            Mensagem interna (visível apenas para a equipe)
+          </Typography.Text>
+        </Checkbox>
+      )}
       <Button
         type="primary"
         variant="solid"

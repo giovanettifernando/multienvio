@@ -173,7 +173,7 @@ export async function listTicketsForCollector(
       },
     },
     orderBy: {
-      updatedAt: 'desc',
+      lastActivityAt: 'desc',
     },
   });
 

@@ -3,7 +3,6 @@ import type { Transporter } from 'nodemailer';
 
 // Dynamic import to avoid ESM/CommonJS issues
 function getNodemailer(): typeof import('nodemailer') {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
   return require('nodemailer');
 }
 

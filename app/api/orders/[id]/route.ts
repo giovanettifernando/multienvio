@@ -5,7 +5,6 @@ import type { Order, OrderEvent, OrderStatus } from "@/types/order";
 export const dynamic = "force-dynamic";
 
 declare global {
-  // eslint-disable-next-line no-var
   var __envioOrders: Map<string, Order> | undefined;
 }
 

@@ -3,7 +3,7 @@
  * Migrado para usar contratos globais de /types/contracts.ts
  */
 
-import { CollectionStatus, type Address } from "@/types/contracts";
+import { CollectionStatus } from "@/types/contracts";
 
 // Re-exportar enum para retrocompatibilidade
 export { CollectionStatus };

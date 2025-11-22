@@ -4,13 +4,14 @@ import { Card, List, Typography, Tag, Skeleton, Empty, Button, Flex } from 'antd
 import { MessageOutlined, PlusOutlined, RightOutlined } from '@ant-design/icons';
 import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
+import type { Status } from '@/lib/validation/support';
 
 const { Text } = Typography;
 
 interface SupportTicket {
   id: string;
   subject: string;
-  status: 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED';
+  status: Status;
   createdAt: string;
   updatedAt: string;
 }
@@ -24,30 +25,30 @@ async function fetchSupportTickets(): Promise<SupportTicket[]> {
   return data.tickets || [];
 }
 
-function getStatusLabel(status: SupportTicket['status']): string {
+function getStatusLabel(status: Status): string {
   switch (status) {
-    case 'OPEN':
+    case 'aberto':
       return 'Aberto';
-    case 'IN_PROGRESS':
+    case 'em_atendimento':
       return 'Em atendimento';
-    case 'RESOLVED':
+    case 'resolvido':
       return 'Resolvido';
-    case 'CLOSED':
+    case 'fechado':
       return 'Fechado';
     default:
       return status;
   }
 }
 
-function getStatusColor(status: SupportTicket['status']): string {
+function getStatusColor(status: Status): string {
   switch (status) {
-    case 'OPEN':
+    case 'aberto':
       return 'error';
-    case 'IN_PROGRESS':
+    case 'em_atendimento':
       return 'processing';
-    case 'RESOLVED':
+    case 'resolvido':
       return 'success';
-    case 'CLOSED':
+    case 'fechado':
       return 'default';
     default:
       return 'default';

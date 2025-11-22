@@ -13,7 +13,7 @@ import {
   Spin,
 } from "antd";
 import { PlusOutlined, EditOutlined, DeleteOutlined, StarOutlined, StarFilled } from "@ant-design/icons";
-import { useAddresses, useAddressCreate, useAddressUpdate, useAddressDelete } from "@/hooks/useAccount";
+import { useAddresses, useAddressCreate } from "@/hooks/useAccount";
 import { AddressModal, type AddressFormValues } from "./AddressModal";
 import type { Address } from "@/types/account";
 
