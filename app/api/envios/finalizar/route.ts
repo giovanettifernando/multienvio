@@ -4,11 +4,11 @@
  */
 
 import { NextResponse } from "next/server";
-import { getSessionFromRequest } from "@/lib/auth/session";
+import { getUserFromRequest } from "@/lib/auth/session";
 
 export async function POST(req: Request) {
   // 🚨 SECURITY: Require authentication
-  const session = await getSessionFromRequest(req);
+  const session = await getUserFromRequest(req);
   if (!session) {
     return NextResponse.json(
       { message: 'Autenticação necessária' },

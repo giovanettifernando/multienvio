@@ -182,9 +182,9 @@ export async function POST(request: Request) {
       let finalAccessToken = data.accessToken;
       let finalWebhookSecret = data.webhookSecret;
 
+      // 🔒 SECURITY: Não logar prévias de tokens para evitar exposição em logs
       console.log('[ADMIN_MERCADOPAGO_POST] Verificando tokens:', {
         accessTokenIsMasked: data.accessToken.startsWith('***'),
-        accessTokenPreview: data.accessToken.substring(0, 10),
         webhookSecretIsMasked: data.webhookSecret?.startsWith('***'),
       });
 
@@ -202,10 +202,8 @@ export async function POST(request: Request) {
         if (existingCred?.accessToken) {
           // Usar o token criptografado existente (já está criptografado, não criptografar novamente)
           finalAccessToken = decrypt(existingCred.accessToken); // Descriptografar para re-criptografar depois
-          console.log('[ADMIN_MERCADOPAGO_POST] Token mascarado detectado. Recuperado token existente:', {
-            tokenLength: finalAccessToken.length,
-            tokenPreview: finalAccessToken.substring(0, 15) + '...',
-          });
+          // 🔒 SECURITY: Não logar preview do token
+          console.log('[ADMIN_MERCADOPAGO_POST] Token mascarado detectado. Recuperado token existente.');
         } else {
           throw new Error('Token mascarado detectado mas não há credencial anterior. Por favor, insira o Access Token completo.');
         }

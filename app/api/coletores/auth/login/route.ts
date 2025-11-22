@@ -8,6 +8,15 @@ import { prisma } from '@/lib/db';
 import bcrypt from 'bcrypt';
 import { SignJWT } from 'jose';
 import { cookies } from 'next/headers';
+import { rateLimitByIP } from '@/lib/rate-limit';
+
+// Validar JWT_SECRET em produção
+if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
+  throw new Error(
+    '🚨 SECURITY ERROR: JWT_SECRET environment variable is required in production. ' +
+    'Please set a secure random secret to prevent token forgery.'
+  );
+}
 
 const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || 'your-secret-key-change-this-in-production'
@@ -19,6 +28,16 @@ const JWT_SECRET = new TextEncoder().encode(
  */
 export async function POST(request: NextRequest) {
   try {
+    // 🔒 SECURITY: Rate limiting para prevenir ataques de força bruta
+    const rateLimitResult = rateLimitByIP(request, 'collector-login', {
+      windowMs: 5 * 60 * 1000, // 5 minutos
+      maxRequests: 5, // 5 tentativas
+    });
+
+    if (rateLimitResult) {
+      return rateLimitResult;
+    }
+
     const body = await request.json();
     const { email, password } = body;
 

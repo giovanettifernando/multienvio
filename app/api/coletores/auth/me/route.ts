@@ -8,6 +8,14 @@ import { cookies } from 'next/headers';
 import { jwtVerify } from 'jose';
 import { prisma } from '@/lib/db';
 
+// Validar JWT_SECRET em produção
+if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
+  throw new Error(
+    '🚨 SECURITY ERROR: JWT_SECRET environment variable is required in production. ' +
+    'Please set a secure random secret to prevent token forgery.'
+  );
+}
+
 const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || 'your-secret-key-change-this-in-production'
 );

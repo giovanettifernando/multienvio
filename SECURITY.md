@@ -8,7 +8,7 @@ Este documento descreve as configurações de segurança implementadas e recomen
 **Status:** ✅ Implementado
 
 O sistema **falha no boot** se as seguintes variáveis não estiverem configuradas em produção:
-- `JWT_SECRET` - Secret para autenticação de clientes
+- `JWT_SECRET` - Secret para autenticação de clientes e coletores autônomos
 - `ADMIN_JWT_SECRET` - Secret para autenticação de admins
 
 ```bash
@@ -17,9 +17,12 @@ node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
 ```
 
 **Arquivos protegidos:**
-- [lib/auth/session.ts](lib/auth/session.ts#L5-L10)
-- [lib/auth/admin-session.ts](lib/auth/admin-session.ts#L6-L11)
-- [middleware.ts](middleware.ts#L11-L18)
+- [lib/auth/session.ts](lib/auth/session.ts#L5-L10) - Clientes
+- [lib/auth/admin-session.ts](lib/auth/admin-session.ts#L6-L11) - Admins
+- [lib/auth/autonomous-collector-session.ts](lib/auth/autonomous-collector-session.ts#L9-L15) - Coletores
+- [app/api/coletores/auth/login/route.ts](app/api/coletores/auth/login/route.ts#L13-L19) - Login de coletores
+- [app/api/coletores/auth/me/route.ts](app/api/coletores/auth/me/route.ts#L11-L17) - Sessão de coletores
+- [middleware.ts](middleware.ts#L11-L18) - Middleware global
 
 ### 2. Autorização Granular (60+ rotas)
 **Status:** ✅ Implementado
@@ -41,6 +44,7 @@ Todas as rotas admin protegidas com 9 permissões granulares:
 Implementado em memória com as seguintes configurações:
 - Login cliente: 5 req/5min (por IP)
 - Login admin: 5 req/5min (por IP)
+- Login coletor: 5 req/5min (por IP) ✅ **NOVO**
 - Password reset: 3 req/10min (por IP)
 - Operações financeiras: 5 req/min (por usuário)
 - Operações de escrita: 15 req/min (por usuário)
@@ -63,6 +67,18 @@ Todas as rotas validam se o usuário está ACTIVE no banco de dados.
 **Status:** ✅ Implementado
 
 Operações sensíveis são registradas em `StaffAuditLog`.
+
+### 7. Proteção de Credenciais em Logs
+**Status:** ✅ Implementado
+
+Credenciais sensíveis **nunca são logadas** em texto claro ou preview:
+- Tokens de API do Mercado Pago são mascarados completamente
+- Access tokens não têm preview nos logs
+- Webhook secrets não são expostos
+- Apenas flags booleanas (isMasked) são registradas
+
+**Arquivo protegido:**
+- [app/api/admin/integrations/mercadopago/route.ts](app/api/admin/integrations/mercadopago/route.ts#L185-L206)
 
 ---
 
