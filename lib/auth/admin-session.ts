@@ -2,6 +2,14 @@ import { SignJWT, jwtVerify } from 'jose';
 import type { AdminPermission } from '@prisma/client';
 import { prisma } from '@/lib/db';
 
+// Validar ADMIN_JWT_SECRET em produção
+if (process.env.NODE_ENV === 'production' && !process.env.ADMIN_JWT_SECRET) {
+  throw new Error(
+    '🚨 SECURITY ERROR: ADMIN_JWT_SECRET environment variable is required in production. ' +
+    'Please set a secure random secret to prevent admin token forgery.'
+  );
+}
+
 // Configuração do JWT para Admin (separado do cliente)
 const ADMIN_JWT_SECRET = new TextEncoder().encode(
   process.env.ADMIN_JWT_SECRET || 'admin-secret-key-change-in-production'

@@ -7,6 +7,16 @@ import { jwtVerify } from 'jose';
 import { getRouteProtection } from '@/lib/auth/route-protection';
 import { prisma } from '@/lib/db';
 
+// Validar JWT secrets em produção
+if (process.env.NODE_ENV === 'production') {
+  if (!process.env.JWT_SECRET) {
+    throw new Error('🚨 SECURITY: JWT_SECRET required in production');
+  }
+  if (!process.env.ADMIN_JWT_SECRET) {
+    throw new Error('🚨 SECURITY: ADMIN_JWT_SECRET required in production');
+  }
+}
+
 // JWT Secrets (customer vs admin)
 const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || 'envio-legal-secret-key-change-in-production'
