@@ -41,6 +41,7 @@ const SharedCardFields = {
     complemento: true,
   }).optional(),
   isDefault: z.boolean().optional(),
+  mpToken: z.string().optional(), // Token do Mercado Pago para vincular cartão
 };
 
 const CardCreateSeparatedSchema = z
@@ -114,6 +115,7 @@ export type NormalizedCardCreateInput = {
   billingAddressId?: string;
   billingAddress?: NormalizedBillingAddress;
   requestDefault: boolean;
+  mpToken?: string; // Token do Mercado Pago (opcional, para salvar no MP)
 };
 
 export type NormalizedCardUpdateInput = {
@@ -281,6 +283,7 @@ export function validateCardCreateInput(payload: unknown): NormalizedCardCreateI
     billingAddressId: data.billingAddressId,
     billingAddress,
     requestDefault: data.isDefault ?? false,
+    mpToken: data.mpToken, // Passar token do MP se fornecido
   };
 }
 

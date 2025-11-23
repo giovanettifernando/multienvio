@@ -58,8 +58,10 @@ function getDefaultDeps(overrides?: PartialDeps): ServiceDeps {
   };
 }
 
-function shouldStorePanCipher(appEnv: string): boolean {
-  return appEnv !== "production";
+function shouldStorePanCipher(): boolean {
+  // Store encrypted PAN in all environments to enable on-demand tokenization
+  // PAN is encrypted with CARD_VAULT_KEY and only decrypted for tokenization
+  return true;
 }
 
 function requireVaultKey(loader: () => Buffer | null): Buffer {
@@ -256,10 +258,10 @@ export async function createUserCard(
   input: NormalizedCardCreateInput,
   deps?: PartialDeps,
 ): Promise<AccountCardDto> {
-  const { prisma: db, loadVaultKey: keyLoader, appEnv, logger } = getDefaultDeps(deps);
+  const { prisma: db, loadVaultKey: keyLoader, logger } = getDefaultDeps(deps);
   const key = requireVaultKey(keyLoader);
   const fingerprint = makeFingerprint(input.pan, input.expMonth, input.expYear);
-  const storePanCipher = shouldStorePanCipher(appEnv);
+  const storePanCipher = shouldStorePanCipher();
   ensureValidExpiration(input.expMonth, input.expYear);
 
   return db.$transaction(async (tx) => {

@@ -40,3 +40,21 @@ export { createPaymentWithTracking, updatePaymentFromMercadoPago } from './payme
 
 // Webhooks
 export { validateWebhookSignature, processWebhook, retryFailedWebhooks } from './webhooks';
+
+// Cards & Customers
+export type {
+  CreateCustomerInput,
+  MercadoPagoCustomer,
+  CreateCardInput,
+  MercadoPagoCard,
+  CreatePaymentWithSavedCardInput,
+} from './cards';
+export {
+  createCustomer,
+  getCustomer,
+  createCard,
+  listCards,
+  deleteCard,
+  createPaymentWithSavedCard,
+  mapMercadoPagoCardBrand,
+} from './cards';

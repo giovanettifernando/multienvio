@@ -6,7 +6,7 @@
  * - Documentação: https://www.mercadopago.com.ar/developers/en/docs/checkout-api/overview
  */
 
-import { MercadoPagoConfig, Payment } from 'mercadopago';
+import { MercadoPagoConfig, Payment, CardToken } from 'mercadopago';
 import { getMercadoPagoConfig } from './config';
 import type {
   CreatePaymentInput,
@@ -32,6 +32,7 @@ async function getClient() {
     accessTokenLength: config.accessToken?.length || 0,
     accessTokenPreview: config.accessToken ? `${config.accessToken.substring(0, 15)}...` : 'VAZIO',
     sandboxMode: config.sandboxMode,
+    testToken: config.sandboxMode, // Será passado para o SDK
   });
 
   if (!config.accessToken || config.accessToken.trim().length === 0) {
@@ -42,6 +43,7 @@ async function getClient() {
     accessToken: config.accessToken,
     options: {
       timeout: 30000,
+      testToken: config.sandboxMode, // Indicar que estamos usando credenciais de teste
     },
   });
 
@@ -57,8 +59,20 @@ async function getClient() {
 export async function createPayment(
   input: CreatePaymentInput
 ): Promise<MercadoPagoPaymentResponse> {
-  const { client } = await getClient();
+  const { client, config } = await getClient();
   const payment = new Payment(client);
+
+  // Em sandbox mode, usar email de teste se configurado
+  const payerEmail = config.sandboxMode && process.env.MP_TEST_USER_EMAIL
+    ? process.env.MP_TEST_USER_EMAIL
+    : input.payer.email;
+
+  console.log('[MERCADO_PAGO] Email do payer:', {
+    original: input.payer.email,
+    usado: payerEmail,
+    sandboxMode: config.sandboxMode,
+    testEmailConfigured: !!process.env.MP_TEST_USER_EMAIL,
+  });
 
   // Montar payload para o Mercado Pago
   const paymentData: Record<string, unknown> = {
@@ -66,7 +80,7 @@ export async function createPayment(
     description: input.description || 'Pagamento Envio Legal',
     payment_method_id: input.paymentMethodId,
     payer: {
-      email: input.payer.email,
+      email: payerEmail,
       first_name: input.payer.firstName,
       last_name: input.payer.lastName,
     },
@@ -107,8 +121,25 @@ export async function createPayment(
     paymentData.external_reference = JSON.stringify(input.metadata);
   }
 
+  // Log detalhado do payload que será enviado
+  console.log('[MERCADO_PAGO] Payload completo sendo enviado:', {
+    transaction_amount: paymentData.transaction_amount,
+    description: paymentData.description,
+    payment_method_id: paymentData.payment_method_id,
+    installments: paymentData.installments,
+    token: paymentData.token ? `${String(paymentData.token).substring(0, 20)}...` : undefined,
+    payer: paymentData.payer,
+    external_reference: paymentData.external_reference,
+  });
+
   try {
+    console.log('[MERCADO_PAGO] Chamando payment.create()...');
     const response = await payment.create({ body: paymentData });
+    console.log('[MERCADO_PAGO] Pagamento criado com sucesso:', {
+      id: response.id,
+      status: response.status,
+      status_detail: response.status_detail,
+    });
     return response as unknown as MercadoPagoPaymentResponse;
   } catch (error: unknown) {
     console.error('[MERCADO_PAGO] Erro ao criar pagamento:', error);
@@ -237,4 +268,60 @@ export function processPaymentData(
     authorizedAt,
     paidAt,
   };
+}
+
+/**
+ * Cria um token de cartão usando SDK backend
+ * NOTA: Esta função deve receber dados do cartão já descriptografados
+ *
+ * @param cardData Dados do cartão para tokenização
+ * @returns Token criado
+ */
+export async function createCardToken(cardData: {
+  cardNumber: string;
+  cardholderName: string;
+  expirationMonth: string;
+  expirationYear: string;
+  securityCode: string;
+  identificationType: string;
+  identificationNumber: string;
+}): Promise<{ id: string; first_six_digits: string; last_four_digits: string }> {
+  const { client } = await getClient();
+  const cardToken = new CardToken(client);
+
+  console.log('[MERCADO_PAGO] Criando token de cartão no backend...');
+
+  try {
+    const tokenData = await cardToken.create({
+      body: {
+        card_number: cardData.cardNumber,
+        expiration_month: cardData.expirationMonth,
+        expiration_year: cardData.expirationYear,
+        security_code: cardData.securityCode,
+        cardholder: {
+          name: cardData.cardholderName,
+          identification: {
+            type: cardData.identificationType,
+            number: cardData.identificationNumber,
+          },
+        },
+      },
+    });
+
+    console.log('[MERCADO_PAGO] Token criado com sucesso:', {
+      id: tokenData.id,
+      first_six_digits: tokenData.first_six_digits,
+      last_four_digits: tokenData.last_four_digits,
+    });
+
+    return {
+      id: tokenData.id,
+      first_six_digits: tokenData.first_six_digits || '',
+      last_four_digits: tokenData.last_four_digits || '',
+    };
+  } catch (error: unknown) {
+    console.error('[MERCADO_PAGO] Erro ao criar token:', error);
+    const errorObj = error as { message?: string };
+    throw new Error(`Erro ao criar token: ${errorObj.message || 'Erro desconhecido'}`);
+  }
 }

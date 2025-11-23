@@ -63,6 +63,14 @@ export async function getMercadoPagoConfig(): Promise<MercadoPagoConfig | null> 
       const publicKey = credential.publicKey || '';
       const accessToken = credential.accessToken ? decrypt(credential.accessToken) : '';
 
+      console.log('[MERCADO_PAGO_CONFIG] Credenciais descriptografadas:', {
+        publicKey: publicKey ? `${publicKey.substring(0, 20)}...` : 'VAZIO',
+        accessToken: accessToken ? `${accessToken.substring(0, 20)}...` : 'VAZIO',
+        accessTokenLength: accessToken?.length || 0,
+        environment: gateway.environment,
+        sandboxMode: gateway.environment === 'SANDBOX',
+      });
+
       if (!publicKey || !accessToken) {
         console.warn('[MERCADO_PAGO_CONFIG] Credenciais incompletas no banco de dados');
         return getFallbackConfig();

@@ -20,18 +20,10 @@ import {
   CheckCircleOutlined,
 } from "@ant-design/icons";
 import { CardPaymentForm } from "./CardPaymentForm";
+import { SavedCardPaymentForm } from "./SavedCardPaymentForm";
+import { useCards } from "@/hooks/useAccount";
 
 const { Text } = Typography;
-
-interface Card {
-  id: string;
-  brand: string;
-  last4: string;
-  holder: string;
-  expMonth: number;
-  expYear: number;
-  isDefault?: boolean;
-}
 
 type PaymentMethod = 'pix' | 'card';
 
@@ -99,19 +91,10 @@ export function AddFundsModal({
   const [loading, setLoading] = useState(false);
   const [pixData, setPixData] = useState<MercadoPagoPaymentResult | null>(null);
   const [showCardForm, setShowCardForm] = useState(false);
+  const [useSavedCard, setUseSavedCard] = useState(true); // true = usar cartão salvo, false = novo cartão
 
-  // Buscar cartões salvos (não usado por enquanto)
-  const {
-    isLoading: isLoadingCards,
-  } = useQuery<Card[]>({
-    queryKey: ['cards'],
-    queryFn: async () => {
-      const res = await fetch('/api/cards');
-      if (!res.ok) throw new Error('Erro ao buscar cartões');
-      return res.json();
-    },
-    enabled: open,
-  });
+  // Buscar cartões salvos usando hook otimizado
+  const { data: savedCards, isLoading: isLoadingCards } = useCards();
 
   // Buscar dados do usuário para email
   const { data: user } = useQuery<{ email: string }>({
@@ -172,6 +155,7 @@ export function AddFundsModal({
     setTopUpAmount(0);
     setSelectedMethod(null);
     setShowCardForm(false);
+    setUseSavedCard(true); // Reset para cartão salvo por padrão
     onClose();
   };
 
@@ -190,39 +174,55 @@ export function AddFundsModal({
 
   // Se estiver mostrando formulário de cartão
   if (showCardForm) {
+    // Decidir qual formulário mostrar: cartão salvo ou novo cartão
+    const hasSavedCards = savedCards && savedCards.length > 0;
+    const shouldShowSavedCardForm = useSavedCard && hasSavedCards;
+
     return (
       <Modal
-        title="Pagamento com Cartão - Mercado Pago"
+        title={shouldShowSavedCardForm ? "Pagar com Cartão Salvo" : "Pagamento com Cartão - Mercado Pago"}
         open={open}
-        onCancel={() => setShowCardForm(false)}
+        onCancel={() => {
+          setShowCardForm(false);
+          setUseSavedCard(true); // Reset ao fechar
+        }}
         footer={null}
         width={700}
       >
-        <Space direction="vertical" size="large" style={{ width: '100%' }}>
-          <Alert
-            message="Pagamento Seguro"
-            description="Seus dados de cartão são processados de forma segura pelo Mercado Pago e não são armazenados em nossos servidores."
-            type="info"
-            showIcon
-          />
-
-          <div style={{ marginBottom: 16 }}>
-            <Text strong>Valor a pagar: </Text>
-            <Text style={{ fontSize: 20, color: '#52c41a' }}>
-              {formatCurrency(topUpAmount)}
-            </Text>
-          </div>
-
-          <CardPaymentForm
+        {shouldShowSavedCardForm ? (
+          <SavedCardPaymentForm
             amount={topUpAmount}
             onSuccess={handleCardSuccess}
             onError={handleCardError}
+            onUseNewCard={() => setUseSavedCard(false)} // Trocar para formulário de novo cartão
           />
+        ) : (
+          <Space direction="vertical" size="large" style={{ width: '100%' }}>
+            <div style={{ marginBottom: 16 }}>
+              <Text strong>Valor a pagar: </Text>
+              <Text style={{ fontSize: 20, color: '#52c41a' }}>
+                {formatCurrency(topUpAmount)}
+              </Text>
+            </div>
 
-          <Button onClick={() => setShowCardForm(false)} block>
-            Voltar
-          </Button>
-        </Space>
+            <CardPaymentForm
+              amount={topUpAmount}
+              onSuccess={handleCardSuccess}
+              onError={handleCardError}
+            />
+
+            <Space direction="vertical" size="small" style={{ width: '100%' }}>
+              {hasSavedCards && (
+                <Button type="link" onClick={() => setUseSavedCard(true)} block>
+                  Voltar para cartões salvos
+                </Button>
+              )}
+              <Button onClick={() => setShowCardForm(false)} block>
+                Cancelar
+              </Button>
+            </Space>
+          </Space>
+        )}
       </Modal>
     );
   }
@@ -335,14 +335,6 @@ export function AddFundsModal({
       width={600}
     >
       <Space direction="vertical" size="large" style={{ width: '100%' }}>
-        <Alert
-          message="Pagamentos via Mercado Pago"
-          description="Todas as recargas são processadas pelo gateway Mercado Pago para sua segurança."
-          type="info"
-          showIcon
-          closable
-        />
-
         {/* Campo de valor da recarga */}
         <Form.Item
           label="Valor da recarga"
@@ -372,14 +364,6 @@ export function AddFundsModal({
           />
         </Form.Item>
 
-        {/* Total a adicionar */}
-        <div>
-          <Text strong>Total a adicionar: </Text>
-          <Text style={{ fontSize: 20, color: '#52c41a' }}>
-            {formatCurrency(topUpAmount || 0)}
-          </Text>
-        </div>
-
         {/* Lista de métodos de pagamento */}
         {isLoadingCards ? (
           <div style={{ textAlign: 'center', padding: '40px 0' }}>
@@ -400,12 +384,7 @@ export function AddFundsModal({
                 <Radio value="pix" style={{ width: '100%' }}>
                   <Space>
                     <QrcodeOutlined style={{ fontSize: 20 }} />
-                    <div>
-                      <div>PIX via Mercado Pago</div>
-                      <Text type="secondary" style={{ fontSize: 12 }}>
-                        Aprovação automática após pagamento
-                      </Text>
-                    </div>
+                    <div>PIX via Mercado Pago</div>
                   </Space>
                 </Radio>
 
@@ -413,12 +392,7 @@ export function AddFundsModal({
                 <Radio value="card" style={{ width: '100%' }}>
                   <Space>
                     <CreditCardOutlined style={{ fontSize: 20 }} />
-                    <div>
-                      <div>Cartão de crédito via Mercado Pago</div>
-                      <Text type="secondary" style={{ fontSize: 12 }}>
-                        Parcelamento disponível • Aprovação instantânea
-                      </Text>
-                    </div>
+                    <div>Cartão de crédito via Mercado Pago</div>
                   </Space>
                 </Radio>
               </Space>

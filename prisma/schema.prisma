@@ -43,6 +43,7 @@ model User {
   passwordHistory        Json?
   tokenVersion           Int                  @default(0)
   defaultPostingUnitId   String?
+  mpCustomerId           String?              @unique
   addresses              Address[]
   cards                  Card[]
   carts                  Cart[]
@@ -106,6 +107,7 @@ model Card {
   billingAddressId String?
   vaultToken       String    @unique
   panCipher        String?
+  mpCardId         String?   @unique
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
   billingAddress   Address?  @relation("BillingAddress", fields: [billingAddressId], references: [id])
