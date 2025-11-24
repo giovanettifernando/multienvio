@@ -32,29 +32,10 @@ export default function CardsList() {
   const cards = cardsQuery.data ?? [];
 
   const handleSubmit = (values: CardFormValues) => {
-    const digits = values.number.replace(/\D/g, "");
-    const [monthPart = "", yearPart = ""] = values.exp.split("/");
-    const monthSanitized = monthPart.trim();
-    const yearSanitized = yearPart.trim();
-    const expMonth = Number.parseInt(monthSanitized, 10);
-    const rawYearNumber = Number.parseInt(yearSanitized, 10);
-    const expYear =
-      yearSanitized.length === 2 && Number.isInteger(rawYearNumber)
-        ? 2000 + rawYearNumber
-        : rawYearNumber;
-    const payload = {
-      holderName: values.holderName,
-      number: digits,
-      expMonth,
-      expYear,
-      cvv: values.cvv,
-      document: values.document,
-      isDefault: values.isDefault,
-    };
-
-    createMutation.mutate(payload, {
+    // CardModal retorna dados completos do cartão + token MP
+    createMutation.mutate(values, {
       onSuccess: () => {
-        message.success("Cartão adicionado.");
+        message.success("Cartão adicionado e vinculado ao Mercado Pago.");
         setShowModal(false);
       },
       onError: (error) => {

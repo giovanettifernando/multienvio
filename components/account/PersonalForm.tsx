@@ -7,12 +7,10 @@ import {
   App,
   Button,
   Card,
-  Col,
   Flex,
   Form,
   Input,
   Popconfirm,
-  Row,
   Space,
   Switch,
   Typography,
@@ -403,97 +401,89 @@ export default function PersonalForm() {
           ) : null}
 
           <Card size="small" title="Dados pessoais" bordered style={{ borderRadius: 12 }}>
-            <Row gutter={[16, 16]}>
-              <Col xs={24} md={12}>
-                <Controller
-                  name="fullName"
-                  control={form.control}
-                  render={({ field, fieldState }) => (
-                    <Form.Item
-                      label="Nome completo"
-                      required
-                      validateStatus={fieldState.error ? "error" : ""}
-                      help={fieldState.error?.message}
-                    >
-                      <Input
-                        {...field}
-                        placeholder="Nome e sobrenome"
-                        aria-invalid={fieldState.invalid}
-                      />
-                    </Form.Item>
-                  )}
-                />
-              </Col>
-              <Col xs={24} md={12}>
-                <Controller
-                  name="email"
-                  control={form.control}
-                  render={({ field, fieldState }) => (
-                    <Form.Item
-                      label="E-mail"
-                      required
-                      validateStatus={fieldState.error ? "error" : ""}
-                      help={fieldState.error?.message || "Email não pode ser alterado"}
-                    >
-                      <Input
-                        {...field}
-                        type="email"
-                        inputMode="email"
-                        placeholder="email@empresa.com"
-                        aria-invalid={fieldState.invalid}
-                        disabled
-                        readOnly
-                        onChange={(event) => field.onChange(event.target.value.toLowerCase())}
-                      />
-                    </Form.Item>
-                  )}
-                />
-              </Col>
-              <Col xs={24} md={8}>
-                <Controller
-                  name="phone"
-                  control={form.control}
-                  render={({ field, fieldState }) => (
-                    <Form.Item
-                      label="Telefone"
-                      required
-                      validateStatus={fieldState.error ? "error" : ""}
-                      help={fieldState.error?.message}
-                    >
-                      <Input
-                        {...field}
-                        inputMode="tel"
-                        placeholder="(00) 00000-0000"
-                        aria-invalid={fieldState.invalid}
-                        onChange={(event) => field.onChange(maskPhone(event.target.value))}
-                      />
-                    </Form.Item>
-                  )}
-                />
-              </Col>
-              <Col xs={24} md={8}>
-                <Controller
-                  name="cpf"
-                  control={form.control}
-                  render={({ field, fieldState }) => (
-                    <Form.Item
-                      label="CPF"
-                      required
-                      validateStatus={fieldState.error ? "error" : ""}
-                      help={fieldState.error?.message}
-                    >
-                      <Input
-                        {...field}
-                        inputMode="numeric"
-                        placeholder="000.000.000-00"
-                        aria-invalid={fieldState.invalid}
-                        onChange={(event) => field.onChange(maskCPF(event.target.value))}
-                      />
-                    </Form.Item>
-                  )}
-                />
-              </Col>
-            </Row>
+            <Space direction="vertical" size={16} style={{ width: "100%" }}>
+              <Controller
+                name="fullName"
+                control={form.control}
+                render={({ field, fieldState }) => (
+                  <Form.Item
+                    label="Nome completo"
+                    required
+                    validateStatus={fieldState.error ? "error" : ""}
+                    help={fieldState.error?.message}
+                  >
+                    <Input
+                      {...field}
+                      placeholder="Nome e sobrenome"
+                      aria-invalid={fieldState.invalid}
+                    />
+                  </Form.Item>
+                )}
+              />
+              <Controller
+                name="email"
+                control={form.control}
+                render={({ field, fieldState }) => (
+                  <Form.Item
+                    label="E-mail"
+                    required
+                    validateStatus={fieldState.error ? "error" : ""}
+                    help={fieldState.error?.message || "Email não pode ser alterado"}
+                  >
+                    <Input
+                      {...field}
+                      type="email"
+                      inputMode="email"
+                      placeholder="email@empresa.com"
+                      aria-invalid={fieldState.invalid}
+                      disabled
+                      readOnly
+                      onChange={(event) => field.onChange(event.target.value.toLowerCase())}
+                    />
+                  </Form.Item>
+                )}
+              />
+              <Controller
+                name="phone"
+                control={form.control}
+                render={({ field, fieldState }) => (
+                  <Form.Item
+                    label="Telefone"
+                    required
+                    validateStatus={fieldState.error ? "error" : ""}
+                    help={fieldState.error?.message}
+                  >
+                    <Input
+                      {...field}
+                      inputMode="tel"
+                      placeholder="(00) 00000-0000"
+                      aria-invalid={fieldState.invalid}
+                      onChange={(event) => field.onChange(maskPhone(event.target.value))}
+                    />
+                  </Form.Item>
+                )}
+              />
+              <Controller
+                name="cpf"
+                control={form.control}
+                render={({ field, fieldState }) => (
+                  <Form.Item
+                    label="CPF"
+                    required
+                    validateStatus={fieldState.error ? "error" : ""}
+                    help={fieldState.error?.message}
+                  >
+                    <Input
+                      {...field}
+                      inputMode="numeric"
+                      placeholder="000.000.000-00"
+                      aria-invalid={fieldState.invalid}
+                      onChange={(event) => field.onChange(maskCPF(event.target.value))}
+                    />
+                  </Form.Item>
+                )}
+              />
+            </Space>
           </Card>
 
           <Card
@@ -512,50 +502,46 @@ export default function PersonalForm() {
               </Flex>
 
               {hasCompany && (
-                <Row gutter={[16, 16]}>
-                  <Col xs={24} md={12}>
-                    <Controller
-                      name="cnpj"
-                      control={form.control}
-                      render={({ field, fieldState }) => (
-                        <Form.Item
-                          label="CNPJ"
-                          required
-                          validateStatus={fieldState.error ? "error" : ""}
-                          help={fieldState.error?.message}
-                        >
-                          <Input
-                            {...field}
-                            inputMode="numeric"
-                            placeholder="00.000.000/0000-00"
-                            aria-invalid={fieldState.invalid}
-                            onChange={(event) => field.onChange(maskCNPJ(event.target.value))}
-                          />
-                        </Form.Item>
-                      )}
-                    />
-                  </Col>
-                  <Col xs={24} md={12}>
-                    <Controller
-                      name="razaoSocial"
-                      control={form.control}
-                      render={({ field, fieldState }) => (
-                        <Form.Item
-                          label="Razão social"
-                          required
-                          validateStatus={fieldState.error ? "error" : ""}
-                          help={fieldState.error?.message}
-                        >
-                          <Input
-                            {...field}
-                            placeholder="Nome empresarial"
-                            aria-invalid={fieldState.invalid}
-                          />
-                        </Form.Item>
-                      )}
-                    />
-                  </Col>
-                </Row>
+                <>
+                  <Controller
+                    name="cnpj"
+                    control={form.control}
+                    render={({ field, fieldState }) => (
+                      <Form.Item
+                        label="CNPJ"
+                        required
+                        validateStatus={fieldState.error ? "error" : ""}
+                        help={fieldState.error?.message}
+                      >
+                        <Input
+                          {...field}
+                          inputMode="numeric"
+                          placeholder="00.000.000/0000-00"
+                          aria-invalid={fieldState.invalid}
+                          onChange={(event) => field.onChange(maskCNPJ(event.target.value))}
+                        />
+                      </Form.Item>
+                    )}
+                  />
+                  <Controller
+                    name="razaoSocial"
+                    control={form.control}
+                    render={({ field, fieldState }) => (
+                      <Form.Item
+                        label="Razão social"
+                        required
+                        validateStatus={fieldState.error ? "error" : ""}
+                        help={fieldState.error?.message}
+                      >
+                        <Input
+                          {...field}
+                          placeholder="Nome empresarial"
+                          aria-invalid={fieldState.invalid}
+                        />
+                      </Form.Item>
+                    )}
+                  />
+                </>
               )}
             </Space>
           </Card>

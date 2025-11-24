@@ -1,22 +1,23 @@
 "use client";
 
 import { PageShell } from "@/components/shared/PageShell";
-import { Card, Space } from "antd";
+import { Card } from "antd";
 import PersonalForm from "@/components/account/PersonalForm";
 import AccountTabs from "@/components/account/AccountTabs";
+import styles from "./page.module.css";
 
 export default function MinhaContaPage() {
   return (
     <PageShell title="Minha Conta" gap="lg">
-      <Space direction="vertical" size="large" style={{ width: "100%" }}>
-        {/* Dados Pessoais - sempre visível */}
+      <div className={styles.accountLayout}>
+        {/* Coluna Esquerda: Dados Pessoais */}
         <Card>
           <PersonalForm />
         </Card>
 
-        {/* Abas: Endereços, Cartões, Destinatários, Segurança */}
+        {/* Coluna Direita: Abas (Endereços, Cartões, Destinatários, Segurança) */}
         <AccountTabs />
-      </Space>
+      </div>
     </PageShell>
   );
 }

@@ -1,0 +1,13 @@
+.accountLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.4fr);
+  gap: 24px;
+  align-items: start;
+}
+
+/* Responsivo: stack em mobile e tablets */
+@media (max-width: 768px) {
+  .accountLayout {
+    grid-template-columns: 1fr;
+  }
+}

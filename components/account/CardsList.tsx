@@ -19,7 +19,7 @@ import {
   useCardDelete,
   useCardUpdate,
 } from "@/hooks/useAccount";
-import { CardModal, type CardFormValues } from "./CardModal";
+import { CardModal, type CardFormValues } from "@/src/components/account/CardModal";
 
 export default function CardsList() {
   const { message } = App.useApp();

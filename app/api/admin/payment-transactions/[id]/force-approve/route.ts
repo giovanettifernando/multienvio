@@ -60,12 +60,11 @@ export async function POST(
     const metadata = updated.metadata as Record<string, unknown> | null;
 
     if (metadata?.type === 'wallet_topup' && updated.userId) {
-      await walletService.creditWallet({
+      await walletService.creditFromGatewayTopup({
         userId: updated.userId,
         amountCents: updated.amountCents,
-        description: `Recarga via ${updated.method}`,
-        paymentTransactionId: updated.id,
         currency: (metadata.currency as string) || 'BRL',
+        paymentTransactionId: updated.id,
         providerPaymentId: updated.externalId || undefined,
       });
 
