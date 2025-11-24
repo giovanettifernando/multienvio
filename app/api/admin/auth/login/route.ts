@@ -4,7 +4,7 @@ export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { ZodError } from 'zod';
-import bcrypt from 'bcryptjs';
+import bcrypt from 'bcrypt';
 import { AdminLoginSchema } from '@/lib/validation/admin-auth';
 import { prisma } from '@/lib/db';
 import { adminSign, createAdminCookieHeader } from '@/lib/auth/admin-session';

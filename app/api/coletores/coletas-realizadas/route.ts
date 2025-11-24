@@ -126,6 +126,7 @@ export async function GET(request: NextRequest) {
             destinationCity: true,
             destinationState: true,
             originCep: true,
+            pickupFee: true,
           },
         },
         user: {
@@ -188,6 +189,7 @@ export async function GET(request: NextRequest) {
           destinationCity: pickup.shipment.destinationCity,
           destinationState: pickup.shipment.destinationState,
           originCep: pickup.shipment.originCep,
+          pickupFee: pickup.shipment.pickupFee,
         },
         user: {
           id: pickup.user.id,

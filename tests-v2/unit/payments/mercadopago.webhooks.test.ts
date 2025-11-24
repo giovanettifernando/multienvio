@@ -1,17 +1,18 @@
-import { describe, it, strictEqual } from 'node:test';
+import { describe, it } from 'node:test';
 import crypto from 'crypto';
-import { validateWebhookSignature } from '@/lib/mercadopago/webhooks';
-import { invalidateConfigCache } from '@/lib/mercadopago/config';
-import type { MercadoPagoWebhookPayload } from '@/lib/mercadopago';
+import { validateWebhookSignature } from '../../../lib/mercadopago/webhooks.ts';
+import { invalidateConfigCache } from '../../../lib/mercadopago/config.ts';
+import type { MercadoPagoWebhookPayload } from '../../../lib/mercadopago/index.ts';
+import assert from 'node:assert/strict';
 
 const payload: MercadoPagoWebhookPayload = {
-  id: 'evt-1',
+  id: 1,
   action: 'payment.updated',
   type: 'payment',
   data: { id: 'pay-1' },
   date_created: new Date().toISOString(),
   api_version: 'v1',
-  user_id: 'user',
+  user_id: 123,
   live_mode: false,
 };
 
@@ -32,7 +33,7 @@ describe('mercadopago webhooks - validateWebhookSignature', () => {
     };
 
     const result = await validateWebhookSignature(payload, headers);
-    strictEqual(result, true);
+    assert.strictEqual(result, true);
   });
 
   it('falha quando headers obrigatórios estão ausentes', async () => {
@@ -42,7 +43,7 @@ describe('mercadopago webhooks - validateWebhookSignature', () => {
       'x-signature': undefined,
       'x-request-id': undefined,
     });
-    strictEqual(result, false);
+    assert.strictEqual(result, false);
   });
 
   it('falha quando timestamp está expirado', async () => {
@@ -58,6 +59,6 @@ describe('mercadopago webhooks - validateWebhookSignature', () => {
     };
 
     const result = await validateWebhookSignature(payload, headers);
-    strictEqual(result, false);
+    assert.strictEqual(result, false);
   });
 });

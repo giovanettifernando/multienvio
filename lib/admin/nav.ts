@@ -3,29 +3,19 @@ import type { AdminPermissionKey } from "@/lib/auth/types";
 export interface AdminNavItem {
   key: string;
   label: string;
-  href: string;
+  href?: string;
   /** Permissões necessárias (qualquer uma delas) */
   permissions?: AdminPermissionKey[];
+  /** Subitens do menu (para criar submenus) */
+  children?: AdminNavItem[];
 }
 
 export const ADMIN_NAV: AdminNavItem[] = [
   { key: "dashboard", label: "Visão geral", href: "/admin" },
   {
-    key: "contas",
-    label: "Contas de clientes",
-    href: "/admin/contas",
-    permissions: ["CONTAS"],
-  },
-  {
     key: "financeiro",
     label: "Financeiro",
     href: "/admin/financeiro",
-    permissions: ["FINANCEIRO"],
-  },
-  {
-    key: "gateway-pagamento",
-    label: "Gateway de Pagamento",
-    href: "/admin/gateway-pagamento",
     permissions: ["FINANCEIRO"],
   },
   {
@@ -37,8 +27,20 @@ export const ADMIN_NAV: AdminNavItem[] = [
   {
     key: "integracoes",
     label: "Integrações",
-    href: "/admin/integracoes",
-    permissions: ["INTEGRACOES"],
+    children: [
+      {
+        key: "gateway-pagamento",
+        label: "Gateway de Pagamento",
+        href: "/admin/gateway-pagamento",
+        permissions: ["FINANCEIRO"],
+      },
+      {
+        key: "transportadoras",
+        label: "Transportadoras",
+        href: "/admin/integracoes",
+        permissions: ["INTEGRACOES"],
+      },
+    ],
   },
   {
     key: "suporte",
@@ -47,27 +49,45 @@ export const ADMIN_NAV: AdminNavItem[] = [
     permissions: ["SUPORTE"],
   },
   {
-    key: "coletores",
-    label: "Coletores",
-    href: "/admin/coletores",
-    permissions: ["COLETORES"],
-  },
-  {
-    key: "pontos-de-coleta",
-    label: "Pontos de Coleta",
-    href: "/admin/pontos-de-coleta",
-    permissions: ["PONTOS_COLETA"],
-  },
-  {
-    key: "usuarios",
-    label: "Usuários",
-    href: "/admin/usuarios",
-    permissions: ["USUARIOS"],
+    key: "cadastros",
+    label: "Cadastros",
+    children: [
+      {
+        key: "contas",
+        label: "Contas de clientes",
+        href: "/admin/contas",
+        permissions: ["CONTAS"],
+      },
+      {
+        key: "coletores",
+        label: "Coletores",
+        href: "/admin/coletores",
+        permissions: ["COLETORES"],
+      },
+      {
+        key: "pontos-de-coleta",
+        label: "Pontos de Coleta",
+        href: "/admin/pontos-de-coleta",
+        permissions: ["PONTOS_COLETA"],
+      },
+      {
+        key: "usuarios",
+        label: "Usuários",
+        href: "/admin/usuarios",
+        permissions: ["USUARIOS"],
+      },
+    ],
   },
   {
     key: "config",
     label: "Configurações",
-    href: "/admin/configuracoes",
-    permissions: ["CONFIGURACOES"],
+    children: [
+      {
+        key: "servidor-email",
+        label: "Servidor de e-mail",
+        href: "/admin/servidor-email",
+        permissions: ["CONFIGURACOES"],
+      },
+    ],
   },
 ];

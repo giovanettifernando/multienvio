@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') ?? '1', 10);
     const pageSize = parseInt(searchParams.get('pageSize') ?? '10', 10);
-    const status = (searchParams.get('status') ?? 'PENDING') as PickupStatus | 'all'; // Padrão: apenas PENDING
+    const statusParam = searchParams.get('status') ?? 'PENDING,SCHEDULED'; // Padrão: apenas coletas pendentes
     const dateStart = searchParams.get('dateStart');
     const dateEnd = searchParams.get('dateEnd');
     const city = searchParams.get('city');
@@ -37,9 +37,14 @@ export async function GET(request: NextRequest) {
       userId: session.userId,
     };
 
-    // Filtro por status - padrão PENDING se não especificado
-    if (status && status !== 'all') {
-      where.status = status;
+    // Filtro por status - suporta múltiplos status separados por vírgula
+    if (statusParam && statusParam !== 'all') {
+      const statuses = statusParam.split(',').map(s => s.trim()) as PickupStatus[];
+      if (statuses.length === 1) {
+        where.status = statuses[0];
+      } else {
+        where.status = { in: statuses };
+      }
     }
 
     // Filtro por cidade

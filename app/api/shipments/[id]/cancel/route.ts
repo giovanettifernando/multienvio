@@ -84,12 +84,20 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         });
       }
 
-      // Se houver pickup request associado, marcar como cancelado
+      // Se houver pickup request associado, verificar status antes de cancelar
+      // Regra: apenas cancela se ainda não foi coletada (PENDING ou SCHEDULED)
+      // Se já foi coletada (COLLECTED ou COMPLETED), mantém o fluxo para o coletor completar e receber a comissão
       if (shipment.pickupRequest) {
-        await tx.pickupRequest.update({
-          where: { id: shipment.pickupRequest.id },
-          data: { status: 'CANCELED' },
-        });
+        const pickupStatus = shipment.pickupRequest.status;
+
+        if (pickupStatus === 'PENDING' || pickupStatus === 'SCHEDULED') {
+          // Cancela a pickup pois ainda não foi coletada
+          await tx.pickupRequest.update({
+            where: { id: shipment.pickupRequest.id },
+            data: { status: 'CANCELED' },
+          });
+        }
+        // Se status for COLLECTED ou COMPLETED, não faz nada - deixa o coletor completar o trabalho
       }
     });
 

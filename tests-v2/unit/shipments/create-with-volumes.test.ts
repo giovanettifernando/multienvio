@@ -1,6 +1,7 @@
-import { describe, it, rejects, deepStrictEqual, strictEqual } from 'node:test';
-import { createShipmentWithVolumes } from '@/lib/shipments/create-with-volumes';
-import { ShipmentStatus } from '@/lib/shipments/shipment-status';
+import { describe, it } from 'node:test';
+import { createShipmentWithVolumes } from '../../../lib/shipments/create-with-volumes.ts';
+import { ShipmentStatus } from '../../../lib/shipments/shipment-status.ts';
+import assert from 'node:assert/strict';
 
 function buildTx() {
   const created: any[] = [];
@@ -48,17 +49,17 @@ describe('createShipmentWithVolumes', () => {
       ],
     });
 
-    strictEqual(shipment.weight, 3);
-    deepStrictEqual(packages.length, 2);
+    assert.strictEqual(shipment.weight, 3);
+    assert.deepStrictEqual(packages.length, 2);
   });
 
   it('falha sem volumes ou dimensões inválidas', async () => {
     const tx = buildTx();
-    await rejects(
+    await assert.rejects(
       createShipmentWithVolumes(tx as any, { shipment: {} as any, volumes: [] }),
       /pelo menos 1 volume/i
     );
-    await rejects(
+    await assert.rejects(
       createShipmentWithVolumes(tx as any, {
         shipment: {
           platformTrackingCode: 'BR123',

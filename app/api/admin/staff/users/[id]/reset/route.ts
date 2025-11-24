@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server';
 import { requireAdminUser } from '@/lib/auth/admin-helpers';
-import bcrypt from 'bcryptjs';
+import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 import { prisma } from '@/lib/db';
 import { AdminPermission } from '@prisma/client';

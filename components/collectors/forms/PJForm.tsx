@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { Controller, useFormContext } from 'react-hook-form';
-import { Form, Input, Checkbox, Space, Typography } from 'antd';
+import { Form, Input, Button, Space, Typography, message } from 'antd';
+import { CopyOutlined } from '@ant-design/icons';
 import type { CollectorFormInput } from '@/lib/collectors/types';
 import { maskCNPJ, maskCEP, unmaskDigits } from '@/lib/collectors/masks';
 
@@ -11,28 +12,31 @@ const { Text } = Typography;
 export default function PJForm() {
   const { control, watch, setValue, formState: { errors } } = useFormContext<CollectorFormInput>();
   const [cepLoading, setCepLoading] = useState(false);
-
-  const cep = watch('pj.endereco.cep');
-  const usarEnderecoFisico = watch('pj.usarEnderecoFisico');
-  const pfEndereco = watch('pf.endereco');
   const [cepResolved, setCepResolved] = useState(false);
 
-  // Copiar endereço da PF quando checkbox marcado
-  useEffect(() => {
-    if (usarEnderecoFisico && pfEndereco) {
-      setValue('pj.endereco.cep', pfEndereco.cep, { shouldValidate: false });
-      setValue('pj.endereco.logradouro', pfEndereco.logradouro, { shouldValidate: false });
-      setValue('pj.endereco.numero', pfEndereco.numero, { shouldValidate: false });
-      setValue('pj.endereco.complemento', pfEndereco.complemento, { shouldValidate: false });
-      setValue('pj.endereco.bairro', pfEndereco.bairro, { shouldValidate: false });
-      setValue('pj.endereco.cidade', pfEndereco.cidade, { shouldValidate: false });
-      setValue('pj.endereco.uf', pfEndereco.uf, { shouldValidate: false });
-    }
-  }, [usarEnderecoFisico, pfEndereco, setValue]);
+  const cep = watch('pj.endereco.cep');
+  const pfEndereco = watch('pf.endereco');
 
-  // Buscar CEP quando válido (apenas se não estiver usando endereço da PF)
+  // Função para copiar endereço da PF para PJ
+  const handleCopyPfAddress = () => {
+    if (!pfEndereco || !pfEndereco.cep) {
+      message.warning('Preencha o endereço da Pessoa Física primeiro');
+      return;
+    }
+
+    setValue('pj.endereco.cep', pfEndereco.cep, { shouldValidate: false });
+    setValue('pj.endereco.logradouro', pfEndereco.logradouro, { shouldValidate: false });
+    setValue('pj.endereco.numero', pfEndereco.numero, { shouldValidate: false });
+    setValue('pj.endereco.complemento', pfEndereco.complemento, { shouldValidate: false });
+    setValue('pj.endereco.bairro', pfEndereco.bairro, { shouldValidate: false });
+    setValue('pj.endereco.cidade', pfEndereco.cidade, { shouldValidate: false });
+    setValue('pj.endereco.uf', pfEndereco.uf, { shouldValidate: false });
+
+    message.success('Endereço copiado da Pessoa Física');
+  };
+
+  // Buscar CEP quando válido
   useEffect(() => {
-    if (usarEnderecoFisico) return;
 
     const fetchCep = async () => {
       if (!cep) {
@@ -69,7 +73,7 @@ export default function PJForm() {
 
     const timer = setTimeout(fetchCep, 500);
     return () => clearTimeout(timer);
-  }, [cep, setValue, usarEnderecoFisico]);
+  }, [cep, setValue]);
 
   return (
     <Space direction="vertical" style={{ width: '100%' }} size={16}>
@@ -110,27 +114,18 @@ export default function PJForm() {
         />
       </Form.Item>
 
-      <Typography.Title level={5} style={{ marginTop: 16, marginBottom: 8 }}>
-        Endereço
-      </Typography.Title>
-
-      <Form.Item
-        validateStatus={errors.pj?.usarEnderecoFisico ? 'error' : ''}
-        help={errors.pj?.usarEnderecoFisico?.message}
-      >
-        <Controller
-          name="pj.usarEnderecoFisico"
-          control={control}
-          render={({ field }) => (
-            <Checkbox
-              checked={field.value}
-              onChange={(e) => field.onChange(e.target.checked)}
-            >
-              Usar mesmo endereço da Pessoa Física
-            </Checkbox>
-          )}
-        />
-      </Form.Item>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 16, marginBottom: 8 }}>
+        <Typography.Title level={5} style={{ margin: 0 }}>
+          Endereço
+        </Typography.Title>
+        <Button
+          icon={<CopyOutlined />}
+          onClick={handleCopyPfAddress}
+          size="small"
+        >
+          Aplicar mesmo endereço de PF
+        </Button>
+      </div>
 
       <Form.Item
         label="CEP"
@@ -148,7 +143,6 @@ export default function PJForm() {
               placeholder="00000-000"
               style={{ width: 160 }}
               maxLength={9}
-              disabled={usarEnderecoFisico}
             />
           )}
         />
@@ -166,7 +160,7 @@ export default function PJForm() {
             <Input
               {...field}
               value={field.value || ''}
-              disabled={usarEnderecoFisico || cepResolved}
+              disabled={cepResolved}
               placeholder="Rua, Avenida..."
             />
           )}
@@ -188,7 +182,6 @@ export default function PJForm() {
                 value={field.value || ''}
                 placeholder="123"
                 style={{ width: 100 }}
-                disabled={usarEnderecoFisico}
               />
             )}
           />
@@ -208,7 +201,6 @@ export default function PJForm() {
                 value={field.value || ''}
                 placeholder="Sala, Andar..."
                 style={{ width: 200 }}
-                disabled={usarEnderecoFisico}
               />
             )}
           />
@@ -227,7 +219,7 @@ export default function PJForm() {
             <Input
               {...field}
               value={field.value || ''}
-              disabled={usarEnderecoFisico || cepResolved}
+              disabled={cepResolved}
               placeholder="Bairro"
             />
           )}
@@ -247,7 +239,7 @@ export default function PJForm() {
               <Input
                 {...field}
                 value={field.value || ''}
-                disabled={usarEnderecoFisico || cepResolved}
+                disabled={cepResolved}
                 placeholder="Cidade"
                 style={{ width: 200 }}
               />
@@ -267,7 +259,7 @@ export default function PJForm() {
               <Input
                 {...field}
                 value={field.value || ''}
-                disabled={usarEnderecoFisico || cepResolved}
+                disabled={cepResolved}
                 placeholder="SP"
                 maxLength={2}
                 style={{ width: 80 }}
@@ -278,14 +270,9 @@ export default function PJForm() {
         </Form.Item>
       </Space>
 
-      {!usarEnderecoFisico && cepResolved && (
+      {cepResolved && (
         <Text type="secondary" style={{ fontSize: 12 }}>
           Edite apenas número e complemento
-        </Text>
-      )}
-      {usarEnderecoFisico && (
-        <Text type="secondary" style={{ fontSize: 12 }}>
-          Endereço copiado da Pessoa Física
         </Text>
       )}
     </Space>

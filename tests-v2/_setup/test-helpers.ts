@@ -1,7 +1,9 @@
 import { mock } from 'node:test';
 
 // Ensure consistent test env
-process.env.NODE_ENV = process.env.NODE_ENV || 'test';
+if (!process.env.NODE_ENV) {
+  (process.env as { NODE_ENV?: string }).NODE_ENV = 'test';
+}
 
 export function resetAllMocks() {
   mock.restoreAll();

@@ -1,5 +1,5 @@
 import { randomUUID } from 'crypto';
-import type { PaymentTransactionStatus, WalletTxStatus, WalletTxType, QuoteStatus, CartStatus, ShipmentStatus } from '@prisma/client';
+import type { TransactionStatus, WalletTxStatus, WalletTxType, QuoteStatus } from '@prisma/client';
 
 export function fakeUser(overrides: Partial<{ id: string; email: string; role: string }> = {}) {
   return {
@@ -18,7 +18,7 @@ export function fakePaymentTransaction(overrides: Partial<Record<string, unknown
     externalId: overrides.externalId ?? null,
     userId: overrides.userId as string | undefined,
     method: overrides.method ?? 'PIX',
-    status: (overrides.status as PaymentTransactionStatus) ?? 'PENDING',
+    status: (overrides.status as TransactionStatus) ?? 'PENDING',
     amountCents: overrides.amountCents ?? 1000,
     feeCents: overrides.feeCents ?? 0,
     netCents: overrides.netCents ?? 1000,
@@ -72,7 +72,7 @@ export function fakeCart(overrides: Partial<Record<string, unknown>> = {}) {
   return {
     id: overrides.id ?? randomUUID(),
     userId: overrides.userId ?? randomUUID(),
-    status: (overrides.status as CartStatus) ?? 'OPEN',
+    status: (overrides.status as string) ?? 'OPEN',
     totals: overrides.totals ?? { total: 0, moeda: 'BRL' },
     meta: overrides.meta ?? {},
     items: overrides.items ?? [],
@@ -86,7 +86,7 @@ export function fakeShipment(overrides: Partial<Record<string, unknown>> = {}) {
     id: overrides.id ?? randomUUID(),
     senderId: overrides.senderId ?? randomUUID(),
     platformTrackingCode: overrides.platformTrackingCode ?? `BR${Date.now()}`,
-    status: (overrides.status as ShipmentStatus) ?? 'awaiting_drop_off_at_point',
+    status: (overrides.status as string) ?? 'awaiting_drop_off_at_point',
     createdAt: overrides.createdAt ?? new Date(),
     updatedAt: overrides.updatedAt ?? new Date(),
     paymentMethod: overrides.paymentMethod ?? null,

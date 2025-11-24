@@ -75,7 +75,7 @@ interface SchedulePickupData {
 }
 
 async function fetchPickups(page: number, pageSize: number): Promise<PickupsResponse> {
-  const response = await fetch(`/api/coletores/coletas?page=${page}&pageSize=${pageSize}&status=PENDING`);
+  const response = await fetch(`/api/coletores/coletas?page=${page}&pageSize=${pageSize}`);
   if (!response.ok) {
     throw new Error('Erro ao carregar coletas');
   }

@@ -48,7 +48,7 @@ const STATUS_LABELS: Record<PickupStatus, string> = {
 
 export default function ColetasPage() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [status, setStatus] = useState<PickupStatus | "all">("PENDING"); // Padrão: apenas pendentes
+  const [status, setStatus] = useState<PickupStatus | "all">("all"); // Padrão: usar padrão do backend (PENDING+SCHEDULED)
   const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null]>([null, null]);
 
   // Fetch pickups with filters
@@ -133,7 +133,7 @@ export default function ColetasPage() {
   ];
 
   return (
-    <PageShell title="Minhas Coletas Pendentes" gap="md">
+    <PageShell title="Gerenciar Coletas" gap="md">
       <Card>
         <Space direction="vertical" size={16} style={{ width: "100%" }}>
           <Space wrap>

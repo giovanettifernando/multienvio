@@ -78,11 +78,11 @@ export async function POST(
 
     // Atualizar pickup request e shipment status em uma transação
     const result = await prisma.$transaction(async (tx) => {
-      // 1. Atualizar PickupRequest como COMPLETED
+      // 1. Atualizar PickupRequest como COLLECTED (aguardando entrega na transportadora)
       const updatedPickupRequest = await tx.pickupRequest.update({
         where: { id },
         data: {
-          status: 'COMPLETED',
+          status: 'COLLECTED',
           collectedAt: now,
           collectedBy: collectedBy.trim(),
           scannedCode: scannedCode.trim(),

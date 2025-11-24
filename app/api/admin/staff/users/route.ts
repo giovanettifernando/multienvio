@@ -6,7 +6,7 @@ import { requireAdminUser } from '@/lib/auth/admin-helpers';
 import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { AdminPermission, Prisma, StaffStatus } from '@prisma/client';
-import bcrypt from 'bcryptjs';
+import bcrypt from 'bcrypt';
 import crypto from 'node:crypto';
 
 async function resolveRoleId(isSuperAdmin: boolean): Promise<string | null> {

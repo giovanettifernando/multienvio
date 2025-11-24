@@ -1,5 +1,6 @@
-import { describe, it, strictEqual, ok } from 'node:test';
-import { pickupPointSchema, filtersSchema } from '@/lib/pickup/schemas';
+import { describe, it } from 'node:test';
+import { pickupPointSchema, filtersSchema } from '../../../lib/pickup/schemas.ts';
+import assert from 'node:assert/strict';
 
 describe('pickup schemas', () => {
   it('aceita configuração válida de pickup point com PIX', () => {
@@ -12,7 +13,7 @@ describe('pickup schemas', () => {
       cidade: 'São Paulo',
       uf: 'SP',
     });
-    strictEqual(parsed.paymentMethod.kind, 'pix');
+    assert.strictEqual(parsed.paymentMethod.kind, 'pix');
   });
 
   it('rejeita CEP sem cidade', () => {
@@ -29,13 +30,13 @@ describe('pickup schemas', () => {
     } catch (e) {
       error = e;
     }
-    ok(error instanceof Error);
+    assert.ok(error instanceof Error);
   });
 
   it('normaliza filtros com defaults', () => {
     const parsed = filtersSchema.parse({});
-    strictEqual(parsed.page, 1);
-    strictEqual(parsed.pageSize, 10);
-    strictEqual(parsed.sort, 'updated_desc');
+    assert.strictEqual(parsed.page, 1);
+    assert.strictEqual(parsed.pageSize, 10);
+    assert.strictEqual(parsed.sort, 'updated_desc');
   });
 });

@@ -22,21 +22,26 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') ?? '1', 10);
     const pageSize = parseInt(searchParams.get('pageSize') ?? '20', 10);
-    const status = searchParams.get('status') ?? 'PENDING';
+    const statusParam = searchParams.get('status') ?? 'PENDING,SCHEDULED';
 
-    console.log('[COLETORES_COLETAS] Query params:', { page, pageSize, status });
+    console.log('[COLETORES_COLETAS] Query params:', { page, pageSize, status: statusParam });
 
     // Construir filtros
     const where: {
       collectorId: string;
-      status?: string;
+      status?: string | { in: string[] };
     } = {
       collectorId: session.coletorId,
     };
 
-    // Filtro por status - apenas pendentes por padrão
-    if (status && status !== 'all') {
-      where.status = status;
+    // Filtro por status - suporta múltiplos status separados por vírgula
+    if (statusParam && statusParam !== 'all') {
+      const statuses = statusParam.split(',').map(s => s.trim());
+      if (statuses.length === 1) {
+        where.status = statuses[0];
+      } else {
+        where.status = { in: statuses };
+      }
     }
 
     console.log('[COLETORES_COLETAS] WHERE filter:', where);

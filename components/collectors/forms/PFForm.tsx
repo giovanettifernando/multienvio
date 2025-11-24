@@ -121,44 +121,6 @@ export default function PFForm() {
         />
       </Form.Item>
 
-      <Form.Item
-        label="Senha"
-        validateStatus={errors.pf?.password ? 'error' : ''}
-        help={errors.pf?.password?.message || 'Mínimo 8 caracteres (apenas para cadastro público)'}
-      >
-        <Controller
-          name="pf.password"
-          control={control}
-          render={({ field }) => (
-            <Input.Password
-              {...field}
-              value={field.value || ''}
-              placeholder="Mínimo 8 caracteres"
-              autoComplete="new-password"
-            />
-          )}
-        />
-      </Form.Item>
-
-      <Form.Item
-        label="Confirmar senha"
-        validateStatus={errors.pf?.confirmPassword ? 'error' : ''}
-        help={errors.pf?.confirmPassword?.message}
-      >
-        <Controller
-          name="pf.confirmPassword"
-          control={control}
-          render={({ field }) => (
-            <Input.Password
-              {...field}
-              value={field.value || ''}
-              placeholder="Repita a senha"
-              autoComplete="new-password"
-            />
-          )}
-        />
-      </Form.Item>
-
       <Typography.Title level={5} style={{ marginTop: 16, marginBottom: 8 }}>
         CNH
       </Typography.Title>

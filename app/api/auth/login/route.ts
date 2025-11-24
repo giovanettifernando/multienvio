@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ZodError } from 'zod';
-import bcrypt from 'bcryptjs';
+import bcrypt from 'bcrypt';
 import { LoginSchema } from '@/lib/validation/auth';
 import { prisma } from '@/lib/db';
 import { createSession } from '@/lib/auth/session';

@@ -22,12 +22,36 @@ export default function AdminLayout({
   const [isChecking, setIsChecking] = useState(true);
 
   const currentNavItem = useMemo(() => {
-    return ADMIN_NAV.find((item) => {
+    // Procurar no nível principal
+    let found = ADMIN_NAV.find((item) => {
       if (item.href === "/admin") {
         return pathname === "/admin";
       }
-      return pathname.startsWith(item.href);
+      if (item.href) {
+        return pathname.startsWith(item.href);
+      }
+      return false;
     });
+
+    // Se não encontrou, procurar nos children
+    if (!found) {
+      for (const item of ADMIN_NAV) {
+        if (item.children) {
+          found = item.children.find((child) => {
+            if (child.href === "/admin") {
+              return pathname === "/admin";
+            }
+            if (child.href) {
+              return pathname.startsWith(child.href);
+            }
+            return false;
+          });
+          if (found) break;
+        }
+      }
+    }
+
+    return found;
   }, [pathname]);
 
   // Check authentication on mount and when pathname changes
@@ -77,34 +101,112 @@ export default function AdminLayout({
 
   // Filter nav items based on permissions
   const authorizedNav = useMemo(() => {
-    return ADMIN_NAV.filter((item) => {
-      if (!item.permissions) return true;
-      if (!admin) return false;
+    return ADMIN_NAV.map((item) => {
+      // Se tem children, filtrar os children baseado em permissões
+      if (item.children) {
+        const authorizedChildren = item.children.filter((child) => {
+          if (!child.permissions) return true;
+          if (!admin) return false;
+          if (isSuperAdmin()) return true;
+          return child.permissions.some((perm) => hasPermission(perm));
+        });
 
-      // Admin role has access to everything
-      if (isSuperAdmin()) return true;
+        // Se não tem children autorizados, não mostrar o grupo
+        if (authorizedChildren.length === 0) return null;
 
-      // Check if user has any of the required permissions
-      return item.permissions.some((perm) => hasPermission(perm));
-    });
+        return { ...item, children: authorizedChildren };
+      }
+
+      // Verificar permissões do item principal
+      if (!item.permissions) return item;
+      if (!admin) return null;
+      if (isSuperAdmin()) return item;
+      return item.permissions.some((perm) => hasPermission(perm)) ? item : null;
+    }).filter((item) => item !== null);
   }, [admin, hasPermission, isSuperAdmin]);
 
   const menuItems = useMemo(
     () =>
-      authorizedNav.map((item) => ({
-        key: item.key,
-        label: <Link href={item.href}>{item.label}</Link>,
-      })),
+      authorizedNav.map((item) => {
+        // Se tem children, criar submenu
+        if (item.children) {
+          return {
+            key: item.key,
+            label: item.label,
+            children: item.children.map((child) => ({
+              key: child.key,
+              label: <Link href={child.href!}>{child.label}</Link>,
+            })),
+          };
+        }
+
+        // Item simples
+        return {
+          key: item.key,
+          label: <Link href={item.href!}>{item.label}</Link>,
+        };
+      }),
     [authorizedNav],
   );
 
-  const selectedKey =
-    authorizedNav.find((item) => {
+  // Encontrar a key selecionada (pode estar no nível principal ou nos children)
+  const selectedKey = useMemo(() => {
+    // Procurar no nível principal
+    let found = authorizedNav.find((item) => {
       if (item.href === "/admin") {
         return pathname === "/admin";
       }
-      return pathname.startsWith(item.href);
-    })?.key ?? (pathname === "/admin" ? "dashboard" : undefined);
+      if (item.href) {
+        return pathname.startsWith(item.href);
+      }
+      return false;
+    });
+
+    if (found) return found.key;
+
+    // Procurar nos children
+    for (const item of authorizedNav) {
+      if (item.children) {
+        found = item.children.find((child) => {
+          if (child.href === "/admin") {
+            return pathname === "/admin";
+          }
+          if (child.href) {
+            return pathname.startsWith(child.href);
+          }
+          return false;
+        });
+        if (found) return found.key;
+      }
+    }
+
+    return pathname === "/admin" ? "dashboard" : undefined;
+  }, [authorizedNav, pathname]);
+
+  // Manter o submenu aberto se algum de seus itens estiver ativo
+  const defaultOpenKeys = useMemo(() => {
+    const openKeys: string[] = [];
+
+    for (const item of authorizedNav) {
+      if (item.children) {
+        const hasActiveChild = item.children.some((child) => {
+          if (child.href === "/admin") {
+            return pathname === "/admin";
+          }
+          if (child.href) {
+            return pathname.startsWith(child.href);
+          }
+          return false;
+        });
+
+        if (hasActiveChild) {
+          openKeys.push(item.key);
+        }
+      }
+    }
+
+    return openKeys;
+  }, [authorizedNav, pathname]);
 
   if (pathname === "/admin/login") {
     return children;
@@ -164,6 +266,7 @@ export default function AdminLayout({
         <Menu
           mode="inline"
           selectedKeys={selectedKey ? [selectedKey] : []}
+          defaultOpenKeys={defaultOpenKeys}
           items={menuItems}
           style={{ borderRight: 0 }}
         />

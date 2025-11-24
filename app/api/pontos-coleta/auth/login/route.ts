@@ -5,7 +5,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { collectorSign, createCollectorCookieHeader } from '@/lib/auth/collector-session';
-import bcrypt from 'bcryptjs';
+import bcrypt from 'bcrypt';
 
 const loginSchema = z.object({
   cnpj: z.string().min(14).max(14), // CNPJ apenas números

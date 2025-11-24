@@ -1,5 +1,6 @@
-import { describe, it, strictEqual, ok } from 'node:test';
-import { addCartItemSchema, updateCartItemSchema, checkoutCartSchema } from '@/lib/validation/cart';
+import { describe, it } from 'node:test';
+import assert from 'node:assert/strict';
+import { addCartItemSchema, updateCartItemSchema, checkoutCartSchema } from '../../../lib/validation/cart.ts';
 
 const basePayload = {
   originAddress: {
@@ -29,7 +30,7 @@ const basePayload = {
 describe('cart validation schemas', () => {
   it('aceita payload mínimo válido para adicionar item', () => {
     const parsed = addCartItemSchema.parse(basePayload);
-    strictEqual(parsed.totals.total, 10);
+    assert.strictEqual(parsed.totals.total, 10);
   });
 
   it('recusa payload inválido (volume faltando peso)', () => {
@@ -42,12 +43,12 @@ describe('cart validation schemas', () => {
     } catch (e) {
       error = e as Error;
     }
-    ok(error instanceof Error);
+    assert.ok(error instanceof Error);
   });
 
   it('checkoutCartSchema aceita lista opcional de items', () => {
     const parsed = checkoutCartSchema.parse({ itemIds: ['1', '2'], paymentMethod: 'wallet' });
-    strictEqual(parsed.itemIds?.length, 2);
+    assert.strictEqual(parsed.itemIds?.length, 2);
   });
 
   it('updateCartItemSchema permite campos parciais', () => {
@@ -55,6 +56,6 @@ describe('cart validation schemas', () => {
       destination: { ...basePayload.destination, numero: '999' },
       totals: { total: 20, moeda: 'BRL' },
     });
-    strictEqual(parsed.totals?.total, 20);
+    assert.strictEqual(parsed.totals?.total, 20);
   });
 });

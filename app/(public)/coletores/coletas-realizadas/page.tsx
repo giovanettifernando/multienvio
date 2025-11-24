@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Card, Empty, Table, Tag, Space, Spin, App, DatePicker, Input, Row, Col, Typography } from 'antd';
-import { EnvironmentOutlined, InboxOutlined, PhoneOutlined, SearchOutlined } from '@ant-design/icons';
+import { Card, Empty, Table, Tag, Space, Spin, App, DatePicker, Input, Row, Col, Typography, Button, Modal, Form } from 'antd';
+import { EnvironmentOutlined, InboxOutlined, PhoneOutlined, SearchOutlined, CheckCircleOutlined } from '@ant-design/icons';
+import type { TableRowSelection } from 'antd/es/table/interface';
 import dayjs, { Dayjs } from 'dayjs';
 import { PageShell } from '@/components/shared/PageShell';
 import { useQuery } from '@tanstack/react-query';
@@ -43,6 +44,7 @@ interface CompletedPickup {
     destinationCity: string;
     destinationState: string;
     originCep: string;
+    pickupFee: number | null;
   };
   user: {
     name: string;
@@ -235,6 +237,10 @@ export default function ColetasRealizadasPage() {
   const [searchInput, setSearchInput] = useState(''); // Input controlado
   const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
   const [isMobile, setIsMobile] = useState(false);
+  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [form] = Form.useForm();
   const pageSize = 20;
 
   // Detectar mobile
@@ -274,6 +280,73 @@ export default function ColetasRealizadasPage() {
   const handleDateRangeChange = (dates: [Dayjs | null, Dayjs | null] | null) => {
     setDateRange(dates);
     setPage(1); // Resetar para página 1 ao mudar período
+  };
+
+  const handleOpenModal = () => {
+    if (selectedRowKeys.length === 0) {
+      message.warning('Selecione pelo menos uma coleta para registrar a entrega');
+      return;
+    }
+
+    // Verificar se todas as coletas selecionadas estão com status AGUARDANDO_ENTREGA
+    const selectedPickups = data?.items.filter((item) => selectedRowKeys.includes(item.id)) ?? [];
+    const invalidPickup = selectedPickups.find((p) => p.derivedStatus !== 'AGUARDANDO_ENTREGA');
+
+    if (invalidPickup) {
+      message.error(`A coleta ${invalidPickup.shipment.trackingCode} não está aguardando entrega na transportadora`);
+      return;
+    }
+
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    form.resetFields();
+  };
+
+  const handleSubmitDelivery = async (values: { carrierRecipient: string; carrierUnit: string }) => {
+    setIsSubmitting(true);
+    try {
+      const response = await fetch('/api/coletores/coletas-realizadas/entregar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          pickupIds: selectedRowKeys,
+          carrierRecipient: values.carrierRecipient,
+          carrierUnit: values.carrierUnit,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Erro ao registrar entrega');
+      }
+
+      const result = await response.json();
+      message.success(result.message || 'Entrega registrada com sucesso!');
+
+      // Limpar seleção e fechar modal
+      setSelectedRowKeys([]);
+      handleCloseModal();
+
+      // Recarregar dados
+      window.location.reload();
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : 'Erro ao registrar entrega');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const rowSelection: TableRowSelection<CompletedPickup> = {
+    selectedRowKeys,
+    onChange: (newSelectedRowKeys) => {
+      setSelectedRowKeys(newSelectedRowKeys);
+    },
+    getCheckboxProps: (record) => ({
+      disabled: record.derivedStatus !== 'AGUARDANDO_ENTREGA',
+    }),
   };
 
   const columns: ColumnsType<CompletedPickup> = [
@@ -374,6 +447,18 @@ export default function ColetasRealizadasPage() {
         collectedAt ? dayjs(collectedAt).format('DD/MM/YYYY HH:mm') : 'N/A',
     },
     {
+      title: 'Comissão',
+      key: 'commission',
+      width: 120,
+      render: (_, record: CompletedPickup) => {
+        // Exibir comissão apenas se status for CONCLUIDA (entregue na transportadora)
+        if (record.derivedStatus === 'CONCLUIDA' && record.shipment.pickupFee) {
+          return `R$ ${record.shipment.pickupFee.toFixed(2)}`;
+        }
+        return <span style={{ color: '#8c8c8c' }}>-</span>;
+      },
+    },
+    {
       title: 'Status',
       dataIndex: 'derivedStatus',
       key: 'derivedStatus',
@@ -389,11 +474,21 @@ export default function ColetasRealizadasPage() {
       {/* Filtros */}
       <Card style={{ marginBottom: 16 }}>
         <Space direction="vertical" size="middle" style={{ width: '100%' }}>
-          {/* Totalizador */}
-          <div>
+          {/* Totalizador e Botão de Entrega */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
             <Title level={5} style={{ margin: 0 }}>
               Total: {data?.total ?? 0} coletas
             </Title>
+            {!isMobile && (
+              <Button
+                type="primary"
+                icon={<CheckCircleOutlined />}
+                onClick={handleOpenModal}
+                disabled={selectedRowKeys.length === 0 || isLoading}
+              >
+                Registrar entrega na transportadora ({selectedRowKeys.length})
+              </Button>
+            )}
           </div>
 
           {/* Filtros em linha ou empilhados */}
@@ -512,6 +607,7 @@ export default function ColetasRealizadasPage() {
                 columns={columns}
                 dataSource={data.items}
                 rowKey="id"
+                rowSelection={rowSelection}
                 pagination={{
                   current: page,
                   pageSize,
@@ -521,13 +617,59 @@ export default function ColetasRealizadasPage() {
                   responsive: true,
                   showSizeChanger: false,
                 }}
-                scroll={{ x: 1200 }}
+                scroll={{ x: 1300 }}
                 size="middle"
               />
             </Card>
           )}
         </>
       )}
+
+      {/* Modal de Registro de Entrega */}
+      <Modal
+        title="Registrar entrega na transportadora"
+        open={isModalOpen}
+        onCancel={handleCloseModal}
+        footer={null}
+        width={500}
+      >
+        <Form
+          form={form}
+          layout="vertical"
+          onFinish={handleSubmitDelivery}
+        >
+          <p style={{ marginBottom: 16, color: '#8c8c8c' }}>
+            {selectedRowKeys.length} coleta(s) selecionada(s)
+          </p>
+
+          <Form.Item
+            label="Nome de quem recebeu"
+            name="carrierRecipient"
+            rules={[{ required: true, message: 'Por favor, informe quem recebeu' }]}
+          >
+            <Input placeholder="Ex: João Silva" />
+          </Form.Item>
+
+          <Form.Item
+            label="Unidade da transportadora"
+            name="carrierUnit"
+            rules={[{ required: true, message: 'Por favor, informe a unidade' }]}
+          >
+            <Input placeholder="Ex: CD São Paulo - Zona Sul" />
+          </Form.Item>
+
+          <Form.Item style={{ marginBottom: 0, marginTop: 24 }}>
+            <Space style={{ width: '100%', justifyContent: 'flex-end' }}>
+              <Button onClick={handleCloseModal} disabled={isSubmitting}>
+                Cancelar
+              </Button>
+              <Button type="primary" htmlType="submit" loading={isSubmitting}>
+                Confirmar entrega
+              </Button>
+            </Space>
+          </Form.Item>
+        </Form>
+      </Modal>
     </PageShell>
   );
 }

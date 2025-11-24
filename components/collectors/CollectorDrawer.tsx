@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Drawer, Tabs, Button, Space, Spin, message } from 'antd';
+import { Drawer, Tabs, Button, Space, Spin, message, Modal } from 'antd';
+import { MailOutlined } from '@ant-design/icons';
 import type { UploadFile } from 'antd/es/upload/interface';
 import { useForm, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -93,6 +94,7 @@ export default function CollectorDrawer({
   const [cnhFiles, setCnhFiles] = useState<UploadFile[]>([]);
   const [crlvFiles, setCrlvFiles] = useState<UploadFile[]>([]);
   const [addressProofFiles, setAddressProofFiles] = useState<UploadFile[]>([]);
+  const [sendingPasswordReset, setSendingPasswordReset] = useState(false);
 
   const resolver = useMemo(() => zodResolver(collectorFormSchema), []);
 
@@ -249,6 +251,37 @@ export default function CollectorDrawer({
     }
   };
 
+  const handlePasswordReset = async () => {
+    if (!editCollector) return;
+
+    Modal.confirm({
+      title: 'Redefinir senha do coletor',
+      content: `Será enviado um email para ${editCollector.pf.email} com instruções para redefinição de senha. Deseja continuar?`,
+      okText: 'Enviar email',
+      cancelText: 'Cancelar',
+      onOk: async () => {
+        setSendingPasswordReset(true);
+        try {
+          const res = await fetch(`/api/admin/coletores/${editCollector.id}/reset-password`, {
+            method: 'POST',
+            credentials: 'include',
+          });
+
+          if (!res.ok) {
+            const data = await res.json();
+            throw new Error(data.message || 'Erro ao enviar email de redefinição');
+          }
+
+          message.success('Email de redefinição de senha enviado com sucesso!');
+        } catch (error) {
+          message.error(error instanceof Error ? error.message : 'Erro ao enviar email de redefinição');
+        } finally {
+          setSendingPasswordReset(false);
+        }
+      },
+    });
+  };
+
   const tabItems = useMemo(
     () => [
       {
@@ -298,14 +331,26 @@ export default function CollectorDrawer({
       open={open}
       destroyOnClose={false}
       footer={
-        <Space style={{ float: 'right' }}>
-          <Button onClick={onClose} disabled={loading}>
-            Cancelar
-          </Button>
-          <Button type="primary" onClick={handleSave} loading={loading}>
-            {editCollector ? 'Salvar alterações' : 'Criar coletor'}
-          </Button>
-        </Space>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          {editCollector && (
+            <Button
+              icon={<MailOutlined />}
+              onClick={handlePasswordReset}
+              loading={sendingPasswordReset}
+              disabled={loading}
+            >
+              Redefinir senha
+            </Button>
+          )}
+          <Space style={{ marginLeft: 'auto' }}>
+            <Button onClick={onClose} disabled={loading}>
+              Cancelar
+            </Button>
+            <Button type="primary" onClick={handleSave} loading={loading}>
+              {editCollector ? 'Salvar alterações' : 'Criar coletor'}
+            </Button>
+          </Space>
+        </div>
       }
     >
       <FormProvider {...formMethods}>

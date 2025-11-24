@@ -206,6 +206,7 @@ model Shipment {
   destinationCep          String
   estimatedDays           Int?
   freightCost             Float?
+  pickupFee               Float?          // Taxa de coleta (comissão do coletor)
   pickupPointId           String?
   document                Json?
   paymentMethod           String?
@@ -303,11 +304,14 @@ model PickupRequest {
   originUf          String?    @db.VarChar(2)
   windowStart       DateTime?  // Início da janela de coleta
   windowEnd         DateTime?  // Fim da janela de coleta
-  status            String     @default("PENDING") // PENDING, SCHEDULED, FAILED, CANCELED, COMPLETED
+  status            String     @default("PENDING") // PENDING, SCHEDULED, COLLECTED, FAILED, CANCELED, COMPLETED
   notes             String?    @db.Text
   collectedAt       DateTime?  // Data/hora em que a coleta foi realizada
   collectedBy       String?    // Nome de quem entregou os volumes
   scannedCode       String?    // Código de rastreio lido/digitado pelo coletor
+  deliveredToCarrierAt DateTime? // Data/hora em que foi entregue na transportadora
+  carrierRecipient  String?    // Nome de quem recebeu na transportadora
+  carrierUnit       String?    // Unidade da transportadora onde foi entregue
   scheduleAt        DateTime?  // Data/hora agendada pelo coletor para realizar a coleta
   attemptCount      Int        @default(0) // Contador de tentativas de coleta
   attemptNotes      Json?      // Histórico de tentativas com data/hora e observações
