@@ -1,5 +1,5 @@
 import { ApiError } from "../api/errors";
-import prisma from "../db";
+import { prisma } from "../db";
 import type { RequestLogger } from "../api/types";
 import type {
   NormalizedRecipientCreateInput,

@@ -1,7 +1,7 @@
 import { randomUUID } from "crypto";
 import type { Card, Prisma, PrismaClient } from "@prisma/client";
 import { ApiError } from "../api/errors";
-import prisma from "../db";
+import { prisma } from "../db";
 import {
   decryptPan,
   encryptPan,

@@ -5,7 +5,7 @@
  * Todas as operações com valores monetários usam centavos internamente.
  */
 
-import prisma from '@/lib/db';
+import { prisma } from '@/lib/db';
 import { WalletTxType, WalletTxStatus } from '@prisma/client';
 
 export interface WalletBalance {

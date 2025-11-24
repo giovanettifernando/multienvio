@@ -52,7 +52,7 @@ export async function verify(token: string, validateTokenVersion: boolean = fals
 
     // Se solicitado, validar tokenVersion contra o banco de dados
     if (validateTokenVersion && jwtPayload.userId) {
-      const prisma = (await import('../db')).default;
+      const { prisma } = await import('../db');
       const user = await prisma.user.findUnique({
         where: { id: jwtPayload.userId },
         select: { tokenVersion: true },

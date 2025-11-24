@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { App, Form, Input, Modal, Alert, Row, Col } from "antd";
+import { App, Form, Input, Modal, Row, Col } from "antd";
 import {
   CreditCardOutlined,
   SafetyOutlined,
