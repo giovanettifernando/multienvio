@@ -1,13 +1,12 @@
 'use client';
 
 import { Tabs } from 'antd';
-import { ApiOutlined, LinkOutlined, LockOutlined, CreditCardOutlined, HeartOutlined } from '@ant-design/icons';
+import { ApiOutlined, LinkOutlined, LockOutlined, HeartOutlined } from '@ant-design/icons';
 import CarrierTable from '@/components/integrations/CarrierTable';
 import CarrierDrawer from '@/components/integrations/CarrierDrawer';
 import ApiTable from '@/components/integrations/ApiTable';
 import ApiDrawer from '@/components/integrations/ApiDrawer';
 import AuthPanel from '@/components/integrations/AuthPanel';
-import PaymentGatewayTab from '@/components/integrations/PaymentGatewayTab';
 import HealthPanel from '@/components/integrations/HealthPanel';
 import { PageShell } from '@/components/shared/PageShell';
 
@@ -52,16 +51,6 @@ export default function IntegrationsPage() {
         </span>
       ),
       children: <AuthPanel />,
-    },
-    {
-      key: 'payment',
-      label: (
-        <span>
-          <CreditCardOutlined />
-          Gate de Pagamento
-        </span>
-      ),
-      children: <PaymentGatewayTab />,
     },
     {
       key: 'health',

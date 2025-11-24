@@ -93,7 +93,13 @@ export const POST = withApiHandler(async (context) => {
 
   // Descriptografar PAN
   const cipher = parsePanCipher(card.panCipher);
+  if (!cipher) {
+    throw ApiError.badRequest("Dados do cartão inválidos");
+  }
   const key = loadVaultKey();
+  if (!key) {
+    throw ApiError.badRequest("Chave de criptografia não configurada");
+  }
   const pan = decryptPan(cipher, key);
 
   // Criar token usando SDK backend

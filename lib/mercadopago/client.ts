@@ -298,6 +298,8 @@ export async function createCardToken(cardData: {
         expiration_month: cardData.expirationMonth,
         expiration_year: cardData.expirationYear,
         security_code: cardData.securityCode,
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore - MP SDK types are incomplete, cardholder is required
         cardholder: {
           name: cardData.cardholderName,
           identification: {
@@ -313,6 +315,10 @@ export async function createCardToken(cardData: {
       first_six_digits: tokenData.first_six_digits,
       last_four_digits: tokenData.last_four_digits,
     });
+
+    if (!tokenData.id) {
+      throw new Error('Token ID não retornado pelo Mercado Pago');
+    }
 
     return {
       id: tokenData.id,
