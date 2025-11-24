@@ -69,6 +69,25 @@ export async function validateWebhookSignature(
       return false;
     }
 
+    // Validar janela temporal (5 minutos) para prevenir replay attacks
+    const timestampMs = parseInt(ts, 10) * 1000; // Converter de segundos para milissegundos
+    const now = Date.now();
+    const maxAge = 5 * 60 * 1000; // 5 minutos em milissegundos
+
+    if (now - timestampMs > maxAge) {
+      console.warn('[MERCADO_PAGO_WEBHOOK] Webhook expirado - timestamp muito antigo', {
+        timestampAge: Math.floor((now - timestampMs) / 1000) + 's',
+        maxAge: '5min',
+      });
+      return false;
+    }
+
+    // Rejeitar timestamps do futuro (clock skew tolerance de 1 minuto)
+    if (timestampMs > now + 60000) {
+      console.warn('[MERCADO_PAGO_WEBHOOK] Webhook rejeitado - timestamp no futuro');
+      return false;
+    }
+
     // Construir manifest string
     const dataId = payload.data?.id || '';
     const manifest = `id:${dataId};request-id:${xRequestId};ts:${ts};`;
@@ -133,7 +152,27 @@ export async function processWebhook(
     return false;
   }
 
-  // 3. Registrar webhook no banco (apenas se assinatura válida)
+  // 3. Verificar deduplicação por externalId (prevenir processamento duplicado)
+  const externalId = payload.data?.id;
+  if (externalId) {
+    const existingWebhook = await prisma.paymentWebhook.findFirst({
+      where: {
+        gatewayId: gateway.id,
+        externalId,
+        status: 'PROCESSED',
+      },
+    });
+
+    if (existingWebhook) {
+      console.log('[MERCADO_PAGO_WEBHOOK] Webhook já processado (deduplicação)', {
+        externalId,
+        processedAt: existingWebhook.processedAt,
+      });
+      return true; // Retornar sucesso para não reenviar
+    }
+  }
+
+  // 4. Registrar webhook no banco (apenas se assinatura válida e não duplicado)
   const webhookRecord = await prisma.paymentWebhook.create({
     data: {
       gatewayId: gateway.id,
@@ -147,7 +186,7 @@ export async function processWebhook(
 
   try {
 
-    // 4. Processar apenas eventos de pagamento
+    // 5. Processar apenas eventos de pagamento
     if (payload.type !== 'payment' && !payload.action?.includes('payment')) {
       await prisma.paymentWebhook.update({
         where: { id: webhookRecord.id },
@@ -160,7 +199,7 @@ export async function processWebhook(
       return true; // Não é erro, apenas ignorado
     }
 
-    // 5. Extrair ID do pagamento
+    // 6. Extrair ID do pagamento
     const paymentId = payload.data?.id;
 
     if (!paymentId) {
@@ -175,7 +214,7 @@ export async function processWebhook(
       return false;
     }
 
-    // 6. Atualizar transaction a partir do MP
+    // 7. Atualizar transaction a partir do MP
     try {
       await updatePaymentFromMercadoPago(paymentId);
     } catch (updateError: unknown) {
@@ -202,7 +241,7 @@ export async function processWebhook(
       throw updateError;
     }
 
-    // 7. Marcar webhook como processado
+    // 8. Marcar webhook como processado
     await prisma.paymentWebhook.update({
       where: { id: webhookRecord.id },
       data: {

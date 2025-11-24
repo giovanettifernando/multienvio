@@ -1013,6 +1013,22 @@ model LedgerEntry {
   @@map("ledger_entries")
 }
 
+model EmailConfig {
+  id          String     @id @default(cuid())
+  host        String     // SMTP host (ex: smtp.gmail.com)
+  port        Int        @default(587) // SMTP port
+  secure      Boolean    @default(false) // TLS/SSL (true para porta 465)
+  user        String     // SMTP username (email)
+  password    String     // SMTP password (criptografada no app)
+  fromAddress String     // Email remetente padrão
+  fromName    String     // Nome remetente padrão
+  status      EmailConfigStatus @default(ACTIVE)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@map("email_configs")
+}
+
 model Collector {
   id                       String               @id @default(cuid())
   status                   CollectorStatus      @default(ACTIVE)
@@ -1313,6 +1329,11 @@ enum PickupFeeType {
   PER_KM
 
   @@map("pickup_fee_type")
+}
+
+enum EmailConfigStatus {
+  ACTIVE
+  INACTIVE
 }
 
 // Cache de coordenadas geocodificadas por CEP usando PostGIS

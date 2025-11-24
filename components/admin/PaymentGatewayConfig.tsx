@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Card, Form, Input, Select, Button, Space, message, Spin, Alert } from 'antd';
 import { SaveOutlined, ReloadOutlined } from '@ant-design/icons';
 
@@ -16,12 +16,7 @@ export default function PaymentGatewayConfig() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  // Carregar configuração atual
-  useEffect(() => {
-    loadConfig();
-  }, []);
-
-  const loadConfig = async () => {
+  const loadConfig = useCallback(async () => {
     setLoading(true);
     try {
       const res = await fetch('/api/admin/payment-gateway/config');
@@ -42,7 +37,12 @@ export default function PaymentGatewayConfig() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [form]);
+
+  // Carregar configuração atual
+  useEffect(() => {
+    loadConfig();
+  }, [loadConfig]);
 
   const onFinish = async (values: GatewayConfig) => {
     setSaving(true);

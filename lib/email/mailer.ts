@@ -1,37 +1,41 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
 import type { Transporter } from 'nodemailer';
+import { getEmailConfig } from './config';
 
 // Dynamic import to avoid ESM/CommonJS issues
 function getNodemailer(): typeof import('nodemailer') {
   return require('nodemailer');
 }
 
-// Function to create transporter (lazy initialization to ensure env vars are loaded)
-function createTransporter(): Transporter {
-  const user = process.env.EMAIL_USER || 'enviolegal@app.neoera.com.br';
-  const pass = process.env.EMAIL_PASSWORD || 'Jedi2025@#';
+// Function to create transporter (lazy initialization to ensure config is loaded from DB)
+async function createTransporter(): Promise<Transporter> {
+  // Buscar configuração do banco de dados
+  const config = await getEmailConfig();
+
+  if (!config) {
+    throw new Error(
+      'Email configuration not found. Please configure SMTP settings in /admin/configuracoes'
+    );
+  }
 
   console.log('[MAILER] Creating transporter with:', {
-    host: 'smtp.titan.email',
-    port: 587,
-    secure: false,
-    user,
-    passwordLength: pass?.length || 0,
+    host: config.host,
+    port: config.port,
+    secure: config.secure,
+    user: config.user,
   });
 
   const nodemailer = getNodemailer();
 
   return nodemailer.createTransport({
-    host: 'smtp.titan.email',
-    port: 587,
-    secure: false, // Use STARTTLS (not SSL)
-    requireTLS: true, // Require STARTTLS
+    host: config.host,
+    port: config.port,
+    secure: config.secure,
     auth: {
-      user,
-      pass,
+      user: config.user,
+      pass: config.password,
     },
     tls: {
-      ciphers: 'SSLv3',
       rejectUnauthorized: false,
     },
   });
@@ -49,10 +53,18 @@ export interface SendEmailOptions {
  */
 export async function sendEmail(options: SendEmailOptions): Promise<boolean> {
   try {
-    const transporter = createTransporter();
+    // Buscar configuração do banco
+    const config = await getEmailConfig();
+
+    if (!config) {
+      console.error('[EMAIL] No email configuration found');
+      return false;
+    }
+
+    const transporter = await createTransporter();
 
     const info = await transporter.sendMail({
-      from: `"Envio Legal" <${process.env.EMAIL_USER || 'enviolegal@app.neoera.com.br'}>`,
+      from: `"${config.fromName}" <${config.fromAddress}>`,
       to: options.to,
       subject: options.subject,
       html: options.html,
