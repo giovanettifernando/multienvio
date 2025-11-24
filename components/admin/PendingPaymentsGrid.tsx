@@ -33,7 +33,9 @@ export default function PendingPaymentsGrid() {
   const loadPayments = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/admin/payment-transactions/pending');
+      const res = await fetch('/api/admin/payment-transactions/pending', {
+        credentials: 'include',
+      });
       if (!res.ok) throw new Error('Erro ao carregar pagamentos');
 
       const data = await res.json();
@@ -51,6 +53,7 @@ export default function PendingPaymentsGrid() {
       const res = await fetch('/api/admin/payment-transactions/sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ externalId }),
       });
 
@@ -73,6 +76,7 @@ export default function PendingPaymentsGrid() {
     try {
       const res = await fetch(`/api/admin/payment-transactions/${paymentId}/force-approve`, {
         method: 'POST',
+        credentials: 'include',
       });
 
       if (!res.ok) {

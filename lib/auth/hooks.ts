@@ -108,7 +108,9 @@ async function fetchUsers(filters?: AdminUserFilters): Promise<AdminUserListResp
   if (filters?.pageSize) params.set("pageSize", filters.pageSize.toString());
   if (filters?.sort) params.set("sort", filters.sort);
 
-  const res = await fetch(`${API_BASE}?${params.toString()}`);
+  const res = await fetch(`${API_BASE}?${params.toString()}`, {
+    credentials: 'include',
+  });
   if (!res.ok) {
     const error = await res.json().catch(() => ({}));
     throw new Error(error.message || "Erro ao carregar usuários");
@@ -131,7 +133,9 @@ async function fetchUsers(filters?: AdminUserFilters): Promise<AdminUserListResp
 }
 
 async function fetchUser(id: string): Promise<AdminUser> {
-  const res = await fetch(`${API_BASE}/${id}`);
+  const res = await fetch(`${API_BASE}/${id}`, {
+    credentials: 'include',
+  });
   if (!res.ok) {
     const error = await res.json().catch(() => ({}));
     throw new Error(error.message || "Erro ao carregar usuário");
@@ -147,6 +151,7 @@ async function createUser(data: CreateAdminUserInput): Promise<AdminUser> {
   const res = await fetch(API_BASE, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
+    credentials: 'include',
     body: JSON.stringify({
       name: data.name,
       email: data.email,
@@ -174,6 +179,7 @@ async function updateUser(id: string, data: UpdateAdminUserInput): Promise<Admin
   const res = await fetch(`${API_BASE}/${id}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
+    credentials: 'include',
     body: JSON.stringify({
       name: data.name,
       email: data.email,
@@ -194,7 +200,10 @@ async function updateUser(id: string, data: UpdateAdminUserInput): Promise<Admin
 }
 
 async function deleteUser(id: string): Promise<void> {
-  const res = await fetch(`${API_BASE}/${id}`, { method: "DELETE" });
+  const res = await fetch(`${API_BASE}/${id}`, {
+    method: "DELETE",
+    credentials: 'include',
+  });
   if (!res.ok) {
     const error = await res.json().catch(() => ({}));
     throw new Error(error.message || "Erro ao excluir usuário");
@@ -205,6 +214,7 @@ async function toggleUserStatus(id: string, status: "active" | "blocked"): Promi
   const res = await fetch(`${API_BASE}/${id}/status`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
+    credentials: 'include',
     body: JSON.stringify({ status: mapStatusToDb(status) }),
   });
 
@@ -218,7 +228,10 @@ async function toggleUserStatus(id: string, status: "active" | "blocked"): Promi
 }
 
 async function resetPassword(id: string): Promise<ResetPasswordResponse> {
-  const res = await fetch(`${API_BASE}/${id}/reset`, { method: "POST" });
+  const res = await fetch(`${API_BASE}/${id}/reset`, {
+    method: "POST",
+    credentials: 'include',
+  });
 
   if (!res.ok) {
     const error = await res.json().catch(() => ({}));

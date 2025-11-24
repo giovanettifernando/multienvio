@@ -67,7 +67,7 @@ export const ADMIN_NAV: AdminNavItem[] = [
   {
     key: "config",
     label: "Configurações",
-    href: "/admin/config",
+    href: "/admin/configuracoes",
     permissions: ["CONFIGURACOES"],
   },
 ];

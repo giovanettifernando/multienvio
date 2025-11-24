@@ -19,7 +19,9 @@ export default function PaymentGatewayConfig() {
   const loadConfig = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/admin/payment-gateway/config');
+      const res = await fetch('/api/admin/payment-gateway/config', {
+        credentials: 'include',
+      });
       if (!res.ok) throw new Error('Erro ao carregar configuração');
 
       const data = await res.json();
@@ -64,6 +66,7 @@ export default function PaymentGatewayConfig() {
       const res = await fetch('/api/admin/payment-gateway/config', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(payload),
       });
 

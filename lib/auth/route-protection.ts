@@ -30,6 +30,7 @@ const PUBLIC_ROUTES = [
   /^\/$/,                          // Home
   /^\/auth\/.*/,                   // All auth pages (login, register, etc)
   /^\/api\/auth\/.*/,              // Auth API endpoints (login, register, logout, me)
+  /^\/api\/admin\/auth\/.*/,       // Admin auth API endpoints (login, logout, me)
   /^\/_next\/.*/,                  // Next.js internals
   /^\/public\/.*/,                 // Public assets
   /^\/assets\/.*/,                 // Assets

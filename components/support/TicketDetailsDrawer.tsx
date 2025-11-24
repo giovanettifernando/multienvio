@@ -128,7 +128,10 @@ export function TicketDetailsContent({
   const staffUsersQuery = useQuery({
     queryKey: ['adminStaffUsers'],
     queryFn: async (): Promise<Array<{ id: string; name: string; email: string }>> => {
-      const response = await fetch('/api/admin/staff/users?status=active', { cache: 'no-store' });
+      const response = await fetch('/api/admin/staff/users?status=active', {
+        cache: 'no-store',
+        credentials: 'include',
+      });
       const data = await response.json().catch(() => undefined);
       if (!response.ok) {
         const errorMessage =

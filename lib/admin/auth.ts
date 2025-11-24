@@ -22,7 +22,9 @@ export function getAdminTokenFromCookie() {
  */
 export async function checkAdminAuth(): Promise<AdminUser | null> {
   try {
-    const response = await fetch("/api/admin/auth/me");
+    const response = await fetch("/api/admin/auth/me", {
+      credentials: 'include',
+    });
     if (!response.ok) return null;
     const data = await response.json();
     const staff = data?.staff;
@@ -60,6 +62,7 @@ export async function logoutAdmin(): Promise<boolean> {
   try {
     const response = await fetch("/api/admin/auth/logout", {
       method: "POST",
+      credentials: 'include',
     });
     return response.ok;
   } catch {

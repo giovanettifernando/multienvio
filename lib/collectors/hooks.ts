@@ -100,7 +100,9 @@ export function useCollectors(params?: CollectorFilters) {
     queryFn: async (): Promise<CollectorListResponse> => {
       const suffix = searchParams.toString();
       const url = `/api/admin/coletores${suffix ? `?${suffix}` : ''}`;
-      const res = await fetch(url);
+      const res = await fetch(url, {
+        credentials: 'include',
+      });
       if (!res.ok) throw new Error('Erro ao carregar coletores');
       return res.json();
     },
@@ -111,7 +113,9 @@ export function useCollector(id: string | null) {
   return useQuery({
     queryKey: qk.one(id || ''),
     queryFn: async (): Promise<Collector> => {
-      const res = await fetch(`/api/admin/coletores/${id}`);
+      const res = await fetch(`/api/admin/coletores/${id}`, {
+        credentials: 'include',
+      });
       if (!res.ok) throw new Error('Erro ao carregar coletor');
       const data = await res.json();
       return data.collector || data;
@@ -128,6 +132,7 @@ export function useCreateCollector() {
       const res = await fetch('/api/admin/coletores', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(normalizePayload(data)),
       });
 
@@ -157,6 +162,7 @@ export function useUpdateCollector() {
       const res = await fetch(`/api/admin/coletores/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(normalizePayload(data)),
       });
 
@@ -183,7 +189,10 @@ export function useDeleteCollector() {
 
   return useMutation({
     mutationFn: async (id: string): Promise<void> => {
-      const res = await fetch(`/api/admin/coletores/${id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/admin/coletores/${id}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
       if (!res.ok) {
         const error = await res.json();
         throw new Error(error.message || 'Erro ao excluir coletor');
@@ -207,6 +216,7 @@ export function useToggleCollectorStatus() {
       const res = await fetch(`/api/admin/coletores/${id}/status`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ status }),
       });
 

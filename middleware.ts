@@ -119,11 +119,11 @@ function isStaffAuthenticated(payload: AdminJWTPayload | null): boolean {
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Check if this is an admin route (starts with /admin)
-  const isAdminRoute = pathname.startsWith('/admin');
+  // Check if this is an admin route (starts with /admin or /api/admin)
+  const isAdminRoute = pathname.startsWith('/admin') || pathname.startsWith('/api/admin');
 
-  // Skip middleware for admin login page
-  if (pathname === '/admin/login') {
+  // Skip middleware for admin login page and admin auth APIs
+  if (pathname === '/admin/login' || pathname.startsWith('/api/admin/auth/')) {
     return NextResponse.next();
   }
 

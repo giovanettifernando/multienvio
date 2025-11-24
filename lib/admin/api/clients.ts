@@ -8,7 +8,10 @@ export async function fetchClients(params: ClientsQuery = {}): Promise<ClientsRe
   if (params.type && params.type !== 'all') sp.set('type', params.type);
   if (params.status && params.status !== 'all') sp.set('status', params.status);
 
-  const res = await fetch(`/api/admin/clients?${sp.toString()}`, { cache: 'no-store' });
+  const res = await fetch(`/api/admin/clients?${sp.toString()}`, {
+    cache: 'no-store',
+    credentials: 'include',
+  });
   if (!res.ok) throw new Error('Falha ao carregar clientes');
   return res.json();
 }
@@ -17,6 +20,7 @@ export async function blockAccounts(ids: string[]): Promise<{ ok: boolean }> {
   const res = await fetch('/api/admin/clients/block', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
     body: JSON.stringify({ ids }),
   });
   if (!res.ok) throw new Error('Falha ao bloquear contas');
@@ -27,6 +31,7 @@ export async function unblockAccounts(ids: string[]): Promise<{ ok: boolean }> {
   const res = await fetch('/api/admin/clients/unblock', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
     body: JSON.stringify({ ids }),
   });
   if (!res.ok) throw new Error('Falha ao desbloquear contas');
@@ -37,6 +42,7 @@ export async function updateAccount(id: string, patch: Partial<AdminClient>): Pr
   const res = await fetch(`/api/admin/clients/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
     body: JSON.stringify(patch),
   });
   if (!res.ok) throw new Error('Falha ao atualizar conta');
@@ -47,6 +53,7 @@ export async function resetPassword(ids: string[]): Promise<{ ok: boolean }> {
   const res = await fetch('/api/admin/clients/reset-password', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
     body: JSON.stringify({ ids }),
   });
   if (!res.ok) throw new Error('Falha ao resetar senha');

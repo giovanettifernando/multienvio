@@ -30,7 +30,9 @@ export function usePickupPointsAPI() {
         params.set('pageSize', filters.pageSize.toString());
       }
 
-      const response = await fetch(`/api/admin/pickup-points?${params.toString()}`);
+      const response = await fetch(`/api/admin/pickup-points?${params.toString()}`, {
+        credentials: 'include',
+      });
 
       if (!response.ok) {
         const data = await response.json();
@@ -52,7 +54,9 @@ export function usePickupPointsAPI() {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(`/api/admin/pickup-points/${id}`);
+      const response = await fetch(`/api/admin/pickup-points/${id}`, {
+        credentials: 'include',
+      });
 
       if (!response.ok) {
         const data = await response.json();
@@ -79,6 +83,7 @@ export function usePickupPointsAPI() {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify(data),
       });
 
@@ -107,6 +112,7 @@ export function usePickupPointsAPI() {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify(data),
       });
 
@@ -132,6 +138,7 @@ export function usePickupPointsAPI() {
     try {
       const response = await fetch(`/api/admin/pickup-points/${id}`, {
         method: 'DELETE',
+        credentials: 'include',
       });
 
       if (!response.ok) {
@@ -153,6 +160,7 @@ export function usePickupPointsAPI() {
     try {
       const response = await fetch(`/api/admin/pickup-points/${id}/status`, {
         method: 'POST',
+        credentials: 'include',
       });
 
       if (!response.ok) {

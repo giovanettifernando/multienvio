@@ -103,9 +103,15 @@ export async function adminVerify(token: string): Promise<AdminJWTPayload | null
  */
 export function createAdminCookieHeader(token: string): string {
   const maxAge = 60 * 60 * 24 * 7; // 7 dias em segundos
-  const secure = process.env.NODE_ENV === 'production' ? 'Secure; ' : '';
+  const isProduction = process.env.NODE_ENV === 'production';
 
-  return `${ADMIN_AUTH_COOKIE_NAME}=${token}; HttpOnly; ${secure}SameSite=Lax; Path=/; Max-Age=${maxAge}`;
+  // Em desenvolvimento (localhost HTTP), usar SameSite=Lax sem Secure
+  // Em produção (HTTPS), usar Secure com SameSite=Lax para melhor segurança
+  const cookieAttributes = isProduction
+    ? 'Secure; SameSite=Lax'
+    : 'SameSite=Lax';
+
+  return `${ADMIN_AUTH_COOKIE_NAME}=${token}; HttpOnly; ${cookieAttributes}; Path=/; Max-Age=${maxAge}`;
 }
 
 /**

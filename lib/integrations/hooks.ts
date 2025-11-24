@@ -19,7 +19,9 @@ export function useCarriers() {
   return useQuery({
     queryKey: integrationKeys.carriers(),
     queryFn: async (): Promise<Carrier[]> => {
-      const res = await fetch('/api/admin/integrations/carriers');
+      const res = await fetch('/api/admin/integrations/carriers', {
+        credentials: 'include',
+      });
       if (!res.ok) throw new Error('Erro ao carregar transportadoras');
       const data = await res.json();
       return data.carriers || [];
@@ -31,7 +33,9 @@ export function useCarrier(id: string | null) {
   return useQuery({
     queryKey: integrationKeys.carrier(id || ''),
     queryFn: async (): Promise<Carrier> => {
-      const res = await fetch(`/api/admin/integrations/carriers/${id}`);
+      const res = await fetch(`/api/admin/integrations/carriers/${id}`, {
+        credentials: 'include',
+      });
       if (!res.ok) throw new Error('Erro ao carregar transportadora');
       return res.json();
     },
@@ -47,6 +51,7 @@ export function useCreateCarrier() {
       const res = await fetch('/api/admin/integrations/carriers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(data),
       });
       if (!res.ok) {
@@ -73,6 +78,7 @@ export function useUpdateCarrier() {
       const res = await fetch(`/api/admin/integrations/carriers/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(data),
       });
       if (!res.ok) {
@@ -112,6 +118,7 @@ export function useDeleteCarrier() {
     mutationFn: async (id: string): Promise<void> => {
       const res = await fetch(`/api/admin/integrations/carriers/${id}`, {
         method: 'DELETE',
+        credentials: 'include',
       });
       if (!res.ok) throw new Error('Erro ao excluir transportadora');
     },
@@ -275,7 +282,9 @@ export function usePaymentGateway() {
   return useQuery({
     queryKey: integrationKeys.paymentGateway(),
     queryFn: async (): Promise<PaymentGatewayConfig | null> => {
-      const res = await fetch('/api/admin/integrations/mercadopago');
+      const res = await fetch('/api/admin/integrations/mercadopago', {
+        credentials: 'include',
+      });
       if (!res.ok) throw new Error('Erro ao carregar gateway de pagamento');
       const result = await res.json();
 
@@ -315,6 +324,7 @@ export function useSavePaymentGateway() {
       const res = await fetch('/api/admin/integrations/mercadopago', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(payload),
       });
       if (!res.ok) {

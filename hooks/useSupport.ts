@@ -120,6 +120,7 @@ function getAssignmentEndpoint(ticketId: string): string {
 async function fetchJson<T>(input: RequestInfo | URL, init?: RequestInit): Promise<T> {
   const response = await fetch(input, {
     cache: "no-store",
+    credentials: "include",
     ...init,
     headers: {
       "Content-Type": "application/json",
@@ -265,6 +266,7 @@ export function usePostTicketMessage(audience: Audience = "user") {
         response = await fetch(endpoint, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          credentials: "include",
           body: JSON.stringify({
             content: trimmed,
             // attachments not supported for autonomous collectors yet
@@ -287,6 +289,7 @@ export function usePostTicketMessage(audience: Audience = "user") {
 
         response = await fetch(endpoint, {
           method: "POST",
+          credentials: "include",
           body: formData,
         });
       }

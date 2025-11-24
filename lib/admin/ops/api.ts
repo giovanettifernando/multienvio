@@ -24,7 +24,9 @@ export async function listShipments(p: ListParams): Promise<Paged<OpsShipment>> 
   if (p.dateEnd) params.set('dateEnd', p.dateEnd);
   if (p.riskOnly) params.set('riskOnly', 'true');
 
-  const res = await fetch(`/api/admin/ops/shipments?${params}`);
+  const res = await fetch(`/api/admin/ops/shipments?${params}`, {
+    credentials: 'include',
+  });
   if (!res.ok) throw new Error('Failed to fetch shipments');
   return res.json();
 }
@@ -33,6 +35,7 @@ export async function bulkUpdateShipmentStatus(ids: string[], status: string): P
   const res = await fetch('/api/admin/ops/shipments/bulk', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
     body: JSON.stringify({ ids, status }),
   });
   if (!res.ok) throw new Error('Failed to update shipments');
@@ -42,13 +45,16 @@ export async function bulkUpdateShipmentStatus(ids: string[], status: string): P
 export async function reprocessShipment(id: string): Promise<{ ok: true }> {
   const res = await fetch(`/api/admin/ops/shipments/${id}/reprocess`, {
     method: 'POST',
+    credentials: 'include',
   });
   if (!res.ok) throw new Error('Failed to reprocess shipment');
   return res.json();
 }
 
 export async function getShipmentTimeline(id: string): Promise<TimelineEvent[]> {
-  const res = await fetch(`/api/admin/ops/shipments/${id}/timeline`);
+  const res = await fetch(`/api/admin/ops/shipments/${id}/timeline`, {
+    credentials: 'include',
+  });
   if (!res.ok) throw new Error('Failed to fetch timeline');
   return res.json();
 }
@@ -65,7 +71,9 @@ export async function listPickups(p: ListParams): Promise<Paged<PickupOrder>> {
   if (p.city) params.set('city', p.city);
   if (p.state) params.set('state', p.state);
 
-  const res = await fetch(`/api/admin/ops/pickups?${params}`);
+  const res = await fetch(`/api/admin/ops/pickups?${params}`, {
+    credentials: 'include',
+  });
   if (!res.ok) throw new Error('Failed to fetch pickups');
   return res.json();
 }
@@ -74,6 +82,7 @@ export async function updatePickup(id: string, patch: Partial<PickupOrder>): Pro
   const res = await fetch(`/api/admin/ops/pickups/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
     body: JSON.stringify(patch),
   });
   if (!res.ok) throw new Error('Failed to update pickup');
@@ -88,7 +97,9 @@ export async function listPoC(p: ListParams): Promise<PointOfCollection[]> {
   if (p.state) params.set('state', p.state);
   if (p.active !== undefined) params.set('active', p.active.toString());
 
-  const res = await fetch(`/api/admin/ops/pocs?${params}`);
+  const res = await fetch(`/api/admin/ops/pocs?${params}`, {
+    credentials: 'include',
+  });
   if (!res.ok) throw new Error('Failed to fetch PoCs');
   return res.json();
 }
@@ -97,6 +108,7 @@ export async function togglePoCActive(id: string, active: boolean): Promise<{ ok
   const res = await fetch(`/api/admin/ops/pocs/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
     body: JSON.stringify({ active }),
   });
   if (!res.ok) throw new Error('Failed to toggle PoC');
@@ -107,6 +119,7 @@ export async function updatePoC(id: string, patch: Partial<PointOfCollection>): 
   const res = await fetch(`/api/admin/ops/pocs/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
     body: JSON.stringify(patch),
   });
   if (!res.ok) throw new Error('Failed to update PoC');
@@ -125,7 +138,9 @@ export async function listExceptions(p: ListParams): Promise<Paged<OpsException>
   if (p.carrier) params.set('carrier', p.carrier);
   if (p.pocId) params.set('pocId', p.pocId);
 
-  const res = await fetch(`/api/admin/ops/exceptions?${params}`);
+  const res = await fetch(`/api/admin/ops/exceptions?${params}`, {
+    credentials: 'include',
+  });
   if (!res.ok) throw new Error('Failed to fetch exceptions');
   return res.json();
 }
@@ -134,6 +149,7 @@ export async function updateException(id: string, patch: Partial<OpsException>):
   const res = await fetch(`/api/admin/ops/exceptions/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
     body: JSON.stringify(patch),
   });
   if (!res.ok) throw new Error('Failed to update exception');
@@ -146,7 +162,9 @@ export async function getSlaSummary(p: { dateStart?: string; dateEnd?: string })
   if (p.dateStart) params.set('dateStart', p.dateStart);
   if (p.dateEnd) params.set('dateEnd', p.dateEnd);
 
-  const res = await fetch(`/api/admin/ops/sla?${params}`);
+  const res = await fetch(`/api/admin/ops/sla?${params}`, {
+    credentials: 'include',
+  });
   if (!res.ok) throw new Error('Failed to fetch SLA');
   return res.json();
 }
@@ -159,7 +177,9 @@ export async function listEvents(p: ListParams): Promise<Paged<OpsEvent>> {
   if (p.processed !== undefined) params.set('processed', p.processed.toString());
   if (p.source) params.set('source', p.source);
 
-  const res = await fetch(`/api/admin/ops/events?${params}`);
+  const res = await fetch(`/api/admin/ops/events?${params}`, {
+    credentials: 'include',
+  });
   if (!res.ok) throw new Error('Failed to fetch events');
   return res.json();
 }
@@ -167,6 +187,7 @@ export async function listEvents(p: ListParams): Promise<Paged<OpsEvent>> {
 export async function retryEvent(id: string): Promise<{ ok: true }> {
   const res = await fetch(`/api/admin/ops/events/${id}/retry`, {
     method: 'POST',
+    credentials: 'include',
   });
   if (!res.ok) throw new Error('Failed to retry event');
   return res.json();
@@ -175,6 +196,7 @@ export async function retryEvent(id: string): Promise<{ ok: true }> {
 export async function markEventProcessed(id: string): Promise<{ ok: true }> {
   const res = await fetch(`/api/admin/ops/events/${id}/mark`, {
     method: 'POST',
+    credentials: 'include',
   });
   if (!res.ok) throw new Error('Failed to mark event');
   return res.json();
