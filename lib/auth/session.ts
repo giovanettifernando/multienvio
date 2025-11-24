@@ -60,11 +60,8 @@ export async function verify(token: string, validateTokenVersion: boolean = fals
 
       // Se o usuário não existe ou o tokenVersion não bate, token inválido
       if (!user || user.tokenVersion !== jwtPayload.tokenVersion) {
-        console.warn('Token version mismatch - session invalidated', {
-          userId: jwtPayload.userId,
-          tokenVersion: jwtPayload.tokenVersion,
-          currentVersion: user?.tokenVersion,
-        });
+        // Log genérico sem expor dados sensíveis (userId, tokenVersion)
+        console.warn('Token version mismatch - session invalidated');
         return null;
       }
     }

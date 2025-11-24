@@ -82,10 +82,8 @@ export async function validateWebhookSignature(
     const isValid = calculatedSignature === v1;
 
     if (!isValid) {
-      console.warn('[MERCADO_PAGO_WEBHOOK] Assinatura inválida:', {
-        expected: v1,
-        calculated: calculatedSignature,
-      });
+      // Não logar assinaturas completas para evitar exposição do webhook secret
+      console.warn('[MERCADO_PAGO_WEBHOOK] Assinatura inválida - verificação de HMAC falhou');
     }
 
     return isValid;
@@ -98,11 +96,12 @@ export async function validateWebhookSignature(
 /**
  * Processa webhook do Mercado Pago
  *
- * Fluxo:
- * 1. Valida assinatura
- * 2. Registra webhook no banco (PaymentWebhook)
- * 3. Processa evento (atualiza PaymentTransaction)
- * 4. Aplica efeitos de domínio se necessário
+ * Fluxo (ordem corrigida para segurança):
+ * 1. Busca gateway
+ * 2. Valida assinatura ANTES de gravar
+ * 3. Registra webhook no banco apenas se válido (PaymentWebhook)
+ * 4. Processa evento (atualiza PaymentTransaction)
+ * 5. Aplica efeitos de domínio se necessário
  *
  * @param payload Payload do webhook
  * @param headers Headers do webhook
@@ -122,7 +121,19 @@ export async function processWebhook(
     return false;
   }
 
-  // 2. Registrar webhook no banco
+  // 2. Validar assinatura ANTES de criar registro no banco (segurança anti-DOS)
+  const isValid = await validateWebhookSignature(payload, headers);
+
+  if (!isValid) {
+    console.warn('[MERCADO_PAGO_WEBHOOK] Webhook rejeitado - assinatura inválida', {
+      eventType: payload.action || payload.type,
+      externalId: payload.data?.id,
+    });
+    // Não criar registro no banco para evitar poluição com webhooks inválidos
+    return false;
+  }
+
+  // 3. Registrar webhook no banco (apenas se assinatura válida)
   const webhookRecord = await prisma.paymentWebhook.create({
     data: {
       gatewayId: gateway.id,
@@ -135,20 +146,6 @@ export async function processWebhook(
   });
 
   try {
-    // 3. Validar assinatura (se configurado)
-    const isValid = await validateWebhookSignature(payload, headers);
-
-    if (!isValid) {
-      await prisma.paymentWebhook.update({
-        where: { id: webhookRecord.id },
-        data: {
-          status: 'FAILED',
-          errorMessage: 'Assinatura inválida',
-          processedAt: new Date(),
-        },
-      });
-      return false;
-    }
 
     // 4. Processar apenas eventos de pagamento
     if (payload.type !== 'payment' && !payload.action?.includes('payment')) {

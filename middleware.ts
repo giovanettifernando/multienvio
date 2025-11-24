@@ -202,21 +202,54 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // Check if this is an API route
+  const isApiRoute = pathname.startsWith('/api/');
+
   // Get auth token from cookie (customer auth)
   const token = request.cookies.get(AUTH_COOKIE_NAME)?.value;
   const payload = token ? await verifyToken(token) : null;
 
+  // Handle collector routes
+  if (protection === 'collector') {
+    // TODO: Implement collector authentication
+    // For now, collectors use their own auth system in their routes
+    // This middleware just ensures the route is recognized as protected
+    return NextResponse.next();
+  }
+
+  // Handle pickup point routes
+  if (protection === 'pickup_point') {
+    // TODO: Implement pickup point authentication
+    // For now, pickup points use their own auth system in their routes
+    // This middleware just ensures the route is recognized as protected
+    return NextResponse.next();
+  }
+
   // Handle admin routes (customer with admin role)
   if (protection === 'admin') {
     if (!isAuthenticated(payload)) {
-      // Not authenticated - redirect to login with returnUrl
+      if (isApiRoute) {
+        // API route - return 401 Unauthorized
+        return NextResponse.json(
+          { error: 'Unauthorized', message: 'Authentication required' },
+          { status: 401 }
+        );
+      }
+      // Page route - redirect to login with returnUrl
       const loginUrl = new URL('/auth/login', request.url);
       loginUrl.searchParams.set('returnUrl', pathname);
       return NextResponse.redirect(loginUrl);
     }
 
     if (!isAdmin(payload)) {
-      // Authenticated but not admin - redirect to login
+      if (isApiRoute) {
+        // API route - return 403 Forbidden
+        return NextResponse.json(
+          { error: 'Forbidden', message: 'Admin access required' },
+          { status: 403 }
+        );
+      }
+      // Page route - redirect to login
       const loginUrl = new URL('/auth/login', request.url);
       loginUrl.searchParams.set('returnUrl', pathname);
       return NextResponse.redirect(loginUrl);
@@ -229,7 +262,14 @@ export async function middleware(request: NextRequest) {
   // Handle authenticated routes (any logged-in user)
   if (protection === 'auth') {
     if (!isAuthenticated(payload)) {
-      // Not authenticated - redirect to login with returnUrl
+      if (isApiRoute) {
+        // API route - return 401 Unauthorized
+        return NextResponse.json(
+          { error: 'Unauthorized', message: 'Authentication required' },
+          { status: 401 }
+        );
+      }
+      // Page route - redirect to login with returnUrl
       const loginUrl = new URL('/auth/login', request.url);
       loginUrl.searchParams.set('returnUrl', pathname);
       return NextResponse.redirect(loginUrl);
