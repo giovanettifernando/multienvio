@@ -4,6 +4,16 @@ const fs = require("fs");
 const tsNode = require("ts-node");
 const tsConfigPaths = require("tsconfig-paths");
 
+// Evita que intervals de libs (ex.: rate-limit) mantenham o processo vivo
+const originalSetInterval = global.setInterval;
+global.setInterval = (...args) => {
+  const handle = originalSetInterval(...args);
+  if (handle && typeof handle.unref === "function") {
+    handle.unref();
+  }
+  return handle;
+};
+
 // Garante ambiente de teste
 process.env.NODE_ENV = process.env.NODE_ENV ?? "test";
 
