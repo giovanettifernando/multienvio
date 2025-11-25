@@ -1,28 +1,32 @@
 import assert from 'node:assert';
 import test from 'node:test';
-import { ProfileSchema } from '../../../lib/validation/profile.ts';
+import { UpdateProfileSchema } from '../../../lib/validation/profile.ts';
 
 test.describe('validation/profile', () => {
-  test('aceita perfil básico e empresa opcional', () => {
-    const parsed = ProfileSchema.parse({
-      fullName: 'User',
-      email: 'a@b.com',
-      phone: '123',
-      cpf: '00000000000',
+  test('aceita perfil básico e normaliza campos', () => {
+    const parsed = UpdateProfileSchema.parse({
+      name: '  User  Name ',
+      phone: '(11) 91234-5678',
+      cpf: '39053344705', // CPF válido
       hasCompany: true,
-      company: { cnpj: '12345678000100', razaoSocial: 'Empresa' },
+      cnpj: '27865757000102', // CNPJ válido
+      razaoSocial: '  Empresa   Teste ',
     });
-    assert.strictEqual(parsed.company?.cnpj, '12345678000100');
+    assert.strictEqual(parsed.name, 'User Name');
+    assert.strictEqual(parsed.phone, '11912345678');
+    assert.strictEqual(parsed.cnpj, '27865757000102');
+    assert.strictEqual(parsed.razaoSocial, 'Empresa Teste');
   });
 
-  test('rejeita quando hasCompany sem company', () => {
-    assert.throws(() => ProfileSchema.parse({
-      fullName: 'User',
-      email: 'a@b.com',
-      phone: '123',
-      cpf: '00000000000',
+  test('permite hasCompany com campos vazios normalizados para null', () => {
+    const parsed = UpdateProfileSchema.parse({
+      name: 'User Name',
       hasCompany: true,
-      company: null,
-    }));
+      cnpj: null,
+      razaoSocial: '',
+    });
+    assert.strictEqual(parsed.hasCompany, true);
+    assert.strictEqual(parsed.cnpj, null);
+    assert.strictEqual(parsed.razaoSocial, null);
   });
 });

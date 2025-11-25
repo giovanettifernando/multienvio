@@ -4,6 +4,12 @@ import { GET, PUT } from '../../../../../../app/api/account/profile/route.ts';
 
 const originalFetch = global.fetch;
 
+function makeRequest(url: string, options?: RequestInit) {
+  const req = new Request(url, options);
+  (req as any).nextUrl = new URL(url);
+  return req;
+}
+
 test.describe('app/api/account/profile', () => {
   test.afterEach(() => {
     global.fetch = originalFetch;
@@ -15,7 +21,7 @@ test.describe('app/api/account/profile', () => {
       status: 401,
       json: async () => ({ message: 'unauth' }),
     })) as any;
-    const res = await GET(new Request('http://test/api/account/profile'));
+    const res = await GET(makeRequest('http://test/api/account/profile'));
     assert.strictEqual(res.status, 401);
     const body = await res.json();
     assert.strictEqual(body.message, 'unauth');
@@ -39,7 +45,7 @@ test.describe('app/api/account/profile', () => {
       }),
     })) as any;
 
-    const res = await GET(new Request('http://test/api/account/profile'));
+    const res = await GET(makeRequest('http://test/api/account/profile'));
     const body = await res.json();
     assert.strictEqual(body.fullName, 'User');
     assert.strictEqual(body.company.cnpj, '11');
@@ -57,7 +63,7 @@ test.describe('app/api/account/profile', () => {
     }) as any;
 
     const res = await PUT(
-      new Request('http://test/api/account/profile', {
+      makeRequest('http://test/api/account/profile', {
         method: 'PUT',
         body: JSON.stringify({ fullName: 'New Name', phone: '999' }),
       }),
@@ -86,7 +92,7 @@ test.describe('app/api/account/profile', () => {
     }) as any;
 
     const res = await PUT(
-      new Request('http://test/api/account/profile', {
+      makeRequest('http://test/api/account/profile', {
         method: 'PUT',
         body: JSON.stringify({ fullName: 'Saved', phone: '123' }),
       }),

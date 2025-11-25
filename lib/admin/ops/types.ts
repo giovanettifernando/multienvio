@@ -14,23 +14,53 @@ export type CarrierCode = 'Correios' | 'Jadlog' | 'J&T' | 'Loggi' | 'Outro';
 
 export interface OpsShipment {
   id: string;
-  customerId: string;
-  customerName: string;
-  orderRef?: string | null;
-  carrier: CarrierCode | null;
+  platformTrackingCode: string;
+  carrierTrackingCode?: string | null;
+  senderId: string;
+  senderName: string;
+  senderEmail?: string | null;
+  recipientId?: string | null;
+  recipientName?: string | null;
+  recipientPhone?: string | null;
+  recipientEmail?: string | null;
+  recipientDocument?: string | null;
+  destinationAddress?: string | null;
+  destinationNeighborhood?: string | null;
+  destinationCity: string;
+  destinationState: string;
+  destinationCep: string;
+  originCep: string;
+  weight: number;
+  declaredValue: number;
+  status: string;
+  carrier?: string | null;
   service?: string | null;
-  status: ShipmentStatus;
-  pickupType: PickupType; // home_pickup (endereço), poc_pickup (ponto)
-  pickupAddress?: string | null;
-  pocId?: string | null;  // ponto de coleta associado (se houver)
-  pocName?: string | null;
-  trackingCode?: string | null;
-  createdAt: string;      // ISO
-  updatedAt: string;      // ISO
-  eta?: string | null;    // ETA estimado
-  weightKg?: number | null;
-  volume?: { w: number; h: number; l: number } | null;
-  riskFlag?: boolean;     // antifraude/risco
+  estimatedDays?: number | null;
+  freightCost?: number | null;
+  pickupFee?: number | null;
+  pickupPointId?: string | null;
+  pickupPointName?: string | null;
+  collectorId?: string | null;
+  collectorName?: string | null;
+  postedAt?: string | null;
+  receivedAt?: string | null;
+  receivedBy?: string | null;
+  deliveredAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  // Pickup Request info
+  pickupRequestId?: string | null;
+  pickupRequestStatus?: string | null;
+  pickupScheduledAt?: string | null;
+  pickupCollectedAt?: string | null;
+  pickupDeliveredToCarrierAt?: string | null;
+  // Label info
+  labelStatus?: string | null;
+  labelFileUrl?: string | null;
+  labelIsPrinted?: boolean;
+  // Package info
+  packageCount?: number;
+  hasDivergence?: boolean;
 }
 
 export interface PickupOrder {

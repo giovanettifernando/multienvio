@@ -22,14 +22,14 @@ function generateInitialSeed(): OpsSeed {
   const carriers: Array<'Correios' | 'Jadlog' | 'J&T' | 'Loggi' | null> = ['Correios', 'Jadlog', 'J&T', 'Loggi', null];
   const services = ['SEDEX', 'PAC', '.Package', 'Express', 'Standard', 'Same Day'];
   const statuses: Array<OpsShipment['status']> = [
-    ...Array(16).fill('awaiting_dropoff'),
-    ...Array(12).fill('awaiting_pickup'),
-    ...Array(8).fill('received_at_poc'),
-    ...Array(8).fill('in_pickup'),
-    ...Array(20).fill('in_transit'),
-    ...Array(8).fill('out_for_delivery'),
-    ...Array(6).fill('delivered'),
-    ...Array(2).fill('exception'),
+    ...Array(16).fill('AWAITING_DROP_OFF_AT_POINT'),
+    ...Array(12).fill('PICKUP_REQUESTED'),
+    ...Array(8).fill('RECEIVED_AT_POINT'),
+    ...Array(8).fill('IN_TRANSIT_TO_CARRIER'),
+    ...Array(20).fill('IN_TRANSIT'),
+    ...Array(8).fill('OUT_FOR_DELIVERY'),
+    ...Array(6).fill('DELIVERED'),
+    ...Array(2).fill('EXCEPTION'),
   ];
 
   // Generate 80 shipments
@@ -37,29 +37,56 @@ function generateInitialSeed(): OpsSeed {
     const daysAgo = Math.floor(Math.random() * 30);
     const createdAt = new Date(now.getTime() - daysAgo * 24 * 60 * 60 * 1000);
     const status = statuses[i % statuses.length];
-    const pickupType = Math.random() < 0.6 ? 'poc_pickup' : Math.random() < 0.8 ? 'home_pickup' : 'locker_pickup';
     const carrier = carriers[Math.floor(Math.random() * carriers.length)];
-    const pocId = pickupType === 'poc_pickup' ? `poc_00${Math.floor(Math.random() * 10) + 1}` : null;
+    const weight = parseFloat((Math.random() * 5 + 0.5).toFixed(2));
+    const declaredValue = parseFloat((Math.random() * 500 + 50).toFixed(2));
 
     shipments.push({
       id: `shp_${String(i + 1).padStart(3, '0')}`,
-      customerId: `cli_${String((i % 12) + 1).padStart(3, '0')}`,
-      customerName: customers[i % customers.length],
-      orderRef: Math.random() < 0.8 ? `ORD-2025-${String(i + 1).padStart(4, '0')}` : null,
+      platformTrackingCode: `EL${String(i + 1).padStart(9, '0')}`,
+      carrierTrackingCode: carrier ? `${carrier.substring(0, 2).toUpperCase()}${String(i + 1).padStart(9, '0')}` : null,
+      senderId: `cli_${String((i % 12) + 1).padStart(3, '0')}`,
+      senderName: customers[i % customers.length],
+      senderEmail: `contato${(i % 12) + 1}@email.com`,
+      recipientId: null,
+      recipientName: `Cliente ${i + 1}`,
+      recipientPhone: `(11) 9${String(90000000 + i).substring(0, 8)}`,
+      recipientEmail: null,
+      recipientDocument: null,
+      destinationAddress: `Rua ${i + 1}, ${(i + 1) * 10}`,
+      destinationNeighborhood: 'Centro',
+      destinationCity: 'São Paulo',
+      destinationState: 'SP',
+      destinationCep: `01${String(i + 1).padStart(3, '0')}-000`,
+      originCep: `05${String(i + 1).padStart(3, '0')}-000`,
+      weight,
+      declaredValue,
+      status,
       carrier,
       service: carrier ? services[Math.floor(Math.random() * services.length)] : null,
-      status,
-      pickupType,
-      pickupAddress: pickupType === 'home_pickup' ? `Rua ${i + 1}, ${(i + 1) * 10} - São Paulo/SP` : null,
-      pocId,
-      pocName: pocId ? `PoC ${pocId.split('_')[1]}` : null,
-      trackingCode: carrier ? `${carrier.substring(0, 2).toUpperCase()}${String(i + 1).padStart(9, '0')}` : null,
+      estimatedDays: carrier ? Math.floor(Math.random() * 5 + 1) : null,
+      freightCost: carrier ? parseFloat((Math.random() * 50 + 10).toFixed(2)) : null,
+      pickupFee: Math.random() < 0.5 ? parseFloat((Math.random() * 10 + 5).toFixed(2)) : null,
+      pickupPointId: null,
+      pickupPointName: null,
+      collectorId: null,
+      collectorName: null,
+      postedAt: null,
+      receivedAt: null,
+      receivedBy: null,
+      deliveredAt: status === 'DELIVERED' ? new Date(createdAt.getTime() + Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString() : null,
       createdAt: createdAt.toISOString(),
       updatedAt: new Date(createdAt.getTime() + Math.random() * 48 * 60 * 60 * 1000).toISOString(),
-      eta: status !== 'delivered' && status !== 'exception' ? new Date(now.getTime() + Math.random() * 5 * 24 * 60 * 60 * 1000).toISOString() : null,
-      weightKg: parseFloat((Math.random() * 5 + 0.5).toFixed(2)),
-      volume: { w: Math.floor(Math.random() * 40 + 10), h: Math.floor(Math.random() * 30 + 5), l: Math.floor(Math.random() * 50 + 10) },
-      riskFlag: Math.random() < 0.1,
+      pickupRequestId: null,
+      pickupRequestStatus: null,
+      pickupScheduledAt: null,
+      pickupCollectedAt: null,
+      pickupDeliveredToCarrierAt: null,
+      labelStatus: null,
+      labelFileUrl: null,
+      labelIsPrinted: false,
+      packageCount: 1,
+      hasDivergence: false,
     });
   }
 

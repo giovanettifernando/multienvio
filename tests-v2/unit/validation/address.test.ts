@@ -6,14 +6,14 @@ test.describe('validation/address', () => {
   test('valida endereço completo', () => {
     const data = {
       cep: '12345678',
-      street: 'Rua',
-      number: '10',
-      district: 'Centro',
-      city: 'Cidade',
-      state: 'SP',
+      logradouro: 'Rua',
+      numero: '10',
+      bairro: 'Centro',
+      cidade: 'Cidade',
+      uf: 'SP',
     };
-    const parsed = AddressSchema.parse(data);
-    assert.strictEqual(parsed.city, 'Cidade');
+    const parsed = AddressSchema.parse(data as any);
+    assert.strictEqual(parsed.cidade, 'Cidade');
   });
 
   test('rejeita CEP inválido', () => {

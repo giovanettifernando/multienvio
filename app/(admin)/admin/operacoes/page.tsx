@@ -71,26 +71,42 @@ export default function AdminOperacoesPage() {
         inTransit: 0,
         exceptions: 0,
         delivered: 0,
-        slaRisk: 0,
       };
     }
 
     const items = allShipments.items;
     return {
-      backlog: items.filter((s) => s.status === 'awaiting_dropoff' || s.status === 'awaiting_pickup').length,
-      inPickup: items.filter((s) => s.status === 'in_pickup').length,
-      atPoC: items.filter((s) => s.status === 'received_at_poc').length,
-      inTransit: items.filter((s) => s.status === 'in_transit' || s.status === 'out_for_delivery').length,
-      exceptions: items.filter((s) => s.status === 'exception').length,
-      delivered: items.filter((s) => s.status === 'delivered').length,
-      slaRisk: items.filter((s) => s.riskFlag).length,
+      // Backlog: Coleta solicitada + Aguardando entrega no ponto
+      backlog: items.filter((s) =>
+        s.status === 'PICKUP_REQUESTED' ||
+        s.status === 'AWAITING_DROP_OFF_AT_POINT'
+      ).length,
+      // Em coleta: inclui em trânsito para transportadora
+      inPickup: items.filter((s) =>
+        s.status === 'IN_TRANSIT_TO_CARRIER' ||
+        s.status === 'IN_TRANSIT_TO_CARRIER_HUB'
+      ).length,
+      // No ponto: Recebido no ponto + Recebido na transportadora
+      atPoC: items.filter((s) =>
+        s.status === 'RECEIVED_AT_POINT' ||
+        s.status === 'RECEIVED_AT_CARRIER'
+      ).length,
+      // Em trânsito: Em trânsito + Saiu para entrega
+      inTransit: items.filter((s) =>
+        s.status === 'IN_TRANSIT' ||
+        s.status === 'OUT_FOR_DELIVERY'
+      ).length,
+      // Exceções
+      exceptions: items.filter((s) => s.status === 'EXCEPTION').length,
+      // Entregues
+      delivered: items.filter((s) => s.status === 'DELIVERED').length,
     };
   }, [allShipments]);
 
   const tabItems = [
     {
       key: 'shipments',
-      label: 'Pedidos/Envios',
+      label: 'Envios',
       children: <ShipmentsTable dateStart={_period.dateStart} dateEnd={_period.dateEnd} />,
     },
     {
@@ -226,13 +242,6 @@ export default function AdminOperacoesPage() {
                 title="Entregues"
                 value={kpis.delivered}
                 valueStyle={{ color: '#52c41a' }}
-              />
-            </Col>
-            <Col xs={24} sm={12} lg={6} xl={3}>
-              <Statistic
-                title="SLAs em Risco"
-                value={kpis.slaRisk}
-                valueStyle={{ color: kpis.slaRisk > 0 ? '#cf1322' : '#52c41a' }}
               />
             </Col>
           </Row>
