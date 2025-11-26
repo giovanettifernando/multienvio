@@ -400,7 +400,7 @@ export default function PersonalForm() {
             />
           ) : null}
 
-          <Card size="small" title="Dados pessoais" variant="bordered" style={{ borderRadius: 12 }}>
+          <Card size="small" title="Dados pessoais" variant="outlined" style={{ borderRadius: 12 }}>
             <Space direction="vertical" size={16} style={{ width: "100%" }}>
               <Controller
                 name="fullName"
@@ -488,7 +488,7 @@ export default function PersonalForm() {
 
           <Card
             size="small"
-            variant="bordered"
+            variant="outlined"
             style={{ borderRadius: 12 }}
           >
             <Space direction="vertical" size={16} style={{ width: "100%" }}>

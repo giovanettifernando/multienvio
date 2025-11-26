@@ -19,6 +19,10 @@ import {
   shouldUseMockFallback,
   type CarrierCode,
 } from './mocks';
+import {
+  quoteFromCorreios,
+  isCorreiosAvailable,
+} from '@/lib/integrations/carriers/correiosAdapter';
 
 /**
  * Service layer for quotation operations
@@ -88,19 +92,45 @@ async function quoteCarrier(
   const startTime = Date.now();
 
   try {
-    // TODO: Aqui entraria a integração real com cada transportadora
-    // Por enquanto, simulamos com erro para demonstrar o fallback
     console.info(`[QUOTE][${requestId}] Attempting real quote for ${carrier}`, {
       origin: request.origem.cep,
       dest: request.destino.cep,
       volumes: request.volumes.length,
     });
 
-    // Simula integração não configurada para demonstrar fallback
-    // Em produção, isso seria substituído por:
-    // const realQuotes = await realCarrierApi.quote(carrier, request);
-    // return { results: realQuotes, source: 'real' };
+    // ========================================
+    // CORREIOS - Integração Real
+    // ========================================
+    if (carrier === 'CORREIOS') {
+      // Verificar se integração está configurada
+      if (!isCorreiosAvailable()) {
+        console.info(`[QUOTE][${requestId}] Correios integration not configured, using mock`);
+        throw new Error('INTEGRATION_DISABLED');
+      }
 
+      // Chamar integração real dos Correios
+      const correiosResult = await quoteFromCorreios(request);
+
+      const duration = Date.now() - startTime;
+      console.info(`[QUOTE][${requestId}] Correios quote completed (${duration}ms)`, {
+        source: correiosResult.source,
+        results: correiosResult.results.length,
+      });
+
+      // Se obteve resultados reais, retornar
+      if (correiosResult.source === 'real' && correiosResult.results.length > 0) {
+        return correiosResult;
+      }
+
+      // Se falhou, deixar cair no fallback
+      throw new Error(correiosResult.error || 'No results from Correios');
+    }
+
+    // ========================================
+    // OUTRAS TRANSPORTADORAS - TODO: Implementar
+    // ========================================
+    // Por enquanto, simula integração não configurada para demonstrar fallback
+    // Em produção, adicionar integração para: JADLOG, LOGGI, JT, etc.
     throw new Error('INTEGRATION_DISABLED');
   } catch (error) {
     const duration = Date.now() - startTime;

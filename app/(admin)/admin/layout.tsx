@@ -25,36 +25,36 @@ export default function AdminLayout({
   const [isChecking, setIsChecking] = useState(() => pathname !== "/admin/login");
 
   const currentNavItem = useMemo(() => {
-    // Procurar no nível principal
-    let found = ADMIN_NAV.find((item) => {
-      if (item.href === "/admin") {
-        return pathname === "/admin";
-      }
-      if (item.href) {
-        return pathname.startsWith(item.href);
-      }
-      return false;
-    });
+    // Coletar todos os itens com href (principal e children)
+    type NavItemWithHref = typeof ADMIN_NAV[number] & { href: string };
+    const allItems: NavItemWithHref[] = [];
 
-    // Se não encontrou, procurar nos children
-    if (!found) {
-      for (const item of ADMIN_NAV) {
-        if (item.children) {
-          found = item.children.find((child) => {
-            if (child.href === "/admin") {
-              return pathname === "/admin";
-            }
-            if (child.href) {
-              return pathname.startsWith(child.href);
-            }
-            return false;
-          });
-          if (found) break;
+    for (const item of ADMIN_NAV) {
+      if (item.href) {
+        allItems.push(item as NavItemWithHref);
+      }
+      if (item.children) {
+        for (const child of item.children) {
+          if (child.href) {
+            allItems.push(child as NavItemWithHref);
+          }
         }
       }
     }
 
-    return found;
+    // Ordenar por tamanho do href (mais específico primeiro)
+    allItems.sort((a, b) => b.href.length - a.href.length);
+
+    // Encontrar o primeiro match
+    for (const item of allItems) {
+      if (item.href === "/admin") {
+        if (pathname === "/admin") return item;
+      } else if (pathname.startsWith(item.href)) {
+        return item;
+      }
+    }
+
+    return undefined;
   }, [pathname]);
 
   // Initial state based on pathname (computed synchronously)
@@ -157,32 +157,31 @@ export default function AdminLayout({
 
   // Encontrar a key selecionada (pode estar no nível principal ou nos children)
   const selectedKey = useMemo(() => {
-    // Procurar no nível principal
-    let found = authorizedNav.find((item) => {
-      if (item.href === "/admin") {
-        return pathname === "/admin";
-      }
-      if (item.href) {
-        return pathname.startsWith(item.href);
-      }
-      return false;
-    });
+    // Coletar todos os itens com href (principal e children)
+    const allItems: Array<{ key: string; href: string }> = [];
 
-    if (found) return found.key;
-
-    // Procurar nos children
     for (const item of authorizedNav) {
+      if (item.href) {
+        allItems.push({ key: item.key, href: item.href });
+      }
       if (item.children) {
-        found = item.children.find((child) => {
-          if (child.href === "/admin") {
-            return pathname === "/admin";
-          }
+        for (const child of item.children) {
           if (child.href) {
-            return pathname.startsWith(child.href);
+            allItems.push({ key: child.key, href: child.href });
           }
-          return false;
-        });
-        if (found) return found.key;
+        }
+      }
+    }
+
+    // Ordenar por tamanho do href (mais específico primeiro)
+    allItems.sort((a, b) => b.href.length - a.href.length);
+
+    // Encontrar o primeiro match
+    for (const item of allItems) {
+      if (item.href === "/admin") {
+        if (pathname === "/admin") return item.key;
+      } else if (pathname.startsWith(item.href)) {
+        return item.key;
       }
     }
 

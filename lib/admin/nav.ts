@@ -40,6 +40,12 @@ export const ADMIN_NAV: AdminNavItem[] = [
         href: "/admin/integracoes",
         permissions: ["INTEGRACOES"],
       },
+      {
+        key: "correios",
+        label: "Correios",
+        href: "/admin/integracoes/correios",
+        permissions: ["INTEGRACOES"],
+      },
     ],
   },
   {
