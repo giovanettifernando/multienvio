@@ -108,27 +108,6 @@ export function normalizePhone(phone: string): string | null {
 }
 
 /**
- * Normaliza telefone brasileiro para formato E.164 (DEPRECATED - não usar)
- * @deprecated Use normalizePhone() instead
- */
-export function normalizePhoneE164(phone: string): string | null {
-  // Remove tudo que não é dígito
-  const cleaned = phone.replace(/\D/g, '');
-
-  // Telefone brasileiro: 10 ou 11 dígitos (com ou sem 9º dígito)
-  if (cleaned.length === 10 || cleaned.length === 11) {
-    return `+55${cleaned}`;
-  }
-
-  // Se já está no formato +55...
-  if (phone.startsWith('+55') && (cleaned.length === 12 || cleaned.length === 13)) {
-    return `+55${cleaned.substring(2)}`;
-  }
-
-  return null;
-}
-
-/**
  * Valida formato de telefone brasileiro
  */
 export function isValidBrazilianPhone(phone: string): boolean {

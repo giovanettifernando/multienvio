@@ -240,11 +240,6 @@ export const validatePaymentRules = {
 };
 
 // Helper functions for field masking
-export function maskCardNumber(cardNumber: string): string {
-  if (cardNumber.length < 4) return '****';
-  return `**** **** **** ${cardNumber.slice(-4)}`;
-}
-
 export function maskPaymentCredentials(credential: unknown): unknown {
   const cred = credential as Record<string, unknown>;
   return {
@@ -255,25 +250,4 @@ export function maskPaymentCredentials(credential: unknown): unknown {
     accessToken: cred.accessToken ? '****** (hidden)' : null,
     refreshToken: cred.refreshToken ? '****** (hidden)' : null,
   };
-}
-
-// Currency formatting helper (BRL)
-export function formatCurrency(cents: number): string {
-  return new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-  }).format(cents / 100);
-}
-
-// Timezone helper (America/Fortaleza)
-export function formatDateForTimezone(date: Date): string {
-  return new Intl.DateTimeFormat('pt-BR', {
-    timeZone: 'America/Fortaleza',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-  }).format(date);
 }

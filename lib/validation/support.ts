@@ -70,38 +70,3 @@ export const NewTicketInputSchema = z.object({
 });
 
 export type NewTicketInput = z.infer<typeof NewTicketInputSchema>;
-
-// Helper functions
-export function newTicket(input: NewTicketInput): SupportTicket {
-  const now = new Date().toISOString();
-  return {
-    id: crypto.randomUUID(),
-    createdAt: now,
-    updatedAt: now,
-    status: 'aberto',
-    priority: input.priority,
-    subject: input.subject.trim(),
-    description: input.description.trim(),
-    tags: input.tags ?? [],
-    requester: input.requester,
-    messages: [],
-    attachments: input.attachments ?? [],
-    assignedTo: null,
-  };
-}
-
-export function newMessage(params: {
-  authorRole: AuthorRole;
-  authorName: string;
-  text: string;
-  attachments?: SupportAttachment[];
-}): SupportMessage {
-  return {
-    id: crypto.randomUUID(),
-    at: new Date().toISOString(),
-    authorRole: params.authorRole,
-    authorName: params.authorName,
-    text: params.text.trim(),
-    attachments: params.attachments ?? [],
-  };
-}

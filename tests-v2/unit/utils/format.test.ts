@@ -3,7 +3,6 @@ import test from 'node:test';
 import {
   formatCurrencyBRL,
   formatNumberBR,
-  formatSignedCurrency,
   formatWalletDescription,
 } from '../../../lib/format.ts';
 
@@ -16,11 +15,6 @@ test.describe('utils/format', () => {
   test('formatNumberBR respeita casas decimais', () => {
     assert.strictEqual(formatNumberBR(1000.5), '1.000,50');
     assert.strictEqual(formatNumberBR(1000, 0), '1.000');
-  });
-
-  test('formatSignedCurrency adiciona sinal correto', () => {
-    assert.strictEqual(formatSignedCurrency(50, true), '+ R$\u00a050,00');
-    assert.strictEqual(formatSignedCurrency(50, false), '- R$\u00a050,00');
   });
 
   test('formatWalletDescription trata descrições especiais', () => {

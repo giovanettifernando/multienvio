@@ -45,10 +45,18 @@ export async function validateWebhookSignature(
   const config = await getMercadoPagoConfig();
 
   if (!config?.webhookSecret) {
-    console.warn('[MERCADO_PAGO_WEBHOOK] Webhook secret não configurado, pulando validação');
-    // Por segurança, retornar false se não tiver secret configurado
-    // Em desenvolvimento, você pode mudar para true para facilitar testes
-    return process.env.NODE_ENV === 'development';
+    // SECURITY: Always require webhookSecret in production
+    if (process.env.NODE_ENV === 'production') {
+      console.error('[MERCADO_PAGO_WEBHOOK] SECURITY: webhookSecret não configurado em produção - rejeitando webhook');
+      return false;
+    }
+    // In development/staging, warn but allow for testing (only if explicitly enabled)
+    if (process.env.ALLOW_UNSIGNED_WEBHOOKS === 'true') {
+      console.warn('[MERCADO_PAGO_WEBHOOK] ⚠️ DEVELOPMENT: Webhook sem validação de assinatura (ALLOW_UNSIGNED_WEBHOOKS=true)');
+      return true;
+    }
+    console.warn('[MERCADO_PAGO_WEBHOOK] Webhook secret não configurado - rejeitando. Use ALLOW_UNSIGNED_WEBHOOKS=true para testes.');
+    return false;
   }
 
   try {

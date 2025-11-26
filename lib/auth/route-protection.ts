@@ -161,6 +161,8 @@ export function isAuthApiRoute(path: string): boolean {
 /**
  * Check if the path should be protected by middleware
  * Returns the type of protection needed: 'admin', 'auth', 'collector', 'pickup_point', or null (public)
+ *
+ * SECURITY: All /api/* routes require authentication by default unless explicitly public
  */
 export function getRouteProtection(path: string): 'admin' | 'auth' | 'collector' | 'pickup_point' | null {
   // Check public routes first
@@ -188,6 +190,13 @@ export function getRouteProtection(path: string): 'admin' | 'auth' | 'collector'
     return 'auth';
   }
 
-  // Default to public
+  // SECURITY: All API routes require authentication by default
+  // This is a defense-in-depth measure - if a route is not explicitly public, it requires auth
+  if (path.startsWith('/api/')) {
+    console.warn(`[SECURITY] API route not explicitly configured, requiring auth: ${path}`);
+    return 'auth';
+  }
+
+  // Default to public for non-API routes (pages)
   return null;
 }

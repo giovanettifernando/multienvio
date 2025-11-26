@@ -9,10 +9,6 @@ if (!globalThis.__envioLegalAppStartedAt) {
   globalThis.__envioLegalAppStartedAt = startedAtMs;
 }
 
-export function getAppStartedAt(): number {
-  return startedAtMs;
-}
-
 export function getAppStartedAtIso(): string {
   return new Date(startedAtMs).toISOString();
 }

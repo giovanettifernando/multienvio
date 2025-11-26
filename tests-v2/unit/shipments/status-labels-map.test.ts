@@ -4,14 +4,10 @@ import {
   mapToUIStatus,
   getStatusLabel,
   getBackendStatusesForUIFilter,
-  canShipmentBeCancelled,
 } from '../../../lib/shipments/status-labels-map.ts';
 import {
   ShipmentStatus,
   ShipmentStatusLabels,
-  CANCELLABLE_BEFORE_HANDOFF,
-  CANCELLABLE_IN_TRANSIT,
-  FINAL_STATUSES,
 } from '../../../lib/shipments/shipment-status.ts';
 
 test.describe('shipments/status-labels-map', () => {
@@ -60,15 +56,5 @@ test.describe('shipments/status-labels-map', () => {
     assert.ok(getBackendStatusesForUIFilter('Cancelado').includes(ShipmentStatus.CANCELLED_BEFORE_HANDOFF));
     assert.ok(getBackendStatusesForUIFilter('Devolvido').includes(ShipmentStatus.RETURNED_TO_SENDER));
     assert.deepStrictEqual(getBackendStatusesForUIFilter('Outro' as any), []);
-  });
-
-  test('canShipmentBeCancelled respeita finais e canceláveis', () => {
-    for (const status of FINAL_STATUSES) {
-      assert.strictEqual(canShipmentBeCancelled(status), false);
-    }
-    for (const status of [...CANCELLABLE_BEFORE_HANDOFF, ...CANCELLABLE_IN_TRANSIT]) {
-      // Deve ser true para todos canceláveis, exceto se também for final (nenhum em interseção atualmente)
-      assert.strictEqual(canShipmentBeCancelled(status), true);
-    }
   });
 });

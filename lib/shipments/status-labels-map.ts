@@ -3,7 +3,7 @@
  * Usado em endpoints de API para traduzir status do banco para labels amigáveis
  */
 
-import { ShipmentStatus, ShipmentStatusLabels, CANCELLABLE_BEFORE_HANDOFF, CANCELLABLE_IN_TRANSIT, FINAL_STATUSES } from './shipment-status';
+import { ShipmentStatus, ShipmentStatusLabels } from './shipment-status';
 
 /**
  * Status simplificados para exibição na UI do frontend
@@ -203,20 +203,4 @@ export function getBackendStatusesForUIFilter(uiStatus: UIShipmentStatus): Shipm
     default:
       return [];
   }
-}
-
-/**
- * Verifica se um shipment pode ser cancelado com base no status completo do backend
- * @param status Status completo do backend (ShipmentStatus)
- * @returns true se pode ser cancelado, false caso contrário
- */
-export function canShipmentBeCancelled(status: ShipmentStatus): boolean {
-  // Status finais não podem ser cancelados
-  if ((FINAL_STATUSES as readonly ShipmentStatus[]).includes(status)) {
-    return false;
-  }
-
-  // Verificar se está nos status canceláveis
-  const allCancellable: readonly ShipmentStatus[] = [...CANCELLABLE_BEFORE_HANDOFF, ...CANCELLABLE_IN_TRANSIT];
-  return allCancellable.includes(status);
 }

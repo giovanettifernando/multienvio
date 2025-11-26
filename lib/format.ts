@@ -30,19 +30,6 @@ export function formatNumberBR(value: number, decimals: number = 2): string {
 }
 
 /**
- * Formata um valor com sinal de crédito/débito
- * @param value - Valor em reais
- * @param isCredit - Se é crédito (true) ou débito (false)
- * @returns String formatada com sinal (ex: "+ R$ 100,00" ou "- R$ 50,00")
- */
-export function formatSignedCurrency(value: number, isCredit: boolean): string {
-  const absoluteValue = Math.abs(value);
-  const formatted = formatCurrencyBRL(absoluteValue);
-  const sign = isCredit ? '+' : '-';
-  return `${sign} ${formatted}`;
-}
-
-/**
  * Formata a descrição de uma transação da carteira
  * @param raw - Descrição bruta da transação
  * @returns Descrição formatada para exibição

@@ -41,8 +41,3 @@ export function enforceRateLimit({ key, limit, windowMs, now = Date.now() }: Enf
     });
   }
 }
-
-export function resetRateLimit(key: string) {
-  const store = getStore();
-  store.delete(key);
-}

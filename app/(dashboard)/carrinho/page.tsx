@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState, useCallback, useRef } from "react";
 import { Col, Row, Skeleton, message } from "antd";
 import { EmptyCart } from "@/components/cart/EmptyCart";
 import { CartTable } from "@/components/cart/CartTable";
@@ -10,41 +10,50 @@ import { CheckoutCartModal } from "@/components/payments/CheckoutCartModal";
 import {
   useCart,
   useCartClear as useCartClearMutation,
-  useCartRemove,
 } from "@/hooks/useCart";
 import type { CartItem } from "@/types/cart";
 import { PageShell } from "@/components/shared/PageShell";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 export default function CarrinhoPage() {
   const cartQuery = useCart();
+  const queryClient = useQueryClient();
 
   const [removeModalOpen, setRemoveModalOpen] = useState(false);
   const [itemToRemove, setItemToRemove] = useState<CartItem | null>(null);
-  const [pendingRemoveId, setPendingRemoveId] = useState<string | null>(null);
   const [checkoutModalOpen, setCheckoutModalOpen] = useState(false);
 
-  const removeMutation = useCartRemove(pendingRemoveId ?? "");
+  // Usar ref para evitar múltiplas chamadas simultâneas
+  const isRemovingRef = useRef(false);
+
+  const removeMutation = useMutation({
+    mutationFn: async (itemId: string) => {
+      const response = await fetch(`/api/cart/items/${itemId}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.message || "Falha ao remover item do carrinho");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      message.success("Item removido do carrinho");
+      queryClient.invalidateQueries({ queryKey: ["cart"] });
+    },
+    onError: (error) => {
+      message.error(
+        error instanceof Error
+          ? error.message
+          : "Falha ao remover item do carrinho",
+      );
+    },
+    onSettled: () => {
+      isRemovingRef.current = false;
+    },
+  });
+
   const clearMutation = useCartClearMutation();
-
-  useEffect(() => {
-    if (!pendingRemoveId) return;
-
-    removeMutation.mutate(undefined, {
-      onSuccess: () => {
-        message.success("Item removido do carrinho");
-      },
-      onError: (error) => {
-        message.error(
-          error instanceof Error
-            ? error.message
-            : "Falha ao remover item do carrinho",
-        );
-      },
-      onSettled: () => {
-        setPendingRemoveId(null);
-      },
-    });
-  }, [pendingRemoveId, removeMutation]);
 
   const cart = cartQuery.data;
   const isLoading = cartQuery.isLoading;
@@ -59,11 +68,14 @@ export default function CarrinhoPage() {
     setRemoveModalOpen(true);
   };
 
-  const confirmRemove = () => {
+  const confirmRemove = useCallback(() => {
     if (!itemToRemove) return;
+    if (isRemovingRef.current) return; // Evitar múltiplas chamadas
+
+    isRemovingRef.current = true;
     setRemoveModalOpen(false);
-    setPendingRemoveId(itemToRemove.id);
-  };
+    removeMutation.mutate(itemToRemove.id);
+  }, [itemToRemove, removeMutation]);
 
   const handleClearCart = () => {
     clearMutation.mutate(undefined, {
