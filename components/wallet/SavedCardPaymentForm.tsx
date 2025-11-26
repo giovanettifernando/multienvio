@@ -108,11 +108,12 @@ export function SavedCardPaymentForm({
     setProcessing(true);
 
     try {
-      // Verificar HTTPS (requisito do Mercado Pago)
-      if (typeof window !== "undefined" && window.location.protocol !== "https:") {
-        throw new Error(
-          "Pagamento requer conexão segura (HTTPS). Em desenvolvimento, use ngrok."
-        );
+      // Verificar HTTPS (requisito do Mercado Pago) - apenas em produção
+      // Em desenvolvimento, o SDK pode funcionar sem HTTPS em alguns casos
+      if (typeof window !== "undefined" &&
+          window.location.protocol !== "https:" &&
+          process.env.NODE_ENV === "production") {
+        throw new Error("Não foi possível estabelecer uma conexão segura. Tente novamente.");
       }
 
       // Buscar dados do usuário para obter CPF
@@ -252,15 +253,6 @@ export function SavedCardPaymentForm({
   return (
     <AntCard>
       <Space direction="vertical" size="large" style={{ width: "100%" }}>
-        {typeof window !== "undefined" && window.location.protocol !== "https:" && (
-          <Alert
-            message="HTTPS necessário"
-            description="O pagamento requer conexão segura (HTTPS). Use ngrok para desenvolvimento local."
-            type="warning"
-            showIcon
-          />
-        )}
-
         <div>
           <Text strong style={{ marginBottom: 8, display: "block" }}>
             Valor a pagar:

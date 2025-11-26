@@ -78,7 +78,7 @@ function ColetorLoginForm() {
 
   async function handleResendEmail() {
     // TODO: Implement resend email endpoint
-    message.info('Funcionalidade de reenvio de e-mail em desenvolvimento');
+    message.info('Funcionalidade temporariamente indisponível. Entre em contato com o suporte.');
   }
 
   return (

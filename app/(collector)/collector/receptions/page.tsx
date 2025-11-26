@@ -293,7 +293,7 @@ export default function ReceptionsPage() {
   };
 
   const handleScanCode = () => {
-    message.info('Funcionalidade de leitura de código em desenvolvimento');
+    message.info('Funcionalidade temporariamente indisponível');
     // TODO: Implementar leitura de código de barras via câmera
   };
 

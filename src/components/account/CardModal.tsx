@@ -121,11 +121,12 @@ export function CardModal({ open, loading, onSubmit, onCancel }: CardModalProps)
       setProcessing(true);
       const values = await form.validateFields();
 
-      // Verificar se está usando HTTPS (requisito do Mercado Pago)
-      if (typeof window !== "undefined" && window.location.protocol !== "https:") {
-        throw new Error(
-          "O cadastro de cartões requer HTTPS. Em desenvolvimento, use ngrok ou adicione créditos via 'Cartão de crédito' que salvará o cartão automaticamente."
-        );
+      // Verificar se está usando HTTPS (requisito do Mercado Pago) - apenas em produção
+      // Em desenvolvimento, o SDK pode funcionar sem HTTPS em alguns casos
+      if (typeof window !== "undefined" &&
+          window.location.protocol !== "https:" &&
+          process.env.NODE_ENV === "production") {
+        throw new Error("Não foi possível estabelecer uma conexão segura. Tente novamente.");
       }
 
       if (!publicKey || !window.MercadoPago) {

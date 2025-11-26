@@ -11,7 +11,6 @@ import {
   Modal,
   Space,
   message,
-  Alert,
 } from "antd";
 import { PageShell } from "@/components/shared/PageShell";
 import AddFundsModal from "@/components/wallet/AddFundsModal";
@@ -148,15 +147,6 @@ export default function PaymentMethodsPage() {
       </Modal>
 
       <PageShell title="Métodos de pagamento" gap="md">
-        <Alert
-          message="ℹ️ Integração em Desenvolvimento"
-          description="Os cartões são salvos no banco de dados, mas ainda não processam pagamentos reais. A integração completa com o gateway de pagamento será implementada em breve."
-          type="warning"
-          showIcon
-          closable
-          style={{ marginBottom: 16 }}
-        />
-
         <Space>
           <Button type="primary" onClick={() => setModalOpen(true)}>
             Adicionar cartão

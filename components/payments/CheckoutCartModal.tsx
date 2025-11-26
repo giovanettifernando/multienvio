@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Modal, Radio, Button, Typography, Space, App, Spin } from 'antd';
+import { Modal, Radio, Button, Typography, Space, App, Spin, Alert } from 'antd';
 import { useRouter } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -10,6 +10,9 @@ import {
   CreditCardOutlined,
   CheckCircleOutlined,
 } from '@ant-design/icons';
+import { SavedCardPaymentForm } from '@/components/wallet/SavedCardPaymentForm';
+import { CardPaymentForm } from '@/components/wallet/CardPaymentForm';
+import { useCards } from '@/hooks/useAccount';
 
 const { Text } = Typography;
 
@@ -32,26 +35,31 @@ interface WalletData {
   latestTransactions?: unknown[];
 }
 
-interface Card {
-  id: string;
-  brand: string;
-  last4: string;
-  holder: string;
-  expMonth: number;
-  expYear: number;
-}
-
 type PaymentMethod = 'wallet' | 'pix' | 'card';
 
-// Mapeamento de bandeiras para ícones/labels
-const BRAND_LABELS: Record<string, string> = {
-  visa: 'Visa',
-  mastercard: 'Mastercard',
-  amex: 'American Express',
-  elo: 'Elo',
-  hipercard: 'Hipercard',
-  hiper: 'Hiper',
-};
+interface MercadoPagoPaymentResult {
+  success: boolean;
+  transaction: {
+    id: string;
+    referenceId: string;
+    status: string;
+    amountCents: number;
+    method: string;
+  };
+  payment: {
+    id: number;
+    status: string;
+    statusDetail: string;
+    pixQrCode?: string;
+    pixQrCodeBase64?: string;
+  };
+}
+
+// Contexto de checkout pendente (para continuar após pagamento)
+interface PendingCheckout {
+  cartId: string;
+  shipmentIds: string[];
+}
 
 export function CheckoutCartModal({
   open,
@@ -63,8 +71,15 @@ export function CheckoutCartModal({
   const { message } = App.useApp();
 
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod | null>(null);
-  const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // Estados para pagamento com cartão via Mercado Pago
+  const [showCardForm, setShowCardForm] = useState(false);
+  const [useSavedCard, setUseSavedCard] = useState(true);
+  const [pendingCheckout, setPendingCheckout] = useState<PendingCheckout | null>(null);
+
+  // Estados para PIX via Mercado Pago
+  const [pixData, setPixData] = useState<MercadoPagoPaymentResult | null>(null);
 
   const totalAmount = cart.total;
   const itemCount = cart.items.length;
@@ -85,15 +100,15 @@ export function CheckoutCartModal({
     enabled: open,
   });
 
-  // Buscar cartões salvos
-  const {
-    data: cards = [],
-    isLoading: isLoadingCards,
-  } = useQuery<Card[]>({
-    queryKey: ['cards'],
+  // Buscar cartões salvos via hook
+  const { data: savedCards, isLoading: isLoadingCards } = useCards();
+
+  // Buscar dados do usuário para email
+  const { data: user } = useQuery<{ email: string }>({
+    queryKey: ['user-session'],
     queryFn: async () => {
-      const res = await fetch('/api/cards');
-      if (!res.ok) throw new Error('Erro ao buscar cartões');
+      const res = await fetch('/api/auth/me');
+      if (!res.ok) throw new Error('Erro ao buscar dados do usuário');
       return res.json();
     },
     enabled: open,
@@ -101,17 +116,107 @@ export function CheckoutCartModal({
 
   const balance = walletData?.balance?.availableReais ?? 0;
   const hasInsufficientBalance = balance < totalAmount;
-
   const isWalletDisabled = hasInsufficientBalance;
-  const isConfirmDisabled =
-    !selectedMethod ||
-    (selectedMethod === 'card' && !selectedCardId);
+  const isConfirmDisabled = !selectedMethod;
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL',
     }).format(value);
+  };
+
+  // Função auxiliar para rollback de shipments
+  const rollbackShipments = async (cartId: string, shipmentIds: string[]) => {
+    console.error('[CHECKOUT_CART] Iniciando rollback...');
+
+    try {
+      await Promise.all(
+        shipmentIds.map(async (id: string) => {
+          const cancelRes = await fetch(`/api/shipments/${id}/cancel`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ reason: 'payment_failed' }),
+          });
+
+          if (!cancelRes.ok) {
+            console.error(`[CHECKOUT_CART] Falha ao cancelar shipment ${id}`);
+          }
+        })
+      );
+
+      console.log('[CHECKOUT_CART] Rollback concluído - shipments cancelados');
+
+      // Destravar carrinho
+      const unlockRes = await fetch(`/api/cart/${cartId}/unlock`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      if (unlockRes.ok) {
+        console.log('[CHECKOUT_CART] Carrinho destravado com sucesso');
+      }
+    } catch (rollbackError) {
+      console.error('[CHECKOUT_CART] Erro durante rollback:', rollbackError);
+    }
+  };
+
+  // Função para finalizar checkout após pagamento aprovado
+  const finalizeCheckout = async (cartId: string, shipmentIds: string[], paymentId: number) => {
+    try {
+      // Confirmar pagamento dos shipments
+      await fetch('/api/shipments/payment-batch', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          shipmentIds,
+          method: 'card',
+          status: 'approved',
+          meta: {
+            mercadoPagoPaymentId: paymentId,
+            amount: totalAmount,
+          },
+        }),
+      });
+
+      // Limpar carrinho
+      await fetch('/api/carrinho', { method: 'DELETE' });
+
+      // Invalidar cache e redirecionar
+      queryClient.invalidateQueries({ queryKey: ['cart'] });
+      queryClient.invalidateQueries({ queryKey: ['shipments'] });
+
+      message.success('Pagamento aprovado! Etiquetas sendo emitidas...');
+      handleClose();
+      router.push('/shipments');
+    } catch (error) {
+      console.error('[CHECKOUT_CART] Erro ao finalizar checkout:', error);
+      message.error('Pagamento aprovado, mas houve erro ao processar. Entre em contato com o suporte.');
+    }
+  };
+
+  // Handler para sucesso do pagamento com cartão
+  const handleCardSuccess = async (paymentId: number) => {
+    if (!pendingCheckout) {
+      message.error('Erro: checkout pendente não encontrado');
+      return;
+    }
+
+    console.log('[CHECKOUT_CART] Pagamento com cartão aprovado:', paymentId);
+    await finalizeCheckout(pendingCheckout.cartId, pendingCheckout.shipmentIds, paymentId);
+  };
+
+  // Handler para erro do pagamento com cartão
+  const handleCardError = async (error: Error) => {
+    message.error(error.message || 'Erro ao processar pagamento com cartão');
+
+    if (pendingCheckout) {
+      await rollbackShipments(pendingCheckout.cartId, pendingCheckout.shipmentIds);
+    }
+
+    setShowCardForm(false);
+    setPendingCheckout(null);
+    setLoading(false);
   };
 
   const handleConfirm = async () => {
@@ -141,8 +246,7 @@ export function CheckoutCartModal({
       // PASSO 2: Processar pagamento de acordo com o método selecionado
       if (selectedMethod === 'wallet') {
         try {
-          // Debitar da carteira (idempotente por cartId)
-          // ✅ AGORA ATÔMICO: débito + confirmação + emissão de etiqueta em uma transação
+          // Debitar da carteira (atômico)
           const debitRes = await fetch('/api/wallet/debit', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -159,7 +263,6 @@ export function CheckoutCartModal({
 
           if (!debitRes.ok) {
             const error = await debitRes.json();
-            // Ignorar erros de idempotência (já foi processado)
             if (error.message?.includes('P2002') || error.message?.includes('já foi debitado')) {
               console.log('[CHECKOUT_CART] Pagamento já processado (idempotente)');
             } else {
@@ -167,179 +270,289 @@ export function CheckoutCartModal({
             }
           }
 
-          // ✅ REMOVIDO: Não é mais necessário chamar payment-batch separadamente
-          // O endpoint /api/wallet/debit agora faz tudo atomicamente:
-          // - Debita carteira
-          // - Confirma pagamento dos shipments
-          // - Emite etiquetas
-          // Isso evita inconsistências se uma das chamadas falhar
-
           queryClient.invalidateQueries({ queryKey: ['wallet'] });
           message.success('Pagamento com carteira aprovado!');
+
+          // Limpar carrinho e redirecionar
+          await fetch('/api/carrinho', { method: 'DELETE' });
+          queryClient.invalidateQueries({ queryKey: ['cart'] });
+          queryClient.invalidateQueries({ queryKey: ['shipments'] });
+          handleClose();
+          router.push('/shipments');
+
         } catch (paymentError) {
-          // 🔄 ROLLBACK AUTOMÁTICO: Cancelar shipments se pagamento falhar
-          console.error('[CHECKOUT_CART] Pagamento falhou, iniciando rollback...', paymentError);
-
-          try {
-            // Cancelar todos os shipments criados
-            await Promise.all(
-              shipmentIds.map(async (id: string) => {
-                const cancelRes = await fetch(`/api/shipments/${id}/cancel`, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ reason: 'payment_failed' }),
-                });
-
-                if (!cancelRes.ok) {
-                  console.error(`[CHECKOUT_CART] Falha ao cancelar shipment ${id}`);
-                }
-              })
-            );
-
-            console.log('[CHECKOUT_CART] Rollback concluído - shipments cancelados');
-
-            // 🔓 DESTRAVAR CARRINHO: Após cancelar shipments, destravar o carrinho para permitir novo checkout
-            const unlockRes = await fetch(`/api/cart/${cartId}/unlock`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-            });
-
-            if (unlockRes.ok) {
-              console.log('[CHECKOUT_CART] Carrinho destravado com sucesso');
-            } else {
-              console.error('[CHECKOUT_CART] Falha ao destravar carrinho, mas rollback foi concluído');
-            }
-          } catch (rollbackError) {
-            console.error('[CHECKOUT_CART] Erro durante rollback:', rollbackError);
-            // Continuar mesmo se rollback falhar - o erro de pagamento é mais importante
-          }
-
-          // Re-throw o erro original de pagamento
+          await rollbackShipments(cartId, shipmentIds);
           throw paymentError;
         }
 
       } else if (selectedMethod === 'pix') {
-        // Aprovar pagamento PIX (simulado)
-        await fetch('/api/shipments/payment-batch', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            shipmentIds,
-            method: 'pix',
-            status: 'approved',
-            meta: { simulated: true, amount: totalAmount },
-          }),
-        });
+        // Criar pagamento PIX via Mercado Pago
+        try {
+          const pixRes = await fetch('/api/payments/mercadopago/create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              transactionAmount: totalAmount,
+              paymentMethodId: 'pix',
+              payer: {
+                email: user?.email || 'usuario@example.com',
+              },
+              description: `Pagamento de ${itemCount} envio(s) - Envio Legal`,
+              metadata: {
+                type: 'checkout_payment',
+                cartId,
+                shipmentIds,
+              },
+            }),
+          });
 
-        message.success('Pagamento PIX aprovado (simulado)!');
+          if (!pixRes.ok) {
+            const error = await pixRes.json();
+            throw new Error(error.message || 'Erro ao gerar PIX');
+          }
+
+          const pixResult: MercadoPagoPaymentResult = await pixRes.json();
+          setPixData(pixResult);
+          setPendingCheckout({ cartId, shipmentIds });
+          message.success('QR Code PIX gerado com sucesso!');
+          setLoading(false);
+          return; // Não fechar modal, aguardar pagamento
+
+        } catch (pixError) {
+          await rollbackShipments(cartId, shipmentIds);
+          throw pixError;
+        }
 
       } else if (selectedMethod === 'card') {
-        // Aprovar pagamento com cartão (simulado)
-        await fetch('/api/shipments/payment-batch', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            shipmentIds,
-            method: 'card',
-            status: 'approved',
-            meta: { simulated: true, amount: totalAmount, cardId: selectedCardId },
-          }),
-        });
-
-        message.success('Pagamento com cartão aprovado (simulado)!');
+        // Mostrar formulário de cartão do Mercado Pago
+        setPendingCheckout({ cartId, shipmentIds });
+        setShowCardForm(true);
+        setLoading(false);
+        return; // Não fechar modal, aguardar input do usuário
       }
 
-      // PASSO 3: Limpar carrinho
-      await fetch('/api/carrinho', { method: 'DELETE' });
-
-      // PASSO 4: Invalidar cache e redirecionar
-      queryClient.invalidateQueries({ queryKey: ['cart'] });
-      queryClient.invalidateQueries({ queryKey: ['shipments'] });
-
-      onClose();
-      router.push('/shipments');
     } catch (error) {
       console.error('[CHECKOUT_CART_ERROR]', error);
-
-      // Tratamento específico de erros com mensagens detalhadas
-      let errorMessage = 'Erro ao processar pagamento';
-      let errorDescription: string | undefined;
-
-      if (error instanceof Error) {
-        const msg = error.message.toLowerCase();
-
-        // Erro de saldo insuficiente
-        if (msg.includes('saldo insuficiente') || msg.includes('insufficient')) {
-          errorMessage = 'Saldo insuficiente na carteira';
-          errorDescription = `Você precisa de ${formatCurrency(totalAmount)} mas tem apenas ${formatCurrency(balance)} disponível. Adicione fundos e tente novamente.`;
-        }
-        // Erro de carrinho não encontrado
-        else if (msg.includes('carrinho não encontrado') || msg.includes('cart not found')) {
-          errorMessage = 'Carrinho não encontrado';
-          errorDescription = 'Seu carrinho expirou ou já foi processado. Tente criar uma nova cotação.';
-        }
-        // Erro de carrinho vazio
-        else if (msg.includes('carrinho vazio') || msg.includes('cart empty')) {
-          errorMessage = 'Carrinho vazio';
-          errorDescription = 'Não há itens no carrinho para processar. Adicione cotações ao carrinho primeiro.';
-        }
-        // Erro de nenhum item selecionado
-        else if (msg.includes('nenhum item selecionado') || msg.includes('no items selected')) {
-          errorMessage = 'Nenhum item selecionado';
-          errorDescription = 'Selecione pelo menos um item do carrinho para prosseguir com o checkout.';
-        }
-        // Erro de carteira não encontrada
-        else if (msg.includes('carteira não encontrada') || msg.includes('wallet not found')) {
-          errorMessage = 'Carteira não disponível';
-          errorDescription = 'Sua carteira ainda não foi criada. Tente recarregar a página ou escolha outro método de pagamento.';
-        }
-        // Erro de total inválido
-        else if (msg.includes('invalid_item_total')) {
-          errorMessage = 'Valor do item inválido';
-          errorDescription = 'Um ou mais itens do carrinho tem valor inválido. Remova o item e crie uma nova cotação.';
-        }
-        // Erro de timeout
-        else if (msg.includes('timeout') || msg.includes('timed out')) {
-          errorMessage = 'Tempo esgotado';
-          errorDescription = 'A operação demorou muito. Verifique se o pagamento foi processado antes de tentar novamente.';
-        }
-        // Erro de rede
-        else if (msg.includes('failed to fetch') || msg.includes('network')) {
-          errorMessage = 'Erro de conexão';
-          errorDescription = 'Não foi possível conectar ao servidor. Verifique sua internet e tente novamente.';
-        }
-        // Erro genérico com mensagem do servidor
-        else {
-          errorMessage = error.message || 'Erro ao processar pagamento';
-        }
-      }
-
-      // Exibir mensagem de erro com descrição se disponível
-      if (errorDescription) {
-        message.error({
-          content: (
-            <div>
-              <strong>{errorMessage}</strong>
-              <div style={{ marginTop: 8, fontSize: 13 }}>{errorDescription}</div>
-            </div>
-          ),
-          duration: 8,
-        });
-      } else {
-        message.error(errorMessage);
-      }
+      showErrorMessage(error);
     } finally {
-      setLoading(false);
+      if (selectedMethod === 'wallet') {
+        setLoading(false);
+      }
     }
   };
 
+  const showErrorMessage = (error: unknown) => {
+    let errorMessage = 'Erro ao processar pagamento';
+    let errorDescription: string | undefined;
+
+    if (error instanceof Error) {
+      const msg = error.message.toLowerCase();
+
+      if (msg.includes('saldo insuficiente') || msg.includes('insufficient')) {
+        errorMessage = 'Saldo insuficiente na carteira';
+        errorDescription = `Você precisa de ${formatCurrency(totalAmount)} mas tem apenas ${formatCurrency(balance)} disponível.`;
+      } else if (msg.includes('carrinho não encontrado') || msg.includes('cart not found')) {
+        errorMessage = 'Carrinho não encontrado';
+        errorDescription = 'Seu carrinho expirou ou já foi processado.';
+      } else if (msg.includes('carrinho vazio') || msg.includes('cart empty')) {
+        errorMessage = 'Carrinho vazio';
+        errorDescription = 'Não há itens no carrinho para processar.';
+      } else if (msg.includes('carteira não encontrada') || msg.includes('wallet not found')) {
+        errorMessage = 'Carteira não disponível';
+        errorDescription = 'Sua carteira ainda não foi criada.';
+      } else {
+        errorMessage = error.message || 'Erro ao processar pagamento';
+      }
+    }
+
+    if (errorDescription) {
+      message.error({
+        content: (
+          <div>
+            <strong>{errorMessage}</strong>
+            <div style={{ marginTop: 8, fontSize: 13 }}>{errorDescription}</div>
+          </div>
+        ),
+        duration: 8,
+      });
+    } else {
+      message.error(errorMessage);
+    }
+  };
+
+  const handleClose = () => {
+    setSelectedMethod(null);
+    setShowCardForm(false);
+    setUseSavedCard(true);
+    setPendingCheckout(null);
+    setPixData(null);
+    setLoading(false);
+    onClose();
+  };
+
+  // Renderizar formulário de cartão do Mercado Pago
+  if (showCardForm && pendingCheckout) {
+    const hasSavedCards = savedCards && savedCards.length > 0;
+    const shouldShowSavedCardForm = useSavedCard && hasSavedCards;
+
+    return (
+      <Modal
+        title={shouldShowSavedCardForm ? "Pagar com Cartão Salvo" : "Pagamento com Cartão - Mercado Pago"}
+        open={open}
+        onCancel={() => {
+          // Cancelar checkout pendente
+          rollbackShipments(pendingCheckout.cartId, pendingCheckout.shipmentIds);
+          setShowCardForm(false);
+          setPendingCheckout(null);
+        }}
+        footer={null}
+        width={700}
+      >
+        <div style={{ marginBottom: 16 }}>
+          <Text strong>Total a pagar: </Text>
+          <Text style={{ fontSize: 20, color: '#52c41a' }}>
+            {formatCurrency(totalAmount)}
+          </Text>
+          <br />
+          <Text type="secondary">
+            {itemCount} {itemCount === 1 ? 'envio' : 'envios'}
+          </Text>
+        </div>
+
+        {shouldShowSavedCardForm ? (
+          <SavedCardPaymentForm
+            amount={totalAmount}
+            onSuccess={handleCardSuccess}
+            onError={handleCardError}
+            onUseNewCard={() => setUseSavedCard(false)}
+          />
+        ) : (
+          <Space direction="vertical" size="large" style={{ width: '100%' }}>
+            <CardPaymentForm
+              amount={totalAmount}
+              onSuccess={handleCardSuccess}
+              onError={handleCardError}
+            />
+
+            <Space direction="vertical" size="small" style={{ width: '100%' }}>
+              {hasSavedCards && (
+                <Button type="link" onClick={() => setUseSavedCard(true)} block>
+                  Voltar para cartões salvos
+                </Button>
+              )}
+              <Button onClick={() => {
+                rollbackShipments(pendingCheckout.cartId, pendingCheckout.shipmentIds);
+                setShowCardForm(false);
+                setPendingCheckout(null);
+              }} block>
+                Cancelar
+              </Button>
+            </Space>
+          </Space>
+        )}
+      </Modal>
+    );
+  }
+
+  // Renderizar QR Code PIX
+  if (pixData && pixData.payment.pixQrCode && pendingCheckout) {
+    return (
+      <Modal
+        title="QR Code PIX - Mercado Pago"
+        open={open}
+        onCancel={() => {
+          // Não fazer rollback aqui - usuário pode ter pago
+          handleClose();
+        }}
+        footer={[
+          <Button key="close" onClick={handleClose}>
+            Fechar
+          </Button>,
+        ]}
+        width={600}
+      >
+        <Space direction="vertical" size="large" style={{ width: '100%' }}>
+          <Alert
+            message="Aguardando pagamento"
+            description="Após escanear o QR Code e realizar o pagamento, o status será atualizado automaticamente via webhook do Mercado Pago."
+            type="info"
+            showIcon
+          />
+
+          <div style={{ textAlign: 'center' }}>
+            <Text type="secondary" style={{ marginBottom: 12, display: 'block' }}>
+              Escaneie o QR Code abaixo com o app do seu banco:
+            </Text>
+
+            {pixData.payment.pixQrCodeBase64 && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={`data:image/png;base64,${pixData.payment.pixQrCodeBase64}`}
+                alt="QR Code PIX"
+                style={{
+                  width: 280,
+                  height: 280,
+                  border: '2px solid #d9d9d9',
+                  borderRadius: 12,
+                  padding: 16,
+                  background: '#fff',
+                }}
+              />
+            )}
+
+            <div style={{ marginTop: 16 }}>
+              <Text strong style={{ fontSize: 18 }}>
+                {formatCurrency(totalAmount)}
+              </Text>
+              <br />
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                {itemCount} {itemCount === 1 ? 'envio' : 'envios'}
+              </Text>
+              <br />
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                ID: {pixData.transaction.referenceId}
+              </Text>
+            </div>
+          </div>
+
+          <Alert
+            message="PIX Copia e Cola"
+            description={
+              <div style={{ wordBreak: 'break-all', fontSize: 12 }}>
+                {pixData.payment.pixQrCode}
+                <br />
+                <Button
+                  type="link"
+                  size="small"
+                  onClick={() => {
+                    navigator.clipboard.writeText(pixData.payment.pixQrCode!);
+                    message.success('Código PIX copiado!');
+                  }}
+                  style={{ paddingLeft: 0 }}
+                >
+                  Copiar código
+                </Button>
+              </div>
+            }
+            type="warning"
+          />
+
+          <Text type="secondary" style={{ fontSize: 12, textAlign: 'center', display: 'block' }}>
+            Após a confirmação do pagamento, os envios serão processados automaticamente.
+          </Text>
+        </Space>
+      </Modal>
+    );
+  }
+
+  // Renderizar seleção de método de pagamento (tela principal)
   return (
     <Modal
       title="Escolha o método de pagamento"
       open={open}
-      onCancel={onClose}
+      onCancel={handleClose}
       footer={[
-        <Button key="cancel" onClick={onClose} disabled={loading}>
+        <Button key="cancel" onClick={handleClose} disabled={loading}>
           Cancelar
         </Button>,
         <Button
@@ -372,12 +585,7 @@ export function CheckoutCartModal({
         ) : (
           <Radio.Group
             value={selectedMethod}
-            onChange={(e) => {
-              setSelectedMethod(e.target.value);
-              if (e.target.value !== 'card') {
-                setSelectedCardId(null);
-              }
-            }}
+            onChange={(e) => setSelectedMethod(e.target.value)}
             style={{ width: '100%' }}
           >
             <Space direction="vertical" size="middle" style={{ width: '100%' }}>
@@ -401,58 +609,33 @@ export function CheckoutCartModal({
                 </Space>
               </Radio>
 
-              {/* PIX */}
+              {/* PIX via Mercado Pago */}
               <Radio value="pix">
                 <Space>
                   <QrcodeOutlined style={{ fontSize: 20 }} />
                   <div>
-                    <div>PIX</div>
+                    <div>PIX via Mercado Pago</div>
                     <Text type="secondary" style={{ fontSize: 12 }}>
-                      Aprovação instantânea (simulado)
+                      Aprovação instantânea
                     </Text>
                   </div>
                 </Space>
               </Radio>
 
-              {/* Cartão de crédito */}
+              {/* Cartão de crédito via Mercado Pago */}
               <Radio value="card">
                 <Space>
                   <CreditCardOutlined style={{ fontSize: 20 }} />
                   <div>
-                    <div>Cartão de crédito</div>
+                    <div>Cartão de crédito via Mercado Pago</div>
                     <Text type="secondary" style={{ fontSize: 12 }}>
-                      Parcelamento disponível (simulado)
+                      {savedCards && savedCards.length > 0
+                        ? `${savedCards.length} cartão(ões) salvo(s)`
+                        : 'Cadastre um novo cartão'}
                     </Text>
                   </div>
                 </Space>
               </Radio>
-
-              {/* Seleção de cartão */}
-              {selectedMethod === 'card' && cards.length > 0 && (
-                <div style={{ marginLeft: 32 }}>
-                  <Radio.Group
-                    value={selectedCardId}
-                    onChange={(e) => setSelectedCardId(e.target.value)}
-                  >
-                    <Space direction="vertical">
-                      {cards.map((card) => (
-                        <Radio key={card.id} value={card.id}>
-                          {BRAND_LABELS[card.brand] || card.brand} •••• {card.last4}
-                          <Text type="secondary" style={{ fontSize: 12, marginLeft: 8 }}>
-                            {card.expMonth.toString().padStart(2, '0')}/{card.expYear}
-                          </Text>
-                        </Radio>
-                      ))}
-                    </Space>
-                  </Radio.Group>
-                </div>
-              )}
-
-              {selectedMethod === 'card' && cards.length === 0 && (
-                <div style={{ marginLeft: 32 }}>
-                  <Text type="secondary">Nenhum cartão cadastrado</Text>
-                </div>
-              )}
             </Space>
           </Radio.Group>
         )}
