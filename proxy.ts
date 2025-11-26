@@ -4,8 +4,8 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { jwtVerify } from 'jose';
-import { getRouteProtection } from '@/lib/auth/route-protection';
-import { prisma } from '@/lib/db';
+import { getRouteProtection } from './lib/auth/route-protection';
+import { prisma } from './lib/db';
 
 // Validar JWT secrets em produção
 if (process.env.NODE_ENV === 'production') {
