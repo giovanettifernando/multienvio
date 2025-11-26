@@ -5,7 +5,7 @@
  * Faz fetch do /api/auth/me na primeira montagem para sincronizar sessão com backend
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAuthStore } from "@/stores/auth";
 import type { User } from "@/lib/auth/types";
 
@@ -13,17 +13,17 @@ export function useCurrentUser(): { user: User | null; loading: boolean } {
   const user = useAuthStore((s) => s.user);
   const fetchCurrentUser = useAuthStore((s) => s.fetchCurrentUser);
   const [loading, setLoading] = useState(true);
-  const [hasFetched, setHasFetched] = useState(false);
+  const hasFetchedRef = useRef(false);
 
   useEffect(() => {
     // Only fetch once per app load
-    if (!hasFetched) {
-      setHasFetched(true);
-      fetchCurrentUser().finally(() => setLoading(false));
-    } else {
+    if (hasFetchedRef.current) {
       setLoading(false);
+      return;
     }
-  }, [fetchCurrentUser, hasFetched]);
+    hasFetchedRef.current = true;
+    fetchCurrentUser().finally(() => setLoading(false));
+  }, [fetchCurrentUser]);
 
   return { user, loading };
 }

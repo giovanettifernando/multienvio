@@ -80,7 +80,8 @@ export function ClientDrawer({ open, client, onClose, onStatusChange }: ClientDr
 
   if (!client) return null;
 
-  const totalShipments = Math.floor(Math.random() * 500) + 50;
+  // TODO: Substituir por dados reais quando a API estiver disponível
+  const totalShipments = client.totalShipments ?? 0;
   const walletAvailable = client.walletBalance / 100;
   const creditsMonth = client.creditsMonth / 100;
   const debitsMonth = client.debitsMonth != null ? client.debitsMonth / 100 : null;

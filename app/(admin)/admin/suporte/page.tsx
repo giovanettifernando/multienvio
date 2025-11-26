@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useState, useMemo } from 'react';
 import { Grid, Skeleton } from 'antd';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { NewTicketList } from '@/components/support/NewTicketList';
@@ -18,33 +18,18 @@ export default function AdminSupportPage() {
 function AdminSupportPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
   const [isComposing, setIsComposing] = useState(false);
   const screens = Grid.useBreakpoint();
   const isDesktop = screens.lg ?? false;
 
-  // Handle ticket query param
-  useEffect(() => {
-    const ticketId = searchParams.get('ticket');
-    if (ticketId && isDesktop) {
-      setSelectedTicketId(ticketId);
-      return;
-    }
-    setSelectedTicketId(null);
-    setIsComposing(false);
+  // Derivar selectedTicketId dos searchParams e isDesktop (sem useEffect)
+  const selectedTicketId = useMemo(() => {
+    if (!isDesktop) return null;
+    return searchParams.get('ticket');
   }, [searchParams, isDesktop]);
-
-  // Close drawer on mobile
-  useEffect(() => {
-    if (!isDesktop) {
-      setSelectedTicketId(null);
-      setIsComposing(false);
-    }
-  }, [isDesktop]);
 
   const handleSelectTicket = (ticketId: string) => {
     if (isDesktop) {
-      setSelectedTicketId(ticketId);
       const params = new URLSearchParams(searchParams.toString());
       params.set('ticket', ticketId);
       const query = params.toString();
@@ -55,7 +40,6 @@ function AdminSupportPageContent() {
   };
 
   const handleCloseDrawer = () => {
-    setSelectedTicketId(null);
     setIsComposing(false);
     const params = new URLSearchParams(searchParams.toString());
     params.delete('ticket');

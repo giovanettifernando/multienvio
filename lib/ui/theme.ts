@@ -92,7 +92,7 @@ const sharedComponentTokens: ThemeConfig["components"] = {
     defaultColor: "#1E3450",
   },
   Skeleton: {
-    color: "rgba(0, 56, 115, 0.08)",
+    gradientFromColor: "rgba(0, 56, 115, 0.08)",
   },
   Layout: {
     headerBg: "#FFFFFF",

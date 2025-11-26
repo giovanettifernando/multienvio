@@ -1,33 +1,37 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useSyncExternalStore } from 'react';
 import { Layout, theme, Button, Flex } from 'antd';
 import { MenuOutlined } from '@ant-design/icons';
 import { Sidebar } from './Sidebar';
 
 const { Header, Content } = Layout;
 
+// Hook para detectar viewport mobile de forma reativa
+function useIsMobile(): boolean {
+  return useSyncExternalStore(
+    (callback) => {
+      window.addEventListener('resize', callback);
+      return () => window.removeEventListener('resize', callback);
+    },
+    () => (typeof window !== 'undefined' ? window.innerWidth < 768 : false),
+    () => false
+  );
+}
+
+// Ler collapse state do localStorage de forma síncrona
+function getInitialCollapsed(): boolean {
+  if (typeof globalThis === 'undefined' || !globalThis.localStorage) return false;
+  const saved = globalThis.localStorage.getItem('enviolegal:sider-collapsed');
+  return saved === '1';
+}
+
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const { token } = theme.useToken();
-  const [collapsed, setCollapsed] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
+  const [collapsed, setCollapsed] = useState(getInitialCollapsed);
+  const isMobile = useIsMobile();
 
-  // Detect mobile viewport
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
-
-  // Remember collapse state in localStorage
-  useEffect(() => {
-    const saved = globalThis?.localStorage?.getItem('enviolegal:sider-collapsed');
-    if (saved != null) setCollapsed(saved === '1');
-  }, []);
-
+  // Persistir collapse state
   useEffect(() => {
     try {
       globalThis?.localStorage?.setItem('enviolegal:sider-collapsed', collapsed ? '1' : '0');

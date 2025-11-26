@@ -298,7 +298,7 @@ export async function createCardToken(cardData: {
         expiration_month: cardData.expirationMonth,
         expiration_year: cardData.expirationYear,
         security_code: cardData.securityCode,
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+         
         // @ts-ignore - MP SDK types are incomplete, cardholder is required
         cardholder: {
           name: cardData.cardholderName,

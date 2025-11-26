@@ -329,7 +329,7 @@ export default function CollectorDrawer({
       width={760}
       onClose={onClose}
       open={open}
-      destroyOnClose={false}
+      destroyOnHidden={false}
       footer={
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           {editCollector && (

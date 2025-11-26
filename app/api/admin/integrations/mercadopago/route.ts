@@ -168,7 +168,7 @@ export async function POST(request: Request) {
       }
 
       // Desativar credenciais antigas
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+       
       const _oldCredentials = await tx.paymentCredential.updateMany({
         where: {
           gatewayId: gateway.id,

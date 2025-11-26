@@ -60,7 +60,7 @@ export function ModalNovaEmbalagem({ open, onClose, onSuccess }: ModalNovaEmbala
       okText="Salvar"
       cancelText="Cancelar"
       confirmLoading={createPackaging.isPending}
-      destroyOnClose
+      destroyOnHidden
     >
       <Form layout="vertical" style={{ marginTop: 24 }}>
         <Form.Item

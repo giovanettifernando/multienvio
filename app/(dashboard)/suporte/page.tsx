@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { PlusOutlined } from '@ant-design/icons';
 import { Button, Card } from 'antd';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -11,27 +11,15 @@ import { PageShell } from '@/components/shared/PageShell';
 export default function SupportPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
+  // Derivar o ticketId diretamente dos searchParams (não precisa de estado separado)
+  const selectedTicketId = searchParams.get('ticket');
   const [isComposing, setIsComposing] = useState(false);
 
-  // Handle ticket query param
-  useEffect(() => {
-    const ticketId = searchParams.get('ticket');
-    if (ticketId) {
-      setSelectedTicketId(ticketId);
-      return;
-    }
-    setSelectedTicketId(null);
-    setIsComposing(false);
-  }, [searchParams]);
-
   const handleOpenTicket = (id: string) => {
-    setSelectedTicketId(id);
     router.push(`/suporte?ticket=${id}`);
   };
 
   const handleCloseDrawer = () => {
-    setSelectedTicketId(null);
     setIsComposing(false);
     router.push('/suporte');
   };

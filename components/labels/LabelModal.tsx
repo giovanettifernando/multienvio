@@ -68,7 +68,7 @@ export function LabelModal({ open, label, onClose }: LabelModalProps) {
             key: 'preview',
             label: 'Pré-visualização',
             children: (
-              canActions ? (
+              canActions && pdfUrl ? (
                 <iframe
                   title="preview-pdf"
                   src={pdfUrl}
@@ -76,7 +76,9 @@ export function LabelModal({ open, label, onClose }: LabelModalProps) {
                 />
               ) : (
                 <Typography.Text type="secondary">
-                  PDF indisponível para este status ({label?.status}). A etiqueta precisa estar EMITIDA.
+                  {canActions
+                    ? 'Carregando PDF...'
+                    : `PDF indisponível para este status (${label?.status}). A etiqueta precisa estar EMITIDA.`}
                 </Typography.Text>
               )
             ),

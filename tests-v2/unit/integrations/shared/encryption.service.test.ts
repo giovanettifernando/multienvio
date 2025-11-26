@@ -9,7 +9,7 @@ const originalEnvKey = process.env.ENCRYPTION_KEY;
 function loadModule() {
   delete require.cache[MODULE_PATH];
   process.env.ENCRYPTION_KEY = FIXED_KEY;
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
+   
   return require(MODULE_PATH) as typeof import('../../../../lib/integrations/shared/encryption.service.ts');
 }
 

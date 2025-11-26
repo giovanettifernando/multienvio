@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useSyncExternalStore } from "react";
 import { Tabs } from "antd";
 import AddressesList from "./AddressesList";
 import CardsList from "./CardsList";
@@ -10,39 +10,39 @@ import SecurityForm from "./SecurityForm";
 
 type TabKey = "addresses" | "cards" | "recipients" | "recurring-items" | "security";
 
+// Hook para ler hash da URL de forma reativa
+function useHash(): string {
+  return useSyncExternalStore(
+    (callback) => {
+      window.addEventListener("hashchange", callback);
+      return () => window.removeEventListener("hashchange", callback);
+    },
+    () => (typeof window !== "undefined" ? window.location.hash.replace("#", "") : ""),
+    () => ""
+  );
+}
+
+function getInitialTab(hash: string): TabKey {
+  if (hash && hash !== "personal") {
+    return hash as TabKey;
+  }
+  return "addresses";
+}
+
 export default function AccountTabs() {
-  const [activeKey, setActiveKey] = useState<TabKey>("addresses");
+  const hash = useHash();
+  // Derivar activeKey do hash
+  const activeKey = getInitialTab(hash);
 
+  // Limpar hash "personal" se presente
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    const hash = window.location.hash.replace("#", "") as string;
-
-    // Ignorar hash "personal" (dados pessoais agora estão sempre visíveis)
-    if (hash && hash !== "personal") {
-      setActiveKey(hash as TabKey);
+    if (hash === "personal") {
+      window.history.replaceState(null, "", window.location.pathname);
     }
-
-    const handler = () => {
-      const current = window.location.hash.replace("#", "") as string;
-
-      // Se for #personal, remover o hash e não fazer nada (dados pessoais já visíveis)
-      if (current === "personal") {
-        window.history.replaceState(null, "", window.location.pathname);
-        return;
-      }
-
-      if (current && current !== "personal") {
-        setActiveKey(current as TabKey);
-      }
-    };
-
-    window.addEventListener("hashchange", handler);
-    return () => window.removeEventListener("hashchange", handler);
-  }, []);
+  }, [hash]);
 
   const handleChange = (key: string) => {
     const normalized = (key as TabKey) || "addresses";
-    setActiveKey(normalized);
     if (typeof window !== "undefined") {
       window.location.hash = normalized;
     }

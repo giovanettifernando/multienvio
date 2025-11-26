@@ -10,7 +10,9 @@ export default function ResetPasswordPage() {
     <Suspense
       fallback={
         <div style={{ minHeight: "100dvh", display: "grid", placeItems: "center" }}>
-          <Spin size="large" tip="Carregando..." />
+          <Spin size="large" tip="Carregando...">
+            <div style={{ minHeight: 100 }} />
+          </Spin>
         </div>
       }
     >

@@ -93,7 +93,7 @@ export async function GET(
   try {
     const authResult = await requireAdminUser(request, AdminPermission.INTEGRACOES);
     if (authResult instanceof NextResponse) return authResult;
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+     
     const { session } = authResult;
 
     const { id } = await params;

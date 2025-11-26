@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { Form, Input, Button, Card, Typography, App, Spin } from 'antd';
 import { useAuthStore } from '@/stores/auth';
 import { useCurrentUser, useIsAdmin } from '@/hooks/useCurrentUser';
+import { useHydration } from '@/hooks/useHydration';
 import React from 'react';
 
 type LoginValues = {
@@ -18,15 +19,10 @@ function LoginPageContent() {
   const searchParams = useSearchParams();
   const { message } = App.useApp();
   const [loading, setLoading] = useState(false);
-  const [hydrated, setHydrated] = useState(false);
+  const hydrated = useHydration();
   const login = useAuthStore((s) => s.login);
   const { user: currentUser, loading: userLoading } = useCurrentUser();
   const isAdmin = useIsAdmin();
-
-  // Wait for hydration
-  useEffect(() => {
-    setHydrated(true);
-  }, []);
 
   // Auto-redirect if already logged in
   useEffect(() => {
@@ -78,7 +74,9 @@ function LoginPageContent() {
   if (!hydrated || userLoading || (hydrated && currentUser)) {
     return (
       <div style={{ minHeight: '100dvh', display: 'grid', placeItems: 'center' }}>
-        <Spin size="large" tip="Carregando..." />
+        <Spin size="large" tip="Carregando...">
+          <div style={{ minHeight: 100 }} />
+        </Spin>
       </div>
     );
   }
@@ -138,7 +136,9 @@ export default function LoginPage() {
   return (
     <Suspense fallback={
       <div style={{ minHeight: '100dvh', display: 'grid', placeItems: 'center' }}>
-        <Spin size="large" tip="Carregando..." />
+        <Spin size="large" tip="Carregando...">
+          <div style={{ minHeight: 100 }} />
+        </Spin>
       </div>
     }>
       <LoginPageContent />

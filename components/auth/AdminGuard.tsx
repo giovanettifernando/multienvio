@@ -5,10 +5,11 @@
  * Redireciona usuários não-admin para o login
  */
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores/auth";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useHydration } from "@/hooks/useHydration";
 import { Spin } from "antd";
 
 interface AdminGuardProps {
@@ -20,12 +21,7 @@ export function AdminGuard({ children }: AdminGuardProps) {
   const { user, loading } = useCurrentUser();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const isAdmin = useAuthStore((s) => s.isAdmin);
-  const [hydrated, setHydrated] = useState(false);
-
-  // Wait for Zustand hydration
-  useEffect(() => {
-    setHydrated(true);
-  }, []);
+  const hydrated = useHydration();
 
   // Check auth only after hydration and loading
   useEffect(() => {
@@ -46,7 +42,9 @@ export function AdminGuard({ children }: AdminGuardProps) {
         alignItems: "center",
         minHeight: "100vh",
       }}>
-        <Spin size="large" tip="Verificando permissões..." />
+        <Spin size="large" tip="Verificando permissões...">
+          <div style={{ minHeight: 100 }} />
+        </Spin>
       </div>
     );
   }

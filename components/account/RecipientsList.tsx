@@ -85,9 +85,11 @@ export default function RecipientsList() {
     }
   }, [recipientsQuery.data, setAll]);
 
-  useEffect(() => {
+  // Handler para busca que também reseta a página
+  const handleSearchChange = (value: string) => {
+    setSearch(value);
     setPage(1);
-  }, [search]);
+  };
 
   const createMutation = useRecipientCreate();
   const updateMutation = useRecipientUpdate();
@@ -200,7 +202,7 @@ export default function RecipientsList() {
           placeholder="Buscar por nome, documento, cidade..."
           prefix={<SearchOutlined />}
           value={search}
-          onChange={(event) => setSearch(event.target.value)}
+          onChange={(event) => handleSearchChange(event.target.value)}
           allowClear
         />
 

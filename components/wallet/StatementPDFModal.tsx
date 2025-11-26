@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useRef, useState } from "react";
-import { Modal, Button, Space, message } from "antd";
+import { Modal, Button, Space, App } from "antd";
 import { PrinterOutlined, DownloadOutlined } from "@ant-design/icons";
 
 interface StatementPDFModalProps {
@@ -19,6 +19,7 @@ export default function StatementPDFModal({
   dateTo,
   search,
 }: StatementPDFModalProps) {
+  const { message } = App.useApp();
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [isDownloading, setIsDownloading] = useState(false);
 
@@ -89,7 +90,7 @@ export default function StatementPDFModal({
       onCancel={onClose}
       width="90%"
       style={{ top: 20, maxWidth: 1200 }}
-      bodyStyle={{ padding: 0, height: 'calc(100vh - 200px)' }}
+      styles={{ body: { padding: 0, height: 'calc(100vh - 200px)' } }}
       footer={
         <Space>
           <Button onClick={onClose}>Fechar</Button>

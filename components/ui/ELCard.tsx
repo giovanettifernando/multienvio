@@ -12,7 +12,7 @@ type HeaderConfig = {
   extra?: ReactNode;
 };
 
-export interface ELCardProps extends CardProps {
+export interface ELCardProps extends Omit<CardProps, 'bodyStyle'> {
   header?: HeaderConfig;
   padding?: keyof typeof spacing;
   bodyGap?: keyof typeof spacing;
@@ -23,7 +23,6 @@ export function ELCard({
   padding = "lg",
   bodyGap = "md",
   className,
-  bodyStyle,
   children,
   ...cardProps
 }: ELCardProps) {
@@ -37,7 +36,6 @@ export function ELCard({
     gap: `${gapValue}px`,
     padding: `${paddingValue}px`,
     ...(cardStyles?.body ?? {}),
-    ...bodyStyle,
   };
 
   const mergedStyles = {

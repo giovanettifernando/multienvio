@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState, useCallback, useEffect } from "react";
+import React, { useMemo, useState, useCallback } from "react";
 import {
   Button,
   Tag,
@@ -26,7 +26,7 @@ import {
 } from "@ant-design/icons";
 import Link from "next/link";
 import { useShipments, useShipmentCancel } from "@/hooks/useShipments";
-import type { Shipment, ShipmentStatus } from "@/src/types/shipments";
+import type { Shipment, ShipmentStatus } from "@/types/shipments";
 import type { LabelItem } from "@/lib/types/label";
 import type { ColumnsType } from "antd/es/table";
 import { PageShell } from "@/components/shared/PageShell";
@@ -95,10 +95,16 @@ export default function ShipmentsPage() {
   const items = data?.items ?? [];
   const pagination = data?.pagination;
 
-  // Reset page to 1 when filters change
-  useEffect(() => {
+  // Handlers que resetam a página ao mudar filtros
+  const handleQueryChange = (newQuery: string) => {
+    setQuery(newQuery);
     setPage(1);
-  }, [query, status]);
+  };
+
+  const handleStatusChange = (newStatus: ShipmentStatus | "Todos") => {
+    setStatus(newStatus);
+    setPage(1);
+  };
 
   // Query para buscar divergências quando modal abrir
   const { data: divergencesData, isLoading: divergencesLoading } = useQuery<{
@@ -500,13 +506,13 @@ export default function ShipmentsPage() {
           placeholder="Buscar por rastreio, nome do destinatário, cidade, transportadora ou serviço"
           prefix={<SearchOutlined />}
           value={query}
-          onChange={(event) => setQuery(event.target.value)}
+          onChange={(event) => handleQueryChange(event.target.value)}
         />
         <Select
           style={{ width: 200 }}
           placeholder="Filtrar por status"
           value={status}
-          onChange={(value) => setStatus(value as ShipmentStatus | "Todos")}
+          onChange={handleStatusChange}
           options={STATUS_OPTIONS.map((opt) => ({
             label: opt,
             value: opt,

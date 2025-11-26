@@ -133,7 +133,7 @@ export default function PublicTrackingPage() {
             backgroundColor: "#fafafa",
             border: "1px solid #d9d9d9",
           }}
-          bodyStyle={{ padding: "12px 16px" }}
+          styles={{ body: { padding: "12px 16px" } }}
         >
           <Space direction="vertical" size={8} style={{ width: "100%" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
@@ -165,7 +165,7 @@ export default function PublicTrackingPage() {
         <TrackingTimeline events={data.events} title="Histórico de rastreamento" />
 
         {/* BLOCO 3: Detalhes Essenciais */}
-        <Card title="Detalhes do envio" bodyStyle={{ padding: "16px" }}>
+        <Card title="Detalhes do envio" styles={{ body: { padding: "16px" } }}>
           <Row gutter={[16, 12]}>
             <Col xs={24} sm={12}>
               <div>

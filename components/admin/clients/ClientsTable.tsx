@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { App, Button, Flex, Input, Popconfirm, Select, Space, Table, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import type { TableRowSelection } from 'antd/lib/table/interface';
@@ -66,14 +66,11 @@ export function ClientsTable({ clients, onViewClient, onStatusChange }: ClientsT
     });
   }, [clients, normalizedDigits, normalizedQuery, status, type]);
 
-  useEffect(() => {
-    const maxPage = Math.max(1, Math.ceil(filteredClients.length / pageSize) || 1);
-    if (page > maxPage) {
-      setPage(maxPage);
-    }
-  }, [filteredClients.length, page, pageSize]);
+  // Calcular página válida inline (corrige página se ficou maior que o máximo)
+  const maxPage = Math.max(1, Math.ceil(filteredClients.length / pageSize) || 1);
+  const validPage = Math.min(page, maxPage);
 
-  const offset = (page - 1) * pageSize;
+  const offset = (validPage - 1) * pageSize;
   const paginatedClients = useMemo(
     () => filteredClients.slice(offset, offset + pageSize),
     [filteredClients, offset, pageSize]
@@ -334,7 +331,7 @@ export function ClientsTable({ clients, onViewClient, onStatusChange }: ClientsT
         rowSelection={rowSelection}
         scroll={{ x: 1400 }}
         pagination={{
-          current: page,
+          current: validPage,
           pageSize,
           total: filteredClients.length,
           showSizeChanger: true,

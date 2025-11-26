@@ -14,6 +14,7 @@ export interface AdminClient {
   creditsMonth: number;      // Créditos no mês (centavos)
   debitsMonth: number | null;       // Débitos no mês (centavos)
   walletPendingCents?: number; // Saldo pendente em centavos (opcional)
+  totalShipments?: number; // Total de envios do cliente (opcional)
 }
 
 export interface ClientsQuery {

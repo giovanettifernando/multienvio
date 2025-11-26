@@ -38,7 +38,7 @@ export function PublicShipmentItems({ volumes }: PublicShipmentItemsProps) {
     return (
       <Card
         title="Itens do envio"
-        bodyStyle={{ padding: "16px" }}
+        styles={{ body: { padding: "16px" } }}
       >
         {volume.documentType === 'NF' && volume.nfKey && (
           <div style={{ marginBottom: 12, paddingBottom: 12, borderBottom: '1px solid #f0f0f0' }}>
@@ -187,7 +187,7 @@ export function PublicShipmentItems({ volumes }: PublicShipmentItemsProps) {
   }));
 
   return (
-    <Card title="Itens do envio" bodyStyle={{ padding: 0 }}>
+    <Card title="Itens do envio" styles={{ body: { padding: 0 } }}>
       <Collapse
         items={collapseItems}
         defaultActiveKey={volumes.map(v => v.index.toString())}

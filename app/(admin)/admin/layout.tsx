@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Layout, Menu, Typography, Flex, Spin } from "antd";
 import { usePathname, useRouter } from "next/navigation";
@@ -19,7 +19,10 @@ export default function AdminLayout({
   const admin = useAdminSession((state) => state.admin);
   const setAdmin = useAdminSession((state) => state.setAdmin);
   const clearAdmin = useAdminSession((state) => state.clearAdmin);
-  const [isChecking, setIsChecking] = useState(true);
+  const hasVerified = useRef(false);
+
+  // isChecking starts false for login page (computed from pathname)
+  const [isChecking, setIsChecking] = useState(() => pathname !== "/admin/login");
 
   const currentNavItem = useMemo(() => {
     // Procurar no nível principal
@@ -54,15 +57,18 @@ export default function AdminLayout({
     return found;
   }, [pathname]);
 
+  // Initial state based on pathname (computed synchronously)
+  const isLoginPage = pathname === "/admin/login";
+
   // Check authentication on mount and when pathname changes
   useEffect(() => {
-    if (pathname === "/admin/login") {
-      setIsChecking(false);
-      return;
-    }
+    if (isLoginPage) return;
+
+    // Prevent duplicate checks
+    if (hasVerified.current && admin) return;
 
     const verifyAuth = async () => {
-      setIsChecking(true);
+      hasVerified.current = true;
       const staffUser = await checkAdminAuth();
 
       if (!staffUser) {
@@ -76,7 +82,7 @@ export default function AdminLayout({
     };
 
     verifyAuth();
-  }, [pathname, router, setAdmin, clearAdmin]);
+  }, [pathname, router, setAdmin, clearAdmin, isLoginPage, admin]);
 
   const hasPermission = useAdminSession((state) => state.hasPermission);
   const isSuperAdmin = useAdminSession((state) => state.isSuperAdmin);
@@ -208,7 +214,7 @@ export default function AdminLayout({
     return openKeys;
   }, [authorizedNav, pathname]);
 
-  if (pathname === "/admin/login") {
+  if (isLoginPage) {
     return children;
   }
 

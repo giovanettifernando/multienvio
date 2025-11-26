@@ -1,4 +1,4 @@
-import type { Shipment as SrcShipment } from '@/src/types/shipments';
+import type { Shipment as SrcShipment } from '@/types/shipments';
 import type { Shipment } from '@/lib/types/shipment';
 import { labelFromShipment } from '@/lib/adapters/label-from-shipment';
 import { pushLabelToQueryCache } from '@/lib/labels/cache';

@@ -16,7 +16,7 @@ import { ELCard } from "@/components/ui/ELCard";
 import { ELFormItem } from "@/components/ui/ELFormItem";
 import { ELInput } from "@/components/ui/ELInput";
 import { NEW_THEME_ENABLED } from "@/lib/features/new-theme";
-import { spacing } from "@/src/styles/theme";
+import { spacing } from "@/lib/ui/theme";
 import {
   loginSchema,
   type LoginInput,

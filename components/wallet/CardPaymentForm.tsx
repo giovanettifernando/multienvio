@@ -108,7 +108,9 @@ export function CardPaymentForm({
     return (
       <AntCard>
         <div style={{ textAlign: "center", padding: "40px 0" }}>
-          <Spin tip="Carregando formulário de pagamento..." />
+          <Spin tip="Carregando formulário de pagamento...">
+            <div style={{ minHeight: 100 }} />
+          </Spin>
         </div>
       </AntCard>
     );

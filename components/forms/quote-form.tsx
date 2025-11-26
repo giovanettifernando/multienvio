@@ -859,7 +859,7 @@ export function QuoteForm({ company }: QuoteFormProps) {
 
           <Card
             title="Resultados da cotação"
-            bodyStyle={{ display: "flex", flexDirection: "column", gap: 16 }}
+            styles={{ body: { display: "flex", flexDirection: "column", gap: 16 } }}
             extra={
               <Select
                 value={sortKey}

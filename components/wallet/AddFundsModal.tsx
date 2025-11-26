@@ -367,7 +367,9 @@ export function AddFundsModal({
         {/* Lista de métodos de pagamento */}
         {isLoadingCards ? (
           <div style={{ textAlign: 'center', padding: '40px 0' }}>
-            <Spin tip="Carregando métodos de pagamento..." />
+            <Spin tip="Carregando métodos de pagamento...">
+              <div style={{ minHeight: 100 }} />
+            </Spin>
           </div>
         ) : (
           <div>

@@ -260,7 +260,9 @@ export function CheckoutModal({
 
         {isLoadingWallet || isLoadingCards ? (
           <div style={{ textAlign: 'center', padding: '40px 0' }}>
-            <Spin tip="Carregando opções de pagamento..." />
+            <Spin tip="Carregando opções de pagamento...">
+              <div style={{ minHeight: 100 }} />
+            </Spin>
           </div>
         ) : (
           <Radio.Group

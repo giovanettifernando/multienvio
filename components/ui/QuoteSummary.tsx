@@ -67,7 +67,7 @@ export function QuoteSummary({
           ) : null}
         </Flex>
       }
-      bodyStyle={{ padding: 16, display: "flex", flexDirection: "column", gap: 16 }}
+      styles={{ body: { padding: 16, display: "flex", flexDirection: "column", gap: 16 } }}
       style={{
         position: "sticky",
         top: 16,

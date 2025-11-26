@@ -58,7 +58,7 @@ export function QuoteResultCard({
 
   return (
     <Card
-      bodyStyle={{ padding: 16 }}
+      styles={{ body: { padding: 16 } }}
       style={{
         borderRadius: 8,
         border: highlighted ? "2px solid #1677FF" : "1px solid #E5E6EB",

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Card, Result, Button, Spin } from 'antd';
 import { CheckCircleOutlined, CloseCircleOutlined, LoadingOutlined, WarningOutlined } from '@ant-design/icons';
@@ -15,56 +15,37 @@ export default function VerifyEmailPage() {
   const errorParam = searchParams.get('error');
   const token = searchParams.get('token');
 
-  const [status, setStatus] = useState<Status>('loading');
-  const [message, setMessage] = useState('');
-
-  useEffect(() => {
-    // Handle redirected states from GET endpoint
+  // Derivar status e message dos searchParams (sem useEffect/setState)
+  const { status, message } = useMemo((): { status: Status; message: string } => {
     if (successParam === 'verified') {
-      setStatus('success');
-      setMessage('E-mail verificado com sucesso! Seu cadastro será analisado pela nossa equipe.');
-      return;
+      return { status: 'success', message: 'E-mail verificado com sucesso! Seu cadastro será analisado pela nossa equipe.' };
     }
-
     if (successParam === 'already_verified') {
-      setStatus('already_verified');
-      setMessage('Este e-mail já foi verificado anteriormente.');
-      return;
+      return { status: 'already_verified', message: 'Este e-mail já foi verificado anteriormente.' };
     }
-
     if (errorParam === 'token_invalid') {
-      setStatus('error');
-      setMessage('Link de verificação inválido.');
-      return;
+      return { status: 'error', message: 'Link de verificação inválido.' };
     }
-
     if (errorParam === 'token_not_found') {
-      setStatus('error');
-      setMessage('Link de verificação não encontrado ou expirado.');
-      return;
+      return { status: 'error', message: 'Link de verificação não encontrado ou expirado.' };
     }
-
     if (errorParam === 'token_expired') {
-      setStatus('expired');
-      setMessage('Link de verificação expirado. Por favor, solicite um novo cadastro.');
-      return;
+      return { status: 'expired', message: 'Link de verificação expirado. Por favor, solicite um novo cadastro.' };
     }
-
     if (errorParam === 'server_error') {
-      setStatus('error');
-      setMessage('Erro ao processar verificação. Tente novamente mais tarde.');
-      return;
+      return { status: 'error', message: 'Erro ao processar verificação. Tente novamente mais tarde.' };
     }
-
-    // If there's a token, redirect to GET endpoint
     if (token) {
-      window.location.href = `/api/coletores/auth/confirm-email?token=${token}`;
-      return;
+      return { status: 'loading', message: '' };
     }
+    return { status: 'error', message: 'Link de verificação inválido ou ausente.' };
+  }, [token, successParam, errorParam]);
 
-    // No token and no status params
-    setStatus('error');
-    setMessage('Link de verificação inválido ou ausente.');
+  // Redirect para GET endpoint se tiver token
+  useEffect(() => {
+    if (token && !successParam && !errorParam) {
+      window.location.href = `/api/coletores/auth/confirm-email?token=${token}`;
+    }
   }, [token, successParam, errorParam]);
 
   return (

@@ -165,12 +165,12 @@ export function MinhasEmbalagensSelect({ value, onChange, placeholder }: MinhasE
         options={options}
         onChange={handleChange}
         onClear={handleClear}
-        onDropdownVisibleChange={setIsDropdownOpen}
+        onOpenChange={setIsDropdownOpen}
         loading={isLoading}
         notFoundContent={isLoading ? <Spin size="small" /> : 'Nenhuma embalagem encontrada'}
         style={{ width: '100%' }}
         allowClear
-        dropdownStyle={{ maxHeight: 300 }}
+        popupMatchSelectWidth={true}
       />
       <ModalNovaEmbalagem
         open={modalOpen}

@@ -45,6 +45,31 @@ export interface AddressDetails {
 const geocodingCache = new Map<string, { coordinates: GeoCoordinates; precision: GeocodingPrecision; provider: string }>();
 
 /**
+ * Controle de rate limiting para Nominatim (1 req/segundo)
+ */
+let lastNominatimRequest = 0;
+
+async function waitForNominatimRateLimit(): Promise<void> {
+  const now = Date.now();
+  const elapsed = now - lastNominatimRequest;
+  const minInterval = 1100; // 1.1 segundos para margem de segurança
+
+  if (elapsed < minInterval) {
+    await new Promise(resolve => setTimeout(resolve, minInterval - elapsed));
+  }
+  lastNominatimRequest = Date.now();
+}
+
+/**
+ * Headers para Nominatim seguindo suas políticas de uso
+ * https://operations.osmfoundation.org/policies/nominatim/
+ */
+const NOMINATIM_HEADERS = {
+  'User-Agent': 'EnvioLegal/1.0 (https://enviolegal.com.br; contato@enviolegal.com.br)',
+  'Accept': 'application/json',
+};
+
+/**
  * Faz fetch com retry automático
  */
 async function fetchWithRetry(url: string, options: RequestInit, maxRetries = 2): Promise<Response> {
@@ -148,15 +173,14 @@ export async function geocodeCEP(
 
         const nominatimUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(fullAddress)}&limit=1`;
 
+        await waitForNominatimRateLimit();
         const nominatimResponse = await fetchWithRetry(
           nominatimUrl,
           {
-            headers: {
-              'User-Agent': 'Envio Legal App',
-            },
-            signal: AbortSignal.timeout(8000),
+            headers: NOMINATIM_HEADERS,
+            signal: AbortSignal.timeout(15000),
           },
-          0 // Sem retry para economizar tempo
+          1
         );
 
         if (nominatimResponse.ok) {
@@ -200,15 +224,14 @@ export async function geocodeCEP(
 
       const nominatimUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(zipcodeQuery)}&limit=1`;
 
+      await waitForNominatimRateLimit();
       const nominatimResponse = await fetchWithRetry(
         nominatimUrl,
         {
-          headers: {
-            'User-Agent': 'Envio Legal App',
-          },
-          signal: AbortSignal.timeout(8000),
+          headers: NOMINATIM_HEADERS,
+          signal: AbortSignal.timeout(15000),
         },
-        0
+        1
       );
 
       if (nominatimResponse.ok) {
@@ -244,15 +267,14 @@ export async function geocodeCEP(
 
       const nominatimUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(cityQuery)}&limit=1`;
 
+      await waitForNominatimRateLimit();
       const nominatimResponse = await fetchWithRetry(
         nominatimUrl,
         {
-          headers: {
-            'User-Agent': 'Envio Legal App',
-          },
-          signal: AbortSignal.timeout(8000),
+          headers: NOMINATIM_HEADERS,
+          signal: AbortSignal.timeout(15000),
         },
-        0
+        1
       );
 
       if (nominatimResponse.ok) {
@@ -363,13 +385,12 @@ export async function geocodeAddress(address: {
   try {
     const nominatimUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(fullAddress)}&limit=1`;
 
+    await waitForNominatimRateLimit();
     const response = await fetchWithRetry(
       nominatimUrl,
       {
-        headers: {
-          'User-Agent': 'Envio Legal App',
-        },
-        signal: AbortSignal.timeout(10000),
+        headers: NOMINATIM_HEADERS,
+        signal: AbortSignal.timeout(15000),
       },
       1
     );

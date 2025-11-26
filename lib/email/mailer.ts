@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-require-imports */
+ 
 import type { Transporter } from 'nodemailer';
 import { getEmailConfig } from './config';
 

@@ -1,5 +1,5 @@
-// Force Node.js runtime for Prisma database access
-export const runtime = 'nodejs';
+// Next.js 16 Proxy - replaces middleware.ts
+// Runtime is always Node.js (not Edge) - Prisma works here
 
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
@@ -116,7 +116,7 @@ function isStaffAuthenticated(payload: AdminJWTPayload | null): boolean {
   return payload !== null && payload.staffId !== undefined;
 }
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Check if this is an admin route (starts with /admin or /api/admin)
@@ -183,7 +183,7 @@ export async function middleware(request: NextRequest) {
         return NextResponse.redirect(loginUrl);
       }
     } catch (error) {
-      console.error('[MIDDLEWARE] Database error validating tokenVersion:', error);
+      console.error('[PROXY] Database error validating tokenVersion:', error);
       // On database error, redirect to login for security
       const loginUrl = new URL('/admin/login', request.url);
       loginUrl.searchParams.set('next', pathname);

@@ -32,7 +32,9 @@ export default function AdminLogoutPage() {
       justifyContent: "center",
       minHeight: "100vh"
     }}>
-      <Spin size="large" tip="Saindo..." />
+      <Spin size="large" tip="Saindo...">
+        <div style={{ minHeight: 100 }} />
+      </Spin>
     </div>
   );
 }

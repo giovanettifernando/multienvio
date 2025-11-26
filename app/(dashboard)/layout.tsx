@@ -1,20 +1,16 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth';
 import { DashboardShell } from '@/components/layout/dashboard-shell';
 import { Spin } from 'antd';
+import { useHydration } from '@/hooks/useHydration';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
-  const [hydrated, setHydrated] = useState(false);
-
-  // Wait for Zustand hydration
-  useEffect(() => {
-    setHydrated(true);
-  }, []);
+  const hydrated = useHydration();
 
   // Check auth only after hydration
   useEffect(() => {

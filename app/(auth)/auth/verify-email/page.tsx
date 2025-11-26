@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Alert, Button, Result, Spin } from "antd";
 import { CheckCircleOutlined, CloseCircleOutlined, MailOutlined } from "@ant-design/icons";
@@ -8,55 +8,73 @@ import Link from "next/link";
 import { FormCard } from "@/components/ui/FormCard";
 
 type VerificationState = "validating" | "success" | "error" | "already_verified";
+type VerificationResult = {
+  state: VerificationState;
+  message: string;
+  email: string;
+  errorCode: string;
+};
 
 function VerifyEmailContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
+  const hasFetched = useRef(false);
 
-  const [state, setState] = useState<VerificationState>("validating");
-  const [message, setMessage] = useState("");
-  const [email, setEmail] = useState("");
-  const [errorCode, setErrorCode] = useState("");
-
-  useEffect(() => {
+  // Estado inicial baseado na presença do token
+  const initialState = useMemo((): VerificationResult => {
     if (!token) {
-      setState("error");
-      setMessage("Token de verificação não fornecido. Verifique o link no email.");
-      setErrorCode("MISSING_TOKEN");
-      return;
+      return {
+        state: "error",
+        message: "Token de verificação não fornecido. Verifique o link no email.",
+        email: "",
+        errorCode: "MISSING_TOKEN"
+      };
     }
+    return { state: "validating", message: "", email: "", errorCode: "" };
+  }, [token]);
 
-    // Call verification endpoint
+  const [result, setResult] = useState<VerificationResult>(initialState);
+
+  // Chamar endpoint de verificação
+  useEffect(() => {
+    if (!token || hasFetched.current) return;
+
     const verifyEmail = async () => {
+      hasFetched.current = true;
       try {
         const response = await fetch(`/api/auth/verify-email?token=${encodeURIComponent(token)}`);
         const data = await response.json();
 
         if (response.ok) {
           if (data.code === "ALREADY_VERIFIED") {
-            setState("already_verified");
-            setMessage(data.message);
+            setResult({ state: "already_verified", message: data.message, email: "", errorCode: "" });
           } else {
-            setState("success");
-            setMessage(data.message);
-            setEmail(data.email || "");
+            setResult({ state: "success", message: data.message, email: data.email || "", errorCode: "" });
           }
         } else {
-          setState("error");
-          setMessage(data.message || "Erro ao verificar email");
-          setErrorCode(data.code || "UNKNOWN_ERROR");
+          setResult({
+            state: "error",
+            message: data.message || "Erro ao verificar email",
+            email: "",
+            errorCode: data.code || "UNKNOWN_ERROR"
+          });
         }
       } catch (error) {
         console.error("[VERIFY_EMAIL] Error:", error);
-        setState("error");
-        setMessage("Erro ao conectar com o servidor. Tente novamente.");
-        setErrorCode("NETWORK_ERROR");
+        setResult({
+          state: "error",
+          message: "Erro ao conectar com o servidor. Tente novamente.",
+          email: "",
+          errorCode: "NETWORK_ERROR"
+        });
       }
     };
 
     verifyEmail();
   }, [token]);
+
+  const { state, message, email, errorCode } = result;
 
   const handleResendVerification = () => {
     router.push(`/auth/resend-verification?email=${encodeURIComponent(email)}`);
