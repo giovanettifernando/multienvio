@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { App, Button, Flex, Input, Popconfirm, Select, Space, Table, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import type { TableRowSelection } from 'antd/lib/table/interface';
@@ -34,6 +35,7 @@ function formatCurrencyFromCents(value: number): string {
 
 export function ClientsTable({ clients, onViewClient, onStatusChange }: ClientsTableProps) {
   const { message } = App.useApp();
+  const router = useRouter();
 
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -185,8 +187,13 @@ export function ClientsTable({ clients, onViewClient, onStatusChange }: ClientsT
       width: 180,
       render: (_, record) => (
         <Space size="small">
-          <Button type="link" size="small" icon={<EyeOutlined />} onClick={() => onViewClient(record)}>
-            Ver
+          <Button
+            type="link"
+            size="small"
+            icon={<EyeOutlined />}
+            onClick={() => router.push(`/admin/contas/${record.id}`)}
+          >
+            Ver detalhes
           </Button>
           {record.status === 'blocked' ? (
             <Popconfirm

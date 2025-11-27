@@ -8,6 +8,7 @@ import { checkoutCartSchema } from '@/lib/validation/cart';
 import { createShipmentWithVolumes } from '@/lib/shipments/create-with-volumes';
 import { createInitialTrackingEvent } from '@/lib/tracking/create-event';
 import { ShipmentStatus } from '@/lib/shipments/shipment-status';
+import { calculateCommissionsInCents } from '@/lib/quotes/commission';
 import crypto from 'crypto';
 import type { Prisma } from '@prisma/client';
 
@@ -164,6 +165,19 @@ export async function POST(request: Request) {
           initialStatus = ShipmentStatus.AWAITING_DROP_OFF_AT_POINT;
         }
 
+        // Extrair valor da taxa de coleta (já com comissão aplicada)
+        const pickupFeeData = item.pickupFee as { feeAmount?: number } | null;
+        const pickupFeeAmount = pickupFeeData?.feeAmount ?? 0;
+
+        // Calcular comissões para reconciliação
+        // Os valores de frete e coleta já têm comissão aplicada, precisamos extrair
+        const freightCostCents = Math.round(selectedQuote.price * 100);
+        const pickupFeeCents = Math.round(pickupFeeAmount * 100);
+        const { shippingCommissionCents, pickupCommissionCents } = await calculateCommissionsInCents(
+          freightCostCents,
+          pickupFeeCents
+        );
+
         // Criar shipment COM VOLUMES usando serviço centralizado
         const { shipment } = await createShipmentWithVolumes(tx, {
           shipment: {
@@ -198,6 +212,9 @@ export async function POST(request: Request) {
             } as Prisma.InputJsonValue,
             status: initialStatus,
             paymentMethod: null,
+            // Registrar comissões para reconciliação
+            platformShippingCommissionCents: shippingCommissionCents > 0 ? shippingCommissionCents : null,
+            platformPickupCommissionCents: pickupCommissionCents > 0 ? pickupCommissionCents : null,
           },
           volumes: volumes.map((vol) => ({
             peso: vol.pesoKg || 0,

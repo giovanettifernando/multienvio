@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getAutonomousCollectorSession } from '@/lib/auth/autonomous-collector-session';
 import { ShipmentStatus } from '@/lib/shipments/shipment-status';
+import { chargeAdditionalPickupFee } from '@/lib/services/additionalPickupFee';
 
 interface RegisterAttemptBody {
   notes?: string;
@@ -31,7 +32,7 @@ export async function POST(
     const body: RegisterAttemptBody = await request.json();
     const { notes } = body;
 
-    // Buscar pickup request
+    // Buscar pickup request com dados do shipment
     const pickupRequest = await prisma.pickupRequest.findUnique({
       where: { id },
       select: {
@@ -40,6 +41,9 @@ export async function POST(
         status: true,
         attemptCount: true,
         attemptNotes: true,
+        userId: true,
+        shipmentId: true,
+        originCep: true,
       },
     });
 
@@ -129,6 +133,29 @@ export async function POST(
       shipmentStatus: shouldMarkAsFailed ? ShipmentStatus.PICKUP_FAILED : 'unchanged',
     });
 
+    // 3. Cobrar taxa adicional de coleta do usuário
+    let chargeResult = null;
+    if (pickupRequest.userId && pickupRequest.originCep) {
+      try {
+        chargeResult = await chargeAdditionalPickupFee({
+          pickupRequestId: id,
+          userId: pickupRequest.userId,
+          shipmentId: result.shipmentId,
+          attemptNumber: newAttemptCount,
+          originCep: pickupRequest.originCep,
+        });
+
+        console.log('[REGISTRAR_TENTATIVA] Taxa adicional cobrada:', {
+          method: chargeResult.method,
+          amountCents: chargeResult.amountCents,
+          newBalance: chargeResult.newBalanceCents,
+        });
+      } catch (chargeError) {
+        // Não bloquear o registro da tentativa se a cobrança falhar
+        console.error('[REGISTRAR_TENTATIVA] Erro ao cobrar taxa adicional:', chargeError);
+      }
+    }
+
     const message = shouldMarkAsFailed
       ? `Tentativa ${result.attemptCount} registrada. Coleta marcada como falhou após ${MAX_ATTEMPTS} tentativas.`
       : 'Tentativa de coleta registrada com sucesso';
@@ -141,6 +168,12 @@ export async function POST(
         attemptCount: result.attemptCount,
         attemptNotes: result.attemptNotes,
       },
+      additionalFeeCharged: chargeResult ? {
+        success: chargeResult.success,
+        method: chargeResult.method,
+        amountCents: chargeResult.amountCents,
+        message: chargeResult.message,
+      } : null,
     }, { status: 200 });
   } catch (error) {
     console.error('[REGISTRAR_TENTATIVA_ERROR]', error);

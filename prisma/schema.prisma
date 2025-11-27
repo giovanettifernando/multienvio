@@ -221,6 +221,9 @@ model Shipment {
   deliveredAt             DateTime?
   createdAt               DateTime        @default(now())
   updatedAt               DateTime        @updatedAt
+  // Campos de comissão da plataforma (para reconciliação)
+  platformShippingCommissionCents Int?    @map("platform_shipping_commission_cents") // Comissão sobre frete em centavos
+  platformPickupCommissionCents   Int?    @map("platform_pickup_commission_cents")   // Comissão sobre coleta em centavos
   recipient               User?           @relation("RecipientShipments", fields: [recipientId], references: [id])
   sender                  User            @relation("SenderShipments", fields: [senderId], references: [id])
   trackingEvents          TrackingEvent[]
@@ -1385,4 +1388,22 @@ model RecurringItem {
 
   @@index([userId])
   @@map("recurring_items")
+}
+
+/// Configuração de comissões da plataforma (singleton)
+/// Valores em percentual (ex: 10.5 = 10.5%)
+model PlatformCommission {
+  id                       String   @id @default(cuid())
+  /// Comissão sobre valor de frete (%)
+  shippingCommissionPercent Decimal @default(0) @db.Decimal(5, 2) @map("shipping_commission_percent")
+  /// Comissão sobre taxa de coleta (%)
+  pickupFeeCommissionPercent Decimal @default(0) @db.Decimal(5, 2) @map("pickup_fee_commission_percent")
+  /// Se ativa, aplica as comissões
+  isActive                  Boolean  @default(true) @map("is_active")
+  /// Última alteração feita por (staff user id)
+  updatedById               String?  @map("updated_by_id")
+  createdAt                 DateTime @default(now()) @map("created_at")
+  updatedAt                 DateTime @updatedAt @map("updated_at")
+
+  @@map("platform_commissions")
 }

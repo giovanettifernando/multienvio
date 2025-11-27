@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useEffect } from "react";
+import { useMemo, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import type { CompanyWizardData } from "@/lib/validation/company";
@@ -13,6 +13,9 @@ import { ELEmpty } from "@/components/ui/ELEmpty";
 import { PageShell } from "@/components/shared/PageShell";
 import { useQuoteStore } from "@/store/useQuoteStore";
 import { useQuoteDraft } from "@/lib/state/quoteDraft";
+import { useCanQuote } from "@/hooks/useWalletStatus";
+import ResolveDebtModal from "@/components/wallet/ResolveDebtModal";
+import { formatNumberBR } from "@/lib/format";
 
 async function fetchCompany(): Promise<CompanyWizardData | null> {
   const res = await fetch("/api/account/company");
@@ -26,11 +29,16 @@ export default function CotacoesPage() {
   console.log('[COTACOES_PAGE] ========== COMPONENT RENDER ==========');
 
   const router = useRouter();
+  const [resolveDebtOpen, setResolveDebtOpen] = useState(false);
+
   const { data: company, isLoading: companyLoading } = useQuery({
     queryKey: ["account", "company"],
     queryFn: fetchCompany,
     staleTime: 60_000,
   });
+
+  // Verificar se o usuário pode cotar (não tem saldo negativo)
+  const { canQuote, isLoading: walletLoading, negativeAmountReais } = useCanQuote();
 
   const addresses = useAddressStore((s) => s.items);
   const reset = useQuoteStore((s) => s.reset);
@@ -138,7 +146,7 @@ export default function CotacoesPage() {
     };
   }, [addresses]);
 
-  if (companyLoading) {
+  if (companyLoading || walletLoading) {
     return (
       <PageShell
         title="Cotar envio"
@@ -147,6 +155,35 @@ export default function CotacoesPage() {
         <ELCard>
           <ELSkeleton active paragraph={{ rows: 4 }} />
         </ELCard>
+      </PageShell>
+    );
+  }
+
+  // Bloqueio por saldo negativo
+  if (!canQuote) {
+    return (
+      <PageShell
+        title="Cotar envio"
+        description="Compare serviços e crie etiquetas de forma rápida com os dados da sua empresa."
+      >
+        <ELCard>
+          <ELEmpty
+            title="Pendências financeiras"
+            description={`Você possui um saldo negativo de R$ ${formatNumberBR(negativeAmountReais)} que precisa ser regularizado para continuar cotando envios.`}
+            primaryAction={{
+              label: "Resolver pendências",
+              onClick: () => setResolveDebtOpen(true),
+            }}
+            secondaryAction={{
+              label: "Ir para Carteira",
+              onClick: () => router.push("/carteira"),
+            }}
+          />
+        </ELCard>
+        <ResolveDebtModal
+          open={resolveDebtOpen}
+          onClose={() => setResolveDebtOpen(false)}
+        />
       </PageShell>
     );
   }

@@ -10,9 +10,11 @@
  * - Sempre selecionar o coletor MAIS PRÓXIMO do remetente
  * - Taxa pode ser FIXED (valor fixo) ou PER_KM (valor por km)
  * - Distância calculada com PostGIS ST_Distance (precisão em metros)
+ * - Comissão da plataforma aplicada sobre a taxa base do coletor
  */
 
 import { findNearestCollectorByCep } from '@/lib/services/postgis';
+import { applyPickupFeeCommission } from '@/lib/quotes/commission';
 
 export type PickupFeeCalculation = {
   success: true;
@@ -72,15 +74,15 @@ export async function calculatePickupFee(
     });
 
     // 3. Calcular taxa de coleta baseado no tipo
-    let feeAmount = 0;
+    let baseFeeAmount = 0;
 
     if (nearestCollector.pickupFeeType === 'FIXED') {
-      feeAmount = nearestCollector.pickupFixedFee ?? 0;
-      console.log(`[PICKUP_FEE] Fixed fee: R$ ${feeAmount}`);
+      baseFeeAmount = nearestCollector.pickupFixedFee ?? 0;
+      console.log(`[PICKUP_FEE] Fixed fee (base): R$ ${baseFeeAmount}`);
     } else if (nearestCollector.pickupFeeType === 'PER_KM') {
       const feePerKm = nearestCollector.pickupFeePerKm ?? 0;
-      feeAmount = nearestCollector.distanceKm * feePerKm;
-      console.log(`[PICKUP_FEE] Per-km fee: ${nearestCollector.distanceKm} km × R$ ${feePerKm} = R$ ${feeAmount}`);
+      baseFeeAmount = nearestCollector.distanceKm * feePerKm;
+      console.log(`[PICKUP_FEE] Per-km fee (base): ${nearestCollector.distanceKm} km × R$ ${feePerKm} = R$ ${baseFeeAmount}`);
     } else {
       return {
         success: false,
@@ -88,8 +90,15 @@ export async function calculatePickupFee(
       };
     }
 
-    // Arredondar para 2 casas decimais
-    feeAmount = Math.round(feeAmount * 100) / 100;
+    // Arredondar taxa base para 2 casas decimais
+    baseFeeAmount = Math.round(baseFeeAmount * 100) / 100;
+
+    // 4. Aplicar comissão da plataforma sobre a taxa de coleta
+    const { finalFee: feeAmount, commissionAmount, commissionPercent } = await applyPickupFeeCommission(baseFeeAmount);
+
+    if (commissionAmount > 0) {
+      console.log(`[PICKUP_FEE] Platform commission: ${commissionPercent}% = R$ ${commissionAmount.toFixed(2)} (base: R$ ${baseFeeAmount.toFixed(2)} → final: R$ ${feeAmount.toFixed(2)})`);
+    }
 
     const totalWithPickup = freightCost + feeAmount;
 

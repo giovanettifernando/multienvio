@@ -51,6 +51,10 @@ export interface ShipmentInput {
   // Status inicial
   status?: string;
   paymentMethod?: string | null;
+
+  // Comissões da plataforma (para reconciliação)
+  platformShippingCommissionCents?: number | null;
+  platformPickupCommissionCents?: number | null;
 }
 
 export interface CreateShipmentWithVolumesInput {

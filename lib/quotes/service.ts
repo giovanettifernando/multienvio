@@ -23,6 +23,7 @@ import {
   quoteFromCorreios,
   isCorreiosAvailable,
 } from '@/lib/integrations/carriers/correiosAdapter';
+import { applyShippingCommission } from './commission';
 
 /**
  * Service layer for quotation operations
@@ -234,6 +235,19 @@ export async function createQuote(
   // Calculate shipping options
   const shippingOptions = await calculateShippingOptions(request);
 
+  // Apply platform commission to all shipping options
+  const optionsWithCommission = await Promise.all(
+    shippingOptions.map(async (option) => {
+      const { finalPrice, commissionAmount } = await applyShippingCommission(option.preco);
+      return {
+        ...option,
+        precoBase: option.preco, // Preço original da transportadora
+        preco: finalPrice, // Preço final com comissão
+        comissaoCentavos: Math.round(commissionAmount * 100),
+      };
+    })
+  );
+
   // Calculate expiration time (24 hours)
   const expiresAt = calculateQuoteExpiration();
 
@@ -261,19 +275,20 @@ export async function createQuote(
         })),
       },
       options: {
-        create: shippingOptions.map((option) => ({
+        create: optionsWithCommission.map((option) => ({
           carrierId: option.id.split('-')[0],
           carrierName: option.carrier,
           serviceId: option.id,
           serviceName: option.modalidade,
-          basePriceCents: Math.round(option.preco * 100),
+          basePriceCents: Math.round(option.precoBase * 100), // Preço base da transportadora
           insuranceCents: 0,
-          additionalCents: 0,
+          additionalCents: option.comissaoCentavos, // Comissão registrada como adicional
           discountCents: 0,
-          totalCents: Math.round(option.preco * 100),
+          totalCents: Math.round(option.preco * 100), // Preço final com comissão
           deliveryDays: option.prazoDias,
           metadata: {
             exigeSeguro: option.exigeSeguro,
+            platformCommissionCents: option.comissaoCentavos, // Registro explícito da comissão
           },
         })),
       },

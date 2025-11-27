@@ -2,15 +2,22 @@
 
 import React from "react";
 import { Button, Card, Space, Typography, Row, Col } from "antd";
-import { PlusOutlined } from "@ant-design/icons";
+import { PlusOutlined, WarningOutlined } from "@ant-design/icons";
 import { useWallet } from "@/hooks/useWallet";
 import { formatNumberBR } from "@/lib/format";
 
-export default function BalanceCard({ onAddFunds }: { onAddFunds: () => void }) {
+interface BalanceCardProps {
+  onAddFunds: () => void;
+  onResolveDebt?: () => void;
+}
+
+export default function BalanceCard({ onAddFunds, onResolveDebt }: BalanceCardProps) {
   const { data, isLoading } = useWallet();
 
   const available = data?.balance?.availableReais ?? 0;
   const pending = data?.balance?.pendingReais ?? 0;
+  const hasNegativeBalance = available < 0;
+  const negativeAmount = Math.abs(available);
 
   return (
     <Card loading={isLoading}>
@@ -27,11 +34,11 @@ export default function BalanceCard({ onAddFunds }: { onAddFunds: () => void }) 
                 margin: 0,
                 fontSize: 42,
                 fontWeight: 700,
-                color: "#1890ff",
+                color: hasNegativeBalance ? "#ff4d4f" : "#1890ff",
                 lineHeight: 1.2
               }}
             >
-              R$ {formatNumberBR(available)}
+              {hasNegativeBalance ? "-" : ""} R$ {formatNumberBR(Math.abs(available))}
             </Typography.Title>
 
             {/* Saldo pendente (se houver) */}
@@ -58,6 +65,43 @@ export default function BalanceCard({ onAddFunds }: { onAddFunds: () => void }) 
           </Button>
         </Col>
       </Row>
+
+      {/* Banner de saldo negativo */}
+      {hasNegativeBalance && (
+        <div
+          style={{
+            marginTop: 16,
+            padding: "12px 16px",
+            backgroundColor: "#ff4d4f",
+            borderRadius: 8,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 12,
+            flexWrap: "wrap",
+          }}
+        >
+          <Space>
+            <WarningOutlined style={{ color: "white", fontSize: 18 }} />
+            <Typography.Text style={{ color: "white", fontWeight: 500 }}>
+              Resolver pendências financeiras (R$ {formatNumberBR(negativeAmount)})
+            </Typography.Text>
+          </Space>
+          <Button
+            type="default"
+            size="small"
+            onClick={onResolveDebt}
+            style={{
+              backgroundColor: "white",
+              borderColor: "white",
+              color: "#ff4d4f",
+              fontWeight: 500,
+            }}
+          >
+            Resolver agora
+          </Button>
+        </div>
+      )}
     </Card>
   );
 }

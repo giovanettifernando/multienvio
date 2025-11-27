@@ -100,6 +100,12 @@ export const ADMIN_NAV: AdminNavItem[] = [
         href: "/admin/config/google-oauth",
         permissions: ["CONFIGURACOES"],
       },
+      {
+        key: "comissoes",
+        label: "Comissões da plataforma",
+        href: "/admin/config/comissoes",
+        permissions: ["CONFIGURACOES"],
+      },
     ],
   },
 ];

@@ -6,12 +6,14 @@ import { useRouter } from "next/navigation";
 import BalanceCard from "@/components/wallet/BalanceCard";
 import MonthlySummaryCard from "@/components/wallet/MonthlySummaryCard";
 import AddFundsModal from "@/components/wallet/AddFundsModal";
+import ResolveDebtModal from "@/components/wallet/ResolveDebtModal";
 import TransactionsTable from "@/components/wallet/TransactionsTable";
 import { useWallet } from "@/hooks/useWallet";
 import { useCards } from "@/hooks/useAccount";
 
 export default function CarteiraPage() {
   const [open, setOpen] = useState(false);
+  const [resolveDebtOpen, setResolveDebtOpen] = useState(false);
   const { data, isLoading } = useWallet();
   const router = useRouter();
   const { data: cards } = useCards();
@@ -36,7 +38,10 @@ export default function CarteiraPage() {
 
       <Row gutter={[16, 16]}>
         <Col xs={24} lg={12}>
-          <BalanceCard onAddFunds={() => setOpen(true)} />
+          <BalanceCard
+            onAddFunds={() => setOpen(true)}
+            onResolveDebt={() => setResolveDebtOpen(true)}
+          />
         </Col>
         <Col xs={24} lg={12}>
           {data?.monthlySummary && (
@@ -59,6 +64,11 @@ export default function CarteiraPage() {
       <AddFundsModal
         open={open}
         onClose={() => setOpen(false)}
+      />
+
+      <ResolveDebtModal
+        open={resolveDebtOpen}
+        onClose={() => setResolveDebtOpen(false)}
       />
     </div>
   );
