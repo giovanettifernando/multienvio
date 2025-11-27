@@ -3,6 +3,7 @@
  * POST /api/admin/integrations/correios
  *
  * Rotas de configuração da integração Correios (Admin)
+ * Suporta credenciais separadas para Produção e Homologação
  */
 
 export const runtime = 'nodejs';
@@ -19,22 +20,28 @@ import { invalidateCorreiosConfigCache, clearTokenCache } from '@/lib/integratio
 const CORREIOS_CARRIER_SLUG = 'correios';
 
 /**
- * Schema de validação para configuração dos Correios
- * Suporta dois modos de autenticação:
- * 1. API Key (novo): apenas apiKey é necessário
- * 2. Legado: username + password + cartaoPostagem
+ * Schema de credenciais para um ambiente específico
  */
-const correiosConfigSchema = z.object({
-  environment: z.enum(['sandbox', 'production']).default('sandbox'),
-  // Modo API Key (novo)
-  apiKey: z.string().optional(),
-  // Modo Legado
+const environmentCredentialsSchema = z.object({
   username: z.string().optional(),
   password: z.string().optional(),
   cartaoPostagem: z.string().optional(),
-  // Dados adicionais
   contrato: z.string().optional(),
   dr: z.string().optional(),
+});
+
+/**
+ * Schema de validação para configuração dos Correios
+ * Suporta credenciais separadas para cada ambiente
+ */
+const correiosConfigSchema = z.object({
+  // Ambiente ativo para uso
+  activeEnvironment: z.enum(['sandbox', 'production']).default('sandbox'),
+  // Credenciais de Produção
+  production: environmentCredentialsSchema.optional(),
+  // Credenciais de Homologação (Sandbox)
+  sandbox: environmentCredentialsSchema.optional(),
+  // Serviços (compartilhados entre ambientes)
   servicos: z
     .array(
       z.object({
@@ -46,96 +53,124 @@ const correiosConfigSchema = z.object({
       })
     )
     .optional(),
-}).refine(
-  (data) => {
-    // Deve ter API Key OU (username + password + cartaoPostagem)
-    const hasApiKey = data.apiKey && data.apiKey.length > 0;
-    const hasLegacy = data.username && data.password && data.cartaoPostagem;
-    return hasApiKey || hasLegacy;
-  },
-  {
-    message: 'Informe a API Key ou as credenciais legadas (usuário, senha e cartão de postagem)',
-  }
-);
+});
 
 type CorreiosConfigInput = z.infer<typeof correiosConfigSchema>;
 
 /**
+ * Helper para processar credenciais de um ambiente
+ */
+function processCredentials(
+  credential: {
+    username: string | null;
+    password: string | null;
+    clientId: string | null;
+    customHeaders: unknown;
+  } | null,
+  shouldReveal: boolean
+): {
+  username: string;
+  password: string;
+  cartaoPostagem: string;
+  contrato: string;
+  dr: string;
+  configured: boolean;
+} {
+  if (!credential) {
+    return {
+      username: '',
+      password: '',
+      cartaoPostagem: '',
+      contrato: '',
+      dr: '',
+      configured: false,
+    };
+  }
+
+  const customData = (credential.customHeaders as Record<string, unknown>) || {};
+
+  let passwordValue = '';
+  if (credential.password) {
+    try {
+      const decrypted = decrypt(credential.password);
+      passwordValue = shouldReveal ? decrypted : (decrypted.length > 0 ? '***' : '');
+    } catch {
+      passwordValue = '***';
+    }
+  }
+
+  return {
+    username: credential.username || '',
+    password: passwordValue,
+    cartaoPostagem: credential.clientId || '',
+    contrato: (customData.contrato as string) || '',
+    dr: (customData.dr as string) || '',
+    configured: !!(credential.username && credential.password && credential.clientId),
+  };
+}
+
+/**
  * GET - Busca configuração atual dos Correios
+ * Query params:
+ *   - reveal=true: Retorna valores descriptografados
  */
 export async function GET(request: Request) {
   try {
     const authResult = await requireAdminUser(request, AdminPermission.INTEGRACOES);
     if (authResult instanceof NextResponse) return authResult;
 
-    // Buscar carrier e credenciais
+    const url = new URL(request.url);
+    const shouldReveal = url.searchParams.get('reveal') === 'true';
+
+    // Buscar carrier
     const carrier = await prisma.carrier.findFirst({
       where: { slug: CORREIOS_CARRIER_SLUG },
-      include: {
-        credentials: {
-          where: { isActive: true },
-          orderBy: { createdAt: 'desc' },
-          take: 1,
-        },
-      },
     });
 
-    if (!carrier || carrier.credentials.length === 0) {
+    if (!carrier) {
       return NextResponse.json({
         configured: false,
-        data: null,
+        activeEnvironment: 'sandbox',
+        production: { configured: false, username: '', password: '', cartaoPostagem: '', contrato: '', dr: '' },
+        sandbox: { configured: false, username: '', password: '', cartaoPostagem: '', contrato: '', dr: '' },
+        servicos: [],
       });
     }
 
-    const credential = carrier.credentials[0];
+    // Buscar credenciais de cada ambiente
+    const [productionCred, sandboxCred] = await Promise.all([
+      prisma.carrierCredential.findFirst({
+        where: {
+          carrierId: carrier.id,
+          environment: 'PRODUCTION',
+          isActive: true,
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+      prisma.carrierCredential.findFirst({
+        where: {
+          carrierId: carrier.id,
+          environment: 'SANDBOX',
+          isActive: true,
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+    ]);
 
-    // Extrair dados do customHeaders
-    const customData = (credential.customHeaders as Record<string, unknown>) || {};
+    const productionData = processCredentials(productionCred, shouldReveal);
+    const sandboxData = processCredentials(sandboxCred, shouldReveal);
 
-    // Mascarar senha e apiKey (mostrar apenas ***)
-    let maskedPassword = '';
-    if (credential.password) {
-      try {
-        const decrypted = decrypt(credential.password);
-        maskedPassword = decrypted.length > 0 ? '***' : '';
-      } catch {
-        maskedPassword = '***';
-      }
-    }
-
-    // Verificar se tem API Key (armazenada em customData.apiKey criptografada)
-    let maskedApiKey = '';
-    const encryptedApiKey = customData.apiKey as string | undefined;
-    if (encryptedApiKey) {
-      try {
-        const decrypted = decrypt(encryptedApiKey);
-        maskedApiKey = decrypted.length > 0 ? `${decrypted.substring(0, 10)}...***` : '';
-      } catch {
-        maskedApiKey = '***';
-      }
-    }
-
-    // Determinar modo de autenticação
-    const authMode = maskedApiKey ? 'apiKey' : 'legacy';
+    // Serviços vêm de qualquer credencial (preferência produção)
+    const customData = (productionCred?.customHeaders || sandboxCred?.customHeaders || {}) as Record<string, unknown>;
 
     return NextResponse.json({
-      configured: true,
-      data: {
-        environment: carrier.environment === 'SANDBOX' ? 'sandbox' : 'production',
-        authMode,
-        // Modo API Key
-        apiKey: maskedApiKey,
-        // Modo Legado
-        username: credential.username || '',
-        password: maskedPassword,
-        cartaoPostagem: credential.clientId || '',
-        // Dados adicionais
-        contrato: (customData.contrato as string) || '',
-        dr: (customData.dr as string) || '',
-        servicos: customData.servicos || [],
-        status: carrier.status,
-        lastUpdated: credential.updatedAt,
-      },
+      configured: productionData.configured || sandboxData.configured,
+      activeEnvironment: carrier.environment === 'SANDBOX' ? 'sandbox' : 'production',
+      production: productionData,
+      sandbox: sandboxData,
+      servicos: customData.servicos || [],
+      status: carrier.status,
+      lastUpdated: productionCred?.updatedAt || sandboxCred?.updatedAt || carrier.updatedAt,
     });
   } catch (error) {
     console.error('[ADMIN_CORREIOS_GET]', error);
@@ -146,13 +181,13 @@ export async function GET(request: Request) {
 
 /**
  * POST - Salva/atualiza configuração dos Correios
+ * Suporta credenciais separadas para cada ambiente
  */
 export async function POST(request: Request) {
   try {
     const authResult = await requireAdminUser(request, AdminPermission.INTEGRACOES);
     if (authResult instanceof NextResponse) return authResult;
 
-    // Validar payload
     const body = await request.json();
     const parsed = correiosConfigSchema.safeParse(body);
 
@@ -168,6 +203,19 @@ export async function POST(request: Request) {
 
     const data: CorreiosConfigInput = parsed.data;
 
+    // Verificar se pelo menos um ambiente tem credenciais completas
+    const hasProdCreds = data.production?.username && data.production?.password && data.production?.cartaoPostagem;
+    const hasSandboxCreds = data.sandbox?.username && data.sandbox?.password && data.sandbox?.cartaoPostagem;
+
+    if (!hasProdCreds && !hasSandboxCreds) {
+      return NextResponse.json(
+        {
+          message: 'Configure ao menos um ambiente com usuário, senha e cartão de postagem',
+        },
+        { status: 400 }
+      );
+    }
+
     // Determinar URLs base por ambiente
     const baseUrls = {
       sandbox: 'https://apihom.correios.com.br',
@@ -181,14 +229,13 @@ export async function POST(request: Request) {
 
     await prisma.$transaction(async (tx) => {
       if (!carrier) {
-        // Criar novo carrier
         carrier = await tx.carrier.create({
           data: {
             name: 'Correios',
             slug: CORREIOS_CARRIER_SLUG,
             status: 'ACTIVE',
-            environment: data.environment === 'sandbox' ? 'SANDBOX' : 'PRODUCTION',
-            baseUrl: baseUrls[data.environment],
+            environment: data.activeEnvironment === 'sandbox' ? 'SANDBOX' : 'PRODUCTION',
+            baseUrl: baseUrls[data.activeEnvironment],
             timeout: 30000,
             maxRetries: 3,
             logoUrl: 'https://www.correios.com.br/++resource++correios/img/logo-correios-blue.svg',
@@ -196,82 +243,38 @@ export async function POST(request: Request) {
           },
         });
       } else {
-        // Atualizar carrier existente
         carrier = await tx.carrier.update({
           where: { id: carrier.id },
           data: {
             status: 'ACTIVE',
-            environment: data.environment === 'sandbox' ? 'SANDBOX' : 'PRODUCTION',
-            baseUrl: baseUrls[data.environment],
+            environment: data.activeEnvironment === 'sandbox' ? 'SANDBOX' : 'PRODUCTION',
+            baseUrl: baseUrls[data.activeEnvironment],
             updatedAt: new Date(),
           },
         });
       }
 
-      // Desativar credenciais antigas
-      await tx.carrierCredential.updateMany({
-        where: {
-          carrierId: carrier.id,
-          isActive: true,
-        },
-        data: {
-          isActive: false,
-        },
-      });
-
-      // Buscar credencial anterior para recuperar valores mascarados
-      const existingCred = await tx.carrierCredential.findFirst({
-        where: {
-          carrierId: carrier.id,
-          isActive: false,
-        },
-        orderBy: { createdAt: 'desc' },
-        select: { password: true, customHeaders: true },
-      });
-
-      const existingCustomData = (existingCred?.customHeaders as Record<string, unknown>) || {};
-
-      // Detectar se senha está mascarada e recuperar valor real
-      let finalPassword = data.password || '';
-      if (data.password === '***' && existingCred?.password) {
-        finalPassword = decrypt(existingCred.password);
+      // Processar credenciais de PRODUÇÃO
+      if (data.production) {
+        await saveEnvironmentCredentials(
+          tx,
+          carrier.id,
+          'PRODUCTION',
+          data.production,
+          data.servicos
+        );
       }
 
-      // Detectar se API Key está mascarada e recuperar valor real
-      let finalApiKey = data.apiKey || '';
-      if (data.apiKey && data.apiKey.includes('...***') && existingCustomData.apiKey) {
-        finalApiKey = decrypt(existingCustomData.apiKey as string);
+      // Processar credenciais de SANDBOX
+      if (data.sandbox) {
+        await saveEnvironmentCredentials(
+          tx,
+          carrier.id,
+          'SANDBOX',
+          data.sandbox,
+          data.servicos
+        );
       }
-
-      // Montar customHeaders com dados adicionais
-      const customHeaders: Record<string, unknown> = {};
-      if (data.contrato) customHeaders.contrato = data.contrato;
-      if (data.dr) customHeaders.dr = data.dr;
-      if (data.servicos && data.servicos.length > 0) customHeaders.servicos = data.servicos;
-      // Armazenar API Key criptografada em customHeaders
-      if (finalApiKey) {
-        customHeaders.apiKey = encrypt(finalApiKey);
-      }
-
-      // Determinar tipo de autenticação
-      const hasApiKey = finalApiKey && finalApiKey.length > 0;
-      const authType = hasApiKey ? 'API_KEY' : 'BASIC';
-
-      // Criar nova credencial
-      await tx.carrierCredential.create({
-        data: {
-          carrierId: carrier.id,
-          environment: data.environment === 'sandbox' ? 'SANDBOX' : 'PRODUCTION',
-          authType: authType as 'BASIC' | 'API_KEY' | 'OAUTH2' | 'BEARER' | 'CUSTOM',
-          username: data.username || '',
-          password: finalPassword ? encrypt(finalPassword) : '',
-          clientId: data.cartaoPostagem || '', // Usando clientId para cartão de postagem
-          customHeaders: Object.keys(customHeaders).length > 0
-            ? (customHeaders as Prisma.InputJsonValue)
-            : Prisma.JsonNull,
-          isActive: true,
-        },
-      });
 
       // Criar endpoints padrão se não existirem
       const endpoints = [
@@ -307,7 +310,7 @@ export async function POST(request: Request) {
       }
     });
 
-    // Invalidar caches para forçar recarregamento da nova configuração
+    // Invalidar caches
     invalidateCorreiosConfigCache();
     clearTokenCache();
 
@@ -322,6 +325,7 @@ export async function POST(request: Request) {
           id: carrier.id,
           slug: carrier.slug,
           status: carrier.status,
+          activeEnvironment: data.activeEnvironment,
         },
       },
       { status: 200 }
@@ -331,4 +335,79 @@ export async function POST(request: Request) {
     const message = error instanceof Error ? error.message : 'Erro ao salvar configuração';
     return NextResponse.json({ message }, { status: 500 });
   }
+}
+
+/**
+ * Helper para salvar credenciais de um ambiente específico
+ */
+async function saveEnvironmentCredentials(
+  tx: Prisma.TransactionClient,
+  carrierId: string,
+  environment: 'PRODUCTION' | 'SANDBOX',
+  credentials: z.infer<typeof environmentCredentialsSchema>,
+  servicos?: z.infer<typeof correiosConfigSchema>['servicos']
+) {
+  // Se não tem dados válidos, não fazer nada
+  if (!credentials.username && !credentials.password && !credentials.cartaoPostagem) {
+    return;
+  }
+
+  // Buscar credencial existente para este ambiente
+  const existingCred = await tx.carrierCredential.findFirst({
+    where: {
+      carrierId,
+      environment,
+      isActive: true,
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  // Detectar se senha está mascarada e recuperar valor real
+  let finalPassword = credentials.password || '';
+  if (credentials.password === '***' && existingCred?.password) {
+    try {
+      finalPassword = decrypt(existingCred.password);
+    } catch {
+      finalPassword = '';
+    }
+  }
+
+  // Se não tem credenciais válidas para este ambiente, pular
+  if (!credentials.username || !finalPassword || !credentials.cartaoPostagem) {
+    return;
+  }
+
+  // Montar customHeaders
+  const customHeaders: Record<string, unknown> = {};
+  if (credentials.contrato) customHeaders.contrato = credentials.contrato;
+  if (credentials.dr) customHeaders.dr = credentials.dr;
+  if (servicos && servicos.length > 0) customHeaders.servicos = servicos;
+
+  // Desativar credenciais antigas deste ambiente
+  await tx.carrierCredential.updateMany({
+    where: {
+      carrierId,
+      environment,
+      isActive: true,
+    },
+    data: {
+      isActive: false,
+    },
+  });
+
+  // Criar nova credencial
+  await tx.carrierCredential.create({
+    data: {
+      carrierId,
+      environment,
+      authType: 'BASIC',
+      username: credentials.username,
+      password: encrypt(finalPassword),
+      clientId: credentials.cartaoPostagem,
+      customHeaders: Object.keys(customHeaders).length > 0
+        ? (customHeaders as Prisma.InputJsonValue)
+        : Prisma.JsonNull,
+      isActive: true,
+    },
+  });
 }

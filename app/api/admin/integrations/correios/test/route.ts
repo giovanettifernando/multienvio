@@ -60,13 +60,30 @@ const testSchema = z.discriminatedUnion('type', [
       .regex(/^[A-Z]{2}\d{9}[A-Z]{2}$/, 'Código de rastreio inválido (ex: NX000000000BR)'),
   }),
 
-  // Teste de pré-postagem (simulação)
+  // Teste de pré-postagem (executa de verdade na API)
   z.object({
-    type: z.literal('prepostagem_sim'),
+    type: z.literal('prepostagem'),
     codigoServico: z.string().min(1, 'Código do serviço é obrigatório'),
-    cepOrigem: z.string().length(8, 'CEP origem deve ter 8 dígitos'),
-    cepDestino: z.string().length(8, 'CEP destino deve ter 8 dígitos'),
     pesoGramas: z.number().min(1).max(30000).default(500),
+    alturaCm: z.number().min(1).max(100).optional(),
+    larguraCm: z.number().min(1).max(100).optional(),
+    comprimentoCm: z.number().min(1).max(100).optional(),
+    // Remetente
+    remetenteNome: z.string().min(1, 'Nome do remetente é obrigatório'),
+    remetenteCep: z.string().length(8, 'CEP do remetente deve ter 8 dígitos'),
+    remetenteLogradouro: z.string().min(1, 'Logradouro do remetente é obrigatório'),
+    remetenteNumero: z.string().optional(),
+    remetenteBairro: z.string().optional(),
+    remetenteCidade: z.string().min(1, 'Cidade do remetente é obrigatória'),
+    remetenteUf: z.string().length(2, 'UF do remetente deve ter 2 caracteres'),
+    // Destinatário
+    destinatarioNome: z.string().min(1, 'Nome do destinatário é obrigatório'),
+    destinatarioCep: z.string().length(8, 'CEP do destinatário deve ter 8 dígitos'),
+    destinatarioLogradouro: z.string().min(1, 'Logradouro do destinatário é obrigatório'),
+    destinatarioNumero: z.string().optional(),
+    destinatarioBairro: z.string().optional(),
+    destinatarioCidade: z.string().min(1, 'Cidade do destinatário é obrigatória'),
+    destinatarioUf: z.string().length(2, 'UF do destinatário deve ter 2 caracteres'),
   }),
 ]);
 
@@ -129,8 +146,8 @@ export async function POST(request: Request) {
       case 'tracking':
         return await testTracking(data, startTime);
 
-      case 'prepostagem_sim':
-        return await testPrePostagemSimulation(data, startTime);
+      case 'prepostagem':
+        return await testPrePostagem(data, startTime);
 
       default:
         return NextResponse.json(
@@ -345,47 +362,103 @@ async function testTracking(
 }
 
 /**
- * Teste de pré-postagem (simulação - não cria objeto real)
+ * Teste de pré-postagem (executa de verdade na API dos Correios)
  */
-async function testPrePostagemSimulation(
-  data: Extract<TestInput, { type: 'prepostagem_sim' }>,
+async function testPrePostagem(
+  data: Extract<TestInput, { type: 'prepostagem' }>,
   startTime: number
 ) {
-  const latency = Date.now() - startTime;
+  try {
+    // Garantir que a config do banco está no cache
+    await getCorreiosConfigAsync();
 
-  // Para não criar objetos reais na API, apenas validamos os dados
-  // e retornamos uma simulação do que seria enviado
-  const payload = {
-    idCorreios: `SIM-${Date.now()}`,
-    codigoServico: data.codigoServico,
-    cepOrigem: data.cepOrigem,
-    cepDestino: data.cepDestino,
-    pesoGramas: data.pesoGramas,
-    remetente: {
-      nome: 'Remetente Teste',
-      cep: data.cepOrigem,
-    },
-    destinatario: {
-      nome: 'Destinatário Teste',
-      cep: data.cepDestino,
-      logradouro: 'Rua de Teste',
-      cidade: 'Cidade Teste',
-      uf: 'SP',
-    },
-  };
+    const configInfo = getCorreiosConfigInfo();
 
-  return NextResponse.json({
-    success: true,
-    type: 'prepostagem_sim',
-    message:
-      'Simulação de pré-postagem. Os dados estão válidos para envio à API.',
-    result: {
-      simulacao: true,
-      avisoImportante:
-        'Este é um teste de simulação. Nenhum objeto foi criado na API dos Correios.',
-      payloadQueSeriaEnviado: payload,
-      endpointDestino: '/prepostagem/v2/prepostagens',
-    },
-    latencyMs: latency,
-  });
+    console.log('[CORREIOS_TEST] Executando pré-postagem real:', {
+      ambiente: configInfo.environment,
+      apiBase: configInfo.apiBase,
+      codigoServico: data.codigoServico,
+    });
+
+    // Montar input para pré-postagem
+    const input = {
+      codigoServico: data.codigoServico,
+      pesoGramas: data.pesoGramas,
+      alturaCm: data.alturaCm,
+      larguraCm: data.larguraCm,
+      comprimentoCm: data.comprimentoCm,
+      remetente: {
+        nome: data.remetenteNome,
+        cep: data.remetenteCep,
+        logradouro: data.remetenteLogradouro,
+        numero: data.remetenteNumero,
+        bairro: data.remetenteBairro,
+        cidade: data.remetenteCidade,
+        uf: data.remetenteUf,
+      },
+      destinatario: {
+        nome: data.destinatarioNome,
+        cep: data.destinatarioCep,
+        logradouro: data.destinatarioLogradouro,
+        numero: data.destinatarioNumero,
+        bairro: data.destinatarioBairro,
+        cidade: data.destinatarioCidade,
+        uf: data.destinatarioUf,
+      },
+    };
+
+    // Executar pré-postagem real na API dos Correios
+    const resultado = await criarPrePostagem(input);
+    const latency = Date.now() - startTime;
+
+    if (resultado.success) {
+      return NextResponse.json({
+        success: true,
+        type: 'prepostagem',
+        message: `Pré-postagem criada com sucesso! Código de rastreio: ${resultado.codigoRastreio || 'Aguardando processamento'}`,
+        result: {
+          ambiente: configInfo.environment,
+          apiBase: configInfo.apiBase,
+          idLote: resultado.idLote,
+          codigoRastreio: resultado.codigoRastreio,
+          idObjeto: resultado.idObjeto,
+          status: resultado.status,
+          dadosEnviados: input,
+          respostaCompleta: resultado.bruto,
+        },
+        latencyMs: latency,
+      });
+    } else {
+      return NextResponse.json({
+        success: false,
+        type: 'prepostagem',
+        message: resultado.erros?.[0]?.mensagem || 'Erro ao criar pré-postagem',
+        result: {
+          ambiente: configInfo.environment,
+          apiBase: configInfo.apiBase,
+          erros: resultado.erros,
+          dadosEnviados: input,
+          respostaCompleta: resultado.bruto,
+        },
+        latencyMs: latency,
+      });
+    }
+  } catch (error) {
+    const latency = Date.now() - startTime;
+    const configInfo = getCorreiosConfigInfo();
+
+    console.error('[CORREIOS_TEST] Erro na pré-postagem:', error);
+
+    return NextResponse.json({
+      success: false,
+      type: 'prepostagem',
+      message: error instanceof Error ? error.message : 'Falha na pré-postagem',
+      result: {
+        ambiente: configInfo.environment,
+        apiBase: configInfo.apiBase,
+        erro: error instanceof Error ? error.message : 'Erro desconhecido',
+      },
+      latencyMs: latency,
+    });
+  }
 }

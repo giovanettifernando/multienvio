@@ -6,7 +6,6 @@ import {
   Form,
   Input,
   Button,
-  Switch,
   Space,
   Typography,
   Tabs,
@@ -14,42 +13,45 @@ import {
   Spin,
   Divider,
   Tag,
-  Table,
   InputNumber,
   Collapse,
   Radio,
   message,
+  Badge,
 } from 'antd';
 import {
   SaveOutlined,
   ApiOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
-  SyncOutlined,
   SendOutlined,
   SearchOutlined,
   FileTextOutlined,
+  ExperimentOutlined,
+  CloudOutlined,
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
-const { Title, Text, Paragraph } = Typography;
+const { Title, Text } = Typography;
 
 // ============================================================================
 // Types
 // ============================================================================
 
-interface CorreiosConfig {
-  environment: 'sandbox' | 'production';
-  authMode?: 'apiKey' | 'legacy';
-  // Modo API Key (novo)
-  apiKey?: string;
-  // Modo Legado
+interface EnvironmentCredentials {
   username: string;
   password: string;
   cartaoPostagem: string;
-  // Opcionais
   contrato?: string;
   dr?: string;
+  configured: boolean;
+}
+
+interface CorreiosConfig {
+  configured: boolean;
+  activeEnvironment: 'sandbox' | 'production';
+  production: EnvironmentCredentials;
+  sandbox: EnvironmentCredentials;
   servicos?: Array<{
     codigoServico: string;
     coProduto?: string;
@@ -73,13 +75,19 @@ interface TestResult {
 // API Calls
 // ============================================================================
 
-async function fetchConfig(): Promise<{ configured: boolean; data: CorreiosConfig | null }> {
+async function fetchConfig(): Promise<CorreiosConfig> {
   const res = await fetch('/api/admin/integrations/correios');
   if (!res.ok) throw new Error('Erro ao carregar configuração');
   return res.json();
 }
 
-async function saveConfig(data: Partial<CorreiosConfig>): Promise<{ message: string }> {
+async function fetchConfigRevealed(): Promise<CorreiosConfig> {
+  const res = await fetch('/api/admin/integrations/correios?reveal=true');
+  if (!res.ok) throw new Error('Erro ao carregar configuração');
+  return res.json();
+}
+
+async function saveConfig(data: Record<string, unknown>): Promise<{ message: string }> {
   const res = await fetch('/api/admin/integrations/correios', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -102,16 +110,137 @@ async function runTest(data: Record<string, unknown>): Promise<TestResult> {
 }
 
 // ============================================================================
-// Components
+// Helper Components
+// ============================================================================
+
+function EnvironmentBadge({ environment, configured }: { environment: 'sandbox' | 'production'; configured: boolean }) {
+  const isSandbox = environment === 'sandbox';
+
+  return (
+    <Badge
+      status={configured ? 'success' : 'default'}
+      text={
+        <Space>
+          {isSandbox ? <ExperimentOutlined /> : <CloudOutlined />}
+          <span>{isSandbox ? 'Homologação' : 'Produção'}</span>
+          {configured && <Tag color="green" style={{ marginLeft: 4 }}>Configurado</Tag>}
+        </Space>
+      }
+    />
+  );
+}
+
+function CredentialsForm({
+  prefix,
+  environment,
+  onReveal,
+  loadingReveal,
+  passwordVisible,
+  onPasswordVisibleChange,
+}: {
+  prefix: string;
+  environment: 'sandbox' | 'production';
+  onReveal: (env: 'sandbox' | 'production') => void;
+  loadingReveal: boolean;
+  passwordVisible: boolean;
+  onPasswordVisibleChange: (visible: boolean) => void;
+}) {
+  const isSandbox = environment === 'sandbox';
+  const cwsUrl = isSandbox ? 'https://cwshom.correios.com.br' : 'https://cws.correios.com.br';
+
+  return (
+    <>
+      <Alert
+        type="info"
+        message={`Credenciais para ${isSandbox ? 'Homologação (Sandbox)' : 'Produção'}`}
+        description={
+          <>
+            Obtenha suas credenciais no portal{' '}
+            <a href={cwsUrl} target="_blank" rel="noopener noreferrer">
+              {cwsUrl}
+            </a>
+          </>
+        }
+        showIcon
+        style={{ marginBottom: 16 }}
+      />
+
+      <Form.Item
+        name={[prefix, 'username']}
+        label="Usuário (CNPJ)"
+        rules={[{ required: false }]}
+        extra="CNPJ do usuário no portal Meu Correios"
+      >
+        <Input placeholder="00000000000000" maxLength={14} />
+      </Form.Item>
+
+      <Form.Item
+        name={[prefix, 'password']}
+        label="Código de Acesso"
+        rules={[{ required: false }]}
+        extra="Código gerado no portal CWS. Clique no ícone para revelar."
+      >
+        <Input.Password
+          placeholder="••••••••"
+          visibilityToggle={{
+            visible: passwordVisible,
+            onVisibleChange: (visible) => {
+              if (visible && !passwordVisible) {
+                onReveal(environment);
+              } else {
+                onPasswordVisibleChange(visible);
+              }
+            },
+          }}
+        />
+      </Form.Item>
+      {loadingReveal && <Spin size="small" style={{ marginLeft: 8 }} />}
+
+      <Form.Item
+        name={[prefix, 'cartaoPostagem']}
+        label="Cartão de Postagem"
+        rules={[{ required: false }]}
+        extra="Número do cartão de postagem do contrato"
+      >
+        <Input placeholder="0000000000" maxLength={15} />
+      </Form.Item>
+
+      <Collapse size="small" style={{ marginTop: 8 }}>
+        <Collapse.Panel header="Configurações Opcionais" key="optional">
+          <Form.Item
+            name={[prefix, 'contrato']}
+            label="Número do Contrato"
+            extra="Opcional - Número do contrato com os Correios"
+          >
+            <Input placeholder="0000000000" maxLength={15} />
+          </Form.Item>
+
+          <Form.Item
+            name={[prefix, 'dr']}
+            label="Diretoria Regional (DR)"
+            extra="Opcional - Código da diretoria regional"
+          >
+            <Input placeholder="Ex: 10" maxLength={5} />
+          </Form.Item>
+        </Collapse.Panel>
+      </Collapse>
+    </>
+  );
+}
+
+// ============================================================================
+// Main Components
 // ============================================================================
 
 function ConfigTab() {
   const [form] = Form.useForm();
   const queryClient = useQueryClient();
-  const [authMode, setAuthMode] = useState<'apiKey' | 'legacy'>('apiKey');
   const initializedRef = useRef(false);
+  const [productionPasswordVisible, setProductionPasswordVisible] = useState(false);
+  const [sandboxPasswordVisible, setSandboxPasswordVisible] = useState(false);
+  const [loadingReveal, setLoadingReveal] = useState(false);
 
-  const { data, isLoading } = useQuery({
+  const { data: config, isLoading } = useQuery({
     queryKey: ['admin', 'correios', 'config'],
     queryFn: fetchConfig,
   });
@@ -121,39 +250,70 @@ function ConfigTab() {
     onSuccess: () => {
       message.success('Configuração salva com sucesso!');
       queryClient.invalidateQueries({ queryKey: ['admin', 'correios', 'config'] });
+      setProductionPasswordVisible(false);
+      setSandboxPasswordVisible(false);
     },
     onError: (err: Error) => {
       message.error(err.message);
     },
   });
 
-  const config = data?.data;
-
-  // Sincronizar modo de autenticação apenas uma vez quando os dados carregam
+  // Inicializar formulário quando dados carregam
   useEffect(() => {
     if (config && !initializedRef.current) {
-      const initialMode = config.authMode || (config.apiKey ? 'apiKey' : 'legacy');
-      setAuthMode(initialMode);
+      form.setFieldsValue({
+        activeEnvironment: config.activeEnvironment || 'sandbox',
+        production: {
+          username: config.production?.username || '',
+          password: config.production?.password || '',
+          cartaoPostagem: config.production?.cartaoPostagem || '',
+          contrato: config.production?.contrato || '',
+          dr: config.production?.dr || '',
+        },
+        sandbox: {
+          username: config.sandbox?.username || '',
+          password: config.sandbox?.password || '',
+          cartaoPostagem: config.sandbox?.cartaoPostagem || '',
+          contrato: config.sandbox?.contrato || '',
+          dr: config.sandbox?.dr || '',
+        },
+      });
       initializedRef.current = true;
     }
-  }, [config]);
+  }, [config, form]);
+
+  const handleRevealCredentials = async (environment: 'sandbox' | 'production') => {
+    setLoadingReveal(true);
+    try {
+      const revealed = await fetchConfigRevealed();
+      const envData = environment === 'production' ? revealed.production : revealed.sandbox;
+
+      if (envData?.password) {
+        form.setFieldsValue({
+          [environment]: {
+            ...form.getFieldValue(environment),
+            password: envData.password,
+          },
+        });
+        if (environment === 'production') {
+          setProductionPasswordVisible(true);
+        } else {
+          setSandboxPasswordVisible(true);
+        }
+      }
+    } catch {
+      message.error('Erro ao revelar credenciais');
+    } finally {
+      setLoadingReveal(false);
+    }
+  };
 
   const handleSubmit = (values: Record<string, unknown>) => {
-    const payload: Partial<CorreiosConfig> = {
-      environment: values.sandboxMode ? 'sandbox' : 'production',
-      contrato: values.contrato as string,
-      dr: values.dr as string,
+    const payload = {
+      activeEnvironment: values.activeEnvironment,
+      production: values.production,
+      sandbox: values.sandbox,
     };
-
-    // Adicionar campos conforme o modo de autenticação
-    if (authMode === 'apiKey') {
-      payload.apiKey = values.apiKey as string;
-    } else {
-      payload.username = values.username as string;
-      payload.password = values.password as string;
-      payload.cartaoPostagem = values.cartaoPostagem as string;
-    }
-
     mutation.mutate(payload);
   };
 
@@ -171,145 +331,103 @@ function ConfigTab() {
       layout="vertical"
       onFinish={handleSubmit}
       initialValues={{
-        sandboxMode: config?.environment === 'sandbox',
-        apiKey: config?.apiKey || '',
-        username: config?.username || '',
-        password: config?.password || '',
-        cartaoPostagem: config?.cartaoPostagem || '',
-        contrato: config?.contrato || '',
-        dr: config?.dr || '',
+        activeEnvironment: 'sandbox',
       }}
     >
-      {data?.configured && (
+      {/* Status */}
+      {config?.configured && (
         <Alert
           type="success"
           message="Integração Configurada"
           description={
-            <>
-              Modo: <Tag color="blue">{config?.authMode === 'apiKey' ? 'API Key' : 'Legado'}</Tag>
-              {' | '}
-              Última atualização:{' '}
-              {config?.lastUpdated
-                ? new Date(config.lastUpdated).toLocaleString('pt-BR')
-                : 'N/A'}
-            </>
+            <Space direction="vertical" size="small">
+              <Space>
+                <Text>Ambiente ativo:</Text>
+                <Tag color={config.activeEnvironment === 'sandbox' ? 'green' : 'red'}>
+                  {config.activeEnvironment === 'sandbox' ? 'Homologação' : 'Produção'}
+                </Tag>
+              </Space>
+              <Space>
+                <EnvironmentBadge environment="production" configured={config.production?.configured || false} />
+                <Divider type="vertical" />
+                <EnvironmentBadge environment="sandbox" configured={config.sandbox?.configured || false} />
+              </Space>
+            </Space>
           }
           showIcon
           style={{ marginBottom: 16 }}
         />
       )}
 
-      <Card title="Ambiente" size="small" style={{ marginBottom: 16 }}>
+      {/* Ambiente Ativo */}
+      <Card title="Ambiente Ativo" size="small" style={{ marginBottom: 16 }}>
         <Form.Item
-          name="sandboxMode"
-          label="Modo Sandbox (Homologação)"
-          valuePropName="checked"
-          extra="Ative para usar o ambiente de testes dos Correios"
+          name="activeEnvironment"
+          label="Selecione o ambiente que será usado para operações"
+          extra="O sistema usará as credenciais do ambiente selecionado para todas as chamadas de API"
         >
-          <Switch checkedChildren="Sandbox" unCheckedChildren="Produção" />
-        </Form.Item>
-      </Card>
-
-      <Card title="Autenticação CWS" size="small" style={{ marginBottom: 16 }}>
-        <Form.Item label="Modo de Autenticação">
-          <Radio.Group
-            value={authMode}
-            onChange={(e) => setAuthMode(e.target.value)}
-            optionType="button"
-            buttonStyle="solid"
-          >
-            <Radio.Button value="apiKey">API Key (Novo)</Radio.Button>
-            <Radio.Button value="legacy">Usuário/Senha (Legado)</Radio.Button>
+          <Radio.Group optionType="button" buttonStyle="solid">
+            <Radio.Button value="sandbox">
+              <Space>
+                <ExperimentOutlined />
+                Homologação (Sandbox)
+              </Space>
+            </Radio.Button>
+            <Radio.Button value="production">
+              <Space>
+                <CloudOutlined />
+                Produção
+              </Space>
+            </Radio.Button>
           </Radio.Group>
         </Form.Item>
-
-        {authMode === 'apiKey' ? (
-          <>
-            <Alert
-              type="info"
-              message="Autenticação via API Key"
-              description={
-                <>
-                  Gere sua API Key no portal{' '}
-                  <a href="https://cws.correios.com.br" target="_blank" rel="noopener noreferrer">
-                    cws.correios.com.br
-                  </a>
-                  . A chave começa com <code>cws-ch1_</code>.
-                </>
-              }
-              showIcon
-              style={{ marginBottom: 16 }}
-            />
-            <Form.Item
-              name="apiKey"
-              label="API Key"
-              rules={[
-                { required: authMode === 'apiKey', message: 'Informe a API Key' },
-                {
-                  pattern: /^cws-ch1_/,
-                  message: 'API Key deve começar com cws-ch1_',
-                  warningOnly: true,
-                },
-              ]}
-              extra="Chave gerada no portal CWS dos Correios"
-            >
-              <Input.Password
-                placeholder="cws-ch1_xxxxxxxxxxxxxxxxx"
-                style={{ fontFamily: 'monospace' }}
-              />
-            </Form.Item>
-          </>
-        ) : (
-          <>
-            <Form.Item
-              name="username"
-              label="Usuário CWS"
-              rules={[{ required: authMode === 'legacy', message: 'Informe o usuário CWS' }]}
-              extra="Usuário do componente CWS (Meu Correios)"
-            >
-              <Input placeholder="seu_usuario_cws" />
-            </Form.Item>
-
-            <Form.Item
-              name="password"
-              label="Senha CWS"
-              rules={[{ required: authMode === 'legacy', message: 'Informe a senha CWS' }]}
-              extra="Senha do componente CWS"
-            >
-              <Input.Password placeholder="••••••••" />
-            </Form.Item>
-
-            <Form.Item
-              name="cartaoPostagem"
-              label="Cartão de Postagem"
-              rules={[{ required: authMode === 'legacy', message: 'Informe o cartão de postagem' }]}
-              extra="Número do cartão de postagem do contrato"
-            >
-              <Input placeholder="0000000000" maxLength={15} />
-            </Form.Item>
-          </>
-        )}
       </Card>
 
-      <Collapse style={{ marginBottom: 16 }}>
-        <Collapse.Panel header="Configurações Opcionais" key="optional">
-          <Form.Item
-            name="contrato"
-            label="Número do Contrato"
-            extra="Opcional - Número do contrato com os Correios"
-          >
-            <Input placeholder="0000000000" maxLength={15} />
-          </Form.Item>
+      {/* Credenciais de Produção */}
+      <Card
+        title={
+          <Space>
+            <CloudOutlined />
+            <span>Credenciais de Produção</span>
+            {config?.production?.configured && <Tag color="green">Configurado</Tag>}
+          </Space>
+        }
+        size="small"
+        style={{ marginBottom: 16, borderColor: '#ff4d4f33' }}
+        headStyle={{ background: '#fff2f0' }}
+      >
+        <CredentialsForm
+          prefix="production"
+          environment="production"
+          onReveal={handleRevealCredentials}
+          loadingReveal={loadingReveal}
+          passwordVisible={productionPasswordVisible}
+          onPasswordVisibleChange={setProductionPasswordVisible}
+        />
+      </Card>
 
-          <Form.Item
-            name="dr"
-            label="Diretoria Regional (DR)"
-            extra="Opcional - Código da diretoria regional"
-          >
-            <Input placeholder="Ex: 10" maxLength={5} />
-          </Form.Item>
-        </Collapse.Panel>
-      </Collapse>
+      {/* Credenciais de Homologação */}
+      <Card
+        title={
+          <Space>
+            <ExperimentOutlined />
+            <span>Credenciais de Homologação (Sandbox)</span>
+            {config?.sandbox?.configured && <Tag color="green">Configurado</Tag>}
+          </Space>
+        }
+        size="small"
+        style={{ marginBottom: 16, borderColor: '#52c41a33' }}
+        headStyle={{ background: '#f6ffed' }}
+      >
+        <CredentialsForm
+          prefix="sandbox"
+          environment="sandbox"
+          onReveal={handleRevealCredentials}
+          loadingReveal={loadingReveal}
+          passwordVisible={sandboxPasswordVisible}
+          onPasswordVisibleChange={setSandboxPasswordVisible}
+        />
+      </Card>
 
       <Form.Item>
         <Button
@@ -349,6 +467,8 @@ function TestAuthTab() {
 
   return (
     <Space direction="vertical" style={{ width: '100%' }} size="large">
+      <ApiUrlPreview endpoint="/token/v1/autentica/cartaopostagem" />
+
       <Alert
         type="info"
         message="Teste de Autenticação"
@@ -404,6 +524,8 @@ function TestQuoteTab() {
 
   return (
     <Space direction="vertical" style={{ width: '100%' }} size="large">
+      <ApiUrlPreview endpoint="/preco/v1/nacional" />
+
       <Alert
         type="info"
         message="Teste de Cotação"
@@ -425,19 +547,11 @@ function TestQuoteTab() {
         }}
       >
         <Space wrap>
-          <Form.Item
-            name="cepOrigem"
-            label="CEP Origem"
-            rules={[{ required: true }]}
-          >
+          <Form.Item name="cepOrigem" label="CEP Origem" rules={[{ required: true }]}>
             <Input placeholder="00000000" maxLength={9} style={{ width: 120 }} />
           </Form.Item>
 
-          <Form.Item
-            name="cepDestino"
-            label="CEP Destino"
-            rules={[{ required: true }]}
-          >
+          <Form.Item name="cepDestino" label="CEP Destino" rules={[{ required: true }]}>
             <Input placeholder="00000000" maxLength={9} style={{ width: 120 }} />
           </Form.Item>
 
@@ -463,12 +577,7 @@ function TestQuoteTab() {
         </Space>
 
         <Form.Item>
-          <Button
-            type="primary"
-            htmlType="submit"
-            icon={<SendOutlined />}
-            loading={loading}
-          >
+          <Button type="primary" htmlType="submit" icon={<SendOutlined />} loading={loading}>
             Executar Cotação
           </Button>
         </Form.Item>
@@ -506,6 +615,8 @@ function TestTrackingTab() {
 
   return (
     <Space direction="vertical" style={{ width: '100%' }} size="large">
+      <ApiUrlPreview endpoint="/rastro/v1/objetos/{codigo}" />
+
       <Alert
         type="info"
         message="Teste de Rastreamento"
@@ -533,12 +644,7 @@ function TestTrackingTab() {
         </Form.Item>
 
         <Form.Item>
-          <Button
-            type="primary"
-            htmlType="submit"
-            icon={<SearchOutlined />}
-            loading={loading}
-          >
+          <Button type="primary" htmlType="submit" icon={<SearchOutlined />} loading={loading}>
             Rastrear
           </Button>
         </Form.Item>
@@ -546,6 +652,72 @@ function TestTrackingTab() {
 
       {result && <TestResultDisplay result={result} />}
     </Space>
+  );
+}
+
+function ApiUrlPreview({ endpoint }: { endpoint: string }) {
+  const { data: config, isLoading } = useQuery({
+    queryKey: ['admin', 'correios', 'config'],
+    queryFn: fetchConfig,
+    staleTime: 0,
+    refetchOnMount: true,
+  });
+
+  if (isLoading) {
+    return <Spin size="small" />;
+  }
+
+  const environment = config?.activeEnvironment || 'sandbox';
+  const baseUrl = environment === 'production'
+    ? 'https://api.correios.com.br'
+    : 'https://apihom.correios.com.br';
+  const fullUrl = `${baseUrl}${endpoint}`;
+
+  const envConfig = environment === 'production' ? config?.production : config?.sandbox;
+  const isConfigured = envConfig?.configured || false;
+
+  return (
+    <Card
+      size="small"
+      style={{
+        marginBottom: 16,
+        background: environment === 'sandbox' ? '#f6ffed' : '#fff2f0',
+        borderColor: environment === 'sandbox' ? '#b7eb8f' : '#ffccc7',
+      }}
+    >
+      <Space direction="vertical" style={{ width: '100%' }} size="small">
+        <Space>
+          <Text strong>Ambiente:</Text>
+          <Tag color={environment === 'sandbox' ? 'green' : 'red'}>
+            {environment === 'sandbox' ? 'SANDBOX (Homologação)' : 'PRODUÇÃO'}
+          </Tag>
+          {!isConfigured && (
+            <Tag color="warning">Credenciais não configuradas</Tag>
+          )}
+        </Space>
+        <Space>
+          <Text strong>URL Base:</Text>
+          <Text code copyable>{baseUrl}</Text>
+        </Space>
+        <Space>
+          <Text strong>Endpoint:</Text>
+          <Text code>{endpoint}</Text>
+        </Space>
+        <Divider style={{ margin: '8px 0' }} />
+        <Space>
+          <Text strong>URL Completa:</Text>
+          <Text code copyable style={{ wordBreak: 'break-all' }}>{fullUrl}</Text>
+        </Space>
+        {environment === 'production' && (
+          <Alert
+            type="warning"
+            message="Atenção: Você está no ambiente de PRODUÇÃO. As requisições serão reais e podem gerar custos."
+            style={{ marginTop: 8 }}
+            showIcon
+          />
+        )}
+      </Space>
+    </Card>
   );
 }
 
@@ -559,17 +731,32 @@ function TestPrePostagemTab() {
     setResult(null);
     try {
       const res = await runTest({
-        type: 'prepostagem_sim',
-        codigoServico: values.codigoServico,
-        cepOrigem: (values.cepOrigem as string).replace(/\D/g, ''),
-        cepDestino: (values.cepDestino as string).replace(/\D/g, ''),
-        pesoGramas: values.pesoGramas,
+        type: 'prepostagem',
+        codigoServico: values.codigoServico as string,
+        pesoGramas: values.pesoGramas as number,
+        alturaCm: values.alturaCm as number,
+        larguraCm: values.larguraCm as number,
+        comprimentoCm: values.comprimentoCm as number,
+        remetenteNome: values.remetenteNome as string,
+        remetenteCep: (values.remetenteCep as string).replace(/\D/g, ''),
+        remetenteLogradouro: values.remetenteLogradouro as string,
+        remetenteNumero: values.remetenteNumero as string,
+        remetenteBairro: values.remetenteBairro as string,
+        remetenteCidade: values.remetenteCidade as string,
+        remetenteUf: (values.remetenteUf as string).toUpperCase(),
+        destinatarioNome: values.destinatarioNome as string,
+        destinatarioCep: (values.destinatarioCep as string).replace(/\D/g, ''),
+        destinatarioLogradouro: values.destinatarioLogradouro as string,
+        destinatarioNumero: values.destinatarioNumero as string,
+        destinatarioBairro: values.destinatarioBairro as string,
+        destinatarioCidade: values.destinatarioCidade as string,
+        destinatarioUf: (values.destinatarioUf as string).toUpperCase(),
       });
       setResult(res);
     } catch (err) {
       setResult({
         success: false,
-        type: 'prepostagem_sim',
+        type: 'prepostagem',
         message: err instanceof Error ? err.message : 'Erro desconhecido',
       });
     } finally {
@@ -579,10 +766,12 @@ function TestPrePostagemTab() {
 
   return (
     <Space direction="vertical" style={{ width: '100%' }} size="large">
+      <ApiUrlPreview endpoint="/prepostagem/v2/prepostagens" />
+
       <Alert
-        type="warning"
-        message="Simulação de Pré-Postagem"
-        description="Este teste apenas valida os dados. NÃO cria objetos reais na API dos Correios."
+        type="info"
+        message="Teste de Pré-Postagem Real"
+        description="Este teste executa uma pré-postagem REAL na API dos Correios. No ambiente SANDBOX, não gera custos. Em PRODUÇÃO, pode gerar custos."
         showIcon
       />
 
@@ -592,42 +781,101 @@ function TestPrePostagemTab() {
         onFinish={handleTest}
         initialValues={{
           codigoServico: '03220',
-          cepOrigem: '01310100',
-          cepDestino: '22041080',
           pesoGramas: 500,
+          alturaCm: 10,
+          larguraCm: 15,
+          comprimentoCm: 20,
+          remetenteNome: 'Empresa Teste Ltda',
+          remetenteCep: '01310100',
+          remetenteLogradouro: 'Av. Paulista',
+          remetenteNumero: '1000',
+          remetenteBairro: 'Bela Vista',
+          remetenteCidade: 'São Paulo',
+          remetenteUf: 'SP',
+          destinatarioNome: 'João da Silva',
+          destinatarioCep: '22041080',
+          destinatarioLogradouro: 'Rua Barata Ribeiro',
+          destinatarioNumero: '500',
+          destinatarioBairro: 'Copacabana',
+          destinatarioCidade: 'Rio de Janeiro',
+          destinatarioUf: 'RJ',
         }}
       >
-        <Space wrap>
-          <Form.Item
-            name="codigoServico"
-            label="Código Serviço"
-            rules={[{ required: true }]}
-            extra="03220=SEDEX, 03298=PAC"
-          >
-            <Input placeholder="03220" maxLength={5} style={{ width: 100 }} />
-          </Form.Item>
+        <Card title="Serviço e Dimensões" size="small" style={{ marginBottom: 16 }}>
+          <Space wrap>
+            <Form.Item name="codigoServico" label="Código Serviço" rules={[{ required: true }]} extra="03220=SEDEX, 03298=PAC">
+              <Input placeholder="03220" maxLength={5} style={{ width: 100 }} />
+            </Form.Item>
+            <Form.Item name="pesoGramas" label="Peso (g)" rules={[{ required: true }]}>
+              <InputNumber min={1} max={30000} style={{ width: 100 }} />
+            </Form.Item>
+            <Form.Item name="comprimentoCm" label="Comp. (cm)">
+              <InputNumber min={1} max={100} style={{ width: 80 }} />
+            </Form.Item>
+            <Form.Item name="larguraCm" label="Larg. (cm)">
+              <InputNumber min={1} max={100} style={{ width: 80 }} />
+            </Form.Item>
+            <Form.Item name="alturaCm" label="Alt. (cm)">
+              <InputNumber min={1} max={100} style={{ width: 80 }} />
+            </Form.Item>
+          </Space>
+        </Card>
 
-          <Form.Item name="cepOrigem" label="CEP Origem" rules={[{ required: true }]}>
-            <Input placeholder="00000000" maxLength={9} style={{ width: 120 }} />
-          </Form.Item>
+        <Card title="Remetente" size="small" style={{ marginBottom: 16 }}>
+          <Space wrap style={{ width: '100%' }}>
+            <Form.Item name="remetenteNome" label="Nome" rules={[{ required: true }]} style={{ minWidth: 200 }}>
+              <Input placeholder="Nome do remetente" />
+            </Form.Item>
+            <Form.Item name="remetenteCep" label="CEP" rules={[{ required: true }]}>
+              <Input placeholder="00000000" maxLength={9} style={{ width: 110 }} />
+            </Form.Item>
+            <Form.Item name="remetenteLogradouro" label="Logradouro" rules={[{ required: true }]} style={{ minWidth: 200 }}>
+              <Input placeholder="Rua, Av, etc" />
+            </Form.Item>
+            <Form.Item name="remetenteNumero" label="Número">
+              <Input placeholder="Nº" style={{ width: 80 }} />
+            </Form.Item>
+            <Form.Item name="remetenteBairro" label="Bairro">
+              <Input placeholder="Bairro" style={{ width: 150 }} />
+            </Form.Item>
+            <Form.Item name="remetenteCidade" label="Cidade" rules={[{ required: true }]}>
+              <Input placeholder="Cidade" style={{ width: 150 }} />
+            </Form.Item>
+            <Form.Item name="remetenteUf" label="UF" rules={[{ required: true }]}>
+              <Input placeholder="UF" maxLength={2} style={{ width: 60 }} />
+            </Form.Item>
+          </Space>
+        </Card>
 
-          <Form.Item name="cepDestino" label="CEP Destino" rules={[{ required: true }]}>
-            <Input placeholder="00000000" maxLength={9} style={{ width: 120 }} />
-          </Form.Item>
-
-          <Form.Item name="pesoGramas" label="Peso (g)">
-            <InputNumber min={1} max={30000} style={{ width: 100 }} />
-          </Form.Item>
-        </Space>
+        <Card title="Destinatário" size="small" style={{ marginBottom: 16 }}>
+          <Space wrap style={{ width: '100%' }}>
+            <Form.Item name="destinatarioNome" label="Nome" rules={[{ required: true }]} style={{ minWidth: 200 }}>
+              <Input placeholder="Nome do destinatário" />
+            </Form.Item>
+            <Form.Item name="destinatarioCep" label="CEP" rules={[{ required: true }]}>
+              <Input placeholder="00000000" maxLength={9} style={{ width: 110 }} />
+            </Form.Item>
+            <Form.Item name="destinatarioLogradouro" label="Logradouro" rules={[{ required: true }]} style={{ minWidth: 200 }}>
+              <Input placeholder="Rua, Av, etc" />
+            </Form.Item>
+            <Form.Item name="destinatarioNumero" label="Número">
+              <Input placeholder="Nº" style={{ width: 80 }} />
+            </Form.Item>
+            <Form.Item name="destinatarioBairro" label="Bairro">
+              <Input placeholder="Bairro" style={{ width: 150 }} />
+            </Form.Item>
+            <Form.Item name="destinatarioCidade" label="Cidade" rules={[{ required: true }]}>
+              <Input placeholder="Cidade" style={{ width: 150 }} />
+            </Form.Item>
+            <Form.Item name="destinatarioUf" label="UF" rules={[{ required: true }]}>
+              <Input placeholder="UF" maxLength={2} style={{ width: 60 }} />
+            </Form.Item>
+          </Space>
+        </Card>
 
         <Form.Item>
-          <Button
-            type="primary"
-            htmlType="submit"
-            icon={<FileTextOutlined />}
-            loading={loading}
-          >
-            Simular Pré-Postagem
+          <Button type="primary" htmlType="submit" icon={<FileTextOutlined />} loading={loading} size="large">
+            Executar Pré-Postagem
           </Button>
         </Form.Item>
       </Form>
@@ -651,20 +899,12 @@ function TestResultDisplay({ result }: { result: TestResult }) {
             <CloseCircleOutlined style={{ color: '#ff4d4f' }} />
           )}
           <span>Resultado do Teste</span>
-          {result.latencyMs && (
-            <Tag color="blue">{result.latencyMs}ms</Tag>
-          )}
+          {result.latencyMs && <Tag color="blue">{result.latencyMs}ms</Tag>}
         </Space>
       }
-      style={{
-        borderColor: isSuccess ? '#52c41a' : '#ff4d4f',
-      }}
+      style={{ borderColor: isSuccess ? '#52c41a' : '#ff4d4f' }}
     >
-      <Alert
-        type={isSuccess ? 'success' : 'error'}
-        message={result.message}
-        style={{ marginBottom: 16 }}
-      />
+      <Alert type={isSuccess ? 'success' : 'error'} message={result.message} style={{ marginBottom: 16 }} />
 
       {result.result != null && (
         <Collapse>
