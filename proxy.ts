@@ -156,11 +156,22 @@ function createResponseWithActivityCookie(response: NextResponse): NextResponse 
 
 /**
  * Create redirect response that clears auth cookies (for timeout)
+ * @param authCookieName - The auth cookie to clear (admin_auth or auth_token)
  */
-function createTimeoutRedirect(request: NextRequest, loginPath: string, returnParam: string, pathname: string): NextResponse {
+function createTimeoutRedirect(
+  request: NextRequest,
+  loginPath: string,
+  returnParam: string,
+  pathname: string,
+  authCookieName: string
+): NextResponse {
   const loginUrl = new URL(loginPath, request.url);
   loginUrl.searchParams.set(returnParam, pathname);
+  loginUrl.searchParams.set('reason', 'inactivity'); // Indicate timeout reason
   const response = NextResponse.redirect(loginUrl);
+
+  // Clear the auth cookie to force re-login
+  response.cookies.delete(authCookieName);
 
   // Clear the last_activity cookie
   response.cookies.delete(LAST_ACTIVITY_COOKIE_NAME);
@@ -246,7 +257,7 @@ export async function proxy(request: NextRequest) {
     const adminLastActivity = request.cookies.get(LAST_ACTIVITY_COOKIE_NAME)?.value;
     if (isInactiveSession(adminLastActivity)) {
       // Session expired due to inactivity - redirect to admin login
-      return createTimeoutRedirect(request, '/admin/login', 'next', pathname);
+      return createTimeoutRedirect(request, '/admin/login', 'next', pathname, ADMIN_AUTH_COOKIE_NAME);
     }
 
     // Is authenticated as staff with valid tokenVersion - update activity and allow access
@@ -323,7 +334,7 @@ export async function proxy(request: NextRequest) {
           { status: 401 }
         );
       }
-      return createTimeoutRedirect(request, '/login', 'returnUrl', pathname);
+      return createTimeoutRedirect(request, '/login', 'returnUrl', pathname, AUTH_COOKIE_NAME);
     }
 
     // Is admin - update activity and allow access
@@ -355,7 +366,7 @@ export async function proxy(request: NextRequest) {
           { status: 401 }
         );
       }
-      return createTimeoutRedirect(request, '/login', 'returnUrl', pathname);
+      return createTimeoutRedirect(request, '/login', 'returnUrl', pathname, AUTH_COOKIE_NAME);
     }
 
     // Is authenticated - update activity and allow access

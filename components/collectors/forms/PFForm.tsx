@@ -2,14 +2,19 @@
 
 import { useEffect, useState } from 'react';
 import { Controller, useFormContext } from 'react-hook-form';
-import { Form, Input, DatePicker, Checkbox, Space, Typography, Select } from 'antd';
+import { Form, Input, DatePicker, Checkbox, Row, Col, Typography, Select, Divider } from 'antd';
+import { UserOutlined, IdcardOutlined, HomeOutlined, PhoneOutlined, LockOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import type { CollectorFormInput } from '@/lib/collectors/types';
 import { maskPhone, maskCEP, maskCPF, unmaskDigits } from '@/lib/collectors/masks';
 
-const { Text } = Typography;
+const { Title, Text } = Typography;
 
-export default function PFForm() {
+interface PFFormProps {
+  showPassword?: boolean;
+}
+
+export default function PFForm({ showPassword = false }: PFFormProps) {
   const { control, watch, setValue, formState: { errors } } = useFormContext<CollectorFormInput>();
   const [cepLoading, setCepLoading] = useState(false);
 
@@ -65,348 +70,437 @@ export default function PFForm() {
   }, [cep, setValue]);
 
   return (
-    <Space direction="vertical" style={{ width: '100%' }} size={16}>
-      <Form.Item
-        label="Nome completo"
-        required
-        validateStatus={errors.pf?.nome ? 'error' : ''}
-        help={errors.pf?.nome?.message}
-      >
-        <Controller
-          name="pf.nome"
-          control={control}
-          render={({ field }) => (
-            <Input {...field} placeholder="Nome completo do coletor" />
-          )}
-        />
-      </Form.Item>
+    <div>
+      {/* Dados Pessoais */}
+      <Title level={5} style={{ marginBottom: 24, display: 'flex', alignItems: 'center', gap: 8 }}>
+        <UserOutlined /> Dados Pessoais
+      </Title>
 
-      <Form.Item
-        label="CPF"
-        required
-        validateStatus={errors.pf?.cpf ? 'error' : ''}
-        help={errors.pf?.cpf?.message}
-      >
-        <Controller
-          name="pf.cpf"
-          control={control}
-          render={({ field }) => (
-            <Input
-              {...field}
-              onChange={(e) => field.onChange(maskCPF(e.target.value))}
-              placeholder="000.000.000-00"
-              style={{ width: 200 }}
-              maxLength={14}
+      <Row gutter={[24, 0]}>
+        <Col xs={24} md={16}>
+          <Form.Item
+            label="Nome completo"
+            required
+            validateStatus={errors.pf?.nome ? 'error' : ''}
+            help={errors.pf?.nome?.message}
+          >
+            <Controller
+              name="pf.nome"
+              control={control}
+              render={({ field }) => (
+                <Input {...field} placeholder="Digite seu nome completo" />
+              )}
             />
-          )}
-        />
-      </Form.Item>
+          </Form.Item>
+        </Col>
 
-      <Form.Item
-        label="E-mail"
-        required
-        validateStatus={errors.pf?.email ? 'error' : ''}
-        help={errors.pf?.email?.message}
-      >
-        <Controller
-          name="pf.email"
-          control={control}
-          render={({ field }) => (
-            <Input
-              {...field}
-              type="email"
-              placeholder="email@exemplo.com"
+        <Col xs={24} md={8}>
+          <Form.Item
+            label="CPF"
+            required
+            validateStatus={errors.pf?.cpf ? 'error' : ''}
+            help={errors.pf?.cpf?.message}
+          >
+            <Controller
+              name="pf.cpf"
+              control={control}
+              render={({ field }) => (
+                <Input
+                  {...field}
+                  onChange={(e) => field.onChange(maskCPF(e.target.value))}
+                  placeholder="000.000.000-00"
+                  maxLength={14}
+                />
+              )}
             />
-          )}
-        />
-      </Form.Item>
+          </Form.Item>
+        </Col>
+      </Row>
 
-      <Typography.Title level={5} style={{ marginTop: 16, marginBottom: 8 }}>
-        CNH
-      </Typography.Title>
-
-      <Form.Item
-        label="Número da CNH"
-        required
-        validateStatus={errors.pf?.cnh?.number ? 'error' : ''}
-        help={errors.pf?.cnh?.number?.message}
-      >
-        <Controller
-          name="pf.cnh.number"
-          control={control}
-          render={({ field }) => (
-            <Input {...field} placeholder="Número da CNH" maxLength={11} />
-          )}
-        />
-      </Form.Item>
-
-      <Form.Item
-        label="Categoria"
-        required
-        validateStatus={errors.pf?.cnh?.category ? 'error' : ''}
-        help={errors.pf?.cnh?.category?.message}
-      >
-        <Controller
-          name="pf.cnh.category"
-          control={control}
-          render={({ field }) => (
-            <Select
-              {...field}
-              placeholder="Selecione a categoria"
-              style={{ width: 180 }}
-              options={[
-                { value: 'ACC', label: 'ACC' },
-                { value: 'A', label: 'A' },
-                { value: 'B', label: 'B' },
-                { value: 'C', label: 'C' },
-                { value: 'D', label: 'D' },
-                { value: 'E', label: 'E' },
-              ]}
+      <Row gutter={[24, 0]}>
+        <Col xs={24} md={12}>
+          <Form.Item
+            label="E-mail"
+            required
+            validateStatus={errors.pf?.email ? 'error' : ''}
+            help={errors.pf?.email?.message}
+          >
+            <Controller
+              name="pf.email"
+              control={control}
+              render={({ field }) => (
+                <Input {...field} type="email" placeholder="seu@email.com" />
+              )}
             />
-          )}
-        />
-      </Form.Item>
+          </Form.Item>
+        </Col>
+      </Row>
 
-      <Form.Item
-        label="Validade"
-        required
-        validateStatus={errors.pf?.cnh?.expiresAt ? 'error' : ''}
-        help={errors.pf?.cnh?.expiresAt?.message}
-      >
-        <Controller
-          name="pf.cnh.expiresAt"
-          control={control}
-          render={({ field }) => (
-            <DatePicker
-              {...field}
-              value={field.value ? dayjs(field.value) : null}
-              onChange={(date) => field.onChange(date ? date.format('YYYY-MM-DD') : '')}
-              format="DD/MM/YYYY"
-              placeholder="Selecione a validade"
-              style={{ width: 200 }}
+      {/* Senha (opcional para admin, obrigatório para cadastro público) */}
+      {showPassword && (
+        <>
+          <Divider style={{ margin: '24px 0 16px' }} />
+          <Title level={5} style={{ marginBottom: 24, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <LockOutlined /> Senha de Acesso
+          </Title>
+
+          <Row gutter={[24, 0]}>
+            <Col xs={24} md={12}>
+              <Form.Item
+                label="Senha"
+                required
+                validateStatus={errors.pf?.password ? 'error' : ''}
+                help={errors.pf?.password?.message || 'Mínimo 8 caracteres'}
+              >
+                <Controller
+                  name="pf.password"
+                  control={control}
+                  render={({ field }) => (
+                    <Input.Password
+                      {...field}
+                      value={field.value || ''}
+                      placeholder="Crie uma senha segura"
+                    />
+                  )}
+                />
+              </Form.Item>
+            </Col>
+
+            <Col xs={24} md={12}>
+              <Form.Item
+                label="Confirmar senha"
+                required
+                validateStatus={errors.pf?.confirmPassword ? 'error' : ''}
+                help={errors.pf?.confirmPassword?.message}
+              >
+                <Controller
+                  name="pf.confirmPassword"
+                  control={control}
+                  render={({ field }) => (
+                    <Input.Password
+                      {...field}
+                      value={field.value || ''}
+                      placeholder="Digite a senha novamente"
+                    />
+                  )}
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+        </>
+      )}
+
+      {/* CNH */}
+      <Divider style={{ margin: '24px 0 16px' }} />
+      <Title level={5} style={{ marginBottom: 24, display: 'flex', alignItems: 'center', gap: 8 }}>
+        <IdcardOutlined /> CNH - Carteira de Habilitação
+      </Title>
+
+      <Row gutter={[24, 0]}>
+        <Col xs={24} md={10}>
+          <Form.Item
+            label="Número da CNH"
+            required
+            validateStatus={errors.pf?.cnh?.number ? 'error' : ''}
+            help={errors.pf?.cnh?.number?.message}
+          >
+            <Controller
+              name="pf.cnh.number"
+              control={control}
+              render={({ field }) => (
+                <Input {...field} placeholder="00000000000" maxLength={11} />
+              )}
             />
-          )}
-        />
-      </Form.Item>
+          </Form.Item>
+        </Col>
 
-      <Typography.Title level={5} style={{ marginTop: 16, marginBottom: 8 }}>
-        Endereço
-      </Typography.Title>
-
-      <Form.Item
-        label="CEP"
-        validateStatus={errors.pf?.endereco?.cep ? 'error' : ''}
-        help={errors.pf?.endereco?.cep?.message || (cepLoading ? 'Buscando CEP...' : undefined)}
-      >
-        <Controller
-          name="pf.endereco.cep"
-          control={control}
-          render={({ field }) => (
-            <Input
-              {...field}
-              value={field.value || ''}
-              onChange={(e) => field.onChange(maskCEP(e.target.value))}
-              placeholder="00000-000"
-              style={{ width: 160 }}
-              maxLength={9}
+        <Col xs={12} md={7}>
+          <Form.Item
+            label="Categoria"
+            required
+            validateStatus={errors.pf?.cnh?.category ? 'error' : ''}
+            help={errors.pf?.cnh?.category?.message}
+          >
+            <Controller
+              name="pf.cnh.category"
+              control={control}
+              render={({ field }) => (
+                <Select
+                  {...field}
+                  placeholder="Categoria"
+                  options={[
+                    { value: 'ACC', label: 'ACC' },
+                    { value: 'A', label: 'A' },
+                    { value: 'B', label: 'B' },
+                    { value: 'C', label: 'C' },
+                    { value: 'D', label: 'D' },
+                    { value: 'E', label: 'E' },
+                  ]}
+                />
+              )}
             />
-          )}
-        />
-      </Form.Item>
+          </Form.Item>
+        </Col>
 
-      <Form.Item
-        label="Logradouro"
-        validateStatus={errors.pf?.endereco?.logradouro ? 'error' : ''}
-        help={errors.pf?.endereco?.logradouro?.message}
-      >
-        <Controller
-          name="pf.endereco.logradouro"
-          control={control}
-          render={({ field }) => (
-            <Input
-              {...field}
-              value={field.value || ''}
-              disabled={cepResolved}
-              placeholder="Rua, Avenida..."
+        <Col xs={12} md={7}>
+          <Form.Item
+            label="Validade"
+            required
+            validateStatus={errors.pf?.cnh?.expiresAt ? 'error' : ''}
+            help={errors.pf?.cnh?.expiresAt?.message}
+          >
+            <Controller
+              name="pf.cnh.expiresAt"
+              control={control}
+              render={({ field }) => (
+                <DatePicker
+                  {...field}
+                  value={field.value ? dayjs(field.value) : null}
+                  onChange={(date) => field.onChange(date ? date.format('YYYY-MM-DD') : '')}
+                  format="DD/MM/YYYY"
+                  placeholder="DD/MM/AAAA"
+                  style={{ width: '100%' }}
+                />
+              )}
             />
-          )}
-        />
-      </Form.Item>
+          </Form.Item>
+        </Col>
+      </Row>
 
-      <Space size={12}>
-        <Form.Item
-          label="Número"
-          validateStatus={errors.pf?.endereco?.numero ? 'error' : ''}
-          help={errors.pf?.endereco?.numero?.message}
-        >
-          <Controller
-            name="pf.endereco.numero"
-            control={control}
-            render={({ field }) => (
-              <Input
-                {...field}
-                value={field.value || ''}
-                placeholder="123"
-                style={{ width: 100 }}
-              />
-            )}
-          />
-        </Form.Item>
+      {/* Endereço */}
+      <Divider style={{ margin: '24px 0 16px' }} />
+      <Title level={5} style={{ marginBottom: 24, display: 'flex', alignItems: 'center', gap: 8 }}>
+        <HomeOutlined /> Endereço Residencial
+      </Title>
 
-        <Form.Item
-          label="Complemento"
-          validateStatus={errors.pf?.endereco?.complemento ? 'error' : ''}
-          help={errors.pf?.endereco?.complemento?.message}
-        >
-          <Controller
-            name="pf.endereco.complemento"
-            control={control}
-            render={({ field }) => (
-              <Input
-                {...field}
-                value={field.value || ''}
-                placeholder="Apto, Bloco..."
-                style={{ width: 200 }}
-              />
-            )}
-          />
-        </Form.Item>
-      </Space>
-
-      <Form.Item
-        label="Bairro"
-        validateStatus={errors.pf?.endereco?.bairro ? 'error' : ''}
-        help={errors.pf?.endereco?.bairro?.message}
-      >
-        <Controller
-          name="pf.endereco.bairro"
-          control={control}
-          render={({ field }) => (
-            <Input
-              {...field}
-              value={field.value || ''}
-              disabled={cepResolved}
-              placeholder="Bairro"
+      <Row gutter={[24, 0]}>
+        <Col xs={24} sm={8} md={6}>
+          <Form.Item
+            label="CEP"
+            validateStatus={errors.pf?.endereco?.cep ? 'error' : ''}
+            help={errors.pf?.endereco?.cep?.message || (cepLoading ? 'Buscando...' : undefined)}
+          >
+            <Controller
+              name="pf.endereco.cep"
+              control={control}
+              render={({ field }) => (
+                <Input
+                  {...field}
+                  value={field.value || ''}
+                  onChange={(e) => field.onChange(maskCEP(e.target.value))}
+                  placeholder="00000-000"
+                  maxLength={9}
+                />
+              )}
             />
-          )}
-        />
-      </Form.Item>
+          </Form.Item>
+        </Col>
 
-      <Space size={12}>
-        <Form.Item
-          label="Cidade"
-          validateStatus={errors.pf?.endereco?.cidade ? 'error' : ''}
-          help={errors.pf?.endereco?.cidade?.message}
-        >
-          <Controller
-            name="pf.endereco.cidade"
-            control={control}
-            render={({ field }) => (
-              <Input
-                {...field}
-                value={field.value || ''}
-                disabled={cepResolved}
-                placeholder="Cidade"
-                style={{ width: 200 }}
-              />
-            )}
-          />
-        </Form.Item>
+        <Col xs={24} sm={16} md={18}>
+          <Form.Item
+            label="Logradouro"
+            validateStatus={errors.pf?.endereco?.logradouro ? 'error' : ''}
+            help={errors.pf?.endereco?.logradouro?.message}
+          >
+            <Controller
+              name="pf.endereco.logradouro"
+              control={control}
+              render={({ field }) => (
+                <Input
+                  {...field}
+                  value={field.value || ''}
+                  disabled={cepResolved}
+                  placeholder="Rua, Avenida..."
+                />
+              )}
+            />
+          </Form.Item>
+        </Col>
+      </Row>
 
-        <Form.Item
-          label="UF"
-          validateStatus={errors.pf?.endereco?.uf ? 'error' : ''}
-          help={errors.pf?.endereco?.uf?.message}
-        >
-          <Controller
-            name="pf.endereco.uf"
-            control={control}
-            render={({ field }) => (
-              <Input
-                {...field}
-                value={field.value || ''}
-                disabled={cepResolved}
-                placeholder="SP"
-                maxLength={2}
-                style={{ width: 80 }}
-                onChange={(e) => field.onChange(e.target.value.toUpperCase())}
-              />
-            )}
-          />
-        </Form.Item>
-      </Space>
+      <Row gutter={[24, 0]}>
+        <Col xs={8} md={4}>
+          <Form.Item
+            label="Número"
+            validateStatus={errors.pf?.endereco?.numero ? 'error' : ''}
+            help={errors.pf?.endereco?.numero?.message}
+          >
+            <Controller
+              name="pf.endereco.numero"
+              control={control}
+              render={({ field }) => (
+                <Input {...field} value={field.value || ''} placeholder="123" />
+              )}
+            />
+          </Form.Item>
+        </Col>
+
+        <Col xs={16} md={8}>
+          <Form.Item
+            label="Complemento"
+            validateStatus={errors.pf?.endereco?.complemento ? 'error' : ''}
+            help={errors.pf?.endereco?.complemento?.message}
+          >
+            <Controller
+              name="pf.endereco.complemento"
+              control={control}
+              render={({ field }) => (
+                <Input {...field} value={field.value || ''} placeholder="Apto, Bloco..." />
+              )}
+            />
+          </Form.Item>
+        </Col>
+
+        <Col xs={24} md={12}>
+          <Form.Item
+            label="Bairro"
+            validateStatus={errors.pf?.endereco?.bairro ? 'error' : ''}
+            help={errors.pf?.endereco?.bairro?.message}
+          >
+            <Controller
+              name="pf.endereco.bairro"
+              control={control}
+              render={({ field }) => (
+                <Input
+                  {...field}
+                  value={field.value || ''}
+                  disabled={cepResolved}
+                  placeholder="Bairro"
+                />
+              )}
+            />
+          </Form.Item>
+        </Col>
+      </Row>
+
+      <Row gutter={[24, 0]}>
+        <Col xs={16} md={8}>
+          <Form.Item
+            label="Cidade"
+            validateStatus={errors.pf?.endereco?.cidade ? 'error' : ''}
+            help={errors.pf?.endereco?.cidade?.message}
+          >
+            <Controller
+              name="pf.endereco.cidade"
+              control={control}
+              render={({ field }) => (
+                <Input
+                  {...field}
+                  value={field.value || ''}
+                  disabled={cepResolved}
+                  placeholder="Cidade"
+                />
+              )}
+            />
+          </Form.Item>
+        </Col>
+
+        <Col xs={8} md={4}>
+          <Form.Item
+            label="UF"
+            validateStatus={errors.pf?.endereco?.uf ? 'error' : ''}
+            help={errors.pf?.endereco?.uf?.message}
+          >
+            <Controller
+              name="pf.endereco.uf"
+              control={control}
+              render={({ field }) => (
+                <Input
+                  {...field}
+                  value={field.value || ''}
+                  disabled={cepResolved}
+                  placeholder="SP"
+                  maxLength={2}
+                  onChange={(e) => field.onChange(e.target.value.toUpperCase())}
+                />
+              )}
+            />
+          </Form.Item>
+        </Col>
+      </Row>
 
       {cepResolved && (
-        <Text type="secondary" style={{ fontSize: 12 }}>
-          Edite apenas número e complemento
+        <Text type="secondary" style={{ fontSize: 12, display: 'block', marginTop: -16, marginBottom: 16 }}>
+          Endereço preenchido automaticamente pelo CEP. Edite apenas número e complemento.
         </Text>
       )}
 
-      <Typography.Title level={5} style={{ marginTop: 16, marginBottom: 8 }}>
-        Contato
-      </Typography.Title>
+      {/* Contato */}
+      <Divider style={{ margin: '24px 0 16px' }} />
+      <Title level={5} style={{ marginBottom: 24, display: 'flex', alignItems: 'center', gap: 8 }}>
+        <PhoneOutlined /> Contato
+      </Title>
 
-      <Form.Item
-        label="Celular"
-        required
-        validateStatus={errors.pf?.celular ? 'error' : ''}
-        help={errors.pf?.celular?.message}
-      >
-        <Controller
-          name="pf.celular"
-          control={control}
-          render={({ field }) => (
-            <Input
-              {...field}
-              value={field.value || ''}
-              onChange={(e) => field.onChange(maskPhone(e.target.value))}
-              placeholder="(11) 98765-4321"
-              style={{ width: 200 }}
-              maxLength={15}
+      <Row gutter={[24, 0]}>
+        <Col xs={24} md={8}>
+          <Form.Item
+            label="Celular"
+            required
+            validateStatus={errors.pf?.celular ? 'error' : ''}
+            help={errors.pf?.celular?.message}
+          >
+            <Controller
+              name="pf.celular"
+              control={control}
+              render={({ field }) => (
+                <Input
+                  {...field}
+                  value={field.value || ''}
+                  onChange={(e) => field.onChange(maskPhone(e.target.value))}
+                  placeholder="(11) 98765-4321"
+                  maxLength={15}
+                />
+              )}
             />
-          )}
-        />
-      </Form.Item>
+          </Form.Item>
+        </Col>
 
-      <Form.Item
-        validateStatus={errors.pf?.usarMesmoNumero ? 'error' : ''}
-        help={errors.pf?.usarMesmoNumero?.message}
-      >
-        <Controller
-          name="pf.usarMesmoNumero"
-          control={control}
-          render={({ field }) => (
-            <Checkbox
-              checked={field.value}
-              onChange={(e) => field.onChange(e.target.checked)}
+        <Col xs={24} md={16}>
+          <Form.Item
+            validateStatus={errors.pf?.usarMesmoNumero ? 'error' : ''}
+            style={{ marginTop: 30 }}
+          >
+            <Controller
+              name="pf.usarMesmoNumero"
+              control={control}
+              render={({ field }) => (
+                <Checkbox
+                  checked={field.value}
+                  onChange={(e) => field.onChange(e.target.checked)}
+                >
+                  Usar mesmo número para WhatsApp
+                </Checkbox>
+              )}
+            />
+          </Form.Item>
+        </Col>
+      </Row>
+
+      {!usarMesmoNumero && (
+        <Row gutter={[24, 0]}>
+          <Col xs={24} md={8}>
+            <Form.Item
+              label="WhatsApp"
+              validateStatus={errors.pf?.whatsapp ? 'error' : ''}
+              help={errors.pf?.whatsapp?.message}
             >
-              Usar mesmo número do celular para WhatsApp
-            </Checkbox>
-          )}
-        />
-      </Form.Item>
-
-      <Form.Item
-        label="WhatsApp"
-        validateStatus={errors.pf?.whatsapp ? 'error' : ''}
-        help={errors.pf?.whatsapp?.message}
-      >
-        <Controller
-          name="pf.whatsapp"
-          control={control}
-          render={({ field }) => (
-            <Input
-              {...field}
-              value={field.value || ''}
-              onChange={(e) => field.onChange(maskPhone(e.target.value))}
-              placeholder="(11) 98765-4321"
-              disabled={usarMesmoNumero}
-              style={{ width: 200 }}
-              maxLength={15}
-            />
-          )}
-        />
-      </Form.Item>
-    </Space>
+              <Controller
+                name="pf.whatsapp"
+                control={control}
+                render={({ field }) => (
+                  <Input
+                    {...field}
+                    value={field.value || ''}
+                    onChange={(e) => field.onChange(maskPhone(e.target.value))}
+                    placeholder="(11) 98765-4321"
+                    maxLength={15}
+                  />
+                )}
+              />
+            </Form.Item>
+          </Col>
+        </Row>
+      )}
+    </div>
   );
 }

@@ -266,5 +266,5 @@ export function useToggleCollectorStatus() {
 }
 
 export function useUpload() {
-  return useCallback(async (file: File) => uploadFile(file), []);
+  return useCallback(async (file: File, documentType?: string) => uploadFile(file, documentType), []);
 }

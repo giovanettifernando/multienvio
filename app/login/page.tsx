@@ -32,6 +32,15 @@ function LoginPageContent() {
   const { user: currentUser, loading: userLoading } = useCurrentUser();
   const isAdmin = useIsAdmin();
 
+  // Show message if redirected due to inactivity
+  useEffect(() => {
+    if (!hydrated) return;
+    const reason = searchParams.get('reason');
+    if (reason === 'inactivity') {
+      message.warning('Sua sessão expirou por inatividade. Por favor, faça login novamente.');
+    }
+  }, [hydrated, searchParams, message]);
+
   // Auto-redirect if already logged in
   useEffect(() => {
     if (!hydrated || userLoading) return;

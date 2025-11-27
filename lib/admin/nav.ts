@@ -15,8 +15,32 @@ export const ADMIN_NAV: AdminNavItem[] = [
   {
     key: "financeiro",
     label: "Financeiro",
-    href: "/admin/financeiro",
-    permissions: ["FINANCEIRO"],
+    children: [
+      {
+        key: "movimentacoes",
+        label: "Movimentações",
+        href: "/admin/financeiro/movimentacoes",
+        permissions: ["FINANCEIRO"],
+      },
+      {
+        key: "repasses",
+        label: "Repasses",
+        href: "/admin/financeiro/repasses",
+        permissions: ["FINANCEIRO"],
+      },
+      {
+        key: "comissoes-financeiro",
+        label: "Comissões",
+        href: "/admin/financeiro/comissoes",
+        permissions: ["FINANCEIRO"],
+      },
+      {
+        key: "relatorios-fiscais",
+        label: "Relatórios Fiscais",
+        href: "/admin/financeiro/relatorios",
+        permissions: ["FINANCEIRO"],
+      },
+    ],
   },
   {
     key: "operacoes",

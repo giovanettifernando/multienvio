@@ -57,11 +57,13 @@ export const pfSchema = z.object({
     .string()
     .optional()
     .or(z.literal(''))
+    .or(z.null())
     .transform((value) => (value == null || value === '' ? null : value)),
   confirmPassword: z
     .string()
     .optional()
     .or(z.literal(''))
+    .or(z.null())
     .transform((value) => (value == null || value === '' ? null : value)),
   cnh: z.object({
     number: z.string({ message: 'Número da CNH é obrigatório' }).min(9, 'Número da CNH deve ter no mínimo 9 caracteres'),

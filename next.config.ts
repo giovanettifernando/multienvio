@@ -14,6 +14,8 @@ const nextConfig: NextConfig = {
   // Experimental: optimize package imports (replaces modularizeImports for Turbopack)
   experimental: {
     optimizePackageImports: ['antd', '@ant-design/icons'],
+    // Increase body size limit for file uploads through middleware/proxy
+    middlewareClientMaxBodySize: '20mb',
   },
 
   // Note: modularizeImports removed - conflicts with Turbopack in Next.js 16

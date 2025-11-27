@@ -2,14 +2,15 @@
 
 import { useEffect, useState } from 'react';
 import { Controller, useFormContext } from 'react-hook-form';
-import { Form, Input, Button, Space, Typography, message } from 'antd';
-import { CopyOutlined } from '@ant-design/icons';
+import { Form, Input, Button, Row, Col, Typography, Divider, App } from 'antd';
+import { BankOutlined, HomeOutlined, CopyOutlined } from '@ant-design/icons';
 import type { CollectorFormInput } from '@/lib/collectors/types';
 import { maskCNPJ, maskCEP, unmaskDigits } from '@/lib/collectors/masks';
 
-const { Text } = Typography;
+const { Title, Text } = Typography;
 
 export default function PJForm() {
+  const { message } = App.useApp();
   const { control, watch, setValue, formState: { errors } } = useFormContext<CollectorFormInput>();
   const [cepLoading, setCepLoading] = useState(false);
   const [cepResolved, setCepResolved] = useState(false);
@@ -31,13 +32,13 @@ export default function PJForm() {
     setValue('pj.endereco.bairro', pfEndereco.bairro, { shouldValidate: false });
     setValue('pj.endereco.cidade', pfEndereco.cidade, { shouldValidate: false });
     setValue('pj.endereco.uf', pfEndereco.uf, { shouldValidate: false });
+    setCepResolved(true);
 
     message.success('Endereço copiado da Pessoa Física');
   };
 
   // Buscar CEP quando válido
   useEffect(() => {
-
     const fetchCep = async () => {
       if (!cep) {
         setCepResolved(false);
@@ -76,205 +77,221 @@ export default function PJForm() {
   }, [cep, setValue]);
 
   return (
-    <Space direction="vertical" style={{ width: '100%' }} size={16}>
-      <Form.Item
-        label="Razão Social"
-        required
-        validateStatus={errors.pj?.razaoSocial ? 'error' : ''}
-        help={errors.pj?.razaoSocial?.message}
-      >
-        <Controller
-          name="pj.razaoSocial"
-          control={control}
-          render={({ field }) => (
-            <Input {...field} placeholder="Razão social da empresa" />
-          )}
-        />
-      </Form.Item>
+    <div>
+      {/* Dados da Empresa */}
+      <Title level={5} style={{ marginBottom: 24, display: 'flex', alignItems: 'center', gap: 8 }}>
+        <BankOutlined /> Dados da Empresa
+      </Title>
 
-      <Form.Item
-        label="CNPJ"
-        required
-        validateStatus={errors.pj?.cnpj ? 'error' : ''}
-        help={errors.pj?.cnpj?.message}
-      >
-        <Controller
-          name="pj.cnpj"
-          control={control}
-          render={({ field }) => (
-            <Input
-              {...field}
-              value={field.value || ''}
-              onChange={(e) => field.onChange(maskCNPJ(e.target.value))}
-              placeholder="00.000.000/0000-00"
-              style={{ width: 220 }}
-              maxLength={18}
+      <Row gutter={[24, 0]}>
+        <Col xs={24} md={16}>
+          <Form.Item
+            label="Razão Social"
+            required
+            validateStatus={errors.pj?.razaoSocial ? 'error' : ''}
+            help={errors.pj?.razaoSocial?.message}
+          >
+            <Controller
+              name="pj.razaoSocial"
+              control={control}
+              render={({ field }) => (
+                <Input {...field} placeholder="Razão social da empresa" />
+              )}
             />
-          )}
-        />
-      </Form.Item>
+          </Form.Item>
+        </Col>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 16, marginBottom: 8 }}>
-        <Typography.Title level={5} style={{ margin: 0 }}>
-          Endereço
-        </Typography.Title>
+        <Col xs={24} md={8}>
+          <Form.Item
+            label="CNPJ"
+            required
+            validateStatus={errors.pj?.cnpj ? 'error' : ''}
+            help={errors.pj?.cnpj?.message}
+          >
+            <Controller
+              name="pj.cnpj"
+              control={control}
+              render={({ field }) => (
+                <Input
+                  {...field}
+                  value={field.value || ''}
+                  onChange={(e) => field.onChange(maskCNPJ(e.target.value))}
+                  placeholder="00.000.000/0000-00"
+                  maxLength={18}
+                />
+              )}
+            />
+          </Form.Item>
+        </Col>
+      </Row>
+
+      {/* Endereço */}
+      <Divider style={{ margin: '24px 0 16px' }} />
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+        <Title level={5} style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <HomeOutlined /> Endereço da Empresa
+        </Title>
         <Button
           icon={<CopyOutlined />}
           onClick={handleCopyPfAddress}
           size="small"
+          type="dashed"
         >
-          Aplicar mesmo endereço de PF
+          Copiar endereço PF
         </Button>
       </div>
 
-      <Form.Item
-        label="CEP"
-        validateStatus={errors.pj?.endereco?.cep ? 'error' : ''}
-        help={errors.pj?.endereco?.cep?.message || (cepLoading ? 'Buscando CEP...' : undefined)}
-      >
-        <Controller
-          name="pj.endereco.cep"
-          control={control}
-          render={({ field }) => (
-            <Input
-              {...field}
-              value={field.value || ''}
-              onChange={(e) => field.onChange(maskCEP(e.target.value))}
-              placeholder="00000-000"
-              style={{ width: 160 }}
-              maxLength={9}
+      <Row gutter={[24, 0]}>
+        <Col xs={24} sm={8} md={6}>
+          <Form.Item
+            label="CEP"
+            validateStatus={errors.pj?.endereco?.cep ? 'error' : ''}
+            help={errors.pj?.endereco?.cep?.message || (cepLoading ? 'Buscando...' : undefined)}
+          >
+            <Controller
+              name="pj.endereco.cep"
+              control={control}
+              render={({ field }) => (
+                <Input
+                  {...field}
+                  value={field.value || ''}
+                  onChange={(e) => field.onChange(maskCEP(e.target.value))}
+                  placeholder="00000-000"
+                  maxLength={9}
+                />
+              )}
             />
-          )}
-        />
-      </Form.Item>
+          </Form.Item>
+        </Col>
 
-      <Form.Item
-        label="Logradouro"
-        validateStatus={errors.pj?.endereco?.logradouro ? 'error' : ''}
-        help={errors.pj?.endereco?.logradouro?.message}
-      >
-        <Controller
-          name="pj.endereco.logradouro"
-          control={control}
-          render={({ field }) => (
-            <Input
-              {...field}
-              value={field.value || ''}
-              disabled={cepResolved}
-              placeholder="Rua, Avenida..."
+        <Col xs={24} sm={16} md={18}>
+          <Form.Item
+            label="Logradouro"
+            validateStatus={errors.pj?.endereco?.logradouro ? 'error' : ''}
+            help={errors.pj?.endereco?.logradouro?.message}
+          >
+            <Controller
+              name="pj.endereco.logradouro"
+              control={control}
+              render={({ field }) => (
+                <Input
+                  {...field}
+                  value={field.value || ''}
+                  disabled={cepResolved}
+                  placeholder="Rua, Avenida..."
+                />
+              )}
             />
-          )}
-        />
-      </Form.Item>
+          </Form.Item>
+        </Col>
+      </Row>
 
-      <Space size={12}>
-        <Form.Item
-          label="Número"
-          validateStatus={errors.pj?.endereco?.numero ? 'error' : ''}
-          help={errors.pj?.endereco?.numero?.message}
-        >
-          <Controller
-            name="pj.endereco.numero"
-            control={control}
-            render={({ field }) => (
-              <Input
-                {...field}
-                value={field.value || ''}
-                placeholder="123"
-                style={{ width: 100 }}
-              />
-            )}
-          />
-        </Form.Item>
-
-        <Form.Item
-          label="Complemento"
-          validateStatus={errors.pj?.endereco?.complemento ? 'error' : ''}
-          help={errors.pj?.endereco?.complemento?.message}
-        >
-          <Controller
-            name="pj.endereco.complemento"
-            control={control}
-            render={({ field }) => (
-              <Input
-                {...field}
-                value={field.value || ''}
-                placeholder="Sala, Andar..."
-                style={{ width: 200 }}
-              />
-            )}
-          />
-        </Form.Item>
-      </Space>
-
-      <Form.Item
-        label="Bairro"
-        validateStatus={errors.pj?.endereco?.bairro ? 'error' : ''}
-        help={errors.pj?.endereco?.bairro?.message}
-      >
-        <Controller
-          name="pj.endereco.bairro"
-          control={control}
-          render={({ field }) => (
-            <Input
-              {...field}
-              value={field.value || ''}
-              disabled={cepResolved}
-              placeholder="Bairro"
+      <Row gutter={[24, 0]}>
+        <Col xs={8} md={4}>
+          <Form.Item
+            label="Número"
+            validateStatus={errors.pj?.endereco?.numero ? 'error' : ''}
+            help={errors.pj?.endereco?.numero?.message}
+          >
+            <Controller
+              name="pj.endereco.numero"
+              control={control}
+              render={({ field }) => (
+                <Input {...field} value={field.value || ''} placeholder="123" />
+              )}
             />
-          )}
-        />
-      </Form.Item>
+          </Form.Item>
+        </Col>
 
-      <Space size={12}>
-        <Form.Item
-          label="Cidade"
-          validateStatus={errors.pj?.endereco?.cidade ? 'error' : ''}
-          help={errors.pj?.endereco?.cidade?.message}
-        >
-          <Controller
-            name="pj.endereco.cidade"
-            control={control}
-            render={({ field }) => (
-              <Input
-                {...field}
-                value={field.value || ''}
-                disabled={cepResolved}
-                placeholder="Cidade"
-                style={{ width: 200 }}
-              />
-            )}
-          />
-        </Form.Item>
+        <Col xs={16} md={8}>
+          <Form.Item
+            label="Complemento"
+            validateStatus={errors.pj?.endereco?.complemento ? 'error' : ''}
+            help={errors.pj?.endereco?.complemento?.message}
+          >
+            <Controller
+              name="pj.endereco.complemento"
+              control={control}
+              render={({ field }) => (
+                <Input {...field} value={field.value || ''} placeholder="Sala, Andar..." />
+              )}
+            />
+          </Form.Item>
+        </Col>
 
-        <Form.Item
-          label="UF"
-          validateStatus={errors.pj?.endereco?.uf ? 'error' : ''}
-          help={errors.pj?.endereco?.uf?.message}
-        >
-          <Controller
-            name="pj.endereco.uf"
-            control={control}
-            render={({ field }) => (
-              <Input
-                {...field}
-                value={field.value || ''}
-                disabled={cepResolved}
-                placeholder="SP"
-                maxLength={2}
-                style={{ width: 80 }}
-                onChange={(e) => field.onChange(e.target.value.toUpperCase())}
-              />
-            )}
-          />
-        </Form.Item>
-      </Space>
+        <Col xs={24} md={12}>
+          <Form.Item
+            label="Bairro"
+            validateStatus={errors.pj?.endereco?.bairro ? 'error' : ''}
+            help={errors.pj?.endereco?.bairro?.message}
+          >
+            <Controller
+              name="pj.endereco.bairro"
+              control={control}
+              render={({ field }) => (
+                <Input
+                  {...field}
+                  value={field.value || ''}
+                  disabled={cepResolved}
+                  placeholder="Bairro"
+                />
+              )}
+            />
+          </Form.Item>
+        </Col>
+      </Row>
+
+      <Row gutter={[24, 0]}>
+        <Col xs={16} md={8}>
+          <Form.Item
+            label="Cidade"
+            validateStatus={errors.pj?.endereco?.cidade ? 'error' : ''}
+            help={errors.pj?.endereco?.cidade?.message}
+          >
+            <Controller
+              name="pj.endereco.cidade"
+              control={control}
+              render={({ field }) => (
+                <Input
+                  {...field}
+                  value={field.value || ''}
+                  disabled={cepResolved}
+                  placeholder="Cidade"
+                />
+              )}
+            />
+          </Form.Item>
+        </Col>
+
+        <Col xs={8} md={4}>
+          <Form.Item
+            label="UF"
+            validateStatus={errors.pj?.endereco?.uf ? 'error' : ''}
+            help={errors.pj?.endereco?.uf?.message}
+          >
+            <Controller
+              name="pj.endereco.uf"
+              control={control}
+              render={({ field }) => (
+                <Input
+                  {...field}
+                  value={field.value || ''}
+                  disabled={cepResolved}
+                  placeholder="SP"
+                  maxLength={2}
+                  onChange={(e) => field.onChange(e.target.value.toUpperCase())}
+                />
+              )}
+            />
+          </Form.Item>
+        </Col>
+      </Row>
 
       {cepResolved && (
-        <Text type="secondary" style={{ fontSize: 12 }}>
-          Edite apenas número e complemento
+        <Text type="secondary" style={{ fontSize: 12, display: 'block', marginTop: -16, marginBottom: 16 }}>
+          Endereço preenchido automaticamente pelo CEP. Edite apenas número e complemento.
         </Text>
       )}
-    </Space>
+    </div>
   );
 }

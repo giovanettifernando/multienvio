@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { App, Button, Card, Form, Input } from "antd";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAdminSession } from "@/stores/useAdminSession";
@@ -22,6 +22,14 @@ function AdminLoginForm() {
   const next = searchParams.get("next") || "/admin";
   const setAdmin = useAdminSession((state) => state.setAdmin);
   const [loading, setLoading] = useState(false);
+
+  // Show message if redirected due to inactivity
+  useEffect(() => {
+    const reason = searchParams.get('reason');
+    if (reason === 'inactivity') {
+      message.warning('Sua sessão expirou por inatividade. Por favor, faça login novamente.');
+    }
+  }, [searchParams, message]);
 
   async function onFinish(values: LoginFormValues) {
     setLoading(true);
