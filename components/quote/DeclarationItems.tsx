@@ -18,7 +18,7 @@ import {
   useFormContext,
 } from "react-hook-form";
 import type { FinalizeFormValues } from "@/types/quoteFinalize";
-import styles from "@/app/(dashboard)/cotacoes/cotacoes.module.css";
+import styles from "@/app/(envio)/cotacoes/cotacoes.module.css";
 
 const currency = new Intl.NumberFormat("pt-BR", {
   style: "currency",

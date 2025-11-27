@@ -13,7 +13,7 @@ import { useEffect, useRef, useState } from "react";
 import type { QuoteFormValues } from "./QuoteForm";
 import { MinhasEmbalagensSelect } from "@/components/cotacoes/MinhasEmbalagensSelect";
 import type { PackagingTemplate } from "@/hooks/usePackaging";
-import styles from "@/app/(dashboard)/cotacoes/cotacoes.module.css";
+import styles from "@/app/(envio)/cotacoes/cotacoes.module.css";
 
 export const DEFAULT_CUBAGE_FACTOR = 6000;
 

@@ -17,7 +17,7 @@ import {
   Typography,
 } from "antd";
 import type { QuoteSummary, QuoteVolume } from "@/types/quote";
-import styles from "@/app/(dashboard)/cotacoes/cotacoes.module.css";
+import styles from "@/app/(envio)/cotacoes/cotacoes.module.css";
 
 type ResultsBannerProps = {
   summary: QuoteSummary;

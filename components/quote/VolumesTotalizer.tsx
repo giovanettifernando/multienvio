@@ -2,7 +2,7 @@
 
 import { Space } from "antd";
 import { InboxOutlined, FunctionOutlined } from "@ant-design/icons";
-import styles from "@/app/(dashboard)/cotacoes/cotacoes.module.css";
+import styles from "@/app/(envio)/cotacoes/cotacoes.module.css";
 
 type VolumesTotalizerProps = {
   volumeCount: number;
