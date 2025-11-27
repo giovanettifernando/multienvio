@@ -1,21 +1,20 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { Table, Button, Space, Switch, Modal, Tooltip, Typography, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { EditOutlined, DeleteOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
-import dayjs from 'dayjs';
+import { EyeOutlined, DeleteOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import { maskCNPJ } from '@/lib/collectors/masks';
 import { formatBRL } from '@/lib/utils/format';
 import DocsStatusBadge from './DocsStatusBadge';
 import type { Collector, CollectorListResponse } from '@/lib/collectors/types';
 
-const { Link, Text } = Typography;
+const { Text } = Typography;
 const { confirm } = Modal;
 
 interface CollectorsTableProps {
   data?: CollectorListResponse;
   loading: boolean;
-  onEdit: (collector: Collector) => void;
   onDelete: (id: string) => void;
   onToggleStatus: (id: string, status: 'active' | 'blocked') => void;
   onPageChange: (page: number, pageSize: number) => void;
@@ -24,11 +23,12 @@ interface CollectorsTableProps {
 export default function CollectorsTable({
   data,
   loading,
-  onEdit,
   onDelete,
   onToggleStatus,
   onPageChange,
 }: CollectorsTableProps) {
+  const router = useRouter();
+
   const handleDelete = (collector: Collector) => {
     confirm({
       title: 'Confirmar exclusão',
@@ -61,7 +61,13 @@ export default function CollectorsTable({
       render: (_: unknown, record: Collector) => (
         <Space direction="vertical" size={0}>
           <Tooltip title={`Razão social: ${record.pj.razaoSocial}`}>
-            <Link onClick={() => onEdit(record)}>{record.pf.nome}</Link>
+            <Button
+              type="link"
+              style={{ padding: 0, height: 'auto' }}
+              onClick={() => router.push(`/admin/coletores/${record.id}`)}
+            >
+              {record.pf.nome}
+            </Button>
           </Tooltip>
           <Tooltip title={record.pj.cnpj}>
             <Text type="secondary" style={{ fontSize: 12 }}>
@@ -132,18 +138,17 @@ export default function CollectorsTable({
       ),
     },
     {
-      title: 'Atualizado em',
-      dataIndex: 'updatedAt',
-      key: 'updatedAt',
-      render: (value: string) => dayjs(value).format('DD/MM/YYYY HH:mm'),
-    },
-    {
       title: 'Ações',
       key: 'actions',
       render: (_: unknown, record: Collector) => (
         <Space size="small">
-          <Button type="link" icon={<EditOutlined />} size="small" onClick={() => onEdit(record)}>
-            Editar
+          <Button
+            type="link"
+            icon={<EyeOutlined />}
+            size="small"
+            onClick={() => router.push(`/admin/coletores/${record.id}`)}
+          >
+            Ver detalhes
           </Button>
           <Button
             type="link"

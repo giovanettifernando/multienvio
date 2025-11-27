@@ -13,13 +13,37 @@ const ADMIN_ROUTES = [
 
 /**
  * Routes that require authentication (any logged-in user)
+ * Use /* suffix to match sub-routes
  */
 const AUTH_ROUTES = [
   '/conta',
+  '/conta/*',
   '/minha-conta',
+  '/minha-conta/*',
   '/pedidos',
+  '/pedidos/*',
   '/coletas',
+  '/coletas/*',
   '/envios',
+  '/envios/*',
+  '/cotacoes',
+  '/cotacoes/*',
+  '/cotar',
+  '/cotar/*',
+  '/etiquetas',
+  '/etiquetas/*',
+  '/shipments',
+  '/shipments/*',
+  '/carrinho',
+  '/carrinho/*',
+  '/suporte',
+  '/suporte/*',
+  '/carteira',
+  '/carteira/*',
+  '/rastreamento',
+  '/rastreamento/*',
+  '/devolucoes',
+  '/devolucoes/*',
 ];
 
 /**

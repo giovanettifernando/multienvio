@@ -127,13 +127,6 @@ export function ClientsTable({ clients, onViewClient, onStatusChange }: ClientsT
 
   const columns: ColumnsType<AdminClient> = [
     {
-      title: 'Criada em',
-      dataIndex: 'createdAt',
-      width: 120,
-      render: (v: string) => dayjs(v).format('DD/MM/YYYY'),
-      sorter: (a, b) => dayjs(a.createdAt).valueOf() - dayjs(b.createdAt).valueOf(),
-    },
-    {
       title: 'Tipo',
       dataIndex: 'type',
       width: 80,
@@ -164,21 +157,6 @@ export function ClientsTable({ clients, onViewClient, onStatusChange }: ClientsT
       dataIndex: 'status',
       width: 120,
       render: (v: AccountStatus) => <Tag color={statusColors[v]}>{statusLabels[v]}</Tag>,
-    },
-    {
-      title: 'Créditos no mês',
-      dataIndex: 'creditsMonth',
-      width: 160,
-      align: 'right',
-      render: (v: number) => formatCurrencyFromCents(v),
-      sorter: (a, b) => a.creditsMonth - b.creditsMonth,
-    },
-    {
-      title: 'Débitos no mês',
-      dataIndex: 'debitsMonth',
-      width: 140,
-      align: 'right',
-      render: () => '—',
     },
     {
       title: 'Ações',
@@ -336,7 +314,7 @@ export function ClientsTable({ clients, onViewClient, onStatusChange }: ClientsT
         columns={columns}
         loading={blockMutation.isPending || unblockMutation.isPending}
         rowSelection={rowSelection}
-        scroll={{ x: 1400 }}
+        scroll={{ x: 980 }}
         pagination={{
           current: validPage,
           pageSize,

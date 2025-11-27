@@ -1,20 +1,21 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card, Button, App } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import SearchFilters from '@/components/pickup/SearchFilters';
 import PointsTable from '@/components/pickup/PointsTable';
 import PointDrawer from '@/components/pickup/PointDrawer';
 import { usePickupPointsAPI } from '@/hooks/usePickupPointsAPI';
-import type { PickupPointFilters, PickupPoint, PickupPointFormData, PickupPointListResponse } from '@/lib/pickup/types';
+import type { PickupPointFilters, PickupPointFormData, PickupPointListResponse } from '@/lib/pickup/types';
 import { PageShell } from '@/components/shared/PageShell';
 
 export default function PontosDeColetaPage() {
   const { message } = App.useApp();
+  const router = useRouter();
   const [filters, setFilters] = useState<PickupPointFilters>({ status: 'all', page: 1, pageSize: 10 });
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [editingPoint, setEditingPoint] = useState<PickupPoint | null>(null);
   const [data, setData] = useState<PickupPointListResponse>({
     items: [],
     total: 0,
@@ -52,33 +53,26 @@ export default function PontosDeColetaPage() {
   };
 
   const handleAdd = () => {
-    setEditingPoint(null);
-    setDrawerOpen(true);
-  };
-
-  const handleEdit = (point: PickupPoint) => {
-    setEditingPoint(point);
     setDrawerOpen(true);
   };
 
   const handleDrawerClose = () => {
     setDrawerOpen(false);
-    setEditingPoint(null);
   };
 
   const handleSubmit = async (formData: PickupPointFormData) => {
     try {
-      if (editingPoint) {
-        await api.updatePoint(editingPoint.id, formData);
-        message.success('Ponto atualizado com sucesso');
-      } else {
-        await api.createPoint(formData);
-        message.success('Ponto criado com sucesso');
-      }
+      const result = await api.createPoint(formData);
+      message.success('Ponto criado com sucesso');
       handleDrawerClose();
-      await loadData();
+      // Navegar para a página de detalhes do novo ponto
+      if (result?.id) {
+        router.push(`/admin/pontos-de-coleta/${result.id}`);
+      } else {
+        await loadData();
+      }
     } catch {
-      message.error(api.error || 'Erro ao salvar ponto');
+      message.error(api.error || 'Erro ao criar ponto');
     }
   };
 
@@ -117,7 +111,6 @@ export default function PontosDeColetaPage() {
         <PointsTable
           data={data}
           loading={isLoading || api.loading}
-          onEdit={handleEdit}
           onDelete={handleDelete}
           onToggleStatus={handleToggleStatus}
           onPageChange={handlePageChange}
@@ -129,7 +122,7 @@ export default function PontosDeColetaPage() {
         onClose={handleDrawerClose}
         onSubmit={handleSubmit}
         loading={api.loading}
-        editPoint={editingPoint}
+        editPoint={null}
       />
     </PageShell>
   );

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card, Button } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import SearchFilters from '@/components/collectors/SearchFilters';
@@ -9,25 +10,23 @@ import CollectorDrawer from '@/components/collectors/CollectorDrawer';
 import {
   useCollectors,
   useCreateCollector,
-  useUpdateCollector,
   useDeleteCollector,
   useToggleCollectorStatus,
 } from '@/lib/collectors/hooks';
-import type { Collector, CollectorFilters, CollectorFormData } from '@/lib/collectors/types';
+import type { CollectorFilters, CollectorFormData } from '@/lib/collectors/types';
 import { PageShell } from '@/components/shared/PageShell';
 
 export default function ColetoresPage() {
+  const router = useRouter();
   const [filters, setFilters] = useState<CollectorFilters>({
     status: 'all',
     page: 1,
     pageSize: 10,
   });
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [editingCollector, setEditingCollector] = useState<Collector | null>(null);
 
   const { data, isLoading } = useCollectors(filters);
   const createCollector = useCreateCollector();
-  const updateCollector = useUpdateCollector();
   const deleteCollector = useDeleteCollector();
   const toggleStatus = useToggleCollectorStatus();
 
@@ -40,37 +39,23 @@ export default function ColetoresPage() {
   };
 
   const handleAdd = () => {
-    setEditingCollector(null);
-    setDrawerOpen(true);
-  };
-
-  const handleEdit = (collector: Collector) => {
-    setEditingCollector(collector);
     setDrawerOpen(true);
   };
 
   const handleClose = () => {
     setDrawerOpen(false);
-    setEditingCollector(null);
   };
 
   const handleSubmit = async (payload: CollectorFormData) => {
-    if (editingCollector) {
-      await updateCollector.mutateAsync(
-        { id: editingCollector.id, data: payload },
-        {
-          onSuccess: () => {
-            handleClose();
-          },
+    await createCollector.mutateAsync(payload, {
+      onSuccess: (collector) => {
+        handleClose();
+        // Navegar para a página de detalhes do novo coletor
+        if (collector?.id) {
+          router.push(`/admin/coletores/${collector.id}`);
         }
-      );
-    } else {
-      await createCollector.mutateAsync(payload, {
-        onSuccess: () => {
-          handleClose();
-        },
-      });
-    }
+      },
+    });
   };
 
   const handleDelete = async (id: string) => {
@@ -96,7 +81,6 @@ export default function ColetoresPage() {
         <CollectorsTable
           data={data}
           loading={isLoading}
-          onEdit={handleEdit}
           onDelete={handleDelete}
           onToggleStatus={handleToggleStatus}
           onPageChange={handlePageChange}
@@ -107,8 +91,8 @@ export default function ColetoresPage() {
         open={drawerOpen}
         onClose={handleClose}
         onSubmit={handleSubmit}
-        loading={createCollector.isPending || updateCollector.isPending}
-        editCollector={editingCollector}
+        loading={createCollector.isPending}
+        editCollector={null}
       />
     </PageShell>
   );

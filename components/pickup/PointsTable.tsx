@@ -1,21 +1,19 @@
 'use client';
 
-import { Table, Button, Space, Switch, Modal, Typography } from 'antd';
-import { EditOutlined, DeleteOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
+import { useRouter } from 'next/navigation';
+import { Table, Button, Space, Switch, Modal, Typography, Tag } from 'antd';
+import { EyeOutlined, DeleteOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
-import dayjs from 'dayjs';
 import { maskCNPJ } from '@/lib/pickup/masks';
 import { formatBRL } from '@/lib/utils/format';
-import StatusTag from './StatusTag';
 import type { PickupPoint, PickupPointListResponse } from '@/lib/pickup/types';
 
-const { Link } = Typography;
+const { Text } = Typography;
 const { confirm } = Modal;
 
 interface PointsTableProps {
   data?: PickupPointListResponse;
   loading: boolean;
-  onEdit: (point: PickupPoint) => void;
   onDelete: (id: string) => void;
   onToggleStatus: (id: string) => void;
   onPageChange: (page: number, pageSize: number) => void;
@@ -24,11 +22,12 @@ interface PointsTableProps {
 export default function PointsTable({
   data,
   loading,
-  onEdit,
   onDelete,
   onToggleStatus,
   onPageChange,
 }: PointsTableProps) {
+  const router = useRouter();
+
   const handleStatusToggle = (point: PickupPoint, checked: boolean) => {
     const action = checked ? 'ativar' : 'bloquear';
 
@@ -64,16 +63,24 @@ export default function PointsTable({
       dataIndex: 'nomeFantasia',
       key: 'nomeFantasia',
       render: (text: string, record: PickupPoint) => (
-        <Link onClick={() => onEdit(record)} style={{ cursor: 'pointer' }}>
+        <Button
+          type="link"
+          style={{ padding: 0, height: 'auto' }}
+          onClick={() => router.push(`/admin/pontos-de-coleta/${record.id}`)}
+        >
           {text}
-        </Link>
+        </Button>
       ),
     },
     {
       title: 'CNPJ',
       dataIndex: 'cnpj',
       key: 'cnpj',
-      render: (cnpj: string) => maskCNPJ(cnpj),
+      render: (cnpj: string) => (
+        <Text type="secondary" style={{ fontSize: 12 }}>
+          {maskCNPJ(cnpj)}
+        </Text>
+      ),
     },
     {
       title: 'Cidade/UF',
@@ -128,7 +135,9 @@ export default function PointsTable({
       key: 'status',
       render: (_: unknown, record: PickupPoint) => (
         <Space size="small">
-          <StatusTag status={record.status} />
+          <Tag color={String(record.status) === 'ACTIVE' ? 'green' : 'red'}>
+            {String(record.status) === 'ACTIVE' ? 'Ativo' : 'Bloqueado'}
+          </Tag>
           <Switch
             checked={String(record.status) === 'ACTIVE'}
             onChange={(checked) => handleStatusToggle(record, checked)}
@@ -138,23 +147,17 @@ export default function PointsTable({
       ),
     },
     {
-      title: 'Atualizado em',
-      dataIndex: 'updatedAt',
-      key: 'updatedAt',
-      render: (date: string) => dayjs(date).format('DD/MM/YYYY HH:mm'),
-    },
-    {
       title: 'Ações',
       key: 'actions',
       render: (_: unknown, record: PickupPoint) => (
         <Space size="small">
           <Button
             type="link"
-            icon={<EditOutlined />}
-            onClick={() => onEdit(record)}
+            icon={<EyeOutlined />}
+            onClick={() => router.push(`/admin/pontos-de-coleta/${record.id}`)}
             size="small"
           >
-            Editar
+            Ver detalhes
           </Button>
           <Button
             type="link"

@@ -20,6 +20,7 @@ import {
   Select,
   Divider,
   App,
+  Popconfirm,
 } from "antd";
 import {
   ArrowLeftOutlined,
@@ -30,6 +31,7 @@ import {
   ShoppingOutlined,
   WalletOutlined,
   MailOutlined,
+  DeleteOutlined,
 } from "@ant-design/icons";
 import { PageShell } from "@/components/shared/PageShell";
 import AdminClientProfile from "@/components/admin/clients/AdminClientProfile";
@@ -132,10 +134,9 @@ async function fetchClientDetails(id: string): Promise<ClientDetails> {
 }
 
 const STATUS_OPTIONS = [
-  { value: "active", label: "Ativo" },
-  { value: "pending", label: "Pendente" },
-  { value: "blocked", label: "Bloqueado" },
   { value: "suspended", label: "Suspenso" },
+  { value: "active", label: "Ativo" },
+  { value: "blocked", label: "Bloqueado" },
 ];
 
 export default function AdminClientDetailsPage() {
@@ -146,6 +147,7 @@ export default function AdminClientDetailsPage() {
 
   const [statusLoading, setStatusLoading] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   const {
     data,
@@ -201,6 +203,27 @@ export default function AdminClientDetailsPage() {
       message.error(error instanceof Error ? error.message : "Erro ao enviar email");
     } finally {
       setResetLoading(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    setDeleteLoading(true);
+    try {
+      const res = await fetch(`/api/admin/clients/${clientId}`, {
+        method: "DELETE",
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.message || "Erro ao excluir conta");
+      }
+
+      message.success("Conta excluída com sucesso");
+      router.push("/admin/contas");
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : "Erro ao excluir conta");
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -454,9 +477,29 @@ export default function AdminClientDetailsPage() {
               onClick={handleSendResetPassword}
               loading={resetLoading}
               block
+              style={{ marginBottom: 8 }}
             >
               Enviar redefinição de senha
             </Button>
+
+            {/* Delete Account Button */}
+            <Popconfirm
+              title="Excluir conta"
+              description="Tem certeza que deseja excluir esta conta? Esta ação não pode ser desfeita."
+              onConfirm={handleDeleteAccount}
+              okText="Sim, excluir"
+              cancelText="Cancelar"
+              okButtonProps={{ danger: true }}
+            >
+              <Button
+                icon={<DeleteOutlined />}
+                danger
+                loading={deleteLoading}
+                block
+              >
+                Excluir conta
+              </Button>
+            </Popconfirm>
           </Card>
         </Col>
 
