@@ -77,7 +77,8 @@ export async function persistCollectorDocument(
     ? `${uniqueId}-${safeDocType}-${safeName}.${safeExt}`
     : `${uniqueId}-${safeDocType}-${safeName}`;
 
-  const filePath = path.join(collectorDir, storedFileName);
+  // Use template literal to avoid Turbopack overly broad file pattern analysis
+  const filePath = `${collectorDir}${path.sep}${storedFileName}`;
   await writeFile(filePath, buffer);
 
   const safeCollectorId = sanitizeSegment(collectorId);

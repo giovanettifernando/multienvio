@@ -26,6 +26,7 @@ export async function POST(request: Request) {
         cnpj: true,
         nomeFantasia: true,
         passwordHash: true,
+        tokenVersion: true,
       },
     });
 
@@ -61,11 +62,12 @@ export async function POST(request: Request) {
       );
     }
 
-    // Gerar JWT token
+    // Gerar JWT token com tokenVersion para invalidação via logout
     const token = await collectorSign({
       pointId: point.id,
       cnpj: point.cnpj,
       nomeFantasia: point.nomeFantasia,
+      tokenVersion: point.tokenVersion,
     });
 
     // Criar response com cookie

@@ -1,9 +1,17 @@
-// Next.js 16 Proxy - replaces middleware.ts
-// Runtime is always Node.js (not Edge) - Prisma works here
+/**
+ * Next.js 16 Proxy - replaces middleware.ts
+ * Runtime is always Node.js (not Edge) - Prisma works here
+ *
+ * Session/Inactivity Timeout Rules:
+ * - ADMIN (admin_auth): Has idle timeout (SESSION_IDLE_MINUTES, default 10min)
+ * - CLIENT (auth_token): Has idle timeout (SESSION_IDLE_MINUTES, default 10min)
+ * - PICKUP POINT (collector_auth): NO idle timeout (only fixed JWT expiration)
+ * - AUTONOMOUS COLLECTOR (coletor-token): NO idle timeout (only fixed JWT expiration)
+ */
 
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { jwtVerify } from 'jose';
+import { jwtVerify, errors as joseErrors } from 'jose';
 import { getRouteProtection } from './lib/auth/route-protection';
 import { prisma } from './lib/db';
 
@@ -39,8 +47,13 @@ const AUTH_COOKIE_NAME = 'auth_token'; // Customer auth
 const ADMIN_AUTH_COOKIE_NAME = 'admin_auth'; // Staff/Admin auth
 const LAST_ACTIVITY_COOKIE_NAME = 'last_activity'; // Inactivity tracking
 
-// Inactivity timeout (10 minutes)
-const INACTIVITY_LIMIT_MS = 10 * 60 * 1000;
+// Idle timeout configurável via env (default: 10 minutos)
+// Aplicado APENAS para admin e clientes, NÃO para pontos de coleta e coletores autônomos
+const SESSION_IDLE_MINUTES = parseInt(process.env.SESSION_IDLE_MINUTES || '10', 10);
+const INACTIVITY_LIMIT_MS = SESSION_IDLE_MINUTES * 60 * 1000;
+
+// Tipos de erro de verificação JWT
+type JWTVerifyResult = { payload: AdminJWTPayload | JWTPayload | null; error: 'expired' | 'invalid' | null };
 
 // Cache de tokenVersion (30 segundos) para reduzir DB lookups
 interface TokenVersionCache {
@@ -71,31 +84,39 @@ interface AdminJWTPayload {
 }
 
 /**
- * Verify customer JWT token and return payload
+ * Verify customer JWT token and return payload with error type
  */
-async function verifyToken(token: string): Promise<JWTPayload | null> {
+async function verifyToken(token: string): Promise<{ payload: JWTPayload | null; error: 'expired' | 'invalid' | null }> {
   try {
     const { payload } = await jwtVerify(token, JWT_SECRET);
-    return payload as unknown as JWTPayload;
+    return { payload: payload as unknown as JWTPayload, error: null };
   } catch (error) {
-    // Token invalid or expired
-    return null;
+    // Detectar erro de token expirado especificamente
+    if (error instanceof joseErrors.JWTExpired) {
+      return { payload: null, error: 'expired' };
+    }
+    // Token invalid
+    return { payload: null, error: 'invalid' };
   }
 }
 
 /**
- * Verify admin JWT token and return payload
+ * Verify admin JWT token and return payload with error type
  */
-async function verifyAdminToken(token: string): Promise<AdminJWTPayload | null> {
+async function verifyAdminToken(token: string): Promise<{ payload: AdminJWTPayload | null; error: 'expired' | 'invalid' | null }> {
   try {
     const { payload } = await jwtVerify(token, ADMIN_JWT_SECRET, {
       issuer: 'enviolegal-admin',
       audience: 'admin',
     });
-    return payload as unknown as AdminJWTPayload;
+    return { payload: payload as unknown as AdminJWTPayload, error: null };
   } catch (error) {
-    // Token invalid or expired
-    return null;
+    // Detectar erro de token expirado especificamente
+    if (error instanceof joseErrors.JWTExpired) {
+      return { payload: null, error: 'expired' };
+    }
+    // Token invalid
+    return { payload: null, error: 'invalid' };
   }
 }
 
@@ -155,7 +176,7 @@ function createResponseWithActivityCookie(response: NextResponse): NextResponse 
 }
 
 /**
- * Create redirect response that clears auth cookies (for timeout)
+ * Create redirect response that clears auth cookies (for inactivity timeout)
  * @param authCookieName - The auth cookie to clear (admin_auth or auth_token)
  */
 function createTimeoutRedirect(
@@ -167,13 +188,39 @@ function createTimeoutRedirect(
 ): NextResponse {
   const loginUrl = new URL(loginPath, request.url);
   loginUrl.searchParams.set(returnParam, pathname);
-  loginUrl.searchParams.set('reason', 'inactivity'); // Indicate timeout reason
+  loginUrl.searchParams.set('reason', 'inactivity'); // Indicate inactivity timeout
   const response = NextResponse.redirect(loginUrl);
 
   // Clear the auth cookie to force re-login
   response.cookies.delete(authCookieName);
 
   // Clear the last_activity cookie
+  response.cookies.delete(LAST_ACTIVITY_COOKIE_NAME);
+
+  return response;
+}
+
+/**
+ * Create redirect response that clears auth cookies (for session/JWT expiration)
+ * Different from inactivity - this is when the fixed JWT TTL expires
+ * @param authCookieName - The auth cookie to clear (admin_auth or auth_token)
+ */
+function createSessionExpiredRedirect(
+  request: NextRequest,
+  loginPath: string,
+  returnParam: string,
+  pathname: string,
+  authCookieName: string
+): NextResponse {
+  const loginUrl = new URL(loginPath, request.url);
+  loginUrl.searchParams.set(returnParam, pathname);
+  loginUrl.searchParams.set('reason', 'session-expired'); // Indicate JWT expired
+  const response = NextResponse.redirect(loginUrl);
+
+  // Clear the auth cookie to force re-login
+  response.cookies.delete(authCookieName);
+
+  // Clear the last_activity cookie (if exists)
   response.cookies.delete(LAST_ACTIVITY_COOKIE_NAME);
 
   return response;
@@ -194,18 +241,27 @@ export async function proxy(request: NextRequest) {
   if (isAdminRoute) {
     // Get admin auth token from cookie
     const adminToken = request.cookies.get(ADMIN_AUTH_COOKIE_NAME)?.value;
-    const adminPayload = adminToken ? await verifyAdminToken(adminToken) : null;
 
-    if (!isStaffAuthenticated(adminPayload)) {
+    // Verify token and check for specific error types
+    const adminResult = adminToken ? await verifyAdminToken(adminToken) : { payload: null, error: null };
+
+    // If JWT expired, redirect with session-expired reason and clear cookies
+    if (adminResult.error === 'expired') {
+      return createSessionExpiredRedirect(request, '/admin/login', 'next', pathname, ADMIN_AUTH_COOKIE_NAME);
+    }
+
+    if (!isStaffAuthenticated(adminResult.payload)) {
       // Not authenticated as staff - redirect to admin login
       const loginUrl = new URL('/admin/login', request.url);
       loginUrl.searchParams.set('next', pathname);
       return NextResponse.redirect(loginUrl);
     }
 
+    const adminPayload = adminResult.payload!;
+
     // Validate tokenVersion against database (with cache)
     try {
-      const staffId = adminPayload!.staffId;
+      const staffId = adminPayload.staffId;
       const now = Date.now();
 
       // Verificar cache primeiro
@@ -236,7 +292,7 @@ export async function proxy(request: NextRequest) {
       // If user not found, tokenVersion mismatch, or user is not active, redirect to login
       if (
         !staffUser ||
-        staffUser.tokenVersion !== adminPayload!.tokenVersion ||
+        staffUser.tokenVersion !== adminPayload.tokenVersion ||
         staffUser.status !== 'ACTIVE'
       ) {
         // Invalidar cache em caso de erro de autenticação
@@ -277,7 +333,20 @@ export async function proxy(request: NextRequest) {
 
   // Get auth token from cookie (customer auth)
   const token = request.cookies.get(AUTH_COOKIE_NAME)?.value;
-  const payload = token ? await verifyToken(token) : null;
+  const tokenResult = token ? await verifyToken(token) : { payload: null, error: null };
+
+  // If JWT expired, redirect with session-expired reason and clear cookies
+  if (tokenResult.error === 'expired') {
+    if (isApiRoute) {
+      return NextResponse.json(
+        { error: 'Session expired', message: 'Sessão expirada. Faça login novamente.' },
+        { status: 401 }
+      );
+    }
+    return createSessionExpiredRedirect(request, '/login', 'returnUrl', pathname, AUTH_COOKIE_NAME);
+  }
+
+  const payload = tokenResult.payload;
 
   // Handle collector routes
   if (protection === 'collector') {

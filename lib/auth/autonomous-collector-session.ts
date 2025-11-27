@@ -1,10 +1,15 @@
 /**
- * Utility functions for autonomous collector (coletor autônomo) authentication and session management
+ * Autonomous Collector (Coletor Autônomo) Session Management
  * Separate from pickup points (pontos de coleta)
+ *
+ * - TTL: 7 days (configured in login route via CLIENT_SESSION_TTL_DAYS)
+ * - Idle timeout: NO (only fixed JWT expiration)
+ * - TokenVersion: YES (validated on every session check for logout invalidation)
  */
 
 import { cookies } from 'next/headers';
-import { jwtVerify } from 'jose';
+import { jwtVerify, errors as joseErrors } from 'jose';
+import { prisma } from '@/lib/db';
 
 // Validar JWT_SECRET em produção
 if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
@@ -18,23 +23,31 @@ const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || 'your-secret-key-change-this-in-production'
 );
 
+// Cookie name for autonomous collectors
+export const AUTONOMOUS_COLLECTOR_COOKIE_NAME = 'coletor-token';
+
+// Tipos de erro de verificação JWT
+export type AutonomousCollectorJWTVerifyError = 'expired' | 'invalid' | 'token_version_mismatch' | 'collector_inactive' | null;
+
 export interface AutonomousCollectorSession {
   coletorId: string;
   pfEmail: string;
   pfNome: string;
   pjRazaoSocial: string;
   status: string;
+  tokenVersion: number;
 }
 
 /**
  * Get autonomous collector session from JWT cookie
  * Cookie name: 'coletor-token' (set during login at /api/coletores/auth/login)
+ * Validates tokenVersion against database
  * @returns Collector session payload or null if not authenticated
  */
 export async function getAutonomousCollectorSession(): Promise<AutonomousCollectorSession | null> {
   try {
     const cookieStore = await cookies();
-    const token = cookieStore.get('coletor-token');
+    const token = cookieStore.get(AUTONOMOUS_COLLECTOR_COOKIE_NAME);
 
     if (!token?.value) {
       return null;
@@ -46,15 +59,44 @@ export async function getAutonomousCollectorSession(): Promise<AutonomousCollect
       return null;
     }
 
-    return {
+    const session: AutonomousCollectorSession = {
       coletorId: payload.coletorId as string,
       pfEmail: payload.pfEmail as string,
       pfNome: payload.pfNome as string,
       pjRazaoSocial: payload.pjRazaoSocial as string,
       status: payload.status as string,
+      tokenVersion: (payload.tokenVersion as number) ?? 0,
     };
+
+    // Validar tokenVersion contra o banco de dados
+    const collector = await prisma.collector.findUnique({
+      where: { id: session.coletorId },
+      select: { tokenVersion: true, status: true },
+    });
+
+    if (!collector) {
+      console.log('[AUTONOMOUS_COLLECTOR_SESSION] Collector not found:', session.coletorId);
+      return null;
+    }
+
+    if (collector.tokenVersion !== session.tokenVersion) {
+      console.log('[AUTONOMOUS_COLLECTOR_SESSION] Token version mismatch. Expected:', collector.tokenVersion, 'Got:', session.tokenVersion);
+      return null;
+    }
+
+    if (collector.status !== 'ACTIVE') {
+      console.log('[AUTONOMOUS_COLLECTOR_SESSION] Collector is not active:', collector.status);
+      return null;
+    }
+
+    return session;
   } catch (error) {
-    console.error('[getAutonomousCollectorSession] Error:', error);
+    // Detectar erro de token expirado especificamente
+    if (error instanceof joseErrors.JWTExpired) {
+      console.warn('[AUTONOMOUS_COLLECTOR_SESSION] JWT expired');
+      return null;
+    }
+    console.error('[AUTONOMOUS_COLLECTOR_SESSION] Error:', error);
     return null;
   }
 }
@@ -83,4 +125,13 @@ export async function requireAutonomousCollectorSession(): Promise<AutonomousCol
 export async function getCollectorId(): Promise<string> {
   const session = await requireAutonomousCollectorSession();
   return session.coletorId;
+}
+
+/**
+ * Remove the autonomous collector cookie
+ */
+export function createAutonomousCollectorCookieRemovalHeader(): string {
+  const secure = process.env.NODE_ENV === 'production' ? 'Secure; ' : '';
+
+  return `${AUTONOMOUS_COLLECTOR_COOKIE_NAME}=; HttpOnly; ${secure}SameSite=Lax; Path=/; Max-Age=0`;
 }

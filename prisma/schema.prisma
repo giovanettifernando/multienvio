@@ -544,6 +544,7 @@ model PickupPoint {
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
   passwordHash      String?
+  tokenVersion      Int               @default(0)
   receptions        Reception[]
   supportTickets    SupportTicket[]
 

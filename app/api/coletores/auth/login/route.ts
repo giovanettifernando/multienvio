@@ -128,13 +128,14 @@ export async function POST(request: NextRequest) {
 
     console.info('[login] LOGIN_SUCCESS: Collector ID:', collector.id, '(', collector.pfNome, ') logged in successfully');
 
-    // Create JWT token
+    // Create JWT token with tokenVersion for logout invalidation
     const token = await new SignJWT({
       coletorId: collector.id,
       pfEmail: collector.pfEmail,
       pfNome: collector.pfNome,
       pjRazaoSocial: collector.pjRazaoSocial,
       status: collector.status,
+      tokenVersion: collector.tokenVersion,
     })
       .setProtectedHeader({ alg: 'HS256' })
       .setIssuedAt()

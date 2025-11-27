@@ -1,22 +1,40 @@
-import { SignJWT, jwtVerify } from 'jose';
+/**
+ * Pickup Point (Ponto de Coleta) Session Management
+ *
+ * - TTL: Configured via COLLECTOR_SESSION_TTL_HOURS env (default: 12 hours)
+ * - Idle timeout: NO (only fixed JWT expiration)
+ * - TokenVersion: YES (validated on every session check for logout invalidation)
+ */
+
+import { SignJWT, jwtVerify, errors as joseErrors } from 'jose';
+import { prisma } from '@/lib/db';
 
 // Configuração do JWT para Pontos de Coleta (separado de admin e usuário)
 const COLLECTOR_JWT_SECRET = new TextEncoder().encode(
   process.env.COLLECTOR_JWT_SECRET || 'collector-secret-key-change-in-production'
 );
 const JWT_ALGORITHM = 'HS256';
-const JWT_EXPIRATION = '12h'; // 12 horas
+
+// TTL configurável via env (default: 12 horas)
+const SESSION_TTL_HOURS = parseInt(process.env.COLLECTOR_SESSION_TTL_HOURS || '12', 10);
+const JWT_EXPIRATION = `${SESSION_TTL_HOURS}h`;
+const COOKIE_MAX_AGE_SECONDS = 60 * 60 * SESSION_TTL_HOURS;
+
 const JWT_ISSUER = 'enviolegal-collector';
 const JWT_AUDIENCE = 'collector';
 
 // Nome do cookie collector (separado de admin e user)
 export const COLLECTOR_AUTH_COOKIE_NAME = 'collector_auth';
 
+// Tipos de erro de verificação JWT
+export type CollectorJWTVerifyError = 'expired' | 'invalid' | 'token_version_mismatch' | 'point_inactive' | null;
+
 // Tipo do payload do JWT Collector
 export interface CollectorJWTPayload {
   pointId: string; // ID do ponto de coleta
   cnpj: string;
   nomeFantasia: string;
+  tokenVersion: number; // Para invalidação de sessão via logout
   iss?: string;
   aud?: string;
   iat?: number;
@@ -40,28 +58,41 @@ export async function collectorSign(payload: Omit<CollectorJWTPayload, 'iss' | '
 
 /**
  * Verifica e decodifica um JWT Collector
+ * @returns Objeto com payload e erro, se houver
  */
-export async function collectorVerify(token: string): Promise<CollectorJWTPayload | null> {
+export async function collectorVerify(token: string): Promise<{ payload: CollectorJWTPayload | null; error: CollectorJWTVerifyError }> {
   try {
     const { payload } = await jwtVerify(token, COLLECTOR_JWT_SECRET, {
       issuer: JWT_ISSUER,
       audience: JWT_AUDIENCE,
     });
-    return payload as unknown as CollectorJWTPayload;
+    return { payload: payload as unknown as CollectorJWTPayload, error: null };
   } catch (error) {
-    console.error('Collector JWT verification failed:', error);
-    return null;
+    // Detectar erro de token expirado especificamente
+    if (error instanceof joseErrors.JWTExpired) {
+      console.warn('[COLLECTOR_SESSION] JWT expired');
+      return { payload: null, error: 'expired' };
+    }
+    console.error('[COLLECTOR_SESSION] JWT verification failed:', error);
+    return { payload: null, error: 'invalid' };
   }
+}
+
+/**
+ * Verifica JWT Collector e retorna apenas o payload (compatibilidade)
+ */
+export async function collectorVerifySimple(token: string): Promise<CollectorJWTPayload | null> {
+  const { payload } = await collectorVerify(token);
+  return payload;
 }
 
 /**
  * Cria um header Set-Cookie para o collector_auth
  */
 export function createCollectorCookieHeader(token: string): string {
-  const maxAge = 60 * 60 * 12; // 12 horas em segundos
   const secure = process.env.NODE_ENV === 'production' ? 'Secure; ' : '';
 
-  return `${COLLECTOR_AUTH_COOKIE_NAME}=${token}; HttpOnly; ${secure}SameSite=Lax; Path=/; Max-Age=${maxAge}`;
+  return `${COLLECTOR_AUTH_COOKIE_NAME}=${token}; HttpOnly; ${secure}SameSite=Lax; Path=/; Max-Age=${COOKIE_MAX_AGE_SECONDS}`;
 }
 
 /**
@@ -90,6 +121,7 @@ export function getCollectorTokenFromRequest(request: Request): string | null {
 
 /**
  * Obtém a sessão collector a partir de uma Request
+ * Valida tokenVersion contra o banco de dados
  */
 export async function getCollectorSessionFromRequest(request: Request): Promise<CollectorJWTPayload | null> {
   const token = getCollectorTokenFromRequest(request);
@@ -98,12 +130,33 @@ export async function getCollectorSessionFromRequest(request: Request): Promise<
     return null;
   }
 
-  const payload = await collectorVerify(token);
-  if (payload) {
-    console.log('[COLLECTOR_SESSION] Valid session for pointId:', payload.pointId);
-  } else {
+  const jwtPayload = await collectorVerifySimple(token);
+  if (!jwtPayload) {
     console.log('[COLLECTOR_SESSION] Invalid token');
+    return null;
   }
 
-  return payload;
+  // Validar tokenVersion contra o banco de dados
+  const point = await prisma.pickupPoint.findUnique({
+    where: { id: jwtPayload.pointId },
+    select: { tokenVersion: true, status: true },
+  });
+
+  if (!point) {
+    console.log('[COLLECTOR_SESSION] Pickup point not found:', jwtPayload.pointId);
+    return null;
+  }
+
+  if (point.tokenVersion !== jwtPayload.tokenVersion) {
+    console.log('[COLLECTOR_SESSION] Token version mismatch. Expected:', point.tokenVersion, 'Got:', jwtPayload.tokenVersion);
+    return null;
+  }
+
+  if (point.status !== 'ACTIVE') {
+    console.log('[COLLECTOR_SESSION] Pickup point is not active:', point.status);
+    return null;
+  }
+
+  console.log('[COLLECTOR_SESSION] Valid session for pointId:', jwtPayload.pointId);
+  return jwtPayload;
 }

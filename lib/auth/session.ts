@@ -1,4 +1,12 @@
-import { SignJWT, jwtVerify } from 'jose';
+/**
+ * Customer/Client Session Management
+ *
+ * - TTL: Configured via CLIENT_SESSION_TTL_DAYS env (default: 7 days)
+ * - Idle timeout: YES (10 min by default, configured in proxy.ts)
+ * - TokenVersion: YES (validated on every session check for logout invalidation)
+ */
+
+import { SignJWT, jwtVerify, errors as joseErrors } from 'jose';
 import { cookies } from 'next/headers';
 
 // Validar JWT_SECRET em produção
@@ -14,10 +22,17 @@ const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || 'envio-legal-secret-key-change-in-production'
 );
 const JWT_ALGORITHM = 'HS256';
-const JWT_EXPIRATION = '7d'; // 7 dias
+
+// TTL configurável via env (default: 7 dias)
+const SESSION_TTL_DAYS = parseInt(process.env.CLIENT_SESSION_TTL_DAYS || '7', 10);
+const JWT_EXPIRATION = `${SESSION_TTL_DAYS}d`;
+const COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * SESSION_TTL_DAYS;
 
 // Nome do cookie
 export const AUTH_COOKIE_NAME = 'auth_token';
+
+// Tipos de erro de verificação JWT
+export type JWTVerifyError = 'expired' | 'invalid' | 'token_version_mismatch' | null;
 
 // Tipo do payload do JWT
 export interface JWTPayload {
@@ -44,8 +59,12 @@ export async function sign(payload: Omit<JWTPayload, 'iat' | 'exp'>): Promise<st
 
 /**
  * Verifica e decodifica um JWT
+ * @returns Objeto com payload e erro, se houver
  */
-export async function verify(token: string, validateTokenVersion: boolean = false): Promise<JWTPayload | null> {
+export async function verify(
+  token: string,
+  validateTokenVersion: boolean = false
+): Promise<{ payload: JWTPayload | null; error: JWTVerifyError }> {
   try {
     const { payload } = await jwtVerify(token, JWT_SECRET);
     const jwtPayload = payload as unknown as JWTPayload;
@@ -60,17 +79,29 @@ export async function verify(token: string, validateTokenVersion: boolean = fals
 
       // Se o usuário não existe ou o tokenVersion não bate, token inválido
       if (!user || user.tokenVersion !== jwtPayload.tokenVersion) {
-        // Log genérico sem expor dados sensíveis (userId, tokenVersion)
-        console.warn('Token version mismatch - session invalidated');
-        return null;
+        console.warn('[CLIENT_SESSION] Token version mismatch - session invalidated');
+        return { payload: null, error: 'token_version_mismatch' };
       }
     }
 
-    return jwtPayload;
+    return { payload: jwtPayload, error: null };
   } catch (error) {
-    console.error('JWT verification failed:', error);
-    return null;
+    // Detectar erro de token expirado especificamente
+    if (error instanceof joseErrors.JWTExpired) {
+      console.warn('[CLIENT_SESSION] JWT expired');
+      return { payload: null, error: 'expired' };
+    }
+    console.error('[CLIENT_SESSION] JWT verification failed:', error);
+    return { payload: null, error: 'invalid' };
   }
+}
+
+/**
+ * Verifica JWT e retorna apenas o payload (mantém compatibilidade com código existente)
+ */
+export async function verifySimple(token: string, validateTokenVersion: boolean = false): Promise<JWTPayload | null> {
+  const { payload } = await verify(token, validateTokenVersion);
+  return payload;
 }
 
 /**
@@ -88,9 +119,9 @@ export async function setAuthCookie(token: string, rememberMe: boolean = false):
     path: '/',
   };
 
-  // Se "lembrar de mim", adicionar maxAge (7 dias)
+  // Se "lembrar de mim", adicionar maxAge (usa SESSION_TTL_DAYS)
   if (rememberMe) {
-    cookieOptions.maxAge = 60 * 60 * 24 * 7; // 7 dias em segundos
+    cookieOptions.maxAge = COOKIE_MAX_AGE_SECONDS;
   }
   // Caso contrário, cookie de sessão (sem maxAge) - fecha ao fechar navegador
 
@@ -129,7 +160,7 @@ export async function getSession(): Promise<JWTPayload | null> {
   if (!token) return null;
 
   // Sempre validar tokenVersion ao obter sessão
-  return verify(token, true);
+  return verifySimple(token, true);
 }
 
 /**
@@ -169,9 +200,9 @@ export async function getUserFromRequest(request: Request): Promise<JWTPayload |
     if (!token) return null;
 
     // Verificar e decodificar JWT (sempre validar tokenVersion)
-    return verify(token, true);
+    return verifySimple(token, true);
   } catch (error) {
-    console.error('Error getting user from request:', error);
+    console.error('[CLIENT_SESSION] Error getting user from request:', error);
     return null;
   }
 }

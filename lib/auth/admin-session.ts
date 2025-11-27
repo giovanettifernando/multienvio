@@ -1,4 +1,12 @@
-import { SignJWT, jwtVerify } from 'jose';
+/**
+ * Admin/Staff Session Management
+ *
+ * - TTL: Configured via ADMIN_SESSION_TTL_DAYS env (default: 7 days)
+ * - Idle timeout: YES (10 min by default, configured in proxy.ts via SESSION_IDLE_MINUTES)
+ * - TokenVersion: YES (validated on every session check for logout invalidation)
+ */
+
+import { SignJWT, jwtVerify, errors as joseErrors } from 'jose';
 import type { AdminPermission } from '@prisma/client';
 import { prisma } from '@/lib/db';
 
@@ -15,12 +23,20 @@ const ADMIN_JWT_SECRET = new TextEncoder().encode(
   process.env.ADMIN_JWT_SECRET || 'admin-secret-key-change-in-production'
 );
 const JWT_ALGORITHM = 'HS256';
-const JWT_EXPIRATION = '7d'; // 7 dias
+
+// TTL configurável via env (default: 7 dias)
+const SESSION_TTL_DAYS = parseInt(process.env.ADMIN_SESSION_TTL_DAYS || '7', 10);
+const JWT_EXPIRATION = `${SESSION_TTL_DAYS}d`;
+const COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * SESSION_TTL_DAYS;
+
 const JWT_ISSUER = 'enviolegal-admin';
 const JWT_AUDIENCE = 'admin';
 
 // Nome do cookie admin (separado do cliente)
 export const ADMIN_AUTH_COOKIE_NAME = 'admin_auth';
+
+// Tipos de erro de verificação JWT
+export type AdminJWTVerifyError = 'expired' | 'invalid' | 'token_version_mismatch' | 'user_inactive' | null;
 
 // Tipo do payload do JWT Admin
 export interface AdminJWTPayload {
@@ -74,8 +90,9 @@ export async function adminSign(payload: Omit<AdminJWTPayload, 'iss' | 'aud' | '
 
 /**
  * Verifica e decodifica um JWT Admin
+ * @returns Objeto com payload e erro, se houver
  */
-export async function adminVerify(token: string): Promise<AdminJWTPayload | null> {
+export async function adminVerify(token: string): Promise<{ payload: AdminJWTPayload | null; error: AdminJWTVerifyError }> {
   try {
     const { payload } = await jwtVerify(token, ADMIN_JWT_SECRET, {
       issuer: JWT_ISSUER,
@@ -90,19 +107,31 @@ export async function adminVerify(token: string): Promise<AdminJWTPayload | null
       permissionsType: typeof decoded.permissions,
       permissionsIsArray: Array.isArray(decoded.permissions),
     });
-    return decoded;
+    return { payload: decoded, error: null };
   } catch (error) {
-    // Token invalid, expired, or wrong issuer/audience
-    console.error('Admin JWT verification failed:', error);
-    return null;
+    // Detectar erro de token expirado especificamente
+    if (error instanceof joseErrors.JWTExpired) {
+      console.warn('[ADMIN_SESSION] JWT expired');
+      return { payload: null, error: 'expired' };
+    }
+    // Token invalid or wrong issuer/audience
+    console.error('[ADMIN_SESSION] Admin JWT verification failed:', error);
+    return { payload: null, error: 'invalid' };
   }
+}
+
+/**
+ * Verifica JWT Admin e retorna apenas o payload (compatibilidade)
+ */
+export async function adminVerifySimple(token: string): Promise<AdminJWTPayload | null> {
+  const { payload } = await adminVerify(token);
+  return payload;
 }
 
 /**
  * Cria um header Set-Cookie para o admin_auth
  */
 export function createAdminCookieHeader(token: string): string {
-  const maxAge = 60 * 60 * 24 * 7; // 7 dias em segundos
   const isProduction = process.env.NODE_ENV === 'production';
 
   // Em desenvolvimento (localhost HTTP), usar SameSite=Lax sem Secure
@@ -111,7 +140,7 @@ export function createAdminCookieHeader(token: string): string {
     ? 'Secure; SameSite=Lax'
     : 'SameSite=Lax';
 
-  return `${ADMIN_AUTH_COOKIE_NAME}=${token}; HttpOnly; ${cookieAttributes}; Path=/; Max-Age=${maxAge}`;
+  return `${ADMIN_AUTH_COOKIE_NAME}=${token}; HttpOnly; ${cookieAttributes}; Path=/; Max-Age=${COOKIE_MAX_AGE_SECONDS}`;
 }
 
 /**
@@ -146,7 +175,7 @@ export async function getAdminSessionFromRequest(request: Request): Promise<Admi
   const token = getAdminTokenFromRequest(request);
   if (!token) return null;
 
-  const jwtPayload = await adminVerify(token);
+  const jwtPayload = await adminVerifySimple(token);
   if (!jwtPayload) return null;
 
   // Validate tokenVersion against database

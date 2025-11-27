@@ -55,7 +55,8 @@ export async function persistSupportAttachment(
     ? `${uniqueId}-${safeName}.${safeExt}`
     : `${uniqueId}-${safeName}`;
 
-  const filePath = path.join(ticketDir, storedFileName);
+  // Use template literal to avoid Turbopack overly broad file pattern analysis
+  const filePath = `${ticketDir}${path.sep}${storedFileName}`;
   await writeFile(filePath, buffer);
 
   const safeTicketId = sanitizeSegment(ticketId);
