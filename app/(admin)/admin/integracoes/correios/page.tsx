@@ -69,6 +69,7 @@ interface TestResult {
   message: string;
   result?: unknown;
   latencyMs?: number;
+  correiosApiResponse?: unknown; // Resposta bruta da API dos Correios
 }
 
 // ============================================================================
@@ -906,9 +907,10 @@ function TestResultDisplay({ result }: { result: TestResult }) {
     >
       <Alert type={isSuccess ? 'success' : 'error'} message={result.message} style={{ marginBottom: 16 }} />
 
-      {result.result != null && (
-        <Collapse>
-          <Collapse.Panel header="Detalhes da Resposta" key="details">
+      <Collapse>
+        {/* Detalhes da resposta interna */}
+        {result.result != null && (
+          <Collapse.Panel header="Resposta da API Interna" key="internal">
             <pre
               style={{
                 background: '#f5f5f5',
@@ -922,8 +924,35 @@ function TestResultDisplay({ result }: { result: TestResult }) {
               {JSON.stringify(result.result, null, 2)}
             </pre>
           </Collapse.Panel>
-        </Collapse>
-      )}
+        )}
+
+        {/* Resposta bruta da API dos Correios */}
+        {result.correiosApiResponse != null && (
+          <Collapse.Panel
+            header={
+              <Space>
+                <span>Resposta da API dos Correios</span>
+                <Tag color="orange">Bruta</Tag>
+              </Space>
+            }
+            key="correios"
+          >
+            <pre
+              style={{
+                background: '#fffbe6',
+                padding: 12,
+                borderRadius: 4,
+                overflow: 'auto',
+                maxHeight: 500,
+                fontSize: 12,
+                border: '1px solid #ffe58f',
+              }}
+            >
+              {JSON.stringify(result.correiosApiResponse, null, 2)}
+            </pre>
+          </Collapse.Panel>
+        )}
+      </Collapse>
     </Card>
   );
 }

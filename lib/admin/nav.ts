@@ -94,6 +94,12 @@ export const ADMIN_NAV: AdminNavItem[] = [
         href: "/admin/servidor-email",
         permissions: ["CONFIGURACOES"],
       },
+      {
+        key: "google-oauth",
+        label: "Credenciais Google",
+        href: "/admin/config/google-oauth",
+        permissions: ["CONFIGURACOES"],
+      },
     ],
   },
 ];

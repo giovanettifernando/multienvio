@@ -82,20 +82,26 @@ async function getCorreiosConfigFromDB(): Promise<CorreiosConfig | null> {
 
     const carrier = await prisma.carrier.findFirst({
       where: { slug: 'correios', status: 'ACTIVE' },
-      include: {
-        credentials: {
-          where: { isActive: true },
-          orderBy: { createdAt: 'desc' },
-          take: 1,
-        },
-      },
     });
 
-    if (!carrier || carrier.credentials.length === 0) {
+    if (!carrier) {
       return null;
     }
 
-    const credential = carrier.credentials[0];
+    // Buscar credenciais do ambiente ativo (PRODUCTION ou SANDBOX)
+    const credential = await prisma.carrierCredential.findFirst({
+      where: {
+        carrierId: carrier.id,
+        environment: carrier.environment, // Usar o ambiente ativo do carrier
+        isActive: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (!credential) {
+      console.warn('[CORREIOS_CLIENT] Nenhuma credencial encontrada para o ambiente:', carrier.environment);
+      return null;
+    }
     const customData = (credential.customHeaders as Record<string, unknown>) || {};
 
     // Descriptografar senha
@@ -130,6 +136,17 @@ async function getCorreiosConfigFromDB(): Promise<CorreiosConfig | null> {
       contrato: (customData.contrato as string) || undefined,
       dr: customData.dr ? parseInt(customData.dr as string, 10) : undefined,
     };
+
+    // Log de diagnóstico
+    console.log('[CORREIOS_CLIENT] Config carregada do banco:', {
+      ambiente: config.environment,
+      apiBase: config.apiBase,
+      usuario: config.usuario ? `${config.usuario.substring(0, 4)}****` : '(vazio)',
+      temSenha: !!config.senha,
+      cartaoPostagem: config.cartaoPostagem ? `${config.cartaoPostagem.substring(0, 4)}****` : '(vazio)',
+      credentialId: credential.id,
+      credentialEnv: credential.environment,
+    });
 
     // Atualizar cache
     dbConfigCache = config;
@@ -351,6 +368,116 @@ async function fetchCorreiosToken(config: CorreiosConfig): Promise<TokenCache> {
       undefined,
       'CONNECTION_ERROR'
     );
+  }
+}
+
+/**
+ * Interface para resultado de teste de autenticação
+ */
+export interface CorreiosAuthTestResult {
+  success: boolean;
+  token?: string;
+  rawResponse?: CorreiosTokenResponse;
+  error?: string;
+  httpStatus?: number;
+  latencyMs: number;
+}
+
+/**
+ * Testa autenticação e retorna resposta bruta da API dos Correios
+ * Útil para diagnóstico e depuração
+ */
+export async function testCorreiosAuth(): Promise<CorreiosAuthTestResult> {
+  const startTime = Date.now();
+
+  try {
+    // Carregar config do banco (forçar refresh)
+    const config = await getCorreiosConfigAsync();
+
+    // Validar configuração
+    const validation = validateCorreiosConfig(config);
+    if (!validation.valid) {
+      return {
+        success: false,
+        error: `Configuração inválida: ${validation.errors.join(', ')}`,
+        latencyMs: Date.now() - startTime,
+      };
+    }
+
+    // Modo API Key: não tem resposta bruta, apenas validação
+    if (validation.authMode === 'apiKey' && config.apiKey) {
+      return {
+        success: true,
+        token: config.apiKey.substring(0, 20) + '...',
+        rawResponse: {
+          token: '(API Key mode - sem resposta bruta)',
+          expiraEm: '',
+          ambiente: config.environment,
+        } as CorreiosTokenResponse,
+        latencyMs: Date.now() - startTime,
+      };
+    }
+
+    // Modo legado: fazer chamada real à API
+    const url = `${config.apiBase}${CORREIOS_ENDPOINTS.token}`;
+    const credentials = Buffer.from(`${config.usuario}:${config.senha}`).toString('base64');
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Basic ${credentials}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify({
+        numero: config.cartaoPostagem,
+      }),
+    });
+
+    const latencyMs = Date.now() - startTime;
+
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => 'Unknown error');
+      let errorJson: unknown = null;
+      try {
+        errorJson = JSON.parse(errorText);
+      } catch {
+        // Não é JSON
+      }
+
+      return {
+        success: false,
+        error: `HTTP ${response.status}: ${response.statusText}`,
+        httpStatus: response.status,
+        rawResponse: errorJson as CorreiosTokenResponse | undefined,
+        latencyMs,
+      };
+    }
+
+    const data: CorreiosTokenResponse = await response.json();
+
+    // Atualizar cache
+    if (data.token && data.expiraEm) {
+      tokenCache = {
+        token: data.token,
+        expiraEm: new Date(data.expiraEm),
+        fetchedAt: new Date(),
+      };
+    }
+
+    return {
+      success: true,
+      token: data.token?.substring(0, 30) + '...',
+      rawResponse: data,
+      httpStatus: response.status,
+      latencyMs,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Erro desconhecido',
+      latencyMs: Date.now() - startTime,
+    };
   }
 }
 

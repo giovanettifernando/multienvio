@@ -52,12 +52,14 @@ export {
   getCorreiosConfigAsync,
   validateCorreiosConfig,
   getCorreiosToken,
+  testCorreiosAuth,
   clearTokenCache,
   invalidateCorreiosConfigCache,
   correiosFetch,
   parseCorreiosDecimal,
   isCorreiosConfigured,
   getCorreiosConfigInfo,
+  type CorreiosAuthTestResult,
 } from './client';
 
 // Preço e Prazo (cotação)

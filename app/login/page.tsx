@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, Suspense, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { Form, Input, Button, Card, Typography, App, Spin } from 'antd';
+import { Form, Input, Button, Card, Typography, App, Spin, Divider } from 'antd';
+import { GoogleOutlined } from '@ant-design/icons';
 import { useAuthStore } from '@/stores/auth';
 import { useCurrentUser, useIsAdmin } from '@/hooks/useCurrentUser';
 import { useHydration } from '@/hooks/useHydration';
@@ -19,7 +20,14 @@ function LoginPageContent() {
   const searchParams = useSearchParams();
   const { message } = App.useApp();
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const hydrated = useHydration();
+
+  // Handle Google login
+  const handleGoogleLogin = useCallback(() => {
+    setGoogleLoading(true);
+    window.location.href = '/api/auth/google?context=user';
+  }, []);
   const login = useAuthStore((s) => s.login);
   const { user: currentUser, loading: userLoading } = useCurrentUser();
   const isAdmin = useIsAdmin();
@@ -117,10 +125,23 @@ function LoginPageContent() {
           </div>
 
           <Form.Item style={{ marginTop: 8 }}>
-            <Button type="primary" htmlType="submit" block loading={loading}>
+            <Button type="primary" htmlType="submit" block loading={loading} disabled={loading || googleLoading}>
               Entrar
             </Button>
           </Form.Item>
+
+          <Divider plain style={{ margin: '16px 0', color: 'rgba(0,0,0,0.45)' }}>ou</Divider>
+
+          <Button
+            block
+            size="large"
+            icon={<GoogleOutlined />}
+            onClick={handleGoogleLogin}
+            loading={googleLoading}
+            disabled={loading || googleLoading}
+          >
+            Continuar com Google
+          </Button>
         </Form>
 
         <Typography.Paragraph style={{ marginTop: 16, textAlign: 'center' }} type="secondary">

@@ -11,10 +11,12 @@ import {
   App,
   Button,
   Checkbox,
+  Divider,
   Form,
   Input,
   Typography,
 } from "antd";
+import { GoogleOutlined } from "@ant-design/icons";
 import { PasswordStrength } from "@/components/form/PasswordStrength";
 import { FormCard } from "@/components/ui/FormCard";
 import { cadastroSchema } from "@/lib/validation/auth";
@@ -30,6 +32,14 @@ export default function CadastroPage() {
   const { message } = App.useApp();
   const registerStore = useAuthStore((state) => state.register);
   const [isLoading, setIsLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+
+  // Handle Google signup
+  const handleGoogleSignup = useCallback(() => {
+    setIsGoogleLoading(true);
+    // Redirect to Google OAuth with user context
+    window.location.href = '/api/auth/google?context=user';
+  }, []);
 
   const {
     control,
@@ -275,12 +285,25 @@ export default function CadastroPage() {
             type="primary"
             htmlType="submit"
             loading={isLoading}
-            disabled={isLoading}
+            disabled={isLoading || isGoogleLoading}
             block
           >
             Criar conta
           </Button>
         </Form.Item>
+
+        <Divider plain style={{ margin: '16px 0', color: 'rgba(0,0,0,0.45)' }}>ou</Divider>
+
+        <Button
+          block
+          size="large"
+          icon={<GoogleOutlined />}
+          onClick={handleGoogleSignup}
+          loading={isGoogleLoading}
+          disabled={isLoading || isGoogleLoading}
+        >
+          Cadastrar com Google
+        </Button>
       </Form>
     </FormCard>
   );

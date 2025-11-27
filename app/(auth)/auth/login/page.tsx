@@ -7,9 +7,11 @@ import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Alert from "antd/es/alert";
 import App from "antd/es/app";
+import Button from "antd/es/button";
 import Checkbox from "antd/es/checkbox";
 import Form from "antd/es/form";
 import Typography from "antd/es/typography";
+import { GoogleOutlined } from "@ant-design/icons";
 import { FormCard } from "@/components/ui/FormCard";
 import { ELButton } from "@/components/ui/ELButton";
 import { ELCard } from "@/components/ui/ELCard";
@@ -33,6 +35,14 @@ export default function LoginPage() {
   const isAdmin = useAuthStore((state) => state.isAdmin);
   const [formError, setFormError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+
+  // Handle Google login
+  const handleGoogleLogin = useCallback(() => {
+    setIsGoogleLoading(true);
+    // Redirect to Google OAuth with user context
+    window.location.href = '/api/auth/google?context=user';
+  }, []);
 
   const {
     control,
@@ -191,11 +201,25 @@ export default function LoginPage() {
             variant="primary"
             htmlType="submit"
             loading={isLoading}
-            disabled={isLoading}
+            disabled={isLoading || isGoogleLoading}
             block
           >
             Entrar
           </ELButton>
+
+          <div className={styles.divider}>ou</div>
+
+          <Button
+            block
+            size="large"
+            icon={<GoogleOutlined className={styles.googleIcon} />}
+            className={styles.googleButton}
+            onClick={handleGoogleLogin}
+            loading={isGoogleLoading}
+            disabled={isLoading || isGoogleLoading}
+          >
+            Continuar com Google
+          </Button>
         </div>
       </Form>
     ),
@@ -206,6 +230,8 @@ export default function LoginPage() {
       formError,
       handleSubmit,
       isLoading,
+      isGoogleLoading,
+      handleGoogleLogin,
       onSubmit,
     ],
   );

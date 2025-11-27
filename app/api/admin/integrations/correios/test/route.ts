@@ -12,15 +12,14 @@ import { z } from 'zod';
 import { requireAdminUser } from '@/lib/auth/admin-helpers';
 import { AdminPermission } from '@prisma/client';
 import {
-  getCorreiosToken,
   getCorreiosConfigAsync,
   validateCorreiosConfig,
-  calcularPrecoCorreios,
   calcularPrazoCorreios,
   cotarCorreiosDefault,
   rastrearObjeto,
   criarPrePostagem,
   getCorreiosConfigInfo,
+  testCorreiosAuth,
 } from '@/lib/integrations/correios';
 
 /**
@@ -165,35 +164,46 @@ export async function POST(request: Request) {
 /**
  * Teste de autenticação
  */
-async function testAuth(startTime: number) {
-  try {
-    const configInfo = getCorreiosConfigInfo();
-    const token = await getCorreiosToken();
-    const latency = Date.now() - startTime;
+async function testAuth(_startTime: number) {
+  // Usar nova função que retorna resposta bruta da API
+  const authResult = await testCorreiosAuth();
+  const configInfo = getCorreiosConfigInfo();
 
-    const authModeLabel = configInfo.authMode === 'apiKey' ? 'API Key (Novo)' : 'Usuário/Senha (Legado)';
+  const authModeLabel = configInfo.authMode === 'apiKey' ? 'API Key (Novo)' : 'Usuário/Senha (Legado)';
 
+  if (authResult.success) {
     return NextResponse.json({
       success: true,
       type: 'auth',
       message: `Autenticação realizada com sucesso (${authModeLabel})`,
       result: {
-        tokenObtido: !!token,
-        tokenPreview: token ? `${token.substring(0, 20)}...` : null,
+        tokenObtido: !!authResult.token,
+        tokenPreview: authResult.token,
         modoAutenticacao: authModeLabel,
         ambiente: configInfo.environment,
         baseUrl: configInfo.apiBase,
         cartaoPostagem: configInfo.cartaoPostagem,
+        httpStatus: authResult.httpStatus,
       },
-      latencyMs: latency,
+      // Resposta bruta da API dos Correios
+      correiosApiResponse: authResult.rawResponse,
+      latencyMs: authResult.latencyMs,
     });
-  } catch (error) {
-    const latency = Date.now() - startTime;
+  } else {
     return NextResponse.json({
       success: false,
       type: 'auth',
-      message: error instanceof Error ? error.message : 'Falha na autenticação',
-      latencyMs: latency,
+      message: authResult.error || 'Falha na autenticação',
+      result: {
+        modoAutenticacao: authModeLabel,
+        ambiente: configInfo.environment,
+        baseUrl: configInfo.apiBase,
+        cartaoPostagem: configInfo.cartaoPostagem,
+        httpStatus: authResult.httpStatus,
+      },
+      // Resposta bruta da API dos Correios (mesmo em erro)
+      correiosApiResponse: authResult.rawResponse,
+      latencyMs: authResult.latencyMs,
     });
   }
 }
@@ -223,6 +233,14 @@ async function testQuote(
 
     const servicosEncontrados = cotacoes.filter((c) => c.precoTotal > 0);
 
+    // Extrair respostas brutas da API dos Correios
+    const correiosRawResponses = cotacoes.map((c) => ({
+      servico: c.codigoServicoCorreios,
+      nome: c.nomeServico,
+      precoRaw: c.brutoPreco,
+      prazoRaw: c.brutoPrazo,
+    }));
+
     return NextResponse.json({
       success: true,
       type: 'quote',
@@ -246,14 +264,21 @@ async function testQuote(
         totalServicos: cotacoes.length,
         servicosDisponiveis: servicosEncontrados.length,
       },
+      // Resposta bruta da API dos Correios (preço e prazo)
+      correiosApiResponse: correiosRawResponses,
       latencyMs: latency,
     });
   } catch (error) {
     const latency = Date.now() - startTime;
+    const configInfo = getCorreiosConfigInfo();
     return NextResponse.json({
       success: false,
       type: 'quote',
       message: error instanceof Error ? error.message : 'Falha na cotação',
+      result: {
+        ambiente: configInfo.environment,
+        baseUrl: configInfo.apiBase,
+      },
       latencyMs: latency,
     });
   }

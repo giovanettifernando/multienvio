@@ -37,6 +37,10 @@ const ADMIN_JWT_SECRET = new TextEncoder().encode(
 // Cookie names
 const AUTH_COOKIE_NAME = 'auth_token'; // Customer auth
 const ADMIN_AUTH_COOKIE_NAME = 'admin_auth'; // Staff/Admin auth
+const LAST_ACTIVITY_COOKIE_NAME = 'last_activity'; // Inactivity tracking
+
+// Inactivity timeout (10 minutes)
+const INACTIVITY_LIMIT_MS = 10 * 60 * 1000;
 
 // Cache de tokenVersion (30 segundos) para reduzir DB lookups
 interface TokenVersionCache {
@@ -116,6 +120,54 @@ function isStaffAuthenticated(payload: AdminJWTPayload | null): boolean {
   return payload !== null && payload.staffId !== undefined;
 }
 
+/**
+ * Check if session has expired due to inactivity
+ * Returns true if inactive for more than INACTIVITY_LIMIT_MS
+ */
+function isInactiveSession(lastActivityValue: string | undefined): boolean {
+  if (!lastActivityValue) {
+    // No activity recorded yet - not inactive
+    return false;
+  }
+
+  const lastActivityTime = parseInt(lastActivityValue, 10);
+  if (isNaN(lastActivityTime)) {
+    // Invalid timestamp - treat as inactive for safety
+    return true;
+  }
+
+  const now = Date.now();
+  return (now - lastActivityTime) > INACTIVITY_LIMIT_MS;
+}
+
+/**
+ * Create response with updated last_activity cookie
+ */
+function createResponseWithActivityCookie(response: NextResponse): NextResponse {
+  response.cookies.set(LAST_ACTIVITY_COOKIE_NAME, Date.now().toString(), {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/',
+    maxAge: 60 * 60 * 24, // 24 hours
+  });
+  return response;
+}
+
+/**
+ * Create redirect response that clears auth cookies (for timeout)
+ */
+function createTimeoutRedirect(request: NextRequest, loginPath: string, returnParam: string, pathname: string): NextResponse {
+  const loginUrl = new URL(loginPath, request.url);
+  loginUrl.searchParams.set(returnParam, pathname);
+  const response = NextResponse.redirect(loginUrl);
+
+  // Clear the last_activity cookie
+  response.cookies.delete(LAST_ACTIVITY_COOKIE_NAME);
+
+  return response;
+}
+
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -190,8 +242,15 @@ export async function proxy(request: NextRequest) {
       return NextResponse.redirect(loginUrl);
     }
 
-    // Is authenticated as staff with valid tokenVersion - allow access
-    return NextResponse.next();
+    // Check inactivity timeout for admin
+    const adminLastActivity = request.cookies.get(LAST_ACTIVITY_COOKIE_NAME)?.value;
+    if (isInactiveSession(adminLastActivity)) {
+      // Session expired due to inactivity - redirect to admin login
+      return createTimeoutRedirect(request, '/admin/login', 'next', pathname);
+    }
+
+    // Is authenticated as staff with valid tokenVersion - update activity and allow access
+    return createResponseWithActivityCookie(NextResponse.next());
   }
 
   // Get route protection level for customer routes
@@ -255,8 +314,20 @@ export async function proxy(request: NextRequest) {
       return NextResponse.redirect(loginUrl);
     }
 
-    // Is admin - allow access
-    return NextResponse.next();
+    // Check inactivity timeout for customer admin
+    const customerAdminLastActivity = request.cookies.get(LAST_ACTIVITY_COOKIE_NAME)?.value;
+    if (isInactiveSession(customerAdminLastActivity)) {
+      if (isApiRoute) {
+        return NextResponse.json(
+          { error: 'Session expired', message: 'Sessão expirada por inatividade' },
+          { status: 401 }
+        );
+      }
+      return createTimeoutRedirect(request, '/login', 'returnUrl', pathname);
+    }
+
+    // Is admin - update activity and allow access
+    return createResponseWithActivityCookie(NextResponse.next());
   }
 
   // Handle authenticated routes (any logged-in user)
@@ -275,8 +346,20 @@ export async function proxy(request: NextRequest) {
       return NextResponse.redirect(loginUrl);
     }
 
-    // Is authenticated - allow access
-    return NextResponse.next();
+    // Check inactivity timeout for authenticated users (cliente)
+    const clienteLastActivity = request.cookies.get(LAST_ACTIVITY_COOKIE_NAME)?.value;
+    if (isInactiveSession(clienteLastActivity)) {
+      if (isApiRoute) {
+        return NextResponse.json(
+          { error: 'Session expired', message: 'Sessão expirada por inatividade' },
+          { status: 401 }
+        );
+      }
+      return createTimeoutRedirect(request, '/login', 'returnUrl', pathname);
+    }
+
+    // Is authenticated - update activity and allow access
+    return createResponseWithActivityCookie(NextResponse.next());
   }
 
   // Default: allow access

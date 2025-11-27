@@ -1,7 +1,8 @@
 'use client';
 
-import { Suspense, useState } from 'react';
-import { App, Button, Card, Form, Input, Space } from 'antd';
+import { Suspense, useState, useCallback } from 'react';
+import { App, Button, Card, Divider, Form, Input, Space } from 'antd';
+import { GoogleOutlined } from '@ant-design/icons';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useColetorSession } from '@/stores/useColetorSession';
@@ -19,6 +20,15 @@ function ColetorLoginForm() {
   const setColetor = useColetorSession((state) => state.setColetor);
   const [loading, setLoading] = useState(false);
   const [showResendEmail, setShowResendEmail] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+
+  // Handle Google login
+  const handleGoogleLogin = useCallback(() => {
+    setGoogleLoading(true);
+    // Redirect to Google OAuth with collector context
+    const redirectUrl = encodeURIComponent(next);
+    window.location.href = `/api/auth/google?context=collector&redirect=${redirectUrl}`;
+  }, [next]);
 
   async function onFinish(values: LoginFormValues) {
     setLoading(true);
@@ -102,9 +112,22 @@ function ColetorLoginForm() {
           <Input.Password placeholder="••••••••" />
         </Form.Item>
         <Space direction="vertical" style={{ width: '100%' }} size="middle">
-          <Button type="primary" htmlType="submit" block loading={loading}>
+          <Button type="primary" htmlType="submit" block loading={loading} disabled={loading || googleLoading}>
             Entrar
           </Button>
+
+          <Divider plain style={{ margin: '8px 0', color: 'rgba(0,0,0,0.45)' }}>ou</Divider>
+
+          <Button
+            block
+            icon={<GoogleOutlined />}
+            onClick={handleGoogleLogin}
+            loading={googleLoading}
+            disabled={loading || googleLoading}
+          >
+            Continuar com Google
+          </Button>
+
           {showResendEmail && (
             <Button block onClick={handleResendEmail}>
               Reenviar e-mail de verificação

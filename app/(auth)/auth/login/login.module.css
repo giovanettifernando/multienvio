@@ -64,6 +64,42 @@
   color: var(--color-text, #182235);
 }
 
+.divider {
+  display: flex;
+  align-items: center;
+  gap: var(--el-spacing-md, 12px);
+  color: rgba(24, 34, 53, 0.56);
+  font-size: 14px;
+}
+
+.divider::before,
+.divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: rgba(24, 34, 53, 0.12);
+}
+
+.googleButton {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: var(--el-spacing-sm, 8px);
+  border: 1px solid rgba(24, 34, 53, 0.16) !important;
+  background: #fff !important;
+  color: var(--color-text, #182235) !important;
+  transition: all 0.2s ease;
+}
+
+.googleButton:hover {
+  border-color: rgba(24, 34, 53, 0.24) !important;
+  background: rgba(24, 34, 53, 0.02) !important;
+}
+
+.googleIcon {
+  font-size: 18px;
+}
+
 @media (max-width: 480px) {
   .container {
     padding-inline: var(--el-spacing-md, 12px);

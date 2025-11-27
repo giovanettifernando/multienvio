@@ -1,0 +1,149 @@
+/**
+ * POST /api/admin/config/google-oauth/test
+ *
+ * Testa as credenciais Google OAuth
+ */
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
+import { NextResponse } from 'next/server';
+import { z } from 'zod';
+import { requireAdminUser } from '@/lib/auth/admin-helpers';
+import { AdminPermission } from '@prisma/client';
+
+const testSchema = z.object({
+  clientId: z.string().min(1, 'Client ID é obrigatório'),
+  clientSecret: z.string().min(1, 'Client Secret é obrigatório'),
+});
+
+/**
+ * POST - Testa as credenciais
+ */
+export async function POST(request: Request) {
+  try {
+    const authResult = await requireAdminUser(request, AdminPermission.CONFIGURACOES);
+    if (authResult instanceof NextResponse) return authResult;
+
+    const body = await request.json();
+    const parsed = testSchema.safeParse(body);
+
+    if (!parsed.success) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Dados inválidos',
+          details: parsed.error.flatten(),
+        },
+        { status: 400 }
+      );
+    }
+
+    const { clientId, clientSecret } = parsed.data;
+    const startTime = Date.now();
+
+    // Testar credenciais fazendo uma requisição ao endpoint de descoberta do Google
+    // Isso verifica se o Client ID é válido
+    try {
+      // Primeiro, verificar se o Client ID parece válido
+      if (!clientId.includes('.apps.googleusercontent.com')) {
+        return NextResponse.json({
+          success: false,
+          error: 'Client ID inválido. Deve terminar com .apps.googleusercontent.com',
+          latencyMs: Date.now() - startTime,
+        });
+      }
+
+      // Verificar se o Client Secret tem o formato correto (começa com GOCSPX-)
+      if (!clientSecret.startsWith('GOCSPX-')) {
+        return NextResponse.json({
+          success: false,
+          error: 'Client Secret inválido. Deve começar com GOCSPX-',
+          latencyMs: Date.now() - startTime,
+        });
+      }
+
+      // Fazer uma requisição de teste ao endpoint de token
+      // Usamos um code inválido propositalmente para verificar se as credenciais são reconhecidas
+      const testResponse = await fetch('https://oauth2.googleapis.com/token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          client_id: clientId,
+          client_secret: clientSecret,
+          code: 'test_invalid_code',
+          redirect_uri: 'http://localhost:3000/api/auth/google/callback',
+          grant_type: 'authorization_code',
+        }),
+      });
+
+      const responseData = await testResponse.json();
+      const latency = Date.now() - startTime;
+
+      // Se o erro for "invalid_grant", significa que as credenciais são válidas
+      // mas o código de autorização é inválido (o que é esperado no teste)
+      if (responseData.error === 'invalid_grant') {
+        return NextResponse.json({
+          success: true,
+          message: 'Credenciais válidas! O Google reconheceu o Client ID e Secret.',
+          details: {
+            clientIdValid: true,
+            clientSecretValid: true,
+            googleResponse: 'invalid_grant (esperado para código de teste)',
+          },
+          latencyMs: latency,
+        });
+      }
+
+      // Se o erro for "invalid_client", as credenciais estão erradas
+      if (responseData.error === 'invalid_client') {
+        return NextResponse.json({
+          success: false,
+          error: 'Credenciais inválidas. Verifique o Client ID e Client Secret.',
+          details: responseData,
+          latencyMs: latency,
+        });
+      }
+
+      // Se o erro for "unauthorized_client", o redirect_uri não está configurado
+      if (responseData.error === 'unauthorized_client') {
+        return NextResponse.json({
+          success: true,
+          message: 'Credenciais válidas, mas o URI de redirecionamento não está autorizado.',
+          warning: 'Configure o redirect_uri no Google Cloud Console',
+          details: {
+            clientIdValid: true,
+            clientSecretValid: true,
+            redirectUriConfigured: false,
+          },
+          latencyMs: latency,
+        });
+      }
+
+      // Outro erro não esperado
+      return NextResponse.json({
+        success: false,
+        error: `Resposta inesperada do Google: ${responseData.error || 'desconhecido'}`,
+        details: responseData,
+        latencyMs: latency,
+      });
+    } catch (fetchError) {
+      const latency = Date.now() - startTime;
+      console.error('[GOOGLE_OAUTH_TEST] Fetch error:', fetchError);
+      return NextResponse.json({
+        success: false,
+        error: 'Erro ao conectar com o Google. Verifique sua conexão.',
+        details: fetchError instanceof Error ? fetchError.message : 'Erro desconhecido',
+        latencyMs: latency,
+      });
+    }
+  } catch (error) {
+    console.error('[ADMIN_GOOGLE_OAUTH_TEST]', error);
+    return NextResponse.json(
+      { success: false, error: 'Erro ao testar credenciais' },
+      { status: 500 }
+    );
+  }
+}

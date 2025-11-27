@@ -35,6 +35,8 @@ model User {
   resetPasswordToken     String?              @unique
   termsAcceptedAt        DateTime?
   avatarUrl              String?
+  googleId               String?              @unique
+  authProvider           String               @default("email")
   cpf                    String?
   cnpj                   String?
   hasCompany             Boolean              @default(false)
@@ -64,6 +66,7 @@ model User {
   @@index([email])
   @@index([emailVerificationToken])
   @@index([resetPasswordToken])
+  @@index([googleId])
   @@map("users")
 }
 
@@ -1033,6 +1036,17 @@ model EmailConfig {
   @@map("email_configs")
 }
 
+model GoogleOAuthConfig {
+  id           String   @id @default(cuid())
+  clientId     String   // Google Client ID
+  clientSecret String   // Google Client Secret (criptografado)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("google_oauth_configs")
+}
+
 model Collector {
   id                       String               @id @default(cuid())
   status                   CollectorStatus      @default(ACTIVE)
@@ -1086,6 +1100,9 @@ model Collector {
   pfEmailVerificationToken String?              @unique
   pfEmailVerified          Boolean              @default(false)
   pfEmailVerifiedAt        DateTime?
+  googleId                 String?              @unique
+  authProvider             String               @default("email")
+  tokenVersion             Int                  @default(0)
   credential               CollectorCredential?
   documents                CollectorDocument[]
   pickupRequests           PickupRequest[]
@@ -1097,6 +1114,7 @@ model Collector {
   @@index([pjCnpj])
   @@index([pfCidade, pfUf])
   @@index([pjCidade, pjUf])
+  @@index([googleId])
   @@map("collectors")
 }
 
