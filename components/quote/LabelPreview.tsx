@@ -53,18 +53,18 @@ export function LabelPreview({
         {/* Transportadora e Modalidade */}
         <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
           <Space size={6}>
-            <TruckOutlined style={{ fontSize: 14, color: "#52c41a" }} />
-            <Typography.Text style={{ fontSize: 13 }}>
+            <TruckOutlined style={{ fontSize: 16, color: "#52c41a" }} />
+            <Typography.Text style={{ fontSize: 14 }}>
               <strong>{carrier}</strong>
-              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+              <Typography.Text type="secondary" style={{ fontSize: 13 }}>
                 {" "}• {modalidade}
               </Typography.Text>
             </Typography.Text>
           </Space>
 
           <Space size={6}>
-            <ClockCircleOutlined style={{ fontSize: 14, color: "#1890ff" }} />
-            <Typography.Text style={{ fontSize: 13 }}>
+            <ClockCircleOutlined style={{ fontSize: 16, color: "#1890ff" }} />
+            <Typography.Text style={{ fontSize: 14 }}>
               <strong>Prazo:</strong>{" "}
               {prazoDias === 1 ? "1 dia útil" : `${prazoDias} dias úteis`}
             </Typography.Text>
@@ -74,8 +74,8 @@ export function LabelPreview({
         {/* Preço e Total */}
         <div style={{ display: "flex", gap: 24, flexWrap: "wrap", alignItems: "center" }}>
           <Space size={6}>
-            <DollarOutlined style={{ fontSize: 14, color: "#52c41a" }} />
-            <Typography.Text style={{ fontSize: 13 }}>
+            <DollarOutlined style={{ fontSize: 16, color: "#52c41a" }} />
+            <Typography.Text style={{ fontSize: 14 }}>
               <strong>Frete:</strong> {currency.format(preco)}
             </Typography.Text>
           </Space>
@@ -83,25 +83,25 @@ export function LabelPreview({
           {isLoadingPickupFee && (
             <Space size={6}>
               <Spin size="small" />
-              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+              <Typography.Text type="secondary" style={{ fontSize: 13 }}>
                 Calculando coleta...
               </Typography.Text>
             </Space>
           )}
 
           {!isLoadingPickupFee && hasPickupFee && (
-            <>
-              <Space size={6}>
-                <CarOutlined style={{ fontSize: 14, color: "#fa8c16" }} />
-                <Typography.Text style={{ fontSize: 13 }}>
-                  <strong>Coleta:</strong> {currency.format(pickupFee.feeAmount)}
-                </Typography.Text>
-              </Space>
-
-              <Typography.Text strong style={{ fontSize: 14, color: "#1890ff" }}>
-                Total: {currency.format(total)}
+            <Space size={6}>
+              <CarOutlined style={{ fontSize: 16, color: "#fa8c16" }} />
+              <Typography.Text style={{ fontSize: 14 }}>
+                <strong>Coleta:</strong> {currency.format(pickupFee.feeAmount)}
               </Typography.Text>
-            </>
+            </Space>
+          )}
+
+          {!isLoadingPickupFee && hasPickupFee && (
+            <Typography.Text strong style={{ fontSize: 15, color: "#1890ff", marginLeft: "auto" }}>
+              Total: {currency.format(total)}
+            </Typography.Text>
           )}
         </div>
       </Space>

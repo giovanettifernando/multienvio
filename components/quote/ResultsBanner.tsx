@@ -75,16 +75,16 @@ export function ResultsBanner({ summary }: ResultsBannerProps) {
         <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
           {/* Origem */}
           <Space size={6}>
-            <HomeOutlined style={{ fontSize: 14, color: "#0F2A5F" }} />
-            <Typography.Text style={{ fontSize: 13 }}>
+            <HomeOutlined style={{ fontSize: 16, color: "#0F2A5F" }} />
+            <Typography.Text style={{ fontSize: 14 }}>
               <strong>Origem:</strong> {origemCep}
               {origemCidade && origemUf && (
-                <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                <Typography.Text type="secondary" style={{ fontSize: 13 }}>
                   {" "}({origemCidade}/{origemUf})
                 </Typography.Text>
               )}
               {origemIsDefault && (
-                <Tag color="blue" style={{ fontSize: 10, marginLeft: 6, padding: "0 4px" }}>
+                <Tag color="blue" style={{ fontSize: 11, marginLeft: 6, padding: "0 4px" }}>
                   Padrão
                 </Tag>
               )}
@@ -93,11 +93,11 @@ export function ResultsBanner({ summary }: ResultsBannerProps) {
 
           {/* Destino */}
           <Space size={6}>
-            <EnvironmentOutlined style={{ fontSize: 14, color: "#C2410C" }} />
-            <Typography.Text style={{ fontSize: 13 }}>
+            <EnvironmentOutlined style={{ fontSize: 16, color: "#C2410C" }} />
+            <Typography.Text style={{ fontSize: 14 }}>
               <strong>Destino:</strong> {destinoCep}
               {destinoCidade && destinoUf && (
-                <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                <Typography.Text type="secondary" style={{ fontSize: 13 }}>
                   {" "}({destinoCidade}/{destinoUf})
                 </Typography.Text>
               )}
@@ -109,18 +109,18 @@ export function ResultsBanner({ summary }: ResultsBannerProps) {
         <div style={{ display: "flex", gap: 24, flexWrap: "wrap", alignItems: "center" }}>
           {/* Seguro */}
           <Space size={6}>
-            <SafetyOutlined style={{ fontSize: 14, color: "#15803d" }} />
-            <Typography.Text style={{ fontSize: 13 }}>
+            <SafetyOutlined style={{ fontSize: 16, color: "#15803d" }} />
+            <Typography.Text style={{ fontSize: 14 }}>
               <strong>Seguro:</strong> {formatCurrency(summary.seguroValor ?? null)}
             </Typography.Text>
           </Space>
 
           {/* Volumes */}
           <Space size={6} align="center">
-            <InboxOutlined style={{ fontSize: 14, color: "#1e40af" }} />
-            <Typography.Text style={{ fontSize: 13 }}>
+            <InboxOutlined style={{ fontSize: 16, color: "#1e40af" }} />
+            <Typography.Text style={{ fontSize: 14 }}>
               <strong>Volumes:</strong> {nVolumes}
-              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+              <Typography.Text type="secondary" style={{ fontSize: 13 }}>
                 {" "}(cubado: {totalCubicWeight.toFixed(2)}kg)
               </Typography.Text>
             </Typography.Text>
@@ -130,7 +130,7 @@ export function ResultsBanner({ summary }: ResultsBannerProps) {
               <>
                 {visibleVolumes.map((vol, idx) => (
                   <Tooltip key={vol.id} title={formatVolumeCompact(vol)}>
-                    <Tag color="blue" style={{ fontSize: 10, margin: 0, padding: "0 4px" }}>
+                    <Tag color="blue" style={{ fontSize: 11, margin: 0, padding: "0 4px" }}>
                       V{idx + 1}
                     </Tag>
                   </Tooltip>
@@ -140,14 +140,14 @@ export function ResultsBanner({ summary }: ResultsBannerProps) {
                     title={
                       <Space direction="vertical" size={2}>
                         {remainingVolumes.map((vol, idx) => (
-                          <div key={vol.id} style={{ fontSize: 11 }}>
+                          <div key={vol.id} style={{ fontSize: 12 }}>
                             V{idx + 3}: {formatVolumeCompact(vol)}
                           </div>
                         ))}
                       </Space>
                     }
                   >
-                    <Tag style={{ fontSize: 10, cursor: "help", margin: 0, padding: "0 4px" }}>
+                    <Tag style={{ fontSize: 11, cursor: "help", margin: 0, padding: "0 4px" }}>
                       +{remainingVolumes.length}
                     </Tag>
                   </Tooltip>
