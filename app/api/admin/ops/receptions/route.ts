@@ -1,12 +1,13 @@
 /**
  * GET /api/admin/ops/receptions
  *
- * Lista todas as recepções em pontos de coleta com filtros.
+ * Lista a fila de envios nos pontos de coleta.
+ * Mostra shipments que têm pickupPointId definido e estão nos status relevantes.
  *
  * Parâmetros:
  * - page: Número da página (default: 1)
  * - pageSize: Itens por página (default: 20)
- * - status: Filtro por status (PENDING, RECEIVED, ISSUE_REPORTED, PROCESSED)
+ * - status: Filtro por status (AWAITING_DROP_OFF_AT_POINT, DROPPED_OFF_AT_POINT, RECEIVED_AT_POINT, AWAITING_CARRIER_PICKUP_AT_POINT, COLLECTED_FROM_POINT, all)
  * - pickupPointId: Filtro por ponto de coleta
  * - dateStart, dateEnd: Filtro por período
  * - q: Busca textual (código de rastreio, nome do remetente/destinatário)
@@ -20,11 +21,21 @@ import { prisma } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
-const RECEPTION_STATUS_ORDER: Record<string, number> = {
-  PENDING: 1,
-  RECEIVED: 2,
-  ISSUE_REPORTED: 3,
-  PROCESSED: 4,
+// Status relevantes para fila de pontos de coleta
+const POC_QUEUE_STATUSES = [
+  'AWAITING_DROP_OFF_AT_POINT',
+  'DROPPED_OFF_AT_POINT',
+  'RECEIVED_AT_POINT',
+  'AWAITING_CARRIER_PICKUP_AT_POINT',
+  'COLLECTED_FROM_POINT',
+];
+
+const STATUS_ORDER: Record<string, number> = {
+  AWAITING_DROP_OFF_AT_POINT: 1,
+  DROPPED_OFF_AT_POINT: 2,
+  RECEIVED_AT_POINT: 3,
+  AWAITING_CARRIER_PICKUP_AT_POINT: 4,
+  COLLECTED_FROM_POINT: 5,
 };
 
 export async function GET(request: NextRequest) {
@@ -46,15 +57,20 @@ export async function GET(request: NextRequest) {
     const dateEnd = searchParams.get('dateEnd');
     const q = searchParams.get('q');
 
-    const where: Prisma.ReceptionWhereInput = {};
+    const where: Prisma.ShipmentWhereInput = {
+      pickupPointId: { not: null },
+    };
 
     // Filtro por status
     if (status && status !== 'all') {
-      where.status = status as Prisma.EnumReceptionStatusFilter;
+      where.status = status;
+    } else {
+      // Por padrão, mostrar apenas os status da fila do PoC
+      where.status = { in: POC_QUEUE_STATUSES };
     }
 
     // Filtro por ponto de coleta
-    if (pickupPointId) {
+    if (pickupPointId && pickupPointId !== 'all') {
       where.pickupPointId = pickupPointId;
     }
 
@@ -74,56 +90,76 @@ export async function GET(request: NextRequest) {
     // Busca textual
     if (q) {
       where.OR = [
-        { trackingCode: { contains: q, mode: 'insensitive' } },
-        { senderName: { contains: q, mode: 'insensitive' } },
+        { platformTrackingCode: { contains: q, mode: 'insensitive' } },
+        { carrierTrackingCode: { contains: q, mode: 'insensitive' } },
         { recipientName: { contains: q, mode: 'insensitive' } },
-        { pickupPoint: { nomeFantasia: { contains: q, mode: 'insensitive' } } },
+        { sender: { name: { contains: q, mode: 'insensitive' } } },
       ];
     }
 
-    const [receptions, total] = await Promise.all([
-      prisma.reception.findMany({
+    const [shipments, total] = await Promise.all([
+      prisma.shipment.findMany({
         where,
         include: {
-          pickupPoint: {
+          sender: {
             select: {
               id: true,
-              nomeFantasia: true,
-              cidade: true,
-              uf: true,
+              name: true,
+              email: true,
+              phone: true,
             },
           },
         },
         orderBy: [
-          { status: 'asc' },
           { createdAt: 'desc' },
         ],
         skip: (page - 1) * pageSize,
         take: pageSize,
       }),
-      prisma.reception.count({ where }),
+      prisma.shipment.count({ where }),
     ]);
 
+    // Buscar pontos de coleta para enriquecer os dados
+    const pickupPointIds = [...new Set(shipments.map(s => s.pickupPointId).filter(Boolean))] as string[];
+    const pickupPoints = pickupPointIds.length > 0
+      ? await prisma.pickupPoint.findMany({
+          where: { id: { in: pickupPointIds } },
+          select: {
+            id: true,
+            nomeFantasia: true,
+            cidade: true,
+            uf: true,
+          },
+        })
+      : [];
+
+    const pickupPointMap = new Map(pickupPoints.map(p => [p.id, p]));
+
     // Calcular resumo por status
-    const statusSummary = await prisma.reception.groupBy({
+    const statusSummary = await prisma.shipment.groupBy({
       by: ['status'],
-      where: dateStart || dateEnd ? {
-        createdAt: where.createdAt,
-      } : {},
+      where: {
+        pickupPointId: { not: null },
+        status: { in: POC_QUEUE_STATUSES },
+        ...(dateStart || dateEnd ? { createdAt: where.createdAt } : {}),
+      },
       _count: true,
     });
 
-    // Calcular total de comissões
-    const commissionTotal = await prisma.reception.aggregate({
-      where,
+    // Calcular total de comissões (pickupFee dos pontos)
+    const commissionTotal = await prisma.shipment.aggregate({
+      where: {
+        pickupPointId: { not: null },
+        status: { in: POC_QUEUE_STATUSES },
+      },
       _sum: {
-        commissionCents: true,
+        pickupFee: true,
       },
     });
 
     const summary = {
       total,
-      totalCommission: (commissionTotal._sum.commissionCents || 0) / 100,
+      totalCommission: commissionTotal._sum.pickupFee || 0,
       byStatus: statusSummary.reduce(
         (acc, s) => {
           acc[s.status] = s._count;
@@ -134,47 +170,62 @@ export async function GET(request: NextRequest) {
     };
 
     // Ordenar por prioridade de status
-    const sortedReceptions = receptions.sort((a, b) => {
-      const orderA = RECEPTION_STATUS_ORDER[a.status] || 99;
-      const orderB = RECEPTION_STATUS_ORDER[b.status] || 99;
+    const sortedShipments = shipments.sort((a, b) => {
+      const orderA = STATUS_ORDER[a.status] || 99;
+      const orderB = STATUS_ORDER[b.status] || 99;
       if (orderA !== orderB) return orderA - orderB;
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
 
     return NextResponse.json({
-      items: sortedReceptions.map((reception) => ({
-        id: reception.id,
-        status: reception.status,
-        trackingCode: reception.trackingCode,
-        senderName: reception.senderName,
-        recipientName: reception.recipientName,
-        commissionCents: reception.commissionCents,
-        weight: reception.weight,
-        declaredValue: reception.declaredValue,
-        receivedAt: reception.receivedAt?.toISOString() || null,
-        processedAt: reception.processedAt?.toISOString() || null,
-        issueType: reception.issueType,
-        issueDetails: reception.issueDetails,
-        createdAt: reception.createdAt.toISOString(),
-        updatedAt: reception.updatedAt.toISOString(),
-        pickupPoint: reception.pickupPoint
-          ? {
-              id: reception.pickupPoint.id,
-              name: reception.pickupPoint.nomeFantasia,
-              city: reception.pickupPoint.cidade,
-              state: reception.pickupPoint.uf,
-            }
-          : null,
-      })),
+      items: sortedShipments.map((shipment) => {
+        const pickupPoint = shipment.pickupPointId ? pickupPointMap.get(shipment.pickupPointId) : null;
+        return {
+          id: shipment.id,
+          status: shipment.status,
+          trackingCode: shipment.platformTrackingCode,
+          carrierTrackingCode: shipment.carrierTrackingCode,
+          carrier: shipment.carrier,
+          service: shipment.service,
+          senderName: shipment.sender?.name || null,
+          recipientName: shipment.recipientName,
+          weight: shipment.weight,
+          declaredValue: shipment.declaredValue,
+          originCep: shipment.originCep,
+          destinationCity: shipment.destinationCity,
+          destinationState: shipment.destinationState,
+          pickupFee: shipment.pickupFee,
+          receivedAt: shipment.receivedAt?.toISOString() || null,
+          receivedBy: shipment.receivedBy,
+          createdAt: shipment.createdAt.toISOString(),
+          updatedAt: shipment.updatedAt.toISOString(),
+          pickupPoint: pickupPoint
+            ? {
+                id: pickupPoint.id,
+                name: pickupPoint.nomeFantasia,
+                city: pickupPoint.cidade,
+                state: pickupPoint.uf,
+              }
+            : null,
+          sender: shipment.sender
+            ? {
+                id: shipment.sender.id,
+                name: shipment.sender.name,
+                email: shipment.sender.email,
+                phone: shipment.sender.phone,
+              }
+            : null,
+        };
+      }),
       page,
       pageSize,
       total,
       summary,
     });
   } catch (error) {
-    console.error('[RECEPTIONS_LIST] Error:', error);
+    console.error('[POC_QUEUE_LIST] Error:', error);
     return NextResponse.json(
-      { message: 'Erro ao listar recepções' },
+      { message: 'Erro ao listar fila dos pontos de coleta' },
       { status: 500 }
     );
   }

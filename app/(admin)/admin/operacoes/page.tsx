@@ -8,6 +8,7 @@ import { listShipments } from '@/lib/admin/ops/api';
 import ShipmentsTable from '@/components/admin/ops/ShipmentsTable';
 import PickupsTable from '@/components/admin/ops/PickupsTable';
 import ReceptionsTable from '@/components/admin/ops/ReceptionsTable';
+import ExceptionsTable from '@/components/admin/ops/ExceptionsTable';
 import EventsTable from '@/components/admin/ops/EventsTable';
 import { PageShell } from '@/components/shared/PageShell';
 
@@ -123,14 +124,7 @@ export default function AdminOperacoesPage() {
     {
       key: 'exceptions',
       label: 'Exceções',
-      children: (
-        <Alert
-          message="Funcionalidade em Desenvolvimento"
-          description="Gestão de exceções operacionais estará disponível em breve."
-          type="info"
-          showIcon
-        />
-      ),
+      children: <ExceptionsTable dateStart={_period.dateStart} dateEnd={_period.dateEnd} />,
     },
     {
       key: 'sla',

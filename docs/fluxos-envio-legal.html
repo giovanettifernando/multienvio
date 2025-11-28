@@ -1,0 +1,1508 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head><meta charset="utf-8" /><title>Fluxos da Plataforma Envio Legal</title>
+<style>
+body { font-family: Arial, sans-serif; line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 24px; }
+.cover { text-align: center; margin-bottom: 32px; }
+pre { background: #f6f8fa; padding: 12px; overflow: auto; }
+code { font-family: Consolas, monospace; }
+table { border-collapse: collapse; width: 100%; margin: 12px 0; }
+th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+ul, ol { margin-top: 0; margin-bottom: 0; padding-left: 24px; }
+h1, h2, h3, h4, h5, h6 { margin-top: 20px; }
+</style>
+</head>
+<body>
+
+<section class="cover">
+  <h1>Fluxos da Plataforma Envio Legal</h1>
+  <p>Versão 1.0</p>
+  <p>Data: 2025-11-28</p>
+</section>
+
+<div class="content">
+<h1>Relatório de Fluxos (descobertos no código)</h1>
+
+<h2>1) Inventário de Entradas</h2>
+<ul>
+<li><strong>UI Routes descobertas</strong> (page.tsx):</li>
+<li>Autenticação: <code>app/(auth)/auth/login/page.tsx:1</code>, <code>.../cadastro/page.tsx:1</code>, <code>.../esqueci-senha/page.tsx:1</code>, <code>.../forgot-password/page.tsx:1</code>, <code>.../reset/[token]/page.tsx:1</code>, <code>.../reset-password/page.tsx:1</code>, <code>.../verify-email/page.tsx:1</code>, <code>.../confirmacao/page.tsx:1</code></li>
+<li>Público/coletores: <code>app/(public)/coletores/page.tsx:1</code>, <code>.../login/page.tsx:1</code>, <code>.../cadastro/page.tsx:1</code>, <code>.../coletas/page.tsx:1</code>, <code>.../coletas-realizadas/page.tsx:1</code>, <code>.../suporte/page.tsx:1</code>, <code>.../verificar-email/page.tsx:1</code>, <code>.../coletor/redefinir-senha/page.tsx:1</code></li>
+<li>Coletor área logada: <code>app/(collector)/collector/page.tsx:1</code>, <code>.../login/page.tsx:1</code>, <code>.../receptions/page.tsx:1</code>, <code>.../support/page.tsx:1</code>, <code>.../support/novo/page.tsx:1</code></li>
+<li>Admin: <code>app/(admin)/admin/page.tsx:1</code>, <code>.../login/page.tsx:1</code>, <code>.../logout/page.tsx:1</code>, <code>.../usuarios/page.tsx:1</code>, <code>.../coletores/page.tsx:1</code>, <code>.../coletores/[id]/page.tsx:1</code>, <code>.../pontos-de-coleta/page.tsx:1</code>, <code>.../pontos-de-coleta/[id]/page.tsx:1</code>, <code>.../financeiro/page.tsx:1</code>, <code>.../financeiro/relatorios/page.tsx:1</code>, <code>.../financeiro/movimentacoes/page.tsx:1</code>, <code>.../financeiro/repasses/page.tsx:1</code>, <code>.../financeiro/comissoes/page.tsx:1</code>, <code>.../financeiro/despesas/page.tsx:1</code>, <code>.../financeiro/summary</code> etc (todas as páginas listadas em <code>rg --files -g &amp;#x27;page.tsx&amp;#x27; app</code>)</li>
+<li>Envio (cliente): <code>app/(envio)/(overview)/page.tsx:1</code>, <code>.../cotar/page.tsx:1</code>, <code>.../cotacoes/page.tsx:1</code>, <code>.../cotacoes/finalizar/page.tsx:1</code>, <code>.../carrinho/page.tsx:1</code>, <code>.../shipments/page.tsx:1</code>, <code>.../shipments/[id]/page.tsx:1</code>, <code>.../coletas/page.tsx:1</code>, <code>.../coletas/[id]/page.tsx:1</code>, <code>.../coletas/nova/page.tsx:1</code>, <code>.../etiquetas/page.tsx:1</code>, <code>.../rastreamento/page.tsx:1</code>, <code>.../rastreamento/[id]/page.tsx:1</code>, <code>.../conta/perfil/page.tsx:1</code>, <code>.../minha-conta/page.tsx:1</code>, <code>.../carteira/page.tsx:1</code>, <code>.../carteira/extrato/page.tsx:1</code>, <code>.../carteira/faturas/page.tsx:1</code>, <code>.../carteira/metodos/page.tsx:1</code>, <code>.../devolucoes/page.tsx:1</code>, <code>.../suporte/page.tsx:1</code>, <code>.../suporte/[id]/page.tsx:1</code>, <code>.../suporte/novo/page.tsx:1</code></li>
+<li>Outros: <code>app/login/page.tsx:1</code>, <code>app/rastreio/[code]/page.tsx:1</code></li>
+<li><strong>API Endpoints descobertos</strong> (<code>route.ts</code>):</li>
+<li>Auth (cliente): <code>/api/auth/login</code>, <code>/api/auth/register</code>, <code>/api/auth/verify-email</code>, <code>/api/auth/forgot-password</code>, <code>/api/auth/reset-password</code>, <code>/api/auth/resend-verification</code>, <code>/api/auth/logout</code>, <code>/api/auth/me</code>, <code>/api/auth/google</code>, <code>/api/auth/google/callback</code></li>
+<li>Conta (cliente): <code>/api/account/me</code>, <code>/api/account/profile</code>, <code>/api/account/password</code>, <code>/api/account/security/change-password</code>, <code>/api/account/company</code>, <code>/api/account/addresses</code>, <code>/api/account/addresses/[id]</code>, <code>/api/account/recipients</code>, <code>/api/account/recipients/[id]</code>, <code>/api/account/recipients/[id]/make-default</code>, <code>/api/account/cards</code>, <code>/api/account/cards/[id]</code>, <code>/api/account/cards/[id]/make-default</code>, <code>/api/account/cards/[id]/tokenize</code>, <code>/api/account/cards/[id]/create-token-backend</code>, <code>/api/account/cards/[id]/pan</code>, <code>/api/account/cards/[id]/route</code>, <code>/api/account/recipients</code>, <code>/api/account/recipients/[id]</code></li>
+<li>Cotação/checkout/carrinho: <code>/api/cotacoes</code>, <code>/api/cotacoes/[id]</code>, <code>/api/cotacoes/selecionar</code>, <code>/api/cart</code>, <code>/api/cart/items</code>, <code>/api/cart/items/[id]</code>, <code>/api/cart/[id]/unlock</code>, <code>/api/carrinho</code>, <code>/api/carrinho/[itemId]</code>, <code>/api/carrinho/checkout</code>, <code>/api/checkout</code></li>
+<li>Shipments: <code>/api/shipments</code>, <code>/api/shipments/[id]</code>, <code>/api/shipments/[id]/cancel</code>, <code>/api/shipments/[id]/payment</code>, <code>/api/shipments/payment-batch</code>, <code>/api/shipments/[id]/divergences</code>, <code>/api/shipments/[id]/manifest</code></li>
+<li>Pickups/Coletas: <code>/api/coletas</code>, <code>/api/coletas/[id]</code>, <code>/api/pickups</code>, <code>/api/pickups/[id]</code>, <code>/api/pickups/[id]/manifest</code>, <code>/api/pickup-fee/calculate</code></li>
+<li>Labels: <code>/api/labels</code></li>
+<li>Wallet/pagamentos: <code>/api/wallet</code>, <code>/api/wallet/status</code>, <code>/api/wallet/transactions</code>, <code>/api/wallet/statement/pdf</code>, <code>/api/wallet/statement/download</code>, <code>/api/wallet/debit</code>, <code>/api/wallet/resolve-debt</code>, <code>/api/payments/charge</code>, <code>/api/payments/methods</code>, <code>/api/payments/mercadopago/create</code>, <code>/api/payments/mercadopago/public-key</code>, <code>/api/payments/mercadopago/card-saved</code>, <code>/api/payments/mercadopago/...</code></li>
+<li>Suporte: <code>/api/support/tickets</code>, <code>/api/support/tickets/[id]</code>, <code>/api/support/tickets/[id]/messages</code>, <code>/api/support/tickets/[id]/attachments</code></li>
+<li>Rastreamento público: <code>/api/public/track/[code]</code>, <code>/api/tracking</code></li>
+<li>NFE/CEP/Geocode: <code>/api/nfe/parse</code>, <code>/api/cep</code>, <code>/api/cep/[cep]</code>, <code>/api/geocode</code></li>
+<li>Upload público: <code>/api/public/upload/collector-document</code></li>
+<li>Pontos de coleta: <code>/api/pickup-points</code>, <code>/api/pontos-coleta/auth/login/me/logout</code>, <code>/api/pontos-coleta/dashboard</code>, <code>/api/pontos-coleta/receptions</code>, <code>/api/pontos-coleta/receptions/[id]/register-entry</code>, <code>/api/pontos-coleta/receptions/[id]/receive</code>, <code>/api/pontos-coleta/receptions/volumes/[id]/check</code>, <code>/api/pontos-coleta/receptions/volumes/[id]/divergence</code>, <code>/api/pontos-coleta/tickets...</code></li>
+<li>Coletores: <code>/api/coletores/auth/login/register/me/logout/confirm-email/verify-email</code>, <code>/api/coletores/coletas</code>, <code>/api/coletores/coletas/[id]/registrar</code>, <code>/api/coletores/coletas/[id]/agendar</code>, <code>/api/coletores/coletas/[id]/registrar-tentativa</code>, <code>/api/coletores/coletas-realizadas</code>, <code>/api/coletores/coletas-realizadas/entregar</code>, <code>/api/coletores/suporte</code>, <code>/api/coletores/dashboard</code>, <code>/api/coletores/documentos</code></li>
+<li>Admin auth/config: <code>/api/admin/auth/login</code>, <code>/api/admin/auth/me</code>, <code>/api/admin/auth/logout</code>, <code>/api/admin/config/google-oauth</code>, <code>/api/admin/config/google-oauth/test</code>, <code>/api/admin/config/comissoes</code>, <code>/api/admin/email-config</code>, <code>/api/admin/email-config/test-connection</code>, <code>/api/admin/email-config/send-test</code></li>
+<li>Admin clientes: <code>/api/admin/clients</code>, <code>/api/admin/clients/[id]</code>, <code>/api/admin/clients/[id]/profile</code>, <code>/api/admin/clients/[id]/addresses</code>, <code>/api/admin/clients/[id]/addresses/[addressId]</code>, <code>/api/admin/clients/[id]/recipients</code>, <code>/api/admin/clients/[id]/recipients/[recipientId]</code>, <code>/api/admin/clients/[id]/cards</code>, <code>/api/admin/clients/[id]/cards/[cardId]</code>, <code>/api/admin/clients/[id]/wallet</code>, <code>/api/admin/clients/[id]/wallet/adjust</code>, <code>/api/admin/clients/[id]/wallet/route</code>, <code>/api/admin/clients/[id]/recurring-items</code>, <code>/api/admin/clients/[id]/recurring-items/[itemId]</code>, <code>/api/admin/clients/[id]/details</code>, <code>/api/admin/clients/block</code>, <code>/api/admin/clients/unblock</code>, <code>/api/admin/clients/reset-password</code></li>
+<li>Admin finanças: <code>/api/admin/finance/ledger</code>, <code>/ledger/adjustment</code>, <code>/ledger/reconcile</code>, <code>/finance/reconciliation</code>, <code>/finance/reconciliation/mark</code>, <code>/finance/summary</code>, <code>/finance/reports</code>, <code>/finance/reports/dre</code>, <code>/finance/reports/accounts-payable</code>, <code>/finance/expenses</code>, <code>/finance/expenses/[id]</code>, <code>/finance/expense-templates</code>, <code>/finance/expense-templates/[id]</code>, <code>/finance/commissions</code>, <code>/finance/commissions/[id]/approve</code>, <code>/finance/commissions/[id]/paid</code>, <code>/finance/payouts</code>, <code>/finance/payouts/[id]/paid</code>, <code>/finance/carrier-payouts</code>, <code>/finance/invoices</code>, <code>/finance/invoices/[id]/paid</code>, <code>/finance/invoices/[id]/cancel</code>, <code>/finance/profile-commissions</code>, <code>/finance/wallet-transactions</code>, <code>/finance/chargebacks</code>, <code>/finance/chargebacks/[id]</code></li>
+<li>Admin integrações: <code>/api/admin/integrations/correios</code>, <code>/.../test</code>, <code>/.../carriers</code>, <code>/.../carriers/[id]</code>, <code>/.../services</code>, <code>/.../pricing-rules</code>, <code>/.../credentials</code>, <code>/.../endpoints</code>, <code>/.../test-connection</code>, <code>/api/admin/integrations/mercadopago</code>, <code>/.../test-webhook</code>, <code>/api/admin/payment-gateway/config</code></li>
+<li>Admin operações/ops: <code>/api/admin/ops/shipments</code>, <code>/api/admin/ops/shipments/[id]</code>, <code>/.../timeline</code>, <code>/.../pickup-request</code>, <code>/.../reprocess</code>, <code>/.../bulk</code>, <code>/api/admin/ops/events</code>, <code>/api/admin/ops/events/[id]/mark</code>, <code>/.../retry</code>, <code>/api/admin/ops/pocs</code>, <code>/api/admin/ops/pocs/[id]</code>, <code>/api/admin/ops/collectors</code></li>
+<li>Admin ceps/fipe: <code>/api/admin/ceps/...</code>, <code>/api/admin/fipe/brands</code>, <code>/api/admin/fipe/models</code>, <code>/api/admin/fipe/sync</code></li>
+<li>Admin staff/users: <code>/api/admin/staff/users</code>, <code>/.../[id]</code>, <code>/.../[id]/status</code>, <code>/.../[id]/reset</code></li>
+<li>Admin suporte: <code>/api/admin/support/tickets</code>, <code>/api/admin/support/tickets/[id]</code>, <code>/.../[id]/assign</code>, <code>/.../[id]/reply</code>, <code>/.../[id]/status</code></li>
+<li>Dashboard/health: <code>/api/dashboard</code>, <code>/api/dashboard/pending-pickup-shipments</code>, <code>/api/system/status</code>, <code>/api/health</code>, <code>/api/health/db</code>, <code>/api/test-db</code></li>
+<li>Serviços auxiliares: <code>/api/packaging</code>, <code>/api/packaging/[id]</code>, <code>/api/services</code>, <code>/api/units</code>, <code>/api/invoices</code>, <code>/api/orders</code>, <code>/api/orders/[id]</code>, <code>/api/labels</code>, <code>/api/user/preferences</code>, <code>/api/wallet/resolve-debt</code>, <code>/api/wallet/status</code></li>
+<li>Webhooks: <code>/api/webhooks/mercadopago</code>, <code>/api/webhooks/pix</code>, <code>/api/webhooks/tracking</code>, <code>/api/webhooks/pickups</code></li>
+<li><strong>Webhooks/Jobs/Actions descobertos</strong></li>
+<li>Webhooks: Mercado Pago (<code>app/api/webhooks/mercadopago/route.ts:1</code>), Pix (<code>app/api/webhooks/pix/route.ts</code>), tracking (<code>app/api/webhooks/tracking/route.ts</code>), pickups (<code>app/api/webhooks/pickups/route.ts</code>)</li>
+<li>Jobs/scripts (manuais): <code>scripts/sync-pending-payments.ts</code>, <code>scripts/approve-pending-payment.ts</code>, <code>scripts/geocode-collectors.ts</code>, <code>scripts/fipe-sync.ts</code>, <code>scripts/update-mp-credentials.ts</code>, <code>scripts/test-*</code> etc. (executados sob demanda).</li>
+</ul>
+
+<h2>2) Fluxos (catálogo completo)</h2>
+<p>Fluxos agrupados por domínio.</p>
+
+<h3>Fluxo F1 – Registro e verificação de usuário</h3>
+<ul>
+<li><strong>Entradas que disparam:</strong> POST <code>/api/auth/register</code>; GET <code>/api/auth/verify-email</code>.</li>
+<li><strong>Perfis/atores:</strong> Visitante.</li>
+<li><strong>Pré-condições:</strong> Payload válido, email único; token de verificação.</li>
+<li><strong>Passo a passo detalhado:</strong> valida zod; verifica email duplicado; cria user com status pending e token; envia email de verificação; endpoint verify marca <code>emailVerified</code> e <code>status=active</code>.</li>
+<li><strong>Decisões/ramificações:</strong> email existente → 409; token inválido/expirado → 400; já verificado → mensagem específica.</li>
+<li><strong>Efeitos no banco:</strong> cria <code>User</code>; atualiza <code>emailVerified/status</code>.</li>
+<li><strong>Status/Enums envolvidos:</strong> <code>User.status</code> pending→active.</li>
+<li><strong>Integrações externas:</strong> envio de email.</li>
+<li><strong>Respostas/erros:</strong> 201 cadastro; 409 email; 422 validação; 400 token inválido.</li>
+<li><strong>Rastreabilidade:</strong> <code>app/api/auth/register/route.ts:12-161</code>; <code>app/api/auth/verify-email/route.ts:8-90</code>.</li>
+</ul>
+
+<h3>Fluxo F2 – Login e sessão de usuário</h3>
+<ul>
+<li><strong>Entradas que disparam:</strong> POST <code>/api/auth/login</code>; GET <code>/api/auth/me</code>; POST <code>/api/auth/logout</code>.</li>
+<li><strong>Perfis/atores:</strong> Cliente.</li>
+<li><strong>Pré-condições:</strong> Email verificado, <code>status=ACTIVE</code>, senha correta.</li>
+<li><strong>Passo a passo detalhado:</strong> rate limit; valida payload; busca usuário+role; verifica senha; bloqueia se não verificado ou status diferente de ACTIVE; atualiza <code>lastLoginAt</code>; cria sessão JWT/cookie.</li>
+<li><strong>Decisões/ramificações:</strong> senha/email inválidos → 401; email não verificado → 403; conta inativa → 403.</li>
+<li><strong>Efeitos no banco:</strong> update <code>User.lastLoginAt</code>.</li>
+<li><strong>Status/Enums envolvidos:</strong> <code>UserStatus.ACTIVE</code>.</li>
+<li><strong>Integrações externas:</strong> nenhuma.</li>
+<li><strong>Respostas/erros:</strong> 200 sucesso; 401/403/422/500.</li>
+<li><strong>Rastreabilidade:</strong> <code>app/api/auth/login/route.ts:12-161</code>.</li>
+</ul>
+
+<h3>Fluxo F3 – Recuperação e redefinição de senha</h3>
+<ul>
+<li><strong>Entradas que disparam:</strong> POST <code>/api/auth/forgot-password</code>; POST <code>/api/auth/reset-password</code>.</li>
+<li><strong>Perfis/atores:</strong> Cliente.</li>
+<li><strong>Pré-condições:</strong> Email cadastrado (não exposto); token válido para reset.</li>
+<li><strong>Passo a passo detalhado:</strong> forgot: rate limit, gera token hash e expiração, cria <code>PasswordResetToken</code>, envia email; reset: valida, confere token (não usado, não expirado), atualiza <code>passwordHash</code>, <code>tokenVersion</code>, marca token used (transação).</li>
+<li><strong>Decisões/ramificações:</strong> token inválido/expirado/used → 400; validação 422.</li>
+<li><strong>Efeitos no banco:</strong> cria <code>PasswordResetToken</code>; atualiza <code>User</code> senha/tokenVersion.</li>
+<li><strong>Status/Enums envolvidos:</strong> token usage; <code>User.tokenVersion</code>.</li>
+<li><strong>Integrações externas:</strong> email reset.</li>
+<li><strong>Respostas/erros:</strong> sucesso genérico; 400 token issues; 422 validação; 500.</li>
+<li><strong>Rastreabilidade:</strong> <code>app/api/auth/forgot-password/route.ts:12-103</code>; <code>app/api/auth/reset-password/route.ts:11-135</code>.</li>
+</ul>
+
+<h3>Fluxo F4 – Cotação de frete</h3>
+<ul>
+<li><strong>Entradas que disparam:</strong> UI <code>/cotacoes</code>; POST <code>/api/cotacoes</code>; GET <code>/api/cotacoes</code>.</li>
+<li><strong>Perfis/atores:</strong> Cliente autenticado.</li>
+<li><strong>Pré-condições:</strong> sessão válida; payload conforme schema.</li>
+<li><strong>Passo a passo detalhado:</strong> valida request; <code>createQuote</code> calcula peso cúbico, chama integrações (Correios) com fallback mock, aplica comissão; persiste <code>Quote</code>, volumes, opções; GET lista com filtros/paginação.</li>
+<li><strong>Decisões/ramificações:</strong> fallback para mock se integração indisponível; erros de validação 400.</li>
+<li><strong>Efeitos no banco:</strong> cria <code>Quote</code>, <code>QuoteVolume</code>, <code>QuoteOption</code>; seleção gera <code>QuoteSelection</code>.</li>
+<li><strong>Status/Enums envolvidos:</strong> <code>QuoteStatus</code> DRAFT/SELECTED/CONFIRMED/EXPIRED/CANCELED.</li>
+<li><strong>Integrações externas:</strong> Correios; mock fallback.</li>
+<li><strong>Respostas/erros:</strong> 201/200; 400/401/500.</li>
+<li><strong>Rastreabilidade:</strong> <code>app/api/cotacoes/route.ts:17-129</code>; <code>lib/quotes/service.ts:88-168</code>.</li>
+</ul>
+
+<h3>Fluxo F5 – Carrinho e itens</h3>
+<ul>
+<li><strong>Entradas que disparam:</strong> <code>/api/carrinho</code> (alias <code>/api/cart</code>), <code>/api/carrinho/[itemId]</code>, <code>/api/cart/items</code>.</li>
+<li><strong>Perfis/atores:</strong> Cliente autenticado.</li>
+<li><strong>Pré-condições:</strong> sessão válida.</li>
+<li><strong>Passo a passo detalhado:</strong> GET cria/retorna carrinho OPEN com itens; CRUD itens (origem/destino/volumes/quote); DELETE limpa e reseta totals/meta/status OPEN.</li>
+<li><strong>Decisões/ramificações:</strong> carrinho inexistente → 404; status LOCKED pode ser limpo.</li>
+<li><strong>Efeitos no banco:</strong> <code>Cart</code>, <code>CartItem</code>.</li>
+<li><strong>Status/Enums envolvidos:</strong> <code>Cart.status</code> OPEN/LOCKED.</li>
+<li><strong>Integrações externas:</strong> nenhuma.</li>
+<li><strong>Respostas/erros:</strong> 200/201; 400/401/404/500.</li>
+<li><strong>Rastreabilidade:</strong> <code>app/api/carrinho/route.ts:12-133</code>.</li>
+</ul>
+
+<h3>Fluxo F6 – Checkout e criação de envio</h3>
+<ul>
+<li><strong>Entradas que disparam:</strong> POST <code>/api/checkout</code>.</li>
+<li><strong>Perfis/atores:</strong> Cliente autenticado.</li>
+<li><strong>Pré-condições:</strong> volumes &gt;0; documento com itens; sessão válida.</li>
+<li><strong>Passo a passo detalhado:</strong> valida payload; calcula valor declarado; idempotência (envio similar &lt;5min retorna existente); garante carteira; define status inicial (coleta→PICKUP_REQUESTED, ponto→AWAITING_DROP_OFF_AT_POINT); cria <code>Shipment</code> e <code>Package</code> via serviço; cria <code>Label</code> pending; cria <code>PickupRequest</code> se solicitado; cria <code>TrackingEvent</code> inicial; salva destinatário recorrente opcional; retorna URL de pagamento se gateway ativo, senão tracking.</li>
+<li><strong>Decisões/ramificações:</strong> ausência de itens documento → 400; idempotência retorna existente; escolha de status inicial baseada em pickup/ponto.</li>
+<li><strong>Efeitos no banco:</strong> <code>Shipment</code>, <code>Package</code>, <code>Label</code>, <code>PickupRequest</code>, <code>TrackingEvent</code>, <code>Recipient</code> opcional.</li>
+<li><strong>Status/Enums envolvidos:</strong> <code>ShipmentStatus</code> inicial; <code>Label.status=pending</code>; <code>PickupRequest.status=PENDING</code>.</li>
+<li><strong>Integrações externas:</strong> gateway (apenas URL).</li>
+<li><strong>Respostas/erros:</strong> 400/401/500.</li>
+<li><strong>Rastreabilidade:</strong> <code>app/api/checkout/route.ts:95-499</code>; <code>lib/shipments/create-with-volumes.ts:69-136</code>; <code>lib/tracking/create-event.ts:47-62</code>.</li>
+</ul>
+
+<h3>Fluxo F7 – Pagamento via carteira</h3>
+<ul>
+<li><strong>Entradas que disparam:</strong> POST <code>/api/wallet/debit</code>.</li>
+<li><strong>Perfis/atores:</strong> Cliente autenticado.</li>
+<li><strong>Pré-condições:</strong> carteira existente e saldo suficiente; amount&gt;0; shipmentId/referenceId.</li>
+<li><strong>Passo a passo detalhado:</strong> valida; transação idempotente por referenceId; verifica carteira; debita <code>availableCents</code>; cria <code>WalletTransaction</code> CONFIRMED e <code>LedgerEntry</code> CHARGE; atualiza shipments (paymentMethod=WALLET, document.payment approved) e <code>Label</code> issued com PDF mock; retorna saldo.</li>
+<li><strong>Decisões/ramificações:</strong> referenceId existente → idempotente; saldo insuficiente → erro; violação unique tratada como idempotente.</li>
+<li><strong>Efeitos no banco:</strong> update <code>Wallet</code>; create <code>WalletTransaction</code>, <code>LedgerEntry</code>; update <code>Shipment</code> e <code>Label</code>.</li>
+<li><strong>Status/Enums envolvidos:</strong> <code>WalletTxStatus</code>; <code>Label.status</code> issued.</li>
+<li><strong>Integrações externas:</strong> nenhuma.</li>
+<li><strong>Respostas/erros:</strong> 200/400/401/500.</li>
+<li><strong>Rastreabilidade:</strong> <code>app/api/wallet/debit/route.ts:12-275</code>.</li>
+</ul>
+
+<h3>Fluxo F8 – Listagem e detalhe de envios</h3>
+<ul>
+<li><strong>Entradas que disparam:</strong> GET <code>/api/shipments</code>; GET <code>/api/shipments/[id]</code>.</li>
+<li><strong>Perfis/atores:</strong> Cliente (remetente).</li>
+<li><strong>Pré-condições:</strong> sessão válida; ownership.</li>
+<li><strong>Passo a passo detalhado:</strong> lista filtra por sender e exige packages; suporta busca e filtro status, paginação; detalhe busca envio com volumes/tracking/label/pickup; valida ownership; parseia documento e retorna volumes com itens, tracking ordenado.</li>
+<li><strong>Decisões/ramificações:</strong> 401/403/404 conforme acesso; filtros opcionais.</li>
+<li><strong>Efeitos no banco:</strong> leitura.</li>
+<li><strong>Status/Enums envolvidos:</strong> <code>ShipmentStatus</code>.</li>
+<li><strong>Integrações externas:</strong> nenhuma.</li>
+<li><strong>Respostas/erros:</strong> 200/400/401/403/404/500.</li>
+<li><strong>Rastreabilidade:</strong> <code>app/api/shipments/route.ts:5-188</code>; <code>app/api/shipments/[id]/route.ts:12-190</code>.</li>
+</ul>
+
+<h3>Fluxo F9 – Cancelamento e exclusão de envio</h3>
+<ul>
+<li><strong>Entradas que disparam:</strong> POST <code>/api/shipments/[id]/cancel</code>; DELETE <code>/api/shipments/[id]</code>.</li>
+<li><strong>Perfis/atores:</strong> Cliente.</li>
+<li><strong>Pré-condições:</strong> envio pertence ao usuário; status permite cancelamento; não pago para deleção.</li>
+<li><strong>Passo a passo detalhado:</strong> cancel: checa status final/cancelável; calcula próximo status de cancelamento; transação atualiza shipment status, label canceled, pickup PENDING/SCHEDULED → CANCELED; delete: só se paymentMethod ausente, deleta packages/label/tracking/shipment.</li>
+<li><strong>Decisões/ramificações:</strong> status final → bloqueio; pickup coletada não é cancelada; deleção bloqueada se pago.</li>
+<li><strong>Efeitos no banco:</strong> updates em Shipment/Label/PickupRequest; deletes cascata.</li>
+<li><strong>Status/Enums envolvidos:</strong> <code>ShipmentStatus</code> cancelamento; <code>Label.status</code>; <code>PickupRequest.status</code>.</li>
+<li><strong>Integrações externas:</strong> nenhuma.</li>
+<li><strong>Respostas/erros:</strong> 200/400/401/403/404/500.</li>
+<li><strong>Rastreabilidade:</strong> <code>app/api/shipments/[id]/cancel/route.ts:16-118</code>; <code>app/api/shipments/[id]/route.ts:196-263</code>.</li>
+</ul>
+
+<h3>Fluxo F10 – Suporte (tickets cliente)</h3>
+<ul>
+<li><strong>Entradas que disparam:</strong> <code>/api/support/tickets</code>, <code>/api/support/tickets/[id]</code>, <code>/api/support/tickets/[id]/messages</code>, <code>/api/support/tickets/[id]/attachments</code>.</li>
+<li><strong>Perfis/atores:</strong> Cliente autenticado.</li>
+<li><strong>Pré-condições:</strong> sessão válida.</li>
+<li><strong>Passo a passo detalhado:</strong> cria ticket (OPEN, prioridade MEDIUM), lista por user, detalhe com mensagens/attachments; mensagens com authorRole USER.</li>
+<li><strong>Decisões/ramificações:</strong> status alteração via admin; anexos armazenam url/tamanho.</li>
+<li><strong>Efeitos no banco:</strong> <code>SupportTicket</code>, <code>SupportMessage</code>, <code>SupportAttachment</code>.</li>
+<li><strong>Status/Enums envolvidos:</strong> <code>SupportTicketStatus</code>.</li>
+<li><strong>Integrações externas:</strong> nenhuma.</li>
+<li><strong>Respostas/erros:</strong> padrões.</li>
+<li><strong>Rastreabilidade:</strong> <code>app/api/support/tickets/*</code>.</li>
+</ul>
+
+<h3>Fluxo F11 – Rastreamento público</h3>
+<ul>
+<li><strong>Entradas que disparam:</strong> <code>/api/public/track/[code]</code>, <code>/api/tracking</code>; UI <code>/rastreio/[code]</code>.</li>
+<li><strong>Perfis/atores:</strong> Público.</li>
+<li><strong>Pré-condições:</strong> tracking code válido.</li>
+<li><strong>Passo a passo detalhado:</strong> busca shipment por <code>publicTrackingId</code>/trackingCode; retorna status e eventos.</li>
+<li><strong>Decisões/ramificações:</strong> 404 se não encontrado.</li>
+<li><strong>Efeitos no banco:</strong> leitura.</li>
+<li><strong>Status/Enums envolvidos:</strong> <code>ShipmentStatus</code>.</li>
+<li><strong>Integrações externas:</strong> nenhuma.</li>
+<li><strong>Respostas/erros:</strong> 200/404/500.</li>
+<li><strong>Rastreabilidade:</strong> <code>app/api/public/track/[code]/route.ts</code>; <code>app/api/tracking/route.ts</code>.</li>
+</ul>
+
+<h3>Fluxo F12 – Gestão de carteira/recipientes/endereço/cartões</h3>
+<ul>
+<li><strong>Entradas que disparam:</strong> <code>/api/account/addresses*</code>, <code>/api/account/recipients*</code>, <code>/api/account/cards*</code>, <code>/api/account/profile</code>, <code>/api/account/password</code>, <code>/api/account/security/change-password</code>, <code>/api/account/me</code>.</li>
+<li><strong>Perfis/atores:</strong> Cliente autenticado.</li>
+<li><strong>Pré-condições:</strong> sessão válida; ownership.</li>
+<li><strong>Passo a passo detalhado:</strong> CRUD em Address/Recipient/Card; change-password atualiza hash/tokenVersion; profile atualiza dados.</li>
+<li><strong>Decisões/ramificações:</strong> validação/404/403.</li>
+<li><strong>Efeitos no banco:</strong> updates/inserts/deletes; tokenVersion incrementa.</li>
+<li><strong>Status/Enums envolvidos:</strong> <code>CardBrand</code>, flags isDefault.</li>
+<li><strong>Integrações externas:</strong> tokenização/gateway para cartões.</li>
+<li><strong>Respostas/erros:</strong> 200/201/400/401/403/404.</li>
+<li><strong>Rastreabilidade:</strong> <code>app/api/account/*/route.ts</code>.</li>
+</ul>
+
+<h3>Fluxo F13 – Webhook Mercado Pago</h3>
+<ul>
+<li><strong>Entradas que disparam:</strong> POST <code>/api/webhooks/mercadopago</code>.</li>
+<li><strong>Perfis/atores:</strong> Mercado Pago.</li>
+<li><strong>Pré-condições:</strong> assinatura x-signature; payload.</li>
+<li><strong>Passo a passo detalhado:</strong> extrai headers/payload; chama <code>processWebhook</code> que valida assinatura, mapeia status, atualiza transação/labels/wallet.</li>
+<li><strong>Decisões/ramificações:</strong> processado → 200; falha → 400; erro → 500 (retry).</li>
+<li><strong>Efeitos no banco:</strong> <code>PaymentTransaction</code> updates; possivelmente <code>WalletTransaction</code>, <code>Shipment</code>.</li>
+<li><strong>Status/Enums envolvidos:</strong> <code>TransactionStatus</code>.</li>
+<li><strong>Integrações externas:</strong> Mercado Pago API.</li>
+<li><strong>Respostas/erros:</strong> 200/400/500.</li>
+<li><strong>Rastreabilidade:</strong> <code>app/api/webhooks/mercadopago/route.ts:22-82</code>; <code>lib/mercadopago/index.ts</code>.</li>
+</ul>
+
+<h3>Fluxo F14 – Coleta (PickupRequest) e área do coletor</h3>
+<ul>
+<li><strong>Entradas que disparam:</strong> criação de pickup no checkout; <code>/api/coletores/coletas*</code>, <code>/api/coletores/coletas-realizadas*</code>, <code>/api/coletores/dashboard</code>, <code>/api/coletores/suporte*</code>, <code>/api/coletores/documentos</code>.</li>
+<li><strong>Perfis/atores:</strong> Coletor autenticado; remetente ao solicitar coleta.</li>
+<li><strong>Pré-condições:</strong> PickupRequest existente; sessão do coletor.</li>
+<li><strong>Passo a passo detalhado:</strong> coletor agenda (<code>scheduleAt</code>), registra coleta (status COLLECTED/COMPLETED), registra tentativa (incrementa <code>attemptCount/notes</code>), entrega volumes; dashboard retorna pendências.</li>
+<li><strong>Decisões/ramificações:</strong> pickups PENDING/SCHEDULED canceladas se shipment cancelado (fluxo F9); coletas realizadas endpoint fecha ciclo.</li>
+<li><strong>Efeitos no banco:</strong> updates em <code>PickupRequest</code> (status, scheduleAt, attemptCount, notes).</li>
+<li><strong>Status/Enums envolvidos:</strong> <code>PickupRequest.status</code>.</li>
+<li><strong>Integrações externas:</strong> nenhuma.</li>
+<li><strong>Respostas/erros:</strong> padrões.</li>
+<li><strong>Rastreabilidade:</strong> <code>app/api/coletores/*</code>; <code>prisma/schema.prisma</code> PickupRequest.</li>
+</ul>
+
+<h3>Fluxo F15 – Labels e divergências de volumes</h3>
+<ul>
+<li><strong>Entradas que disparam:</strong> <code>/api/labels</code>, <code>/api/shipments/[id]/divergences</code>.</li>
+<li><strong>Perfis/atores:</strong> Cliente/operadores.</li>
+<li><strong>Pré-condições:</strong> shipment existente.</li>
+<li><strong>Passo a passo detalhado:</strong> divergência atualiza Package (hasDivergence, fields); label emitida no pagamento (F7), cancelada no cancelamento (F9).</li>
+<li><strong>Decisões/ramificações:</strong> apenas pacotes existentes.</li>
+<li><strong>Efeitos no banco:</strong> update <code>Package</code>; update <code>Label</code>.</li>
+<li><strong>Status/Enums envolvidos:</strong> <code>Label.status</code>; divergence flags.</li>
+<li><strong>Integrações externas:</strong> nenhuma (label mock PDF).</li>
+<li><strong>Respostas/erros:</strong> padrões.</li>
+<li><strong>Rastreabilidade:</strong> <code>app/api/shipments/[id]/divergences/route.ts</code>; <code>app/api/wallet/debit/route.ts</code>.</li>
+</ul>
+
+<h3>Fluxo F16 – Suporte/operacional admin e staff</h3>
+<ul>
+<li><strong>Entradas que disparam:</strong> <code>/api/admin/support/tickets*</code>, <code>/api/admin/staff/users*</code>, <code>/api/admin/ops/shipments*</code>, <code>/api/admin/ops/events*</code>.</li>
+<li><strong>Perfis/atores:</strong> Admin/Staff.</li>
+<li><strong>Pré-condições:</strong> sessão admin; permissões.</li>
+<li><strong>Passo a passo detalhado:</strong> CRUD de tickets admin, atribuição e respostas; CRUD staff users (status/reset); ops shipments (timeline, pickup-request, reprocess, bulk) e events (mark/retry).</li>
+<li><strong>Decisões/ramificações:</strong> permissões via AdminPermission; status controlado por endpoints específicos.</li>
+<li><strong>Efeitos no banco:</strong> <code>SupportTicket/Message</code>, <code>StaffUser</code>, <code>Ops events</code>, <code>Shipment</code> updates.</li>
+<li><strong>Status/Enums envolvidos:</strong> <code>SupportTicketStatus</code>, <code>StaffStatus</code>, shipment statuses.</li>
+<li><strong>Integrações externas:</strong> possivelmente reprocess chama transportadora.</li>
+<li><strong>Respostas/erros:</strong> padrões.</li>
+<li><strong>Rastreabilidade:</strong> <code>app/api/admin/support/tickets/*</code>; <code>app/api/admin/staff/users/*</code>; <code>app/api/admin/ops/shipments/*</code>.</li>
+</ul>
+
+<h3>Fluxo F17 – Integrações de transportadoras e gateways (admin)</h3>
+<ul>
+<li><strong>Entradas que disparam:</strong> <code>/api/admin/integrations/carriers*</code>, <code>/api/admin/integrations/correios*</code>, <code>/api/admin/integrations/mercadopago*</code>, <code>/api/admin/payment-gateway/config</code>.</li>
+<li><strong>Perfis/atores:</strong> Admin integrações.</li>
+<li><strong>Pré-condições:</strong> sessão admin; permissões INTEGRACOES.</li>
+<li><strong>Passo a passo detalhado:</strong> CRUD carriers/services/credentials/pricing/endpoints; testes de conexão; config MercadoPago e gateway; health checks e webhooks.</li>
+<li><strong>Decisões/ramificações:</strong> ativar/desativar integrações; rotacionar credenciais.</li>
+<li><strong>Efeitos no banco:</strong> Carrier*, PaymentGateway*, PaymentCredential/Endpoint/Webhook.</li>
+<li><strong>Status/Enums envolvidos:</strong> <code>IntegrationStatus</code>, <code>IntegrationEnvironment</code>, <code>AuthType</code>.</li>
+<li><strong>Integrações externas:</strong> transportadoras, Mercado Pago.</li>
+<li><strong>Respostas/erros:</strong> padrões.</li>
+<li><strong>Rastreabilidade:</strong> <code>app/api/admin/integrations/*</code>; <code>app/api/admin/payment-gateway/config/route.ts</code>.</li>
+</ul>
+
+<h3>Fluxo F18 – Financeiro (admin)</h3>
+<ul>
+<li><strong>Entradas que disparam:</strong> <code>/api/admin/finance/ledger*</code>, <code>/finance/reconciliation*</code>, <code>/finance/summary</code>, <code>/finance/expenses*</code>, <code>/finance/expense-templates*</code>, <code>/finance/commissions*</code>, <code>/finance/payouts*</code>, <code>/finance/invoices*</code>, <code>/finance/chargebacks*</code>, <code>/finance/wallet-transactions</code>.</li>
+<li><strong>Perfis/atores:</strong> Admin financeiro.</li>
+<li><strong>Pré-condições:</strong> permissões FINANCEIRO.</li>
+<li><strong>Passo a passo detalhado:</strong> lançamentos e reconciliação de ledger; CRUD despesas/templates; aprovação/pagamento de comissões/payouts/invoices/chargebacks; listagem de wallet transactions.</li>
+<li><strong>Decisões/ramificações:</strong> status das despesas/invoices/commissions/payouts; ajustes e reconciliações.</li>
+<li><strong>Efeitos no banco:</strong> <code>LedgerEntry</code>, <code>Expense</code>, <code>ExpenseTemplate</code>, <code>PaymentTransaction</code>, <code>PaymentChargeback</code>, <code>PaymentRefund</code>, <code>WalletTransaction</code>.</li>
+<li><strong>Status/Enums envolvidos:</strong> <code>ExpenseStatus</code>, <code>LedgerEntryType</code>, <code>TransactionStatus</code>, <code>WalletTxStatus</code>.</li>
+<li><strong>Integrações externas:</strong> gateway/pagamentos via sync endpoints.</li>
+<li><strong>Respostas/erros:</strong> padrões.</li>
+<li><strong>Rastreabilidade:</strong> <code>app/api/admin/finance/*</code>.</li>
+</ul>
+
+<h3>Fluxo F19 – Ponto de coleta (hub) recepção</h3>
+<ul>
+<li><strong>Entradas que disparam:</strong> <code>/api/pontos-coleta/auth/login/me/logout</code>; <code>/api/pontos-coleta/receptions*</code>; <code>/api/pontos-coleta/receptions/volumes/[id]/check|divergence</code>; <code>/api/pontos-coleta/dashboard</code>; <code>/api/pontos-coleta/tickets*</code>.</li>
+<li><strong>Perfis/atores:</strong> Operador de ponto de coleta.</li>
+<li><strong>Pré-condições:</strong> login do pickup point.</li>
+<li><strong>Passo a passo detalhado:</strong> autentica; registra entrada <code>Reception</code> (status PENDING); receive marca RECEIVED/PROCESSED; check/divergence marca issues; dashboard retorna métricas; tickets vinculados.</li>
+<li><strong>Decisões/ramificações:</strong> trackingCode unique; issueType/issueDetails para divergência.</li>
+<li><strong>Efeitos no banco:</strong> <code>Reception</code>; <code>SupportTicket</code> (pickupPointId).</li>
+<li><strong>Status/Enums envolvidos:</strong> <code>ReceptionStatus</code>.</li>
+<li><strong>Integrações externas:</strong> nenhuma.</li>
+<li><strong>Respostas/erros:</strong> padrões.</li>
+<li><strong>Rastreabilidade:</strong> <code>app/api/pontos-coleta/*</code>; <code>prisma/schema.prisma</code> Reception.</li>
+</ul>
+
+<h3>Fluxo F20 – Webhooks Pix/Tracking/Pickups</h3>
+<ul>
+<li><strong>Entradas que disparam:</strong> <code>/api/webhooks/pix</code>; <code>/api/webhooks/tracking</code>; <code>/api/webhooks/pickups</code>.</li>
+<li><strong>Perfis/atores:</strong> provedores externos.</li>
+<li><strong>Pré-condições:</strong> payload conforme provedor.</li>
+<li><strong>Passo a passo detalhado:</strong> valida payload; cria/atualiza PaymentTransaction (pix), TrackingEvent (tracking), PickupRequest/Shipment (pickups).</li>
+<li><strong>Decisões/ramificações:</strong> payload inválido → 400; erro → 500 (retry externo).</li>
+<li><strong>Efeitos no banco:</strong> updates conforme entidade alvo.</li>
+<li><strong>Status/Enums envolvidos:</strong> <code>TransactionStatus</code>, <code>ShipmentStatus</code>, <code>PickupRequest.status</code>.</li>
+<li><strong>Integrações externas:</strong> provedores de pix/tracking/pickup.</li>
+<li><strong>Respostas/erros:</strong> 200/400/500.</li>
+<li><strong>Rastreabilidade:</strong> <code>app/api/webhooks/pix/route.ts</code>; <code>app/api/webhooks/tracking/route.ts</code>; <code>app/api/webhooks/pickups/route.ts</code>.</li>
+</ul>
+
+<h3>Fluxo F21 – Configurações e preferências</h3>
+<ul>
+<li><strong>Entradas que disparam:</strong> <code>/api/user/preferences</code>, <code>/api/account/me</code>, <code>/api/system/status</code>, <code>/api/health</code>.</li>
+<li><strong>Perfis/atores:</strong> Cliente (preferences), público (health).</li>
+<li><strong>Pré-condições:</strong> sessão válida para preferences/me.</li>
+<li><strong>Passo a passo detalhado:</strong> update/GET preferences; me retorna dados; health/status retornam disponibilidade.</li>
+<li><strong>Decisões/ramificações:</strong> nenhuma relevante.</li>
+<li><strong>Efeitos no banco:</strong> update preferences (User).</li>
+<li><strong>Status/Enums envolvidos:</strong> n/a.</li>
+<li><strong>Integrações externas:</strong> nenhuma.</li>
+<li><strong>Respostas/erros:</strong> padrões.</li>
+<li><strong>Rastreabilidade:</strong> <code>app/api/user/preferences/route.ts</code>; <code>app/api/health/route.ts</code>.</li>
+</ul>
+
+<h3>Fluxo F22 – Gestão de itens recorrentes</h3>
+<ul>
+<li><strong>Entradas que disparam:</strong> <code>/api/recurring-items*</code>; <code>/api/admin/clients/[id]/recurring-items*</code>.</li>
+<li><strong>Perfis/atores:</strong> Cliente/Admin.</li>
+<li><strong>Pré-condições:</strong> sessão válida.</li>
+<li><strong>Passo a passo detalhado:</strong> CRUD <code>RecurringItem</code>; import/search; admin vincula a cliente.</li>
+<li><strong>Decisões/ramificações:</strong> ownership; filtros.</li>
+<li><strong>Efeitos no banco:</strong> <code>RecurringItem</code>.</li>
+<li><strong>Status/Enums envolvidos:</strong> n/a.</li>
+<li><strong>Integrações externas:</strong> nenhuma.</li>
+<li><strong>Respostas/erros:</strong> padrões.</li>
+<li><strong>Rastreabilidade:</strong> <code>app/api/recurring-items/*</code>; <code>app/api/admin/clients/[id]/recurring-items/*</code>.</li>
+</ul>
+
+<h3>Fluxo F23 – Upload público de documentos de coletor</h3>
+<ul>
+<li><strong>Entradas que disparam:</strong> POST <code>/api/public/upload/collector-document</code>.</li>
+<li><strong>Perfis/atores:</strong> Público (com parâmetros esperados).</li>
+<li><strong>Pré-condições:</strong> collectorId/type fornecidos.</li>
+<li><strong>Passo a passo detalhado:</strong> valida payload; cria/atualiza <code>CollectorDocument</code> (filename/url/type).</li>
+<li><strong>Decisões/ramificações:</strong> unique por collectorId+type.</li>
+<li><strong>Efeitos no banco:</strong> <code>CollectorDocument</code>.</li>
+<li><strong>Status/Enums envolvidos:</strong> n/a.</li>
+<li><strong>Integrações externas:</strong> storage (url).</li>
+<li><strong>Respostas/erros:</strong> 200/201/400/409.</li>
+<li><strong>Rastreabilidade:</strong> <code>app/api/public/upload/collector-document/route.ts</code>.</li>
+</ul>
+
+<h3>Fluxo F24 – Páginas administrativas de integração/email/config</h3>
+<ul>
+<li><strong>Entradas que disparam:</strong> UI admin config/integracoes/email/gateway; APIs correspondentes.</li>
+<li><strong>Perfis/atores:</strong> Admin.</li>
+<li><strong>Pré-condições:</strong> login admin.</li>
+<li><strong>Passo a passo detalhado:</strong> UI consome endpoints de configs (OAuth Google, SMTP, comissões).</li>
+<li><strong>Decisões/ramificações:</strong> ativar/desativar configs.</li>
+<li><strong>Efeitos no banco:</strong> <code>GoogleOAuthConfig</code>, <code>EmailConfig</code>, <code>PlatformCommission</code>.</li>
+<li><strong>Status/Enums envolvidos:</strong> <code>EmailConfigStatus</code>.</li>
+<li><strong>Integrações externas:</strong> SMTP, Google.</li>
+<li><strong>Respostas/erros:</strong> padrões.</li>
+<li><strong>Rastreabilidade:</strong> <code>app/api/admin/config/*</code>, <code>app/api/admin/email-config/*</code>.</li>
+</ul>
+
+<h3>Fluxo F25 – Scripts/manutenções</h3>
+<ul>
+<li><strong>Entradas que disparam:</strong> scripts em <code>scripts/*</code> (geocode, fipe, sync payments, etc.).</li>
+<li><strong>Perfis/atores:</strong> Operador CLI.</li>
+<li><strong>Pré-condições:</strong> execução manual com ambiente.</li>
+<li><strong>Passo a passo detalhado:</strong> cada script roda lógica específica (geocode, sync pagamentos, etc.).</li>
+<li><strong>Decisões/ramificações:</strong> conforme script.</li>
+<li><strong>Efeitos no banco:</strong> updates via Prisma.</li>
+<li><strong>Status/Enums envolvidos:</strong> variados.</li>
+<li><strong>Integrações externas:</strong> geocoding, MP, etc. dependendo do script.</li>
+<li><strong>Respostas/erros:</strong> saída CLI.</li>
+<li><strong>Rastreabilidade:</strong> arquivos em <code>scripts/*.ts|js</code>.</li>
+</ul>
+
+<h2>3) Subfluxos reutilizáveis (biblioteca)</h2>
+<ul>
+<li><code>createShipmentWithVolumes</code> (<code>lib/shipments/create-with-volumes.ts:69-136</code>): valida volumes&gt;0, calcula peso total, define status inicial, cria Shipment/Package.</li>
+<li><code>createInitialTrackingEvent</code> (<code>lib/tracking/create-event.ts:47-62</code>): cria evento inicial com status.</li>
+<li><code>calculateShippingOptions/quoteCarrier</code> (<code>lib/quotes/service.ts:88-168</code>): cotação por transportadora com fallback mock; agrega resultados.</li>
+<li><code>processWebhook/updatePaymentFromMercadoPago</code> (<code>lib/mercadopago/*</code>): valida assinatura, mapeia status de pagamento.</li>
+<li><code>rateLimitByIP</code> (<code>lib/rate-limit.ts</code>): aplicado em login/forgot.</li>
+<li>Sessão/auth (<code>lib/auth/session.ts</code>, <code>lib/auth/user-session.ts</code>): valida tokenVersion e cria sessões.</li>
+</ul>
+
+<h2>4) Apêndice – Mapa de Estados</h2>
+<ul>
+<li><code>ShipmentStatus</code> (<code>lib/shipments/shipment-status.ts:9-285</code>): criação em PICKUP_REQUESTED/awaiting drop-off; cancelamentos; fases transporte/entrega; finais.</li>
+<li><code>Label.status</code> (<code>prisma/schema.prisma:214-243</code>): pending→issued (pagamento)→canceled (cancel).</li>
+<li><code>PickupRequest.status</code> (<code>prisma/schema.prisma:240-276</code>): PENDING→SCHEDULED/COLLECTED/FAILED/CANCELED/COMPLETED.</li>
+<li><code>QuoteStatus</code> (<code>prisma/schema.prisma:132-151</code>): DRAFT→SELECTED/CONFIRMED/EXPIRED/CANCELED.</li>
+<li><code>Cart.status</code> (<code>prisma/schema.prisma:88-109</code>): OPEN/LOCKED.</li>
+<li><code>WalletTxStatus</code> (<code>prisma/schema.prisma:408-423</code>): PENDING/CONFIRMED/FAILED/CANCELED (débito confirma).</li>
+<li><code>SupportTicketStatus</code> (<code>prisma/schema.prisma:476-506</code>): OPEN/IN_PROGRESS/RESOLVED/CLOSED.</li>
+<li><code>ReceptionStatus</code> (<code>prisma/schema.prisma:430-463</code>): PENDING→RECEIVED/ISSUE_REPORTED/PROCESSED.</li>
+<li><code>ExpenseStatus</code> (<code>prisma/schema.prisma:1168-1196</code>): PENDING→PAID/CANCELED.</li>
+<li><code>StaffStatus</code> (<code>prisma/schema.prisma:240-259</code>): ACTIVE/BLOCKED.</li>
+<li><code>IntegrationStatus</code>, <code>TransactionStatus</code>, <code>PickupPointStatus</code> conforme modelos.</li>
+</ul>
+
+<h1>Documento de Validação Funcional – Fluxos da Plataforma Envio Legal</h1>
+
+<h2>1) Visão Geral</h2>
+<p><strong>1.1 Perfis/Atores (descobertos)</strong></p>
+<ul>
+<li>Cliente (usuário padrão) – cria conta, autentica, gera cotações, paga, acompanha envios.</li>
+<li>Coletor – acessa área própria para coletas e suporte.</li>
+<li>Ponto de Coleta – autentica e registra recepção/entradas de volumes.</li>
+<li>Admin/Staff – opera módulos de clientes, finanças, integrações, suporte, operações, ceps/fipe.</li>
+<li>Integrações externas – Mercado Pago (pagamentos/webhooks), Correios (cotação), provedores de tracking/pix/pickups via webhooks.</li>
+<li>Público anônimo – rastreia envio via tracking público, acessa páginas públicas.</li>
+</ul>
+
+<p><strong>1.2 Glossário (evidenciado no código)</strong></p>
+<ul>
+<li>Shipment (Envio) – registro principal de postagem/entrega com status logístico.</li>
+<li>Package (Volume) – volume associado ao shipment, pode ter divergência.</li>
+<li>Label (Etiqueta) – PDF associado ao shipment para postagem.</li>
+<li>Quote (Cotação) – cálculo de frete com opções e seleção.</li>
+<li>Cart/Carrinho – itens de cotação/volumes antes do checkout.</li>
+<li>Checkout – criação do shipment a partir do carrinho/seleção.</li>
+<li>PickupRequest (Coleta) – solicitação de coleta no endereço do remetente.</li>
+<li>Wallet (Carteira) – saldo do cliente, transações e ledger.</li>
+<li>SupportTicket – chamado de suporte (cliente/coletor/ponto).</li>
+<li>Reception – entrada de volume em ponto de coleta.</li>
+<li>PaymentTransaction – transação em gateway (Mercado Pago).</li>
+<li>RecurringItem – item recorrente cadastrado pelo usuário/admin.</li>
+</ul>
+
+<p><strong>1.3 Módulos/Domínios inferidos</strong> Autenticação e conta; Cotação e carrinho; Checkout e criação de envio; Pagamentos e carteira; Rastreamento; Suporte; Coletas (coletor); Pontos de coleta; Admin clientes; Admin finanças; Admin integrações; Admin operações (ops); Recorrentes; Webhooks externos.</p>
+
+<h2>2) Mapa Macro de Jornadas</h2>
+<p><strong>Jornada J1 – Cadastro &amp; Acesso</strong></p>
+<ul>
+<li>Início: visitante acessa páginas de login/cadastro → autentica.</li>
+<li>Fim: sessão criada ou email verificado.</li>
+<li>Atores: Cliente, Coletor, Admin.</li>
+<li>Artefatos: User/Collector/Staff, token de verificação, sessão.</li>
+</ul>
+
+<pre><code class="language-mermaid">
+flowchart TD
+  start[Visitante] --&gt; cadastro[Cadastro / Login]
+  cadastro --&gt;|sucesso| sessao[Sessão criada]
+  cadastro --&gt;|email pendente| verif[Verificação de email]
+  verif --&gt; statusAtivo[Conta ativa]
+  sessao --&gt; fim[Usuário autenticado]
+</code></pre>
+
+<p><strong>Jornada J2 – Cotar → Checkout → Pagar → Etiqueta</strong></p>
+<ul>
+<li>Início: Cliente abre cotação.</li>
+<li>Fim: Shipment criado, pagamento confirmado, etiqueta emitida.</li>
+<li>Atores: Cliente.</li>
+<li>Artefatos: Quote (opções), Cart/Items, Shipment, Label, WalletTransaction/PaymentTransaction, PickupRequest opcional, TrackingEvent inicial.</li>
+</ul>
+
+<pre><code class="language-mermaid">
+flowchart TD
+  cotar[Gerar cotação] --&gt; escolher[Selecionar opção]
+  escolher --&gt; carrinho[Carrinho/Itens]
+  carrinho --&gt; checkout[Checkout cria Shipment+Label pendente]
+  checkout --&gt;|solicitar coleta?| pickup[PickupRequest opcional]
+  checkout --&gt; tracking[Evento de tracking inicial]
+  checkout --&gt; pagar[Débito carteira / gateway]
+  pagar --&gt; etiqueta[Label emitida]
+  etiqueta --&gt; fimJ2[Envio aguardando logística]
+</code></pre>
+
+<p><strong>Jornada J3 – Logística &amp; Tracking</strong></p>
+<ul>
+<li>Início: Shipment criado.</li>
+<li>Fim: Entrega, cancelamento ou retorno.</li>
+<li>Atores: Cliente (consulta), Coletor (pickup), Ponto de coleta, Admin Ops.</li>
+<li>Artefatos: TrackingEvents, Updates de Shipment/Package, Label status, PickupRequest updates, Reception.</li>
+</ul>
+
+<pre><code class="language-mermaid">
+flowchart TD
+  criado[Shipment criado] --&gt; coleta[Coleta solicitada ou Drop-off]
+  coleta --&gt; eventos[Tracking events]
+  eventos --&gt; entregue[DELIVERED]
+  eventos --&gt; cancel[Cancelamentos]
+  eventos --&gt; retorno[RETURNING/RETURNED]
+</code></pre>
+
+<p><strong>Jornada J4 – Suporte</strong></p>
+<ul>
+<li>Início: Cliente/Coletor/Ponto abre ticket.</li>
+<li>Fim: Ticket resolvido/fechado.</li>
+<li>Atores: Cliente, Coletor, Ponto, Admin/Staff.</li>
+<li>Artefatos: SupportTicket, SupportMessage, Attachments.</li>
+</ul>
+
+<pre><code class="language-mermaid">
+flowchart TD
+  abrir[Abre ticket] --&gt; mensagens[Mensagens/Anexos]
+  mensagens --&gt; admin[Atuação staff/admin]
+  admin --&gt; status[Status: OPEN/IN_PROGRESS/RESOLVED/CLOSED]
+  status --&gt; fimSuporte[Ticket encerrado]
+</code></pre>
+
+<p><strong>Jornada J5 – Financeiro (Admin)</strong></p>
+<ul>
+<li>Início: Admin acessa finanças.</li>
+<li>Fim: Ledger conciliado, despesas lançadas, comissões/payouts marcados.</li>
+<li>Atores: Admin Financeiro.</li>
+<li>Artefatos: LedgerEntry, Expense/ExpenseTemplate, PaymentTransaction, Chargeback/Refund, WalletTransaction.</li>
+</ul>
+
+<pre><code class="language-mermaid">
+flowchart TD
+  acesso[Admin acessa finanças] --&gt; ledger[Movimentos/ledger]
+  acesso --&gt; despesas[Despesas/Templates]
+  acesso --&gt; comissoes[Comissões/Payouts]
+  ledger --&gt; conciliacao[Reconciliação]
+  despesas --&gt; pagamento[Marcar pago/cancelado]
+  comissoes --&gt; repasse[Payout/Chargeback]
+  conciliacao --&gt; fimFin[Financeiro atualizado]
+</code></pre>
+
+<h2>3) Catálogo Completo de Fluxos</h2>
+<h3>Domínio: Autenticação e Conta (Cliente)</h3>
+<h4>Fluxo F01 – Cadastro de usuário</h4>
+<ul>
+<li><strong>Objetivo:</strong> criar conta de cliente.</li>
+<li><strong>Atores/Perfis:</strong> Visitante.</li>
+<li><strong>Entradas:</strong> POST <code>/api/auth/register</code>; UI páginas <code>/auth/cadastro</code>.</li>
+<li><strong>Pré-condições:</strong> payload válido (<code>RegisterSchema</code>), email único.</li>
+<li><strong>Passo a passo (feliz):</strong></li>
+</ul>
+<ol>
+<li>Valida dados (nome/email/senha/telefone).</li>
+<li>Verifica email não existente.</li>
+<li>Hasheia senha, gera token de verificação.</li>
+<li>Busca role <code>user</code>; cria <code>User</code> com <code>status=pending</code>, <code>emailVerified=false</code>.</li>
+<li>Envia email de verificação.</li>
+<li>Retorna confirmação e flag de envio de email.</li>
+</ol>
+<ul>
+<li><strong>Variações do fluxo:</strong></li>
+<li>V1: Email já cadastrado → 409 e mensagem de email em uso.</li>
+<li>V2: Falha de validação → 422 com lista de campos.</li>
+<li>V3: Falha ao enviar email → cadastro ok, mas mensagem indicando reenvio.</li>
+<li><strong>Regras e restrições:</strong> email único; termos aceitos (registrado no campo termsAcceptedAt).</li>
+<li><strong>Estados/Status envolvidos:</strong> <code>User.status</code> pending; <code>emailVerified=false</code>.</li>
+<li><strong>Dados persistidos:</strong> <code>User</code> (nome, email, passwordHash, status pending, token, roleId).</li>
+<li><strong>Integrações externas:</strong> Envio de email de verificação.</li>
+<li><strong>Mensagens/Erros:</strong> 201 sucesso; 409 email duplicado; 422 dados inválidos; 500 erro interno (sem detalhes de negócio).</li>
+<li><strong>Critérios de aceite:</strong></li>
+<li>CA1: Cadastro retorna 201 e grava usuário pending com token.</li>
+<li>CA2: Email duplicado responde 409 sem criar registro novo.</li>
+<li><strong>Rastreabilidade:</strong> <code>app/api/auth/register/route.ts:12-161</code>.</li>
+</ul>
+
+<h4>Fluxo F02 – Verificação de email</h4>
+<ul>
+<li><strong>Objetivo:</strong> ativar conta via token enviado.</li>
+<li><strong>Atores/Perfis:</strong> Cliente pendente.</li>
+<li><strong>Entradas:</strong> GET <code>/api/auth/verify-email?token=...</code>; UI <code>/auth/verify-email</code>.</li>
+<li><strong>Pré-condições:</strong> token presente.</li>
+<li><strong>Passo a passo (feliz):</strong></li>
+</ul>
+<ol>
+<li>Lê token, faz hash.</li>
+<li>Busca usuário com token e <code>emailVerified=false</code>.</li>
+<li>Atualiza <code>emailVerified=true</code>, <code>emailVerifiedAt</code>, <code>status=active</code>, limpa token.</li>
+<li>Retorna sucesso.</li>
+</ol>
+<ul>
+<li><strong>Variações do fluxo:</strong></li>
+<li>V1: Token inválido/expirado → 400 com mensagem para solicitar novo.</li>
+<li>V2: Usuário já verificado → resposta de já verificado (200).</li>
+<li><strong>Regras e restrições:</strong> token obrigatório.</li>
+<li><strong>Estados/Status envolvidos:</strong> pending → active.</li>
+<li><strong>Dados persistidos:</strong> update em User (flags e status).</li>
+<li><strong>Integrações externas:</strong> nenhuma.</li>
+<li><strong>Mensagens/Erros:</strong> 400 token inválido; 200 sucesso/already verified.</li>
+<li><strong>Critérios de aceite:</strong></li>
+<li>CA1: Token válido ativa conta e limpa token.</li>
+<li>CA2: Token inválido não altera usuário.</li>
+<li><strong>Rastreabilidade:</strong> <code>app/api/auth/verify-email/route.ts:8-90</code>.</li>
+</ul>
+
+<h4>Fluxo F03 – Login de usuário</h4>
+<ul>
+<li><strong>Objetivo:</strong> autenticar e criar sessão.</li>
+<li><strong>Atores/Perfis:</strong> Cliente.</li>
+<li><strong>Entradas:</strong> POST <code>/api/auth/login</code>; UI <code>/auth/login</code>.</li>
+<li><strong>Pré-condições:</strong> email verificado, <code>status=ACTIVE</code>, senha correta.</li>
+<li><strong>Passo a passo (feliz):</strong></li>
+</ul>
+<ol>
+<li>Aplica rate limit (5 tentativas/5min).</li>
+<li>Valida payload.</li>
+<li>Busca usuário e compara senha.</li>
+<li>Bloqueia se email não verificado ou status ≠ ACTIVE.</li>
+<li>Atualiza <code>lastLoginAt</code>.</li>
+<li>Cria sessão JWT/cookie com tokenVersion.</li>
+<li>Retorna dados do usuário.</li>
+</ol>
+<ul>
+<li><strong>Variações do fluxo:</strong></li>
+<li>V1: Email/senha inválidos → 401 genérico.</li>
+<li>V2: Email não verificado → 403 com código <code>EMAIL_NOT_VERIFIED</code>.</li>
+<li>V3: Status inativo → 403 “Conta inativa ou bloqueada”.</li>
+<li><strong>Regras e restrições:</strong> rate limit por IP.</li>
+<li><strong>Estados/Status envolvidos:</strong> <code>User.status=ACTIVE</code>; <code>lastLoginAt</code> atualizado.</li>
+<li><strong>Dados persistidos:</strong> update <code>User.lastLoginAt</code>.</li>
+<li><strong>Integrações externas:</strong> nenhuma.</li>
+<li><strong>Mensagens/Erros:</strong> 401 inválido; 403 email não verificado/conta inativa; 422 validação; 500 genérico.</li>
+<li><strong>Critérios de aceite:</strong></li>
+<li>CA1: Login com email verificado e status ativo cria sessão e retorna 200.</li>
+<li>CA2: Email não verificado responde 403 e não cria sessão.</li>
+<li><strong>Rastreabilidade:</strong> <code>app/api/auth/login/route.ts:12-161</code>.</li>
+</ul>
+
+<h4>Fluxo F04 – Recuperação e redefinição de senha</h4>
+<ul>
+<li><strong>Objetivo:</strong> permitir reset de senha.</li>
+<li><strong>Atores/Perfis:</strong> Cliente.</li>
+<li><strong>Entradas:</strong> POST <code>/api/auth/forgot-password</code>; POST <code>/api/auth/reset-password</code>; UIs <code>/auth/esqueci-senha</code>, <code>/auth/reset-password</code>.</li>
+<li><strong>Pré-condições:</strong> email válido para reset; token válido para redefinição.</li>
+<li><strong>Passo a passo (feliz):</strong></li>
+</ul>
+<ol>
+<li>Forgot: valida email, cria <code>PasswordResetToken</code> (hash, expira em 1h), envia email com link.</li>
+<li>Reset: valida payload, hash do token, verifica registro não usado e não expirado.</li>
+<li>Hasheia nova senha, incrementa <code>tokenVersion</code>, atualiza <code>passwordUpdatedAt</code>, marca token used (transação).</li>
+<li>Retorna sucesso.</li>
+</ol>
+<ul>
+<li><strong>Variações do fluxo:</strong></li>
+<li>V1: Email inexistente → responde sucesso genérico (não revela).</li>
+<li>V2: Token inválido/expirado/used → 400 mensagens específicas.</li>
+<li>V3: Validação falha → 422.</li>
+<li><strong>Regras e restrições:</strong> rate limit no forgot (3/10min); token único e expira 1h.</li>
+<li><strong>Estados/Status envolvidos:</strong> <code>PasswordResetToken.usedAt</code>; <code>User.tokenVersion</code> incrementado (invalida sessões).</li>
+<li><strong>Dados persistidos:</strong> create em <code>PasswordResetToken</code>; update em <code>User</code>.</li>
+<li><strong>Integrações externas:</strong> Email reset.</li>
+<li><strong>Mensagens/Erros:</strong> sucessos genéricos; 400 token issues; 422 validação; 500 genérico.</li>
+<li><strong>Critérios de aceite:</strong></li>
+<li>CA1: Token válido troca senha e incrementa tokenVersion.</li>
+<li>CA2: Token expirado não altera senha e retorna 400.</li>
+<li><strong>Rastreabilidade:</strong> <code>app/api/auth/forgot-password/route.ts:12-103</code>; <code>app/api/auth/reset-password/route.ts:11-135</code>.</li>
+</ul>
+
+<h4>Fluxo F05 – Gestão de perfil, endereços, destinatários, cartões (consultas e atualizações)</h4>
+<ul>
+<li><strong>Objetivo:</strong> manter dados da conta e meios de pagamento.</li>
+<li><strong>Atores/Perfis:</strong> Cliente autenticado.</li>
+<li><strong>Entradas:</strong> APIs <code>/api/account/me</code>, <code>/api/account/profile</code>, <code>/api/account/password</code>, <code>/api/account/security/change-password</code>, <code>/api/account/addresses*</code>, <code>/api/account/recipients*</code>, <code>/api/account/cards*</code>.</li>
+<li><strong>Pré-condições:</strong> sessão válida; ownership do recurso.</li>
+<li><strong>Passo a passo (feliz):</strong></li>
+</ul>
+<ol>
+<li>Consultas retornam dados do usuário e coleções (endereços, destinatários, cartões) filtrando por <code>userId</code>.</li>
+<li>Criação/edição valida payloads (schemas) e grava em tabelas correspondentes.</li>
+<li>Change-password valida senha atual e atualiza <code>passwordHash/tokenVersion</code>.</li>
+</ol>
+<ul>
+<li><strong>Variações do fluxo:</strong> Erros de validação → 400/422; recursos inexistentes → 404; falta de permissão → 403.</li>
+<li><strong>Regras e restrições:</strong> <code>Address/Recipient/Card</code> vinculados a user; fingerprints únicos para cartão; flags de default.</li>
+<li><strong>Estados/Status envolvidos:</strong> <code>Card.isDefault</code>; <code>Address.isDefault</code>; <code>User.tokenVersion</code>.</li>
+<li><strong>Dados persistidos:</strong> CRUD em <code>Address</code>, <code>Recipient</code>, <code>Card</code>, campos de User.</li>
+<li><strong>Integrações externas:</strong> tokenização/cartões podem chamar gateway (e.g., MercadoPago) nos endpoints de tokenize/create-token.</li>
+<li><strong>Mensagens/Erros:</strong> padrões HTTP 200/201/400/401/403/404/422/500.</li>
+<li><strong>Critérios de aceite:</strong></li>
+<li>CA1: Operações só afetem registros do próprio usuário.</li>
+<li>CA2: Troca de senha incrementa tokenVersion e invalida sessões antigas.</li>
+<li><strong>Rastreabilidade:</strong> arquivos <code>app/api/account/*/route.ts</code> (linhas 1+).</li>
+</ul>
+
+<h3>Domínio: Cotação e Carrinho</h3>
+<h4>Fluxo F06 – Geração de cotação</h4>
+<ul>
+<li><strong>Objetivo:</strong> calcular opções de frete.</li>
+<li><strong>Atores/Perfis:</strong> Cliente autenticado.</li>
+<li><strong>Entradas:</strong> POST <code>/api/cotacoes</code>; UI <code>/cotacoes</code>.</li>
+<li><strong>Pré-condições:</strong> sessão válida; payload conforme <code>quoteRequestSchema</code>.</li>
+<li><strong>Passo a passo (feliz):</strong></li>
+</ul>
+<ol>
+<li>Valida request; normaliza CEPs e volumes.</li>
+<li>Chama <code>createQuote</code> que calcula cubic weight, aplica regras, chama transportadoras.</li>
+<li>Tenta Correios real; se indisponível, fallback para mock; agrega resultados.</li>
+<li>Persiste <code>Quote</code>, <code>QuoteVolume</code>, <code>QuoteOption</code>; retorna opções e pontos parceiros.</li>
+</ol>
+<ul>
+<li><strong>Variações do fluxo:</strong></li>
+<li>V1: Validação falha → 400 com detalhes.</li>
+<li>V2: Integração Correios indisponível → usa mock e indica source <code>mock</code>.</li>
+<li><strong>Regras e restrições:</strong> volumes obrigatórios; CEPs válidos; fallback permitido.</li>
+<li><strong>Estados/Status envolvidos:</strong> <code>QuoteStatus=DRAFT</code> na criação.</li>
+<li><strong>Dados persistidos:</strong> tabelas de Quote e opções.</li>
+<li><strong>Integrações externas:</strong> Correios (quote), fallback mock.</li>
+<li><strong>Mensagens/Erros:</strong> 201 sucesso; 400 dados inválidos; 401 não autenticado; 500 erro de cálculo.</li>
+<li><strong>Critérios de aceite:</strong></li>
+<li>CA1: Com Correios fora, ainda retorna opções mock.</li>
+<li>CA2: Resultado inclui expiresAt e lista de opções ordenáveis.</li>
+<li><strong>Rastreabilidade:</strong> <code>app/api/cotacoes/route.ts:17-77</code>; <code>lib/quotes/service.ts:88-168</code>.</li>
+</ul>
+
+<h4>Fluxo F07 – Seleção/atualização de cotação e listagem</h4>
+<ul>
+<li><strong>Objetivo:</strong> selecionar opção e consultar histórico.</li>
+<li><strong>Atores/Perfis:</strong> Cliente.</li>
+<li><strong>Entradas:</strong> POST <code>/api/cotacoes/selecionar</code>; GET <code>/api/cotacoes</code>; GET <code>/api/cotacoes/[id]</code>.</li>
+<li><strong>Pré-condições:</strong> sessão válida; quote pertence ao usuário.</li>
+<li><strong>Passo a passo (feliz):</strong></li>
+</ul>
+<ol>
+<li>Seleção grava <code>QuoteSelection</code> e status <code>SELECTED</code>.</li>
+<li>Listagem aplica filtros (page/limit/status/sort/order) e retorna paginação.</li>
+<li>Detalhe retorna volumes, opções e seleção.</li>
+</ol>
+<ul>
+<li><strong>Variações:</strong> Validação de params → 400; não autenticado → 401.</li>
+<li><strong>Regras:</strong> ownership; quote não expirada.</li>
+<li><strong>Estados/Status:</strong> <code>QuoteStatus SELECTED/CONFIRMED/EXPIRED/CANCELED</code> conforme ações subsequentes.</li>
+<li><strong>Dados persistidos:</strong> update em <code>QuoteSelection</code>/<code>Quote.status</code>.</li>
+<li><strong>Integrações externas:</strong> nenhuma.</li>
+<li><strong>Mensagens/Erros:</strong> padrões.</li>
+<li><strong>Critérios de aceite:</strong></li>
+<li>CA1: Seleção não permitida para quote de outro usuário.</li>
+<li>CA2: Listagem respeita paginação e filtros.</li>
+<li><strong>Rastreabilidade:</strong> <code>app/api/cotacoes/route.ts:86-129</code>.</li>
+</ul>
+
+<h4>Fluxo F08 – Gestão de carrinho</h4>
+<ul>
+<li><strong>Objetivo:</strong> manter itens antes do checkout.</li>
+<li><strong>Atores/Perfis:</strong> Cliente.</li>
+<li><strong>Entradas:</strong> GET/DELETE <code>/api/carrinho</code> (alias <code>/api/cart</code>); POST/PUT/DELETE <code>/api/carrinho/[itemId]</code>; <code>/api/carrinho/checkout</code>.</li>
+<li><strong>Pré-condições:</strong> sessão válida.</li>
+<li><strong>Passo a passo (feliz):</strong></li>
+</ul>
+<ol>
+<li>GET cria/retorna carrinho OPEN com itens.</li>
+<li>CRUD de itens adiciona origens/destinos/volumes/preferences/selectedQuote.</li>
+<li>DELETE limpa itens e reseta status/totals/meta.</li>
+</ol>
+<ul>
+<li><strong>Variações:</strong> Carrinho não encontrado → 404; validação de item → 400.</li>
+<li><strong>Regras:</strong> status permitido OPEN/LOCKED para limpeza; totals resetados ao limpar.</li>
+<li><strong>Estados/Status:</strong> <code>Cart.status</code> OPEN/LOCKED.</li>
+<li><strong>Dados persistidos:</strong> <code>Cart</code>, <code>CartItem</code>.</li>
+<li><strong>Integrações externas:</strong> nenhuma.</li>
+<li><strong>Mensagens/Erros:</strong> 200/201; 400/401/404/500.</li>
+<li><strong>Critérios de aceite:</strong></li>
+<li>CA1: GET cria carrinho se não existir.</li>
+<li>CA2: DELETE deixa carrinho em OPEN com totals zerados.</li>
+<li><strong>Rastreabilidade:</strong> <code>app/api/carrinho/route.ts:12-133</code>.</li>
+</ul>
+
+<h3>Domínio: Checkout, Shipment, Pagamento, Rastreamento</h3>
+<h4>Fluxo F09 – Checkout e criação de envio</h4>
+<ul>
+<li><strong>Objetivo:</strong> converter cotação em shipment e etiqueta pendente.</li>
+<li><strong>Atores/Perfis:</strong> Cliente.</li>
+<li><strong>Entradas:</strong> POST <code>/api/checkout</code>.</li>
+<li><strong>Pré-condições:</strong> sessão válida; documentos com itens; volumes &gt;0.</li>
+<li><strong>Passo a passo (feliz):</strong></li>
+</ul>
+<ol>
+<li>Valida payload (documento/volumes/endereços).</li>
+<li>Calcula valor declarado (por volume ou itens).</li>
+<li>Idempotência: se shipment similar &lt;5min, retorna existente.</li>
+<li>Garante carteira; define status inicial (coleta → <code>PICKUP_REQUESTED</code>, drop-off → <code>AWAITING_DROP_OFF_AT_POINT</code>).</li>
+<li>Cria <code>Shipment</code> + <code>Package</code> via subfluxo SF1; cria <code>Label</code> pending; opcional <code>PickupRequest</code> PENDING; cria <code>TrackingEvent</code> inicial.</li>
+<li>Salva destinatário recorrente se solicitado.</li>
+<li>Se gateway ativo, retorna URL de pagamento; senão retorna tracking info.</li>
+</ol>
+<ul>
+<li><strong>Variações do fluxo:</strong></li>
+<li>V1: Falta itens de documento → 400 <code>MISSING_DOCUMENT_ITEMS</code>.</li>
+<li>V2: Idempotência encontra shipment → retorna existente sem recriar.</li>
+<li>V3: SolicitarColeta=false com pickupPointId → status inicial drop-off.</li>
+<li><strong>Regras e restrições:</strong> volumes &gt;0; documento obrigatório; status inicial baseado em coleta/ponto; idempotência por comparação de campos e janela de 5min.</li>
+<li><strong>Estados/Status envolvidos:</strong> Shipment status inicial; Label <code>pending</code>; PickupRequest <code>PENDING</code>.</li>
+<li><strong>Dados persistidos:</strong> <code>Shipment</code>, <code>Package</code>, <code>Label</code>, <code>PickupRequest</code>, <code>TrackingEvent</code>, opcional <code>Recipient</code>.</li>
+<li><strong>Integrações externas:</strong> Gateway (URL); nenhuma chamada de cobrança aqui.</li>
+<li><strong>Mensagens/Erros:</strong> 400 validação; 401 não autenticado; 500 genérico.</li>
+<li><strong>Critérios de aceite:</strong></li>
+<li>CA1: Shipment criado sempre tem pelo menos um Package.</li>
+<li>CA2: Requisição idêntica em &lt;5min retorna mesmo shipment.</li>
+<li><strong>Subfluxo SF1:</strong> <code>createShipmentWithVolumes</code> (valida volumes, calcula peso, cria shipment+packages).</li>
+<li><strong>Rastreabilidade:</strong> <code>app/api/checkout/route.ts:95-499</code>; <code>lib/shipments/create-with-volumes.ts:69-136</code>; <code>lib/tracking/create-event.ts:47-62</code>.</li>
+</ul>
+
+<h4>Fluxo F10 – Pagamento via carteira (envios e outros)</h4>
+<ul>
+<li><strong>Objetivo:</strong> debitar carteira e emitir etiqueta.</li>
+<li><strong>Atores/Perfis:</strong> Cliente.</li>
+<li><strong>Entradas:</strong> POST <code>/api/wallet/debit</code>.</li>
+<li><strong>Pré-condições:</strong> sessão válida; <code>amount&amp;gt;0</code>; saldo suficiente.</li>
+<li><strong>Passo a passo (feliz):</strong></li>
+</ul>
+<ol>
+<li>Valida shipmentId/referenceId e amount.</li>
+<li>Transação: checa idempotência por referenceId; verifica carteira e saldo.</li>
+<li>Debita <code>availableCents</code>; cria <code>WalletTransaction</code> CONFIRMED e <code>LedgerEntry</code> CHARGE.</li>
+<li>Atualiza shipments vinculados: <code>paymentMethod=WALLET</code>, document.payment approved, e label <code>issued</code> com PDF mock.</li>
+<li>Retorna saldo e id transação.</li>
+</ol>
+<ul>
+<li><strong>Variações do fluxo:</strong></li>
+<li>V1: referenceId já usado → retorna ok idempotente.</li>
+<li>V2: Saldo insuficiente → 400 code <code>INSUFFICIENT_FUNDS</code>.</li>
+<li>V3: Violação unique (P2002) → trata como idempotente se existir transação.</li>
+<li><strong>Regras e restrições:</strong> only user’s wallet; shipmentId opcional se referenceId fornecido; amount &gt;0.</li>
+<li><strong>Estados/Status envolvidos:</strong> <code>WalletTransaction status=CONFIRMED</code>; <code>Label.status=issued</code>.</li>
+<li><strong>Dados persistidos:</strong> update <code>Wallet</code>; create <code>WalletTransaction</code>, <code>LedgerEntry</code>; update <code>Shipment</code> document/payment; update <code>Label</code>.</li>
+<li><strong>Integrações externas:</strong> nenhuma (mock).</li>
+<li><strong>Mensagens/Erros:</strong> 200 ok/idempotent; 400 saldo insuficiente/dados inválidos; 401 não autorizado; 500 genérico.</li>
+<li><strong>Critérios de aceite:</strong></li>
+<li>CA1: referenceId único garante idempotência.</li>
+<li>CA2: Após pagamento, label fica <code>issued</code> e shipment document contém payment aprovado.</li>
+<li><strong>Rastreabilidade:</strong> <code>app/api/wallet/debit/route.ts:12-275</code>.</li>
+</ul>
+
+<h4>Fluxo F11 – Consulta de envios</h4>
+<ul>
+<li><strong>Objetivo:</strong> listar envios do cliente com filtros e paginação.</li>
+<li><strong>Atores/Perfis:</strong> Cliente.</li>
+<li><strong>Entradas:</strong> GET <code>/api/shipments</code>.</li>
+<li><strong>Pré-condições:</strong> sessão válida.</li>
+<li><strong>Passo a passo (feliz):</strong></li>
+</ul>
+<ol>
+<li>Filtra por <code>senderId</code> e exige packages existentes.</li>
+<li>Aplica busca textual e filtro de status (mapa UI→backend).</li>
+<li>Pagina (page/limit) e ordena por createdAt desc.</li>
+<li>Retorna itens com status UI, divergências, pickup info, label URL e tracking URL.</li>
+</ol>
+<ul>
+<li><strong>Variações:</strong> status “Todos” não filtra; q vazio não aplica OR.</li>
+<li><strong>Regras:</strong> só shipments do usuário.</li>
+<li><strong>Estados/Status:</strong> quaisquer do <code>ShipmentStatus</code>; mapeamento UI.</li>
+<li><strong>Dados persistidos:</strong> leitura.</li>
+<li><strong>Integrações externas:</strong> nenhuma.</li>
+<li><strong>Mensagens/Erros:</strong> 200; 401 se não logado; 500 erro busca.</li>
+<li><strong>Critérios de aceite:</strong></li>
+<li>CA1: Lista só shipments com pelo menos 1 volume.</li>
+<li>CA2: Paginação retorna totalPages e flags hasNext/Prev.</li>
+<li><strong>Rastreabilidade:</strong> <code>app/api/shipments/route.ts:5-188</code>.</li>
+</ul>
+
+<h4>Fluxo F12 – Detalhe de envio e volumes</h4>
+<ul>
+<li><strong>Objetivo:</strong> obter detalhes completos de um envio.</li>
+<li><strong>Atores/Perfis:</strong> Cliente.</li>
+<li><strong>Entradas:</strong> GET <code>/api/shipments/[id]</code>; UI <code>/shipments/[id]</code>.</li>
+<li><strong>Pré-condições:</strong> sessão válida; ownership.</li>
+<li><strong>Passo a passo (feliz):</strong></li>
+</ul>
+<ol>
+<li>Busca shipment com packages, trackingEvents, label, pickupRequest.</li>
+<li>Valida que senderId é do usuário.</li>
+<li>Parseia documento (NFE/DECLARACAO) para listar nfeKeys/items.</li>
+<li>Mapeia packages → volumes com itens por volume (se houver).</li>
+<li>Serializa datas e retorna pickup/label/tracking.</li>
+</ol>
+<ul>
+<li><strong>Variações:</strong> 404 se não existe; 403 se não pertence.</li>
+<li><strong>Regras:</strong> acesso restrito ao remetente.</li>
+<li><strong>Estados/Status:</strong> apenas leitura; mostra status atual.</li>
+<li><strong>Dados persistidos:</strong> leitura.</li>
+<li><strong>Integrações externas:</strong> nenhuma.</li>
+<li><strong>Mensagens/Erros:</strong> 200; 401/403/404/500.</li>
+<li><strong>Critérios de aceite:</strong></li>
+<li>CA1: Documento retornado distingue NFE/DECLARACAO e inclui chaves/itens.</li>
+<li>CA2: Volumes vêm ordenados por packageNumber.</li>
+<li><strong>Rastreabilidade:</strong> <code>app/api/shipments/[id]/route.ts:12-190</code>.</li>
+</ul>
+
+<h4>Fluxo F13 – Cancelamento de envio</h4>
+<ul>
+<li><strong>Objetivo:</strong> registrar cancelamento conforme status.</li>
+<li><strong>Atores/Perfis:</strong> Cliente.</li>
+<li><strong>Entradas:</strong> POST <code>/api/shipments/[id]/cancel</code>.</li>
+<li><strong>Pré-condições:</strong> sessão válida; envio pertence ao cliente; não em status final; status permitido para cancelamento.</li>
+<li><strong>Passo a passo (feliz):</strong></li>
+</ul>
+<ol>
+<li>Verifica ownership e status atual.</li>
+<li>Checa se status é final; se não, avalia <code>canBeCancelled</code>.</li>
+<li>Calcula próximo status de cancelamento (<code>getNextCancellationStatus</code>).</li>
+<li>Transação: atualiza Shipment para status de cancelamento; Label → <code>canceled</code>; PickupRequest → <code>CANCELED</code> se PENDING/SCHEDULED.</li>
+<li>Retorna mensagem conforme tipo (antes ou em trânsito).</li>
+</ol>
+<ul>
+<li><strong>Variações:</strong> status final → 400; status não cancelável → 400; erro de cálculo → 500.</li>
+<li><strong>Regras:</strong> FINAL_STATUSES bloqueiam; pickups coletadas não são canceladas.</li>
+<li><strong>Estados/Status:</strong> Shipment transita para <code>CANCELLATION_REQUESTED_BEFORE_HANDOFF</code> ou <code>CANCELLATION_REQUESTED_IN_TRANSIT</code>; Label <code>canceled</code>; PickupRequest <code>CANCELED</code>.</li>
+<li><strong>Dados persistidos:</strong> updates em Shipment, Label, PickupRequest.</li>
+<li><strong>Integrações externas:</strong> nenhuma.</li>
+<li><strong>Mensagens/Erros:</strong> 400/401/403/404/500.</li>
+<li><strong>Critérios de aceite:</strong></li>
+<li>CA1: Cancelamento antes da postagem retorna mensagem “Envio cancelado com sucesso”.</li>
+<li>CA2: Cancelamento em trânsito retorna mensagem de solicitação registrada.</li>
+<li><strong>Rastreabilidade:</strong> <code>app/api/shipments/[id]/cancel/route.ts:16-118</code>; <code>lib/shipments/shipment-status.ts:173-204</code>.</li>
+</ul>
+
+<h4>Fluxo F14 – Exclusão de envio sem pagamento</h4>
+<ul>
+<li><strong>Objetivo:</strong> excluir envio não pago.</li>
+<li><strong>Atores/Perfis:</strong> Cliente.</li>
+<li><strong>Entradas:</strong> DELETE <code>/api/shipments/[id]</code>.</li>
+<li><strong>Pré-condições:</strong> sessão válida; ownership; <code>paymentMethod</code> nulo.</li>
+<li><strong>Passo a passo (feliz):</strong></li>
+</ul>
+<ol>
+<li>Busca shipment, valida pertença.</li>
+<li>Verifica ausência de paymentMethod.</li>
+<li>Transação: deleta packages, labels, trackingEvents e shipment.</li>
+<li>Retorna confirmação.</li>
+</ol>
+<ul>
+<li><strong>Variações:</strong> shipment pago → 400; não encontrado → 404.</li>
+<li><strong>Regras:</strong> não deletar pagos.</li>
+<li><strong>Estados/Status:</strong> n/a.</li>
+<li><strong>Dados persistidos:</strong> deletes cascata.</li>
+<li><strong>Integrações externas:</strong> nenhuma.</li>
+<li><strong>Mensagens/Erros:</strong> 200; 400/401/403/404/500.</li>
+<li><strong>Critérios de aceite:</strong></li>
+<li>CA1: Deleção não permitida se paymentMethod definido.</li>
+<li>CA2: Todos os vínculos (packages/labels/tracking) são removidos na transação.</li>
+<li><strong>Rastreabilidade:</strong> <code>app/api/shipments/[id]/route.ts:196-263</code>.</li>
+</ul>
+
+<h4>Fluxo F15 – Rastreamento público</h4>
+<ul>
+<li><strong>Objetivo:</strong> permitir consulta pública de status.</li>
+<li><strong>Atores/Perfis:</strong> Público/Cliente.</li>
+<li><strong>Entradas:</strong> GET <code>/api/public/track/[code]</code>; UI <code>/rastreio/[code]</code>.</li>
+<li><strong>Pré-condições:</strong> código válido.</li>
+<li><strong>Passo a passo (feliz):</strong></li>
+</ul>
+<ol>
+<li>Busca shipment por <code>publicTrackingId</code> ou tracking code.</li>
+<li>Retorna eventos ordenados, status, destino e links.</li>
+</ol>
+<ul>
+<li><strong>Variações:</strong> código inexistente → 404.</li>
+<li><strong>Regras:</strong> endpoint público, sem autenticação.</li>
+<li><strong>Estados/Status:</strong> exibe status atual.</li>
+<li><strong>Dados persistidos:</strong> leitura.</li>
+<li><strong>Integrações externas:</strong> nenhuma.</li>
+<li><strong>Mensagens/Erros:</strong> 200/404/500.</li>
+<li><strong>Critérios de aceite:</strong></li>
+<li>CA1: Consulta não exige login.</li>
+<li>CA2: Eventos retornam ordenados por occurredAt desc.</li>
+<li><strong>Rastreabilidade:</strong> <code>app/api/public/track/[code]/route.ts:1+</code>; <code>app/api/tracking/route.ts:1+</code>.</li>
+</ul>
+
+<h3>Domínio: Suporte</h3>
+<h4>Fluxo F16 – Tickets de suporte do cliente</h4>
+<ul>
+<li><strong>Objetivo:</strong> abrir e interagir com tickets.</li>
+<li><strong>Atores/Perfis:</strong> Cliente autenticado.</li>
+<li><strong>Entradas:</strong> POST/GET <code>/api/support/tickets</code>; GET/PUT <code>/api/support/tickets/[id]</code>; POST <code>/api/support/tickets/[id]/messages</code>; POST <code>/api/support/tickets/[id]/attachments</code>.</li>
+<li><strong>Pré-condições:</strong> sessão válida; ticket pertence ao usuário.</li>
+<li><strong>Passo a passo (feliz):</strong></li>
+</ul>
+<ol>
+<li>Cria ticket com subject/description, status <code>OPEN</code>, prioridade <code>MEDIUM</code>.</li>
+<li>Lista tickets do usuário com paginação/filtros (status/priority).</li>
+<li>Detalhe retorna mensagens e anexos.</li>
+<li>Mensagens adicionadas com <code>authorRole=USER</code>.</li>
+</ol>
+<ul>
+<li><strong>Variações:</strong> atualização de status ocorre via admin; anexos salvos com url/filename.</li>
+<li><strong>Regras:</strong> visibilidade por <code>userId</code>; status controlado por staff para mudança.</li>
+<li><strong>Estados/Status:</strong> <code>SupportTicketStatus</code> OPEN/IN_PROGRESS/RESOLVED/CLOSED.</li>
+<li><strong>Dados persistidos:</strong> <code>SupportTicket</code>, <code>SupportMessage</code>, <code>SupportAttachment</code>.</li>
+<li><strong>Integrações externas:</strong> nenhuma.</li>
+<li><strong>Mensagens/Erros:</strong> padrões.</li>
+<li><strong>Critérios de aceite:</strong></li>
+<li>CA1: Usuário só vê tickets próprios.</li>
+<li>CA2: Criação define status OPEN e prioridade MEDIUM por padrão.</li>
+<li><strong>Rastreabilidade:</strong> <code>app/api/support/tickets/*</code>.</li>
+</ul>
+
+<h3>Domínio: Coletas (Coletor)</h3>
+<h4>Fluxo F17 – Operação de coletas pelo coletor</h4>
+<ul>
+<li><strong>Objetivo:</strong> permitir que coletor gerencie coletas atribuídas.</li>
+<li><strong>Atores/Perfis:</strong> Coletor autenticado.</li>
+<li><strong>Entradas:</strong> <code>/api/coletores/auth/login/register/me/logout/confirm-email/verify-email</code>; <code>/api/coletores/coletas*</code>; <code>/api/coletores/coletas-realizadas*</code>; <code>/api/coletores/dashboard</code>; <code>/api/coletores/suporte*</code>; <code>/api/coletores/documentos</code>.</li>
+<li><strong>Pré-condições:</strong> credenciais de coletor; email verificado para operações protegidas.</li>
+<li><strong>Passo a passo (feliz):</strong></li>
+</ul>
+<ol>
+<li>Login cria sessão do coletor.</li>
+<li>Lista coletas atribuídas; registrar coleta (<code>registrar</code>), agendar (<code>agendar</code> com scheduleAt), registrar tentativa (<code>registrar-tentativa</code> incrementa <code>attemptCount/attemptNotes</code>).</li>
+<li>Coletas realizadas (<code>coletas-realizadas</code>) e entrega de volumes (<code>entregar</code>).</li>
+<li>Dashboard retorna KPIs.</li>
+</ol>
+<ul>
+<li><strong>Variações:</strong> confirmação de email; reset de senha do coletor via endpoints de auth.</li>
+<li><strong>Regras:</strong> filtros por collectorId; atualizações respeitam status de <code>PickupRequest</code>.</li>
+<li><strong>Estados/Status:</strong> <code>PickupRequest.status</code> PENDING/SCHEDULED/COLLECTED/FAILED/CANCELED/COMPLETED.</li>
+<li><strong>Dados persistidos:</strong> updates em <code>PickupRequest</code> (scheduleAt, collectedAt, attemptCount/notes, status).</li>
+<li><strong>Integrações externas:</strong> nenhuma.</li>
+<li><strong>Mensagens/Erros:</strong> padrões 200/201/400/401/403/404/500.</li>
+<li><strong>Critérios de aceite:</strong></li>
+<li>CA1: Registrar tentativa incrementa contador e armazena notas.</li>
+<li>CA2: Agendar coleta grava scheduleAt e muda status para SCHEDULED.</li>
+<li><strong>Rastreabilidade:</strong> <code>app/api/coletores/*</code>; <code>prisma/schema.prisma</code> PickupRequest.</li>
+</ul>
+
+<h3>Domínio: Pontos de Coleta</h3>
+<h4>Fluxo F18 – Recepção e divergências em ponto de coleta</h4>
+<ul>
+<li><strong>Objetivo:</strong> registrar entrada e processamento de volumes em pontos parceiros.</li>
+<li><strong>Atores/Perfis:</strong> Operador do Ponto de Coleta.</li>
+<li><strong>Entradas:</strong> <code>/api/pontos-coleta/auth/login/me/logout</code>; <code>/api/pontos-coleta/receptions*</code>; <code>/api/pontos-coleta/receptions/volumes/[id]/check|divergence</code>; <code>/api/pontos-coleta/dashboard</code>; <code>/api/pontos-coleta/tickets*</code>.</li>
+<li><strong>Pré-condições:</strong> login de pickup point.</li>
+<li><strong>Passo a passo (feliz):</strong></li>
+</ul>
+<ol>
+<li>Login gera sessão do ponto.</li>
+<li>Registro de entrada (<code>register-entry</code>) cria/atualiza <code>Reception</code> com trackingCode, status <code>PENDING</code>.</li>
+<li>Receber (<code>receive</code>) marca <code>Reception.status=RECEIVED/PROCESSED</code>, registra peso/declaredValue.</li>
+<li>Checagem de volume (<code>check</code>) e divergência (<code>divergence</code>) marcam issueType/issueDetails.</li>
+<li>Dashboard retorna métricas.</li>
+</ol>
+<ul>
+<li><strong>Variações:</strong> tickets de suporte vinculados ao pickup point.</li>
+<li><strong>Regras:</strong> trackingCode único; status controla ações permitidas.</li>
+<li><strong>Estados/Status:</strong> <code>ReceptionStatus</code> PENDING/RECEIVED/ISSUE_REPORTED/PROCESSED.</li>
+<li><strong>Dados persistidos:</strong> <code>Reception</code>, <code>SupportTicket</code> (pickupPointId).</li>
+<li><strong>Integrações externas:</strong> nenhuma.</li>
+<li><strong>Mensagens/Erros:</strong> padrões.</li>
+<li><strong>Critérios de aceite:</strong></li>
+<li>CA1: Divergência registra issueDetails e pode manter status ISSUE_REPORTED.</li>
+<li>CA2: Receber volume altera status e timestamps receivedAt/processedAt.</li>
+<li><strong>Rastreabilidade:</strong> <code>app/api/pontos-coleta/*</code>; <code>prisma/schema.prisma</code> Reception.</li>
+</ul>
+
+<h3>Domínio: Webhooks e Integrações</h3>
+<h4>Fluxo F19 – Webhook Mercado Pago</h4>
+<ul>
+<li><strong>Objetivo:</strong> processar notificações de pagamento.</li>
+<li><strong>Atores/Perfis:</strong> Mercado Pago.</li>
+<li><strong>Entradas:</strong> POST <code>/api/webhooks/mercadopago</code>.</li>
+<li><strong>Pré-condições:</strong> headers com <code>x-signature</code> e payload webhook.</li>
+<li><strong>Passo a passo (feliz):</strong></li>
+</ul>
+<ol>
+<li>Lê headers e payload; loga.</li>
+<li>Chama <code>processWebhook</code> para validar assinatura e mapear evento.</li>
+<li>Atualiza PaymentTransaction/Wallet/Shipment conforme status mapeado.</li>
+<li>Retorna 200 se processado.</li>
+</ol>
+<ul>
+<li><strong>Variações:</strong> falha de processamento → 400; exceção → 500 (retry pelo MP).</li>
+<li><strong>Regras:</strong> endpoint público; validação HMAC.</li>
+<li><strong>Estados/Status:</strong> <code>TransactionStatus</code> alterado conforme MP; <code>PaymentWebhook.status</code>.</li>
+<li><strong>Dados persistidos:</strong> <code>PaymentTransaction</code>, possivelmente <code>WalletTransaction</code> e <code>Shipment/Label</code>.</li>
+<li><strong>Integrações externas:</strong> Mercado Pago API/status.</li>
+<li><strong>Mensagens/Erros:</strong> 200 sucesso; 400 não processável; 500 erro temporário.</li>
+<li><strong>Critérios de aceite:</strong></li>
+<li>CA1: Assinatura inválida não deve atualizar transação e retorna 400.</li>
+<li>CA2: Evento processado retorna success true.</li>
+<li><strong>Rastreabilidade:</strong> <code>app/api/webhooks/mercadopago/route.ts:22-82</code>; <code>lib/mercadopago/index.ts</code>.</li>
+</ul>
+
+<h4>Fluxo F20 – Webhooks Pix/Tracking/Pickups</h4>
+<ul>
+<li><strong>Objetivo:</strong> receber eventos de pix, tracking externo e pickups.</li>
+<li><strong>Atores/Perfis:</strong> provedores externos.</li>
+<li><strong>Entradas:</strong> POST <code>/api/webhooks/pix</code>; <code>/api/webhooks/tracking</code>; <code>/api/webhooks/pickups</code>.</li>
+<li><strong>Pré-condições:</strong> payload conforme origem.</li>
+<li><strong>Passo a passo (feliz):</strong> valida payload e atualiza entidades (PaymentTransaction para pix; TrackingEvent para tracking; PickupRequest/Shipment para pickups).</li>
+<li><strong>Variações:</strong> payload inválido → 400; exceção → 500.</li>
+<li><strong>Regras:</strong> endpoints públicos.</li>
+<li><strong>Estados/Status:</strong> <code>TransactionStatus</code>, <code>ShipmentStatus</code>, <code>PickupRequest.status</code>.</li>
+<li><strong>Dados persistidos:</strong> updates correspondentes.</li>
+<li><strong>Integrações externas:</strong> respectivos provedores.</li>
+<li><strong>Mensagens/Erros:</strong> 200/400/500.</li>
+<li><strong>Critérios de aceite:</strong></li>
+<li>CA1: Payload inválido não altera estado.</li>
+<li>CA2: Eventos válidos criam registros esperados (tracking/pickup).</li>
+<li><strong>Rastreabilidade:</strong> <code>app/api/webhooks/pix/route.ts</code>; <code>app/api/webhooks/tracking/route.ts</code>; <code>app/api/webhooks/pickups/route.ts</code>.</li>
+</ul>
+
+<h3>Domínio: Admin – Clientes e Staff</h3>
+<h4>Fluxo F21 – Gestão de clientes (admin)</h4>
+<ul>
+<li><strong>Objetivo:</strong> CRUD e ajustes em clientes.</li>
+<li><strong>Atores/Perfis:</strong> Admin/Staff com permissão.</li>
+<li><strong>Entradas:</strong> <code>/api/admin/clients*</code> (detalhes, addresses, recipients, cards, wallet adjust, block/unblock, reset-password).</li>
+<li><strong>Pré-condições:</strong> sessão admin.</li>
+<li><strong>Passo a passo (feliz):</strong> listar/criar/editar cliente; ajustar carteira; bloquear/desbloquear; resetar senha; gerenciar endereços/recipients/cards; consultar detalhes.</li>
+<li><strong>Variações:</strong> block/unblock alteram status; reset-password envia token ou aplica alteração.</li>
+<li><strong>Regras:</strong> permissões via <code>AdminPermission.USUARIOS/CONTAS</code>.</li>
+<li><strong>Estados/Status:</strong> User.status para clientes; Wallet valores.</li>
+<li><strong>Dados persistidos:</strong> tabelas User, Address, Recipient, Card, Wallet.</li>
+<li><strong>Integrações externas:</strong> nenhuma direta.</li>
+<li><strong>Mensagens/Erros:</strong> padrões.</li>
+<li><strong>Critérios de aceite:</strong></li>
+<li>CA1: Ajuste de carteira altera available/pending conforme endpoint.</li>
+<li>CA2: Block impede ações de cliente (verificado em auth/login).</li>
+<li><strong>Rastreabilidade:</strong> <code>app/api/admin/clients/*</code>.</li>
+</ul>
+
+<h4>Fluxo F22 – Gestão de staff users</h4>
+<ul>
+<li><strong>Objetivo:</strong> administrar contas de staff.</li>
+<li><strong>Atores/Perfis:</strong> Admin.</li>
+<li><strong>Entradas:</strong> <code>/api/admin/staff/users*</code>.</li>
+<li><strong>Pré-condições:</strong> permissão USUARIOS.</li>
+<li><strong>Passo a passo (feliz):</strong> criar/editar staff, alterar status, resetar, listar.</li>
+<li><strong>Variações:</strong> status ACTIVE/BLOCKED.</li>
+<li><strong>Regras:</strong> <code>AdminPermission</code> array no usuário; <code>isSuperAdmin</code>.</li>
+<li><strong>Estados/Status:</strong> <code>StaffStatus</code>.</li>
+<li><strong>Dados persistidos:</strong> <code>StaffUser</code>, <code>StaffRole</code>, <code>StaffAuditLog</code>.</li>
+<li><strong>Integrações externas:</strong> nenhuma.</li>
+<li><strong>Mensagens/Erros:</strong> padrões.</li>
+<li><strong>Critérios de aceite:</strong></li>
+<li>CA1: Reset incrementa tokenVersion (quando implementado).</li>
+<li>CA2: Status BLOCKED impede login (conforme auth admin).</li>
+<li><strong>Rastreabilidade:</strong> <code>app/api/admin/staff/users/*</code>; <code>prisma/schema.prisma</code> StaffUser.</li>
+</ul>
+
+<h3>Domínio: Admin – Finanças</h3>
+<h4>Fluxo F23 – Ledger e reconciliação</h4>
+<ul>
+<li><strong>Objetivo:</strong> registrar lançamentos e reconciliar transações.</li>
+<li><strong>Atores/Perfis:</strong> Admin Financeiro.</li>
+<li><strong>Entradas:</strong> <code>/api/admin/finance/ledger*</code>, <code>/finance/reconciliation*</code>, <code>/finance/summary</code>, <code>/finance/wallet-transactions</code>.</li>
+<li><strong>Pré-condições:</strong> permissão FINANCEIRO.</li>
+<li><strong>Passo a passo (feliz):</strong> criar ajustes, reconciliar entradas, marcar reconciliações, consultar resumo e transações.</li>
+<li><strong>Variações:</strong> ajustes/mark reconcile aplicam flags; summary agrega saldos.</li>
+<li><strong>Regras:</strong> tipos <code>LedgerEntryType</code> (CHARGE/REFUND/CHARGEBACK/FEE/PAYOUT/ADJUSTMENT).</li>
+<li><strong>Estados/Status:</strong> WalletTransaction status; LedgerEntry não tem status mas tem tipo.</li>
+<li><strong>Dados persistidos:</strong> <code>LedgerEntry</code>, <code>WalletTransaction</code>.</li>
+<li><strong>Integrações externas:</strong> nenhuma direta.</li>
+<li><strong>Mensagens/Erros:</strong> padrões.</li>
+<li><strong>Critérios de aceite:</strong></li>
+<li>CA1: Ajuste cria ledger entry com tipo ADJUSTMENT.</li>
+<li>CA2: Reconciliação marca transações conforme endpoint.</li>
+<li><strong>Rastreabilidade:</strong> <code>app/api/admin/finance/ledger/route.ts</code>; <code>.../reconcile/route.ts</code>; <code>.../reconciliation/route.ts</code>.</li>
+</ul>
+
+<h4>Fluxo F24 – Despesas e templates</h4>
+<ul>
+<li><strong>Objetivo:</strong> administrar despesas fixas/variáveis e templates.</li>
+<li><strong>Atores/Perfis:</strong> Admin Financeiro.</li>
+<li><strong>Entradas:</strong> <code>/api/admin/finance/expenses*</code>; <code>/finance/expense-templates*</code>.</li>
+<li><strong>Pré-condições:</strong> permissão FINANCEIRO.</li>
+<li><strong>Passo a passo (feliz):</strong> criar/editar despesas com status <code>PENDING</code>; marcar <code>PAID/CANCELED</code>; gerir templates.</li>
+<li><strong>Variações:</strong> recorrência; receipt upload info.</li>
+<li><strong>Regras:</strong> campos de categoria/tipo; índices para filtro.</li>
+<li><strong>Estados/Status:</strong> <code>ExpenseStatus</code> PENDING→PAID/CANCELED.</li>
+<li><strong>Dados persistidos:</strong> <code>Expense</code>, <code>ExpenseTemplate</code>.</li>
+<li><strong>Integrações externas:</strong> nenhuma.</li>
+<li><strong>Mensagens/Erros:</strong> padrões.</li>
+<li><strong>Critérios de aceite:</strong></li>
+<li>CA1: Marcar pago preenche <code>paidAt</code>.</li>
+<li>CA2: Template isActive controla uso em sugestões.</li>
+<li><strong>Rastreabilidade:</strong> <code>app/api/admin/finance/expenses/route.ts</code>; <code>[id]/route.ts</code>; <code>.../expense-templates/*</code>.</li>
+</ul>
+
+<h4>Fluxo F25 – Comissões, repasses e invoices</h4>
+<ul>
+<li><strong>Objetivo:</strong> gerenciar comissões e repasses.</li>
+<li><strong>Atores/Perfis:</strong> Admin Financeiro.</li>
+<li><strong>Entradas:</strong> <code>/api/admin/finance/commissions*</code>; <code>/finance/payouts*</code>; <code>/finance/carrier-payouts</code>; <code>/finance/invoices*</code>; <code>/finance/chargebacks*</code>.</li>
+<li><strong>Pré-condições:</strong> permissão FINANCEIRO.</li>
+<li><strong>Passo a passo (feliz):</strong> aprovar/recusar/registrar pagamento de comissões; marcar payouts/invoices como paid/cancel; registrar chargebacks e refunds.</li>
+<li><strong>Variações:</strong> approve/paid endpoints alteram status específicos.</li>
+<li><strong>Regras:</strong> status de <code>PaymentTransaction</code>, <code>PaymentChargeback</code>, <code>PaymentRefund</code>.</li>
+<li><strong>Estados/Status:</strong> TransactionStatus; custom status em invoices/commissions/payouts.</li>
+<li><strong>Dados persistidos:</strong> <code>PaymentTransaction</code>, <code>PaymentChargeback</code>, <code>PaymentRefund</code>, entidades de comissão/payout (tabelas correspondentes).</li>
+<li><strong>Integrações externas:</strong> sincronização com gateway quando aplicável (<code>payment-transactions/sync</code>).</li>
+<li><strong>Mensagens/Erros:</strong> padrões.</li>
+<li><strong>Critérios de aceite:</strong></li>
+<li>CA1: Aprovação de comissão muda status e registra data.</li>
+<li>CA2: Marcar invoice como paid grava paidAt.</li>
+<li><strong>Rastreabilidade:</strong> <code>app/api/admin/finance/*</code> (payouts, commissions, chargebacks, invoices).</li>
+</ul>
+
+<h3>Domínio: Admin – Integrações</h3>
+<h4>Fluxo F26 – Gestão de transportadoras e endpoints</h4>
+<ul>
+<li><strong>Objetivo:</strong> configurar transportadoras e regras de preço.</li>
+<li><strong>Atores/Perfis:</strong> Admin Integrações.</li>
+<li><strong>Entradas:</strong> <code>/api/admin/integrations/carriers*</code> (services, pricing-rules, credentials, endpoints, test-connection).</li>
+<li><strong>Pré-condições:</strong> permissão INTEGRACOES.</li>
+<li><strong>Passo a passo (feliz):</strong> criar/editar carrier, services, pricing rules; cadastrar credentials; testar conexão/endpoints; rodar health checks.</li>
+<li><strong>Variações:</strong> rotate credentials; ativar/desativar serviços.</li>
+<li><strong>Regras:</strong> <code>IntegrationStatus</code>, <code>IntegrationEnvironment</code>, <code>AuthType</code>; unique por carrierId+operation.</li>
+<li><strong>Estados/Status:</strong> Carrier.status ACTIVE/INACTIVE/ERROR/TESTING; credentials isActive.</li>
+<li><strong>Dados persistidos:</strong> Carrier*, PricingRule, Credential, Endpoint, HealthCheck, ApiCall, Webhook.</li>
+<li><strong>Integrações externas:</strong> chamadas de teste para endpoints externos.</li>
+<li><strong>Mensagens/Erros:</strong> padrões.</li>
+<li><strong>Critérios de aceite:</strong></li>
+<li>CA1: Test-connection registra resultado (lastTestedAt).</li>
+<li>CA2: Credentials com isActive controlam uso.</li>
+<li><strong>Rastreabilidade:</strong> <code>app/api/admin/integrations/carriers/*</code>.</li>
+</ul>
+
+<h4>Fluxo F27 – Configuração Mercado Pago / Gateways</h4>
+<ul>
+<li><strong>Objetivo:</strong> configurar gateway de pagamento.</li>
+<li><strong>Atores/Perfis:</strong> Admin Integrações.</li>
+<li><strong>Entradas:</strong> <code>/api/admin/integrations/mercadopago*</code>; <code>/api/admin/payment-gateway/config</code>; <code>/api/admin/integrations/mercadopago/test-webhook</code>.</li>
+<li><strong>Pré-condições:</strong> permissão INTEGRACOES/FINANCEIRO.</li>
+<li><strong>Passo a passo (feliz):</strong> salvar credenciais/gateway; testar webhook; consultar public key (cliente via <code>/api/payments/mercadopago/public-key</code>).</li>
+<li><strong>Variações:</strong> habilitar/desabilitar via env <code>PAYMENT_GATEWAY_ENABLED</code>.</li>
+<li><strong>Regras:</strong> authType e environment.</li>
+<li><strong>Estados/Status:</strong> <code>PaymentGateway.status</code>, credentials isActive.</li>
+<li><strong>Dados persistidos:</strong> PaymentGateway, PaymentCredential, PaymentEndpoint, PaymentWebhook/HealthCheck.</li>
+<li><strong>Integrações externas:</strong> Mercado Pago APIs.</li>
+<li><strong>Mensagens/Erros:</strong> padrões.</li>
+<li><strong>Critérios de aceite:</strong></li>
+<li>CA1: Test webhook retorna simulação de processamento.</li>
+<li>CA2: Public key disponível para front se configurada.</li>
+<li><strong>Rastreabilidade:</strong> <code>app/api/admin/integrations/mercadopago/*</code>; <code>app/api/payments/mercadopago/public-key/route.ts</code>.</li>
+</ul>
+
+<h3>Domínio: Admin – Operações (Ops) e CEPS/FIPE</h3>
+<h4>Fluxo F28 – Ops Shipments e eventos</h4>
+<ul>
+<li><strong>Objetivo:</strong> reprocessar e acompanhar shipments pelo time de operações.</li>
+<li><strong>Atores/Perfis:</strong> Admin Ops.</li>
+<li><strong>Entradas:</strong> <code>/api/admin/ops/shipments*</code> (bulk, timeline, pickup-request, reprocess); <code>/api/admin/ops/events*</code>.</li>
+<li><strong>Pré-condições:</strong> permissão OPERACOES.</li>
+<li><strong>Passo a passo (feliz):</strong> listar shipments; acessar timeline; solicitar pickup manual; reprocessar; marcar eventos e retries.</li>
+<li><strong>Variações:</strong> bulk operations; retry de events.</li>
+<li><strong>Regras:</strong> filtros por status/ids; marcações em events registram processed/error.</li>
+<li><strong>Estados/Status:</strong> ShipmentStatus; Ops event status.</li>
+<li><strong>Dados persistidos:</strong> Shipment updates; Ops events.</li>
+<li><strong>Integrações externas:</strong> dependente de reprocess (pode chamar transportadora).</li>
+<li><strong>Mensagens/Erros:</strong> padrões.</li>
+<li><strong>Critérios de aceite:</strong></li>
+<li>CA1: Timeline endpoint retorna histórico de eventos.</li>
+<li>CA2: Retry marca evento para reprocessamento.</li>
+<li><strong>Rastreabilidade:</strong> <code>app/api/admin/ops/shipments/*</code>; <code>app/api/admin/ops/events/*</code>.</li>
+</ul>
+
+<h4>Fluxo F29 – Gestão de CEPs/FIPE</h4>
+<ul>
+<li><strong>Objetivo:</strong> manter base de CEP geocodificada e FIPE para coletores.</li>
+<li><strong>Atores/Perfis:</strong> Admin.</li>
+<li><strong>Entradas:</strong> <code>/api/admin/ceps/*</code> (list-low-precision, force-regeocode, manual-update, list-manual-overrides); <code>/api/admin/fipe/*</code> (brands/models/sync); scripts <code>scripts/geocode-*.ts</code>, <code>fipe-sync.ts</code>.</li>
+<li><strong>Pré-condições:</strong> permissão CONFIGURACOES/INTEGRACOES.</li>
+<li><strong>Passo a passo (feliz):</strong> listar CEPs com baixa precisão, forçar geocode, atualizar manualmente; sincronizar FIPE marcas/modelos.</li>
+<li><strong>Variações:</strong> scripts manuais para geocodificação e fixes de coordenadas.</li>
+<li><strong>Regras:</strong> modelos <code>CepLocation</code>, <code>FipeVehicleBrand/Model</code> com flags isActive/precision.</li>
+<li><strong>Estados/Status:</strong> CepLocation.manualOverride; Fipe isActive.</li>
+<li><strong>Dados persistidos:</strong> <code>CepLocation</code>, <code>FipeVehicleBrand/Model</code>, Collector refs.</li>
+<li><strong>Integrações externas:</strong> serviços de geocoding; base FIPE.</li>
+<li><strong>Mensagens/Erros:</strong> padrões.</li>
+<li><strong>Critérios de aceite:</strong></li>
+<li>CA1: force-regeocode atualiza latitude/longitude.</li>
+<li>CA2: fipe sync popula marcas/modelos ativos.</li>
+<li><strong>Rastreabilidade:</strong> <code>app/api/admin/ceps/*</code>; <code>app/api/admin/fipe/*</code>; scripts <code>scripts/geocode-collectors.ts</code>, <code>scripts/fipe-sync.ts</code>.</li>
+</ul>
+
+<h3>Domínio: Recorrentes e Upload público</h3>
+<h4>Fluxo F30 – Itens recorrentes</h4>
+<ul>
+<li><strong>Objetivo:</strong> cadastrar e listar itens recorrentes.</li>
+<li><strong>Atores/Perfis:</strong> Cliente e Admin.</li>
+<li><strong>Entradas:</strong> <code>/api/recurring-items*</code>; <code>/api/admin/clients/[id]/recurring-items*</code>; <code>/api/recurring-items/import|search</code>.</li>
+<li><strong>Pré-condições:</strong> sessão válida (cliente ou admin).</li>
+<li><strong>Passo a passo (feliz):</strong> CRUD de <code>RecurringItem</code>; importação; busca.</li>
+<li><strong>Variações:</strong> admin associa a cliente específico.</li>
+<li><strong>Regras:</strong> <code>userId</code> obrigatório; descrição/valor.</li>
+<li><strong>Estados/Status:</strong> n/a.</li>
+<li><strong>Dados persistidos:</strong> <code>RecurringItem</code>.</li>
+<li><strong>Integrações externas:</strong> nenhuma.</li>
+<li><strong>Mensagens/Erros:</strong> padrões.</li>
+<li><strong>Critérios de aceite:</strong></li>
+<li>CA1: Import cria múltiplos itens para o usuário.</li>
+<li>CA2: Busca filtra por termo/usuário.</li>
+<li><strong>Rastreabilidade:</strong> <code>app/api/recurring-items/*</code>; <code>app/api/admin/clients/[id]/recurring-items/*</code>.</li>
+</ul>
+
+<h4>Fluxo F31 – Upload público de documento de coletor</h4>
+<ul>
+<li><strong>Objetivo:</strong> receber documentos enviados publicamente.</li>
+<li><strong>Atores/Perfis:</strong> Público (com parâmetros esperados).</li>
+<li><strong>Entradas:</strong> POST <code>/api/public/upload/collector-document</code>.</li>
+<li><strong>Pré-condições:</strong> payload com collectorId, type, arquivo.</li>
+<li><strong>Passo a passo (feliz):</strong> valida payload; cria/atualiza <code>CollectorDocument</code> com filename/url/type.</li>
+<li><strong>Variações:</strong> unique por collectorId+type (conflitos retornam erro).</li>
+<li><strong>Regras:</strong> documento identificado por tipo.</li>
+<li><strong>Estados/Status:</strong> n/a.</li>
+<li><strong>Dados persistidos:</strong> <code>CollectorDocument</code>.</li>
+<li><strong>Integrações externas:</strong> storage (url).</li>
+<li><strong>Mensagens/Erros:</strong> 200/201; 400/409 conforme unique.</li>
+<li><strong>Critérios de aceite:</strong></li>
+<li>CA1: Novo upload substitui/atualiza conforme política de unique.</li>
+<li>CA2: Resposta traz metadados do documento salvo.</li>
+<li><strong>Rastreabilidade:</strong> <code>app/api/public/upload/collector-document/route.ts</code>.</li>
+</ul>
+
+<h3>Domínio: Health/Status</h3>
+<h4>Fluxo F32 – Saúde do sistema</h4>
+<ul>
+<li><strong>Objetivo:</strong> expor estado de saúde.</li>
+<li><strong>Atores/Perfis:</strong> Público/monitoração.</li>
+<li><strong>Entradas:</strong> GET <code>/api/health</code>, <code>/api/health/db</code>, <code>/api/system/status</code>, <code>/api/health/route.ts</code>.</li>
+<li><strong>Pré-condições:</strong> nenhuma.</li>
+<li><strong>Passo a passo (feliz):</strong> retorna status, timestamp e, em <code>/db</code>, checa conexão.</li>
+<li><strong>Variações:</strong> erro de DB retorna status de falha.</li>
+<li><strong>Regras:</strong> públicas.</li>
+<li><strong>Estados/Status:</strong> n/a.</li>
+<li><strong>Dados persistidos:</strong> leitura teste.</li>
+<li><strong>Integrações externas:</strong> DB.</li>
+<li><strong>Mensagens/Erros:</strong> 200 saudável; 500 em falha.</li>
+<li><strong>Critérios de aceite:</strong></li>
+<li>CA1: <code>/api/health/db</code> falha se DB indisponível.</li>
+<li>CA2: <code>/api/health</code> sempre retorna timestamp.</li>
+<li><strong>Rastreabilidade:</strong> <code>app/api/health/route.ts</code>; <code>app/api/health/db/route.ts</code>; <code>app/api/system/status/route.ts</code>.</li>
+</ul>
+
+<h2>4) Matriz de Cobertura</h2>
+<h3>4.1 Entradas → Fluxos</h3>
+<table>
+<thead><tr><th>Entrada (UI/API/Webhook/Script)</th><th>Fluxo</th></tr></thead>
+<tbody>
+<tr><td><code>/auth/cadastro</code>, <code>/api/auth/register</code></td><td>F01</td></tr>
+<tr><td><code>/auth/verify-email</code>, <code>/api/auth/verify-email</code></td><td>F02</td></tr>
+<tr><td><code>/auth/login</code>, <code>/api/auth/login</code>, <code>/auth/me/logout</code></td><td>F03</td></tr>
+<tr><td><code>/auth/esqueci-senha</code>, <code>/api/auth/forgot-password</code></td><td>F04</td></tr>
+<tr><td><code>/auth/reset-password</code>, <code>/api/auth/reset-password</code></td><td>F04</td></tr>
+<tr><td><code>/conta/*</code> endpoints (profile/password/addresses/recipients/cards/preferences)</td><td>F05</td></tr>
+<tr><td><code>/cotacoes</code> UI &amp; <code>/api/cotacoes</code> POST</td><td>F06</td></tr>
+<tr><td><code>/api/cotacoes</code> GET, <code>/api/cotacoes/selecionar</code>, <code>/api/cotacoes/[id]</code></td><td>F07</td></tr>
+<tr><td><code>/carrinho</code> UI &amp; <code>/api/carrinho*</code></td><td>F08</td></tr>
+<tr><td><code>/api/checkout</code></td><td>F09</td></tr>
+<tr><td><code>/api/wallet/debit</code></td><td>F10</td></tr>
+<tr><td><code>/api/shipments</code></td><td>F11</td></tr>
+<tr><td><code>/api/shipments/[id]</code> GET</td><td>F12</td></tr>
+<tr><td><code>/api/shipments/[id]/cancel</code></td><td>F13</td></tr>
+<tr><td><code>/api/shipments/[id]</code> DELETE</td><td>F14</td></tr>
+<tr><td><code>/rastreio/[code]</code>, <code>/api/public/track/[code]</code>, <code>/api/tracking</code></td><td>F15</td></tr>
+<tr><td><code>/suporte</code> UI &amp; <code>/api/support/tickets*</code></td><td>F16</td></tr>
+<tr><td><code>/coletores/*</code> auth/coletas/suporte</td><td>F17</td></tr>
+<tr><td><code>/pontos-coleta/*</code></td><td>F18</td></tr>
+<tr><td><code>/api/webhooks/mercadopago</code></td><td>F19</td></tr>
+<tr><td><code>/api/webhooks/pix</code>, <code>/api/webhooks/tracking</code>, <code>/api/webhooks/pickups</code></td><td>F20</td></tr>
+<tr><td><code>/api/admin/clients*</code></td><td>F21</td></tr>
+<tr><td><code>/api/admin/staff/users*</code></td><td>F22</td></tr>
+<tr><td><code>/api/admin/finance/ledger*</code>, <code>/finance/reconciliation*</code>, <code>/finance/summary</code>, <code>/finance/wallet-transactions</code></td><td>F23</td></tr>
+<tr><td><code>/api/admin/finance/expenses*</code>, <code>/finance/expense-templates*</code></td><td>F24</td></tr>
+<tr><td><code>/api/admin/finance/commissions*</code>, <code>/finance/payouts*</code>, <code>/finance/invoices*</code>, <code>/finance/chargebacks*</code></td><td>F25</td></tr>
+<tr><td><code>/api/admin/integrations/carriers*</code></td><td>F26</td></tr>
+<tr><td><code>/api/admin/integrations/mercadopago*</code>, <code>/api/admin/payment-gateway/config</code>, <code>/api/payments/mercadopago/public-key</code></td><td>F27</td></tr>
+<tr><td><code>/api/admin/ops/shipments*</code>, <code>/api/admin/ops/events*</code></td><td>F28</td></tr>
+<tr><td><code>/api/admin/ceps/*</code>, <code>/api/admin/fipe/*</code>, scripts <code>geocode-*</code>, <code>fipe-sync.ts</code></td><td>F29</td></tr>
+<tr><td><code>/api/recurring-items*</code>, <code>/api/admin/clients/[id]/recurring-items*</code></td><td>F30</td></tr>
+<tr><td><code>/api/public/upload/collector-document</code></td><td>F31</td></tr>
+<tr><td><code>/api/health*</code>, <code>/api/system/status</code>, <code>/api/health/db</code></td><td>F32</td></tr>
+<tr><td>Scripts diversos (`scripts/*.ts</td><td>js` de manutenção)</td><td>F29 (geocode/fipe) e suporte a finanças/ops conforme script</td></tr>
+</tbody></table>
+
+<h3>4.2 Perfil × Ações/Fluxos</h3>
+<table>
+<thead><tr><th>Perfil</th><th>Fluxos permitidos</th></tr></thead>
+<tbody>
+<tr><td>Visitante</td><td>F01, F02, F15, F31, F32</td></tr>
+<tr><td>Cliente</td><td>F03-F16, F30, F32</td></tr>
+<tr><td>Coletor</td><td>F17, F16 (suporte coletor), F32</td></tr>
+<tr><td>Ponto de Coleta</td><td>F18, F16 (tickets pickup), F32</td></tr>
+<tr><td>Admin/Staff</td><td>F21-F29, F16 (admin suporte), F32</td></tr>
+<tr><td>Integração Externa</td><td>F19, F20</td></tr>
+<tr><td>Script operador</td><td>F29 (geocode/fipe), scripts auxiliares (finance/ops)</td></tr>
+</tbody></table>
+
+<h3>4.3 Status × Ações permitidas (principais)</h3>
+<table>
+<thead><tr><th>Entidade/Status</th><th>Ações</th></tr></thead>
+<tbody>
+<tr><td>User.status pending</td><td>Pode verificar email (F02); não faz login (F03 bloqueia).</td></tr>
+<tr><td>User.status active</td><td>Login permitido (F03); acesso geral.</td></tr>
+<tr><td>QuoteStatus DRAFT</td><td>Pode listar/selecionar (F07); expira conforme regra.</td></tr>
+<tr><td>QuoteStatus SELECTED</td><td>Pode prosseguir para checkout (F09).</td></tr>
+<tr><td>Cart.status OPEN</td><td>CRUD itens, limpeza (F08).</td></tr>
+<tr><td>Cart.status LOCKED</td><td>Pode ser limpo/resetado (F08 DELETE).</td></tr>
+<tr><td>ShipmentStatus PICKUP_REQUESTED/AWAITING_DROP_OFF_AT_POINT</td><td>Cancelável (F13); pagamento pendente (F10).</td></tr>
+<tr><td>ShipmentStatus em FINAL_STATUSES</td><td>Não cancelável (F13).</td></tr>
+<tr><td>Label.status pending</td><td>Emitida após pagamento (F10).</td></tr>
+<tr><td>Label.status issued</td><td>Retorna PDF; pode ser cancelada se envio cancelado antes de postagem (F13).</td></tr>
+<tr><td>PickupRequest PENDING/SCHEDULED</td><td>Cancelada em cancelamento de shipment (F13); coletor pode agendar/registrar (F17).</td></tr>
+<tr><td>PickupRequest COLLECTED/COMPLETED</td><td>Não é cancelada pelo fluxo de cancelamento (F13).</td></tr>
+<tr><td>WalletTransaction PENDING</td><td>Pode ser confirmada via operações administrativas; débito cria diretamente CONFIRMED (F10).</td></tr>
+<tr><td>SupportTicket OPEN/IN_PROGRESS</td><td>Pode receber mensagens; admin altera status (F16/Admin).</td></tr>
+<tr><td>Reception PENDING</td><td>Pode registrar receive/check/divergence (F18).</td></tr>
+<tr><td>Expense PENDING</td><td>Pode ser marcada como PAID/CANCELED (F24).</td></tr>
+<tr><td>StaffStatus BLOCKED</td><td>Impede operações de login admin (F22).</td></tr>
+</tbody></table>
+
+<h2>5) Apêndice Técnico</h2>
+<h3>5.1 Inventário de entradas (arquivo:linhas)</h3>
+<ul>
+<li>UIs (amostra representativa; todas pages listadas): <code>app/(auth)/auth/login/page.tsx:1</code>; <code>app/(auth)/auth/cadastro/page.tsx:1</code>; <code>app/(auth)/auth/esqueci-senha/page.tsx:1</code>; <code>app/(auth)/auth/reset/[token]/page.tsx:1</code>; <code>app/(auth)/auth/reset-password/page.tsx:1</code>; <code>app/(auth)/auth/verify-email/page.tsx:1</code>; <code>app/(public)/coletores/login/page.tsx:1</code>; <code>app/(public)/coletores/cadastro/page.tsx:1</code>; <code>app/(collector)/collector/login/page.tsx:1</code>; <code>app/(admin)/admin/login/page.tsx:1</code>; <code>app/(envio)/cotacoes/page.tsx:1-200</code>; <code>app/(envio)/carrinho/page.tsx:1</code>; <code>app/(envio)/shipments/page.tsx:1</code>; <code>app/(envio)/shipments/[id]/page.tsx:1</code>; <code>app/rastreio/[code]/page.tsx:1</code>; <code>app/(envio)/suporte/page.tsx:1</code>; <code>app/(admin)/admin/financeiro/page.tsx:1</code>; etc. (todas listadas via <code>rg --files -g &amp;#x27;page.tsx&amp;#x27; app</code>).</li>
+<li>APIs (todos <code>route.ts</code> encontrados): ex. <code>app/api/auth/login/route.ts:12-161</code>; <code>app/api/auth/register/route.ts:12-161</code>; <code>app/api/auth/verify-email/route.ts:8-90</code>; <code>app/api/auth/forgot-password/route.ts:12-103</code>; <code>app/api/auth/reset-password/route.ts:11-135</code>; <code>app/api/cotacoes/route.ts:17-129</code>; <code>app/api/cotacoes/selecionar/route.ts:1+</code>; <code>app/api/carrinho/route.ts:12-133</code>; <code>app/api/checkout/route.ts:95-499</code>; <code>app/api/shipments/route.ts:5-188</code>; <code>app/api/shipments/[id]/route.ts:12-263</code>; <code>app/api/shipments/[id]/cancel/route.ts:16-118</code>; <code>app/api/wallet/debit/route.ts:12-275</code>; <code>app/api/support/tickets/route.ts:1+</code>; <code>app/api/coletores/coletas/route.ts:1+</code>; <code>app/api/pontos-coleta/receptions/route.ts:1+</code>; <code>app/api/webhooks/mercadopago/route.ts:22-82</code>; demais endpoints admin listados em <code>rg --files -g &amp;#x27;route.ts&amp;#x27; app/api</code> (todos considerados na matriz).</li>
+<li>Webhooks: <code>app/api/webhooks/mercadopago/route.ts:22-82</code>; <code>app/api/webhooks/pix/route.ts:1+</code>; <code>app/api/webhooks/tracking/route.ts:1+</code>; <code>app/api/webhooks/pickups/route.ts:1+</code>.</li>
+<li>Scripts (jobs manuais): <code>scripts/geocode-collectors.ts:1+</code>; <code>scripts/fipe-sync.ts:1+</code>; <code>scripts/sync-pending-payments.ts:1+</code>; <code>scripts/check-*</code> etc.</li>
+</ul>
+
+<h3>5.2 Evidências por fluxo</h3>
+<ul>
+<li>F01: <code>app/api/auth/register/route.ts:12-161</code>.</li>
+<li>F02: <code>app/api/auth/verify-email/route.ts:8-90</code>.</li>
+<li>F03: <code>app/api/auth/login/route.ts:12-161</code>.</li>
+<li>F04: <code>app/api/auth/forgot-password/route.ts:12-103</code>; <code>app/api/auth/reset-password/route.ts:11-135</code>.</li>
+<li>F05: <code>app/api/account/*/route.ts</code> (profile/password/addresses/recipients/cards/preferences, linhas 1+).</li>
+<li>F06: <code>app/api/cotacoes/route.ts:17-77</code>; <code>lib/quotes/service.ts:88-168</code>.</li>
+<li>F07: <code>app/api/cotacoes/route.ts:86-129</code>; <code>app/api/cotacoes/selecionar/route.ts:1+</code>.</li>
+<li>F08: <code>app/api/carrinho/route.ts:12-133</code>; <code>app/api/cart/items/*</code> etc.</li>
+<li>F09: <code>app/api/checkout/route.ts:95-499</code>; <code>lib/shipments/create-with-volumes.ts:69-136</code>; <code>lib/tracking/create-event.ts:47-62</code>.</li>
+<li>F10: <code>app/api/wallet/debit/route.ts:12-275</code>.</li>
+<li>F11: <code>app/api/shipments/route.ts:5-188</code>.</li>
+<li>F12: <code>app/api/shipments/[id]/route.ts:12-190</code>.</li>
+<li>F13: <code>app/api/shipments/[id]/cancel/route.ts:16-118</code>; <code>lib/shipments/shipment-status.ts:173-204</code>.</li>
+<li>F14: <code>app/api/shipments/[id]/route.ts:196-263</code>.</li>
+<li>F15: <code>app/api/public/track/[code]/route.ts:1+</code>; <code>app/api/tracking/route.ts:1+</code>.</li>
+<li>F16: <code>app/api/support/tickets/*</code>.</li>
+<li>F17: <code>app/api/coletores/*</code>; <code>prisma/schema.prisma</code> PickupRequest.</li>
+<li>F18: <code>app/api/pontos-coleta/*</code>; <code>prisma/schema.prisma</code> Reception.</li>
+<li>F19: <code>app/api/webhooks/mercadopago/route.ts:22-82</code>; <code>lib/mercadopago/index.ts</code>.</li>
+<li>F20: <code>app/api/webhooks/pix/route.ts</code>; <code>app/api/webhooks/tracking/route.ts</code>; <code>app/api/webhooks/pickups/route.ts</code>.</li>
+<li>F21: <code>app/api/admin/clients/*</code>.</li>
+<li>F22: <code>app/api/admin/staff/users/*</code>.</li>
+<li>F23: <code>app/api/admin/finance/ledger/*</code>; <code>.../reconciliation/*</code>; <code>.../summary/*</code>; <code>.../wallet-transactions/route.ts</code>.</li>
+<li>F24: <code>app/api/admin/finance/expenses/*</code>; <code>.../expense-templates/*</code>.</li>
+<li>F25: <code>app/api/admin/finance/commissions/*</code>; <code>.../payouts/*</code>; <code>.../invoices/*</code>; <code>.../chargebacks/*</code>.</li>
+<li>F26: <code>app/api/admin/integrations/carriers/*</code>.</li>
+<li>F27: <code>app/api/admin/integrations/mercadopago/*</code>; <code>app/api/admin/payment-gateway/config/route.ts</code>; <code>app/api/payments/mercadopago/public-key/route.ts</code>.</li>
+<li>F28: <code>app/api/admin/ops/shipments/*</code>; <code>app/api/admin/ops/events/*</code>.</li>
+<li>F29: <code>app/api/admin/ceps/*</code>; <code>app/api/admin/fipe/*</code>; scripts <code>scripts/geocode-collectors.ts</code>, <code>scripts/fipe-sync.ts</code>.</li>
+<li>F30: <code>app/api/recurring-items/*</code>; <code>app/api/admin/clients/[id]/recurring-items/*</code>.</li>
+<li>F31: <code>app/api/public/upload/collector-document/route.ts:1+</code>.</li>
+<li>F32: <code>app/api/health/route.ts</code>; <code>app/api/health/db/route.ts</code>; <code>app/api/system/status/route.ts</code>.</li>
+</ul>
+
+<h3>5.3 Mapa de estados (enums + transições observadas)</h3>
+<ul>
+<li><strong>ShipmentStatus</strong> (<code>lib/shipments/shipment-status.ts:9-285</code>): inicial em F09 (PICKUP_REQUESTED ou AWAITING_DROP_OFF_AT_POINT); cancelamento em F13 para CANCELLATION_REQUESTED_*; finalizações conforme enum (não mapeadas no código mostrado); transições de tracking via webhooks/ops.</li>
+<li><strong>Label.status</strong> (<code>prisma/schema.prisma:214-243</code>): <code>pending</code> na criação (F09); <code>issued</code> após débito (F10); <code>canceled</code> no cancelamento (F13).</li>
+<li><strong>PickupRequest.status</strong> (<code>prisma/schema.prisma:240-276</code>): <code>PENDING</code> na criação (F09); <code>SCHEDULED/COLLECTED/FAILED/CANCELED/COMPLETED</code> via F17/F13.</li>
+<li><strong>QuoteStatus</strong> (<code>prisma/schema.prisma:132-151</code>): <code>DRAFT</code> (F06); <code>SELECTED/CONFIRMED/EXPIRED/CANCELED</code> (F07 e lógica de expiração).</li>
+<li><strong>Cart.status</strong> (<code>prisma/schema.prisma:88-109</code>): <code>OPEN</code>/<code>LOCKED</code> (F08).</li>
+<li><strong>WalletTransaction.status</strong> (<code>prisma/schema.prisma:424-441</code>): <code>PENDING</code> default; <code>CONFIRMED</code> no débito (F10); outras transições possíveis via admin/finance.</li>
+<li><strong>SupportTicketStatus</strong> (<code>prisma/schema.prisma:476-506</code>): <code>OPEN</code> default (F16); alterações por admin suporte (F16/admin).</li>
+<li><strong>ReceptionStatus</strong> (<code>prisma/schema.prisma:430-463</code>): <code>PENDING</code> default; <code>RECEIVED/ISSUE_REPORTED/PROCESSED</code> via F18.</li>
+<li><strong>ExpenseStatus</strong> (<code>prisma/schema.prisma:1168-1196</code>): <code>PENDING</code> default; <code>PAID/CANCELED</code> via F24.</li>
+<li><strong>StaffStatus</strong> (<code>prisma/schema.prisma:240-259</code>): <code>ACTIVE/BLOCKED</code> via F22.</li>
+<li><strong>IntegrationStatus</strong> (<code>prisma/schema.prisma:1054-1076</code>): carriers/payment gateways ACTIVE/INACTIVE/ERROR/TESTING via F26/F27.</li>
+<li><strong>TransactionStatus</strong> (<code>prisma/schema.prisma:1108-1138</code>): PaymentTransaction atualizado via webhooks/pagamentos (F19/F25).</li>
+<li><strong>PickupPointStatus</strong> (<code>prisma/schema.prisma:512-530</code>): ACTIVE/BLOCKED/PENDING, usado em autenticação de ponto (F18).</li>
+<li><strong>WalletTxStatus</strong> (<code>prisma/schema.prisma:408-423</code>): PENDING/CONFIRMED/FAILED/CANCELED; F10 seta CONFIRMED.</li>
+</ul>
+
+<p>Este documento consolida todos os fluxos evidenciados no código, com rastreabilidade para validação funcional por PO/BA.</p>
+</div>
+</body>
+</html>
