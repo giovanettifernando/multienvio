@@ -47,9 +47,20 @@ export function SavedCardPaymentForm({
   const { data: cards, isLoading } = useCards();
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   const [cvv, setCvv] = useState("");
+  const [cvvTouched, setCvvTouched] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [publicKey, setPublicKey] = useState<string | null>(null);
   const [loadingKey, setLoadingKey] = useState(true);
+
+  // Filtrar cartões válidos (com brand e last4)
+  const availableCards = cards?.filter((card) => card.brand && card.last4) || [];
+
+  // Auto-selecionar o primeiro cartão quando carregar
+  useEffect(() => {
+    if (availableCards.length > 0 && !selectedCardId) {
+      setSelectedCardId(availableCards[0].id);
+    }
+  }, [availableCards, selectedCardId]);
 
   // Carregar MP SDK e public key
   useEffect(() => {
@@ -219,9 +230,6 @@ export function SavedCardPaymentForm({
     }
   };
 
-  // Filtrar cartões válidos (com brand e last4)
-  const availableCards = cards?.filter((card) => card.brand && card.last4) || [];
-
   if (isLoading) {
     return (
       <AntCard>
@@ -265,8 +273,6 @@ export function SavedCardPaymentForm({
         <Form.Item
           label="Selecione um cartão"
           required
-          validateStatus={!selectedCardId ? "error" : undefined}
-          help={!selectedCardId ? "Selecione um cartão" : undefined}
         >
           <Radio.Group
             value={selectedCardId}
@@ -308,13 +314,13 @@ export function SavedCardPaymentForm({
         <Form.Item
           label="Código de Segurança (CVV)"
           required
-          validateStatus={!cvv || cvv.length < 3 ? "error" : undefined}
+          validateStatus={cvvTouched && (!cvv || cvv.length < 3) ? "error" : undefined}
           help={
-            !cvv
+            cvvTouched && !cvv
               ? "Informe o CVV do cartão"
-              : cvv.length < 3
+              : cvvTouched && cvv.length < 3
               ? "CVV deve ter 3 ou 4 dígitos"
-              : "Encontrado no verso do cartão"
+              : undefined
           }
         >
           <Input
@@ -327,6 +333,7 @@ export function SavedCardPaymentForm({
                 setCvv(value);
               }
             }}
+            onBlur={() => setCvvTouched(true)}
             maxLength={4}
             size="large"
             style={{ width: "150px" }}

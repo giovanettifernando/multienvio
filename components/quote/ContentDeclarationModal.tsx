@@ -32,7 +32,7 @@ export function ContentDeclarationModal({
       open={open}
       onCancel={onClose}
       footer={null}
-      title={`Declaração de conteúdo ${carrierName}`}
+      title="Declaração de conteúdo"
     >
       <Space direction="vertical" size={16} style={{ width: "100%" }}>
         <Typography.Paragraph>

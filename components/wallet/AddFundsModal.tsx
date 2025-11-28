@@ -92,6 +92,7 @@ export function AddFundsModal({
   const [pixData, setPixData] = useState<MercadoPagoPaymentResult | null>(null);
   const [showCardForm, setShowCardForm] = useState(false);
   const [useSavedCard, setUseSavedCard] = useState(true); // true = usar cartão salvo, false = novo cartão
+  const [amountTouched, setAmountTouched] = useState(false);
 
   // Buscar cartões salvos usando hook otimizado
   const { data: savedCards, isLoading: isLoadingCards } = useCards();
@@ -156,6 +157,7 @@ export function AddFundsModal({
     setSelectedMethod(null);
     setShowCardForm(false);
     setUseSavedCard(true); // Reset para cartão salvo por padrão
+    setAmountTouched(false);
     onClose();
   };
 
@@ -180,7 +182,7 @@ export function AddFundsModal({
 
     return (
       <Modal
-        title={shouldShowSavedCardForm ? "Pagar com Cartão Salvo" : "Pagamento com Cartão - Mercado Pago"}
+        title="Pagamento com Cartão"
         open={open}
         onCancel={() => {
           setShowCardForm(false);
@@ -231,7 +233,7 @@ export function AddFundsModal({
   if (pixData && pixData.payment.pixQrCode) {
     return (
       <Modal
-        title="QR Code PIX - Mercado Pago"
+        title="QR Code PIX"
         open={open}
         onCancel={handleClose}
         footer={[
@@ -242,12 +244,9 @@ export function AddFundsModal({
         width={600}
       >
         <Space direction="vertical" size="large" style={{ width: '100%' }}>
-          <Alert
-            message="Aguardando pagamento"
-            description="Após escanear o QR Code e realizar o pagamento, o saldo será creditado automaticamente em sua carteira."
-            type="info"
-            showIcon
-          />
+          <Text style={{ color: '#ff4d4f', fontSize: 12, textAlign: 'center', display: 'block' }}>
+            Aguardando pagamento.
+          </Text>
 
           <div style={{ textAlign: 'center' }}>
             <Text type="secondary" style={{ marginBottom: 12, display: 'block' }}>
@@ -303,10 +302,6 @@ export function AddFundsModal({
             }
             type="warning"
           />
-
-          <Text type="secondary" style={{ fontSize: 12, textAlign: 'center', display: 'block' }}>
-            O saldo será creditado automaticamente após a confirmação do pagamento pelo Mercado Pago.
-          </Text>
         </Space>
       </Modal>
     );
@@ -340,19 +335,20 @@ export function AddFundsModal({
           label="Valor da recarga"
           required
           help={
-            !topUpAmount || topUpAmount <= 0
+            amountTouched && (!topUpAmount || topUpAmount <= 0)
               ? "Digite um valor maior que zero"
-              : topUpAmount > 10000
+              : amountTouched && topUpAmount > 10000
               ? "O valor máximo é R$ 10.000,00"
-              : "Valor mínimo: R$ 1,00 | Valor máximo: R$ 10.000,00"
+              : undefined
           }
           validateStatus={
-            !topUpAmount || topUpAmount <= 0 || topUpAmount > 10000 ? "error" : undefined
+            amountTouched && (!topUpAmount || topUpAmount <= 0 || topUpAmount > 10000) ? "error" : undefined
           }
         >
           <InputNumber
             value={topUpAmount}
             onChange={(value) => setTopUpAmount(value || 0)}
+            onBlur={() => setAmountTouched(true)}
             min={1}
             max={10000}
             step={10}
@@ -386,7 +382,7 @@ export function AddFundsModal({
                 <Radio value="pix" style={{ width: '100%' }}>
                   <Space>
                     <QrcodeOutlined style={{ fontSize: 20 }} />
-                    <div>PIX via Mercado Pago</div>
+                    <div>PIX</div>
                   </Space>
                 </Radio>
 
@@ -394,7 +390,7 @@ export function AddFundsModal({
                 <Radio value="card" style={{ width: '100%' }}>
                   <Space>
                     <CreditCardOutlined style={{ fontSize: 20 }} />
-                    <div>Cartão de crédito via Mercado Pago</div>
+                    <div>Cartão de crédito</div>
                   </Space>
                 </Radio>
               </Space>
@@ -405,8 +401,8 @@ export function AddFundsModal({
         {selectedMethod === 'pix' && (
           <div style={{ padding: '12px', background: '#f0f2f5', borderRadius: 4 }}>
             <Text type="secondary" style={{ fontSize: 12 }}>
-              Você receberá um QR Code do Mercado Pago para realizar o pagamento.
-              Após a confirmação automática pelo gateway, o saldo será creditado em sua carteira.
+              Você receberá um QR Code para realizar o pagamento.
+              Após a confirmação, o saldo será creditado em sua carteira.
             </Text>
           </div>
         )}

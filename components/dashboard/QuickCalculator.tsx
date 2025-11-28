@@ -40,9 +40,9 @@ export function QuickCalculator() {
     }
   };
 
-  const handleGenerateLabel = (result: QuoteResult) => {
+  const handleGoToQuote = () => {
     setModalOpen(false);
-    router.push(`/etiquetas/nova?carrier=${result.carrier}&service=${result.service}`);
+    router.push('/cotacoes');
   };
 
   return (
@@ -155,10 +155,10 @@ export function QuickCalculator() {
                     type="link"
                     size="small"
                     icon={<ArrowRightOutlined />}
-                    onClick={() => handleGenerateLabel(result)}
+                    onClick={handleGoToQuote}
                     style={{ padding: 0, height: 'auto' }}
                   >
-                    Gerar etiqueta
+                    Cotação
                   </Button>
                 </Space>
               </Flex>

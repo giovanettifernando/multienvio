@@ -110,7 +110,6 @@ export function NewTicketList({
       title: 'ID',
       dataIndex: 'id',
       key: 'id',
-      width: 100,
       render: (id: string) => (
         <Text code style={{ whiteSpace: 'nowrap' }}>
           {id.slice(0, 8)}
@@ -121,7 +120,6 @@ export function NewTicketList({
       title: 'Assunto',
       dataIndex: 'subject',
       key: 'subject',
-      ellipsis: true,
       render: (subject: string, record: SupportTicket) => (
         <a onClick={() => onTicketClick?.(record.id)}>{subject}</a>
       ),
@@ -130,11 +128,10 @@ export function NewTicketList({
       title: 'Solicitante',
       dataIndex: 'requester',
       key: 'requester',
-      width: 200,
       render: (requester: SupportTicket['requester']) => (
         <Space direction="vertical" size={0}>
-          <Text strong>{requester.name}</Text>
-          <Text type="secondary" style={{ fontSize: 12 }}>{requester.email}</Text>
+          <Text strong style={{ whiteSpace: 'nowrap' }}>{requester.name}</Text>
+          <Text type="secondary" style={{ fontSize: 12, whiteSpace: 'nowrap' }}>{requester.email}</Text>
         </Space>
       ),
     }] : []),
@@ -142,36 +139,32 @@ export function NewTicketList({
       title: 'Prioridade',
       dataIndex: 'priority',
       key: 'priority',
-      width: 100,
       render: (priority: Priority) => (
-        <Tag color={priorityColors[priority]}>{priorityLabels[priority]}</Tag>
+        <Tag color={priorityColors[priority]} style={{ whiteSpace: 'nowrap' }}>{priorityLabels[priority]}</Tag>
       ),
     },
     {
       title: 'Status',
       dataIndex: 'status',
       key: 'status',
-      width: 140,
       render: (status: Status) => (
-        <Tag color={statusColors[status]}>{statusLabels[status]}</Tag>
+        <Tag color={statusColors[status]} style={{ whiteSpace: 'nowrap' }}>{statusLabels[status]}</Tag>
       ),
     },
     {
       title: 'Criado',
       dataIndex: 'createdAt',
       key: 'createdAt',
-      width: 150,
       render: (date: string) => (
-        <Text type="secondary">{dayjs(date).fromNow()}</Text>
+        <Text type="secondary" style={{ whiteSpace: 'nowrap' }}>{dayjs(date).fromNow()}</Text>
       ),
     },
     {
       title: 'Atualizado',
       dataIndex: 'updatedAt',
       key: 'updatedAt',
-      width: 150,
       render: (date: string) => (
-        <Text type="secondary">{dayjs(date).fromNow()}</Text>
+        <Text type="secondary" style={{ whiteSpace: 'nowrap' }}>{dayjs(date).fromNow()}</Text>
       ),
     },
   ];
@@ -233,6 +226,7 @@ export function NewTicketList({
         dataSource={tickets}
         columns={columns}
         rowKey="id"
+        tableLayout="auto"
         loading={ticketsQuery.isLoading || ticketsQuery.isFetching}
         pagination={
           audience === 'admin'

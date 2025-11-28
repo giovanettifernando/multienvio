@@ -37,39 +37,39 @@ export default function StatementTable({
       loading={loading}
       dataSource={transactions}
       pagination={pagination}
-      scroll={{ x: 800 }}
+      tableLayout="auto"
       columns={[
         {
           title: "Data",
           dataIndex: "confirmedAt",
-          width: 150,
           render: (v: string | null) => {
             const date = v ? new Date(v) : null;
-            return date
-              ? date.toLocaleDateString("pt-BR", {
-                  day: "2-digit",
-                  month: "2-digit",
-                  year: "numeric",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })
-              : "-";
+            return (
+              <span style={{ whiteSpace: "nowrap" }}>
+                {date
+                  ? date.toLocaleDateString("pt-BR", {
+                      day: "2-digit",
+                      month: "2-digit",
+                      year: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })
+                  : "-"}
+              </span>
+            );
           },
         },
         {
           title: "Tipo",
           dataIndex: "typeLabel",
-          width: 120,
         },
         {
           title: "Valor",
           dataIndex: "formattedAmount",
-          width: 140,
-          align: "right",
           render: (formatted: string, record: WalletTransactionDTO) => {
             const color = record.direction === "credit" ? "#52c41a" : "#ff4d4f";
             return (
-              <span style={{ color, fontWeight: 600, fontSize: 14 }}>
+              <span style={{ color, fontWeight: 600, fontSize: 14, whiteSpace: "nowrap" }}>
                 {formatted}
               </span>
             );
@@ -78,7 +78,6 @@ export default function StatementTable({
         {
           title: "Descrição",
           dataIndex: "description",
-          ellipsis: true,
         },
       ]}
     />
