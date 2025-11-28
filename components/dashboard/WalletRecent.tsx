@@ -1,7 +1,7 @@
 'use client';
 
 import { Card, List, Typography, Skeleton, Empty, Button, Flex } from 'antd';
-import { RightOutlined } from '@ant-design/icons';
+import { SwapOutlined, RightOutlined } from '@ant-design/icons';
 import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import type { WalletTx } from '@/types/wallet';
@@ -48,9 +48,16 @@ export function WalletRecent() {
     staleTime: 90_000,
   });
 
+  const cardTitle = (
+    <Flex align="center" gap={8}>
+      <SwapOutlined />
+      <Text strong>Transações Recentes</Text>
+    </Flex>
+  );
+
   if (isLoading) {
     return (
-      <Card title="Transações Recentes" variant="outlined">
+      <Card title={cardTitle} variant="outlined">
         <Skeleton active paragraph={{ rows: 4 }} />
       </Card>
     );
@@ -58,7 +65,7 @@ export function WalletRecent() {
 
   if (!transactions || transactions.length === 0) {
     return (
-      <Card title="Transações Recentes" variant="outlined">
+      <Card title={cardTitle} variant="outlined">
         <Empty description="Nenhuma transação encontrada" />
       </Card>
     );
@@ -66,7 +73,7 @@ export function WalletRecent() {
 
   return (
     <Card
-      title="Transações Recentes"
+      title={cardTitle}
       variant="outlined"
       extra={
         <Button

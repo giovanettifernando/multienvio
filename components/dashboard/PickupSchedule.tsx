@@ -7,67 +7,71 @@ import { useQuery } from '@tanstack/react-query';
 
 const { Text } = Typography;
 
-interface Pickup {
+interface ScheduledPickup {
   id: string;
-  scheduledDate: string;
-  address: {
-    street: string;
-    city: string;
-    state: string;
+  originCep: string;
+  originAddress: string | null;
+  originCity: string | null;
+  originUf: string | null;
+  scheduleAt: string | null;
+  status: string;
+  shipment: {
+    id: string;
+    trackingCode: string;
+    carrier: string | null;
   };
-  status: 'SCHEDULED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELED';
+  collector: {
+    id: string;
+    name: string;
+  } | null;
 }
 
-async function fetchPickups(): Promise<Pickup[]> {
-  const response = await fetch('/api/pickups?limit=5&upcoming=true');
+interface PickupResponse {
+  items: ScheduledPickup[];
+  total: number;
+}
+
+async function fetchScheduledPickups(): Promise<PickupResponse> {
+  const response = await fetch('/api/coletas?status=SCHEDULED&pageSize=5');
   if (!response.ok) {
     throw new Error('Failed to fetch pickups');
   }
-  const data = await response.json();
-  return data.pickups || [];
+  return response.json();
 }
 
-function getStatusLabel(status: Pickup['status']): string {
-  switch (status) {
-    case 'SCHEDULED':
-      return 'Agendada';
-    case 'IN_PROGRESS':
-      return 'Em andamento';
-    case 'COMPLETED':
-      return 'Concluída';
-    case 'CANCELED':
-      return 'Cancelada';
-    default:
-      return status;
-  }
-}
-
-function getStatusColor(status: Pickup['status']): string {
-  switch (status) {
-    case 'SCHEDULED':
-      return 'blue';
-    case 'IN_PROGRESS':
-      return 'processing';
-    case 'COMPLETED':
-      return 'success';
-    case 'CANCELED':
-      return 'default';
-    default:
-      return 'default';
-  }
+function formatScheduleDate(dateString: string | null): string {
+  if (!dateString) return 'A definir';
+  const date = new Date(dateString);
+  return date.toLocaleDateString('pt-BR', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 }
 
 export function PickupSchedule() {
   const router = useRouter();
-  const { data: pickups, isLoading } = useQuery({
-    queryKey: ['pickups-upcoming'],
-    queryFn: fetchPickups,
+  const { data, isLoading } = useQuery({
+    queryKey: ['pickups-scheduled'],
+    queryFn: fetchScheduledPickups,
     staleTime: 90_000,
   });
 
+  const pickups = data?.items || [];
+  const total = data?.total || 0;
+
+  const cardTitle = (
+    <Flex align="center" gap={8}>
+      <CalendarOutlined />
+      <Text strong>Coletas Agendadas</Text>
+    </Flex>
+  );
+
   if (isLoading) {
     return (
-      <Card title="Coletas Agendadas" variant="outlined">
+      <Card title={cardTitle} variant="outlined">
         <Skeleton active paragraph={{ rows: 4 }} />
       </Card>
     );
@@ -75,27 +79,22 @@ export function PickupSchedule() {
 
   return (
     <Card
-      title={
-        <Flex align="center" gap={8}>
-          <CalendarOutlined />
-          <Text>Coletas Agendadas</Text>
-        </Flex>
-      }
+      title={cardTitle}
       variant="outlined"
       extra={
-        pickups && pickups.length > 0 && (
+        total > 0 && (
           <Button
             type="link"
             size="small"
             icon={<RightOutlined />}
-            onClick={() => router.push('/coletas')}
+            onClick={() => router.push('/coletas?status=SCHEDULED')}
           >
             Ver todas
           </Button>
         )
       }
     >
-      {!pickups || pickups.length === 0 ? (
+      {pickups.length === 0 ? (
         <Empty
           description="Nenhuma coleta agendada"
           image={Empty.PRESENTED_IMAGE_SIMPLE}
@@ -114,23 +113,30 @@ export function PickupSchedule() {
                   <Flex align="center" gap={4}>
                     <CalendarOutlined style={{ fontSize: '12px', color: '#8c8c8c' }} />
                     <Text strong style={{ fontSize: '13px' }}>
-                      {new Date(pickup.scheduledDate).toLocaleDateString('pt-BR', {
-                        day: '2-digit',
-                        month: 'short',
-                        year: 'numeric',
-                      })}
+                      {formatScheduleDate(pickup.scheduleAt)}
                     </Text>
                   </Flex>
                   <Flex align="center" gap={4}>
                     <EnvironmentOutlined style={{ fontSize: '12px', color: '#8c8c8c' }} />
                     <Text type="secondary" style={{ fontSize: '11px' }} ellipsis>
-                      {pickup.address.street}, {pickup.address.city}/{pickup.address.state}
+                      {pickup.originCity && pickup.originUf
+                        ? `${pickup.originCity}/${pickup.originUf}`
+                        : pickup.originCep}
                     </Text>
+                    {pickup.collector && (
+                      <Text type="secondary" style={{ fontSize: '11px' }}>
+                        • {pickup.collector.name}
+                      </Text>
+                    )}
                   </Flex>
+                  <Text type="secondary" style={{ fontSize: '11px' }} ellipsis>
+                    {pickup.shipment.trackingCode}
+                    {pickup.shipment.carrier && ` • ${pickup.shipment.carrier}`}
+                  </Text>
                 </Flex>
 
-                <Tag color={getStatusColor(pickup.status)} style={{ fontSize: '10px' }}>
-                  {getStatusLabel(pickup.status)}
+                <Tag color="blue" style={{ fontSize: '10px' }}>
+                  Agendada
                 </Tag>
               </Flex>
             </List.Item>

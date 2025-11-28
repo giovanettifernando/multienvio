@@ -4,10 +4,12 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from '@/lib/auth/session';
 import { prisma } from '@/lib/db';
+import { ShipmentStatus } from '@/lib/shipments/shipment-status';
 
 /**
  * GET /api/dashboard/pending-pickup-shipments
- * Retorna envios pendentes de entrega em pontos de coleta
+ * Retorna envios aguardando postagem em pontos de coleta
+ * (shipments que não tem coleta e estão esperando entrada no ponto)
  */
 export async function GET(request: NextRequest) {
   try {
@@ -20,14 +22,22 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const limit = parseInt(searchParams.get("limit") ?? "5", 10);
 
-    // Buscar envios pendentes em pontos de coleta
+    // Buscar envios aguardando postagem em pontos de coleta
+    // - Tem ponto de coleta associado
+    // - Status: aguardando entrega no ponto
+    // - NÃO tem pickup request (coleta)
     const shipments = await prisma.shipment.findMany({
       where: {
         senderId: session.userId,
         pickupPointId: { not: null }, // Tem ponto de coleta associado
         status: {
-          in: ['pending_payment', 'ready_for_posting'], // Aguardando entrega no ponto
+          in: [
+            ShipmentStatus.AWAITING_DROP_OFF_AT_POINT,
+            ShipmentStatus.DROPPED_OFF_AT_POINT,
+            ShipmentStatus.AWAITING_CARRIER_PICKUP_AT_POINT,
+          ],
         },
+        pickupRequest: null, // NÃO tem coleta agendada
       },
       include: {
         label: {
@@ -53,25 +63,46 @@ export async function GET(request: NextRequest) {
         nomeFantasia: true,
         cidade: true,
         uf: true,
+        logradouro: true,
+        numero: true,
+        bairro: true,
       },
     });
-
     const pickupPointsMap = new Map(pickupPoints.map(p => [p.id, p]));
 
     // Verificar se há mais resultados
     const hasMore = shipments.length > limit;
     const items = shipments.slice(0, limit);
 
+    // Contar total de envios aguardando postagem
+    const total = await prisma.shipment.count({
+      where: {
+        senderId: session.userId,
+        pickupPointId: { not: null },
+        status: {
+          in: [
+            ShipmentStatus.AWAITING_DROP_OFF_AT_POINT,
+            ShipmentStatus.DROPPED_OFF_AT_POINT,
+            ShipmentStatus.AWAITING_CARRIER_PICKUP_AT_POINT,
+          ],
+        },
+        pickupRequest: null,
+      },
+    });
+
     // Mapear para o formato esperado
     const data = items.map((shipment) => {
       const pickupPoint = pickupPointsMap.get(shipment.pickupPointId!);
-
+      const address = pickupPoint
+        ? [pickupPoint.logradouro, pickupPoint.numero, pickupPoint.bairro].filter(Boolean).join(', ')
+        : '';
       return {
         id: shipment.id,
         trackingCode: shipment.platformTrackingCode,
         pickupPointName: pickupPoint?.nomeFantasia || 'Ponto de coleta',
         pickupPointCity: pickupPoint?.cidade || '',
         pickupPointState: pickupPoint?.uf || '',
+        pickupPointAddress: address,
         status: shipment.status,
         createdAt: shipment.createdAt.toISOString(),
         labelStatus: shipment.label?.status,
@@ -80,7 +111,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       items: data,
-      total: items.length,
+      total,
       hasMore,
     });
   } catch (error) {

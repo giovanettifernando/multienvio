@@ -1019,11 +1019,11 @@ export default function FinalizeQuotePage() {
           {/* Formulários */}
           <Space direction="vertical" size={24} style={{ width: "100%" }}>
             <Row gutter={[24, 24]}>
-              <Col xs={24} lg={10}>
-                <PostingUnitPicker />
-              </Col>
               <Col xs={24} lg={14}>
                 <DocumentChooser />
+              </Col>
+              <Col xs={24} lg={10}>
+                <PostingUnitPicker />
               </Col>
             </Row>
             <RecipientForm />

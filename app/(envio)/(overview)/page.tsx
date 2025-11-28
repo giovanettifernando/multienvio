@@ -10,20 +10,27 @@ import { WalletCard } from "@/components/dashboard/WalletCard";
 import { SupportQuickView } from "@/components/dashboard/SupportQuickView";
 import { PickupSchedule } from "@/components/dashboard/PickupSchedule";
 import { PendingPickupPointShipments } from "@/components/dashboard/PendingPickupPointShipments";
-import { DashboardFooterLinks } from "@/components/dashboard/DashboardFooterLinks";
-import type { Shipment } from "@/types/shipment";
 
-type ShipmentsResponse = {
-  dados: Shipment[];
-};
+interface ShipmentItem {
+  id: string;
+  status: string;
+  createdAt: string;
+}
 
-async function fetchShipments(): Promise<Shipment[]> {
-  const response = await fetch("/api/shipments");
+interface ShipmentsResponse {
+  items: ShipmentItem[];
+  pagination: {
+    total: number;
+  };
+}
+
+async function fetchShipments(): Promise<ShipmentItem[]> {
+  const response = await fetch("/api/shipments?limit=100");
   if (!response.ok) {
     throw new Error("Não foi possível carregar os envios.");
   }
   const data = (await response.json()) as ShipmentsResponse;
-  return data.dados ?? [];
+  return data.items ?? [];
 }
 
 export default function OverviewPage() {
@@ -55,9 +62,9 @@ export default function OverviewPage() {
         </Col>
       </Row>
 
-      {/* Row 2: Calculadora + Carteira | Transações Recentes */}
+      {/* Row 2: Calculadora + Carteira | Transações + Suporte */}
       <Row gutter={[12, 12]}>
-        <Col xs={24} md={12} lg={10}>
+        <Col xs={24} md={12} lg={8}>
           <Row gutter={[12, 12]}>
             <Col xs={24}>
               <QuickCalculator />
@@ -67,14 +74,10 @@ export default function OverviewPage() {
             </Col>
           </Row>
         </Col>
-        <Col xs={24} md={12} lg={14}>
+        <Col xs={24} md={12} lg={8}>
           <WalletRecent />
         </Col>
-      </Row>
-
-      {/* Row 3: Suporte */}
-      <Row gutter={[12, 12]}>
-        <Col xs={24}>
+        <Col xs={24} md={24} lg={8}>
           <SupportQuickView />
         </Col>
       </Row>
@@ -88,9 +91,6 @@ export default function OverviewPage() {
           <PendingPickupPointShipments />
         </Col>
       </Row>
-
-      {/* Footer Links */}
-      <DashboardFooterLinks />
     </PageShell>
   );
 }

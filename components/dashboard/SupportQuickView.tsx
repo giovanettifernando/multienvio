@@ -63,9 +63,16 @@ export function SupportQuickView() {
     staleTime: 90_000,
   });
 
+  const cardTitle = (
+    <Flex align="center" gap={8}>
+      <MessageOutlined />
+      <Text strong>Tickets de Suporte</Text>
+    </Flex>
+  );
+
   if (isLoading) {
     return (
-      <Card title="Tickets de Suporte" variant="outlined">
+      <Card title={cardTitle} variant="outlined">
         <Skeleton active paragraph={{ rows: 4 }} />
       </Card>
     );
@@ -73,12 +80,7 @@ export function SupportQuickView() {
 
   return (
     <Card
-      title={
-        <Flex align="center" gap={8}>
-          <MessageOutlined />
-          <Text>Tickets de Suporte</Text>
-        </Flex>
-      }
+      title={cardTitle}
       variant="outlined"
       extra={
         <Flex gap={8}>

@@ -1,7 +1,7 @@
 'use client';
 
-import { Card, List, Typography, Tag, Skeleton, Empty, Button, Flex, Badge, Space } from 'antd';
-import { EnvironmentOutlined, RightOutlined, InboxOutlined } from '@ant-design/icons';
+import { Card, List, Typography, Tag, Skeleton, Empty, Button, Flex, Badge } from 'antd';
+import { EnvironmentOutlined, RightOutlined, InboxOutlined, PrinterOutlined } from '@ant-design/icons';
 import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 
@@ -53,9 +53,17 @@ export function PendingPickupPointShipments() {
   const total = data?.total || 0;
   const hasMore = data?.hasMore || false;
 
+  const cardTitle = (
+    <Flex align="center" gap={8}>
+      <PrinterOutlined />
+      <Text strong>Aguardando Postagem</Text>
+      {total > 0 && <Badge count={total} />}
+    </Flex>
+  );
+
   if (isLoading) {
     return (
-      <Card title="Envios pendentes em pontos de coleta" variant="outlined">
+      <Card title={cardTitle} variant="outlined">
         <Skeleton active paragraph={{ rows: 4 }} />
       </Card>
     );
@@ -63,12 +71,7 @@ export function PendingPickupPointShipments() {
 
   return (
     <Card
-      title={
-        <Space>
-          Envios pendentes em pontos de coleta
-          {total > 0 && <Badge count={total} />}
-        </Space>
-      }
+      title={cardTitle}
       variant="outlined"
       extra={
         hasMore && (
@@ -76,7 +79,7 @@ export function PendingPickupPointShipments() {
             type="link"
             size="small"
             icon={<RightOutlined />}
-            onClick={() => router.push('/shipments?filter=pending_pickup')}
+            onClick={() => router.push('/shipments?status=Aguardando%20postagem')}
           >
             Ver todos
           </Button>
@@ -87,18 +90,18 @@ export function PendingPickupPointShipments() {
         <Empty
           image={Empty.PRESENTED_IMAGE_SIMPLE}
           description={
-            <Space direction="vertical" size={4}>
-              <Text>Nenhum envio pendente em pontos de coleta.</Text>
+            <Flex vertical gap={4}>
+              <Text>Nenhum envio aguardando postagem.</Text>
               <Text type="secondary" style={{ fontSize: '12px' }}>
-                Assim que você criar um envio para entregar em um ponto de coleta, ele aparecerá aqui.
+                Quando você criar um envio para entregar em ponto de coleta, ele aparecerá aqui.
               </Text>
-            </Space>
+            </Flex>
           }
         />
       ) : (
         <>
           <Text type="secondary" style={{ fontSize: '12px', display: 'block', marginBottom: 16 }}>
-            Leve os envios até o ponto de coleta para que a transportadora possa retirar.
+            Leve os envios até o ponto de coleta indicado para postagem.
           </Text>
           <List
             size="small"
@@ -130,8 +133,8 @@ export function PendingPickupPointShipments() {
                     </Flex>
                   </Flex>
 
-                  <Tag color="orange" style={{ fontSize: '10px' }}>
-                    Pendente
+                  <Tag color="blue" style={{ fontSize: '10px' }}>
+                    Aguard. postagem
                   </Tag>
                 </Flex>
               </List.Item>
