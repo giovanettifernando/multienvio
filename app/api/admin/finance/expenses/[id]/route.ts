@@ -82,6 +82,7 @@ export async function PUT(request: NextRequest, context: RouteContext) {
     const reference = formData.get('reference') as string | null;
     const supplier = formData.get('supplier') as string | null;
     const notes = formData.get('notes') as string | null;
+    const dreAccountCode = formData.get('dreAccountCode') as string | null;
     const isRecurring = formData.has('isRecurring')
       ? formData.get('isRecurring') === 'true'
       : undefined;
@@ -110,6 +111,7 @@ export async function PUT(request: NextRequest, context: RouteContext) {
     if (formData.has('reference')) updateData.reference = reference || null;
     if (formData.has('supplier')) updateData.supplier = supplier || null;
     if (formData.has('notes')) updateData.notes = notes || null;
+    if (formData.has('dreAccountCode')) updateData.dreAccountCode = dreAccountCode || null;
     if (isRecurring !== undefined) updateData.isRecurring = isRecurring;
     if (recurringMonths !== undefined) updateData.recurringMonths = recurringMonths;
 

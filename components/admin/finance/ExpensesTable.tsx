@@ -694,8 +694,8 @@ export function ExpensesTable() {
               value={summary?.totalAmountReais || 0}
               precision={2}
               prefix={<DollarOutlined />}
-              suffix="R$"
               valueStyle={{ color: '#1890ff' }}
+              formatter={(value) => `R$ ${Number(value).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
             />
           </Col>
           <Col xs={24} sm={12} md={6}>
@@ -704,8 +704,8 @@ export function ExpensesTable() {
               value={pendingAmount}
               precision={2}
               prefix={<ClockCircleOutlined />}
-              suffix="R$"
               valueStyle={{ color: '#fa8c16' }}
+              formatter={(value) => `R$ ${Number(value).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
             />
           </Col>
           <Col xs={24} sm={12} md={6}>
@@ -714,8 +714,8 @@ export function ExpensesTable() {
               value={paidAmount}
               precision={2}
               prefix={<CheckCircleOutlined />}
-              suffix="R$"
               valueStyle={{ color: '#52c41a' }}
+              formatter={(value) => `R$ ${Number(value).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
             />
           </Col>
         </Row>

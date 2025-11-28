@@ -42,7 +42,7 @@ export const ADMIN_NAV: AdminNavItem[] = [
       },
       {
         key: "relatorios-fiscais",
-        label: "Relatórios Fiscais",
+        label: "Relatórios",
         href: "/admin/financeiro/relatorios",
         permissions: ["FINANCEIRO"],
       },

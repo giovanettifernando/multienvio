@@ -47,7 +47,7 @@ export function Reports({ period }: ReportsProps) {
   };
 
   return (
-    <Card title="Relatórios Fiscais" size="small">
+    <Card title="Relatórios" size="small">
       <Flex vertical gap={16}>
         <div>
           <p style={{ marginBottom: 8 }}>

@@ -93,38 +93,41 @@ export function DRETable() {
   const columns = useMemo<ColumnsType<DRETableRow>>(() => {
     const cols: ColumnsType<DRETableRow> = [
       {
-        title: 'Código',
+        title: 'Cód.',
         dataIndex: 'code',
         key: 'code',
-        width: 80,
+        width: 60,
         fixed: 'left',
         render: (code: string, record) => (
-          <Text
+          <span
             style={{
-              fontWeight: record.isBold ? 700 : 400,
+              fontWeight: record.isBold ? 600 : 400,
               color: record.isTotal ? '#1890ff' : undefined,
+              fontSize: 11,
             }}
           >
             {code}
-          </Text>
+          </span>
         ),
       },
       {
         title: 'Descrição',
         dataIndex: 'name',
         key: 'name',
-        width: 300,
+        width: 240,
         fixed: 'left',
         render: (name: string, record) => (
-          <Text
+          <span
             style={{
-              fontWeight: record.isBold ? 700 : 400,
+              fontWeight: record.isBold ? 600 : 400,
               color: record.isTotal ? '#1890ff' : undefined,
-              paddingLeft: record.level === 2 ? 16 : record.level === 3 ? 32 : 0,
+              paddingLeft: record.level === 2 ? 8 : record.level === 3 ? 16 : 0,
+              fontSize: 11,
+              whiteSpace: 'nowrap',
             }}
           >
             {name}
-          </Text>
+          </span>
         ),
       },
     ];
@@ -137,22 +140,23 @@ export function DRETable() {
           title: MONTH_NAMES_SHORT[monthData.month - 1],
           dataIndex: monthKey,
           key: monthKey,
-          width: 120,
+          width: 85,
           align: 'right',
           render: (value: number, record) => {
             const isNegative = value < 0;
             const formatted = formatCurrency(Math.abs(value));
             return (
-              <Text
+              <span
                 style={{
-                  fontWeight: record.isBold ? 700 : 400,
+                  fontWeight: record.isBold ? 600 : 400,
                   color: record.isTotal
                     ? isNegative ? '#f5222d' : '#52c41a'
                     : isNegative ? '#f5222d' : undefined,
+                  fontSize: 11,
                 }}
               >
                 {isNegative ? `(${formatted})` : value === 0 ? '-' : formatted}
-              </Text>
+              </span>
             );
           },
         });
@@ -164,23 +168,24 @@ export function DRETable() {
       title: 'Total',
       dataIndex: 'total',
       key: 'total',
-      width: 140,
+      width: 100,
       fixed: 'right',
       align: 'right',
       render: (value: number, record) => {
         const isNegative = value < 0;
         const formatted = formatCurrency(Math.abs(value));
         return (
-          <Text
-            strong
+          <span
             style={{
+              fontWeight: 600,
               color: record.isTotal
                 ? isNegative ? '#f5222d' : '#52c41a'
                 : isNegative ? '#f5222d' : undefined,
+              fontSize: 11,
             }}
           >
             {isNegative ? `(${formatted})` : value === 0 ? '-' : formatted}
-          </Text>
+          </span>
         );
       },
     });
@@ -281,10 +286,10 @@ export function DRETable() {
 
   if (isLoading) {
     return (
-      <Flex vertical gap={24}>
+      <Flex vertical gap={12}>
         {renderFilters()}
         <Card>
-          <Flex justify="center" align="center" style={{ minHeight: 400 }}>
+          <Flex justify="center" align="center" style={{ minHeight: 300 }}>
             <Spin size="large" tip="Carregando DRE..." />
           </Flex>
         </Card>
@@ -294,7 +299,7 @@ export function DRETable() {
 
   if (error) {
     return (
-      <Flex vertical gap={24}>
+      <Flex vertical gap={12}>
         {renderFilters()}
         <Card>
           <Empty
@@ -313,7 +318,7 @@ export function DRETable() {
   }
 
   return (
-    <Flex vertical gap={24}>
+    <Flex vertical gap={12}>
       {renderFilters()}
 
       <Card size="small" styles={{ body: { padding: 0 } }}>
@@ -323,6 +328,7 @@ export function DRETable() {
           pagination={false}
           scroll={{ x: 'max-content' }}
           size="small"
+          className="dre-compact-table"
           rowClassName={(record) => {
             if (record.isTotal) return 'dre-total-row';
             if (record.level === 1) return 'dre-group-row';
@@ -334,6 +340,14 @@ export function DRETable() {
       </Card>
 
       <style jsx global>{`
+        .dre-compact-table .ant-table-thead > tr > th,
+        .dre-compact-table .ant-table-tbody > tr > td {
+          padding: 2px 4px !important;
+          line-height: 1.3 !important;
+        }
+        .dre-compact-table .ant-table-thead > tr > th {
+          font-size: 11px !important;
+        }
         .dre-total-row {
           background-color: #e6f7ff !important;
         }
