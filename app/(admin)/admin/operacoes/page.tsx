@@ -6,7 +6,8 @@ import { useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import { listShipments } from '@/lib/admin/ops/api';
 import ShipmentsTable from '@/components/admin/ops/ShipmentsTable';
-import PoCTable from '@/components/admin/ops/PoCTable';
+import PickupsTable from '@/components/admin/ops/PickupsTable';
+import ReceptionsTable from '@/components/admin/ops/ReceptionsTable';
 import EventsTable from '@/components/admin/ops/EventsTable';
 import { PageShell } from '@/components/shared/PageShell';
 
@@ -112,19 +113,12 @@ export default function AdminOperacoesPage() {
     {
       key: 'pickups',
       label: 'Coletas',
-      children: (
-        <Alert
-          message="Funcionalidade em Desenvolvimento"
-          description="Gestão de coletas (home pickup e PoC pickup) estará disponível em breve."
-          type="info"
-          showIcon
-        />
-      ),
+      children: <PickupsTable dateStart={_period.dateStart} dateEnd={_period.dateEnd} />,
     },
     {
       key: 'pocs',
       label: 'Pontos de Coleta',
-      children: <PoCTable />,
+      children: <ReceptionsTable dateStart={_period.dateStart} dateEnd={_period.dateEnd} />,
     },
     {
       key: 'exceptions',

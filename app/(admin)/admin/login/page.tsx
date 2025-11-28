@@ -27,7 +27,11 @@ function AdminLoginForm() {
   useEffect(() => {
     const reason = searchParams.get('reason');
     if (reason === 'inactivity') {
-      message.warning('Sua sessão expirou por inatividade. Por favor, faça login novamente.');
+      // Use key to prevent duplicate messages
+      message.warning({
+        content: 'Sua sessão expirou por inatividade. Por favor, faça login novamente.',
+        key: 'session-expired',
+      });
     }
   }, [searchParams, message]);
 
