@@ -201,6 +201,52 @@ export async function POST(request: Request) {
               });
             }
           }
+
+          // 8) Marcar carrinho como CHECKED_OUT e remover itens
+          // Buscar carrinho LOCKED que contém estes shipments
+          const cart = await tx.cart.findFirst({
+            where: {
+              userId: session.userId,
+              status: 'LOCKED',
+            },
+          });
+
+          if (cart && cart.meta) {
+            const cartMeta = cart.meta as { shipmentIds?: string[]; [key: string]: unknown };
+            // Verificar se o carrinho contém os shipments pagos
+            const hasMatchingShipments = shipmentIdsToUpdate.some(
+              (id: string) => cartMeta.shipmentIds?.includes(id)
+            );
+
+            if (hasMatchingShipments) {
+              // Verificar se todos os shipments do carrinho foram pagos
+              const allCartShipments = await tx.shipment.findMany({
+                where: {
+                  id: { in: cartMeta.shipmentIds || [] },
+                },
+              });
+
+              const allPaid = allCartShipments.every(
+                (s) => s.paymentMethod !== null
+              );
+
+              if (allPaid) {
+                // Remover itens do carrinho
+                await tx.cartItem.deleteMany({
+                  where: { cartId: cart.id },
+                });
+
+                // Marcar carrinho como CHECKED_OUT
+                await tx.cart.update({
+                  where: { id: cart.id },
+                  data: {
+                    status: 'CHECKED_OUT',
+                    updatedAt: new Date(),
+                  },
+                });
+              }
+            }
+          }
         }
 
         return {
