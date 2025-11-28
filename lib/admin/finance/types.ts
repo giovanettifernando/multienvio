@@ -68,6 +68,50 @@ export interface CarrierPayout {
   proofUrl?: string | null;  // comprovante (mock)
 }
 
+// Tipos para cálculo de repasses (reconciliação com transportadoras)
+export interface CarrierPayoutShipment {
+  id: string;
+  platformTrackingCode: string;
+  carrierTrackingCode: string | null;
+  carrier: string;
+  service: string | null;
+  labelStatus: string;
+  labelPriceCents: number;
+  freightCostReais: number;
+  platformCommissionCents: number;
+  netPayoutReais: number;
+  postedAt: string | null;
+  createdAt: string;
+  destinationCity: string;
+  destinationState: string;
+}
+
+export interface CarrierPayoutSummary {
+  carrier: string;
+  shipmentCount: number;
+  grossAmountCents: number;
+  grossAmountReais: number;
+  platformCommissionCents: number;
+  platformCommissionReais: number;
+  netPayoutCents: number;
+  netPayoutReais: number;
+  shipments: CarrierPayoutShipment[];
+}
+
+export interface CarrierPayoutsResponse {
+  period: {
+    dateStart: string;
+    dateEnd: string;
+  };
+  summary: {
+    totalShipments: number;
+    totalGrossReais: number;
+    totalPlatformCommissionReais: number;
+    totalNetPayoutReais: number;
+  };
+  carriers: CarrierPayoutSummary[];
+}
+
 export type CommissionStatus = 'calculated' | 'approved' | 'paid';
 export interface CommissionItem {
   id: string;
@@ -77,6 +121,51 @@ export interface CommissionItem {
   agentName: string;
   amount: number;
   status: CommissionStatus;
+}
+
+// Tipos para comissões por perfil (coletores e pontos de coleta)
+export type ProfileType = 'collector' | 'pickup_point';
+export type CommissionStatusFilter = 'completed' | 'pending' | 'all';
+
+export interface ProfileCommissionItem {
+  id: string;
+  referenceCode: string;
+  referenceId: string | null;
+  description: string;
+  commissionReais: number;
+  status: 'completed' | 'pending';
+  createdAt: string;
+  completedAt: string | null;
+}
+
+export interface ProfileCommissionSummary {
+  profileId: string;
+  profileName: string;
+  profileType: ProfileType;
+  itemCount: number;
+  completedCount: number;
+  pendingCount: number;
+  totalCommissionReais: number;
+  completedCommissionReais: number;
+  pendingCommissionReais: number;
+  items: ProfileCommissionItem[];
+}
+
+export interface ProfileCommissionsResponse {
+  period: {
+    dateStart: string;
+    dateEnd: string;
+  };
+  profileType: ProfileType;
+  statusFilter: CommissionStatusFilter;
+  summary: {
+    totalProfiles: number;
+    totalItems: number;
+    totalCommissionReais: number;
+    completedCommissionReais: number;
+    pendingCommissionReais: number;
+  };
+  profiles: ProfileCommissionSummary[];
 }
 
 export type ChargebackStatus = 'review' | 'approved' | 'denied';

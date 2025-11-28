@@ -4,10 +4,14 @@ import type {
   LedgerEntry,
   Invoice,
   CarrierPayout,
+  CarrierPayoutsResponse,
   CommissionItem,
   ChargebackItem,
   Paged,
   ListParams,
+  ProfileType,
+  CommissionStatusFilter,
+  ProfileCommissionsResponse,
 } from './types';
 
 // GET summary
@@ -184,6 +188,37 @@ export async function markPayoutPaid(id: string, reference?: string, proofUrl?: 
     body: JSON.stringify({ reference, proofUrl }),
   });
   if (!res.ok) throw new Error('Failed to mark payout as paid');
+  return res.json();
+}
+
+// Carrier payouts calculation (for reconciliation)
+export async function getCarrierPayouts(p: PeriodFilter & { carrier?: string }): Promise<CarrierPayoutsResponse> {
+  const params = new URLSearchParams();
+  if (p.dateStart) params.set('dateStart', p.dateStart);
+  if (p.dateEnd) params.set('dateEnd', p.dateEnd);
+  if (p.carrier) params.set('carrier', p.carrier);
+
+  const res = await fetch(`/api/admin/finance/carrier-payouts?${params}`, {
+    credentials: 'include',
+  });
+  if (!res.ok) throw new Error('Failed to fetch carrier payouts');
+  return res.json();
+}
+
+// Profile commissions (collectors and pickup points)
+export async function getProfileCommissions(
+  p: PeriodFilter & { profileType: ProfileType; status?: CommissionStatusFilter }
+): Promise<ProfileCommissionsResponse> {
+  const params = new URLSearchParams();
+  if (p.dateStart) params.set('dateStart', p.dateStart);
+  if (p.dateEnd) params.set('dateEnd', p.dateEnd);
+  params.set('profileType', p.profileType);
+  if (p.status) params.set('status', p.status);
+
+  const res = await fetch(`/api/admin/finance/profile-commissions?${params}`, {
+    credentials: 'include',
+  });
+  if (!res.ok) throw new Error('Failed to fetch profile commissions');
   return res.json();
 }
 

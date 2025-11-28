@@ -1469,3 +1469,89 @@ model FipeVehicleModel {
   @@index([name])
   @@map("fipe_vehicle_models")
 }
+
+// =====================================================
+// DESPESAS DA PLATAFORMA
+// =====================================================
+
+enum ExpenseType {
+  FIXED    // Despesa fixa (aluguel, salários, etc.)
+  VARIABLE // Despesa variável (marketing, comissões, etc.)
+}
+
+enum ExpenseCategory {
+  INFRAESTRUTURA  // Servidores, hospedagem, domínios
+  SOFTWARE        // Licenças, SaaS, ferramentas
+  GATEWAY         // Taxas de gateway de pagamento
+  MARKETING       // Publicidade, anúncios, promoções
+  PESSOAL         // Salários, benefícios, freelancers
+  ADMINISTRATIVO  // Contador, jurídico, despesas gerais
+  LOGISTICA       // Custos com transportadoras, materiais
+  IMPOSTOS        // Impostos e tributos
+  OUTROS          // Outras despesas
+}
+
+enum ExpenseStatus {
+  PENDING   // Lançada, aguardando pagamento
+  PAID      // Paga
+  CANCELED  // Cancelada
+}
+
+/// Despesas da plataforma (fixas e variáveis)
+model Expense {
+  id            String          @id @default(cuid())
+  type          ExpenseType
+  category      ExpenseCategory
+  description   String
+  amountCents   Int             @map("amount_cents")
+  status        ExpenseStatus   @default(PENDING)
+  dueDate       DateTime?       @map("due_date")
+  paidAt        DateTime?       @map("paid_at")
+  reference     String?         // Número da nota fiscal, boleto, etc.
+  supplier      String?         // Nome do fornecedor
+  notes         String?         // Observações
+
+  // Código da conta DRE para mapeamento
+  dreAccountCode String?        @map("dre_account_code")
+
+  // Comprovante (nota fiscal, recibo, etc.)
+  receiptUrl        String?     @map("receipt_url")
+  receiptFileName   String?     @map("receipt_file_name")
+  receiptUploadedAt DateTime?   @map("receipt_uploaded_at")
+
+  // Recorrência (para despesas fixas)
+  isRecurring       Boolean     @default(false) @map("is_recurring")
+  recurringMonths   Int?        @map("recurring_months") // null = indefinido
+
+  // Auditoria
+  createdBy     String          @map("created_by")
+  createdAt     DateTime        @default(now()) @map("created_at")
+  updatedAt     DateTime        @updatedAt @map("updated_at")
+
+  @@index([type, status, createdAt])
+  @@index([category, createdAt])
+  @@index([dueDate])
+  @@index([createdBy])
+  @@index([dreAccountCode, createdAt])
+  @@map("expenses")
+}
+
+/// Templates de despesas para facilitar lançamentos recorrentes
+model ExpenseTemplate {
+  id            String          @id @default(cuid())
+  name          String          // Nome do template (ex: "Aluguel AWS", "Licença GitHub")
+  type          ExpenseType
+  category      ExpenseCategory
+  supplier      String?         // Fornecedor padrão
+  defaultAmount Int?            @map("default_amount") // Valor padrão em centavos
+  isActive      Boolean         @default(true) @map("is_active")
+  usageCount    Int             @default(0) @map("usage_count") // Para ordenar por mais usados
+  createdBy     String          @map("created_by")
+  createdAt     DateTime        @default(now()) @map("created_at")
+  updatedAt     DateTime        @updatedAt @map("updated_at")
+
+  @@unique([name, category])
+  @@index([category, isActive])
+  @@index([isActive, usageCount])
+  @@map("expense_templates")
+}

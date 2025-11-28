@@ -35,6 +35,12 @@ export const ADMIN_NAV: AdminNavItem[] = [
         permissions: ["FINANCEIRO"],
       },
       {
+        key: "despesas",
+        label: "Despesas",
+        href: "/admin/financeiro/despesas",
+        permissions: ["FINANCEIRO"],
+      },
+      {
         key: "relatorios-fiscais",
         label: "Relatórios Fiscais",
         href: "/admin/financeiro/relatorios",
