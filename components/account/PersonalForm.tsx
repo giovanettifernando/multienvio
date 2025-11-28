@@ -176,6 +176,7 @@ export default function PersonalForm() {
         name: profileQuery.data.fullName,
         email: profileQuery.data.email,
         phone: profileQuery.data.phone,
+        avatarUrl: profileQuery.data.avatarDataUrl,
       });
       setHasCompany(profileQuery.data.hasCompany);
     }
@@ -255,6 +256,7 @@ export default function PersonalForm() {
             name: profile.fullName,
             email: profile.email,
             phone: profile.phone,
+            avatarUrl: profile.avatarDataUrl,
           });
           setHasCompany(profile.hasCompany);
           message.success("Dados salvos com sucesso.");

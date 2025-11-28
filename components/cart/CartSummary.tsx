@@ -63,12 +63,6 @@ export function CartSummary({
             {currencyFormatter.format(cart.descontos)}
           </Typography.Text>
         </Flex>
-        <Flex justify="space-between">
-          <Typography.Text>Taxas</Typography.Text>
-          <Typography.Text strong>
-            {currencyFormatter.format(cart.taxas)}
-          </Typography.Text>
-        </Flex>
         <Divider style={{ margin: "12px 0" }} />
         <Flex justify="space-between">
           <Typography.Text strong>Total</Typography.Text>

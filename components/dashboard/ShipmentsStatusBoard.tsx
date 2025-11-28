@@ -1,66 +1,70 @@
 'use client';
 
-import { Card, Flex, Space, Typography, Badge, Progress, Skeleton } from 'antd';
+import { Card, Flex, Typography, Tag, Skeleton } from 'antd';
 import {
-  ClockCircleOutlined,
+  FileTextOutlined,
+  PrinterOutlined,
+  SendOutlined,
   CarOutlined,
-  RocketOutlined,
   CheckCircleOutlined,
-  WarningOutlined,
+  CloseCircleOutlined,
 } from '@ant-design/icons';
 import { useRouter } from 'next/navigation';
-import type { Shipment } from '@/types/shipment';
+import {
+  ShipmentStatus,
+  SHIPMENT_STATUS_LABELS,
+} from '@/types/contracts';
 
 const { Text } = Typography;
 
 interface ShipmentsStatusBoardProps {
-  shipments: Shipment[];
+  shipments: Array<{ status: string }>;
   loading?: boolean;
 }
 
-interface StatusColumn {
-  key: string;
-  label: string;
+interface StatusConfig {
+  status: ShipmentStatus;
   icon: React.ReactNode;
   color: string;
-  statuses: Shipment['status'][];
+  bgColor: string;
 }
 
-const COLUMNS: StatusColumn[] = [
+const STATUS_CONFIG: StatusConfig[] = [
   {
-    key: 'awaiting',
-    label: 'Aguardando',
-    icon: <ClockCircleOutlined />,
-    color: 'orange',
-    statuses: ['aguardando_coleta', 'pendente'],
+    status: ShipmentStatus.CRIADO,
+    icon: <FileTextOutlined />,
+    color: '#595959',
+    bgColor: '#fafafa',
   },
   {
-    key: 'transit',
-    label: 'Em trânsito',
+    status: ShipmentStatus.ETIQUETA_EMITIDA,
+    icon: <PrinterOutlined />,
+    color: '#1890ff',
+    bgColor: '#e6f7ff',
+  },
+  {
+    status: ShipmentStatus.POSTADO,
+    icon: <SendOutlined />,
+    color: '#13c2c2',
+    bgColor: '#e6fffb',
+  },
+  {
+    status: ShipmentStatus.EM_TRANSPORTE,
     icon: <CarOutlined />,
-    color: 'blue',
-    statuses: ['em_transito', 'postado'],
+    color: '#722ed1',
+    bgColor: '#f9f0ff',
   },
   {
-    key: 'delivery',
-    label: 'Em rota',
-    icon: <RocketOutlined />,
-    color: 'purple',
-    statuses: ['em_rota_de_entrega'],
-  },
-  {
-    key: 'delivered',
-    label: 'Entregue',
+    status: ShipmentStatus.ENTREGUE,
     icon: <CheckCircleOutlined />,
-    color: 'green',
-    statuses: ['entregue'],
+    color: '#52c41a',
+    bgColor: '#f6ffed',
   },
   {
-    key: 'exceptions',
-    label: 'Exceções',
-    icon: <WarningOutlined />,
-    color: 'red',
-    statuses: [], // No exception statuses defined yet
+    status: ShipmentStatus.CANCELADO,
+    icon: <CloseCircleOutlined />,
+    color: '#ff4d4f',
+    bgColor: '#fff2f0',
   },
 ];
 
@@ -69,75 +73,84 @@ export function ShipmentsStatusBoard({ shipments, loading }: ShipmentsStatusBoar
 
   if (loading) {
     return (
-      <Card title="Status de Envios" variant="outlined">
-        <Skeleton active paragraph={{ rows: 3 }} />
+      <Card
+        title={
+          <Flex align="center" gap={8}>
+            <CarOutlined />
+            <Text strong>Status dos Envios</Text>
+          </Flex>
+        }
+        variant="outlined"
+        size="small"
+      >
+        <Skeleton active paragraph={{ rows: 1 }} />
       </Card>
     );
   }
 
-  const total = shipments.length;
-
-  const columnCounts = COLUMNS.map(column => ({
-    ...column,
-    count: shipments.filter(s => column.statuses.includes(s.status)).length,
-    percentage: total > 0 ? (shipments.filter(s => column.statuses.includes(s.status)).length / total) * 100 : 0,
+  const statusCounts = STATUS_CONFIG.map(config => ({
+    ...config,
+    count: shipments.filter(s => s.status === config.status).length,
   }));
 
-  const handleClick = (column: typeof COLUMNS[0]) => {
-    const statusParam = column.statuses.join(',');
-    router.push(`/envios?status=${statusParam}`);
+  const total = shipments.length;
+
+  const handleClick = (status: ShipmentStatus) => {
+    router.push(`/shipments?status=${status}`);
   };
 
   return (
-    <Card title="Status de Envios" variant="outlined">
-      <Flex gap={12} wrap="wrap">
-        {columnCounts.map(column => (
-          <Card
-            key={column.key}
-            size="small"
-            variant="outlined"
-            hoverable
-            onClick={() => handleClick(column)}
+    <Card
+      title={
+        <Flex align="center" gap={8}>
+          <CarOutlined />
+          <Text strong>Status dos Envios</Text>
+          {total > 0 && (
+            <Tag style={{ marginLeft: 8 }}>{total} total</Tag>
+          )}
+        </Flex>
+      }
+      variant="outlined"
+      size="small"
+      styles={{ body: { padding: '12px 16px' } }}
+    >
+      <Flex gap={8} wrap="wrap">
+        {statusCounts.map(item => (
+          <Flex
+            key={item.status}
+            align="center"
+            gap={8}
+            onClick={() => handleClick(item.status)}
             style={{
-              flex: '1 1 140px',
-              minWidth: 140,
+              padding: '8px 12px',
+              borderRadius: 6,
+              background: item.bgColor,
+              border: `1px solid ${item.color}20`,
               cursor: 'pointer',
-              borderColor: column.count > 0 ? `var(--ant-color-${column.color})` : undefined,
+              transition: 'all 0.2s',
+              minWidth: 120,
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'translateY(-1px)';
+              e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = 'none';
             }}
           >
-            <Space direction="vertical" size={8} style={{ width: '100%' }}>
-              <Flex justify="space-between" align="center">
-                <Text type="secondary" style={{ fontSize: '12px' }}>
-                  {column.icon} {column.label}
-                </Text>
-                <Badge
-                  count={column.count}
-                  style={{
-                    backgroundColor: `var(--ant-color-${column.color})`,
-                  }}
-                />
-              </Flex>
-
-              <Text strong style={{ fontSize: '24px', lineHeight: 1 }}>
-                {column.count}
+            <span style={{ color: item.color, fontSize: 16 }}>{item.icon}</span>
+            <Flex vertical gap={0}>
+              <Text style={{ fontSize: 11, color: '#8c8c8c' }}>
+                {SHIPMENT_STATUS_LABELS[item.status]}
               </Text>
-
-              <Progress
-                percent={column.percentage}
-                size="small"
-                showInfo={false}
-                strokeColor={`var(--ant-color-${column.color})`}
-              />
-            </Space>
-          </Card>
+              <Text strong style={{ fontSize: 18, color: item.color, lineHeight: 1 }}>
+                {item.count}
+              </Text>
+            </Flex>
+          </Flex>
         ))}
       </Flex>
-
-      {total === 0 && (
-        <Flex justify="center" style={{ padding: '24px 0' }}>
-          <Text type="secondary">Nenhum envio encontrado</Text>
-        </Flex>
-      )}
     </Card>
   );
 }

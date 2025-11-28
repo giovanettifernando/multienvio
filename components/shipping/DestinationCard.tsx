@@ -1,6 +1,7 @@
 import { EnvironmentOutlined } from "@ant-design/icons";
-import { Space, Typography, theme } from "antd";
+import { Flex, Typography } from "antd";
 import type { ReactNode } from "react";
+import { getCardAccentColor, type RouteCardVariant } from "./route.css";
 
 type DestinationCardProps = {
   title: string;
@@ -14,6 +15,8 @@ type DestinationCardProps = {
   modeSelector: ReactNode;
   /** @deprecated No longer displayed */
   tag?: ReactNode;
+  /** Variante visual do card (determina a cor) */
+  variant?: RouteCardVariant;
   children: ReactNode;
 };
 
@@ -21,45 +24,39 @@ export function DestinationCard({
   title,
   subtitle,
   modeSelector,
+  variant = "destination",
   children,
 }: DestinationCardProps) {
-  const { token } = theme.useToken();
+  const accentColor = getCardAccentColor(variant);
 
   return (
     <div>
-      <Space
-        direction="horizontal"
-        align="start"
-        size={token.paddingSM}
-        style={{ marginBottom: token.padding }}
+      <Flex
+        align="center"
+        gap={8}
+        style={{ marginBottom: 12 }}
       >
-        <div
+        <EnvironmentOutlined
           style={{
-            width: 40,
-            height: 40,
-            borderRadius: token.borderRadiusLG,
-            background: token.colorSuccessBg,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: token.colorSuccess,
-            fontSize: token.fontSizeLG,
+            fontSize: 18,
+            color: accentColor,
           }}
+        />
+        <Typography.Text strong style={{ fontSize: 15, color: accentColor }}>
+          {title}
+        </Typography.Text>
+      </Flex>
+
+      {subtitle && (
+        <Typography.Text
+          type="secondary"
+          style={{ display: "block", marginBottom: 12, fontSize: 13 }}
         >
-          <EnvironmentOutlined />
-        </div>
+          {subtitle}
+        </Typography.Text>
+      )}
 
-        <Space direction="vertical" size={4} style={{ width: "100%" }}>
-          <Typography.Title level={5} style={{ margin: 0 }}>
-            {title}
-          </Typography.Title>
-          {subtitle ? (
-            <Typography.Text type="secondary">{subtitle}</Typography.Text>
-          ) : null}
-        </Space>
-      </Space>
-
-      <div style={{ marginBottom: token.padding }}>{modeSelector}</div>
+      <div style={{ marginBottom: 12 }}>{modeSelector}</div>
       {children}
     </div>
   );

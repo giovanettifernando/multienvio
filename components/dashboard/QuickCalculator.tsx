@@ -52,85 +52,81 @@ export function QuickCalculator() {
           <Flex align="center" gap={8}>
             <CalculatorOutlined />
             <Text strong>Calculadora</Text>
+            <Text type="secondary" style={{ fontSize: 12, fontWeight: 400 }}>(cotação rápida)</Text>
           </Flex>
         }
         variant="outlined"
         size="small"
+        styles={{ body: { padding: '12px 16px' } }}
       >
         <Form
           form={form}
           layout="vertical"
           size="small"
           onFinish={handleCalculate}
-          style={{ fontSize: '13px' }}
         >
-          <Space direction="vertical" size={8} style={{ width: '100%' }}>
+          <Flex gap={12}>
             <Form.Item
               label={<Text style={{ fontSize: '12px' }}>CEP Origem</Text>}
               name="originCep"
-              initialValue="01310-100"
-              style={{ marginBottom: 8 }}
+              rules={[{ required: true, message: 'Obrigatório' }]}
+              style={{ marginBottom: 0, flex: 1 }}
             >
               <Input placeholder="00000-000" size="small" />
             </Form.Item>
-
             <Form.Item
               label={<Text style={{ fontSize: '12px' }}>CEP Destino</Text>}
               name="destCep"
               rules={[{ required: true, message: 'Obrigatório' }]}
-              style={{ marginBottom: 8 }}
+              style={{ marginBottom: 0, flex: 1 }}
             >
               <Input placeholder="00000-000" size="small" />
             </Form.Item>
+          </Flex>
 
-            <Flex gap={8}>
-              <Form.Item
-                label={<Text style={{ fontSize: '12px' }}>Peso (kg)</Text>}
-                name="weight"
-                rules={[{ required: true, message: 'Obrigatório' }]}
-                style={{ marginBottom: 8, flex: 1 }}
-              >
-                <Input type="number" placeholder="1.5" size="small" step="0.1" />
-              </Form.Item>
-
-              <Form.Item
-                label={<Text style={{ fontSize: '12px' }}>Altura (cm)</Text>}
-                name="height"
-                style={{ marginBottom: 8, flex: 1 }}
-              >
-                <Input type="number" placeholder="10" size="small" />
-              </Form.Item>
-            </Flex>
-
-            <Flex gap={8}>
-              <Form.Item
-                label={<Text style={{ fontSize: '12px' }}>Largura (cm)</Text>}
-                name="width"
-                style={{ marginBottom: 8, flex: 1 }}
-              >
-                <Input type="number" placeholder="15" size="small" />
-              </Form.Item>
-
-              <Form.Item
-                label={<Text style={{ fontSize: '12px' }}>Comprimento (cm)</Text>}
-                name="length"
-                style={{ marginBottom: 8, flex: 1 }}
-              >
-                <Input type="number" placeholder="20" size="small" />
-              </Form.Item>
-            </Flex>
-
-            <Button
-              type="primary"
-              htmlType="submit"
-              loading={loading}
-              icon={<CalculatorOutlined />}
-              block
-              size="small"
+          <Flex gap={12} style={{ marginTop: 12 }}>
+            <Form.Item
+              label={<Text style={{ fontSize: '12px' }}>Peso (kg)</Text>}
+              name="weight"
+              rules={[{ required: true, message: 'Obrigatório' }]}
+              style={{ marginBottom: 0, flex: 1 }}
             >
-              Calcular
-            </Button>
-          </Space>
+              <Input type="number" placeholder="0.5" size="small" step="0.1" />
+            </Form.Item>
+            <Form.Item
+              label={<Text style={{ fontSize: '12px' }}>Altura</Text>}
+              name="height"
+              style={{ marginBottom: 0, flex: 1 }}
+            >
+              <Input type="number" placeholder="cm" size="small" />
+            </Form.Item>
+            <Form.Item
+              label={<Text style={{ fontSize: '12px' }}>Largura</Text>}
+              name="width"
+              style={{ marginBottom: 0, flex: 1 }}
+            >
+              <Input type="number" placeholder="cm" size="small" />
+            </Form.Item>
+            <Form.Item
+              label={<Text style={{ fontSize: '12px' }}>Comp.</Text>}
+              name="length"
+              style={{ marginBottom: 0, flex: 1 }}
+            >
+              <Input type="number" placeholder="cm" size="small" />
+            </Form.Item>
+          </Flex>
+
+          <Button
+            type="primary"
+            htmlType="submit"
+            loading={loading}
+            icon={<CalculatorOutlined />}
+            block
+            size="small"
+            style={{ marginTop: 12 }}
+          >
+            Calcular
+          </Button>
         </Form>
       </Card>
 

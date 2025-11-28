@@ -48,6 +48,9 @@ export function RouteCards({
         style={{
           ...connectorStyles(token),
           transform: connectorTransform,
+          color: isReverse ? token.colorError : token.colorPrimary,
+          borderColor: isReverse ? token.colorErrorBorder : token.colorPrimaryBorder,
+          background: isReverse ? token.colorErrorBg : token.colorPrimaryBg,
         }}
         aria-hidden
       >

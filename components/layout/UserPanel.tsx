@@ -38,7 +38,7 @@ export function UserPanel({ collapsed }: UserPanelProps) {
 
   const handleLogout = () => {
     clearSession();
-    router.replace('/login');
+    router.replace('/auth/login');
   };
 
   if (!usuario) {

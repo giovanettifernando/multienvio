@@ -55,7 +55,7 @@ export default function SecurityForm() {
 
         // Redirecionar para a tela de login após 1.5 segundos
         setTimeout(() => {
-          router.push("/login");
+          router.push("/auth/login");
         }, 1500);
       },
       onError: (error) => {

@@ -939,88 +939,95 @@ export default function FinalizeQuotePage() {
     <FormProvider {...formMethods}>
       <form>
         <Flex vertical gap={24}>
-          <ResultsBanner summary={summary!} />
-
-          <Row gutter={[24, 24]}>
-            <Col xs={24} lg={16}>
-              <Space direction="vertical" size={24} style={{ width: "100%" }}>
-                <DocumentChooser />
-                <PostingUnitPicker />
-                <RecipientForm />
-              </Space>
+          {/* Resumo do envio, serviço e pagamento lado a lado no topo */}
+          <Row gutter={[16, 16]}>
+            <Col xs={24} md={12} xl={10}>
+              <ResultsBanner summary={summary!} />
             </Col>
-            <Col xs={24} lg={8}>
-              <Space direction="vertical" size={24} style={{ width: "100%" }}>
-                <LabelPreview
-                  carrier={selectedService?.carrier ?? ""}
-                  modalidade={selectedService?.modalidade ?? ""}
-                  prazoDias={selectedService?.prazoDias ?? 0}
-                  preco={selectedService?.preco ?? 0}
-                  isLoadingPickupFee={pickupAtOrigin && isLoadingPickupFee}
-                  pickupFee={
-                    pickupFeeData && pickupFeeData.success
-                      ? {
-                          collectorName: pickupFeeData.collector.pfNome || pickupFeeData.collector.pjRazaoSocial,
-                          distanceKm: pickupFeeData.distanceKm,
-                          feeAmount: pickupFeeData.feeAmount,
-                        }
-                      : null
-                  }
-                />
-                <Card title="Pagamento">
-                  <Space direction="vertical" size={16} style={{ width: "100%" }}>
-                    <Space direction="vertical" style={{ width: "100%" }}>
-                      <Tooltip title={disabledTooltip}>
-                        <Button
-                          type="default"
-                          htmlType="button"
-                          block
-                          loading={cartAdd.isPending}
-                          disabled={!selectedService || !preconditionsOk}
-                          onClick={onAddToCartClick}
-                          style={{ width: "100%" }}
-                        >
-                          Adicionar ao carrinho
-                        </Button>
-                      </Tooltip>
-                      <Tooltip title={disabledTooltip}>
-                        <Button
-                          type="primary"
-                          htmlType="button"
-                          block
-                          loading={isSubmitting || isProcessingCheckout}
-                          disabled={isSubmitting || isProcessingCheckout || !preconditionsOk}
-                          onClick={(e) => {
-                            console.log('[BUTTON_CLICK]', {
-                              isSubmitting,
-                              isProcessingCheckout,
-                              preconditionsOk,
-                              disabled: isSubmitting || isProcessingCheckout || !preconditionsOk,
-                              formErrors: errors
-                            });
-                            handleSubmit(
-                              handlePayNow,
-                              (validationErrors) => {
-                                console.log('[FORM_VALIDATION_FAILED]', validationErrors);
-                                message.error('Por favor, preencha todos os campos obrigatórios.');
-                                setIsProcessingCheckout(false); // Liberar lock em caso de erro de validação
-                              }
-                            )(e);
-                          }}
-                          style={{ width: "100%" }}
-                        >
-                          Pagar agora
-                        </Button>
-                      </Tooltip>
-                    </Space>
-                    <Typography.Text type="secondary">
-                      Após o pagamento, a etiqueta ficará disponível em Meus envios.
-                    </Typography.Text>
-                  </Space>
-                </Card>
-              </Space>
+            <Col xs={24} md={12} xl={8}>
+              <LabelPreview
+                carrier={selectedService?.carrier ?? ""}
+                modalidade={selectedService?.modalidade ?? ""}
+                prazoDias={selectedService?.prazoDias ?? 0}
+                preco={selectedService?.preco ?? 0}
+                isLoadingPickupFee={pickupAtOrigin && isLoadingPickupFee}
+                pickupFee={
+                  pickupFeeData && pickupFeeData.success
+                    ? {
+                        collectorName: pickupFeeData.collector.pfNome || pickupFeeData.collector.pjRazaoSocial,
+                        distanceKm: pickupFeeData.distanceKm,
+                        feeAmount: pickupFeeData.feeAmount,
+                      }
+                    : null
+                }
+              />
+            </Col>
+            <Col xs={24} md={24} xl={6}>
+              <Card
+                size="small"
+                title="Pagamento"
+                styles={{ body: { padding: "12px 16px" } }}
+              >
+                <Space direction="vertical" size={8} style={{ width: "100%" }}>
+                  <Tooltip title={disabledTooltip}>
+                    <Button
+                      type="default"
+                      htmlType="button"
+                      block
+                      size="small"
+                      loading={cartAdd.isPending}
+                      disabled={!selectedService || !preconditionsOk}
+                      onClick={onAddToCartClick}
+                    >
+                      Adicionar ao carrinho
+                    </Button>
+                  </Tooltip>
+                  <Tooltip title={disabledTooltip}>
+                    <Button
+                      type="primary"
+                      htmlType="button"
+                      block
+                      size="small"
+                      loading={isSubmitting || isProcessingCheckout}
+                      disabled={isSubmitting || isProcessingCheckout || !preconditionsOk}
+                      onClick={(e) => {
+                        console.log('[BUTTON_CLICK]', {
+                          isSubmitting,
+                          isProcessingCheckout,
+                          preconditionsOk,
+                          disabled: isSubmitting || isProcessingCheckout || !preconditionsOk,
+                          formErrors: errors
+                        });
+                        handleSubmit(
+                          handlePayNow,
+                          (validationErrors) => {
+                            console.log('[FORM_VALIDATION_FAILED]', validationErrors);
+                            message.error('Por favor, preencha todos os campos obrigatórios.');
+                            setIsProcessingCheckout(false); // Liberar lock em caso de erro de validação
+                          }
+                        )(e);
+                      }}
+                    >
+                      Pagar agora
+                    </Button>
+                  </Tooltip>
+                </Space>
+              </Card>
             </Col>
           </Row>
+
+          {/* Formulários */}
+          <Space direction="vertical" size={24} style={{ width: "100%" }}>
+            <Row gutter={[24, 24]}>
+              <Col xs={24} lg={10}>
+                <PostingUnitPicker />
+              </Col>
+              <Col xs={24} lg={14}>
+                <DocumentChooser />
+              </Col>
+            </Row>
+            <RecipientForm />
+          </Space>
         </Flex>
 
         <QuoteNavigationButtons

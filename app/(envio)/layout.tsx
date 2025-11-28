@@ -17,7 +17,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     if (!hydrated) return;
 
     if (!user || !isAuthenticated()) {
-      router.replace('/login');
+      router.replace('/auth/login');
     }
   }, [hydrated, user, isAuthenticated, router]);
 

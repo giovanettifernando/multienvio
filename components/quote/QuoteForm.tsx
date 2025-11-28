@@ -4,19 +4,21 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   App,
-  Alert,
   Card,
   Col,
+  ConfigProvider,
   Flex,
   Form,
   Input,
   InputNumber,
   Radio,
   Row,
+  Segmented,
   Space,
   Spin,
   Switch,
   Tag,
+  theme,
   Typography,
 } from "antd";
 import {
@@ -53,7 +55,6 @@ import { RecipientModal, type RecipientFormValues } from "@/components/recipient
 import type { Recipient } from "@/types/account";
 import { useAddresses, useAccountRecipients, useAddressCreate, useRecipientCreate } from "@/hooks/useAccount";
 import { useQuoteDraft } from "@/lib/state/quoteDraft";
-import { RouteModeTag } from "@/components/shipping/RouteModeTag";
 import { RouteCards } from "@/components/shipping/RouteCards";
 import { OriginCard } from "@/components/shipping/OriginCard";
 import { DestinationCard } from "@/components/shipping/DestinationCard";
@@ -209,6 +210,7 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
 
   const queryClient = useQueryClient();
   const { message } = App.useApp();
+  const { token } = theme.useToken();
   const calculateQuotes = useQuoteCalculate();
 
   const { form: storedForm, setResults } = useQuoteStore(
@@ -553,25 +555,11 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
 
   // Estado para logística reversa
   const [isReverse, setIsReverse] = useState(false);
-  const [reverseAlertVisible, setReverseAlertVisible] = useState(false);
-  const [reverseAlertMessage, setReverseAlertMessage] = useState<string | null>(
-    null,
-  );
-  const reverseAlertTimer = useRef<number | null>(null);
 
   // Estado para resultados da cotação
   const [quoteResults, setQuoteResults] = useState<QuoteResultItem[] | null>(null);
   const [quoteError, setQuoteError] = useState<string | null>(null);
 
-  useEffect(() => {
-    return () => {
-      if (reverseAlertTimer.current) {
-        window.clearTimeout(reverseAlertTimer.current);
-        reverseAlertTimer.current = null;
-      }
-      setReverseAlertMessage(null);
-    };
-  }, []);
 
   // Atualização reativa do header de origem/destino
   useEffect(() => {
@@ -707,29 +695,9 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
     [fields.length, message, remove],
   );
 
-  const applyReverseUI = useCallback(
-    (next: boolean) => {
-      if (reverseAlertTimer.current) {
-        window.clearTimeout(reverseAlertTimer.current);
-        reverseAlertTimer.current = null;
-      }
-
-      setIsReverse(next);
-      setReverseAlertVisible(true);
-      setReverseAlertMessage(
-        next
-          ? "Modo Logística Reversa ativado. O destinatário envia e a empresa recebe."
-          : "Modo Envio ativado. A empresa envia e o destinatário recebe.",
-      );
-
-      reverseAlertTimer.current = window.setTimeout(() => {
-        setReverseAlertVisible(false);
-        setReverseAlertMessage(null);
-        reverseAlertTimer.current = null;
-      }, 5_000);
-    },
-    [],
-  );
+  const applyReverseUI = useCallback((next: boolean) => {
+    setIsReverse(next);
+  }, []);
 
   const swapRouteState = useCallback(() => {
     const originSnapshot = origemInfo
@@ -1449,8 +1417,10 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
   };
 
   const destinationModeSelector = (
-    <Space direction="vertical" size={8} style={{ width: "100%" }}>
-      <Typography.Text strong>{destinoModeLabel}</Typography.Text>
+    <div>
+      <Typography.Text type="secondary" style={{ fontSize: 13, display: "block", marginBottom: 6 }}>
+        {destinoModeLabel}
+      </Typography.Text>
       <Radio.Group
         value={destinationMode}
         onChange={(e) => {
@@ -1484,19 +1454,21 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
             }
           }
         }}
+        size="small"
       >
         <Radio value="manual">{destinationManualRadioLabel}</Radio>
         <Radio value="recipient">
           {destinationRecipientRadioLabel}
         </Radio>
       </Radio.Group>
-    </Space>
+    </div>
   );
 
   const companyCardContent = (
     <OriginCard
       title={companyCardTitle}
       info={isReverse ? destinoInfo : origemInfo}
+      variant={isReverse ? "destination" : "origin"}
     >
       <Space direction="vertical" size={16} style={{ width: "100%" }}>
         <Form.Item
@@ -1538,14 +1510,6 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
                     </Typography.Text>
                   </div>
                 </Flex>
-                {field.value && (
-                  <Alert
-                    type="info"
-                    showIcon
-                    message="Coleta na origem será solicitada ao finalizar"
-                    description="Uma solicitação de coleta será criada automaticamente quando você concluir o pagamento."
-                  />
-                )}
               </Space>
             )}
           />
@@ -1559,6 +1523,7 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
       title={clientCardTitle}
       info={clientCardInfo}
       modeSelector={destinationModeSelector}
+      variant={isReverse ? "origin" : "destination"}
       tag=
         {destinationMode === "recipient" ? (
           <Tag color="success" bordered={false}>
@@ -1646,40 +1611,39 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
     <FormProvider {...formMethods}>
       <Form layout="vertical" onFinish={handleSubmit(onSubmit)}>
         <Space direction="vertical" size={24} style={{ width: "100%" }}>
-          {reverseAlertVisible && reverseAlertMessage ? (
-            <Alert
-              type="info"
-              showIcon
-              message={reverseAlertMessage}
-            />
-          ) : null}
-
           <Card>
-            <Space direction="vertical" size={24} style={{ width: "100%" }}>
-              <Flex align="center" justify="space-between" wrap gap={16}>
-                <Typography.Title level={5} style={{ margin: 0 }}>
-                  Configurar envio
-                </Typography.Title>
-                <Space size={8} align="center">
-                  <Switch
-                    checked={isReverse}
-                    onChange={handleReverseToggle}
-                    checkedChildren="Reversa"
-                    unCheckedChildren="Envio"
+            <Space direction="vertical" size={16} style={{ width: "100%" }}>
+              <Flex justify="center">
+                <ConfigProvider
+                  theme={{
+                    components: {
+                      Segmented: {
+                        itemSelectedBg: isReverse ? token.colorError : token.colorPrimary,
+                        itemSelectedColor: "#ffffff",
+                        itemColor: isReverse ? token.colorError : token.colorPrimary,
+                        trackBg: isReverse ? token.colorErrorBg : token.colorPrimaryBg,
+                      },
+                    },
+                  }}
+                >
+                  <Segmented
+                    value={isReverse ? "reversa" : "envio"}
+                    onChange={(value) => handleReverseToggle(value === "reversa")}
                     disabled={calculateQuotes.isPending}
-                    aria-label="Alternar Logística Reversa"
+                    options={[
+                      { label: "Envio", value: "envio" },
+                      { label: "Logística Reversa", value: "reversa" },
+                    ]}
+                    size="middle"
                   />
-                  <Typography.Text strong>Logística Reversa</Typography.Text>
-                </Space>
+                </ConfigProvider>
               </Flex>
 
-              <RouteModeTag isReverse={isReverse}>
-                <RouteCards
-                  isReverse={isReverse}
-                  originCard={originCardNode}
-                  destinationCard={destinationCardNode}
-                />
-              </RouteModeTag>
+              <RouteCards
+                isReverse={isReverse}
+                originCard={originCardNode}
+                destinationCard={destinationCardNode}
+              />
             </Space>
           </Card>
 

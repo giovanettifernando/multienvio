@@ -1,6 +1,7 @@
 import { BankOutlined } from "@ant-design/icons";
-import { Space, Typography, theme } from "antd";
+import { Flex, Typography } from "antd";
 import type { ReactNode } from "react";
+import { getCardAccentColor, type RouteCardVariant } from "./route.css";
 
 type OriginCardProps = {
   title: string;
@@ -13,49 +14,45 @@ type OriginCardProps = {
     cep?: string;
     isDefault?: boolean;
   } | null;
+  /** Variante visual do card (determina a cor) */
+  variant?: RouteCardVariant;
   children: ReactNode;
 };
 
 export function OriginCard({
   title,
   subtitle,
+  variant = "origin",
   children,
 }: OriginCardProps) {
-  const { token } = theme.useToken();
+  const accentColor = getCardAccentColor(variant);
 
   return (
     <div>
-      <Space
-        direction="horizontal"
-        align="start"
-        size={token.paddingSM}
-        style={{ marginBottom: token.padding }}
+      <Flex
+        align="center"
+        gap={8}
+        style={{ marginBottom: 12 }}
       >
-        <div
+        <BankOutlined
           style={{
-            width: 40,
-            height: 40,
-            borderRadius: token.borderRadiusLG,
-            background: token.colorInfoBg,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: token.colorInfo,
-            fontSize: token.fontSizeLG,
+            fontSize: 18,
+            color: accentColor,
           }}
-        >
-          <BankOutlined />
-        </div>
+        />
+        <Typography.Text strong style={{ fontSize: 15, color: accentColor }}>
+          {title}
+        </Typography.Text>
+      </Flex>
 
-        <Space direction="vertical" size={4}>
-          <Typography.Title level={5} style={{ margin: 0 }}>
-            {title}
-          </Typography.Title>
-          {subtitle ? (
-            <Typography.Text type="secondary">{subtitle}</Typography.Text>
-          ) : null}
-        </Space>
-      </Space>
+      {subtitle && (
+        <Typography.Text
+          type="secondary"
+          style={{ display: "block", marginBottom: 12, fontSize: 13 }}
+        >
+          {subtitle}
+        </Typography.Text>
+      )}
 
       {children}
     </div>

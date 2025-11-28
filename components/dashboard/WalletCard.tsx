@@ -1,11 +1,13 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Button, Card, Skeleton, Space, Typography } from "antd";
+import { Button, Card, Skeleton, Flex, Typography, Statistic } from "antd";
+import { WalletOutlined, PlusOutlined, ArrowDownOutlined } from "@ant-design/icons";
 import AddFundsModal from "@/components/wallet/AddFundsModal";
 import { useWallet } from "@/hooks/useWallet";
 import { useWalletTransactions } from "@/hooks/useWalletTransactions";
-import { formatCurrencyBRL } from "@/lib/format";
+
+const { Text } = Typography;
 
 export function WalletCard() {
   const [modalOpen, setModalOpen] = useState(false);
@@ -23,7 +25,8 @@ export function WalletCard() {
       .reduce((acc, entry) => acc + Math.abs(entry.amountReais), 0);
   }, [txData]);
 
-  const lastUpdate = txData?.transactions[0]?.confirmedAt;
+  const balance = wallet?.balance.availableReais ?? 0;
+  const isLowBalance = balance < 50;
 
   return (
     <>
@@ -32,41 +35,61 @@ export function WalletCard() {
         onClose={() => setModalOpen(false)}
       />
       <Card
-        title="Carteira e créditos"
-        variant="outlined"
-        styles={{ body: { paddingTop: 0 } }}
-        extra={
-          <Button type="primary" variant="solid" onClick={() => setModalOpen(true)}>
-            Adicionar créditos
-          </Button>
+        title={
+          <Flex align="center" gap={8}>
+            <WalletOutlined />
+            <Text strong>Carteira</Text>
+          </Flex>
         }
+        variant="outlined"
+        size="small"
+        styles={{ body: { padding: '12px 16px' } }}
       >
         {isLoading ? (
-          <Skeleton active paragraph={{ rows: 2 }} />
+          <Skeleton active paragraph={{ rows: 1 }} />
         ) : wallet ? (
-          <Space direction="vertical" size={8}>
-            <Typography.Text type="secondary">Saldo disponível</Typography.Text>
-            <Typography.Title level={3} style={{ margin: 0 }}>
-              {formatCurrencyBRL(wallet.balance.availableReais)}
-            </Typography.Title>
-            <Typography.Text type={wallet.balance.availableReais < 50 ? "danger" : "secondary"}>
-              {wallet.balance.availableReais < 50
-                ? "Saldo baixo — recarregue para continuar emitindo etiquetas."
-                : lastUpdate
-                  ? `Atualizado em ${new Date(lastUpdate).toLocaleString("pt-BR")}`
-                  : "Sem movimentações recentes"}
-            </Typography.Text>
-            <Typography.Text type="secondary">
-              Gasto nos últimos 30 dias:{" "}
-              <Typography.Text strong>
-                {formatCurrencyBRL(last30DaysSpend)}
-              </Typography.Text>
-            </Typography.Text>
-          </Space>
+          <Flex vertical gap={12}>
+            <Flex justify="space-between" align="center" gap={16}>
+              <Statistic
+                title={<Text type="secondary" style={{ fontSize: 12 }}>Saldo disponível</Text>}
+                value={balance}
+                precision={2}
+                prefix="R$"
+                valueStyle={{
+                  fontSize: 24,
+                  fontWeight: 600,
+                  color: isLowBalance ? '#ff4d4f' : '#003873',
+                }}
+              />
+              <Flex vertical align="end" gap={4}>
+                <Flex align="center" gap={4}>
+                  <ArrowDownOutlined style={{ fontSize: 12, color: '#ff4d4f' }} />
+                  <Text type="secondary" style={{ fontSize: 12 }}>Últimos 30 dias</Text>
+                </Flex>
+                <Text strong style={{ fontSize: 14 }}>
+                  R$ {last30DaysSpend.toFixed(2)}
+                </Text>
+                {isLowBalance && (
+                  <Text type="danger" style={{ fontSize: 11 }}>
+                    Saldo baixo
+                  </Text>
+                )}
+              </Flex>
+            </Flex>
+            <Button
+              type="primary"
+              size="small"
+              icon={<PlusOutlined />}
+              onClick={() => setModalOpen(true)}
+              block
+            >
+              Adicionar créditos
+            </Button>
+          </Flex>
         ) : (
-          <Typography.Text type="secondary">
-            Não foi possível carregar o saldo. Tente novamente mais tarde.
-          </Typography.Text>
+          <Text type="secondary" style={{ fontSize: 13 }}>
+            Não foi possível carregar o saldo.
+          </Text>
         )}
       </Card>
     </>

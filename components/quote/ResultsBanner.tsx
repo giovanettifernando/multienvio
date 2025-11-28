@@ -5,19 +5,9 @@ import {
   HomeOutlined,
   InboxOutlined,
   SafetyOutlined,
-  FunctionOutlined,
 } from "@ant-design/icons";
-import {
-  Card,
-  Col,
-  Row,
-  Space,
-  Tag,
-  Tooltip,
-  Typography,
-} from "antd";
+import { Card, Space, Tag, Tooltip, Typography } from "antd";
 import type { QuoteSummary, QuoteVolume } from "@/types/quote";
-import styles from "@/app/(envio)/cotacoes/cotacoes.module.css";
 
 type ResultsBannerProps = {
   summary: QuoteSummary;
@@ -25,9 +15,9 @@ type ResultsBannerProps = {
 
 // Formatar volume de forma compacta: 20×20×20 • 10kg
 const formatVolumeCompact = (volume: QuoteVolume) => {
-  const dims = `${volume.comprimentoCm}×${volume.larguraCm}×${volume.alturaCm} cm`;
-  const weight = `${volume.pesoKg.toFixed(2)} kg`;
-  return `${dims} • ${weight}`;
+  const dims = `${volume.comprimentoCm}×${volume.larguraCm}×${volume.alturaCm}`;
+  const weight = `${volume.pesoKg.toFixed(1)}kg`;
+  return `${dims}cm • ${weight}`;
 };
 
 // Calcular peso cubado (fórmula: C × L × A / 6000)
@@ -72,210 +62,101 @@ export function ResultsBanner({ summary }: ResultsBannerProps) {
 
   return (
     <Card
+      size="small"
+      title="Resumo do envio"
       style={{
         background: "#f0f5ff",
         borderColor: "#d6e4ff",
       }}
-      styles={{ body: { padding: 16 } }}
+      styles={{ body: { padding: "12px 16px" } }}
     >
-      <Row gutter={[16, 12]}>
-        {/* Coluna 1 - Origem */}
-        <Col xs={24} sm={12} lg={6}>
-          <Space direction="vertical" size={4}>
-            <Typography.Text
-              type="secondary"
-              style={{ fontSize: 12, fontWeight: 600 }}
-            >
-              Origem
-            </Typography.Text>
-            <Space align="start" size={8}>
-              <HomeOutlined style={{ fontSize: 16, marginTop: 2 }} />
-              <div>
-                <Typography.Text strong style={{ fontSize: 16 }}>
-                  {origemCep}
+      <Space direction="vertical" size={8} style={{ width: "100%" }}>
+        {/* Origem e Destino em uma linha */}
+        <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
+          {/* Origem */}
+          <Space size={6}>
+            <HomeOutlined style={{ fontSize: 14, color: "#0F2A5F" }} />
+            <Typography.Text style={{ fontSize: 13 }}>
+              <strong>Origem:</strong> {origemCep}
+              {origemCidade && origemUf && (
+                <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                  {" "}({origemCidade}/{origemUf})
                 </Typography.Text>
-                {origemCidade && origemUf ? (
-                  <div>
-                    <Typography.Text type="secondary" style={{ fontSize: 13 }}>
-                      {origemCidade} / {origemUf}
-                    </Typography.Text>
-                  </div>
-                ) : null}
-                {origemIsDefault ? (
-                  <div style={{ marginTop: 4 }}>
-                    <Tag color="blue" style={{ fontSize: 11 }}>
-                      Meu endereço
+              )}
+              {origemIsDefault && (
+                <Tag color="blue" style={{ fontSize: 10, marginLeft: 6, padding: "0 4px" }}>
+                  Padrão
+                </Tag>
+              )}
+            </Typography.Text>
+          </Space>
+
+          {/* Destino */}
+          <Space size={6}>
+            <EnvironmentOutlined style={{ fontSize: 14, color: "#C2410C" }} />
+            <Typography.Text style={{ fontSize: 13 }}>
+              <strong>Destino:</strong> {destinoCep}
+              {destinoCidade && destinoUf && (
+                <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                  {" "}({destinoCidade}/{destinoUf})
+                </Typography.Text>
+              )}
+            </Typography.Text>
+          </Space>
+        </div>
+
+        {/* Seguro e Volumes em uma linha */}
+        <div style={{ display: "flex", gap: 24, flexWrap: "wrap", alignItems: "center" }}>
+          {/* Seguro */}
+          <Space size={6}>
+            <SafetyOutlined style={{ fontSize: 14, color: "#15803d" }} />
+            <Typography.Text style={{ fontSize: 13 }}>
+              <strong>Seguro:</strong> {formatCurrency(summary.seguroValor ?? null)}
+            </Typography.Text>
+          </Space>
+
+          {/* Volumes */}
+          <Space size={6} align="center">
+            <InboxOutlined style={{ fontSize: 14, color: "#1e40af" }} />
+            <Typography.Text style={{ fontSize: 13 }}>
+              <strong>Volumes:</strong> {nVolumes}
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                {" "}(cubado: {totalCubicWeight.toFixed(2)}kg)
+              </Typography.Text>
+            </Typography.Text>
+
+            {/* Detalhes dos volumes (chips inline) */}
+            {nVolumes > 0 && (
+              <>
+                {visibleVolumes.map((vol, idx) => (
+                  <Tooltip key={vol.id} title={formatVolumeCompact(vol)}>
+                    <Tag color="blue" style={{ fontSize: 10, margin: 0, padding: "0 4px" }}>
+                      V{idx + 1}
                     </Tag>
-                  </div>
-                ) : null}
-              </div>
-            </Space>
-          </Space>
-        </Col>
-
-        {/* Coluna 2 - Destino */}
-        <Col xs={24} sm={12} lg={6}>
-          <Space direction="vertical" size={4}>
-            <Typography.Text
-              type="secondary"
-              style={{ fontSize: 12, fontWeight: 600 }}
-            >
-              Destino
-            </Typography.Text>
-            <Space align="start" size={8}>
-              <EnvironmentOutlined style={{ fontSize: 16, marginTop: 2 }} />
-              <div>
-                <Typography.Text strong style={{ fontSize: 16 }}>
-                  {destinoCep}
-                </Typography.Text>
-                {destinoCidade && destinoUf ? (
-                  <div>
-                    <Typography.Text type="secondary" style={{ fontSize: 13 }}>
-                      {destinoCidade} / {destinoUf}
-                    </Typography.Text>
-                  </div>
-                ) : null}
-              </div>
-            </Space>
-          </Space>
-        </Col>
-
-        {/* Coluna 3 - Seguro declarado */}
-        <Col xs={24} sm={12} lg={6}>
-          <Space direction="vertical" size={4}>
-            <Typography.Text
-              type="secondary"
-              style={{ fontSize: 12, fontWeight: 600 }}
-            >
-              Seguro declarado
-            </Typography.Text>
-            <Space align="start" size={8}>
-              <SafetyOutlined style={{ fontSize: 16, marginTop: 2 }} />
-              <div>
-                <Typography.Text strong style={{ fontSize: 16 }}>
-                  {formatCurrency(summary.seguroValor ?? null)}
-                </Typography.Text>
-              </div>
-            </Space>
-          </Space>
-        </Col>
-
-        {/* Coluna 4 - Volumes */}
-        <Col xs={24} sm={12} lg={6}>
-          <Space direction="vertical" size={4}>
-            <Typography.Text
-              type="secondary"
-              style={{ fontSize: 12, fontWeight: 600 }}
-            >
-              Volumes
-            </Typography.Text>
-            <div
-              className={styles.resultsBanner}
-              data-testid="results-banner"
-            >
-              <Space
-                direction="vertical"
-                size={6}
-                style={{ width: "100%" }}
-              >
-                {/* Linha de volumes */}
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                  }}
-                >
-                  <Space align="center" size={8}>
-                    <InboxOutlined style={{ fontSize: 14, color: "#1e40af" }} />
-                    <span className={styles.resultsBannerTitle}>
-                      Volumes:
-                    </span>
-                    <span className={styles.resultsBannerValue}>
-                      {nVolumes}
-                    </span>
-                  </Space>
-                </div>
-
-                {/* Linha de peso cubado */}
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                  }}
-                >
-                  <Space align="center" size={8}>
-                    <FunctionOutlined
-                      style={{
-                        fontSize: 14,
-                        color: totalCubicWeight > 0 ? "#15803d" : "#64748b",
-                      }}
-                    />
-                    <span className={styles.resultsBannerTitle}>
-                      Peso cubado total:
-                    </span>
-                    <span
-                      className={styles.resultsBannerWeight}
-                      style={{
-                        fontSize: 14,
-                        color: totalCubicWeight > 0 ? "#15803d" : "#64748b",
-                      }}
-                    >
-                      {totalCubicWeight.toFixed(2)} kg
-                    </span>
-                  </Space>
-                </div>
-
-                {/* Detalhes dos volumes (chips) */}
-                {nVolumes > 1 && (
-                  <div style={{ marginTop: 4 }}>
-                    <Space
-                      direction="vertical"
-                      size={4}
-                      style={{ width: "100%" }}
-                    >
-                      {visibleVolumes.map((vol, idx) => (
-                        <Tag
-                          key={vol.id}
-                          color="blue"
-                          style={{ fontSize: 11, margin: 0 }}
-                        >
-                          V{idx + 1}: {formatVolumeCompact(vol)}
-                        </Tag>
-                      ))}
-                      {remainingVolumes.length > 0 ? (
-                        <Tooltip
-                          title={
-                            <Space direction="vertical" size={4}>
-                              {remainingVolumes.map((vol, idx) => (
-                                <div key={vol.id}>
-                                  V{idx + 3}: {formatVolumeCompact(vol)}
-                                </div>
-                              ))}
-                            </Space>
-                          }
-                        >
-                          <Tag
-                            style={{
-                              fontSize: 11,
-                              cursor: "help",
-                              margin: 0,
-                            }}
-                          >
-                            +{remainingVolumes.length}{" "}
-                            {remainingVolumes.length === 1
-                              ? "volume"
-                              : "volumes"}
-                          </Tag>
-                        </Tooltip>
-                      ) : null}
-                    </Space>
-                  </div>
+                  </Tooltip>
+                ))}
+                {remainingVolumes.length > 0 && (
+                  <Tooltip
+                    title={
+                      <Space direction="vertical" size={2}>
+                        {remainingVolumes.map((vol, idx) => (
+                          <div key={vol.id} style={{ fontSize: 11 }}>
+                            V{idx + 3}: {formatVolumeCompact(vol)}
+                          </div>
+                        ))}
+                      </Space>
+                    }
+                  >
+                    <Tag style={{ fontSize: 10, cursor: "help", margin: 0, padding: "0 4px" }}>
+                      +{remainingVolumes.length}
+                    </Tag>
+                  </Tooltip>
                 )}
-              </Space>
-            </div>
+              </>
+            )}
           </Space>
-        </Col>
-      </Row>
+        </div>
+      </Space>
     </Card>
   );
 }

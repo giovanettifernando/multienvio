@@ -196,7 +196,10 @@ export default function LoginPage() {
           </Link>
         </div>
 
-        <div className={NEW_THEME_ENABLED ? styles.actionsColumn : undefined}>
+        <div
+          className={NEW_THEME_ENABLED ? styles.actionsColumn : undefined}
+          style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 12 }}
+        >
           <ELButton
             variant="primary"
             htmlType="submit"
@@ -240,7 +243,6 @@ export default function LoginPage() {
     return (
       <FormCard
         titulo="Entrar"
-        subtitulo="Acesse o painel e gerencie todos os envios em um só lugar."
         footer={
           <Typography.Paragraph style={{ margin: 0 }} type="secondary">
             Ainda não tem conta? <Link href="/auth/cadastro">Crie agora mesmo</Link>
