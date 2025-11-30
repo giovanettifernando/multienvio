@@ -3,6 +3,9 @@ import type { InvoiceData, InvoiceItem, ParseXmlResponse } from '@/lib/types/inv
 
 export const dynamic = 'force-dynamic';
 
+// SECURITY: Limite de tamanho para prevenir ataques de DoS (XML bomb, Billion Laughs)
+const MAX_XML_SIZE = 2 * 1024 * 1024; // 2 MB máximo para XML de NF-e
+
 /**
  * Extrai o conteúdo de uma tag XML
  */
@@ -50,6 +53,29 @@ export async function POST(request: Request) {
         {
           success: false,
           error: 'XML não fornecido ou inválido',
+        },
+        { status: 400 }
+      );
+    }
+
+    // SECURITY: Validar tamanho do XML para prevenir DoS
+    if (xml.length > MAX_XML_SIZE) {
+      return NextResponse.json<ParseXmlResponse>(
+        {
+          success: false,
+          error: `XML muito grande. Tamanho máximo permitido: ${MAX_XML_SIZE / 1024 / 1024}MB`,
+        },
+        { status: 400 }
+      );
+    }
+
+    // SECURITY: Detectar possíveis ataques de XML entity expansion
+    if (xml.includes('<!ENTITY') || xml.includes('<!DOCTYPE')) {
+      console.warn('[NFE_PARSE] Potencial ataque de XML entity expansion detectado');
+      return NextResponse.json<ParseXmlResponse>(
+        {
+          success: false,
+          error: 'XML inválido: DOCTYPE e ENTITY não são permitidos',
         },
         { status: 400 }
       );

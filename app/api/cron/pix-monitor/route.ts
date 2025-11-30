@@ -19,6 +19,7 @@
  */
 
 import { NextResponse } from 'next/server';
+import crypto from 'crypto';
 import {
   monitorPendingPixPayments,
   cleanupOldPendingPix,
@@ -30,14 +31,33 @@ export const dynamic = 'force-dynamic';
 export const maxDuration = 60; // 60 segundos de timeout
 
 /**
+ * SECURITY: Comparação constant-time para evitar timing attacks
+ */
+function secureCompare(a: string, b: string): boolean {
+  if (!a || !b) return false;
+
+  const aBuffer = Buffer.from(a);
+  const bBuffer = Buffer.from(b);
+
+  if (aBuffer.length !== bBuffer.length) {
+    // Para evitar timing leak no comprimento, ainda fazemos a comparação
+    // mas garantimos que retornamos false
+    crypto.timingSafeEqual(aBuffer, Buffer.alloc(aBuffer.length));
+    return false;
+  }
+
+  return crypto.timingSafeEqual(aBuffer, bBuffer);
+}
+
+/**
  * Valida se a requisição é autorizada
  */
 function isAuthorized(request: Request): boolean {
-  // 1. Verificar secret do cron
+  // 1. Verificar secret do cron com comparação constant-time
   const cronSecret = process.env.CRON_SECRET;
   const requestSecret = request.headers.get('x-cron-secret');
 
-  if (cronSecret && requestSecret === cronSecret) {
+  if (cronSecret && requestSecret && secureCompare(requestSecret, cronSecret)) {
     return true;
   }
 

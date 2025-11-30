@@ -50,31 +50,31 @@ export async function GET(request: Request) {
       where.isPrinted = false;
     }
 
-    // Contar total de registros
-    const total = await prisma.label.count({ where });
-
-    // Buscar etiquetas com dados do shipment
-    const labels = await prisma.label.findMany({
-      where,
-      include: {
-        shipment: {
-          select: {
-            id: true,
-            platformTrackingCode: true,
-            carrierTrackingCode: true,
-            originCep: true,
-            destinationCep: true,
-            recipientName: true,
-            recipientDocument: true,
-            destinationCity: true,
-            destinationState: true,
+    // Executar count e findMany em paralelo (otimização)
+    const [total, labels] = await prisma.$transaction([
+      prisma.label.count({ where }),
+      prisma.label.findMany({
+        where,
+        include: {
+          shipment: {
+            select: {
+              id: true,
+              platformTrackingCode: true,
+              carrierTrackingCode: true,
+              originCep: true,
+              destinationCep: true,
+              recipientName: true,
+              recipientDocument: true,
+              destinationCity: true,
+              destinationState: true,
+            },
           },
         },
-      },
-      orderBy: { createdAt: 'desc' },
-      skip: (page - 1) * pageSize,
-      take: pageSize,
-    });
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+    ]);
 
     // Mapear para formato do frontend
     const items: LabelItem[] = labels.map((label) => ({

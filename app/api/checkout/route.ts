@@ -198,7 +198,7 @@ export async function POST(request: Request) {
     }
 
     // Gerar tracking code único (plataforma - customer-facing)
-    const platformTrackingCode = `BR${Date.now()}${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
+    const platformTrackingCode = `EL${Date.now()}${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
 
     // Preparar documento (priorizar NFE se ambos estiverem preenchidos)
     const documentData: {

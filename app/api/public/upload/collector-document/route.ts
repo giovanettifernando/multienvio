@@ -23,6 +23,58 @@ const ALLOWED_TYPES = [
   'application/pdf',
 ];
 
+/**
+ * SECURITY: Magic bytes para validação de tipo de arquivo
+ * Não confiar apenas no MIME type enviado pelo cliente
+ */
+const MAGIC_BYTES: Record<string, { bytes: number[]; offset?: number }[]> = {
+  'image/jpeg': [
+    { bytes: [0xFF, 0xD8, 0xFF] }, // JPEG SOI marker
+  ],
+  'image/png': [
+    { bytes: [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A] }, // PNG signature
+  ],
+  'image/webp': [
+    { bytes: [0x52, 0x49, 0x46, 0x46] }, // RIFF header (WebP starts with RIFF)
+  ],
+  'image/gif': [
+    { bytes: [0x47, 0x49, 0x46, 0x38, 0x37, 0x61] }, // GIF87a
+    { bytes: [0x47, 0x49, 0x46, 0x38, 0x39, 0x61] }, // GIF89a
+  ],
+  'application/pdf': [
+    { bytes: [0x25, 0x50, 0x44, 0x46] }, // %PDF
+  ],
+};
+
+/**
+ * Valida os magic bytes do arquivo
+ */
+function validateMagicBytes(buffer: Buffer, claimedType: string): boolean {
+  const signatures = MAGIC_BYTES[claimedType];
+  if (!signatures) {
+    // Tipo não reconhecido - rejeitar por segurança
+    return false;
+  }
+
+  return signatures.some((sig) => {
+    const offset = sig.offset || 0;
+    if (buffer.length < offset + sig.bytes.length) {
+      return false;
+    }
+    return sig.bytes.every((byte, idx) => buffer[offset + idx] === byte);
+  });
+
+  // WebP tem validação adicional - verificar "WEBP" nos bytes 8-11
+  if (claimedType === 'image/webp') {
+    if (buffer.length < 12) return false;
+    const webpSignature = [0x57, 0x45, 0x42, 0x50]; // "WEBP"
+    const hasWebpSignature = webpSignature.every((byte, idx) => buffer[8 + idx] === byte);
+    if (!hasWebpSignature) return false;
+  }
+
+  return true;
+}
+
 const UPLOAD_DIR = process.env.COLLECTOR_UPLOAD_DIR ??
   path.join(process.cwd(), 'public', 'uploads', 'collectors', 'temp');
 
@@ -60,7 +112,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate file type
+    // Validate MIME type (first check)
     if (!ALLOWED_TYPES.includes(file.type)) {
       return Response.json(
         { message: `Tipo de arquivo não permitido. Use: ${ALLOWED_TYPES.join(', ')}` },
@@ -68,12 +120,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Ensure upload directory exists
-    await mkdir(UPLOAD_DIR, { recursive: true });
-
     // Read file content - use arrayBuffer for broader compatibility
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
+
+    // SECURITY: Validate magic bytes (don't trust MIME type from client)
+    if (!validateMagicBytes(buffer, file.type)) {
+      console.warn('[Upload API] Magic bytes validation failed for claimed type:', file.type);
+      return Response.json(
+        { message: 'Arquivo inválido ou corrompido. O tipo de arquivo não corresponde ao conteúdo.' },
+        { status: 400 }
+      );
+    }
+
+    // Ensure upload directory exists
+    await mkdir(UPLOAD_DIR, { recursive: true });
 
     // Generate unique filename
     const parsedName = path.parse(file.name || 'documento');

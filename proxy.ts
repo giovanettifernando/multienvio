@@ -33,14 +33,9 @@ if (process.env.NODE_ENV === 'production') {
   }
 }
 
-// JWT Secrets (customer vs admin)
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || 'envio-legal-secret-key-change-in-production'
-);
-
-const ADMIN_JWT_SECRET = new TextEncoder().encode(
-  process.env.ADMIN_JWT_SECRET || 'admin-panel-secret-key-change-in-production'
-);
+// JWT Secrets (customer vs admin) - Nunca usar fallbacks em produção
+const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET!);
+const ADMIN_JWT_SECRET = new TextEncoder().encode(process.env.ADMIN_JWT_SECRET!);
 
 // Cookie names
 const AUTH_COOKIE_NAME = 'auth_token'; // Customer auth

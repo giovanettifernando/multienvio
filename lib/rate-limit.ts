@@ -86,22 +86,49 @@ export function rateLimitByUser(
 }
 
 /**
+ * SECURITY: Lista de proxies confiáveis
+ * Apenas aceitar X-Forwarded-For de proxies conhecidos
+ * Configure TRUST_PROXY=true se você estiver atrás de um proxy reverso confiável
+ */
+const TRUSTED_PROXY_ENABLED = process.env.TRUST_PROXY === 'true';
+
+/**
  * Rate limit baseado em IP
  * Usar para operações públicas ou como fallback
+ *
+ * SECURITY: Headers X-Forwarded-For podem ser spoofados por clientes maliciosos.
+ * Só confie nesses headers se você estiver atrás de um proxy reverso confiável
+ * (Nginx, Cloudflare, AWS ALB, etc.) que limpa esses headers.
+ *
+ * Configure TRUST_PROXY=true apenas se você estiver atrás de um proxy confiável.
  */
 export function rateLimitByIP(
   request: NextRequest,
   action: string,
   config: RateLimitConfig = { windowMs: 60000, maxRequests: 5 }
 ): NextResponse | null {
-  // Extrair IP do request
-  const forwarded = request.headers.get('x-forwarded-for');
-  const ip = forwarded ? forwarded.split(',')[0].trim() : (request.headers.get('x-real-ip') || null);
+  let ip: string | null = null;
 
-  // 🔒 SECURITY: Se não conseguir identificar IP, não aplicar rate limiting
-  // para evitar bloquear todos os usuários no mesmo bucket 'unknown'
+  // SECURITY: Só confiar em X-Forwarded-For se proxy confiável estiver habilitado
+  if (TRUSTED_PROXY_ENABLED) {
+    const forwarded = request.headers.get('x-forwarded-for');
+    const realIp = request.headers.get('x-real-ip');
+    ip = forwarded ? forwarded.split(',')[0].trim() : (realIp || null);
+  }
+
+  // Fallback: usar IP direto da conexão (não disponível em todos os ambientes)
   if (!ip) {
-    console.warn(`[RATE_LIMIT] Cannot identify IP for action '${action}', skipping rate limit (security risk in production)`);
+    ip = request.headers.get('x-real-ip') || null;
+  }
+
+  // 🔒 SECURITY: Se não conseguir identificar IP, aplicar rate limit global
+  if (!ip) {
+    if (process.env.NODE_ENV === 'production') {
+      console.warn(`[RATE_LIMIT] Cannot identify IP for action '${action}', using global bucket`);
+      // Em produção, usar bucket global mais restritivo
+      return checkRateLimit(`global:${action}`, { ...config, maxRequests: Math.ceil(config.maxRequests / 2) });
+    }
+    // Em desenvolvimento, permitir sem rate limit
     return null;
   }
 

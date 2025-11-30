@@ -9,10 +9,16 @@
 import { SignJWT, jwtVerify, errors as joseErrors } from 'jose';
 import { prisma } from '@/lib/db';
 
-// Configuração do JWT para Pontos de Coleta (separado de admin e usuário)
-const COLLECTOR_JWT_SECRET = new TextEncoder().encode(
-  process.env.COLLECTOR_JWT_SECRET || 'collector-secret-key-change-in-production'
-);
+// Validar COLLECTOR_JWT_SECRET em produção
+if (process.env.NODE_ENV === 'production' && !process.env.COLLECTOR_JWT_SECRET) {
+  throw new Error(
+    '🚨 SECURITY ERROR: COLLECTOR_JWT_SECRET environment variable is required in production. ' +
+    'Please set a secure random secret to prevent collector token forgery.'
+  );
+}
+
+// Configuração do JWT para Pontos de Coleta (separado de admin e usuário) - Nunca usar fallbacks em produção
+const COLLECTOR_JWT_SECRET = new TextEncoder().encode(process.env.COLLECTOR_JWT_SECRET!);
 const JWT_ALGORITHM = 'HS256';
 
 // TTL configurável via env (default: 12 horas)

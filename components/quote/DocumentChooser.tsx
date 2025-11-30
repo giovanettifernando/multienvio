@@ -4,7 +4,7 @@ import { Card, Tabs, Typography } from "antd";
 import { useFormContext } from "react-hook-form";
 import type { DocumentType } from "@/types/quote";
 import type { FinalizeFormValues } from "@/types/quoteFinalize";
-import { NFeForm } from "@/components/quote/NFeForm";
+import { NFeGridPerPackage } from "@/components/quote/NFeGridPerPackage";
 import { DeclarationItems } from "@/components/quote/DeclarationItems";
 import { VolumeDocuments } from "@/components/quote/VolumeDocuments";
 
@@ -35,7 +35,7 @@ export function DocumentChooser() {
           {
             key: "NFE",
             label: "Nota Fiscal",
-            children: <NFeForm />,
+            children: <NFeGridPerPackage />,
           },
           {
             key: "DECLARACAO",

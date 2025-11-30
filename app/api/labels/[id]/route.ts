@@ -33,13 +33,16 @@ export async function GET(request: Request, { params }: RouteParams) {
                 name: true,
                 email: true,
                 phone: true,
-                company: {
-                  select: {
-                    id: true,
-                    fantasyName: true,
-                    companyName: true,
-                    address: true,
+                razaoSocial: true,
+                addresses: {
+                  where: {
+                    OR: [
+                      { role: 'sender' },
+                      { isDefault: true },
+                    ],
                   },
+                  take: 1,
+                  orderBy: { createdAt: 'desc' },
                 },
               },
             },
@@ -57,16 +60,8 @@ export async function GET(request: Request, { params }: RouteParams) {
       return NextResponse.json({ message: 'Acesso negado' }, { status: 403 });
     }
 
-    // Extrair dados do endereço do remetente da company
-    const senderCompany = label.shipment.sender.company;
-    const senderAddress = senderCompany?.address as {
-      logradouro?: string;
-      numero?: string;
-      bairro?: string;
-      cidade?: string;
-      uf?: string;
-      cep?: string;
-    } | null;
+    // Extrair dados do endereço do remetente
+    const senderAddress = label.shipment.sender.addresses[0];
 
     // Montar resposta com dados estruturados para impressão
     const response = {
@@ -98,8 +93,8 @@ export async function GET(request: Request, { params }: RouteParams) {
 
       // Remetente
       sender: {
-        name: senderCompany?.fantasyName || senderCompany?.companyName || label.shipment.sender.name || 'Não informado',
-        address: senderAddress?.logradouro
+        name: label.shipment.sender.razaoSocial || label.shipment.sender.name || 'Não informado',
+        address: senderAddress
           ? `${senderAddress.logradouro}${senderAddress.numero ? `, ${senderAddress.numero}` : ''}`
           : null,
         neighborhood: senderAddress?.bairro,

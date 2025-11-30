@@ -150,7 +150,7 @@ export async function POST(request: Request) {
         const declaredValue = item.insuranceValue ? Number(item.insuranceValue) : 0;
 
         // Gerar tracking code único (plataforma - customer-facing)
-        const platformTrackingCode = `BR${Date.now()}${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
+        const platformTrackingCode = `EL${Date.now()}${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
 
         // Determinar status inicial baseado no tipo de coleta
         const pickupPointId = item.pickupPoint ? (item.pickupPoint as { id?: string | null; [key: string]: unknown }).id : null;

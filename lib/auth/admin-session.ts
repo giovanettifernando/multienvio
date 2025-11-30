@@ -18,10 +18,8 @@ if (process.env.NODE_ENV === 'production' && !process.env.ADMIN_JWT_SECRET) {
   );
 }
 
-// Configuração do JWT para Admin (separado do cliente)
-const ADMIN_JWT_SECRET = new TextEncoder().encode(
-  process.env.ADMIN_JWT_SECRET || 'admin-secret-key-change-in-production'
-);
+// Configuração do JWT para Admin (separado do cliente) - Nunca usar fallbacks em produção
+const ADMIN_JWT_SECRET = new TextEncoder().encode(process.env.ADMIN_JWT_SECRET!);
 const JWT_ALGORITHM = 'HS256';
 
 // TTL configurável via env (default: 7 dias)

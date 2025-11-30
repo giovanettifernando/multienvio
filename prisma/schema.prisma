@@ -237,6 +237,9 @@ model Shipment {
   @@index([recipientId])
   @@index([status])
   @@index([publicTrackingId])
+  @@index([senderId, status]) // Composite index for user shipments filter
+  @@index([createdAt]) // Index for date range queries
+  @@index([senderId, status, createdAt]) // Composite for filtered listing with sorting
   @@map("shipments")
 }
 
@@ -264,6 +267,7 @@ model Label {
   @@index([status])
   @@index([isPrinted])
   @@index([createdAt])
+  @@index([status, isPrinted]) // Composite for filtered listing
   @@map("labels")
 }
 

@@ -44,3 +44,63 @@ export function formatWalletDescription(raw: string | null): string {
 
   return raw;
 }
+
+/**
+ * SINGLETON: Formatter para moeda BRL (evita criar novo Intl.NumberFormat a cada chamada)
+ */
+const currencyFormatter = new Intl.NumberFormat('pt-BR', {
+  style: 'currency',
+  currency: 'BRL',
+});
+
+/**
+ * Formata valor como moeda BRL usando formatter singleton (otimizado)
+ * @param value - Valor em reais
+ * @returns String formatada (ex: "R$ 1.234,56")
+ */
+export function formatBRL(value: number): string {
+  return currencyFormatter.format(value);
+}
+
+/**
+ * Formata valor em centavos como moeda BRL
+ * @param cents - Valor em centavos
+ * @returns String formatada (ex: "R$ 12,34")
+ */
+export function formatCentsAsBRL(cents: number): string {
+  return currencyFormatter.format(cents / 100);
+}
+
+/**
+ * Interface para parâmetros de paginação
+ */
+export interface PaginationParams {
+  page: number;
+  pageSize: number;
+  skip: number;
+  take: number;
+}
+
+/**
+ * Parseia parâmetros de paginação de URLSearchParams
+ * @param searchParams - URLSearchParams da request
+ * @param defaults - Valores padrão opcionais
+ * @returns Objeto com page, pageSize, skip e take
+ */
+export function parsePaginationParams(
+  searchParams: URLSearchParams,
+  defaults: { page?: number; pageSize?: number } = {}
+): PaginationParams {
+  const page = Math.max(1, parseInt(searchParams.get('page') ?? String(defaults.page ?? 1), 10));
+  const pageSize = Math.min(
+    100, // Limite máximo
+    Math.max(1, parseInt(searchParams.get('pageSize') ?? searchParams.get('limit') ?? String(defaults.pageSize ?? 10), 10))
+  );
+
+  return {
+    page,
+    pageSize,
+    skip: (page - 1) * pageSize,
+    take: pageSize,
+  };
+}

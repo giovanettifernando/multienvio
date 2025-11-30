@@ -379,12 +379,12 @@ export function LabelPrintModal({
 
   return (
     <Modal
-      width={520}
+      width={480}
       open={open}
       onCancel={onClose}
       title={`Etiqueta ${data?.platformTrackingCode ?? ''}`}
       footer={
-        <Space style={{ width: '100%', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <Checkbox
             checked={markAsPrinted}
             onChange={(e) => setMarkAsPrinted(e.target.checked)}
@@ -393,7 +393,7 @@ export function LabelPrintModal({
             {data?.isPrinted ? 'Etiqueta já impressa' : 'Marcar etiqueta como impressa'}
           </Checkbox>
 
-          <Space>
+          <Space style={{ justifyContent: 'flex-end' }}>
             <Button onClick={onClose}>Fechar</Button>
             <Button
               icon={<DownloadOutlined />}
@@ -413,7 +413,7 @@ export function LabelPrintModal({
               Imprimir
             </Button>
           </Space>
-        </Space>
+        </div>
       }
     >
       {loading ? (

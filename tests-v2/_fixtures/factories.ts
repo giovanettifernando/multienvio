@@ -85,7 +85,7 @@ export function fakeShipment(overrides: Partial<Record<string, unknown>> = {}) {
   return {
     id: overrides.id ?? randomUUID(),
     senderId: overrides.senderId ?? randomUUID(),
-    platformTrackingCode: overrides.platformTrackingCode ?? `BR${Date.now()}`,
+    platformTrackingCode: overrides.platformTrackingCode ?? `EL${Date.now()}`,
     status: (overrides.status as string) ?? 'awaiting_drop_off_at_point',
     createdAt: overrides.createdAt ?? new Date(),
     updatedAt: overrides.updatedAt ?? new Date(),

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, Button } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
-import SearchFilters from '@/components/collectors/SearchFilters';
+import EntitySearchFilters from '@/components/shared/EntitySearchFilters';
 import CollectorsTable from '@/components/collectors/CollectorsTable';
 import CollectorDrawer from '@/components/collectors/CollectorDrawer';
 import {
@@ -77,7 +77,15 @@ export default function ColetoresPage() {
       }
     >
       <Card>
-        <SearchFilters onChange={handleFiltersChange} />
+        <EntitySearchFilters<CollectorFilters>
+          onChange={handleFiltersChange}
+          searchPlaceholder="Nome, CNPJ ou placa"
+          statusOptions={[
+            { label: 'Todos', value: 'all' },
+            { label: 'Ativo', value: 'active' },
+            { label: 'Bloqueado', value: 'blocked' },
+          ]}
+        />
         <CollectorsTable
           data={data}
           loading={isLoading}

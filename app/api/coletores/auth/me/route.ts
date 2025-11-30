@@ -16,9 +16,8 @@ if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
   );
 }
 
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || 'your-secret-key-change-this-in-production'
-);
+// JWT Secret - Nunca usar fallbacks em produção
+const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET!);
 
 /**
  * GET /api/coletores/auth/me

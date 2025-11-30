@@ -53,15 +53,16 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Inicializar dados dos meses
-    const monthsData: Array<{ month: number; year: number; values: Record<string, number> }> = [];
-    for (let m = startMonth; m <= endMonth; m++) {
-      monthsData.push({
-        month: m,
+    // Inicializar dados dos meses usando Array.from (mais eficiente)
+    const monthsData: Array<{ month: number; year: number; values: Record<string, number> }> =
+      Array.from({ length: endMonth - startMonth + 1 }, (_, i) => ({
+        month: startMonth + i,
         year,
         values: {},
-      });
-    }
+      }));
+
+    // OTIMIZAÇÃO: Criar Map para lookup O(1) por mês
+    const monthsMap = new Map(monthsData.map(m => [m.month, m]));
 
     // 1. Buscar receitas de comissões de envios (shipments)
     const startDate = new Date(year, startMonth - 1, 1);
@@ -85,21 +86,19 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    // Agrupar receitas por mês
+    // Agrupar receitas por mês - OTIMIZADO com Map (O(1) lookup)
     for (const row of shipmentCommissions) {
       const rowDate = new Date(row.createdAt);
       const month = rowDate.getMonth() + 1;
-      if (month >= startMonth && month <= endMonth) {
-        const monthData = monthsData.find((m) => m.month === month);
-        if (monthData) {
-          // 1.1.01 - Comissão sobre frete por envio
-          monthData.values['1.1.01'] = (monthData.values['1.1.01'] || 0) +
-            (row._sum.platformShippingCommissionCents || 0);
+      const monthData = monthsMap.get(month);
+      if (monthData) {
+        // 1.1.01 - Comissão sobre frete por envio
+        monthData.values['1.1.01'] = (monthData.values['1.1.01'] || 0) +
+          (row._sum.platformShippingCommissionCents || 0);
 
-          // 1.2.01 - Comissão por coleta na origem
-          monthData.values['1.2.01'] = (monthData.values['1.2.01'] || 0) +
-            (row._sum.platformPickupCommissionCents || 0);
-        }
+        // 1.2.01 - Comissão por coleta na origem
+        monthData.values['1.2.01'] = (monthData.values['1.2.01'] || 0) +
+          (row._sum.platformPickupCommissionCents || 0);
       }
     }
 
@@ -122,20 +121,18 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    // Agrupar despesas por mês e conta DRE
+    // Agrupar despesas por mês e conta DRE - OTIMIZADO com Map (O(1) lookup)
     for (const expense of expenses) {
       const month = expense.createdAt.getMonth() + 1;
-      if (month >= startMonth && month <= endMonth) {
-        const monthData = monthsData.find((m) => m.month === month);
-        if (monthData) {
-          // Usar dreAccountCode se definido, senão usar mapeamento padrão
-          const accountCode = expense.dreAccountCode ||
-            EXPENSE_CATEGORY_TO_DRE[expense.category] ||
-            '7.5.02';
+      const monthData = monthsMap.get(month);
+      if (monthData) {
+        // Usar dreAccountCode se definido, senão usar mapeamento padrão
+        const accountCode = expense.dreAccountCode ||
+          EXPENSE_CATEGORY_TO_DRE[expense.category] ||
+          '7.5.02';
 
-          monthData.values[accountCode] = (monthData.values[accountCode] || 0) +
-            expense.amountCents;
-        }
+        monthData.values[accountCode] = (monthData.values[accountCode] || 0) +
+          expense.amountCents;
       }
     }
 

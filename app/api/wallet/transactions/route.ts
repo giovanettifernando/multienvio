@@ -83,17 +83,6 @@ export async function GET(request: Request) {
       ];
     }
 
-    // Buscar total de transações (para paginação)
-    const total = await prisma.walletTransaction.count({ where: whereClause });
-
-    // Buscar transações paginadas
-    const transactions = await prisma.walletTransaction.findMany({
-      where: whereClause,
-      orderBy: { confirmedAt: 'desc' },
-      skip: (page - 1) * limit,
-      take: limit,
-    });
-
     // Calcular resumo do período usando agregações do Prisma (otimizado)
     const periodWhereBase = {
       walletId: wallet.id,
@@ -104,33 +93,44 @@ export async function GET(request: Request) {
       },
     };
 
-    // Agregar créditos: TOPUP, REFUND, ADJUSTMENT positivo
-    const creditsAgg = await prisma.walletTransaction.aggregate({
-      where: {
-        ...periodWhereBase,
-        OR: [
-          { type: 'TOPUP' },
-          { type: 'REFUND' },
-          { type: 'ADJUSTMENT', amountCents: { gte: 0 } },
-        ],
-      },
-      _sum: { amountCents: true },
-      _count: true,
-    });
-
-    // Agregar débitos: PURCHASE, WITHDRAW, ADJUSTMENT negativo
-    const debitsAgg = await prisma.walletTransaction.aggregate({
-      where: {
-        ...periodWhereBase,
-        OR: [
-          { type: 'PURCHASE' },
-          { type: 'WITHDRAW' },
-          { type: 'ADJUSTMENT', amountCents: { lt: 0 } },
-        ],
-      },
-      _sum: { amountCents: true },
-      _count: true,
-    });
+    // Executar todas as queries em paralelo (otimização)
+    const [total, transactions, creditsAgg, debitsAgg] = await Promise.all([
+      // Total para paginação
+      prisma.walletTransaction.count({ where: whereClause }),
+      // Transações paginadas
+      prisma.walletTransaction.findMany({
+        where: whereClause,
+        orderBy: { confirmedAt: 'desc' },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      // Agregar créditos: TOPUP, REFUND, ADJUSTMENT positivo
+      prisma.walletTransaction.aggregate({
+        where: {
+          ...periodWhereBase,
+          OR: [
+            { type: 'TOPUP' },
+            { type: 'REFUND' },
+            { type: 'ADJUSTMENT', amountCents: { gte: 0 } },
+          ],
+        },
+        _sum: { amountCents: true },
+        _count: true,
+      }),
+      // Agregar débitos: PURCHASE, WITHDRAW, ADJUSTMENT negativo
+      prisma.walletTransaction.aggregate({
+        where: {
+          ...periodWhereBase,
+          OR: [
+            { type: 'PURCHASE' },
+            { type: 'WITHDRAW' },
+            { type: 'ADJUSTMENT', amountCents: { lt: 0 } },
+          ],
+        },
+        _sum: { amountCents: true },
+        _count: true,
+      }),
+    ]);
 
     // Calcular totais
     const totalCreditsCents = creditsAgg._sum.amountCents || 0;

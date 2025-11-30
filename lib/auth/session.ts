@@ -17,10 +17,8 @@ if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
   );
 }
 
-// Configuração do JWT
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || 'envio-legal-secret-key-change-in-production'
-);
+// Configuração do JWT - Nunca usar fallbacks em produção
+const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET!);
 const JWT_ALGORITHM = 'HS256';
 
 // TTL configurável via env (default: 7 dias)

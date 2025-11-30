@@ -11,9 +11,16 @@ import bcrypt from 'bcrypt';
 
 export const dynamic = 'force-dynamic';
 
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || 'envio-legal-secret-key-change-in-production'
-);
+// Validar JWT_SECRET em produção
+if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
+  throw new Error(
+    '🚨 SECURITY ERROR: JWT_SECRET environment variable is required in production. ' +
+    'Please set a secure random secret to prevent token forgery.'
+  );
+}
+
+// JWT Secret - Nunca usar fallbacks em produção
+const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET!);
 
 interface TokenPayload {
   collectorId: string;

@@ -45,17 +45,9 @@ export async function validateWebhookSignature(
   const config = await getMercadoPagoConfig();
 
   if (!config?.webhookSecret) {
-    // SECURITY: Always require webhookSecret in production
-    if (process.env.NODE_ENV === 'production') {
-      console.error('[MERCADO_PAGO_WEBHOOK] SECURITY: webhookSecret não configurado em produção - rejeitando webhook');
-      return false;
-    }
-    // In development/staging, warn but allow for testing (only if explicitly enabled)
-    if (process.env.ALLOW_UNSIGNED_WEBHOOKS === 'true') {
-      console.warn('[MERCADO_PAGO_WEBHOOK] ⚠️ DEVELOPMENT: Webhook sem validação de assinatura (ALLOW_UNSIGNED_WEBHOOKS=true)');
-      return true;
-    }
-    console.warn('[MERCADO_PAGO_WEBHOOK] Webhook secret não configurado - rejeitando. Use ALLOW_UNSIGNED_WEBHOOKS=true para testes.');
+    // SECURITY: Sempre requer webhookSecret - não permitir bypass
+    console.error('[MERCADO_PAGO_WEBHOOK] SECURITY: webhookSecret não configurado - rejeitando webhook');
+    console.error('[MERCADO_PAGO_WEBHOOK] Configure o webhookSecret no painel do Mercado Pago e no banco de dados (PaymentGateway.config)');
     return false;
   }
 

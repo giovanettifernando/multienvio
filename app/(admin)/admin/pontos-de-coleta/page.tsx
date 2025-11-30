@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, Button, App } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
-import SearchFilters from '@/components/pickup/SearchFilters';
+import EntitySearchFilters from '@/components/shared/EntitySearchFilters';
 import PointsTable from '@/components/pickup/PointsTable';
 import PointDrawer from '@/components/pickup/PointDrawer';
 import { usePickupPointsAPI } from '@/hooks/usePickupPointsAPI';
@@ -107,7 +107,15 @@ export default function PontosDeColetaPage() {
       }
     >
       <Card>
-        <SearchFilters onChange={handleFiltersChange} />
+        <EntitySearchFilters<PickupPointFilters>
+          onChange={handleFiltersChange}
+          searchPlaceholder="Nome/CNPJ..."
+          statusOptions={[
+            { label: 'Todos', value: 'all' },
+            { label: 'Ativo', value: 'ACTIVE' },
+            { label: 'Bloqueado', value: 'BLOCKED' },
+          ]}
+        />
         <PointsTable
           data={data}
           loading={isLoading || api.loading}
