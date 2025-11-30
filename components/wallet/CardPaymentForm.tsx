@@ -1,8 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Card as AntCard, Spin, Alert } from "antd";
+import { useState, useEffect, useRef } from "react";
+import { Card as AntCard, Spin, Alert, Modal } from "antd";
+import { LoadingOutlined } from "@ant-design/icons";
 import { initMercadoPago, CardPayment } from "@mercadopago/sdk-react";
+
+// Timeout para aguardar confirmação da operadora (15 segundos)
+const CARD_PROCESSING_TIMEOUT_MS = 15000;
 
 interface CardPaymentFormProps {
   amount: number;
@@ -37,6 +41,9 @@ export function CardPaymentForm({
   const [publicKey, setPublicKey] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [processing, setProcessing] = useState(false);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // Buscar Public Key do Mercado Pago
   useEffect(() => {
@@ -64,7 +71,34 @@ export function CardPaymentForm({
     fetchPublicKey();
   }, []);
 
+  // Limpar timeout ao desmontar
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, []);
+
   const handleSubmit = async (formData: MercadoPagoFormData) => {
+    // Mostrar modal de processamento
+    setProcessing(true);
+
+    // Criar AbortController para cancelar requisição no timeout
+    abortControllerRef.current = new AbortController();
+
+    // Configurar timeout de 15 segundos
+    timeoutRef.current = setTimeout(() => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      setProcessing(false);
+      onError(new Error("Erro ao processar pagamento, tente novamente mais tarde"));
+    }, CARD_PROCESSING_TIMEOUT_MS);
+
     try {
       // O SDK já tokenizou o cartão automaticamente
       // formData contém o token e outros dados do cartão
@@ -84,18 +118,41 @@ export function CardPaymentForm({
             type: "wallet_topup",
           },
         }),
+        signal: abortControllerRef.current.signal,
       });
+
+      // Limpar timeout se a requisição completou
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || "Erro ao processar pagamento");
+        // Tratar como "Cartão não autorizado"
+        throw new Error("Cartão não autorizado");
       }
 
       const result = await response.json();
+      setProcessing(false);
       onSuccess(result.payment.id);
     } catch (err) {
+      // Limpar timeout
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+
+      setProcessing(false);
+
+      // Se foi abortado pelo timeout, a mensagem já foi enviada
+      if (err instanceof Error && err.name === "AbortError") {
+        return;
+      }
+
       console.error("[CARD_PAYMENT_SUBMIT]", err);
-      onError(err instanceof Error ? err : new Error("Erro desconhecido"));
+      // Sempre mostrar "Cartão não autorizado" para erros de pagamento
+      onError(new Error("Cartão não autorizado"));
     }
   };
 
@@ -128,15 +185,38 @@ export function CardPaymentForm({
   }
 
   return (
-    <div style={{ maxWidth: 600, margin: "0 auto" }}>
-      <CardPayment
-        initialization={{
-          amount,
-        }}
-        onSubmit={handleSubmit}
-        onError={handleError}
-      />
-    </div>
+    <>
+      {/* Modal bloqueante durante processamento */}
+      <Modal
+        open={processing}
+        closable={false}
+        maskClosable={false}
+        keyboard={false}
+        footer={null}
+        centered
+        width={400}
+      >
+        <div style={{ textAlign: "center", padding: "40px 20px" }}>
+          <LoadingOutlined style={{ fontSize: 48, color: "#1890ff", marginBottom: 24 }} spin />
+          <div style={{ fontSize: 16, fontWeight: 500, marginBottom: 8 }}>
+            Aguardando confirmação da operadora de cartão de crédito
+          </div>
+          <div style={{ fontSize: 14, color: "#666" }}>
+            Por favor, aguarde...
+          </div>
+        </div>
+      </Modal>
+
+      <div style={{ maxWidth: 600, margin: "0 auto" }}>
+        <CardPayment
+          initialization={{
+            amount,
+          }}
+          onSubmit={handleSubmit}
+          onError={handleError}
+        />
+      </div>
+    </>
   );
 }
 

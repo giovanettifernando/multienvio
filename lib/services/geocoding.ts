@@ -1,11 +1,15 @@
 /**
  * Serviço de geocodificação com estratégia de precisão em múltiplas camadas
  *
+ * NOTA: Usamos Nominatim (OpenStreetMap) que tem cobertura limitada para Brasil.
+ * CEPs brasileiros não são bem suportados pelo Nominatim, então usamos estratégias alternativas.
+ *
  * Estratégia de geocodificação (em ordem de tentativa):
  * 1. TENTATIVA A - Endereço completo (rua + bairro + cidade + estado) → precision: 'address'
- * 2. TENTATIVA B - CEP isolado com cidade/estado → precision: 'zipcode'
- * 3. TENTATIVA C - Cidade + estado → precision: 'city'
- * 4. TENTATIVA D - Capital do estado (fallback forte) → precision: 'state_fallback'
+ * 2. TENTATIVA B - Bairro + cidade + estado (sem rua) → precision: 'zipcode' (neighborhood level)
+ * 3. TENTATIVA B2 - Query estruturada com postalcode (raramente funciona no Brasil)
+ * 4. TENTATIVA C - Cidade + estado → precision: 'city_fallback'
+ * 5. TENTATIVA D - Capital do estado (fallback forte) → precision: 'state_fallback'
  */
 
 import type { GeoCoordinates } from '@/lib/utils/geo';
@@ -209,24 +213,78 @@ export async function geocodeCEP(
     }
 
     // ============================================================
-    // TENTATIVA B - CEP isolado com cidade/estado
+    // TENTATIVA B - Bairro + cidade/estado (sem rua)
+    // O Nominatim não entende CEPs brasileiros, então tentamos bairro
+    // ============================================================
+    if (cepData.neighborhood) {
+      try {
+        const neighborhoodParts = [
+          cepData.neighborhood,
+          cepData.city,
+          cepData.state,
+          'Brazil',
+        ];
+
+        const neighborhoodQuery = neighborhoodParts.join(', ');
+        console.log(`[geocodeCEP] TENTATIVA B - Bairro: ${neighborhoodQuery}`);
+
+        const nominatimUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(neighborhoodQuery)}&limit=1`;
+
+        await waitForNominatimRateLimit();
+        const nominatimResponse = await fetchWithRetry(
+          nominatimUrl,
+          {
+            headers: NOMINATIM_HEADERS,
+            signal: AbortSignal.timeout(15000),
+          },
+          1
+        );
+
+        if (nominatimResponse.ok) {
+          const nominatimData = await nominatimResponse.json();
+
+          if (nominatimData && nominatimData.length > 0) {
+            const coordinates: GeoCoordinates = {
+              lat: parseFloat(nominatimData[0].lat),
+              lng: parseFloat(nominatimData[0].lon),
+            };
+
+            console.log(`[geocodeCEP] ✅ TENTATIVA B bem-sucedida (neighborhood):`, coordinates);
+            geocodingCache.set(cacheKey, { coordinates, precision: 'zipcode', provider: 'nominatim' });
+
+            return {
+              success: true,
+              coordinates,
+              precision: 'zipcode',
+              provider: 'nominatim',
+            };
+          }
+        }
+      } catch (error) {
+        console.warn('[geocodeCEP] TENTATIVA B (bairro) falhou, tentando C...', error);
+      }
+    }
+
+    // ============================================================
+    // TENTATIVA B2 - Query estruturada com postalcode (Nominatim structured)
+    // Usa parâmetros separados que o Nominatim pode entender melhor
     // ============================================================
     try {
-      const zipcodeParts = [
-        cleanCep,
-        cepData.city,
-        cepData.state,
-        'Brazil',
-      ];
+      const formattedCep = `${cleanCep.slice(0, 5)}-${cleanCep.slice(5)}`;
+      console.log(`[geocodeCEP] TENTATIVA B2 - Query estruturada: postalcode=${formattedCep}, city=${cepData.city}`);
 
-      const zipcodeQuery = zipcodeParts.join(', ');
-      console.log(`[geocodeCEP] TENTATIVA B - CEP isolado: ${zipcodeQuery}`);
-
-      const nominatimUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(zipcodeQuery)}&limit=1`;
+      // Usar query estruturada do Nominatim (mais precisa)
+      const structuredUrl = new URL('https://nominatim.openstreetmap.org/search');
+      structuredUrl.searchParams.set('format', 'json');
+      structuredUrl.searchParams.set('postalcode', formattedCep);
+      structuredUrl.searchParams.set('city', cepData.city);
+      structuredUrl.searchParams.set('state', cepData.state);
+      structuredUrl.searchParams.set('country', 'Brazil');
+      structuredUrl.searchParams.set('limit', '1');
 
       await waitForNominatimRateLimit();
       const nominatimResponse = await fetchWithRetry(
-        nominatimUrl,
+        structuredUrl.toString(),
         {
           headers: NOMINATIM_HEADERS,
           signal: AbortSignal.timeout(15000),
@@ -243,7 +301,7 @@ export async function geocodeCEP(
             lng: parseFloat(nominatimData[0].lon),
           };
 
-          console.log(`[geocodeCEP] ✅ TENTATIVA B bem-sucedida (zipcode):`, coordinates);
+          console.log(`[geocodeCEP] ✅ TENTATIVA B2 bem-sucedida (zipcode structured):`, coordinates);
           geocodingCache.set(cacheKey, { coordinates, precision: 'zipcode', provider: 'nominatim' });
 
           return {
@@ -255,7 +313,7 @@ export async function geocodeCEP(
         }
       }
     } catch (error) {
-      console.warn('[geocodeCEP] TENTATIVA B falhou, tentando C...', error);
+      console.warn('[geocodeCEP] TENTATIVA B2 falhou, tentando C...', error);
     }
 
     // ============================================================

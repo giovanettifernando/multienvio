@@ -27,10 +27,29 @@ export const POST = withApiHandler(async (context) => {
   const cvv = body.cvv as string | undefined;
   const cpf = body.cpf as string | undefined;
 
-  if (!cvv || cvv.length < 3) {
+  // Validação robusta de CVV
+  if (!cvv) {
     throw new ApiError({
       code: "bad_request",
       message: "CVV é obrigatório.",
+      status: 400,
+    });
+  }
+
+  // CVV deve conter apenas dígitos
+  if (!/^\d+$/.test(cvv)) {
+    throw new ApiError({
+      code: "bad_request",
+      message: "CVV deve conter apenas números.",
+      status: 400,
+    });
+  }
+
+  // CVV deve ter 3 ou 4 dígitos (AMEX usa 4, outros usam 3)
+  if (cvv.length < 3 || cvv.length > 4) {
+    throw new ApiError({
+      code: "bad_request",
+      message: "CVV deve ter 3 ou 4 dígitos.",
       status: 400,
     });
   }
@@ -80,6 +99,18 @@ export const POST = withApiHandler(async (context) => {
       code: "not_found",
       message: "Cartão não possui PAN criptografado.",
       status: 404,
+    });
+  }
+
+  // Validar CVV de acordo com a bandeira do cartão
+  const isAmex = card.brand?.toLowerCase() === "amex" || card.brand?.toLowerCase() === "american express";
+  const expectedCvvLength = isAmex ? 4 : 3;
+
+  if (cvv.length !== expectedCvvLength) {
+    throw new ApiError({
+      code: "bad_request",
+      message: `CVV inválido para ${card.brand || "este cartão"}. Esperado ${expectedCvvLength} dígitos.`,
+      status: 400,
     });
   }
 

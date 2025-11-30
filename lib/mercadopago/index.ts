@@ -41,6 +41,17 @@ export { createPaymentWithTracking, updatePaymentFromMercadoPago } from './payme
 // Webhooks
 export { validateWebhookSignature, processWebhook, retryFailedWebhooks } from './webhooks';
 
+// PIX Monitor
+export type { PixMonitorResult } from './pix-monitor';
+export {
+  monitorPendingPixPayments,
+  cleanupOldPendingPix,
+  getPendingPixPayments,
+  processPixPayment,
+  isPixExpired,
+  recordFailedPixInWallet,
+} from './pix-monitor';
+
 // Cards & Customers
 export type {
   CreateCustomerInput,

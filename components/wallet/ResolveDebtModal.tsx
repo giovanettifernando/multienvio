@@ -108,7 +108,7 @@ export default function ResolveDebtModal({ open, onClose }: ResolveDebtModalProp
       title={null}
       footer={null}
       width={500}
-      destroyOnClose
+      destroyOnHidden
     >
       <Spin spinning={isLoading}>
         <Space direction="vertical" size="large" style={{ width: '100%' }}>

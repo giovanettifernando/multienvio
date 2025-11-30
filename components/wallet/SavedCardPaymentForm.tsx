@@ -1,8 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Card as AntCard, Input, Button, Radio, Space, Typography, Alert, Form, App } from "antd";
-import { CreditCardOutlined, LockOutlined } from "@ant-design/icons";
+import { useState, useEffect, useRef } from "react";
+import { Card as AntCard, Input, Button, Radio, Space, Typography, Alert, Form, App, Modal } from "antd";
+import { CreditCardOutlined, LockOutlined, LoadingOutlined } from "@ant-design/icons";
+
+// Timeout para aguardar confirmação da operadora (15 segundos)
+const CARD_PROCESSING_TIMEOUT_MS = 15000;
 import { useCards } from "@/hooks/useAccount";
 
 const { Text } = Typography;
@@ -48,9 +51,16 @@ export function SavedCardPaymentForm({
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   const [cvv, setCvv] = useState("");
   const [cvvTouched, setCvvTouched] = useState(false);
+
+  // Determinar se o cartão selecionado é AMEX (CVV com 4 dígitos)
+  const selectedCard = cards?.find((c) => c.id === selectedCardId);
+  const isAmex = selectedCard?.brand?.toUpperCase() === "AMEX";
+  const cvvLength = isAmex ? 4 : 3;
   const [processing, setProcessing] = useState(false);
   const [publicKey, setPublicKey] = useState<string | null>(null);
   const [loadingKey, setLoadingKey] = useState(true);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // Filtrar cartões válidos (com brand e last4)
   const availableCards = cards?.filter((card) => card.brand && card.last4) || [];
@@ -61,6 +71,24 @@ export function SavedCardPaymentForm({
       setSelectedCardId(availableCards[0].id);
     }
   }, [availableCards, selectedCardId]);
+
+  // Limpar CVV quando trocar de cartão (tamanho pode mudar)
+  useEffect(() => {
+    setCvv("");
+    setCvvTouched(false);
+  }, [selectedCardId]);
+
+  // Limpar timeout ao desmontar
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, []);
 
   // Carregar MP SDK e public key
   useEffect(() => {
@@ -116,7 +144,20 @@ export function SavedCardPaymentForm({
       return;
     }
 
+    // Mostrar modal de processamento
     setProcessing(true);
+
+    // Criar AbortController para cancelar requisição no timeout
+    abortControllerRef.current = new AbortController();
+
+    // Configurar timeout de 15 segundos
+    timeoutRef.current = setTimeout(() => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      setProcessing(false);
+      onError(new Error("Erro ao processar pagamento, tente novamente mais tarde"));
+    }, CARD_PROCESSING_TIMEOUT_MS);
 
     try {
       // Verificar HTTPS (requisito do Mercado Pago) - apenas em produção
@@ -124,13 +165,15 @@ export function SavedCardPaymentForm({
       if (typeof window !== "undefined" &&
           window.location.protocol !== "https:" &&
           process.env.NODE_ENV === "production") {
-        throw new Error("Não foi possível estabelecer uma conexão segura. Tente novamente.");
+        throw new Error("Cartão não autorizado");
       }
 
       // Buscar dados do usuário para obter CPF
-      const userResponse = await fetch("/api/account/profile");
+      const userResponse = await fetch("/api/account/profile", {
+        signal: abortControllerRef.current.signal,
+      });
       if (!userResponse.ok) {
-        throw new Error("Erro ao buscar dados do usuário");
+        throw new Error("Cartão não autorizado");
       }
       const userData = await userResponse.json();
       const userCpf = userData.cpf?.replace(/\D/g, "") || "00000000000";
@@ -147,12 +190,13 @@ export function SavedCardPaymentForm({
             cvv,
             cpf: userCpf,
           }),
+          signal: abortControllerRef.current.signal,
         }
       );
 
       if (!tokenizeResponse.ok) {
-        const errorData = await tokenizeResponse.json();
-        throw new Error(errorData.message || "Erro ao criar token");
+        // Tratar como "Cartão não autorizado"
+        throw new Error("Cartão não autorizado");
       }
 
       const tokenResponse = await tokenizeResponse.json();
@@ -165,13 +209,12 @@ export function SavedCardPaymentForm({
       });
 
       if (!token || !token.id) {
-        throw new Error("Falha ao criar token");
+        throw new Error("Cartão não autorizado");
       }
 
-      // Obter dados do cartão selecionado
-      const selectedCard = cards?.find((c) => c.id === selectedCardId);
+      // Verificar cartão selecionado
       if (!selectedCard) {
-        throw new Error("Cartão não encontrado");
+        throw new Error("Cartão não autorizado");
       }
 
       // Mapear brand para paymentMethodId
@@ -213,20 +256,40 @@ export function SavedCardPaymentForm({
             cardId: selectedCardId,
           },
         }),
+        signal: abortControllerRef.current.signal,
       });
 
+      // Limpar timeout se a requisição completou
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+
       if (!paymentResponse.ok) {
-        const errorData = await paymentResponse.json();
-        throw new Error(errorData.message || "Erro ao processar pagamento");
+        // Tratar como "Cartão não autorizado"
+        throw new Error("Cartão não autorizado");
       }
 
       const result = await paymentResponse.json();
+      setProcessing(false);
       onSuccess(result.payment.id);
     } catch (err) {
-      console.error("[SAVED_CARD_PAYMENT]", err);
-      onError(err instanceof Error ? err : new Error("Erro desconhecido"));
-    } finally {
+      // Limpar timeout
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+
       setProcessing(false);
+
+      // Se foi abortado pelo timeout, a mensagem já foi enviada
+      if (err instanceof Error && err.name === "AbortError") {
+        return;
+      }
+
+      console.error("[SAVED_CARD_PAYMENT]", err);
+      // Sempre mostrar "Cartão não autorizado" para erros de pagamento
+      onError(new Error("Cartão não autorizado"));
     }
   };
 
@@ -259,16 +322,38 @@ export function SavedCardPaymentForm({
   }
 
   return (
-    <AntCard>
-      <Space direction="vertical" size="large" style={{ width: "100%" }}>
-        <div>
-          <Text strong style={{ marginBottom: 8, display: "block" }}>
-            Valor a pagar:
-          </Text>
-          <Text style={{ fontSize: 24, color: "#52c41a" }}>
-            {formatCurrency(amount)}
-          </Text>
+    <>
+      {/* Modal bloqueante durante processamento */}
+      <Modal
+        open={processing}
+        closable={false}
+        maskClosable={false}
+        keyboard={false}
+        footer={null}
+        centered
+        width={400}
+      >
+        <div style={{ textAlign: "center", padding: "40px 20px" }}>
+          <LoadingOutlined style={{ fontSize: 48, color: "#1890ff", marginBottom: 24 }} spin />
+          <div style={{ fontSize: 16, fontWeight: 500, marginBottom: 8 }}>
+            Aguardando confirmação da operadora de cartão de crédito
+          </div>
+          <div style={{ fontSize: 14, color: "#666" }}>
+            Por favor, aguarde...
+          </div>
         </div>
+      </Modal>
+
+      <AntCard>
+        <Space direction="vertical" size="large" style={{ width: "100%" }}>
+          <div>
+            <Text strong style={{ marginBottom: 8, display: "block" }}>
+              Valor a pagar:
+            </Text>
+            <Text style={{ fontSize: 24, color: "#52c41a" }}>
+              {formatCurrency(amount)}
+            </Text>
+          </div>
 
         <Form.Item
           label="Selecione um cartão"
@@ -314,51 +399,52 @@ export function SavedCardPaymentForm({
         <Form.Item
           label="Código de Segurança (CVV)"
           required
-          validateStatus={cvvTouched && (!cvv || cvv.length < 3) ? "error" : undefined}
+          validateStatus={cvvTouched && (!cvv || cvv.length !== cvvLength) ? "error" : undefined}
           help={
             cvvTouched && !cvv
               ? "Informe o CVV do cartão"
-              : cvvTouched && cvv.length < 3
-              ? "CVV deve ter 3 ou 4 dígitos"
+              : cvvTouched && cvv.length !== cvvLength
+              ? `CVV deve ter ${cvvLength} dígitos`
               : undefined
           }
         >
           <Input
             prefix={<LockOutlined />}
-            placeholder="123"
+            placeholder={isAmex ? "1234" : "123"}
             value={cvv}
             onChange={(e) => {
               const value = e.target.value.replace(/\D/g, "");
-              if (value.length <= 4) {
+              if (value.length <= cvvLength) {
                 setCvv(value);
               }
             }}
             onBlur={() => setCvvTouched(true)}
-            maxLength={4}
+            maxLength={cvvLength}
             size="large"
             style={{ width: "150px" }}
             type="password"
           />
         </Form.Item>
 
-        <Space direction="vertical" size="middle" style={{ width: "100%" }}>
-          <Button
-            type="primary"
-            size="large"
-            block
-            onClick={handleSubmit}
-            loading={processing || loadingKey}
-            disabled={!selectedCardId || !cvv || cvv.length < 3 || !publicKey}
-          >
-            Pagar {formatCurrency(amount)}
-          </Button>
+          <Space direction="vertical" size="middle" style={{ width: "100%" }}>
+            <Button
+              type="primary"
+              size="large"
+              block
+              onClick={handleSubmit}
+              loading={processing || loadingKey}
+              disabled={!selectedCardId || !cvv || cvv.length !== cvvLength || !publicKey}
+            >
+              Pagar {formatCurrency(amount)}
+            </Button>
 
-          <Button type="link" onClick={onUseNewCard} block>
-            Usar outro cartão
-          </Button>
+            <Button type="link" onClick={onUseNewCard} block>
+              Usar outro cartão
+            </Button>
+          </Space>
         </Space>
-      </Space>
-    </AntCard>
+      </AntCard>
+    </>
   );
 }
 
