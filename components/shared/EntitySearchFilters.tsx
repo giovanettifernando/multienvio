@@ -10,10 +10,10 @@ const UFS = [
 
 export interface BaseFilters {
   q?: string;
-  status: string;
+  status?: string;
   uf?: string;
   cidade?: string;
-  page: number;
+  page?: number;
 }
 
 interface StatusOption {

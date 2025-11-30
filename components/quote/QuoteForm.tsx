@@ -6,38 +6,29 @@ import {
   App,
   Card,
   Col,
-  ConfigProvider,
   Flex,
   Form,
   Input,
-  InputNumber,
   Radio,
   Row,
-  Segmented,
   Space,
   Spin,
   Switch,
   Tag,
-  theme,
   Typography,
 } from "antd";
 import {
   Controller,
   FormProvider,
-  SubmitHandler,
-  UseFormReturn,
   useFieldArray,
   useForm,
+  type UseFormReturn,
+  type SubmitHandler,
 } from "react-hook-form";
-import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useShallow } from "zustand/react/shallow";
 import { CheckCircleTwoTone, CloseCircleTwoTone } from "@ant-design/icons";
 import { maskCEP } from "@/lib/masks";
-import {
-  DEFAULT_CUBAGE_FACTOR,
-  VolumesGrid,
-} from "@/components/quote/VolumesGrid";
 import { useQuoteStore } from "@/store/useQuoteStore";
 import type {
   QuoteCalculateResponse,
@@ -58,8 +49,6 @@ import { useQuoteDraft } from "@/lib/state/quoteDraft";
 import { RouteCards } from "@/components/shipping/RouteCards";
 import { OriginCard } from "@/components/shipping/OriginCard";
 import { DestinationCard } from "@/components/shipping/DestinationCard";
-import { VolumesTotalizer } from "@/components/quote/VolumesTotalizer";
-import { QuoteResultsSection } from "@/components/quote/QuoteResultsSection";
 import {
   swapRouteValues as swapRouteFormValues,
   type RouteValues as SwapRouteValues,
@@ -71,129 +60,27 @@ import {
   type Address as StoreAddress,
 } from "@/lib/state/addresses";
 
-const companyAddressKeys: Array<keyof CompanyAddress> = [
-  "cep",
-  "logradouro",
-  "numero",
-  "complemento",
-  "bairro",
-  "cidade",
-  "uf",
-  "nome",
-  "email",
-  "telefone",
-];
+// Extracted components
+import { quoteFormSchema, MAX_VOLUMES, type QuoteFormValues } from "./quoteFormSchema";
+import {
+  addressesEqual,
+  companyAddressKeys,
+  computeTotals,
+  createEmptyVolume,
+  dispatchTelemetry,
+  mapStoreAddressToCompany as mapStoreAddressToCompanyFn,
+  toHeaderInfo,
+} from "./quoteFormHelpers";
+import { DestinationModeSelector } from "./DestinationModeSelector";
+import { InsuranceInput } from "./InsuranceInput";
+import { PickupToggle } from "./PickupToggle";
+import { ReverseToggle } from "./ReverseToggle";
+import { VolumesGrid, DEFAULT_CUBAGE_FACTOR } from "./VolumesGrid";
+import { VolumesTotalizer } from "./VolumesTotalizer";
+import { QuoteResultsSection } from "./QuoteResultsSection";
 
-const addressesEqual = (
-  a?: CompanyAddress | null,
-  b?: CompanyAddress | null,
-) => {
-  if (!a && !b) return true;
-  if (!a || !b) return false;
-  return companyAddressKeys.every((key) => (a[key] ?? "") === (b[key] ?? ""));
-};
-
-const MAX_VOLUMES = 10;
-const cepRegex = /^\d{5}-?\d{3}$/; // Aceita com ou sem hífen
-
-// Helper para converter endereço em info de header
-const toHeaderInfo = (addr: StoreAddress | null | undefined | { id: string; cidade: string; uf: string; cep: string; logradouro?: string; numero?: string; apelido?: string; isDefault?: boolean }) => {
-  if (!addr) return null;
-  const apelido = 'apelido' in addr ? addr.apelido : undefined;
-  return {
-    cidade: addr.cidade,
-    uf: addr.uf,
-    label: apelido ?? `${addr.logradouro || ''}, ${addr.numero || ''}`,
-    cep: addr.cep,
-    isDefault: addr.isDefault ?? false,
-  };
-};
-
-const volumeSchema = z.object({
-  id: z.string().min(1),
-  comprimentoCm: z.number().optional(),
-  larguraCm: z.number().optional(),
-  alturaCm: z.number().optional(),
-  pesoKg: z.number().optional(),
-});
-
-const quoteFormSchema = z.object({
-  origem: z.any().optional().default({}),
-  destino: z.any().optional().default({}),
-  modoOrigem: z.enum(["manual", "recorrente"]).optional(),
-  modoDestino: z.enum(["manual", "recorrente"]).optional(),
-  remetenteRecorrenteId: z.string().nullable().optional(),
-  destinatarioRecorrenteId: z.string().nullable().optional(),
-  origemCep: z
-    .string()
-    .trim()
-    .transform((val) => {
-      const normalized = val.replace(/\D/g, ""); // Remove não-dígitos
-      return normalized.length === 8 ? `${normalized.slice(0, 5)}-${normalized.slice(5)}` : val;
-    })
-    .refine((val) => cepRegex.test(val), { message: "CEP inválido." }),
-  destinoCep: z
-    .string()
-    .trim()
-    .transform((val) => {
-      const normalized = val.replace(/\D/g, ""); // Remove não-dígitos
-      return normalized.length === 8 ? `${normalized.slice(0, 5)}-${normalized.slice(5)}` : val;
-    })
-    .refine((val) => cepRegex.test(val), { message: "CEP inválido." }),
-  coleta: z.boolean(),
-  devolucao: z.boolean(),
-  seguroValor: z
-    .union([
-      z
-        .number()
-        .min(0, "Valor do seguro deve ser maior ou igual a zero."),
-      z.literal(null),
-      z.undefined(),
-    ])
-    .optional(),
-  volumes: z
-    .array(volumeSchema)
-    .min(1, "Adicione ao menos um volume.")
-    .max(MAX_VOLUMES, `Limite máximo de ${MAX_VOLUMES} volumes.`),
-});
-
-export type QuoteFormValues = z.input<typeof quoteFormSchema>;
-
-const createEmptyVolume = (): QuoteFormValues["volumes"][number] => ({
-  id: crypto.randomUUID(),
-  comprimentoCm: 0,
-  larguraCm: 0,
-  alturaCm: 0,
-  pesoKg: 0,
-});
-
-const computeTotals = (volumes: QuoteFormValues["volumes"] | undefined) => {
-  if (!volumes?.length) {
-    return { pesoRealKg: 0, pesoCubadoKg: 0 };
-  }
-  return volumes.reduce(
-    (acc, volume) => {
-      const comprimento = Number(volume.comprimentoCm) || 0;
-      const largura = Number(volume.larguraCm) || 0;
-      const altura = Number(volume.alturaCm) || 0;
-      const peso = Number(volume.pesoKg) || 0;
-      const cubado =
-        comprimento && largura && altura
-          ? (comprimento * largura * altura) / DEFAULT_CUBAGE_FACTOR
-          : 0;
-      return {
-        pesoRealKg: acc.pesoRealKg + peso,
-        pesoCubadoKg: acc.pesoCubadoKg + cubado,
-      };
-    },
-    { pesoRealKg: 0, pesoCubadoKg: 0 },
-  );
-};
-
-const dispatchTelemetry = (event: string, detail?: Record<string, unknown>) => {
-  if (typeof window === "undefined") return;
-  window.dispatchEvent(new CustomEvent(event, { detail }));
-};
+// Re-export QuoteFormValues from schema for external use
+export type { QuoteFormValues } from "./quoteFormSchema";
 
 type QuoteFormProps = {
   defaultOrigin?: {
@@ -210,7 +97,6 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
 
   const queryClient = useQueryClient();
   const { message } = App.useApp();
-  const { token } = theme.useToken();
   const calculateQuotes = useQuoteCalculate();
 
   const { form: storedForm, setResults } = useQuoteStore(
@@ -305,23 +191,8 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
     };
   }, [storedForm]);
 
-  const mapStoreAddressToCompany = useCallback(
-    (address: StoreAddress | { id: string; cidade: string; uf: string; cep: string; logradouro?: string; numero?: string; complemento?: string; bairro?: string; apelido?: string; isDefault?: boolean } | null | undefined): CompanyAddress | null => {
-      if (!address) return null;
-      const apelido = 'apelido' in address ? address.apelido : undefined;
-      return {
-        cep: address.cep,
-        logradouro: address.logradouro,
-        numero: address.numero,
-        complemento: address.complemento,
-        bairro: address.bairro,
-        cidade: address.cidade,
-        uf: address.uf,
-        nome: apelido,
-      };
-    },
-    [],
-  );
+  // Use imported helper function (stable reference at module level)
+  const mapStoreAddressToCompany = mapStoreAddressToCompanyFn;
 
   const defaultVolumes = storedForm?.volumes?.length
     ? storedForm.volumes.map((item) => ({ ...item }))
@@ -1614,29 +1485,11 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
           <Card>
             <Space direction="vertical" size={16} style={{ width: "100%" }}>
               <Flex justify="center">
-                <ConfigProvider
-                  theme={{
-                    components: {
-                      Segmented: {
-                        itemSelectedBg: isReverse ? token.colorError : token.colorPrimary,
-                        itemSelectedColor: "#ffffff",
-                        itemColor: isReverse ? token.colorError : token.colorPrimary,
-                        trackBg: isReverse ? token.colorErrorBg : token.colorPrimaryBg,
-                      },
-                    },
-                  }}
-                >
-                  <Segmented
-                    value={isReverse ? "reversa" : "envio"}
-                    onChange={(value) => handleReverseToggle(value === "reversa")}
-                    disabled={calculateQuotes.isPending}
-                    options={[
-                      { label: "Envio", value: "envio" },
-                      { label: "Logística Reversa", value: "reversa" },
-                    ]}
-                    size="middle"
-                  />
-                </ConfigProvider>
+                <ReverseToggle
+                  isReverse={isReverse}
+                  onChange={handleReverseToggle}
+                  disabled={calculateQuotes.isPending}
+                />
               </Flex>
 
               <RouteCards
@@ -1650,30 +1503,7 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
           <Row gutter={[24, 24]}>
             <Col xs={24} lg={10}>
               <Space direction="vertical" size={16} style={{ width: "100%" }}>
-                <Card size="small">
-                  <Controller
-                    control={control}
-                    name="seguroValor"
-                    render={({ field, fieldState }) => (
-                      <Form.Item
-                        label="Valor do seguro (R$)"
-                        validateStatus={fieldState.error ? "error" : undefined}
-                        help={fieldState.error?.message}
-                        style={{ marginBottom: 0 }}
-                      >
-                        <InputNumber
-                          {...field}
-                          value={field.value ?? undefined}
-                          placeholder="Opcional"
-                          min={0}
-                          step={100}
-                          style={{ width: "100%" }}
-                          onChange={(val) => field.onChange(val ?? undefined)}
-                        />
-                      </Form.Item>
-                    )}
-                  />
-                </Card>
+                <InsuranceInput control={control} />
 
                 <VolumesTotalizer
                   volumeCount={fields.length}
