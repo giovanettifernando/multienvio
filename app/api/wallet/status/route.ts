@@ -7,8 +7,6 @@
  * - Valor da pendência (se houver)
  */
 
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth/session';

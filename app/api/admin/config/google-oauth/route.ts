@@ -5,8 +5,6 @@
  * Rotas de configuração das credenciais Google OAuth (Admin)
  */
 
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server';
 import { z } from 'zod';

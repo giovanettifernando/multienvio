@@ -11,8 +11,6 @@ import { requireAdminUser } from '@/lib/auth/admin-helpers';
 import { AdminPermission } from '@prisma/client';
 import { sendPasswordResetEmail } from '@/lib/email/mailer';
 
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
   try {

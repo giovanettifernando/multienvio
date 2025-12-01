@@ -4,9 +4,6 @@
  * Retorna informações detalhadas da carteira de um usuário (Admin)
  */
 
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
-
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requireAdminUser } from '@/lib/auth/admin-helpers';

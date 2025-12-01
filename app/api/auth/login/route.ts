@@ -7,7 +7,6 @@ import { createSession } from '@/lib/auth/session';
 import { UserStatus, AuthRole, type User } from '@/types/contracts';
 import { rateLimitByIP, RATE_LIMITS } from '@/lib/rate-limit';
 
-export const dynamic = 'force-dynamic';
 
 export async function POST(request: Request) {
   // Rate limiting by IP - 5 attempts per 5 minutes

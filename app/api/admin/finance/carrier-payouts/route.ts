@@ -17,7 +17,6 @@ import { requirePermission } from '@/lib/auth/permissions';
 import { AdminPermission } from '@prisma/client';
 import { prisma } from '@/lib/db';
 
-export const dynamic = 'force-dynamic';
 
 // Tipos para a resposta
 export interface CarrierPayoutShipment {

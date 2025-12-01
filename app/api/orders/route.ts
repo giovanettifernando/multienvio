@@ -4,7 +4,6 @@ import { ZodError } from "zod";
 import { orderSchema } from "@/lib/validation/order";
 import type { Order, OrderEvent, OrderStatus } from "@/types/order";
 
-export const dynamic = "force-dynamic";
 
 declare global {
   var __envioOrders: Map<string, Order> | undefined;

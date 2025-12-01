@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/db';
 import type { PackagingTemplate } from '@prisma/client';
 import type { PackagingCreateOutput, PackagingUpdateOutput } from '@/lib/validation/packaging';
-import { Decimal } from '@prisma/client/runtime/library';
+import { Decimal } from '@prisma/client/runtime/client';
 
 /**
  * Formata um número removendo zeros desnecessários

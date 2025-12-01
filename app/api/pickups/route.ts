@@ -10,7 +10,6 @@ import {
   getCompanyDocument,
 } from "@/lib/validation/company";
 
-export const dynamic = "force-dynamic";
 
 declare global {
   var __envioPickups: Map<string, Pickup> | undefined;

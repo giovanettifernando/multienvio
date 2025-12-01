@@ -1,7 +1,6 @@
 import { withApiHandler } from "@/lib/api/handler";
 import { pingDatabase, schedulePrismaReconnect } from "@/lib/db";
 
-export const dynamic = "force-dynamic";
 
 export const GET = withApiHandler(async ({ logger }) => {
   try {

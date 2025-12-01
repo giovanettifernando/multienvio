@@ -1,7 +1,5 @@
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
-
 import { NextRequest, NextResponse } from 'next/server';
+
 import { prisma } from '@/lib/db';
 import { getUserSessionFromRequest } from '@/lib/auth/user-session';
 import type { Prisma } from '@prisma/client';

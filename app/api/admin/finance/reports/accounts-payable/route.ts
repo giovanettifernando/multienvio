@@ -16,7 +16,6 @@ import { requirePermission } from '@/lib/auth/permissions';
 import { AdminPermission } from '@prisma/client';
 import { prisma } from '@/lib/db';
 
-export const dynamic = 'force-dynamic';
 
 export type PayableType = 'collector_commission' | 'pickup_point_commission' | 'carrier_cost' | 'expense';
 export type PayableStatus = 'pending' | 'paid';

@@ -12,7 +12,6 @@ import { prisma } from '@/lib/db';
 import { SignJWT } from 'jose';
 import nodemailer from 'nodemailer';
 
-export const dynamic = 'force-dynamic';
 
 const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || 'envio-legal-secret-key-change-in-production'

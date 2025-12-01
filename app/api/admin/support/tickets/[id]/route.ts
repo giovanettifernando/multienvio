@@ -4,7 +4,6 @@ import { requirePermission } from '@/lib/auth/permissions';
 import { AdminPermission } from '@prisma/client';
 import { getTicket } from '@/lib/support/service';
 
-export const dynamic = 'force-dynamic';
 
 export async function GET(
   request: Request,

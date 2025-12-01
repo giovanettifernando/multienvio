@@ -5,8 +5,6 @@
  * Permite adicionar crédito ou débito manualmente
  */
 
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';

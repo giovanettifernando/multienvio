@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { Pickup, PickupStatus } from "@/types/pickup";
 
-export const dynamic = "force-dynamic";
 
 declare global {
   var __pickups: Map<string, Pickup> | undefined;

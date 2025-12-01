@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth/session';
 import { createTicketForUser, listTicketsForUser } from '@/lib/support/service';
 import {
@@ -8,7 +8,6 @@ import {
   type Status,
 } from '@/lib/validation/support';
 
-export const dynamic = 'force-dynamic';
 
 function parseArrayParam(params: URLSearchParams, key: string): string[] {
   const values = params.getAll(key);

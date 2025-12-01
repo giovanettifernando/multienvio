@@ -10,7 +10,6 @@ import { AdminPermission } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import { encrypt } from '@/lib/integrations/shared/encryption.service';
 
-export const dynamic = 'force-dynamic';
 
 /**
  * GET - Buscar configuração atual

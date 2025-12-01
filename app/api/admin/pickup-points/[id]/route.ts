@@ -1,5 +1,3 @@
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
@@ -8,7 +6,7 @@ import { prisma } from '@/lib/db';
 import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
 import { AdminPermission, Prisma } from '@prisma/client';
 import { canAccess } from '@/lib/auth/permissions';
-import { Decimal } from '@prisma/client/runtime/library';
+import { Decimal } from '@prisma/client/runtime/client';
 
 const pixMethodSchema = z.object({
   kind: z.literal('pix'),

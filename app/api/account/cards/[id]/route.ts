@@ -11,7 +11,6 @@ import {
 } from "@/lib/services/account-cards.service";
 import { validateCardUpdateInput } from "@/lib/validation/card";
 
-export const dynamic = "force-dynamic";
 
 export const PUT = withApiHandler(async (context) => {
   const { req, params, logger } = context;

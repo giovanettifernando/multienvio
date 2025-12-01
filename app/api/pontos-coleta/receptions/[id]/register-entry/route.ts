@@ -3,8 +3,6 @@
  * POST /api/pontos-coleta/receptions/[id]/register-entry
  */
 
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';

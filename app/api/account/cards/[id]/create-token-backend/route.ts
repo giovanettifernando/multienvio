@@ -15,7 +15,6 @@ import { prisma } from "@/lib/db";
 import { decryptPan, loadVaultKey, parsePanCipher } from "@/lib/crypto/card-vault";
 import { createCardToken } from "@/lib/mercadopago/client";
 
-export const dynamic = "force-dynamic";
 
 export const POST = withApiHandler(async (context) => {
   const { req, params, logger } = context;

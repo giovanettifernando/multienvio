@@ -1,12 +1,13 @@
-'use client';
+import { Suspense } from 'react';
+import { connection } from 'next/server';
+import Loading from './loading';
+import ClientWrapper from './ClientWrapper';
 
-import { ProfileCommissionsTable } from '@/components/admin/finance/ProfileCommissionsTable';
-import { PageShell } from '@/components/shared/PageShell';
-
-export default function ComissoesPage() {
+export default async function ComissoesFinanceiroPage() {
+  await connection();
   return (
-    <PageShell title="Comissões" gap="md">
-      <ProfileCommissionsTable />
-    </PageShell>
+    <Suspense fallback={<Loading />}>
+      <ClientWrapper />
+    </Suspense>
   );
 }

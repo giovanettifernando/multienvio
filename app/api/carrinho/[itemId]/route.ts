@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import type { CartUpdatableFields } from "@/types/cart";
 import { getCartStore, recomputeCartTotals } from "@/lib/api/stores";
 
-export const dynamic = "force-dynamic";
 
 export async function PATCH(
   request: NextRequest,

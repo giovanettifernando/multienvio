@@ -18,7 +18,6 @@ import { applyLedgerEntry, getBillingStore } from "@/lib/billing/store";
 import type { Invoice } from "@/types/billing";
 import { topupSchema } from "@/lib/validation/billing";
 
-export const dynamic = "force-dynamic";
 
 // Headers de aviso para clientes externos
 const DEPRECATION_HEADERS = {

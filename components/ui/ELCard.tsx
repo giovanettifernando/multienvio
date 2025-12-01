@@ -30,16 +30,21 @@ export function ELCard({
   const paddingValue = spacing[padding] ?? spacing.lg;
   const gapValue = spacing[bodyGap] ?? spacing.md;
 
+  // Extract body style if cardStyles is an object (not a function)
+  const existingBodyStyle = typeof cardStyles === 'object' && cardStyles !== null && 'body' in cardStyles
+    ? (cardStyles as { body?: React.CSSProperties }).body
+    : {};
+
   const mergedBodyStyle = {
     display: "flex",
     flexDirection: "column" as const,
     gap: `${gapValue}px`,
     padding: `${paddingValue}px`,
-    ...(cardStyles?.body ?? {}),
+    ...existingBodyStyle,
   };
 
   const mergedStyles = {
-    ...cardStyles,
+    ...(typeof cardStyles === 'object' ? cardStyles : {}),
     body: mergedBodyStyle,
   };
 

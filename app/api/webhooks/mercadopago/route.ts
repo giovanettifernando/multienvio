@@ -6,8 +6,6 @@
  * Referência: https://www.mercadopago.com.ar/developers/en/docs/your-integrations/notifications/webhooks
  */
 
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server';
 import { processWebhook } from '@/lib/mercadopago';

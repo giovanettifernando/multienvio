@@ -1,24 +1,13 @@
-'use client';
+import { Suspense } from 'react';
+import { connection } from 'next/server';
+import Loading from './loading';
+import ClientWrapper from './ClientWrapper';
 
-import { Card } from 'antd';
-import { useRouter } from 'next/navigation';
-import { SupportForm } from '@/components/support/SupportForm';
-import { PageShell } from '@/components/shared/PageShell';
-
-export default function NovoTicketPage() {
-  const router = useRouter();
-
-  const handleSuccess = (ticketId: string) => {
-    router.push(`/suporte?ticket=${ticketId}`);
-  };
-
+export default async function NovoSuportePage() {
+  await connection();
   return (
-    <div style={{ maxWidth: 800, margin: '0 auto' }}>
-      <PageShell title="Abrir Novo Chamado" gap="md">
-        <Card>
-          <SupportForm onSuccess={handleSuccess} />
-        </Card>
-      </PageShell>
-    </div>
+    <Suspense fallback={<Loading />}>
+      <ClientWrapper />
+    </Suspense>
   );
 }

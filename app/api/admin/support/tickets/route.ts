@@ -1,11 +1,10 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
 import { requirePermission } from '@/lib/auth/permissions';
 import { AdminPermission } from '@prisma/client';
 import { listTicketsForAdmin } from '@/lib/support/service';
 import type { Priority, Status } from '@/lib/validation/support';
 
-export const dynamic = 'force-dynamic';
 
 function parseArrayParam(params: URLSearchParams, key: string): string[] {
   const values = params.getAll(key);

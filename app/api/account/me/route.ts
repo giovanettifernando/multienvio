@@ -2,8 +2,6 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getUserFromRequest } from '@/lib/auth/session';
 
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
 
 /**
  * GET /api/account/me

@@ -1,39 +1,20 @@
-import { Skeleton, Card, Tabs, Space, Row, Col } from 'antd';
-
-export default function MinhaContaLoading() {
+export default function Loading() {
   return (
-    <div style={{ padding: '24px' }}>
-      <Skeleton.Input active style={{ width: 150, marginBottom: 24 }} />
-
-      <Card>
-        {/* Tabs skeleton */}
-        <Space style={{ marginBottom: 24 }}>
-          <Skeleton.Button active style={{ width: 80 }} />
-          <Skeleton.Button active style={{ width: 80 }} />
-          <Skeleton.Button active style={{ width: 80 }} />
-          <Skeleton.Button active style={{ width: 80 }} />
-        </Space>
-
-        {/* Content skeleton */}
-        <Row gutter={[16, 16]}>
-          <Col xs={24} md={12}>
-            <Space direction="vertical" style={{ width: '100%' }}>
-              <Skeleton.Input active style={{ width: '100%' }} />
-              <Skeleton.Input active style={{ width: '100%' }} />
-              <Skeleton.Input active style={{ width: '100%' }} />
-            </Space>
-          </Col>
-          <Col xs={24} md={12}>
-            <Space direction="vertical" style={{ width: '100%' }}>
-              <Skeleton.Input active style={{ width: '100%' }} />
-              <Skeleton.Input active style={{ width: '100%' }} />
-              <Skeleton.Input active style={{ width: '100%' }} />
-            </Space>
-          </Col>
-        </Row>
-
-        <Skeleton.Button active style={{ marginTop: 24 }} />
-      </Card>
+    <div style={{ padding: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '200px' }}>
+      <div style={{ 
+        width: '40px', 
+        height: '40px', 
+        border: '3px solid #f3f3f3',
+        borderTop: '3px solid #1890ff',
+        borderRadius: '50%',
+        animation: 'spin 1s linear infinite'
+      }} />
+      <style>{`
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   );
 }

@@ -11,7 +11,6 @@ import { prisma } from '@/lib/db';
 import nodemailer from 'nodemailer';
 import { decrypt } from '@/lib/integrations/shared/encryption.service';
 
-export const dynamic = 'force-dynamic';
 
 /**
  * POST - Enviar email de teste

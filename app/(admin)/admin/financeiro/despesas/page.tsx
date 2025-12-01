@@ -1,12 +1,13 @@
-'use client';
+import { Suspense } from 'react';
+import { connection } from 'next/server';
+import Loading from './loading';
+import ClientWrapper from './ClientWrapper';
 
-import { ExpensesTable } from '@/components/admin/finance/ExpensesTable';
-import { PageShell } from '@/components/shared/PageShell';
-
-export default function DespesasPage() {
+export default async function DespesasPage() {
+  await connection();
   return (
-    <PageShell title="Despesas" gap="md">
-      <ExpensesTable />
-    </PageShell>
+    <Suspense fallback={<Loading />}>
+      <ClientWrapper />
+    </Suspense>
   );
 }

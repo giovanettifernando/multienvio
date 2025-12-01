@@ -5,7 +5,6 @@ import { AdminPermission } from '@prisma/client';
 import { addMessageToTicket, getTicket } from '@/lib/support/service';
 import { persistSupportAttachments } from '@/lib/storage/support-attachments';
 
-export const dynamic = 'force-dynamic';
 
 const MAX_FILES = 5;
 

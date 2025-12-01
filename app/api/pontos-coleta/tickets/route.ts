@@ -1,7 +1,5 @@
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
+import { NextRequest, NextResponse } from 'next/server';
 
-import { NextResponse } from 'next/server';
 import { getCollectorSessionFromRequest } from '@/lib/auth/collector-session';
 import { createTicketForCollector, listTicketsForCollector } from '@/lib/support/collector-service';
 import {

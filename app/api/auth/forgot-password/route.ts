@@ -6,8 +6,6 @@ import { sendPasswordResetEmail } from '@/lib/email/mailer';
 import crypto from 'crypto';
 import { rateLimitByIP, RATE_LIMITS } from '@/lib/rate-limit';
 
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
 
 export async function POST(request: Request) {
   // Rate limiting by IP - 3 attempts per 10 minutes

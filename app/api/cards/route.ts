@@ -2,8 +2,6 @@
  * GET /api/cards
  * Alias para /api/account/cards - retorna cartões salvos do usuário
  */
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth/session';

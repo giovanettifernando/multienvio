@@ -9,7 +9,6 @@ import { AdminPermission } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import { DRE_CHART_OF_ACCOUNTS, CALCULATED_TOTALS } from '@/lib/admin/finance/dre';
 
-export const dynamic = 'force-dynamic';
 
 // Mapeamento padrão de categorias de despesa para contas DRE
 const EXPENSE_CATEGORY_TO_DRE: Record<string, string> = {

@@ -9,7 +9,6 @@ import { jwtVerify } from 'jose';
 import { prisma } from '@/lib/db';
 import bcrypt from 'bcrypt';
 
-export const dynamic = 'force-dynamic';
 
 // Validar JWT_SECRET em produção
 if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {

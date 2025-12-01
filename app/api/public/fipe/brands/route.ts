@@ -12,8 +12,6 @@ import { prisma } from '@/lib/db';
 import type { FipeVehicleType } from '@prisma/client';
 
 // Cache por 24 horas - dados FIPE são estáticos
-export const revalidate = 86400;
-export const dynamic = 'force-static';
 
 export async function GET(request: NextRequest) {
   try {

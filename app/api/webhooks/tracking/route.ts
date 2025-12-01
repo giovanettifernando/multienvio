@@ -6,7 +6,6 @@ import {
   type TrackingPayload,
 } from "@/lib/api/tracking";
 
-export const dynamic = "force-dynamic";
 
 const carrierMap: Record<string, TrackingEventType> = {
   CREATED: "CREATED",

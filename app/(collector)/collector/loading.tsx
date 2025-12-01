@@ -1,32 +1,20 @@
-import { Skeleton, Card, Row, Col, Space } from 'antd';
-
-export default function CollectorLoading() {
+export default function Loading() {
   return (
-    <div style={{ padding: '24px' }}>
-      <Skeleton.Input active style={{ width: 180, marginBottom: 24 }} />
-
-      {/* Stats */}
-      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-        {Array.from({ length: 3 }, (_, i) => (
-          <Col key={i} xs={24} sm={8}>
-            <Card>
-              <Skeleton active paragraph={{ rows: 1 }} />
-            </Card>
-          </Col>
-        ))}
-      </Row>
-
-      {/* Coletas pendentes */}
-      <Card>
-        <Skeleton.Input active style={{ width: 150, marginBottom: 16 }} />
-        <Space direction="vertical" style={{ width: '100%' }}>
-          {Array.from({ length: 3 }, (_, i) => (
-            <Card key={i} size="small">
-              <Skeleton active paragraph={{ rows: 2 }} />
-            </Card>
-          ))}
-        </Space>
-      </Card>
+    <div style={{ padding: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '200px' }}>
+      <div style={{ 
+        width: '40px', 
+        height: '40px', 
+        border: '3px solid #f3f3f3',
+        borderTop: '3px solid #1890ff',
+        borderRadius: '50%',
+        animation: 'spin 1s linear infinite'
+      }} />
+      <style>{`
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   );
 }

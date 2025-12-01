@@ -5,7 +5,6 @@ import {
   type CompanyWizardData,
 } from "@/lib/validation/company";
 
-export const dynamic = "force-dynamic";
 
 function getCompany(): CompanyWizardData | null {
   return globalThis.__envioCompany ?? null;

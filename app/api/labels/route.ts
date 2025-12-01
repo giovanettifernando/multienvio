@@ -4,7 +4,6 @@ import { getUserSessionFromRequest } from "@/lib/auth/user-session";
 import type { LabelItem, LabelsResponse, PrintStatus } from "@/lib/types/label";
 import type { Prisma } from "@prisma/client";
 
-export const dynamic = "force-dynamic";
 
 /**
  * GET /api/labels

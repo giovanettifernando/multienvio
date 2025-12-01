@@ -17,7 +17,6 @@ import {
 import { formatWalletDescription } from '@/lib/format';
 import type { WalletBalanceResponse } from '@/types/wallet-statement';
 
-export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {

@@ -26,8 +26,6 @@ import {
   type PixMonitorResult,
 } from '@/lib/mercadopago/pix-monitor';
 
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
 export const maxDuration = 60; // 60 segundos de timeout
 
 /**

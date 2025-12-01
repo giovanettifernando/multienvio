@@ -4,7 +4,7 @@
  * Lista as transações da carteira com filtros de data e busca + resumo do período
  */
 
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth/session';
 import { prisma } from '@/lib/db';
 import { getLastNDaysRange } from '@/lib/wallet/period-summary';
@@ -17,7 +17,6 @@ import { formatWalletDescription } from '@/lib/format';
 import type { StatementResponse } from '@/types/wallet-statement';
 import type { Prisma } from '@prisma/client';
 
-export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
   try {

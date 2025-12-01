@@ -3,8 +3,6 @@ import type { AccountStatus, AdminClient, ClientType } from '@/lib/admin/types';
 import { formatCNPJ, formatCPF } from '@/lib/masks';
 import { AdminClientsPage } from '@/components/admin/clients/AdminClientsPage';
 
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
 
 function mapClientStatus(status: string): AccountStatus {
   if (status === 'active') return 'active';

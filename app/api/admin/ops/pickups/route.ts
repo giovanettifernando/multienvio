@@ -18,7 +18,6 @@ import { requirePermission } from '@/lib/auth/permissions';
 import { AdminPermission, Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db';
 
-export const dynamic = 'force-dynamic';
 
 const PICKUP_STATUS_ORDER: Record<string, number> = {
   PENDING: 1,

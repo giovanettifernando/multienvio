@@ -1,6 +1,3 @@
-// Force Node.js runtime
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminSessionFromRequest, createAdminCookieRemovalHeader } from '@/lib/auth/admin-session';

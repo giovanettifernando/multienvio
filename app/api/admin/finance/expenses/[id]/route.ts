@@ -11,7 +11,6 @@ import { AdminPermission, ExpenseType, ExpenseCategory, ExpenseStatus } from '@p
 import { prisma } from '@/lib/db';
 import { persistExpenseReceipt, deleteExpenseReceipt } from '@/lib/storage/expense-receipts';
 
-export const dynamic = 'force-dynamic';
 
 type RouteContext = { params: Promise<{ id: string }> };
 

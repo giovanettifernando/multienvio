@@ -6,10 +6,7 @@
  * Suporta credenciais separadas para Produção e Homologação
  */
 
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
-
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { requireAdminUser } from '@/lib/auth/admin-helpers';

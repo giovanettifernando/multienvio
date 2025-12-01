@@ -4,7 +4,7 @@
  * Gera e retorna PDF binário do extrato da carteira
  */
 
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth/session';
 import { prisma } from '@/lib/db';
 import { calculatePeriodSummary, getLastNDaysRange } from '@/lib/wallet/period-summary';
@@ -17,7 +17,6 @@ import { formatNumberBR, formatWalletDescription } from '@/lib/format';
 import puppeteer from 'puppeteer';
 import type { Prisma } from '@prisma/client';
 
-export const dynamic = 'force-dynamic';
 export const maxDuration = 60; // 60 segundos para gerar o PDF
 
 export async function GET(request: Request) {

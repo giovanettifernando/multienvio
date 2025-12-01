@@ -10,8 +10,6 @@ import { prisma } from '@/lib/db';
 import { getUserSessionFromRequest } from '@/lib/auth/user-session';
 import { updatePaymentFromMercadoPago } from '@/lib/mercadopago';
 
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
 
 interface RouteParams {
   params: Promise<{ id: string }>;

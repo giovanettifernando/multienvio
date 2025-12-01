@@ -3,7 +3,6 @@ import { getSession } from '@/lib/auth/session';
 import { addMessageToTicket, getTicketForUser } from '@/lib/support/service';
 import { persistSupportAttachments } from '@/lib/storage/support-attachments';
 
-export const dynamic = 'force-dynamic';
 
 const MAX_FILES = 5;
 

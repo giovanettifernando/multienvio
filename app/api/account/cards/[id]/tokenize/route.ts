@@ -4,7 +4,6 @@ import { requireUserId } from "../../helpers";
 import { prisma } from "@/lib/db";
 import { parsePanCipher, decryptPan, loadVaultKey } from "@/lib/crypto/card-vault";
 
-export const dynamic = "force-dynamic";
 
 /**
  * POST /api/account/cards/[id]/tokenize

@@ -9,7 +9,6 @@ import { requireAdminUser } from '@/lib/auth/admin-helpers';
 import { AdminPermission } from '@prisma/client';
 import nodemailer from 'nodemailer';
 
-export const dynamic = 'force-dynamic';
 
 /**
  * POST - Testar conexão SMTP

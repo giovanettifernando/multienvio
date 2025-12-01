@@ -1,14 +1,13 @@
-"use client";
+import { Suspense } from 'react';
+import { connection } from 'next/server';
+import Loading from './loading';
+import ClientWrapper from './ClientWrapper';
 
-import { PageShell } from "@/components/shared/PageShell";
-import { Typography } from "antd";
-
-export default function AdminConfigPage() {
+export default async function AdminConfigPage() {
+  await connection();
   return (
-    <PageShell title="Configurações do admin" gap="md">
-      <Typography.Text type="secondary">
-        Página de configurações em desenvolvimento
-      </Typography.Text>
-    </PageShell>
+    <Suspense fallback={<Loading />}>
+      <ClientWrapper />
+    </Suspense>
   );
 }

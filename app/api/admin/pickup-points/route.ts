@@ -1,14 +1,12 @@
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
+import { NextRequest, NextResponse } from 'next/server';
 
-import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import bcrypt from 'bcrypt';
 import { prisma } from '@/lib/db';
 import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
 import { AdminPermission, PickupPointStatus, Prisma } from '@prisma/client';
 import { canAccess } from '@/lib/auth/permissions';
-import { Decimal } from '@prisma/client/runtime/library';
+import { Decimal } from '@prisma/client/runtime/client';
 
 // Schema de validação
 const pixMethodSchema = z.object({

@@ -3,7 +3,6 @@ import { getSession } from '@/lib/auth/session';
 import { prisma } from '@/lib/db';
 import { UserStatus, AuthRole, type User } from '@/types/contracts';
 
-export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {

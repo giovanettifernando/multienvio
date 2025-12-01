@@ -9,7 +9,6 @@ import { requirePermission } from '@/lib/auth/permissions';
 import { AdminPermission, ExpenseType, ExpenseCategory } from '@prisma/client';
 import { prisma } from '@/lib/db';
 
-export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   const session = await getAdminSessionFromRequest(request);

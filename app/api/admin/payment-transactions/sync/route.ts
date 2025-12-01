@@ -9,7 +9,6 @@ import { requireAdminUser } from '@/lib/auth/admin-helpers';
 import { AdminPermission } from '@prisma/client';
 import { updatePaymentFromMercadoPago } from '@/lib/mercadopago/payments';
 
-export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest) {
   try {

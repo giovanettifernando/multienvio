@@ -5,7 +5,6 @@
  * Esta chave é segura para ser exposta publicamente
  */
 
-export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server';
 import { getMercadoPagoPublicKey } from '@/lib/mercadopago/config';

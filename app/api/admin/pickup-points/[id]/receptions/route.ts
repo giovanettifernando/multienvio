@@ -10,7 +10,6 @@ import { canAccess } from '@/lib/auth/permissions';
 import { AdminPermission } from '@prisma/client';
 import { prisma } from '@/lib/db';
 
-export const dynamic = 'force-dynamic';
 
 type RouteContext = {
   params: Promise<{

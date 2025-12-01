@@ -5,8 +5,6 @@
  * Creates/links accounts and establishes sessions based on context.
  */
 
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { SignJWT } from 'jose';

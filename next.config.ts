@@ -16,14 +16,15 @@ const nextConfig: NextConfig = {
   // Transpile Ant Design packages
   transpilePackages: ['antd', '@ant-design', 'rc-util', 'rc-pagination', 'rc-picker'],
 
+  // Cache Components temporarily disabled - Math.random() issues with Ant Design
+  // TODO: Re-enable after proper configuration of all pages with Ant Design
+  // cacheComponents: true,
+
   // Experimental: optimize package imports (replaces modularizeImports for Turbopack)
   experimental: {
     optimizePackageImports: ['antd', '@ant-design/icons'],
     // Increase body size limit for file uploads through proxy
     proxyClientMaxBodySize: '20mb',
-    // Note: cacheComponents (PPR) requires migration from 'dynamic'/'revalidate' configs
-    // to 'use cache' directive. Enable after full migration.
-    // cacheComponents: true,
   },
 
   // Note: modularizeImports removed - conflicts with Turbopack in Next.js 16

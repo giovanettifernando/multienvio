@@ -11,7 +11,6 @@ import { AdminPermission } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import * as walletService from '@/lib/wallet/wallet.service';
 
-export const dynamic = 'force-dynamic';
 
 export async function POST(
   req: NextRequest,

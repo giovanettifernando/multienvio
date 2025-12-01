@@ -13,8 +13,6 @@ import { prisma } from '@/lib/db';
 import { getCollectorId } from '@/lib/auth/autonomous-collector-session';
 import { persistCollectorDocument } from '@/lib/storage/collector-documents';
 
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
 
 // Validation schema for document metadata
 const documentMetadataSchema = z.object({

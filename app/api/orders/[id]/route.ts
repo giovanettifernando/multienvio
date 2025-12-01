@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { nanoid } from "nanoid";
 import type { Order, OrderEvent, OrderStatus } from "@/types/order";
 
-export const dynamic = "force-dynamic";
 
 declare global {
   var __envioOrders: Map<string, Order> | undefined;

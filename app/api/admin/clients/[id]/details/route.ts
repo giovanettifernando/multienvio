@@ -4,8 +4,6 @@
  * Retorna todos os detalhes de um usuário da plataforma para administração
  */
 
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';

@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getUserSessionFromRequest } from "@/lib/auth/user-session";
 
-export const dynamic = "force-dynamic";
 
 interface RouteParams {
   params: Promise<{ id: string }>;

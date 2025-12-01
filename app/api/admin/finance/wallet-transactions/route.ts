@@ -16,7 +16,6 @@ import {
   formatTransactionAmount,
 } from '@/lib/wallet/transaction-direction';
 
-export const dynamic = 'force-dynamic';
 
 export interface AdminWalletTransaction {
   id: string;

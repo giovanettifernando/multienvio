@@ -1,22 +1,13 @@
-import { Suspense } from "react";
-import { Spin } from "antd";
-import ResetPasswordForm from "./ResetPasswordForm";
+import { Suspense } from 'react';
+import { connection } from 'next/server';
+import ResetPasswordLoading from './loading';
+import ClientWrapper from './ClientWrapper';
 
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
-
-export default function ResetPasswordPage() {
+export default async function ResetPasswordPage() {
+  await connection();
   return (
-    <Suspense
-      fallback={
-        <div style={{ minHeight: "100dvh", display: "grid", placeItems: "center" }}>
-          <Spin size="large" tip="Carregando...">
-            <div style={{ minHeight: 100 }} />
-          </Spin>
-        </div>
-      }
-    >
-      <ResetPasswordForm />
+    <Suspense fallback={<ResetPasswordLoading />}>
+      <ClientWrapper />
     </Suspense>
   );
 }

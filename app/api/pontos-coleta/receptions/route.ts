@@ -3,9 +3,6 @@
  * GET /api/pontos-coleta/receptions - Lista envios pendentes de recepção
  */
 
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
-
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { Prisma } from '@prisma/client';

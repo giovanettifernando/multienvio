@@ -4,7 +4,7 @@
  * Gera PDF do extrato da carteira com filtros de período
  */
 
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth/session';
 import { prisma } from '@/lib/db';
 import { calculatePeriodSummary, getLastNDaysRange, formatPeriodLabel } from '@/lib/wallet/period-summary';
@@ -16,7 +16,6 @@ import {
 import { formatNumberBR, formatWalletDescription } from '@/lib/format';
 import type { Prisma, WalletTxType } from '@prisma/client';
 
-export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
   try {

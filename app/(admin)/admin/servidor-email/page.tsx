@@ -1,12 +1,13 @@
-'use client';
+import { Suspense } from 'react';
+import { connection } from 'next/server';
+import Loading from './loading';
+import ClientWrapper from './ClientWrapper';
 
-import { PageShell } from '@/components/shared/PageShell';
-import EmailConfigForm from '@/components/admin/EmailConfigForm';
-
-export default function ConfiguracoesPage() {
+export default async function EmailServerPage() {
+  await connection();
   return (
-    <PageShell title="Configurações" gap="lg">
-      <EmailConfigForm />
-    </PageShell>
+    <Suspense fallback={<Loading />}>
+      <ClientWrapper />
+    </Suspense>
   );
 }

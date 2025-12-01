@@ -41,7 +41,6 @@ function resolveMeEndpoint(request: NextRequest): string {
   return new URL("/api/account/me", baseUrl).toString();
 }
 
-export const dynamic = "force-dynamic";
 
 /**
  * GET /api/account/profile

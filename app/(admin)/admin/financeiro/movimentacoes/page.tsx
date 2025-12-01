@@ -1,12 +1,13 @@
-'use client';
+import { Suspense } from 'react';
+import { connection } from 'next/server';
+import Loading from './loading';
+import ClientWrapper from './ClientWrapper';
 
-import { WalletTransactionsTable } from '@/components/admin/finance/WalletTransactionsTable';
-import { PageShell } from '@/components/shared/PageShell';
-
-export default function MovimentacoesPage() {
+export default async function MovimentacoesPage() {
+  await connection();
   return (
-    <PageShell title="Movimentações" gap="md">
-      <WalletTransactionsTable />
-    </PageShell>
+    <Suspense fallback={<Loading />}>
+      <ClientWrapper />
+    </Suspense>
   );
 }

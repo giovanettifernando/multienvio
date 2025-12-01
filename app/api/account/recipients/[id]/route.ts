@@ -15,7 +15,6 @@ import {
   handleRecipientDataStoreError,
 } from "../helpers";
 
-export const dynamic = "force-dynamic";
 
 export const GET = withApiHandler(async (context) => {
   const { req, params, logger } = context;

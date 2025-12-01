@@ -1,43 +1,13 @@
-'use client';
+import { Suspense } from 'react';
+import { connection } from 'next/server';
+import Loading from './loading';
+import ClientWrapper from './ClientWrapper';
 
-import { useState, useCallback } from 'react';
-import { App } from 'antd';
-import { LabelsTable } from '@/components/labels/LabelsTable';
-import { LabelPrintModal } from '@/components/labels/LabelPrintModal';
-import type { LabelItem } from '@/lib/types/label';
-import { PageShell } from '@/components/shared/PageShell';
-import { useQueryClient } from '@tanstack/react-query';
-
-export default function EtiquetasPage() {
-  const [selectedLabelId, setSelectedLabelId] = useState<string | null>(null);
-  const [open, setOpen] = useState(false);
-  const queryClient = useQueryClient();
-
-  const handlePrintStatusChange = useCallback((labelId: string, isPrinted: boolean) => {
-    // Invalidar cache para atualizar a tabela
-    queryClient.invalidateQueries({ queryKey: ['labels'] });
-  }, [queryClient]);
-
+export default async function EtiquetasPage() {
+  await connection();
   return (
-    <App>
-      <PageShell title="Etiquetas" gap="md">
-        <LabelsTable
-          onOpenLabel={(record: LabelItem) => {
-            setSelectedLabelId(record.id);
-            setOpen(true);
-          }}
-        />
-
-        <LabelPrintModal
-          open={open}
-          labelId={selectedLabelId}
-          onClose={() => {
-            setOpen(false);
-            setSelectedLabelId(null);
-          }}
-          onPrintStatusChange={handlePrintStatusChange}
-        />
-      </PageShell>
-    </App>
+    <Suspense fallback={<Loading />}>
+      <ClientWrapper />
+    </Suspense>
   );
 }

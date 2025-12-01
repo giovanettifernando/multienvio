@@ -4,8 +4,6 @@
  * Atualiza o perfil de um usuário da plataforma (Admin)
  */
 
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';

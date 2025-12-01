@@ -3,7 +3,6 @@ import { ApiError } from "@/lib/api/errors";
 import prisma from "@/lib/db";
 import { getUserFromRequest } from "@/lib/auth/session";
 
-export const dynamic = "force-dynamic";
 
 // POST - Importar itens de CSV
 export const POST = withApiHandler(async (context) => {

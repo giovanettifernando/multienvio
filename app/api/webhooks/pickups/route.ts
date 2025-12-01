@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { nanoid } from "nanoid";
 import type { Pickup, PickupStatus } from "@/types/pickup";
 
-export const dynamic = "force-dynamic";
 
 declare global {
   var __envioPickups: Map<string, Pickup> | undefined;

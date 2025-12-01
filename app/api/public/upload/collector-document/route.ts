@@ -11,8 +11,6 @@ import { mkdir, writeFile } from 'fs/promises';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 
-export const dynamic = 'force-dynamic';
-export const runtime = 'nodejs';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 const ALLOWED_TYPES = [

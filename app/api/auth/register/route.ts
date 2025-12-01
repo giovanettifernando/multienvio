@@ -6,8 +6,6 @@ import { prisma } from '@/lib/db';
 import { generateToken, hashToken } from '@/lib/auth/tokens';
 import { sendVerificationEmail } from '@/lib/email/mailer';
 
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
 
 export async function POST(request: Request) {
   try {

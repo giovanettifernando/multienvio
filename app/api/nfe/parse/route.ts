@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { InvoiceData, InvoiceItem, ParseXmlResponse } from '@/lib/types/invoice';
 
-export const dynamic = 'force-dynamic';
 
 // SECURITY: Limite de tamanho para prevenir ataques de DoS (XML bomb, Billion Laughs)
 const MAX_XML_SIZE = 2 * 1024 * 1024; // 2 MB máximo para XML de NF-e

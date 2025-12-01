@@ -1,12 +1,13 @@
-'use client';
+import { Suspense } from 'react';
+import { connection } from 'next/server';
+import Loading from './loading';
+import ClientWrapper from './ClientWrapper';
 
-import { CarrierPayoutsTable } from '@/components/admin/finance/CarrierPayoutsTable';
-import { PageShell } from '@/components/shared/PageShell';
-
-export default function RepassesPage() {
+export default async function RepassesPage() {
+  await connection();
   return (
-    <PageShell title="Repasses às Transportadoras" gap="md">
-      <CarrierPayoutsTable />
-    </PageShell>
+    <Suspense fallback={<Loading />}>
+      <ClientWrapper />
+    </Suspense>
   );
 }

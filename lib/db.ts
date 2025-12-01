@@ -1,6 +1,8 @@
 import { execFile } from "child_process";
 import path from "path";
 import { promisify } from "util";
+import { Pool } from "pg";
+import { PrismaPg } from "@prisma/adapter-pg";
 import { Prisma, PrismaClient } from "@prisma/client";
 import { resolveDatabaseConfig } from "./config/database";
 import { validateEnv } from "./env-validation";
@@ -21,7 +23,14 @@ const isTestEnv = process.env.NODE_ENV === "test";
 const databaseConfig = resolveDatabaseConfig();
 
 function createPrismaClient() {
+  // Prisma 7: usar adapter para conexão com PostgreSQL
+  const pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+  });
+  const adapter = new PrismaPg(pool);
+
   return new PrismaClient({
+    adapter,
     log: process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"],
   });
 }

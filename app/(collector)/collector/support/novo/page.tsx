@@ -1,32 +1,13 @@
-'use client';
+import { Suspense } from 'react';
+import { connection } from 'next/server';
+import Loading from './loading';
+import ClientWrapper from './ClientWrapper';
 
-import { Card, Space, Typography } from 'antd';
-import { useRouter } from 'next/navigation';
-import { SupportForm } from '@/components/support/SupportForm';
-
-const { Title, Text } = Typography;
-
-export default function NovoTicketCollectorPage() {
-  const router = useRouter();
-
-  const handleSuccess = (ticketId: string) => {
-    router.push(`/collector/support?ticket=${ticketId}`);
-  };
-
+export default async function NovoSupportPage() {
+  await connection();
   return (
-    <div style={{ maxWidth: 800, margin: '0 auto' }}>
-      <Space direction="vertical" style={{ width: '100%' }} size="large">
-        <div>
-          <Title level={2}>Abrir Novo Chamado</Title>
-          <Text type="secondary">
-            Preencha o formulário abaixo para abrir um novo chamado de suporte.
-          </Text>
-        </div>
-
-        <Card>
-          <SupportForm onSuccess={handleSuccess} audience="collector" />
-        </Card>
-      </Space>
-    </div>
+    <Suspense fallback={<Loading />}>
+      <ClientWrapper />
+    </Suspense>
   );
 }

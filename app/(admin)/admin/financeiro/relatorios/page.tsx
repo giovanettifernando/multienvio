@@ -1,28 +1,13 @@
-'use client';
+import { Suspense } from 'react';
+import { connection } from 'next/server';
+import Loading from './loading';
+import ClientWrapper from './ClientWrapper';
 
-import { Tabs } from 'antd';
-import { DRETable } from '@/components/admin/finance/DRETable';
-import { AccountsPayableTable } from '@/components/admin/finance/AccountsPayableTable';
-import { PageShell } from '@/components/shared/PageShell';
-
-export default function RelatoriosPage() {
+export default async function RelatoriosPage() {
+  await connection();
   return (
-    <PageShell title="Relatórios Financeiros" gap="md">
-      <Tabs
-        defaultActiveKey="dre"
-        items={[
-          {
-            key: 'dre',
-            label: 'DRE',
-            children: <DRETable />,
-          },
-          {
-            key: 'accounts-payable',
-            label: 'Contas a Pagar',
-            children: <AccountsPayableTable />,
-          },
-        ]}
-      />
-    </PageShell>
+    <Suspense fallback={<Loading />}>
+      <ClientWrapper />
+    </Suspense>
   );
 }

@@ -5,8 +5,6 @@
  * O CVV deve ser tokenizado no frontend usando SDK do Mercado Pago
  */
 
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server';
 import { z } from 'zod';

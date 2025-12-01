@@ -1,12 +1,10 @@
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
 import { AdminPermission, PickupPointStatus } from '@prisma/client';
 import { canAccess } from '@/lib/auth/permissions';
-import { Decimal } from '@prisma/client/runtime/library';
+import { Decimal } from '@prisma/client/runtime/client';
 
 async function requireAdminUser(request: Request) {
   const session = await getAdminSessionFromRequest(request);

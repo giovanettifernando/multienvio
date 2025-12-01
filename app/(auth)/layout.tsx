@@ -1,30 +1,24 @@
-"use client";
+import { Suspense } from 'react';
+import { connection } from 'next/server';
+import LayoutWrapper from './LayoutWrapper';
 
-import type { ReactNode } from "react";
-import { useEffect } from "react";
-import { usePathname, useRouter } from "next/navigation";
-import { useAuthStore } from "@/stores/auth";
-
-const LOGIN_PATH = "/auth/login";
-
-type AuthLayoutProps = {
-  children: ReactNode;
-};
-
-export default function AuthLayout({ children }: AuthLayoutProps) {
-  const router = useRouter();
-  const pathname = usePathname();
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated());
-
-  useEffect(() => {
-    if (isAuthenticated && pathname.startsWith(LOGIN_PATH)) {
-      router.replace("/");
-    }
-  }, [isAuthenticated, pathname, router]);
-
-  if (isAuthenticated && pathname.startsWith(LOGIN_PATH)) {
-    return null;
-  }
-
-  return children;
+export default async function AuthLayout({ children }: { children: React.ReactNode }) {
+  await connection();
+  return (
+    <Suspense fallback={
+      <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center' }}>
+        <div style={{
+          width: '40px',
+          height: '40px',
+          border: '3px solid #f3f3f3',
+          borderTop: '3px solid #1890ff',
+          borderRadius: '50%',
+          animation: 'spin 1s linear infinite'
+        }} />
+        <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
+      </div>
+    }>
+      <LayoutWrapper>{children}</LayoutWrapper>
+    </Suspense>
+  );
 }

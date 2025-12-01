@@ -6,7 +6,6 @@
 import { withApiHandler } from "@/lib/api/handler";
 import { pingDatabase } from "@/lib/db";
 
-export const dynamic = "force-dynamic";
 
 interface DependencyStatus {
   name: string;

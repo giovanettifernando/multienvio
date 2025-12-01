@@ -1,6 +1,6 @@
 import assert from 'node:assert';
 import test from 'node:test';
-import { Decimal } from '@prisma/client/runtime/library';
+import { Decimal } from '@prisma/client/runtime/client';
 import { prisma } from '../../../lib/db.ts';
 import * as service from '../../../lib/services/packaging.ts';
 

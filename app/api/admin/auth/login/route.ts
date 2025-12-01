@@ -1,6 +1,3 @@
-// Force Node.js runtime (not Edge) to use bcrypt and Prisma
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { ZodError } from 'zod';

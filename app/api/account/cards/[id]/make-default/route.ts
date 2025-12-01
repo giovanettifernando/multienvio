@@ -5,7 +5,6 @@ import {
 } from "../../helpers";
 import { makeUserCardDefault } from "@/lib/services/account-cards.service";
 
-export const dynamic = "force-dynamic";
 
 export const POST = withApiHandler(async (context) => {
   const { req, params, logger } = context;

@@ -14,8 +14,6 @@ import { accountSecurityService } from "@/lib/services/account-security.service"
 import { sendPasswordChangedEmail } from "@/lib/email/mailer";
 import prisma from "@/lib/db";
 
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
 
 function getClientIp(request: Request): string | undefined {
   const forwarded = request.headers.get("x-forwarded-for");

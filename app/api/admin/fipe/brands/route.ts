@@ -12,7 +12,6 @@ import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
 import { prisma } from '@/lib/db';
 import type { FipeVehicleType } from '@prisma/client';
 
-export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   const session = await getAdminSessionFromRequest(request);

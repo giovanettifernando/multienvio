@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth/session';
 import { getTicketForUser } from '@/lib/support/service';
 
-export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await getSession();

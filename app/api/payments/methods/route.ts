@@ -15,7 +15,6 @@
 
 import { NextResponse } from "next/server";
 
-export const dynamic = "force-dynamic";
 
 function createGoneResponse(method: string) {
   return NextResponse.json(

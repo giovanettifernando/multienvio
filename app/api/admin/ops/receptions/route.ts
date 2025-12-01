@@ -19,7 +19,6 @@ import { requirePermission } from '@/lib/auth/permissions';
 import { AdminPermission, Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db';
 
-export const dynamic = 'force-dynamic';
 
 // Status relevantes para fila de pontos de coleta
 const POC_QUEUE_STATUSES = [

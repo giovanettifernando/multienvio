@@ -12,7 +12,6 @@ import { AdminPermission } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import { syncFipeBrandsAndModels, getFipeStats, type SyncOptions } from '@/lib/integrations/fipe';
 
-export const dynamic = 'force-dynamic';
 
 // Timeout maior para sync (5 minutos)
 export const maxDuration = 300;
