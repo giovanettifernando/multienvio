@@ -1,4 +1,9 @@
 import type { NextConfig } from "next";
+import bundleAnalyzer from "@next/bundle-analyzer";
+
+const withBundleAnalyzer = bundleAnalyzer({
+  enabled: process.env.ANALYZE === "true",
+});
 
 const nextConfig: NextConfig = {
   // Standalone output disabled temporarily due to _data/postgres permission issues
@@ -16,6 +21,9 @@ const nextConfig: NextConfig = {
     optimizePackageImports: ['antd', '@ant-design/icons'],
     // Increase body size limit for file uploads through proxy
     proxyClientMaxBodySize: '20mb',
+    // Note: cacheComponents (PPR) requires migration from 'dynamic'/'revalidate' configs
+    // to 'use cache' directive. Enable after full migration.
+    // cacheComponents: true,
   },
 
   // Note: modularizeImports removed - conflicts with Turbopack in Next.js 16
@@ -113,4 +121,4 @@ const nextConfig: NextConfig = {
   // Use ESLint CLI directly: `eslint .`
 };
 
-export default nextConfig;
+export default withBundleAnalyzer(nextConfig);

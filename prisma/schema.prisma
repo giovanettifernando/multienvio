@@ -31,8 +31,6 @@ model User {
   emailVerificationToken String?              @unique
   emailVerified          Boolean              @default(false)
   emailVerifiedAt        DateTime?
-  resetPasswordExpiry    DateTime?
-  resetPasswordToken     String?              @unique
   termsAcceptedAt        DateTime?
   avatarUrl              String?
   googleId               String?              @unique
@@ -63,10 +61,7 @@ model User {
   wallet                 Wallet?
   pickupRequests         PickupRequest[]
 
-  @@index([email])
-  @@index([emailVerificationToken])
-  @@index([resetPasswordToken])
-  @@index([googleId])
+  // Removidos índices redundantes: email, emailVerificationToken, googleId já são @unique
   @@map("users")
 }
 
@@ -91,8 +86,7 @@ model Address {
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   billingCards Card[]   @relation("BillingAddress")
 
-  @@index([userId, role])
-  @@index([userId])
+  @@index([userId, role]) // Cobre queries por userId sozinho
   @@index([cep])
   @@map("addresses")
 }
@@ -143,7 +137,7 @@ model Recipient {
   updatedAt   DateTime @updatedAt
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([userId])
+  // Removido @@index([userId]) - coberto pelos compostos abaixo
   @@index([userId, isDefault])
   @@index([userId, document])
   @@index([userId, name])
@@ -263,7 +257,7 @@ model Label {
   updatedAt     DateTime @updatedAt
   shipment      Shipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
 
-  @@index([shipmentId])
+  // Removido @@index([shipmentId]) - shipmentId é @unique
   @@index([status])
   @@index([isPrinted])
   @@index([createdAt])
@@ -332,9 +326,7 @@ model PickupRequest {
   collector         Collector? @relation(fields: [collectorId], references: [id], onDelete: SetNull)
   shipment          Shipment   @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
 
-  @@index([userId])
-  @@index([collectorId])
-  @@index([shipmentId])
+  // Removidos @@index([userId]), @@index([collectorId]), @@index([shipmentId]) - cobertos por compostos/unique
   @@index([status])
   @@index([createdAt])
   @@index([originCep])
@@ -355,8 +347,7 @@ model TrackingEvent {
   createdAt   DateTime @default(now())
   shipment    Shipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
 
-  @@index([shipmentId])
-  @@index([occurredAt])
+  @@index([shipmentId, occurredAt]) // PERFORMANCE: Eventos ordenados por data
   @@map("tracking_events")
 }
 
@@ -434,7 +425,7 @@ model PasswordResetToken {
 
   @@index([userId])
   @@index([expiresAt])
-  @@index([tokenHash])
+  // Removido @@index([tokenHash]) - tokenHash é @unique
   @@map("password_reset_tokens")
 }
 
@@ -495,6 +486,7 @@ model SupportTicket {
   @@index([pickupPointId, createdAt])
   @@index([collectorId, createdAt])
   @@index([assignedTo])
+  @@index([lastActivityAt]) // PERFORMANCE: Ordenação por atividade recente
   @@map("support_tickets")
 }
 
@@ -584,7 +576,7 @@ model Reception {
 
   @@index([pickupPointId, status])
   @@index([pickupPointId, receivedAt])
-  @@index([trackingCode])
+  // Removido @@index([trackingCode]) - trackingCode é @unique
   @@index([status])
   @@map("receptions")
 }
@@ -943,6 +935,7 @@ model PaymentTransaction {
   @@index([userId, status])
   @@index([referenceId])
   @@index([externalId])
+  @@index([paidAt]) // PERFORMANCE: Relatórios por data de pagamento
   @@map("payment_transactions")
 }
 
