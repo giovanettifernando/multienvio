@@ -36,10 +36,9 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('[POST /api/coletores/auth/logout] Error:', error);
+    // 🛡️ SECURITY FIX: Não expor mensagens de erro internas
     return NextResponse.json(
-      {
-        message: error instanceof Error ? error.message : 'Erro ao fazer logout',
-      },
+      { message: 'Erro ao fazer logout' },
       { status: 500 }
     );
   }

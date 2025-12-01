@@ -319,14 +319,14 @@ export default function ExceptionsTable({ dateStart, dateEnd }: ExceptionsTableP
             <Statistic
               title="Total de Exceções"
               value={summary.total}
-              valueStyle={{ fontSize: 24 }}
+              styles={{ content: { fontSize: 24 } }}
             />
           </Col>
           <Col xs={12} sm={8}>
             <Statistic
               title="Divergências PoC"
               value={summary.pocIssues}
-              valueStyle={{ fontSize: 24, color: '#f5222d' }}
+              styles={{ content: { fontSize: 24, color: '#f5222d' } }}
               prefix={<WarningOutlined />}
             />
           </Col>
@@ -334,7 +334,7 @@ export default function ExceptionsTable({ dateStart, dateEnd }: ExceptionsTableP
             <Statistic
               title="Tentativas de Coleta"
               value={summary.pickupAttempts}
-              valueStyle={{ fontSize: 24, color: '#fa8c16' }}
+              styles={{ content: { fontSize: 24, color: '#fa8c16' } }}
               prefix={<RetweetOutlined />}
             />
           </Col>

@@ -338,7 +338,7 @@ export function AccountsPayableTable() {
               value={summary.totalAmountReais}
               precision={2}
               prefix={<DollarOutlined />}
-              valueStyle={{ color: '#1890ff' }}
+              styles={{ content: { color: '#1890ff' } }}
               formatter={(value) => `R$ ${Number(value).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
             />
           </Col>
@@ -348,7 +348,7 @@ export function AccountsPayableTable() {
               value={summary.pendingAmountReais}
               precision={2}
               prefix={<ClockCircleOutlined />}
-              valueStyle={{ color: '#fa8c16' }}
+              styles={{ content: { color: '#fa8c16' } }}
               formatter={(value) => `R$ ${Number(value).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
             />
           </Col>
@@ -358,7 +358,7 @@ export function AccountsPayableTable() {
               value={summary.paidAmountReais}
               precision={2}
               prefix={<CheckCircleOutlined />}
-              valueStyle={{ color: '#52c41a' }}
+              styles={{ content: { color: '#52c41a' } }}
               formatter={(value) => `R$ ${Number(value).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
             />
           </Col>

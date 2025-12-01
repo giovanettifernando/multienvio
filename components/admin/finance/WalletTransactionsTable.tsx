@@ -217,24 +217,24 @@ export function WalletTransactionsTable() {
               <Statistic
                 title="Total Créditos"
                 value={`R$ ${formatBRL(data.summary.totalCredits)}`}
-                valueStyle={{ color: '#3f8600' }}
+                styles={{ content: { color: '#3f8600' } }}
               />
             </Col>
             <Col xs={24} sm={12} lg={6}>
               <Statistic
                 title="Total Débitos"
                 value={`R$ ${formatBRL(data.summary.totalDebits)}`}
-                valueStyle={{ color: '#cf1322' }}
+                styles={{ content: { color: '#cf1322' } }}
               />
             </Col>
             <Col xs={24} sm={12} lg={6}>
               <Statistic
                 title="Saldo Líquido"
                 value={`R$ ${formatBRL(data.summary.netAmount)}`}
-                valueStyle={{
+                styles={{ content: {
                   color: data.summary.netAmount >= 0 ? '#3f8600' : '#cf1322',
                   fontWeight: 'bold',
-                }}
+                } }}
               />
             </Col>
             <Col xs={24} sm={12} lg={6}>

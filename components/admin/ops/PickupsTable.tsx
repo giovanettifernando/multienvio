@@ -346,42 +346,42 @@ export default function PickupsTable({ dateStart, dateEnd }: PickupsTableProps) 
             <Statistic
               title="Total"
               value={summary.total}
-              valueStyle={{ fontSize: 20 }}
+              styles={{ content: { fontSize: 20 } }}
             />
           </Col>
           <Col xs={12} sm={8} md={4}>
             <Statistic
               title="Pendentes"
               value={summary.byStatus?.PENDING || 0}
-              valueStyle={{ fontSize: 20, color: '#fa8c16' }}
+              styles={{ content: { fontSize: 20, color: '#fa8c16' } }}
             />
           </Col>
           <Col xs={12} sm={8} md={4}>
             <Statistic
               title="Agendadas"
               value={summary.byStatus?.SCHEDULED || 0}
-              valueStyle={{ fontSize: 20, color: '#1890ff' }}
+              styles={{ content: { fontSize: 20, color: '#1890ff' } }}
             />
           </Col>
           <Col xs={12} sm={8} md={4}>
             <Statistic
               title="Coletadas"
               value={(summary.byStatus?.COLLECTED || 0) + (summary.byStatus?.COMPLETED || 0)}
-              valueStyle={{ fontSize: 20, color: '#52c41a' }}
+              styles={{ content: { fontSize: 20, color: '#52c41a' } }}
             />
           </Col>
           <Col xs={12} sm={8} md={4}>
             <Statistic
               title="Falhas"
               value={summary.byStatus?.FAILED || 0}
-              valueStyle={{ fontSize: 20, color: '#f5222d' }}
+              styles={{ content: { fontSize: 20, color: '#f5222d' } }}
             />
           </Col>
           <Col xs={12} sm={8} md={4}>
             <Statistic
               title="Canceladas"
               value={summary.byStatus?.CANCELED || 0}
-              valueStyle={{ fontSize: 20, color: '#8c8c8c' }}
+              styles={{ content: { fontSize: 20, color: '#8c8c8c' } }}
             />
           </Col>
         </Row>

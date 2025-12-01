@@ -1,6 +1,6 @@
 'use client';
 
-import { Card, List, Typography, Skeleton, Empty, Button, Flex } from 'antd';
+import { Card, Typography, Skeleton, Empty, Button, Flex, Divider } from 'antd';
 import { SwapOutlined, RightOutlined } from '@ant-design/icons';
 import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
@@ -83,13 +83,12 @@ export function WalletRecent() {
         </Button>
       }
     >
-      <List
-        size="small"
-        dataSource={transactions}
-        renderItem={(tx) => {
+      <Flex vertical gap={0}>
+        {transactions.map((tx, index) => {
           const credit = isCredit(tx.type);
           return (
-            <List.Item>
+            <div key={tx.id || index}>
+              {index > 0 && <Divider style={{ margin: '8px 0' }} />}
               <Flex justify="space-between" align="center" style={{ width: '100%' }} gap={12}>
                 <Flex vertical style={{ flex: 1, minWidth: 0 }}>
                   <Text strong style={{ fontSize: '13px' }}>
@@ -118,10 +117,10 @@ export function WalletRecent() {
                   {credit ? '+' : '-'}R$ {Math.abs(tx.amountReais).toFixed(2)}
                 </Text>
               </Flex>
-            </List.Item>
+            </div>
           );
-        }}
-      />
+        })}
+      </Flex>
     </Card>
   );
 }

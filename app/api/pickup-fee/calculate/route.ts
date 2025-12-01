@@ -68,10 +68,11 @@ export async function POST(request: Request) {
     return NextResponse.json(result);
   } catch (error) {
     console.error('[PICKUP_FEE_CALCULATE]', error);
+    // 🛡️ SECURITY FIX: Não expor mensagens de erro internas
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'Erro ao calcular taxa de coleta',
+        error: 'Erro ao calcular taxa de coleta',
       },
       { status: 500 }
     );

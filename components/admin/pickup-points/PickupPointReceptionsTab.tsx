@@ -229,7 +229,7 @@ export default function PickupPointReceptionsTab({ pointId }: PickupPointRecepti
               title="Total de Recepções"
               value={data?.stats.totalReceptions || 0}
               prefix={<InboxOutlined />}
-              valueStyle={{ color: "#1890ff" }}
+              styles={{ content: { color: "#1890ff" } }}
             />
           </Card>
         </Col>
@@ -239,7 +239,7 @@ export default function PickupPointReceptionsTab({ pointId }: PickupPointRecepti
               title="Recebidos"
               value={data?.stats.receivedCount || 0}
               prefix={<CheckCircleOutlined />}
-              valueStyle={{ color: "#52c41a" }}
+              styles={{ content: { color: "#52c41a" } }}
             />
           </Card>
         </Col>
@@ -249,7 +249,7 @@ export default function PickupPointReceptionsTab({ pointId }: PickupPointRecepti
               title="Pendentes"
               value={data?.stats.pendingCount || 0}
               prefix={<ClockCircleOutlined />}
-              valueStyle={{ color: "#faad14" }}
+              styles={{ content: { color: "#faad14" } }}
             />
             {(data?.stats.issueCount || 0) > 0 && (
               <div style={{ marginTop: 4 }}>
@@ -268,7 +268,7 @@ export default function PickupPointReceptionsTab({ pointId }: PickupPointRecepti
               prefix={<DollarOutlined />}
               precision={2}
               formatter={(value) => formatBRL(value as number)}
-              valueStyle={{ color: "#52c41a" }}
+              styles={{ content: { color: "#52c41a" } }}
             />
           </Card>
         </Col>

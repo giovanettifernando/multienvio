@@ -128,7 +128,7 @@ export default function CollectorDashClient() {
               title={data.kpis.pending.label}
               value={data.kpis.pending.value}
               prefix={<InboxOutlined />}
-              valueStyle={{ color: '#fa8c16' }}
+              styles={{ content: { color: '#fa8c16' } }}
             />
           </Card>
         </Col>
@@ -139,7 +139,7 @@ export default function CollectorDashClient() {
               title={data.kpis.today.label}
               value={data.kpis.today.value}
               prefix={<CheckCircleOutlined />}
-              valueStyle={{ color: '#52c41a' }}
+              styles={{ content: { color: '#52c41a' } }}
             />
           </Card>
         </Col>
@@ -177,7 +177,7 @@ export default function CollectorDashClient() {
               value={data.kpis.commission.value}
               prefix={<DollarOutlined />}
               precision={2}
-              valueStyle={{ color: '#1890ff' }}
+              styles={{ content: { color: '#1890ff' } }}
               suffix={
                 data.kpis.commission.change !== 0 && (
                   <span

@@ -26,13 +26,15 @@ async function getClient() {
   }
 
   // Debug: verificar se accessToken está presente
+  // Log temporário para debug - verificar se o token está correto
+  const tokenEnd = config.accessToken ? config.accessToken.slice(-10) : 'VAZIO';
   console.log('[MERCADO_PAGO_CLIENT] Config recuperada:', {
     hasPublicKey: !!config.publicKey,
     hasAccessToken: !!config.accessToken,
     accessTokenLength: config.accessToken?.length || 0,
-    accessTokenPreview: config.accessToken ? `${config.accessToken.substring(0, 15)}...` : 'VAZIO',
+    accessTokenStart: config.accessToken ? `${config.accessToken.substring(0, 25)}...` : 'VAZIO',
+    accessTokenEnd: `...${tokenEnd}`,
     sandboxMode: config.sandboxMode,
-    testToken: config.sandboxMode, // Será passado para o SDK
   });
 
   if (!config.accessToken || config.accessToken.trim().length === 0) {
@@ -43,7 +45,6 @@ async function getClient() {
     accessToken: config.accessToken,
     options: {
       timeout: 30000,
-      testToken: config.sandboxMode, // Indicar que estamos usando credenciais de teste
     },
   });
 
@@ -67,9 +68,33 @@ export async function createPayment(
     ? process.env.MP_TEST_USER_EMAIL
     : input.payer.email;
 
-  console.log('[MERCADO_PAGO] Email do payer:', {
-    original: input.payer.email,
-    usado: payerEmail,
+  // Usar nome do cartão (cardholderName) quando fornecido
+  // Em pagamentos com cartão, o nome deve coincidir com o titular do cartão
+  // Se o cartão está cadastrado como "APRO" (teste), o pagamento usará esse nome
+  let payerFirstName: string;
+  let payerLastName: string;
+
+  if (input.cardData?.cardholderName) {
+    // Usar nome do cartão (pode ser "APRO" em sandbox)
+    const nameParts = input.cardData.cardholderName.trim().split(/\s+/);
+    payerFirstName = nameParts[0] || 'Nome';
+    payerLastName = nameParts.slice(1).join(' ') || nameParts[0] || 'Sobrenome';
+  } else if (config.sandboxMode) {
+    // Fallback para sandbox sem cardData
+    payerFirstName = 'APRO';
+    payerLastName = 'APRO';
+  } else {
+    // Produção sem cardData
+    payerFirstName = input.payer.firstName || 'Nome';
+    payerLastName = input.payer.lastName || 'Sobrenome';
+  }
+
+  console.log('[MERCADO_PAGO] Dados do payer:', {
+    originalEmail: input.payer.email,
+    usedEmail: payerEmail,
+    cardholderName: input.cardData?.cardholderName,
+    usedFirstName: payerFirstName,
+    usedLastName: payerLastName,
     sandboxMode: config.sandboxMode,
     testEmailConfigured: !!process.env.MP_TEST_USER_EMAIL,
   });
@@ -81,8 +106,8 @@ export async function createPayment(
     payment_method_id: input.paymentMethodId,
     payer: {
       email: payerEmail,
-      first_name: input.payer.firstName,
-      last_name: input.payer.lastName,
+      first_name: payerFirstName,
+      last_name: payerLastName,
     },
   };
 
@@ -110,8 +135,8 @@ export async function createPayment(
       ...existingAdditionalInfo,
       payer: {
         ...existingPayer,
-        first_name: input.payer.firstName,
-        last_name: input.payer.lastName,
+        first_name: payerFirstName,
+        last_name: payerLastName,
       },
     };
   }
@@ -129,7 +154,9 @@ export async function createPayment(
     installments: paymentData.installments,
     token: paymentData.token ? `${String(paymentData.token).substring(0, 20)}...` : undefined,
     payer: paymentData.payer,
+    additional_info_payer: (paymentData.additional_info as Record<string, unknown>)?.payer,
     external_reference: paymentData.external_reference,
+    sandboxMode: config.sandboxMode,
   });
 
   try {
@@ -286,10 +313,17 @@ export async function createCardToken(cardData: {
   identificationType: string;
   identificationNumber: string;
 }): Promise<{ id: string; first_six_digits: string; last_four_digits: string }> {
-  const { client } = await getClient();
+  const { client, config } = await getClient();
   const cardToken = new CardToken(client);
 
-  console.log('[MERCADO_PAGO] Criando token de cartão no backend...');
+  // Em sandbox, usar APRO como nome do titular para forçar aprovação
+  // https://www.mercadopago.com.br/developers/pt/docs/your-integrations/test/cards
+  const cardholderName = config.sandboxMode ? 'APRO' : cardData.cardholderName;
+
+  console.log('[MERCADO_PAGO] Criando token de cartão no backend...', {
+    sandboxMode: config.sandboxMode,
+    cardholderName,
+  });
 
   try {
     const tokenData = await cardToken.create({
@@ -298,10 +332,10 @@ export async function createCardToken(cardData: {
         expiration_month: cardData.expirationMonth,
         expiration_year: cardData.expirationYear,
         security_code: cardData.securityCode,
-         
+
         // @ts-ignore - MP SDK types are incomplete, cardholder is required
         cardholder: {
-          name: cardData.cardholderName,
+          name: cardholderName,
           identification: {
             type: cardData.identificationType,
             number: cardData.identificationNumber,

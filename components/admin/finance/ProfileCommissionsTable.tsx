@@ -444,7 +444,7 @@ export function ProfileCommissionsTable() {
               precision={2}
               prefix={<CheckCircleOutlined />}
               suffix="R$"
-              valueStyle={{ color: '#52c41a' }}
+              styles={{ content: { color: '#52c41a' } }}
             />
           </Col>
           <Col xs={24} sm={12} md={5}>
@@ -454,7 +454,7 @@ export function ProfileCommissionsTable() {
               precision={2}
               prefix={<ClockCircleOutlined />}
               suffix="R$"
-              valueStyle={{ color: '#fa8c16' }}
+              styles={{ content: { color: '#fa8c16' } }}
             />
           </Col>
           <Col xs={24} sm={12} md={6}>
@@ -464,7 +464,7 @@ export function ProfileCommissionsTable() {
               precision={2}
               prefix={<DollarOutlined />}
               suffix="R$"
-              valueStyle={{ color: '#1890ff', fontWeight: 'bold' }}
+              styles={{ content: { color: '#1890ff', fontWeight: 'bold' } }}
             />
           </Col>
         </Row>

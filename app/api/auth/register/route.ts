@@ -10,12 +10,12 @@ import { sendVerificationEmail } from '@/lib/email/mailer';
 export async function POST(request: Request) {
   try {
     const payload = await request.json();
-    console.log('[REGISTER] Received payload:', JSON.stringify(payload, null, 2));
+    // 🛡️ SECURITY FIX: Não logar dados sensíveis
+    console.log('[REGISTER] Processing registration request');
 
     const data = RegisterSchema.parse(payload);
-    console.log('[REGISTER] Validated data:', { email: data.email, name: data.name, hasPhone: !!data.phone });
-
-    console.log('[REGISTER] Attempting to register user:', data.email);
+    // Log apenas campos não sensíveis para debug
+    console.log('[REGISTER] Validated data - hasPhone:', !!data.phone);
 
     // Verificar se email já existe
     const existingUser = await prisma.user.findUnique({
@@ -23,7 +23,7 @@ export async function POST(request: Request) {
     });
 
     if (existingUser) {
-      console.log('[REGISTER] Email already exists:', data.email);
+      console.log('[REGISTER] Email already exists');
       return NextResponse.json(
         {
           message: 'E-mail já cadastrado',
@@ -72,7 +72,7 @@ export async function POST(request: Request) {
       },
     });
 
-    console.log('[REGISTER] User created:', user.id);
+    console.log('[REGISTER] User created successfully');
 
     // Enviar email de verificação (não falhar o cadastro se email falhar)
     let emailVerificationSent = false;
@@ -86,13 +86,13 @@ export async function POST(request: Request) {
       );
 
       if (emailVerificationSent) {
-        console.log('[REGISTER] Verification email sent to:', user.email);
+        console.log('[REGISTER] Verification email sent successfully');
       } else {
-        console.warn('[REGISTER] Failed to send verification email to:', user.email);
+        console.warn('[REGISTER] Failed to send verification email');
         emailError = 'EMAIL_SEND_FAILED';
       }
     } catch (error) {
-      console.error('[REGISTER] Error sending verification email:', error);
+      console.error('[REGISTER] Error sending verification email');
       emailError = 'EMAIL_SEND_FAILED';
     }
 

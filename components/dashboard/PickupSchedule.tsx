@@ -1,6 +1,6 @@
 'use client';
 
-import { Card, List, Typography, Tag, Skeleton, Empty, Button, Flex } from 'antd';
+import { Card, Typography, Tag, Skeleton, Empty, Button, Flex, Divider } from 'antd';
 import { CalendarOutlined, EnvironmentOutlined, RightOutlined } from '@ant-design/icons';
 import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
@@ -97,14 +97,14 @@ export function PickupSchedule() {
           image={Empty.PRESENTED_IMAGE_SIMPLE}
         />
       ) : (
-        <List
-          size="small"
-          dataSource={pickups}
-          renderItem={(pickup) => (
-            <List.Item
+        <Flex vertical gap={0}>
+          {pickups.map((pickup, index) => (
+            <div
+              key={pickup.id}
               style={{ cursor: 'pointer' }}
               onClick={() => router.push(`/coletas/${pickup.id}`)}
             >
+              {index > 0 && <Divider style={{ margin: '8px 0' }} />}
               <Flex justify="space-between" align="center" style={{ width: '100%' }} gap={12}>
                 <Flex vertical style={{ flex: 1, minWidth: 0 }}>
                   <Flex align="center" gap={4}>
@@ -136,9 +136,9 @@ export function PickupSchedule() {
                   Agendada
                 </Tag>
               </Flex>
-            </List.Item>
-          )}
-        />
+            </div>
+          ))}
+        </Flex>
       )}
     </Card>
   );

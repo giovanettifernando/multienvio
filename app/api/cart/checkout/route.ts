@@ -89,12 +89,16 @@ export async function POST(request: Request) {
           totalAmountPreview += itemTotal;
         }
 
-        // Buscar saldo da carteira
-        const wallet = await tx.wallet.findUnique({
-          where: { userId: session.userId },
-        });
+        // 🔒 CRITICAL FIX: Usar FOR UPDATE para evitar race condition
+        // Isso garante que apenas uma transação pode verificar/debitar por vez
+        const wallets = await tx.$queryRaw<Array<{ id: string; availableCents: number }>>`
+          SELECT id, "availableCents"
+          FROM "Wallet"
+          WHERE "userId" = ${session.userId}
+          FOR UPDATE
+        `;
 
-        // Se não tem carteira, criar uma com saldo zero (será validado abaixo)
+        const wallet = wallets[0];
         const availableCents = wallet?.availableCents ?? 0;
 
         if (availableCents < totalAmountPreview * 100) {
@@ -313,6 +317,25 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     console.error('[CART_CHECKOUT]', error);
+
+    // 🛡️ CRITICAL FIX: Liberar carrinho do estado LOCKED em caso de falha
+    // Isso evita que carrinhos fiquem travados permanentemente
+    try {
+      const session = await getSession();
+      if (session?.userId) {
+        await prisma.cart.updateMany({
+          where: {
+            userId: session.userId,
+            status: 'LOCKED',
+          },
+          data: {
+            status: 'OPEN',
+          },
+        });
+      }
+    } catch (unlockError) {
+      console.error('[CART_CHECKOUT] Erro ao destravar carrinho:', unlockError);
+    }
 
     if (error instanceof Error) {
       if (error.message === 'CART_NOT_FOUND') {

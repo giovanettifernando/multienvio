@@ -23,7 +23,17 @@ const statusMap: Record<string, PickupStatus> = {
 };
 
 export async function POST(request: Request) {
-  const payload = await request.json();
+  // 🛡️ SECURITY FIX: Adicionar try/catch para JSON parsing
+  let payload: Record<string, unknown>;
+  try {
+    payload = await request.json();
+  } catch {
+    return NextResponse.json(
+      { mensagem: "JSON inválido no corpo da requisição" },
+      { status: 400 }
+    );
+  }
+
   const pickupId = payload?.pickupId as string;
   const code = payload?.code as string;
   const description = payload?.description as string;
@@ -57,7 +67,7 @@ export async function POST(request: Request) {
     ...pickup.events,
   ];
 
-const isNote = (payload.code?.toUpperCase() ?? "") === "NOTE";
+const isNote = code.toUpperCase() === "NOTE";
 if (!isNote) {
   pickup.status = mapped; // mapped é PickupStatus, ok aqui
 }

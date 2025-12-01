@@ -18,7 +18,17 @@ const carrierMap: Record<string, TrackingEventType> = {
 };
 
 export async function POST(request: Request) {
-  const payload = await request.json();
+  // 🛡️ SECURITY FIX: Adicionar try/catch para JSON parsing
+  let payload: Record<string, unknown>;
+  try {
+    payload = await request.json();
+  } catch {
+    return NextResponse.json(
+      { mensagem: "JSON inválido no corpo da requisição" },
+      { status: 400 }
+    );
+  }
+
   const shipmentId = payload?.shipmentId as string;
   const carrierCode = payload?.code as string;
   const description = payload?.description as string;

@@ -357,9 +357,9 @@ export default function AdminClientWallet({
               precision={2}
               prefix={<WalletOutlined />}
               formatter={formatBRL}
-              valueStyle={{
+              styles={{ content: {
                 color: wallet.hasNegativeBalance ? "#ff4d4f" : "#3f8600",
-              }}
+              } }}
             />
           </Card>
         </Col>
@@ -370,7 +370,7 @@ export default function AdminClientWallet({
               value={wallet.pendingReais}
               precision={2}
               formatter={formatBRL}
-              valueStyle={{ color: "#faad14" }}
+              styles={{ content: { color: "#faad14" } }}
             />
           </Card>
         </Col>
@@ -382,7 +382,7 @@ export default function AdminClientWallet({
               precision={2}
               prefix={<ArrowUpOutlined />}
               formatter={formatBRL}
-              valueStyle={{ color: "#52c41a" }}
+              styles={{ content: { color: "#52c41a" } }}
             />
           </Card>
         </Col>
@@ -394,7 +394,7 @@ export default function AdminClientWallet({
               precision={2}
               prefix={<ArrowDownOutlined />}
               formatter={formatBRL}
-              valueStyle={{ color: "#ff4d4f" }}
+              styles={{ content: { color: "#ff4d4f" } }}
             />
           </Card>
         </Col>

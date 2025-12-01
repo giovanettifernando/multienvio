@@ -273,7 +273,7 @@ export default function CollectorPickupsTab({ collectorId }: CollectorPickupsTab
               title="Total de Coletas"
               value={data?.stats.totalPickups || 0}
               prefix={<ShoppingOutlined />}
-              valueStyle={{ color: "#1890ff" }}
+              styles={{ content: { color: "#1890ff" } }}
             />
           </Card>
         </Col>
@@ -284,7 +284,7 @@ export default function CollectorPickupsTab({ collectorId }: CollectorPickupsTab
               value={data?.stats.totalKm || 0}
               prefix={<CarOutlined />}
               suffix="km"
-              valueStyle={{ color: "#722ed1" }}
+              styles={{ content: { color: "#722ed1" } }}
             />
             {data?.stats.totalKm === 0 && (
               <Text type="secondary" style={{ fontSize: 11 }}>
@@ -301,7 +301,7 @@ export default function CollectorPickupsTab({ collectorId }: CollectorPickupsTab
               prefix={<DollarOutlined />}
               precision={2}
               formatter={(value) => formatBRL(value as number)}
-              valueStyle={{ color: "#52c41a" }}
+              styles={{ content: { color: "#52c41a" } }}
             />
           </Card>
         </Col>

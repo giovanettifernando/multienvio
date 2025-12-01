@@ -1,6 +1,6 @@
 'use client';
 
-import { Card, List, Typography, Tag, Skeleton, Empty, Button, Flex, Badge } from 'antd';
+import { Card, Typography, Tag, Skeleton, Empty, Button, Flex, Badge, Divider } from 'antd';
 import { EnvironmentOutlined, RightOutlined, InboxOutlined, PrinterOutlined } from '@ant-design/icons';
 import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
@@ -100,14 +100,14 @@ export function PendingPickupPointShipments() {
           <Text type="secondary" style={{ fontSize: '12px', display: 'block', marginBottom: 16 }}>
             Leve os envios até o ponto de coleta indicado para postagem.
           </Text>
-          <List
-            size="small"
-            dataSource={shipments}
-            renderItem={(shipment) => (
-              <List.Item
+          <Flex vertical gap={0}>
+            {shipments.map((shipment, index) => (
+              <div
+                key={shipment.id}
                 style={{ cursor: 'pointer', padding: '12px 0' }}
                 onClick={() => router.push(`/shipments/${shipment.id}`)}
               >
+                {index > 0 && <Divider style={{ margin: '0 0 12px 0' }} />}
                 <Flex vertical style={{ width: '100%' }} gap={8}>
                   {/* Linha 1: Código + Tag */}
                   <Flex justify="space-between" align="center" wrap gap={8}>
@@ -140,9 +140,9 @@ export function PendingPickupPointShipments() {
                     </Text>
                   </Flex>
                 </Flex>
-              </List.Item>
-            )}
-          />
+              </div>
+            ))}
+          </Flex>
         </>
       )}
     </Card>

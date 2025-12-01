@@ -36,7 +36,7 @@ export default function PeriodSummaryCard({ summary, loading }: PeriodSummaryCar
             title="Créditos"
             value={formatCurrencyBRL(summary.totalCredits)}
             suffix={<ArrowUpOutlined style={{ fontSize: 14, color: '#52c41a' }} />}
-            valueStyle={{ color: '#52c41a', fontSize: 18 }}
+            styles={{ content: { color: '#52c41a', fontSize: 18 } }}
           />
         </Col>
         <Col xs={24} sm={8}>
@@ -44,18 +44,18 @@ export default function PeriodSummaryCard({ summary, loading }: PeriodSummaryCar
             title="Débitos"
             value={formatCurrencyBRL(summary.totalDebits)}
             suffix={<ArrowDownOutlined style={{ fontSize: 14, color: '#ff4d4f' }} />}
-            valueStyle={{ color: '#ff4d4f', fontSize: 18 }}
+            styles={{ content: { color: '#ff4d4f', fontSize: 18 } }}
           />
         </Col>
         <Col xs={24} sm={8}>
           <Statistic
             title="Saldo do Período"
             value={formatCurrencyBRL(summary.netAmount)}
-            valueStyle={{
+            styles={{ content: {
               color: summary.netAmount >= 0 ? '#52c41a' : '#ff4d4f',
               fontSize: 18,
               fontWeight: 600
-            }}
+            } }}
           />
         </Col>
       </Row>

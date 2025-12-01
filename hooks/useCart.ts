@@ -72,7 +72,7 @@ export function useCart() {
   return useQuery<Cart>({
     queryKey: ["cart"],
     queryFn: async () => {
-      const response = await fetch("/api/carrinho");
+      const response = await fetch("/api/cart");
       if (!response.ok) {
         throw new Error("Falha ao carregar carrinho");
       }
@@ -145,7 +145,7 @@ export function useCartClear() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async () => {
-      const response = await fetch("/api/carrinho", { method: "DELETE" });
+      const response = await fetch("/api/cart", { method: "DELETE" });
       if (!response.ok) {
         throw new Error("Falha ao limpar carrinho");
       }

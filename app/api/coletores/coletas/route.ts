@@ -153,7 +153,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(response, { status: 200 });
   } catch (error) {
     console.error('[COLETORES_COLETAS_GET]', error);
-    const message = error instanceof Error ? error.message : 'Erro ao listar coletas';
-    return NextResponse.json({ message }, { status: 500 });
+    // 🛡️ SECURITY FIX: Não expor mensagens de erro internas
+    return NextResponse.json({ message: 'Erro ao listar coletas' }, { status: 500 });
   }
 }

@@ -138,7 +138,7 @@ function CommissionSimulator({
               value={shippingWithCommission}
               precision={2}
               prefix="R$"
-              valueStyle={{ color: '#1890ff' }}
+              styles={{ content: { color: '#1890ff' } }}
             />
             <Text type="secondary" style={{ fontSize: 12 }}>
               +R$ {shippingCommission.toFixed(2)} ({shippingPercent}%)
@@ -150,7 +150,7 @@ function CommissionSimulator({
               value={pickupWithCommission}
               precision={2}
               prefix="R$"
-              valueStyle={{ color: '#52c41a' }}
+              styles={{ content: { color: '#52c41a' } }}
             />
             <Text type="secondary" style={{ fontSize: 12 }}>
               +R$ {pickupCommission.toFixed(2)} ({pickupPercent}%)
@@ -162,7 +162,7 @@ function CommissionSimulator({
               value={totalWithCommission}
               precision={2}
               prefix="R$"
-              valueStyle={{ color: '#722ed1', fontWeight: 'bold' }}
+              styles={{ content: { color: '#722ed1', fontWeight: 'bold' } }}
             />
             <Text type="secondary" style={{ fontSize: 12 }}>
               Comissão: R$ {totalCommission.toFixed(2)}

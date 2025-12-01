@@ -30,7 +30,6 @@
   "dependencies": {
     "@ant-design/icons": "^6.1.0",
     "@ant-design/nextjs-registry": "^1.2.0",
-    "@ant-design/v5-patch-for-react-19": "^1.0.3",
     "@hookform/resolvers": "^5.2.2",
     "@mercadopago/sdk-react": "^1.0.6",
     "@prisma/adapter-pg": "^7.0.1",

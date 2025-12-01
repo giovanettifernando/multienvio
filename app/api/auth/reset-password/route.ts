@@ -60,8 +60,8 @@ export async function POST(request: Request) {
 
     // Hash new password with bcrypt (12 salt rounds for consistency with password change)
     const passwordHash = await bcrypt.hash(data.password, 12);
-    console.log('[RESET_PASSWORD] Generated hash:', passwordHash.substring(0, 20) + '...');
-    console.log('[RESET_PASSWORD] Hash length:', passwordHash.length);
+    // 🛡️ SECURITY FIX: Não logar hashes de senha
+    console.log('[RESET_PASSWORD] Password hash generated');
 
     const now = new Date();
 
@@ -86,24 +86,8 @@ export async function POST(request: Request) {
       }),
     ]);
 
-    console.log('[RESET_PASSWORD] Transaction completed successfully');
-    console.log('[RESET_PASSWORD] Updated user ID:', result[0].id);
-    console.log('[RESET_PASSWORD] New tokenVersion:', result[0].tokenVersion);
-
-    // Verify the update was persisted
-    const verifyUser = await prisma.user.findUnique({
-      where: { id: resetToken.userId },
-      select: {
-        passwordHash: true,
-        tokenVersion: true,
-        passwordUpdatedAt: true
-      },
-    });
-
-    console.log('[RESET_PASSWORD] Verified passwordHash in DB:', verifyUser?.passwordHash?.substring(0, 20) + '...');
-    console.log('[RESET_PASSWORD] Verified tokenVersion:', verifyUser?.tokenVersion);
-    console.log('[RESET_PASSWORD] Verified passwordUpdatedAt:', verifyUser?.passwordUpdatedAt);
-    console.log('[RESET_PASSWORD] Password reset successfully for user:', resetToken.user.email);
+    // 🛡️ SECURITY FIX: Remover logs de dados sensíveis
+    console.log('[RESET_PASSWORD] Password reset completed successfully');
 
     return NextResponse.json({
       message: 'Senha redefinida com sucesso! Você já pode fazer login com sua nova senha.',

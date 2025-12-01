@@ -24,6 +24,20 @@ export async function GET(request: NextRequest, context: RouteContext) {
     const page = Math.max(1, parseInt(searchParams.get('page') || '1'));
     const pageSize = Math.min(50, Math.max(1, parseInt(searchParams.get('pageSize') || '20')));
 
+    // 🛡️ SECURITY FIX: Validar que o usuário existe antes de acessar a carteira
+    // Isso previne IDOR - enumeration de IDs de usuário via tentativas de acesso à wallet
+    const userExists = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true },
+    });
+
+    if (!userExists) {
+      return NextResponse.json(
+        { message: 'Usuário não encontrado' },
+        { status: 404 }
+      );
+    }
+
     // Filtro de data (padrão: últimos 30 dias)
     const startDateParam = searchParams.get('startDate');
     const endDateParam = searchParams.get('endDate');

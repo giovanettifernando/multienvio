@@ -223,10 +223,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // 🛡️ SECURITY FIX: Não expor mensagens de erro internas
     return NextResponse.json(
-      {
-        message: error instanceof Error ? error.message : 'Erro ao criar cadastro',
-      },
+      { message: 'Erro ao criar cadastro' },
       { status: 500 }
     );
   }

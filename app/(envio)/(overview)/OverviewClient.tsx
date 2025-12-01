@@ -5,6 +5,7 @@ import { Alert, Row, Col } from "antd";
 import { PageShell } from "@/components/shared/PageShell";
 import { QuickCalculator } from "@/components/dashboard/QuickCalculator";
 import { ShipmentsStatusBoard } from "@/components/dashboard/ShipmentsStatusBoard";
+import { ShipmentsSummaryCard } from "@/components/dashboard/ShipmentsSummaryCard";
 import { WalletRecent } from "@/components/dashboard/WalletRecent";
 import { WalletCard } from "@/components/dashboard/WalletCard";
 import { SupportQuickView } from "@/components/dashboard/SupportQuickView";
@@ -52,10 +53,16 @@ export default function OverviewClient() {
         />
       )}
 
-      {/* Row 1: Status de envios */}
+      {/* Row 1: Status de envios (filas ativas) + Resumo (entregues/cancelados) */}
       <Row gutter={[12, 12]}>
-        <Col xs={24}>
+        <Col xs={24} lg={16}>
           <ShipmentsStatusBoard
+            shipments={shipmentsQuery.data ?? []}
+            loading={shipmentsQuery.isLoading}
+          />
+        </Col>
+        <Col xs={24} lg={8}>
+          <ShipmentsSummaryCard
             shipments={shipmentsQuery.data ?? []}
             loading={shipmentsQuery.isLoading}
           />

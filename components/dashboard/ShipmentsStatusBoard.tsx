@@ -1,23 +1,17 @@
 'use client';
 
-import { useState, useMemo } from 'react';
-import { Card, Flex, Typography, Skeleton, Select } from 'antd';
+import { useMemo } from 'react';
+import { Card, Flex, Typography, Skeleton } from 'antd';
 import {
   InboxOutlined,
   ClockCircleOutlined,
   PrinterOutlined,
   SendOutlined,
   CarOutlined,
-  CheckCircleOutlined,
-  CloseCircleOutlined,
-  RollbackOutlined,
-  EnvironmentOutlined,
 } from '@ant-design/icons';
 import { useRouter } from 'next/navigation';
 
 const { Text } = Typography;
-
-type TimeFilter = 'year' | 'month' | 'week' | 'today';
 
 interface ShipmentsStatusBoardProps {
   shipments: Array<{ status: string; createdAt?: string }>;
@@ -41,11 +35,9 @@ const UI_STATUSES = {
   POSTADO: 'Postado',
   EM_TRANSITO: 'Em trânsito',
   EM_ROTA_ENTREGA: 'Em rota de entrega',
-  ENTREGUE: 'Entregue',
-  CANCELADO: 'Cancelado',
-  DEVOLVIDO: 'Devolvido',
 };
 
+// Apenas status ativos (filas) - sem filtro de tempo
 const STATUS_CONFIG: StatusConfig[] = [
   {
     key: 'queue',
@@ -60,7 +52,6 @@ const STATUS_CONFIG: StatusConfig[] = [
     icon: <InboxOutlined />,
     color: '#003873',
     bgColor: '#e6f4ff',
-    filterParam: 'Todos', // Mostrar todos e filtrar no frontend
   },
   {
     key: 'awaiting_pickup',
@@ -98,69 +89,20 @@ const STATUS_CONFIG: StatusConfig[] = [
     bgColor: '#f9f0ff',
     filterParam: 'Em trânsito',
   },
-  {
-    key: 'delivered',
-    label: 'Entregues',
-    statuses: [UI_STATUSES.ENTREGUE],
-    icon: <CheckCircleOutlined />,
-    color: '#52c41a',
-    bgColor: '#f6ffed',
-    filterParam: 'Entregue',
-  },
-  {
-    key: 'canceled',
-    label: 'Cancelados',
-    statuses: [UI_STATUSES.CANCELADO, UI_STATUSES.DEVOLVIDO],
-    icon: <CloseCircleOutlined />,
-    color: '#ff4d4f',
-    bgColor: '#fff2f0',
-    filterParam: 'Cancelado',
-  },
 ];
-
-const TIME_FILTER_OPTIONS = [
-  { value: 'year', label: 'No ano' },
-  { value: 'month', label: 'No mês' },
-  { value: 'week', label: 'Na semana' },
-  { value: 'today', label: 'Hoje' },
-];
-
-function getDateThreshold(filter: TimeFilter): Date {
-  const now = new Date();
-  switch (filter) {
-    case 'today':
-      return new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    case 'week':
-      const weekAgo = new Date(now);
-      weekAgo.setDate(weekAgo.getDate() - 7);
-      return weekAgo;
-    case 'month':
-      return new Date(now.getFullYear(), now.getMonth(), 1);
-    case 'year':
-      return new Date(now.getFullYear(), 0, 1);
-  }
-}
 
 export function ShipmentsStatusBoard({ shipments, loading }: ShipmentsStatusBoardProps) {
   const router = useRouter();
-  const [timeFilter, setTimeFilter] = useState<TimeFilter>('month');
 
-  const filteredShipments = useMemo(() => {
-    const threshold = getDateThreshold(timeFilter);
-    return shipments.filter(s => {
-      if (!s.createdAt) return true;
-      return new Date(s.createdAt) >= threshold;
-    });
-  }, [shipments, timeFilter]);
-
+  // Conta todos os shipments ativos sem filtro de tempo
   const statusCounts = useMemo(() => {
     return STATUS_CONFIG.map(config => ({
       ...config,
-      count: filteredShipments.filter(s =>
+      count: shipments.filter(s =>
         config.statuses.includes(s.status)
       ).length,
     }));
-  }, [filteredShipments]);
+  }, [shipments]);
 
   const handleClick = (config: StatusConfig) => {
     if (config.filterParam) {
@@ -175,7 +117,7 @@ export function ShipmentsStatusBoard({ shipments, loading }: ShipmentsStatusBoar
       <Card
         title={
           <Flex align="center" gap={8}>
-            <CarOutlined />
+            <InboxOutlined />
             <Text strong>Status dos Envios</Text>
           </Flex>
         }
@@ -190,18 +132,9 @@ export function ShipmentsStatusBoard({ shipments, loading }: ShipmentsStatusBoar
   return (
     <Card
       title={
-        <Flex align="center" justify="space-between" style={{ width: '100%' }}>
-          <Flex align="center" gap={8}>
-            <CarOutlined />
-            <Text strong>Status dos Envios</Text>
-          </Flex>
-          <Select
-            size="small"
-            value={timeFilter}
-            onChange={setTimeFilter}
-            options={TIME_FILTER_OPTIONS}
-            style={{ width: 110 }}
-          />
+        <Flex align="center" gap={8}>
+          <InboxOutlined />
+          <Text strong>Status dos Envios</Text>
         </Flex>
       }
       variant="outlined"

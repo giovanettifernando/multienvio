@@ -194,42 +194,42 @@ export default function OperacoesClient() {
               <Statistic
                 title="Em Backlog"
                 value={kpis.backlog}
-                valueStyle={{ color: kpis.backlog > 10 ? '#cf1322' : '#000' }}
+                styles={{ content: { color: kpis.backlog > 10 ? '#cf1322' : '#000' } }}
               />
             </Col>
             <Col xs={24} sm={12} lg={6} xl={3}>
               <Statistic
                 title="Em Coleta"
                 value={kpis.inPickup}
-                valueStyle={{ color: '#1890ff' }}
+                styles={{ content: { color: '#1890ff' } }}
               />
             </Col>
             <Col xs={24} sm={12} lg={6} xl={3}>
               <Statistic
                 title="No PoC"
                 value={kpis.atPoC}
-                valueStyle={{ color: '#faad14' }}
+                styles={{ content: { color: '#faad14' } }}
               />
             </Col>
             <Col xs={24} sm={12} lg={6} xl={3}>
               <Statistic
                 title="Em Trânsito"
                 value={kpis.inTransit}
-                valueStyle={{ color: '#1890ff' }}
+                styles={{ content: { color: '#1890ff' } }}
               />
             </Col>
             <Col xs={24} sm={12} lg={6} xl={3}>
               <Statistic
                 title="Exceções"
                 value={kpis.exceptions}
-                valueStyle={{ color: kpis.exceptions > 0 ? '#cf1322' : '#52c41a' }}
+                styles={{ content: { color: kpis.exceptions > 0 ? '#cf1322' : '#52c41a' } }}
               />
             </Col>
             <Col xs={24} sm={12} lg={6} xl={3}>
               <Statistic
                 title="Entregues"
                 value={kpis.delivered}
-                valueStyle={{ color: '#52c41a' }}
+                styles={{ content: { color: '#52c41a' } }}
               />
             </Col>
           </Row>

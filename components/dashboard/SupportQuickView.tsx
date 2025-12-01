@@ -1,6 +1,6 @@
 'use client';
 
-import { Card, List, Typography, Tag, Skeleton, Empty, Button, Flex } from 'antd';
+import { Card, Typography, Tag, Skeleton, Empty, Button, Flex, Divider } from 'antd';
 import { MessageOutlined, PlusOutlined, RightOutlined } from '@ant-design/icons';
 import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
@@ -116,14 +116,14 @@ export function SupportQuickView() {
           </Button>
         </Empty>
       ) : (
-        <List
-          size="small"
-          dataSource={tickets}
-          renderItem={(ticket) => (
-            <List.Item
+        <Flex vertical gap={0}>
+          {tickets.map((ticket, index) => (
+            <div
+              key={ticket.id}
               style={{ cursor: 'pointer' }}
               onClick={() => router.push(`/suporte/${ticket.id}`)}
             >
+              {index > 0 && <Divider style={{ margin: '8px 0' }} />}
               <Flex justify="space-between" align="center" style={{ width: '100%' }} gap={12}>
                 <Flex vertical style={{ flex: 1, minWidth: 0 }}>
                   <Text strong style={{ fontSize: '13px' }} ellipsis>
@@ -142,9 +142,9 @@ export function SupportQuickView() {
                   {getStatusLabel(ticket.status)}
                 </Tag>
               </Flex>
-            </List.Item>
-          )}
-        />
+            </div>
+          ))}
+        </Flex>
       )}
     </Card>
   );

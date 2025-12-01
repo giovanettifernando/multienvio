@@ -492,7 +492,7 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     console.error('[CHECKOUT_POST]', error);
-    const message = error instanceof Error ? error.message : 'Erro ao processar checkout';
-    return NextResponse.json({ message }, { status: 500 });
+    // 🛡️ SECURITY FIX: Não expor mensagens de erro internas
+    return NextResponse.json({ message: 'Erro ao processar checkout' }, { status: 500 });
   }
 }

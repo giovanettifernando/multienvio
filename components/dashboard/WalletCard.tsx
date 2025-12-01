@@ -55,11 +55,11 @@ export function WalletCard() {
                 value={balance}
                 precision={2}
                 prefix="R$"
-                valueStyle={{
+                styles={{ content: {
                   fontSize: 24,
                   fontWeight: 600,
                   color: isLowBalance ? '#ff4d4f' : '#003873',
-                }}
+                } }}
               />
               <Flex vertical align="end" gap={4}>
                 <Flex align="center" gap={4}>

@@ -89,11 +89,13 @@ export function toApiError(error: unknown): ApiError {
   }
 
   if (error instanceof Error) {
+    // 🛡️ SECURITY FIX: Não expor stack traces em produção
+    const isDev = process.env.NODE_ENV === 'development';
     return new ApiError({
       code: "INTERNAL_ERROR",
       message: "Erro inesperado, tente novamente mais tarde.",
       status: 500,
-      details: { name: error.name, message: error.message, stack: error.stack },
+      details: isDev ? { name: error.name, message: error.message, stack: error.stack } : undefined,
       cause: error,
     });
   }

@@ -83,7 +83,7 @@ export function CheckoutCartModal({
     }
 
     // Clear cart
-    await fetch('/api/carrinho', { method: 'DELETE' });
+    await fetch('/api/cart', { method: 'DELETE' });
 
     // Invalidate cache
     queryClient.invalidateQueries({ queryKey: ['cart'] });

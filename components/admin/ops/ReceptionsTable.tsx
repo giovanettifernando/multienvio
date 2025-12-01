@@ -331,42 +331,42 @@ export default function ReceptionsTable({ dateStart, dateEnd }: ReceptionsTableP
             <Statistic
               title="Total na Fila"
               value={summary.total}
-              valueStyle={{ fontSize: 20 }}
+              styles={{ content: { fontSize: 20 } }}
             />
           </Col>
           <Col xs={12} sm={8} md={4}>
             <Statistic
               title="Aguardando Entrega"
               value={summary.byStatus?.AWAITING_DROP_OFF_AT_POINT || 0}
-              valueStyle={{ fontSize: 20, color: '#fa8c16' }}
+              styles={{ content: { fontSize: 20, color: '#fa8c16' } }}
             />
           </Col>
           <Col xs={12} sm={8} md={4}>
             <Statistic
               title="Entregues no Ponto"
               value={summary.byStatus?.DROPPED_OFF_AT_POINT || 0}
-              valueStyle={{ fontSize: 20, color: '#1890ff' }}
+              styles={{ content: { fontSize: 20, color: '#1890ff' } }}
             />
           </Col>
           <Col xs={12} sm={8} md={4}>
             <Statistic
               title="Recebidos"
               value={summary.byStatus?.RECEIVED_AT_POINT || 0}
-              valueStyle={{ fontSize: 20, color: '#13c2c2' }}
+              styles={{ content: { fontSize: 20, color: '#13c2c2' } }}
             />
           </Col>
           <Col xs={12} sm={8} md={4}>
             <Statistic
               title="Aguardando Coleta"
               value={summary.byStatus?.AWAITING_CARRIER_PICKUP_AT_POINT || 0}
-              valueStyle={{ fontSize: 20, color: '#722ed1' }}
+              styles={{ content: { fontSize: 20, color: '#722ed1' } }}
             />
           </Col>
           <Col xs={12} sm={8} md={4}>
             <Statistic
               title="Comissões"
               value={summary.totalCommission}
-              valueStyle={{ fontSize: 20, color: '#52c41a' }}
+              styles={{ content: { fontSize: 20, color: '#52c41a' } }}
               formatter={(value) =>
                 `R$ ${Number(value).toLocaleString('pt-BR', {
                   minimumFractionDigits: 2,

@@ -117,9 +117,9 @@ export function ClientDrawer({ open, client, onClose, onStatusChange }: ClientDr
               value={monthBalance}
               precision={2}
               prefix="R$"
-              valueStyle={{
+              styles={{ content: {
                 color: monthBalanceCents >= 0 ? '#3f8600' : '#cf1322',
-              }}
+              } }}
             />
           </Col>
         </Row>

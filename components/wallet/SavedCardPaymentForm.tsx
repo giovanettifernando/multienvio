@@ -275,8 +275,20 @@ export function SavedCardPaymentForm({
       }
 
       const result = await paymentResponse.json();
-      setProcessing(false);
-      onSuccess(result.payment.id);
+
+      // Verificar se o pagamento foi realmente aprovado
+      if (result.payment.status === 'approved') {
+        setProcessing(false);
+        onSuccess(result.payment.id);
+      } else if (result.payment.status === 'in_process' || result.payment.status === 'pending') {
+        // Pagamento em análise - informar usuário
+        setProcessing(false);
+        throw new Error("Pagamento em análise pela operadora. Você será notificado quando aprovado.");
+      } else {
+        // Outros status (rejected, etc)
+        setProcessing(false);
+        throw new Error("Cartão não autorizado");
+      }
     } catch (err) {
       // Limpar timeout
       if (timeoutRef.current) {
@@ -292,8 +304,13 @@ export function SavedCardPaymentForm({
       }
 
       console.error("[SAVED_CARD_PAYMENT]", err);
-      // Sempre mostrar "Cartão não autorizado" para erros de pagamento
-      onError(new Error("Cartão não autorizado"));
+
+      // Preservar mensagem de "em análise", outras viram "Cartão não autorizado"
+      if (err instanceof Error && err.message.includes("análise")) {
+        onError(err);
+      } else {
+        onError(new Error("Cartão não autorizado"));
+      }
     }
   };
 

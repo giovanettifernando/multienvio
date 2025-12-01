@@ -116,6 +116,7 @@ export async function listTransactions(
 /**
  * Debita valor da carteira
  * Valida se há saldo suficiente
+ * 🔒 CRITICAL FIX: Usa FOR UPDATE para evitar race condition e saldo negativo
  */
 export async function debit(
   userId: string,
@@ -127,21 +128,47 @@ export async function debit(
     throw new Error('O valor do débito deve ser positivo');
   }
 
-  const wallet = await getOrCreateWallet(userId);
-
-  // Validar saldo disponível
-  if (wallet.availableCents < amountCents) {
-    throw new Error('Saldo insuficiente');
-  }
-
   const now = new Date();
 
-  // Usar transação atômica
-  const [transaction] = await prisma.$transaction([
+  // 🔒 Usar transação com lock pessimista para evitar race condition
+  const transaction = await prisma.$transaction(async (tx) => {
+    // Garantir que a carteira existe
+    let wallet = await tx.wallet.findUnique({
+      where: { userId },
+    });
+
+    if (!wallet) {
+      wallet = await tx.wallet.create({
+        data: {
+          userId,
+          availableCents: 0,
+          pendingCents: 0,
+        },
+      });
+    }
+
+    // 🔒 CRITICAL: Adquirir lock FOR UPDATE antes de verificar saldo
+    const lockedWallets = await tx.$queryRaw<Array<{ id: string; availableCents: number }>>`
+      SELECT id, "availableCents"
+      FROM "Wallet"
+      WHERE "userId" = ${userId}
+      FOR UPDATE
+    `;
+
+    const lockedWallet = lockedWallets[0];
+    if (!lockedWallet) {
+      throw new Error('Carteira não encontrada');
+    }
+
+    // Validar saldo disponível COM o lock adquirido
+    if (lockedWallet.availableCents < amountCents) {
+      throw new Error('Saldo insuficiente');
+    }
+
     // Criar transação de débito
-    prisma.walletTransaction.create({
+    const walletTx = await tx.walletTransaction.create({
       data: {
-        walletId: wallet.id,
+        walletId: lockedWallet.id,
         type: WalletTxType.PURCHASE,
         status: WalletTxStatus.CONFIRMED,
         amountCents: -amountCents, // Negativo para débito
@@ -149,15 +176,18 @@ export async function debit(
         referenceId,
         confirmedAt: now,
       },
-    }),
+    });
+
     // Atualizar saldo disponível
-    prisma.wallet.update({
-      where: { id: wallet.id },
+    await tx.wallet.update({
+      where: { id: lockedWallet.id },
       data: {
         availableCents: { decrement: amountCents },
       },
-    }),
-  ]);
+    });
+
+    return walletTx;
+  });
 
   return {
     id: transaction.id,

@@ -140,8 +140,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(response, { status: 200 });
   } catch (error) {
     console.error('[COLETAS_GET]', error);
-    const message = error instanceof Error ? error.message : 'Erro ao listar coletas';
-    return NextResponse.json({ message }, { status: 500 });
+    // 🛡️ SECURITY FIX: Não expor mensagens de erro internas
+    return NextResponse.json({ message: 'Erro ao listar coletas' }, { status: 500 });
   }
 }
 
@@ -241,7 +241,7 @@ export async function POST(request: NextRequest) {
       }, { status: 409 });
     }
 
-    const message = error instanceof Error ? error.message : 'Erro ao criar coleta';
-    return NextResponse.json({ message }, { status: 500 });
+    // 🛡️ SECURITY FIX: Não expor mensagens de erro internas
+    return NextResponse.json({ message: 'Erro ao criar coleta' }, { status: 500 });
   }
 }

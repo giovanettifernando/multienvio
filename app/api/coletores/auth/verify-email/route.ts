@@ -66,11 +66,9 @@ export async function POST(request: NextRequest) {
     );
   } catch (error) {
     console.error('[verify-email] Error:', error);
-
+    // 🛡️ SECURITY FIX: Não expor mensagens de erro internas
     return NextResponse.json(
-      {
-        message: error instanceof Error ? error.message : 'Erro ao verificar e-mail',
-      },
+      { message: 'Erro ao verificar e-mail' },
       { status: 500 }
     );
   }

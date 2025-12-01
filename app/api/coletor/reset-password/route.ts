@@ -118,10 +118,9 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error('[RESET_PASSWORD_PROCESS]', error);
 
+    // 🛡️ SECURITY FIX: Não expor mensagens de erro internas
     return NextResponse.json(
-      {
-        error: error instanceof Error ? error.message : 'Erro ao redefinir senha',
-      },
+      { error: 'Erro ao redefinir senha. Tente novamente.' },
       { status: 500 }
     );
   }

@@ -464,7 +464,7 @@ export function CarrierPayoutsTable() {
               precision={2}
               prefix={<DollarOutlined />}
               suffix="R$"
-              valueStyle={{ color: '#1890ff' }}
+              styles={{ content: { color: '#1890ff' } }}
             />
           </Col>
           <Col xs={24} sm={12} md={6}>
@@ -474,7 +474,7 @@ export function CarrierPayoutsTable() {
               precision={2}
               prefix={<PercentageOutlined />}
               suffix="R$"
-              valueStyle={{ color: '#fa8c16' }}
+              styles={{ content: { color: '#fa8c16' } }}
             />
           </Col>
           <Col xs={24} sm={12} md={6}>
@@ -484,7 +484,7 @@ export function CarrierPayoutsTable() {
               precision={2}
               prefix={<TruckOutlined />}
               suffix="R$"
-              valueStyle={{ color: '#52c41a', fontWeight: 'bold' }}
+              styles={{ content: { color: '#52c41a', fontWeight: 'bold' } }}
             />
           </Col>
         </Row>
