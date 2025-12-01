@@ -222,8 +222,8 @@ export function ShipmentsStatusBoard({ shipments, loading }: ShipmentsStatusBoar
               border: `1px solid ${item.color}20`,
               cursor: 'pointer',
               transition: 'all 0.2s',
-              flex: 1,
-              minWidth: 0,
+              flex: '1 1 auto',
+              minWidth: 90,
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.transform = 'translateY(-1px)';

@@ -102,27 +102,27 @@ export default function TrackingListPage() {
     <PageShell title="Rastreamento" gap="md">
       <Card variant="borderless">
         <Space direction="vertical" size={16} style={{ width: "100%" }}>
-          <Space wrap align="center">
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
             <Input.Search
               placeholder="Buscar por ID do envio"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              style={{ width: 280 }}
+              style={{ flex: 1, minWidth: 180, maxWidth: 300 }}
             />
 
-            <Space>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               {STATUS_FILTERS.map((filter) => (
                 <Tag
                   key={filter.value}
                   color={statusFilter === filter.value ? "blue" : undefined}
                   onClick={() => setStatusFilter(filter.value)}
-                  style={{ cursor: "pointer" }}
+                  style={{ cursor: "pointer", margin: 0 }}
                 >
                   {filter.label}
                 </Tag>
               ))}
-            </Space>
-          </Space>
+            </div>
+          </div>
         </Space>
       </Card>
 
@@ -132,6 +132,7 @@ export default function TrackingListPage() {
           dataSource={dataSource}
           loading={shipmentsResult.isLoading}
           pagination={{ pageSize: 5 }}
+          scroll={{ x: 900 }}
           columns={[
             {
               title: "Envio",

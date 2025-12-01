@@ -19,6 +19,7 @@ import {
 } from "react-hook-form";
 import type { FinalizeFormValues } from "@/types/quoteFinalize";
 import styles from "@/app/(envio)/cotacoes/cotacoes.module.css";
+import { generateUUID } from "@/lib/utils/uuid";
 
 const currency = new Intl.NumberFormat("pt-BR", {
   style: "currency",
@@ -42,7 +43,7 @@ export function DeclarationItems() {
 
   const handleAddItem = () => {
     append({
-      id: crypto.randomUUID(),
+      id: generateUUID(),
       descricao: "",
       valorUnitario: 0,
       quantidade: 1,

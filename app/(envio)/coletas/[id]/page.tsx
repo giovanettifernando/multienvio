@@ -7,10 +7,11 @@ import {
   Alert,
   Button,
   Card,
+  Col,
   Descriptions,
-  Flex,
   Form,
   Input,
+  Row,
   Select,
   Space,
   Typography,
@@ -167,53 +168,55 @@ export default function PickupDetailPage() {
         </Descriptions>
       </Card>
 
-      <Flex gap={24} align="start" wrap>
-        <Card title="Eventos" variant="borderless" style={{ flex: 1 }}>
-          <PickupTimeline events={pickup.events} />
-        </Card>
-
-        <Space direction="vertical" style={{ width: 320 }} size={24}>
-          <Card title="Atualizar status" variant="borderless">
-            <Form
-              layout="vertical"
-              onFinish={(values: { status: PickupStatus; description?: string }) =>
-                updateStatusMutation.mutate(values)
-              }
-            >
-              <Form.Item name="status" label="Status" rules={[{ required: true }]}>
-                <Select options={STATUS_OPTIONS} />
-              </Form.Item>
-              <Form.Item name="description" label="Descrição">
-                <Input.TextArea rows={3} />
-              </Form.Item>
-              <Button type="primary" htmlType="submit" loading={updateStatusMutation.isPending}>
-                Atualizar
-              </Button>
-            </Form>
+      <Row gutter={[24, 24]}>
+        <Col xs={24} lg={14}>
+          <Card title="Eventos" variant="borderless">
+            <PickupTimeline events={pickup.events} />
           </Card>
+        </Col>
 
-          <Card title="Simular webhook" variant="borderless">
-            <Form
-              layout="vertical"
-              onFinish={(values: { code: string; description: string }) =>
-                webhookMutation.mutate(values)
-              }
-            >
-              <Form.Item name="code" label="Status" rules={[{ required: true }]}
+        <Col xs={24} lg={10}>
+          <Space direction="vertical" size={24} style={{ width: '100%' }}>
+            <Card title="Atualizar status" variant="borderless">
+              <Form
+                layout="vertical"
+                onFinish={(values: { status: PickupStatus; description?: string }) =>
+                  updateStatusMutation.mutate(values)
+                }
               >
-                <Select options={WEBHOOK_OPTIONS} />
-              </Form.Item>
-              <Form.Item name="description" label="Descrição" rules={[{ required: true }]}
+                <Form.Item name="status" label="Status" rules={[{ required: true }]}>
+                  <Select options={STATUS_OPTIONS} />
+                </Form.Item>
+                <Form.Item name="description" label="Descrição">
+                  <Input.TextArea rows={3} />
+                </Form.Item>
+                <Button type="primary" htmlType="submit" loading={updateStatusMutation.isPending}>
+                  Atualizar
+                </Button>
+              </Form>
+            </Card>
+
+            <Card title="Simular webhook" variant="borderless">
+              <Form
+                layout="vertical"
+                onFinish={(values: { code: string; description: string }) =>
+                  webhookMutation.mutate(values)
+                }
               >
-                <Input.TextArea rows={2} />
-              </Form.Item>
-              <Button htmlType="submit" loading={webhookMutation.isPending}>
-                Simular
-              </Button>
-            </Form>
-          </Card>
-        </Space>
-      </Flex>
+                <Form.Item name="code" label="Status" rules={[{ required: true }]}>
+                  <Select options={WEBHOOK_OPTIONS} />
+                </Form.Item>
+                <Form.Item name="description" label="Descrição" rules={[{ required: true }]}>
+                  <Input.TextArea rows={2} />
+                </Form.Item>
+                <Button htmlType="submit" loading={webhookMutation.isPending}>
+                  Simular
+                </Button>
+              </Form>
+            </Card>
+          </Space>
+        </Col>
+      </Row>
     </PageShell>
   );
 }

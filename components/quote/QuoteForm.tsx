@@ -59,6 +59,7 @@ import {
   useAddressStore,
   type Address as StoreAddress,
 } from "@/lib/state/addresses";
+import { generateUUID } from "@/lib/utils/uuid";
 
 // Extracted components
 import { quoteFormSchema, MAX_VOLUMES, type QuoteFormValues } from "./quoteFormSchema";
@@ -1096,7 +1097,7 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
       }
 
       // Usar quoteId da API se disponível, senão gerar no cliente
-      const quoteId = normalized.quoteId || crypto.randomUUID();
+      const quoteId = normalized.quoteId || generateUUID();
 
       const resumo = buildSummary(values);
 

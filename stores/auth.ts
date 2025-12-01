@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { User } from "@/lib/auth/types";
 import { AuthRole, UserStatus } from "@/types/contracts";
+import { generateUUID } from "@/lib/utils/uuid";
 
 /**
  * @deprecated Use User from global contracts
@@ -187,7 +188,7 @@ export function mockLogin(role?: AuthRole): User {
   const now = new Date().toISOString();
 
   const mockUser: User = {
-    id: crypto.randomUUID(),
+    id: generateUUID(),
     name: role === AuthRole.ADMIN ? "Admin Sistema" : "João Silva",
     email: role === AuthRole.ADMIN ? "admin@enviolegal.com" : "joao@example.com",
     phone: "+5511999999999",

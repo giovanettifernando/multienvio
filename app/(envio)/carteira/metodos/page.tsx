@@ -4,11 +4,13 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Button,
+  Col,
   Flex,
   Form,
   Input,
   InputNumber,
   Modal,
+  Row,
   Space,
   message,
 } from "antd";
@@ -129,20 +131,23 @@ export default function PaymentMethodsPage() {
           >
             <Input />
           </Form.Item>
-          <Space>
-            <Form.Item name="expMonth" label="Mês" rules={[{ required: true }]}
-            >
-              <InputNumber min={1} max={12} />
-            </Form.Item>
-            <Form.Item name="expYear" label="Ano" rules={[{ required: true }]}
-            >
-              <InputNumber min={new Date().getFullYear()} max={new Date().getFullYear() + 15} />
-            </Form.Item>
-            <Form.Item name="cvc" label="CVC" rules={[{ required: true }]}
-            >
-              <Input />
-            </Form.Item>
-          </Space>
+          <Row gutter={[12, 0]}>
+            <Col xs={8} sm={6}>
+              <Form.Item name="expMonth" label="Mês" rules={[{ required: true }]}>
+                <InputNumber min={1} max={12} style={{ width: '100%' }} />
+              </Form.Item>
+            </Col>
+            <Col xs={8} sm={6}>
+              <Form.Item name="expYear" label="Ano" rules={[{ required: true }]}>
+                <InputNumber min={new Date().getFullYear()} max={new Date().getFullYear() + 15} style={{ width: '100%' }} />
+              </Form.Item>
+            </Col>
+            <Col xs={8} sm={6}>
+              <Form.Item name="cvc" label="CVC" rules={[{ required: true }]}>
+                <Input />
+              </Form.Item>
+            </Col>
+          </Row>
         </Form>
       </Modal>
 

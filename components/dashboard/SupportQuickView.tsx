@@ -4,6 +4,7 @@ import { Card, List, Typography, Tag, Skeleton, Empty, Button, Flex } from 'antd
 import { MessageOutlined, PlusOutlined, RightOutlined } from '@ant-design/icons';
 import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
+import { apiFetch } from '@/lib/utils/api-fetch';
 import type { Status } from '@/lib/validation/support';
 
 const { Text } = Typography;
@@ -17,11 +18,7 @@ interface SupportTicket {
 }
 
 async function fetchSupportTickets(): Promise<SupportTicket[]> {
-  const response = await fetch('/api/support/tickets?limit=5');
-  if (!response.ok) {
-    throw new Error('Failed to fetch tickets');
-  }
-  const data = await response.json();
+  const data = await apiFetch<{ tickets: SupportTicket[] }>('/api/support/tickets?limit=5');
   return data.tickets || [];
 }
 

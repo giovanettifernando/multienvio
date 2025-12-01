@@ -136,17 +136,17 @@ export default function ColetasPage() {
     <PageShell title="Gerenciar Coletas" gap="md">
       <Card>
         <Space direction="vertical" size={16} style={{ width: "100%" }}>
-          <Space wrap>
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
             <Input
               allowClear
-              style={{ width: 280 }}
+              style={{ flex: 1, minWidth: 180, maxWidth: 300 }}
               placeholder="Buscar por código de rastreio"
               prefix={<SearchOutlined />}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
             <Select
-              style={{ width: 160 }}
+              style={{ minWidth: 140 }}
               value={status}
               onChange={setStatus}
               options={STATUS_OPTIONS}
@@ -157,11 +157,12 @@ export default function ColetasPage() {
               placeholder={["Data início", "Data fim"]}
               value={dateRange}
               onChange={(dates) => setDateRange(dates as [Dayjs | null, Dayjs | null])}
+              style={{ minWidth: 240 }}
             />
             <Button onClick={() => refetch()} disabled={isLoading}>
               Atualizar
             </Button>
-          </Space>
+          </div>
 
           <Table<PickupRequestWithShipment>
             rowKey="id"
@@ -169,6 +170,7 @@ export default function ColetasPage() {
             dataSource={items}
             pagination={{ pageSize: 20 }}
             columns={columns}
+            scroll={{ x: 900 }}
           />
         </Space>
       </Card>

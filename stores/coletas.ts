@@ -4,6 +4,7 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { CollectionStatus } from "@/types/contracts";
 import type { Coleta, CreateColetaInput, UpdateColetaInput, ColetaStatus } from "@/lib/coletas/types";
+import { generateUUID } from "@/lib/utils/uuid";
 
 const STORAGE_KEY = "envio-legal-coletas";
 const STORAGE_VERSION = 1;
@@ -70,7 +71,7 @@ export const useColetasStore = create<State & Actions>()(
         }
 
         const newColeta: Coleta = {
-          id: crypto.randomUUID(),
+          id: generateUUID(),
           shipmentId: input.shipmentId,
           status: input.janelaColeta
             ? CollectionStatus.AGENDADA

@@ -9,7 +9,6 @@ import {
   Card,
   Col,
   Descriptions,
-  Flex,
   Form,
   Input,
   Row,
@@ -152,109 +151,112 @@ const webhookMutation = useMutation<void, Error, {
             </Descriptions>
           </Card>
 
-          <Flex gap={24} align="start" wrap>
-            <Card title="Linha do tempo" variant="borderless" style={{ flex: 1 }}>
-              <TrackingTimeline events={tracking.events} />
-            </Card>
-
-            <Space direction="vertical" style={{ width: 320 }} size={24}>
-              <Card title="Adicionar evento" variant="borderless">
-                <Form
-                  layout="vertical"
-                  onFinish={(values: {
-                    type: TrackingEventType;
-                    description: string;
-                    city?: string;
-                    uf?: string;
-                  }) =>
-                    addEventMutation.mutate({
-                      shipmentId: id,
-                      ...values,
-                    })
-                  }
-                >
-                  <Form.Item name="type" label="Tipo" rules={[{ required: true }]}>           
-                    <Select options={EVENT_OPTIONS} placeholder="Selecione" />
-                  </Form.Item>
-                  <Form.Item
-                    name="description"
-                    label="Descrição"
-                    rules={[{ required: true, message: "Informe a descrição" }]}
-                  >
-                    <Input.TextArea rows={3} />
-                  </Form.Item>
-                  <Row gutter={12}>
-                    <Col span={14}>
-                      <Form.Item name="city" label="Cidade">
-                        <Input />
-                      </Form.Item>
-                    </Col>
-                    <Col span={10}>
-                      <Form.Item name="uf" label="UF">
-                        <Input maxLength={2} />
-                      </Form.Item>
-                    </Col>
-                  </Row>
-                  <Button
-                    type="primary"
-                    htmlType="submit"
-                    loading={addEventMutation.isPending}
-                    block
-                  >
-                    Adicionar evento
-                  </Button>
-                </Form>
+          <Row gutter={[24, 24]}>
+            <Col xs={24} lg={14}>
+              <Card title="Linha do tempo" variant="borderless">
+                <TrackingTimeline events={tracking.events} />
               </Card>
+            </Col>
 
-              <Card title="Simular webhook" variant="borderless">
-                <Form
-                  layout="vertical"
-                  onFinish={(values: {
-                    code: TrackingEventType;
-                    description: string;
-                    city?: string;
-                    uf?: string;
-                  }) =>
-                    webhookMutation.mutate({
-                      shipmentId: id,
-                      ...values,
-                    })
-                  }
-                >
-                  <Form.Item name="code" label="Status" rules={[{ required: true }]}
+            <Col xs={24} lg={10}>
+              <Space direction="vertical" size={24} style={{ width: '100%' }}>
+                <Card title="Adicionar evento" variant="borderless">
+                  <Form
+                    layout="vertical"
+                    onFinish={(values: {
+                      type: TrackingEventType;
+                      description: string;
+                      city?: string;
+                      uf?: string;
+                    }) =>
+                      addEventMutation.mutate({
+                        shipmentId: id,
+                        ...values,
+                      })
+                    }
                   >
-                    <Select options={EVENT_OPTIONS} placeholder="Selecione" />
-                  </Form.Item>
-                  <Form.Item
-                    name="description"
-                    label="Descrição"
-                    rules={[{ required: true }]}
+                    <Form.Item name="type" label="Tipo" rules={[{ required: true }]}>
+                      <Select options={EVENT_OPTIONS} placeholder="Selecione" />
+                    </Form.Item>
+                    <Form.Item
+                      name="description"
+                      label="Descrição"
+                      rules={[{ required: true, message: "Informe a descrição" }]}
+                    >
+                      <Input.TextArea rows={3} />
+                    </Form.Item>
+                    <Row gutter={12}>
+                      <Col span={14}>
+                        <Form.Item name="city" label="Cidade">
+                          <Input />
+                        </Form.Item>
+                      </Col>
+                      <Col span={10}>
+                        <Form.Item name="uf" label="UF">
+                          <Input maxLength={2} />
+                        </Form.Item>
+                      </Col>
+                    </Row>
+                    <Button
+                      type="primary"
+                      htmlType="submit"
+                      loading={addEventMutation.isPending}
+                      block
+                    >
+                      Adicionar evento
+                    </Button>
+                  </Form>
+                </Card>
+
+                <Card title="Simular webhook" variant="borderless">
+                  <Form
+                    layout="vertical"
+                    onFinish={(values: {
+                      code: TrackingEventType;
+                      description: string;
+                      city?: string;
+                      uf?: string;
+                    }) =>
+                      webhookMutation.mutate({
+                        shipmentId: id,
+                        ...values,
+                      })
+                    }
                   >
-                    <Input.TextArea rows={2} />
-                  </Form.Item>
-                  <Row gutter={12}>
-                    <Col span={14}>
-                      <Form.Item name="city" label="Cidade">
-                        <Input />
-                      </Form.Item>
-                    </Col>
-                    <Col span={10}>
-                      <Form.Item name="uf" label="UF">
-                        <Input maxLength={2} />
-                      </Form.Item>
-                    </Col>
-                  </Row>
-                  <Button
-                    htmlType="submit"
-                    loading={webhookMutation.isPending}
-                    block
-                  >
-                    Disparar webhook
-                  </Button>
-                </Form>
-              </Card>
-            </Space>
-          </Flex>
+                    <Form.Item name="code" label="Status" rules={[{ required: true }]}>
+                      <Select options={EVENT_OPTIONS} placeholder="Selecione" />
+                    </Form.Item>
+                    <Form.Item
+                      name="description"
+                      label="Descrição"
+                      rules={[{ required: true }]}
+                    >
+                      <Input.TextArea rows={2} />
+                    </Form.Item>
+                    <Row gutter={12}>
+                      <Col span={14}>
+                        <Form.Item name="city" label="Cidade">
+                          <Input />
+                        </Form.Item>
+                      </Col>
+                      <Col span={10}>
+                        <Form.Item name="uf" label="UF">
+                          <Input maxLength={2} />
+                        </Form.Item>
+                      </Col>
+                    </Row>
+                    <Button
+                      htmlType="submit"
+                      loading={webhookMutation.isPending}
+                      block
+                    >
+                      Disparar webhook
+                    </Button>
+                  </Form>
+                </Card>
+              </Space>
+            </Col>
+          </Row>
         </>
       ) : (
         <Alert

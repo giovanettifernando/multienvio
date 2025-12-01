@@ -6,6 +6,7 @@ import type {
   PickupPointFormData,
   StatusOperacional,
 } from "@/lib/pickup/types";
+import { generateUUID } from "@/lib/utils/uuid";
 
 type State = {
   points: PickupPoint[];
@@ -48,7 +49,7 @@ export const usePontosStore = create<State & Actions>()(
       createPoint: (data) => {
         const now = new Date().toISOString();
         const newPoint: PickupPoint = {
-          id: crypto.randomUUID(),
+          id: generateUUID(),
           status: PickupPointStatus.ACTIVE,
           ...data,
           ie: data.ie || null,

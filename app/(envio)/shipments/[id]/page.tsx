@@ -146,7 +146,7 @@ export default function ShipmentDetailPage() {
       title="Detalhes do envio"
       gap="md"
       extra={
-        <Space>
+        <Space wrap>
           <Button onClick={() => router.push("/shipments")}>Voltar</Button>
           {shipment?.publicTrackingId && (
             <>
@@ -154,14 +154,14 @@ export default function ShipmentDetailPage() {
                 icon={<CopyOutlined />}
                 onClick={handleCopyPublicLink}
               >
-                Copiar link público
+                Copiar link
               </Button>
               <Button
                 type="primary"
                 icon={<ShareAltOutlined />}
                 onClick={handleOpenPublicLink}
               >
-                Abrir link público
+                Abrir link
               </Button>
             </>
           )}
@@ -273,6 +273,7 @@ export default function ShipmentDetailPage() {
                 rowKey="id"
                 pagination={false}
                 size="small"
+                scroll={{ x: 600 }}
                 expandable={{
                   expandedRowRender: (record) => {
                     // Renderizar itens deste volume

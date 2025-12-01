@@ -86,6 +86,7 @@ export default function InvoicesPage() {
             rowKey="id"
             loading={isLoading}
             dataSource={data ?? []}
+            scroll={{ x: 600 }}
             columns={[
               {
                 title: "Número",

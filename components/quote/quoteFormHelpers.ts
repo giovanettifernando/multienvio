@@ -1,6 +1,7 @@
 import { DEFAULT_CUBAGE_FACTOR } from "@/components/quote/VolumesGrid";
 import type { CompanyAddress, Address as StoreAddress } from "@/lib/state/addresses";
 import type { QuoteFormValues, RouteHeaderInfo } from "./quoteFormSchema";
+import { generateUUID } from "@/lib/utils/uuid";
 
 /**
  * Keys used to compare company addresses
@@ -60,7 +61,7 @@ export const toHeaderInfo = (
  * Create an empty volume object
  */
 export const createEmptyVolume = (): QuoteFormValues["volumes"][number] => ({
-  id: crypto.randomUUID(),
+  id: generateUUID(),
   comprimentoCm: 0,
   larguraCm: 0,
   alturaCm: 0,

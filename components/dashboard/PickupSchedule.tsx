@@ -4,6 +4,7 @@ import { Card, List, Typography, Tag, Skeleton, Empty, Button, Flex } from 'antd
 import { CalendarOutlined, EnvironmentOutlined, RightOutlined } from '@ant-design/icons';
 import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
+import { apiFetch } from '@/lib/utils/api-fetch';
 
 const { Text } = Typography;
 
@@ -32,11 +33,7 @@ interface PickupResponse {
 }
 
 async function fetchScheduledPickups(): Promise<PickupResponse> {
-  const response = await fetch('/api/coletas?status=SCHEDULED&pageSize=5');
-  if (!response.ok) {
-    throw new Error('Failed to fetch pickups');
-  }
-  return response.json();
+  return apiFetch('/api/coletas?status=SCHEDULED&pageSize=5');
 }
 
 function formatScheduleDate(dateString: string | null): string {

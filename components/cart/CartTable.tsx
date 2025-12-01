@@ -95,6 +95,7 @@ export function CartTable({ items, onRemove }: CartTableProps) {
       columns={columns}
       dataSource={items}
       pagination={false}
+      scroll={{ x: 800 }}
     />
   );
 }

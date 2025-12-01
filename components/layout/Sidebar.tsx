@@ -2,7 +2,6 @@
 
 import { useMemo } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import Image from 'next/image';
 import { Layout, Menu, Flex } from 'antd';
 import {
   MenuFoldOutlined,
@@ -78,16 +77,16 @@ export function Sidebar({ collapsed, onCollapse }: SidebarProps) {
             EL
           </div>
         ) : (
-          <Image
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
             src="/assets/logo-envio-legal-branca.svg"
             alt="Envio Legal"
-            width={160}
-            height={32}
             style={{
+              width: 160,
+              height: 'auto',
+              maxHeight: 40,
               objectFit: 'contain',
-              maxHeight: '40px',
             }}
-            priority
           />
         )}
       </div>
@@ -284,6 +283,13 @@ export function Sidebar({ collapsed, onCollapse }: SidebarProps) {
 
         .user-panel-logout:focus {
           color: #ff4d4f !important;
+        }
+
+        /* Hide menu tooltips on mobile to avoid overlap with content */
+        @media (max-width: 991px) {
+          .ant-tooltip {
+            display: none !important;
+          }
         }
       `}</style>
     </Sider>

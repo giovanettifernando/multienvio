@@ -4,16 +4,13 @@ import { Card, List, Typography, Skeleton, Empty, Button, Flex } from 'antd';
 import { SwapOutlined, RightOutlined } from '@ant-design/icons';
 import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
+import { apiFetch } from '@/lib/utils/api-fetch';
 import type { WalletTx } from '@/types/wallet';
 
 const { Text } = Typography;
 
 async function fetchWalletTransactions(): Promise<WalletTx[]> {
-  const response = await fetch('/api/wallet/transactions?limit=5');
-  if (!response.ok) {
-    throw new Error('Failed to fetch transactions');
-  }
-  const data = await response.json();
+  const data = await apiFetch<{ transactions: WalletTx[] }>('/api/wallet/transactions?limit=5');
   return data.transactions || [];
 }
 

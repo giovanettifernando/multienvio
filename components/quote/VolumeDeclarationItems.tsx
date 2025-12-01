@@ -18,6 +18,7 @@ import {
 import type { FinalizeFormValues } from "@/types/quoteFinalize";
 import styles from "@/app/(envio)/cotacoes/cotacoes.module.css";
 import { RecurringItemAutocompleteInput } from "./RecurringItemAutocompleteInput";
+import { generateUUID } from "@/lib/utils/uuid";
 
 type VolumeDeclarationItemsProps = {
   volumeIndex: number;
@@ -32,7 +33,7 @@ export function VolumeDeclarationItems({ volumeIndex }: VolumeDeclarationItemsPr
 
   const handleAddItem = () => {
     append({
-      id: crypto.randomUUID(),
+      id: generateUUID(),
       descricao: "",
       valorUnitario: 0,
       quantidade: 1,

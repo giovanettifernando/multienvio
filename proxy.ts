@@ -338,7 +338,7 @@ export async function proxy(request: NextRequest) {
         { status: 401 }
       );
     }
-    return createSessionExpiredRedirect(request, '/login', 'returnUrl', pathname, AUTH_COOKIE_NAME);
+    return createSessionExpiredRedirect(request, '/auth/login', 'returnUrl', pathname, AUTH_COOKIE_NAME);
   }
 
   const payload = tokenResult.payload;
@@ -398,7 +398,7 @@ export async function proxy(request: NextRequest) {
           { status: 401 }
         );
       }
-      return createTimeoutRedirect(request, '/login', 'returnUrl', pathname, AUTH_COOKIE_NAME);
+      return createTimeoutRedirect(request, '/auth/login', 'returnUrl', pathname, AUTH_COOKIE_NAME);
     }
 
     // Is admin - update activity and allow access
@@ -430,7 +430,7 @@ export async function proxy(request: NextRequest) {
           { status: 401 }
         );
       }
-      return createTimeoutRedirect(request, '/login', 'returnUrl', pathname, AUTH_COOKIE_NAME);
+      return createTimeoutRedirect(request, '/auth/login', 'returnUrl', pathname, AUTH_COOKIE_NAME);
     }
 
     // Is authenticated - update activity and allow access

@@ -513,14 +513,14 @@ export default function ShipmentsPage() {
           <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
             <Input
               allowClear
-              style={{ flex: 1, minWidth: 280 }}
-              placeholder="Buscar por rastreio, nome do destinatário, cidade, transportadora ou serviço"
+              style={{ flex: 1, minWidth: 200, maxWidth: '100%' }}
+              placeholder="Buscar por rastreio, destinatário, cidade ou transportadora"
               prefix={<SearchOutlined />}
               value={query}
               onChange={(event) => handleQueryChange(event.target.value)}
             />
             <Select
-              style={{ width: 200 }}
+              style={{ minWidth: 160, flex: '0 1 auto' }}
               placeholder="Filtrar por status"
               value={status}
               onChange={handleStatusChange}
@@ -548,6 +548,7 @@ export default function ShipmentsPage() {
               onChange: handlePaginationChange,
             }}
             columns={columns}
+            scroll={{ x: 1200 }}
           />
         </Space>
       </Card>
@@ -562,7 +563,8 @@ export default function ShipmentsPage() {
             Fechar
           </Button>,
         ]}
-        width={800}
+        width="90%"
+        style={{ maxWidth: 800 }}
       >
         {divergencesLoading ? (
           <div style={{ textAlign: 'center', padding: 32 }}>Carregando...</div>

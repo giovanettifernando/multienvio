@@ -39,6 +39,7 @@ import { useQuoteDraft } from "@/lib/state/quoteDraft";
 import { useCheckoutStore } from "@/stores/checkout";
 import { CheckoutModal } from "@/components/payments/CheckoutModal";
 import { usePickupFee } from "@/hooks/usePickupFee";
+import { generateUUID } from "@/lib/utils/uuid";
 
 const dispatchTelemetry = (event: string, detail?: Record<string, unknown>) => {
   if (typeof window === "undefined") return;
@@ -163,7 +164,7 @@ export default function FinalizeQuotePage() {
           nfeKeys: initialDoc === "NFE" ? Array.from({ length: volumesCount }, () => ({ chave: "" })) : undefined,
           declarationItems: initialDoc === "DECLARACAO" ? [
             {
-              id: crypto.randomUUID(),
+              id: generateUUID(),
               descricao: "", // Vazio para forçar preenchimento
               valorUnitario: 0,
               quantidade: 1,
@@ -174,7 +175,7 @@ export default function FinalizeQuotePage() {
             volumeIndex: idx,
             items: [
               {
-                id: crypto.randomUUID(),
+                id: generateUUID(),
                 descricao: "",
                 valorUnitario: 0,
                 quantidade: 1,

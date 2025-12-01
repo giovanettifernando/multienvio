@@ -4,6 +4,7 @@ import { Card, List, Typography, Tag, Skeleton, Empty, Button, Flex, Badge } fro
 import { EnvironmentOutlined, RightOutlined, InboxOutlined, PrinterOutlined } from '@ant-design/icons';
 import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
+import { apiFetch } from '@/lib/utils/api-fetch';
 
 const { Text } = Typography;
 
@@ -25,11 +26,7 @@ interface PendingShipmentsResponse {
 }
 
 async function fetchPendingShipments(): Promise<PendingShipmentsResponse> {
-  const response = await fetch('/api/dashboard/pending-pickup-shipments?limit=5');
-  if (!response.ok) {
-    throw new Error('Failed to fetch pending shipments');
-  }
-  return response.json();
+  return apiFetch('/api/dashboard/pending-pickup-shipments?limit=5');
 }
 
 function formatDate(dateString: string): string {
@@ -108,34 +105,40 @@ export function PendingPickupPointShipments() {
             dataSource={shipments}
             renderItem={(shipment) => (
               <List.Item
-                style={{ cursor: 'pointer' }}
+                style={{ cursor: 'pointer', padding: '12px 0' }}
                 onClick={() => router.push(`/shipments/${shipment.id}`)}
               >
-                <Flex justify="space-between" align="center" style={{ width: '100%' }} gap={12}>
-                  <Flex vertical style={{ flex: 1, minWidth: 0 }}>
-                    <Flex align="center" gap={4}>
-                      <InboxOutlined style={{ fontSize: '12px', color: '#8c8c8c' }} />
+                <Flex vertical style={{ width: '100%' }} gap={8}>
+                  {/* Linha 1: Código + Tag */}
+                  <Flex justify="space-between" align="center" wrap gap={8}>
+                    <Flex align="center" gap={4} style={{ minWidth: 0 }}>
+                      <InboxOutlined style={{ fontSize: '12px', color: '#8c8c8c', flexShrink: 0 }} />
                       <Text strong style={{ fontSize: '13px' }}>
                         {shipment.trackingCode}
                       </Text>
-                      <Text type="secondary" style={{ fontSize: '12px' }}>
-                        • {shipment.pickupPointName}
-                      </Text>
                     </Flex>
-                    <Flex align="center" gap={4}>
-                      <EnvironmentOutlined style={{ fontSize: '12px', color: '#8c8c8c' }} />
-                      <Text type="secondary" style={{ fontSize: '11px' }} ellipsis>
-                        {shipment.pickupPointCity}/{shipment.pickupPointState}
-                      </Text>
-                      <Text type="secondary" style={{ fontSize: '11px' }}>
-                        • Criado em {formatDate(shipment.createdAt)}
-                      </Text>
-                    </Flex>
+                    <Tag color="blue" style={{ fontSize: '10px', margin: 0 }}>
+                      Aguard. postagem
+                    </Tag>
                   </Flex>
 
-                  <Tag color="blue" style={{ fontSize: '10px' }}>
-                    Aguard. postagem
-                  </Tag>
+                  {/* Linha 2: Ponto de coleta */}
+                  <Text type="secondary" style={{ fontSize: '12px' }} ellipsis>
+                    {shipment.pickupPointName}
+                  </Text>
+
+                  {/* Linha 3: Localização + Data */}
+                  <Flex align="center" gap={8} wrap>
+                    <Flex align="center" gap={4}>
+                      <EnvironmentOutlined style={{ fontSize: '12px', color: '#8c8c8c', flexShrink: 0 }} />
+                      <Text type="secondary" style={{ fontSize: '11px' }}>
+                        {shipment.pickupPointCity}/{shipment.pickupPointState}
+                      </Text>
+                    </Flex>
+                    <Text type="secondary" style={{ fontSize: '11px' }}>
+                      • Criado em {formatDate(shipment.createdAt)}
+                    </Text>
+                  </Flex>
                 </Flex>
               </List.Item>
             )}
