@@ -81,7 +81,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             style={{
               flex: 1,
               overflowY: 'auto',
-              padding: 24,
+              padding: '0 24px 24px',
             }}
           >
             {children}

@@ -7,13 +7,12 @@ import {
   Button,
   Card,
   Col,
-  Flex,
   Row,
   Skeleton,
   Space,
   Tooltip,
-  Typography,
 } from "antd";
+import { PageShell } from "@/components/shared/PageShell";
 import {
   FormProvider,
   SubmitHandler,
@@ -932,13 +931,17 @@ export default function FinalizeQuotePage() {
   };
 
   if (!results || !selection) {
-    return <Skeleton active />;
+    return (
+      <PageShell title="Finalizar Envio" gap="md">
+        <Skeleton active />
+      </PageShell>
+    );
   }
 
   return (
-    <FormProvider {...formMethods}>
-      <form>
-        <Flex vertical gap={24}>
+    <PageShell title="Finalizar Envio" gap="md">
+      <FormProvider {...formMethods}>
+        <form>
           {/* Resumo do envio, serviço e pagamento lado a lado no topo */}
           <Row gutter={[16, 16]}>
             <Col xs={24} md={12} xl={10}>
@@ -1017,7 +1020,7 @@ export default function FinalizeQuotePage() {
           </Row>
 
           {/* Formulários */}
-          <Space direction="vertical" size={24} style={{ width: "100%" }}>
+          <Space direction="vertical" size={24} style={{ width: "100%", marginTop: 24 }}>
             <Row gutter={[24, 24]}>
               <Col xs={24} lg={14}>
                 <DocumentChooser />
@@ -1028,24 +1031,24 @@ export default function FinalizeQuotePage() {
             </Row>
             <RecipientForm />
           </Space>
-        </Flex>
 
-        <QuoteNavigationButtons
-          onBack={() => router.back()}
-          backLabel="Voltar"
-        />
-      </form>
+          <QuoteNavigationButtons
+            onBack={() => router.back()}
+            backLabel="Voltar"
+          />
+        </form>
 
-      {/* Modal de escolha de pagamento */}
-      {createdShipment && (
-        <CheckoutModal
-          open={checkoutModalOpen}
-          onClose={() => setCheckoutModalOpen(false)}
-          shipmentId={createdShipment.id}
-          totalAmount={createdShipment.totalAmount}
-          trackingCode={createdShipment.trackingCode}
-        />
-      )}
-    </FormProvider>
+        {/* Modal de escolha de pagamento */}
+        {createdShipment && (
+          <CheckoutModal
+            open={checkoutModalOpen}
+            onClose={() => setCheckoutModalOpen(false)}
+            shipmentId={createdShipment.id}
+            totalAmount={createdShipment.totalAmount}
+            trackingCode={createdShipment.trackingCode}
+          />
+        )}
+      </FormProvider>
+    </PageShell>
   );
 }

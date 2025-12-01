@@ -3,6 +3,7 @@
 import React, { useMemo, useState, useCallback } from "react";
 import {
   Button,
+  Card,
   Tag,
   Table,
   Input,
@@ -507,85 +508,49 @@ export default function ShipmentsPage() {
 
   return (
     <PageShell title="Gestão de envios" gap="md">
-      <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-        <Input
-          allowClear
-          style={{ flex: 1, minWidth: 280 }}
-          placeholder="Buscar por rastreio, nome do destinatário, cidade, transportadora ou serviço"
-          prefix={<SearchOutlined />}
-          value={query}
-          onChange={(event) => handleQueryChange(event.target.value)}
-        />
-        <Select
-          style={{ width: 200 }}
-          placeholder="Filtrar por status"
-          value={status}
-          onChange={handleStatusChange}
-          options={STATUS_OPTIONS.map((opt) => ({
-            label: opt,
-            value: opt,
-          }))}
-        />
-        <Button onClick={() => refetch()} disabled={isLoading}>
-          Atualizar
-        </Button>
-      </div>
+      <Card>
+        <Space direction="vertical" size={16} style={{ width: '100%' }}>
+          <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+            <Input
+              allowClear
+              style={{ flex: 1, minWidth: 280 }}
+              placeholder="Buscar por rastreio, nome do destinatário, cidade, transportadora ou serviço"
+              prefix={<SearchOutlined />}
+              value={query}
+              onChange={(event) => handleQueryChange(event.target.value)}
+            />
+            <Select
+              style={{ width: 200 }}
+              placeholder="Filtrar por status"
+              value={status}
+              onChange={handleStatusChange}
+              options={STATUS_OPTIONS.map((opt) => ({
+                label: opt,
+                value: opt,
+              }))}
+            />
+            <Button onClick={() => refetch()} disabled={isLoading}>
+              Atualizar
+            </Button>
+          </div>
 
-      <Table<Shipment>
-        rowKey="id"
-        loading={isLoading}
-        dataSource={items}
-        pagination={{
-          current: page,
-          pageSize: pageSize,
-          total: pagination?.total ?? 0,
-          showSizeChanger: true,
-          showTotal: (total, range) => `${range[0]}-${range[1]} de ${total} envios`,
-          pageSizeOptions: ['10', '20', '50', '100'],
-          onChange: handlePaginationChange,
-        }}
-        columns={columns}
-        className="modern-shipments-table"
-        style={{
-          backgroundColor: '#fff',
-          borderRadius: 8,
-          overflow: 'hidden',
-        }}
-      />
-
-      <style jsx global>{`
-        .modern-shipments-table .ant-table {
-          font-size: 13px;
-        }
-
-        .modern-shipments-table .ant-table-thead > tr > th {
-          background-color: #f9fafb !important;
-          font-weight: 600;
-          font-size: 12px;
-          text-transform: uppercase;
-          letter-spacing: 0.025em;
-          color: #6b7280;
-          border-bottom: 2px solid #e5e7eb;
-          padding: 14px 16px;
-        }
-
-        .modern-shipments-table .ant-table-tbody > tr {
-          transition: background-color 0.2s;
-        }
-
-        .modern-shipments-table .ant-table-tbody > tr:hover {
-          background-color: #f9fafb !important;
-        }
-
-        .modern-shipments-table .ant-table-tbody > tr > td {
-          padding: 16px;
-          border-bottom: 1px solid #f3f4f6;
-        }
-
-        .modern-shipments-table .ant-table-tbody > tr:last-child > td {
-          border-bottom: none;
-        }
-      `}</style>
+          <Table<Shipment>
+            rowKey="id"
+            loading={isLoading}
+            dataSource={items}
+            pagination={{
+              current: page,
+              pageSize: pageSize,
+              total: pagination?.total ?? 0,
+              showSizeChanger: true,
+              showTotal: (total, range) => `${range[0]}-${range[1]} de ${total} envios`,
+              pageSizeOptions: ['10', '20', '50', '100'],
+              onChange: handlePaginationChange,
+            }}
+            columns={columns}
+          />
+        </Space>
+      </Card>
 
       {/* Modal de Divergências */}
       <Modal

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { Breadcrumb, App } from 'antd';
+import { App } from 'antd';
 import { LabelsTable } from '@/components/labels/LabelsTable';
 import { LabelPrintModal } from '@/components/labels/LabelPrintModal';
 import type { LabelItem } from '@/lib/types/label';
@@ -21,13 +21,6 @@ export default function EtiquetasPage() {
   return (
     <App>
       <PageShell title="Etiquetas" gap="md">
-        <Breadcrumb
-          items={[
-            { title: 'Envios' },
-            { title: 'Etiquetas' },
-          ]}
-        />
-
         <LabelsTable
           onOpenLabel={(record: LabelItem) => {
             setSelectedLabelId(record.id);

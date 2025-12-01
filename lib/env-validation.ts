@@ -20,7 +20,6 @@ const ENV_VARS: EnvVar[] = [
   // Optional but recommended
   { name: "MP_ACCESS_TOKEN", required: false, description: "Mercado Pago access token" },
   { name: "MERCADOPAGO_ACCESS_TOKEN", required: false, description: "Mercado Pago access token (alternative)" },
-  { name: "MELHOR_ENVIO_TOKEN", required: false, description: "Melhor Envio API token" },
 ];
 
 interface ValidationResult {

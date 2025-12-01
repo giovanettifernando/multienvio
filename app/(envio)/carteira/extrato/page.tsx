@@ -2,13 +2,14 @@
 
 import React, { useState } from "react";
 import { Card, Button, Row, Col, DatePicker, Input, Space, App } from "antd";
-import { PrinterOutlined, SearchOutlined, ArrowLeftOutlined } from "@ant-design/icons";
+import { PrinterOutlined, SearchOutlined } from "@ant-design/icons";
 import { useRouter } from "next/navigation";
 import dayjs, { Dayjs } from "dayjs";
 import { useWalletTransactions } from "@/hooks/useWalletTransactions";
 import PeriodSummaryCard from "@/components/wallet/PeriodSummaryCard";
 import StatementTable from "@/components/wallet/StatementTable";
 import StatementPDFModal from "@/components/wallet/StatementPDFModal";
+import { PageShell } from "@/components/shared/PageShell";
 
 const { RangePicker } = DatePicker;
 const { Search } = Input;
@@ -46,53 +47,69 @@ export default function ExtratoPage() {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+    <PageShell
+      title="Extrato da Carteira"
+      gap="md"
+      extra={
+        <Space>
+          <Button onClick={() => router.push("/carteira")}>
+            Voltar
+          </Button>
+          <Button
+            type="primary"
+            icon={<PrinterOutlined />}
+            onClick={handlePrintPDF}
+            disabled={!transactions.length}
+          >
+            Imprimir / PDF
+          </Button>
+        </Space>
+      }
+    >
       {/* Filtros */}
       <Card>
-        <Space direction="vertical" size="middle" style={{ width: '100%' }}>
-          <Row gutter={[16, 16]}>
-            <Col xs={24} md={12}>
-              <RangePicker
-                value={dateRange}
-                onChange={(dates) => {
-                  if (dates && dates[0] && dates[1]) {
-                    // Validar limite máximo de meses
-                    const monthsDiff = dates[1].diff(dates[0], 'months', true);
+        <Row gutter={[24, 16]}>
+          <Col xs={24} md={12}>
+            <RangePicker
+              value={dateRange}
+              onChange={(dates) => {
+                if (dates && dates[0] && dates[1]) {
+                  // Validar limite máximo de meses
+                  const monthsDiff = dates[1].diff(dates[0], 'months', true);
 
-                    if (monthsDiff > MAX_MONTHS_RANGE) {
-                      message.warning(
-                        `O período máximo permitido é de ${MAX_MONTHS_RANGE} meses. ` +
-                        `Ajustando data final para ${dates[0].add(MAX_MONTHS_RANGE, 'months').format('DD/MM/YYYY')}.`
-                      );
+                  if (monthsDiff > MAX_MONTHS_RANGE) {
+                    message.warning(
+                      `O período máximo permitido é de ${MAX_MONTHS_RANGE} meses. ` +
+                      `Ajustando data final para ${dates[0].add(MAX_MONTHS_RANGE, 'months').format('DD/MM/YYYY')}.`
+                    );
 
-                      // Ajustar data final para o máximo permitido
-                      const adjustedEndDate = dates[0].add(MAX_MONTHS_RANGE, 'months');
-                      setDateRange([dates[0], adjustedEndDate]);
-                    } else {
-                      setDateRange([dates[0], dates[1]]);
-                    }
-
-                    setPage(1); // Reset para primeira página
+                    // Ajustar data final para o máximo permitido
+                    const adjustedEndDate = dates[0].add(MAX_MONTHS_RANGE, 'months');
+                    setDateRange([dates[0], adjustedEndDate]);
+                  } else {
+                    setDateRange([dates[0], dates[1]]);
                   }
-                }}
-                format="DD/MM/YYYY"
-                style={{ width: '100%' }}
-                placeholder={['Data inicial', 'Data final']}
-              />
-            </Col>
-            <Col xs={24} md={12}>
-              <Search
-                placeholder="Buscar por descrição, tipo ou referência..."
-                allowClear
-                enterButton={<SearchOutlined />}
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                onSearch={() => setPage(1)} // Reset para primeira página
-                style={{ width: '100%' }}
-              />
-            </Col>
-          </Row>
-        </Space>
+
+                  setPage(1); // Reset para primeira página
+                }
+              }}
+              format="DD/MM/YYYY"
+              style={{ width: '100%' }}
+              placeholder={['Data inicial', 'Data final']}
+            />
+          </Col>
+          <Col xs={24} md={12}>
+            <Search
+              placeholder="Buscar por descrição, tipo ou referência..."
+              allowClear
+              enterButton={<SearchOutlined />}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              onSearch={() => setPage(1)} // Reset para primeira página
+              style={{ width: '100%' }}
+            />
+          </Col>
+        </Row>
       </Card>
 
       {/* Resumo do período */}
@@ -101,27 +118,7 @@ export default function ExtratoPage() {
       )}
 
       {/* Tabela de transações */}
-      <Card
-        title="Transações"
-        extra={
-          <Space>
-            <Button
-              icon={<ArrowLeftOutlined />}
-              onClick={() => router.push("/carteira")}
-            >
-              Voltar para a carteira
-            </Button>
-            <Button
-              type="primary"
-              icon={<PrinterOutlined />}
-              onClick={handlePrintPDF}
-              disabled={!transactions.length}
-            >
-              Imprimir / PDF
-            </Button>
-          </Space>
-        }
-      >
+      <Card title="Transações">
         <StatementTable
           transactions={transactions}
           loading={isLoading}
@@ -148,6 +145,6 @@ export default function ExtratoPage() {
         dateTo={dateRange[1].format('YYYY-MM-DD')}
         search={search}
       />
-    </div>
+    </PageShell>
   );
 }

@@ -10,6 +10,7 @@ import ResolveDebtModal from "@/components/wallet/ResolveDebtModal";
 import TransactionsTable from "@/components/wallet/TransactionsTable";
 import { useWallet } from "@/hooks/useWallet";
 import { useCards } from "@/hooks/useAccount";
+import { PageShell } from "@/components/shared/PageShell";
 
 export default function CarteiraPage() {
   const [open, setOpen] = useState(false);
@@ -19,7 +20,7 @@ export default function CarteiraPage() {
   const { data: cards } = useCards();
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+    <PageShell title="Carteira" gap="md">
       {(cards?.length ?? 0) === 0 ? (
         <Alert
           type="info"
@@ -27,7 +28,7 @@ export default function CarteiraPage() {
           message="Sem cartões cadastrados"
           description={
             <span>
-              Cadastre um cartão para facilitar recargas. {" "}
+              Cadastre um cartão para facilitar recargas.{" "}
               <Typography.Link onClick={() => router.push("/minha-conta#cards")}>
                 Ir para Cartões
               </Typography.Link>
@@ -36,7 +37,7 @@ export default function CarteiraPage() {
         />
       ) : null}
 
-      <Row gutter={[16, 16]}>
+      <Row gutter={[24, 16]}>
         <Col xs={24} lg={12}>
           <BalanceCard
             onAddFunds={() => setOpen(true)}
@@ -70,6 +71,6 @@ export default function CarteiraPage() {
         open={resolveDebtOpen}
         onClose={() => setResolveDebtOpen(false)}
       />
-    </div>
+    </PageShell>
   );
 }
