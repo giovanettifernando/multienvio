@@ -3,6 +3,10 @@ import path from "path";
 import { promisify } from "util";
 import { Prisma, PrismaClient } from "@prisma/client";
 import { resolveDatabaseConfig } from "./config/database";
+import { validateEnv } from "./env-validation";
+
+// Validate environment variables (warns during build, throws at runtime in production)
+validateEnv();
 
 type GlobalPrismaStore = {
   prisma?: PrismaClient;

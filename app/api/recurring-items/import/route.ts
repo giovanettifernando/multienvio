@@ -19,6 +19,16 @@ export const POST = withApiHandler(async (context) => {
     throw new ApiError({ code: "bad_request", message: "Arquivo não enviado", status: 400 });
   }
 
+  // SECURITY: Limitar tamanho do arquivo para prevenir DoS (max 1MB)
+  const MAX_FILE_SIZE = 1 * 1024 * 1024; // 1MB
+  if (file.size > MAX_FILE_SIZE) {
+    throw new ApiError({
+      code: "bad_request",
+      message: `Arquivo muito grande. Máximo permitido: 1MB. Tamanho enviado: ${(file.size / 1024 / 1024).toFixed(2)}MB`,
+      status: 400
+    });
+  }
+
   const text = await file.text();
   const lines = text.split("\n").filter((line) => line.trim());
 

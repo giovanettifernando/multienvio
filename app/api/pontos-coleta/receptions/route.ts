@@ -10,6 +10,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { Prisma } from '@prisma/client';
 import { ShipmentStatus } from '@/lib/shipments/shipment-status';
+import { getCollectorSessionFromRequest } from '@/lib/auth/collector-session';
 
 /**
  * GET /api/pontos-coleta/receptions
@@ -28,6 +29,12 @@ import { ShipmentStatus } from '@/lib/shipments/shipment-status';
  */
 export async function GET(request: NextRequest) {
   try {
+    // SECURITY: Requer autenticação de ponto de coleta
+    const session = await getCollectorSessionFromRequest(request);
+    if (!session) {
+      return NextResponse.json({ message: 'Não autenticado' }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1', 10);
     const pageSize = parseInt(searchParams.get('pageSize') || '20', 10);

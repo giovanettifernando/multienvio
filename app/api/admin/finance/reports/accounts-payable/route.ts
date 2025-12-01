@@ -86,23 +86,20 @@ export async function GET(request: NextRequest) {
     // Ajustar para fim do dia
     endDate.setHours(23, 59, 59, 999);
 
-    const items: PayableItem[] = [];
+    // PERFORMANCE: Executar todas as queries em paralelo (independentes)
+    const [collectorCommissions, pickupPointCommissions, carrierCosts, expenses] = await Promise.all([
+      getCollectorCommissions(startDate, endDate, statusFilter),
+      getPickupPointCommissions(startDate, endDate, statusFilter),
+      getCarrierCosts(startDate, endDate, statusFilter),
+      getExpenses(startDate, endDate, statusFilter),
+    ]);
 
-    // 1. Comissões de coletores (PickupRequest -> pickupFee)
-    const collectorCommissions = await getCollectorCommissions(startDate, endDate, statusFilter);
-    items.push(...collectorCommissions);
-
-    // 2. Comissões de pontos de coleta (Reception -> commissionCents)
-    const pickupPointCommissions = await getPickupPointCommissions(startDate, endDate, statusFilter);
-    items.push(...pickupPointCommissions);
-
-    // 3. Custos de transportadoras (Labels -> priceCents)
-    const carrierCosts = await getCarrierCosts(startDate, endDate, statusFilter);
-    items.push(...carrierCosts);
-
-    // 4. Outras despesas (Expense)
-    const expenses = await getExpenses(startDate, endDate, statusFilter);
-    items.push(...expenses);
+    const items: PayableItem[] = [
+      ...collectorCommissions,
+      ...pickupPointCommissions,
+      ...carrierCosts,
+      ...expenses,
+    ];
 
     // Ordenar por data de vencimento/criação
     items.sort((a, b) => {

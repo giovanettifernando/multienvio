@@ -96,15 +96,23 @@ export default function ShipmentsPage() {
   const pagination = data?.pagination;
 
   // Handlers que resetam a página ao mudar filtros
-  const handleQueryChange = (newQuery: string) => {
+  const handleQueryChange = useCallback((newQuery: string) => {
     setQuery(newQuery);
     setPage(1);
-  };
+  }, []);
 
-  const handleStatusChange = (newStatus: ShipmentStatus | "Todos") => {
+  const handleStatusChange = useCallback((newStatus: ShipmentStatus | "Todos") => {
     setStatus(newStatus);
     setPage(1);
-  };
+  }, []);
+
+  const handlePaginationChange = useCallback((newPage: number, newPageSize: number) => {
+    setPage(newPage);
+    if (newPageSize !== pageSize) {
+      setPageSize(newPageSize);
+      setPage(1); // Reset to first page when changing page size
+    }
+  }, [pageSize]);
 
   // Query para buscar divergências quando modal abrir
   const { data: divergencesData, isLoading: divergencesLoading } = useQuery<{
@@ -534,13 +542,7 @@ export default function ShipmentsPage() {
           showSizeChanger: true,
           showTotal: (total, range) => `${range[0]}-${range[1]} de ${total} envios`,
           pageSizeOptions: ['10', '20', '50', '100'],
-          onChange: (newPage, newPageSize) => {
-            setPage(newPage);
-            if (newPageSize !== pageSize) {
-              setPageSize(newPageSize);
-              setPage(1); // Reset to first page when changing page size
-            }
-          },
+          onChange: handlePaginationChange,
         }}
         columns={columns}
         className="modern-shipments-table"

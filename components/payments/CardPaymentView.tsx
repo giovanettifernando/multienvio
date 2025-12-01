@@ -47,6 +47,8 @@ export function CardPaymentView({
           onSuccess={onSuccess}
           onError={onError}
           onUseNewCard={() => onUseSavedCard(false)}
+          paymentType="checkout_payment"
+          paymentDescription={`Pagamento de ${itemCount} envio(s) - Envio Legal`}
         />
       ) : (
         <Space direction="vertical" size="large" style={{ width: '100%' }}>
@@ -65,6 +67,7 @@ export function CardPaymentView({
             amount={totalAmount}
             onSuccess={onSuccess}
             onError={onError}
+            paymentType="checkout_payment"
           />
 
           <Space direction="vertical" size="small" style={{ width: '100%' }}>

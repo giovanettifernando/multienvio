@@ -240,9 +240,16 @@ export async function POST(request: Request) {
       lastLoginAt: created.lastLoginAt ?? null,
     });
 
+    // SECURITY: Não retornar senha temporária no response
+    // A senha deve ser enviada via email seguro ou outro canal
+    // TODO: Implementar envio de email com senha temporária
+    console.log('[STAFF_USER_CREATED] Senha temporária gerada para:', payload.email);
+    // Em produção: enviar email com tempPassword
+
     return NextResponse.json({
       user,
-      tempPassword,
+      // tempPassword removido por segurança - deve ser enviado via email
+      passwordGenerated: true,
     }, { status: 201 });
   } catch (error) {
     if (error instanceof NextResponse) {

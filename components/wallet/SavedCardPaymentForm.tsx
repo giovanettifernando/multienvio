@@ -34,6 +34,8 @@ interface SavedCardPaymentFormProps {
   onSuccess: (paymentId: number) => void;
   onError: (error: Error) => void;
   onUseNewCard: () => void; // Callback para usar novo cartão
+  paymentType?: 'wallet_topup' | 'checkout_payment'; // Tipo de pagamento (default: wallet_topup)
+  paymentDescription?: string; // Descrição customizada
 }
 
 /**
@@ -45,6 +47,8 @@ export function SavedCardPaymentForm({
   onSuccess,
   onError,
   onUseNewCard,
+  paymentType = 'wallet_topup',
+  paymentDescription,
 }: SavedCardPaymentFormProps) {
   const { message: messageApi } = App.useApp();
   const { data: cards, isLoading } = useCards();
@@ -250,9 +254,9 @@ export function SavedCardPaymentForm({
           cardData: {
             cardholderName: selectedCard.holderName,
           },
-          description: `Recarga de carteira - R$ ${amount.toFixed(2)}`,
+          description: paymentDescription || `Recarga de carteira - R$ ${amount.toFixed(2)}`,
           metadata: {
-            type: "wallet_topup",
+            type: paymentType,
             cardId: selectedCardId,
           },
         }),

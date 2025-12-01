@@ -12,6 +12,7 @@ interface CardPaymentFormProps {
   amount: number;
   onSuccess: (paymentId: number) => void;
   onError: (error: Error) => void;
+  paymentType?: 'wallet_topup' | 'checkout_payment'; // Tipo de pagamento (default: wallet_topup)
 }
 
 // Tipos do Mercado Pago SDK
@@ -37,6 +38,7 @@ export function CardPaymentForm({
   amount,
   onSuccess,
   onError,
+  paymentType = 'wallet_topup',
 }: CardPaymentFormProps) {
   const [publicKey, setPublicKey] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -115,7 +117,7 @@ export function CardPaymentForm({
             identification: formData.payer?.identification,
           },
           metadata: {
-            type: "wallet_topup",
+            type: paymentType,
           },
         }),
         signal: abortControllerRef.current.signal,

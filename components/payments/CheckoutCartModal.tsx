@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { Modal, Button, App } from 'antd';
-import { CheckCircleOutlined } from '@ant-design/icons';
+import { Modal, Button, App, Spin } from 'antd';
+import { CheckCircleOutlined, LoadingOutlined } from '@ant-design/icons';
 import { useRouter } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCards } from '@/hooks/useAccount';
@@ -255,6 +255,8 @@ export function CheckoutCartModal({
       title="Escolha o método de pagamento"
       open={open}
       onCancel={handleClose}
+      closable={!loading}
+      maskClosable={!loading}
       footer={[
         <Button key="cancel" onClick={handleClose} disabled={loading}>
           Cancelar
@@ -272,16 +274,23 @@ export function CheckoutCartModal({
       ]}
       width={600}
     >
-      <PaymentMethodSelector
-        selectedMethod={selectedMethod}
-        onMethodChange={setSelectedMethod}
-        totalAmount={totalAmount}
-        itemCount={itemCount}
-        balance={balance}
-        hasInsufficientBalance={hasInsufficientBalance}
-        savedCardsCount={savedCards?.length || 0}
-        isLoading={isLoading}
-      />
+      <Spin
+        spinning={loading}
+        indicator={<LoadingOutlined style={{ fontSize: 32 }} spin />}
+        tip="Processando pagamento..."
+        size="large"
+      >
+        <PaymentMethodSelector
+          selectedMethod={selectedMethod}
+          onMethodChange={loading ? () => {} : setSelectedMethod}
+          totalAmount={totalAmount}
+          itemCount={itemCount}
+          balance={balance}
+          hasInsufficientBalance={hasInsufficientBalance}
+          savedCardsCount={savedCards?.length || 0}
+          isLoading={isLoading}
+        />
+      </Spin>
     </Modal>
   );
 }

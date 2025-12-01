@@ -1,9 +1,15 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, Suspense } from 'react';
 import { Modal, Space, Button, Checkbox, App, Spin, Divider } from 'antd';
 import { PrinterOutlined, DownloadOutlined, LoadingOutlined } from '@ant-design/icons';
-import Barcode from 'react-barcode';
+import dynamic from 'next/dynamic';
+
+// Lazy load react-barcode para reduzir bundle inicial
+const Barcode = dynamic(() => import('react-barcode'), {
+  ssr: false,
+  loading: () => <div style={{ height: 40, backgroundColor: '#f0f0f0' }} />,
+});
 
 export interface LabelDetailData {
   id: string;

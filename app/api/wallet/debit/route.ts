@@ -68,10 +68,15 @@ export async function POST(request: Request) {
           };
         }
 
-        // 2) Buscar carteira
-        const wallet = await tx.wallet.findUnique({
-          where: { userId: session.userId },
-        });
+        // 2) Buscar carteira COM LOCK (SELECT FOR UPDATE para prevenir race condition)
+        const wallets = await tx.$queryRaw<Array<{ id: string; userId: string; availableCents: number; pendingCents: number }>>`
+          SELECT id, "userId", "availableCents", "pendingCents"
+          FROM "Wallet"
+          WHERE "userId" = ${session.userId}
+          FOR UPDATE
+        `;
+
+        const wallet = wallets[0];
 
         if (!wallet) {
           throw Object.assign(new Error('Carteira não encontrada'), {
@@ -79,16 +84,16 @@ export async function POST(request: Request) {
           });
         }
 
-        // 3) Verificar saldo
+        // 3) Verificar saldo (com row já bloqueada, garantindo consistência)
         if (wallet.availableCents < amountCents) {
           throw Object.assign(new Error('Saldo insuficiente na carteira'), {
             code: 'INSUFFICIENT_FUNDS'
           });
         }
 
-        // 4) Debitar carteira
+        // 4) Debitar carteira (row já está bloqueada pelo FOR UPDATE)
         const updatedWallet = await tx.wallet.update({
-          where: { userId: session.userId },
+          where: { id: wallet.id },
           data: {
             availableCents: { decrement: amountCents },
           },

@@ -93,8 +93,6 @@ type QuoteFormProps = {
 };
 
 export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
-  console.log('[QuoteForm] ========== COMPONENT RENDER ==========');
-
   const queryClient = useQueryClient();
   const { message } = App.useApp();
   const calculateQuotes = useQuoteCalculate();
@@ -107,21 +105,6 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
   );
 
   const quoteDraft = useQuoteDraft();
-
-  console.log('[QuoteForm] Estado atual dos stores:', JSON.stringify({
-    storedForm: storedForm ? {
-      origemCep: storedForm.origemCep,
-      destinoCep: storedForm.destinoCep,
-      coleta: storedForm.coleta,
-      devolucao: storedForm.devolucao,
-      volumesCount: storedForm.volumes?.length || 0,
-      seguroValor: storedForm.seguroValor,
-    } : null,
-    quoteDraft: {
-      destination: quoteDraft.destination,
-      pickupAtOrigin: quoteDraft.pickupAtOrigin,
-    },
-  }, null, 2));
 
   // Buscar endereços via React Query (mesma fonte que AddressSelect)
   const addressesQuery = useAddresses();
@@ -197,28 +180,6 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
   const defaultVolumes = storedForm?.volumes?.length
     ? storedForm.volumes.map((item) => ({ ...item }))
     : [createEmptyVolume()];
-
-  console.log('[QuoteForm] Calculando defaultValues para useForm:', JSON.stringify({
-    storedOriginAddress: storedOriginAddress ? { cep: storedOriginAddress.cep } : null,
-    storedDestinationAddress: storedDestinationAddress ? { cep: storedDestinationAddress.cep } : null,
-    defaultCompanyAddress: defaultCompanyAddress ? { cep: defaultCompanyAddress.cep } : null,
-    defaultVolumesCount: defaultVolumes.length,
-    computedDefaults: {
-      origemCep: storedForm?.origemCep
-        ? maskCEP(storedForm.origemCep)
-        : defaultCompanyAddress?.cep
-        ? maskCEP(defaultCompanyAddress.cep)
-        : "",
-      destinoCep: storedForm?.destinoCep
-        ? maskCEP(storedForm.destinoCep)
-        : storedDestinationAddress?.cep
-        ? maskCEP(storedDestinationAddress.cep)
-        : "",
-      coleta: storedForm?.coleta ?? false,
-      devolucao: storedForm?.devolucao ?? false,
-      seguroValor: storedForm?.seguroValor ?? undefined,
-    },
-  }, null, 2));
 
   const formMethods = useForm<QuoteFormValues>({
     resolver: zodResolver(quoteFormSchema),
@@ -347,13 +308,9 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
 
   // Sincronizar estados locais quando destination do store for limpo
   useEffect(() => {
-    console.log('[QuoteForm] EFFECT: Verificando destination...', JSON.stringify({ destination }, null, 2));
     if (!destination) {
-      console.log('[QuoteForm] EFFECT: Destination limpo, resetando estados locais');
       setDestinationMode("manual");
       setSelectedRecipientId(null);
-    } else {
-      console.log('[QuoteForm] EFFECT: Destination presente, não resetando');
     }
   }, [destination]);
 
@@ -367,28 +324,10 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
     const currentUpdatedAt = storedForm?.updatedAt || null;
     const isStoreEmpty = !storedForm || (!storedForm.destinoCep && !storedForm.coleta && storedForm.volumes.length === 0);
 
-    console.log('[QuoteForm] EFFECT: Verificando mudanças no storedForm...', JSON.stringify({
-      previousUpdatedAt: previousUpdatedAt.current,
-      currentUpdatedAt,
-      isStoreEmpty,
-      storedForm: storedForm ? {
-        destinoCep: storedForm.destinoCep,
-        coleta: storedForm.coleta,
-        volumesLength: storedForm.volumes?.length,
-      } : null,
-    }, null, 2));
-
     // Detectar se o store foi resetado (updatedAt mudou OU store ficou vazio)
     const storeWasReset = previousUpdatedAt.current !== currentUpdatedAt && isStoreEmpty;
 
     if (storeWasReset) {
-      console.log('[QuoteForm] EFFECT: Store foi RESETADO! Limpando formulário completamente...');
-      console.log('[QuoteForm] EFFECT: Valores atuais ANTES do reset:', {
-        destinoCep: getValues('destinoCep'),
-        coleta: getValues('coleta'),
-        volumes: getValues('volumes'),
-      });
-
       // Resetar o formulário completamente para os valores padrão
       formMethods.reset({
         origem: (storedOriginAddress ?? defaultCompanyAddress ?? {}) as CompanyAddress,
@@ -404,16 +343,6 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
         seguroValor: undefined,
         volumes: [createEmptyVolume()],
       });
-
-      console.log('[QuoteForm] EFFECT: Formulário resetado! Valores após reset:', {
-        destinoCep: getValues('destinoCep'),
-        coleta: getValues('coleta'),
-        volumes: getValues('volumes'),
-      });
-    } else if (isStoreEmpty && previousUpdatedAt.current === null) {
-      console.log('[QuoteForm] EFFECT: Montagem inicial com store vazio - usando defaultValues');
-    } else {
-      console.log('[QuoteForm] EFFECT: Store não foi resetado, mantendo valores do formulário');
     }
 
     // Atualizar a ref com o valor atual
@@ -534,16 +463,6 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
     (destinationMode === "manual" || Boolean(selectedRecipientId)) && // Verificar se destinatário foi selecionado (quando não manual)
     Boolean(cepStatus.origem) &&
     Boolean(cepStatus.destino);
-
-  // Debug: log canSubmit status
-  console.log('[DEBUG canSubmit]', {
-    canSubmit,
-    isPending: calculateQuotes.isPending,
-    selectedOriginId,
-    destinationMode,
-    selectedRecipientId,
-    cepStatus,
-  });
 
   const handleAddVolume = useCallback(() => {
     if (fields.length >= MAX_VOLUMES) {
@@ -1133,10 +1052,6 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
   };
 
   const onSubmit: SubmitHandler<QuoteFormValues> = async (values) => {
-    const formRequestId = `FORM-${Date.now()}`;
-    console.log(`[FORM][${formRequestId}] ========== INÍCIO DO SUBMIT ==========`);
-    console.log(`[FORM][${formRequestId}] Values recebidos:`, values);
-
     const payload: QuoteRequestPayload = {
       origem: { cep: values.origemCep },
       destino: { cep: values.destinoCep },
@@ -1154,8 +1069,6 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
       })),
     };
 
-    console.log(`[FORM][${formRequestId}] Payload montado:`, JSON.stringify(payload, null, 2));
-
     // Validar se há pelo menos um volume válido
     const hasValidVolume = payload.volumes.some(
       (v) => v.comprimentoCm > 0 && v.larguraCm > 0 && v.alturaCm > 0 && v.pesoKg > 0
@@ -1167,22 +1080,13 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
     }
 
     try {
-      console.log(`[FORM][${formRequestId}] Chamando calculateQuotes.mutateAsync...`);
       const response = await calculateQuotes.mutateAsync(payload);
-      console.log(`[FORM][${formRequestId}] Response recebida:`, response);
-      console.log(`[FORM][${formRequestId}] Response type:`, typeof response, Array.isArray(response));
 
       const normalized: QuoteCalculateResponse = Array.isArray(response)
         ? { results: response }
         : response;
-      console.log(`[FORM][${formRequestId}] Normalized:`, {
-        hasQuoteId: !!normalized.quoteId,
-        resultsLength: normalized.results?.length || 0,
-        hasPontos: !!normalized.pontosParceiros,
-      });
 
       if (!normalized.results.length) {
-        console.warn(`[FORM][${formRequestId}] Nenhum resultado retornado!`);
         setQuoteResults([]);
         setQuoteError(null);
         message.warning(
@@ -1193,12 +1097,9 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
 
       // Usar quoteId da API se disponível, senão gerar no cliente
       const quoteId = normalized.quoteId || crypto.randomUUID();
-      console.log(`[FORM][${formRequestId}] QuoteId a ser usado:`, quoteId);
 
       const resumo = buildSummary(values);
-      console.log(`[FORM][${formRequestId}] Resumo montado:`, resumo);
 
-      console.log(`[FORM][${formRequestId}] Salvando no store...`);
       setResults({
         quoteId,
         createdAt: normalized.createdAt || new Date().toISOString(),
@@ -1207,7 +1108,6 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
         results: normalized.results,
         pontosParceiros: normalized.pontosParceiros,
       });
-      console.log(`[FORM][${formRequestId}] Store atualizado!`);
 
       // Atualizar estado local para exibir resultados
       setQuoteResults(normalized.results);
@@ -1223,16 +1123,8 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
         hasInsuranceValue: Boolean(payload.seguro),
       });
 
-      console.log(`[FORM][${formRequestId}] ========== FIM DO SUBMIT (SUCESSO) ==========`);
       message.success(`${normalized.results.length} ${normalized.results.length === 1 ? "cotação encontrada" : "cotações encontradas"}`);
     } catch (error) {
-      console.error(`[FORM][${formRequestId}] ========== ERRO CAPTURADO ==========`);
-      console.error(`[FORM][${formRequestId}] Error:`, error);
-      console.error(`[FORM][${formRequestId}] Error type:`, typeof error);
-      console.error(`[FORM][${formRequestId}] Error name:`, error instanceof Error ? error.name : 'N/A');
-      console.error(`[FORM][${formRequestId}] Error message:`, error instanceof Error ? error.message : String(error));
-      console.error(`[FORM][${formRequestId}] Error stack:`, error instanceof Error ? error.stack : 'N/A');
-
       // Mostrar mensagem de erro específica se disponível
       const errorMessage = error instanceof Error ? error.message : String(error);
 
@@ -1249,8 +1141,6 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
         // Erro genérico
         message.error("Não foi possível calcular as cotações. Tente novamente.");
       }
-
-      console.error(`[FORM][${formRequestId}] ========== FIM DO SUBMIT (ERRO) ==========`);
     }
   };
 

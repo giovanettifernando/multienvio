@@ -209,6 +209,21 @@ export async function refund(
         availableCents: { increment: amountCents },
       },
     }),
+    // Criar entrada no ledger para auditoria
+    prisma.ledgerEntry.create({
+      data: {
+        type: 'REFUND',
+        amountCents,
+        accountType: 'WALLET',
+        accountId: wallet.id,
+        description: title,
+        metadata: {
+          userId,
+          referenceId,
+          source: 'wallet_refund',
+        },
+      },
+    }),
   ]);
 
   return {
@@ -312,7 +327,7 @@ export async function creditFromGatewayTopup(
   const wallet = await getOrCreateWallet(userId);
   const now = new Date();
 
-  // 4. Criar transação de crédito + atualizar saldo (transação atômica)
+  // 4. Criar transação de crédito + atualizar saldo + ledger (transação atômica)
   const [walletTx] = await prisma.$transaction([
     // Criar WalletTransaction
     prisma.walletTransaction.create({
@@ -337,6 +352,23 @@ export async function creditFromGatewayTopup(
       where: { id: wallet.id },
       data: {
         availableCents: { increment: amountCents },
+      },
+    }),
+    // Criar entrada no ledger para auditoria
+    prisma.ledgerEntry.create({
+      data: {
+        type: 'CHARGE', // Crédito de gateway é uma entrada de valor
+        amountCents,
+        accountType: 'WALLET',
+        accountId: wallet.id,
+        description: `Recarga via gateway - R$ ${centsToReais(amountCents).toFixed(2)}`,
+        metadata: {
+          userId,
+          paymentTransactionId,
+          externalId: providerPaymentId || paymentTx.externalId,
+          currency,
+          source: 'gateway_topup',
+        },
       },
     }),
   ]);
@@ -399,7 +431,7 @@ export async function manualCredit(
   const wallet = await getOrCreateWallet(userId);
   const now = new Date();
 
-  // Criar transação de crédito + atualizar saldo (transação atômica)
+  // Criar transação de crédito + atualizar saldo + ledger (transação atômica)
   const [walletTx] = await prisma.$transaction([
     // Criar WalletTransaction
     prisma.walletTransaction.create({
@@ -423,6 +455,22 @@ export async function manualCredit(
       where: { id: wallet.id },
       data: {
         availableCents: { increment: amountCents },
+      },
+    }),
+    // Criar entrada no ledger para auditoria
+    prisma.ledgerEntry.create({
+      data: {
+        type: 'ADJUSTMENT',
+        amountCents,
+        accountType: 'WALLET',
+        accountId: wallet.id,
+        description: reason,
+        metadata: {
+          userId,
+          createdByAdminId,
+          reason,
+          source: 'manual_credit',
+        },
       },
     }),
   ]);
@@ -479,7 +527,7 @@ export async function manualDebit(
 
   const now = new Date();
 
-  // Criar transação de débito + atualizar saldo (transação atômica)
+  // Criar transação de débito + atualizar saldo + ledger (transação atômica)
   const [walletTx] = await prisma.$transaction([
     // Criar WalletTransaction
     prisma.walletTransaction.create({
@@ -503,6 +551,22 @@ export async function manualDebit(
       where: { id: wallet.id },
       data: {
         availableCents: { decrement: amountCents },
+      },
+    }),
+    // Criar entrada no ledger para auditoria
+    prisma.ledgerEntry.create({
+      data: {
+        type: 'ADJUSTMENT',
+        amountCents: -amountCents, // Negativo para débito
+        accountType: 'WALLET',
+        accountId: wallet.id,
+        description: reason,
+        metadata: {
+          userId,
+          createdByAdminId,
+          reason,
+          source: 'manual_debit',
+        },
       },
     }),
   ]);

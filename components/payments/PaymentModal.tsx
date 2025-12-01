@@ -431,6 +431,8 @@ export function PaymentModal({
             onSuccess={handleCardSuccess}
             onError={handleCardError}
             onUseNewCard={() => setUseSavedCard(false)}
+            paymentType={mode === "topup" ? "wallet_topup" : "checkout_payment"}
+            paymentDescription={description}
           />
         ) : (
           <Space direction="vertical" size="large" style={{ width: "100%" }}>
@@ -445,6 +447,7 @@ export function PaymentModal({
               amount={amount}
               onSuccess={handleCardSuccess}
               onError={handleCardError}
+              paymentType={mode === "topup" ? "wallet_topup" : "checkout_payment"}
             />
 
             <Space direction="vertical" size="small" style={{ width: "100%" }}>

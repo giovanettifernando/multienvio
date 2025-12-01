@@ -6,6 +6,7 @@ import { prisma } from "@/lib/db";
 import { getSession } from '@/lib/auth/session';
 import { ShipmentStatus, FINAL_STATUSES } from "@/lib/shipments/shipment-status";
 import { canBeCancelled, getNextCancellationStatus } from "@/lib/shipments/status-migration";
+import { refund as walletRefund, reaisToCents } from "@/lib/wallet/wallet.service";
 
 /**
  * POST /api/shipments/[id]/cancel
@@ -68,6 +69,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       );
     }
 
+    // Verificar se houve pagamento via carteira para reembolso
+    let refundIssued = false;
+    let refundAmount = 0;
+
     // Cancelar shipment, label e pickup em uma transação
     await prisma.$transaction(async (tx) => {
       // Atualizar status do shipment
@@ -101,15 +106,60 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       }
     });
 
+    // REEMBOLSO: Se o pagamento foi via carteira (WALLET), devolver o valor
+    // Apenas para cancelamentos ANTES do handoff (após, pode haver custos)
+    if (
+      shipment.paymentMethod === 'WALLET' &&
+      nextCancellationStatus === ShipmentStatus.CANCELLATION_REQUESTED_BEFORE_HANDOFF
+    ) {
+      try {
+        // Buscar valor pago: prioridade document > label.priceCents > freightCost
+        const doc = shipment.document as Record<string, unknown> | null;
+        const paymentInfo = doc?.payment as { amount?: number } | undefined;
+        // Se payment info não tiver amount, usar o preço da etiqueta em centavos convertido para reais
+        const labelPriceReais = shipment.label?.priceCents ? shipment.label.priceCents / 100 : 0;
+        const amountToRefund = paymentInfo?.amount || labelPriceReais || shipment.freightCost || 0;
+
+        if (amountToRefund > 0) {
+          const refundReferenceId = `refund:shipment:${shipment.id}`;
+
+          await walletRefund(
+            session.userId,
+            reaisToCents(amountToRefund),
+            `Reembolso - Cancelamento envio ${shipment.label?.trackingCode || shipment.id}`,
+            refundReferenceId
+          );
+
+          refundIssued = true;
+          refundAmount = amountToRefund;
+
+          console.log('[SHIPMENT_CANCEL] Reembolso emitido:', {
+            shipmentId: shipment.id,
+            userId: session.userId,
+            amount: amountToRefund,
+          });
+        }
+      } catch (refundError) {
+        // Log do erro mas não falhar o cancelamento
+        console.error('[SHIPMENT_CANCEL] Erro ao emitir reembolso:', refundError);
+        // Marcar para acompanhamento manual
+      }
+    }
+
     // Mensagem baseada no tipo de cancelamento
-    const message = nextCancellationStatus === ShipmentStatus.CANCELLATION_REQUESTED_BEFORE_HANDOFF
+    let message = nextCancellationStatus === ShipmentStatus.CANCELLATION_REQUESTED_BEFORE_HANDOFF
       ? 'Envio cancelado com sucesso'
       : 'Solicitação de cancelamento registrada. A transportadora será notificada.';
+
+    if (refundIssued) {
+      message += `. Reembolso de R$ ${refundAmount.toFixed(2)} creditado na carteira.`;
+    }
 
     return NextResponse.json({
       ok: true,
       message,
       newStatus: nextCancellationStatus,
+      ...(refundIssued && { refund: { amount: refundAmount, credited: true } }),
     });
   } catch (error) {
     console.error('[SHIPMENT_CANCEL]', error);

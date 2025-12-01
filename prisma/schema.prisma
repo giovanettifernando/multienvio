@@ -268,6 +268,7 @@ model Label {
   @@index([isPrinted])
   @@index([createdAt])
   @@index([status, isPrinted]) // Composite for filtered listing
+  @@index([trackingCode]) // PERFORMANCE: Lookups por código de rastreio
   @@map("labels")
 }
 
@@ -338,6 +339,8 @@ model PickupRequest {
   @@index([createdAt])
   @@index([originCep])
   @@index([scheduleAt])
+  @@index([userId, status, createdAt]) // PERFORMANCE: Dashboard do usuário
+  @@index([collectorId, status]) // PERFORMANCE: Dashboard do coletor
   @@map("pickup_requests")
 }
 
@@ -464,6 +467,7 @@ model WalletTransaction {
 
   @@index([walletId, status, createdAt])
   @@index([referenceId])
+  @@index([status, confirmedAt]) // PERFORMANCE: Queries de relatório
   @@map("wallet_transactions")
 }
 
@@ -1558,4 +1562,36 @@ model ExpenseTemplate {
   @@index([category, isActive])
   @@index([isActive, usageCount])
   @@map("expense_templates")
+}
+
+// =====================================================
+// FAQ - Perguntas Frequentes
+// =====================================================
+
+enum FAQAudience {
+  USER      // FAQ para clientes/usuários
+  COLLECTOR // FAQ para coletores
+
+  @@map("faq_audience")
+}
+
+/// Itens de FAQ para Central de Ajuda
+model FAQItem {
+  id          String      @id @default(cuid())
+  question    String      // Pergunta
+  answer      String      @db.Text // Resposta (pode ser longa)
+  category    String?     // Categoria opcional para agrupamento
+  audience    FAQAudience @default(USER) // Público-alvo da pergunta
+  sortOrder   Int         @default(0) @map("sort_order") // Ordem de exibição
+  isActive    Boolean     @default(true) @map("is_active") // Se está publicado
+  views       Int         @default(0) // Contador de visualizações
+  helpfulYes  Int         @default(0) @map("helpful_yes") // "Isso foi útil?" - Sim
+  helpfulNo   Int         @default(0) @map("helpful_no") // "Isso foi útil?" - Não
+  createdBy   String?     @map("created_by") // ID do admin que criou
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+
+  @@index([audience, isActive, sortOrder])
+  @@index([category, isActive])
+  @@map("faq_items")
 }
