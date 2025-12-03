@@ -501,9 +501,11 @@ export async function baixarRotuloPdf(
     });
 
     const downloadResponse = await correiosFetch<{
-      rotulo?: string;       // PDF em base64
-      pdf?: string;          // Alternativa: PDF em base64
-      base64?: string;       // Alternativa: PDF em base64
+      nome?: string;         // Nome do arquivo PDF
+      dados?: string;        // PDF em base64 (formato real da API)
+      rotulo?: string;       // PDF em base64 (alternativa)
+      pdf?: string;          // PDF em base64 (alternativa)
+      base64?: string;       // PDF em base64 (alternativa)
       status?: string;
       erros?: Array<{ codigo: string; mensagem: string }>;
     }>(
@@ -519,9 +521,9 @@ export async function baixarRotuloPdf(
     console.log('[CORREIOS_PREPOSTAGEM] Step 2 - Download response:', {
       idPrePostagem,
       idRecibo,
+      nome: downloadResponse.nome,
+      hasDados: !!downloadResponse.dados,
       hasRotulo: !!downloadResponse.rotulo,
-      hasPdf: !!downloadResponse.pdf,
-      hasBase64: !!downloadResponse.base64,
       status: downloadResponse.status,
       responseKeys: Object.keys(downloadResponse),
     });
@@ -535,15 +537,19 @@ export async function baixarRotuloPdf(
       };
     }
 
-    // O PDF pode vir em diferentes campos (rotulo, pdf, ou base64)
-    const pdfBase64 = downloadResponse.rotulo || downloadResponse.pdf || downloadResponse.base64;
+    // O PDF pode vir em diferentes campos - "dados" é o formato real da API
+    const pdfBase64 = downloadResponse.dados || downloadResponse.rotulo || downloadResponse.pdf || downloadResponse.base64;
 
     if (pdfBase64) {
       // Converter base64 para Buffer
       const pdfBuffer = Buffer.from(pdfBase64, 'base64');
+      // Usar nome do arquivo da resposta ou gerar um nome padrão
+      const fileName = downloadResponse.nome || `rotulo_${idPrePostagem}.pdf`;
+
       console.log('[CORREIOS_PREPOSTAGEM] Step 2 - PDF decoded:', {
         idPrePostagem,
         size: pdfBuffer.length,
+        fileName,
       });
 
       return {
@@ -551,7 +557,7 @@ export async function baixarRotuloPdf(
         codigoRastreio: idPrePostagem,
         content: pdfBuffer,
         contentType: 'application/pdf',
-        fileName: `rotulo_${idPrePostagem}.pdf`,
+        fileName,
       };
     }
 
