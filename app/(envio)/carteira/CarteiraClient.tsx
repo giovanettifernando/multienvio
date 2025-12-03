@@ -25,7 +25,7 @@ export default function CarteiraClient() {
         <Alert
           type="info"
           showIcon
-          message="Sem cartões cadastrados"
+          title="Sem cartões cadastrados"
           description={
             <span>
               Cadastre um cartão para facilitar recargas.{" "}

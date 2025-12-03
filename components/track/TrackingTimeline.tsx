@@ -63,8 +63,8 @@ export function TrackingTimeline({ events, title }: TrackingTimelineProps) {
 
     return {
       color,
-      dot: icon,
-      children: (
+      icon: icon,
+      content: (
         <div>
           <Typography.Text strong>{event.description}</Typography.Text>
           <br />

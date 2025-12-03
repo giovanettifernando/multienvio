@@ -831,7 +831,7 @@ export default function ShipmentDetailDrawer({
           {shipment.trackingEvents && shipment.trackingEvents.length > 0 ? (
             <Timeline
               items={shipment.trackingEvents.map((evt: TrackingEventData) => ({
-                children: (
+                content: (
                   <div>
                     <div style={{ fontWeight: 500, marginBottom: 4 }}>{evt.description}</div>
                     <div style={{ fontSize: 12, color: '#666' }}>

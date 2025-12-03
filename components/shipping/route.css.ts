@@ -11,9 +11,9 @@ const cardPalette = {
     accent: "#0F2A5F",
   },
   destination: {
-    bg: "rgba(194, 65, 12, 0.07)",
-    border: "rgba(194, 65, 12, 0.20)",
-    accent: "#C2410C",
+    bg: "#16A34A14",
+    border: "rgba(22, 163, 74, 0.20)",
+    accent: "#166534",
   },
 };
 

@@ -20,6 +20,9 @@ type GlobalPrismaStore = {
 const execFileAsync = promisify(execFile);
 const globalForPrisma = globalThis as unknown as GlobalPrismaStore;
 const isTestEnv = process.env.NODE_ENV === "test";
+const isBuildPhase = process.env.NEXT_PHASE?.includes("build") ||
+                     process.env.NEXT_PHASE?.includes("generate") ||
+                     (process.env.NODE_ENV === "production" && !process.env.NEXTAUTH_SECRET);
 const databaseConfig = resolveDatabaseConfig();
 
 function createPrismaClient() {
@@ -52,17 +55,14 @@ async function checkPendingMigrationsOnce(): Promise<void> {
     timeout: 30_000,
   })
     .then(({ stdout }) => {
+      if (isBuildPhase) return;
       const trimmed = stdout.trim();
-      if (/Database schema is up to date/i.test(trimmed)) {
-        console.info("[DB] Prisma migrations are up to date.");
-      } else {
+      if (!/Database schema is up to date/i.test(trimmed)) {
         console.warn("[DB] Prisma migrate status indicates pending changes. Run `npx prisma migrate deploy`.");
-        console.warn(trimmed);
       }
     })
-    .catch((error) => {
-      const message = error instanceof Error ? error.message : String(error);
-      console.warn("[DB] Unable to run `prisma migrate status` automatically.", message);
+    .catch(() => {
+      // Silently ignore migration check errors during build
     });
 
   return globalForPrisma.migrationCheck;
@@ -76,24 +76,16 @@ async function initializePrisma(client: PrismaClient) {
   const attempts = Number(process.env.DB_CONNECT_RETRIES ?? 5);
   const backoffMs = Number(process.env.DB_CONNECT_BACKOFF_MS ?? 500);
 
-  console.info(
-    `[DB] Connecting to PostgreSQL at ${databaseConfig.host}:${databaseConfig.port} (db: ${databaseConfig.name}, schema: ${databaseConfig.schema}). Env files: ${
-      databaseConfig.envFiles.length ? databaseConfig.envFiles.join(", ") : "none detected"
-    }.`,
-  );
-
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
     try {
       await client.$connect();
       await client.$queryRaw`SELECT 1`;
-      console.info(`[DB] Connection established (${databaseConfig.host}:${databaseConfig.port}).`);
-      await checkPendingMigrationsOnce();
+      if (!isBuildPhase) {
+        await checkPendingMigrationsOnce();
+      }
       return;
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      console.warn(`[DB] Connection attempt ${attempt}/${attempts} failed: ${message}`);
       if (attempt === attempts) {
-        console.error("[DB] Exhausted connection attempts. Database remains unavailable.");
         throw error;
       }
       await sleep(backoffMs * attempt);
@@ -105,16 +97,7 @@ function registerShutdownHooks(client: PrismaClient) {
   if (typeof process === "undefined") return;
   if (globalForPrisma.disconnectRegistered) return;
 
-  const disconnect = () =>
-    client
-      .$disconnect()
-      .then(() => {
-        console.info("[DB] Prisma client disconnected.");
-      })
-      .catch((error: unknown) => {
-        const message = error instanceof Error ? error.message : String(error);
-        console.warn("[DB] Error disconnecting Prisma client.", message);
-      });
+  const disconnect = () => client.$disconnect().catch(() => {});
 
   process.once("beforeExit", () => void disconnect());
   process.once("SIGINT", () => {
@@ -133,8 +116,6 @@ registerShutdownHooks(prismaClient);
 const readyPromise =
   globalForPrisma.prismaReady ??
   initializePrisma(prismaClient).catch((error) => {
-    const message = error instanceof Error ? error.message : String(error);
-    console.error("[DB] Prisma failed to initialize.", message);
     throw error;
   });
 

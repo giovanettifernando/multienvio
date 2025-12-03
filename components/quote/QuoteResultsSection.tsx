@@ -358,7 +358,7 @@ export function QuoteResultsSection({
           }}
         >
           <Alert
-            message="Erro ao calcular cotações"
+            title="Erro ao calcular cotações"
             description={error}
             type="error"
             showIcon
@@ -512,7 +512,7 @@ export function QuoteResultsSection({
           )}
 
           <Alert
-            message={`${results?.length || 0} ${results?.length === 1 ? "cotação encontrada" : "cotações encontradas"}`}
+            title={`${results?.length || 0} ${results?.length === 1 ? "cotação encontrada" : "cotações encontradas"}`}
             type="success"
             showIcon
           />

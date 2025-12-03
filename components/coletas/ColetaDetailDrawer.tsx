@@ -78,7 +78,7 @@ export function ColetaDetailDrawer({
   const timelineItems = [
     {
       color: "blue",
-      children: (
+      content: (
         <div>
           <div style={{ fontWeight: 500 }}>Coleta Criada</div>
           <div style={{ color: "#999", fontSize: 12 }}>
@@ -93,7 +93,7 @@ export function ColetaDetailDrawer({
   if (coleta.updatedAt !== coleta.createdAt) {
     timelineItems.push({
       color: "green",
-      children: (
+      content: (
         <div>
           <div style={{ fontWeight: 500 }}>Atualização de Status</div>
           <div style={{ color: "#999", fontSize: 12 }}>

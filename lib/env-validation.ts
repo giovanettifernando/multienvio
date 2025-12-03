@@ -81,12 +81,6 @@ export function validateEnv(): ValidationResult {
     }
   }
 
-  // Log warnings for optional vars (skip in test)
-  if (warnings.length > 0 && process.env.NODE_ENV !== "test") {
-    console.warn("[ENV] Missing optional environment variables:");
-    warnings.forEach((w) => console.warn(`  - ${w}`));
-  }
-
   // Handle missing required vars
   if (missing.length > 0) {
     const errorMessage = `Missing required environment variables:\n${missing.map((m) => `  - ${m}`).join("\n")}`;
@@ -97,8 +91,6 @@ export function validateEnv(): ValidationResult {
     if (shouldThrow) {
       console.error("[ENV] CRITICAL:", errorMessage);
       throw new Error(`SECURITY ERROR: ${errorMessage}`);
-    } else if (process.env.NODE_ENV !== "test") {
-      console.warn("[ENV] WARNING:", errorMessage);
     }
   }
 

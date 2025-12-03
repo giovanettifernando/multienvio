@@ -5,13 +5,15 @@ import {
   App,
   Button,
   Card,
-  List,
+  Empty,
   Popconfirm,
   Space,
+  Spin,
   Tag,
   Typography,
+  theme,
 } from "antd";
-import { CreditCardOutlined } from "@ant-design/icons";
+import { CreditCardOutlined, DeleteOutlined, StarOutlined, StarFilled } from "@ant-design/icons";
 import type { Card as CardType } from "@/types/account";
 import {
   useCards,
@@ -23,6 +25,7 @@ import { CardModal, type CardFormValues } from "@/components/account/CardModal";
 
 export default function CardsList() {
   const { message } = App.useApp();
+  const { token } = theme.useToken();
   const cardsQuery = useCards();
   const createMutation = useCardCreate();
   const [showModal, setShowModal] = useState(false);
@@ -92,66 +95,78 @@ export default function CardsList() {
         </Button>
       }
     >
-      <List
-        loading={loading}
-        dataSource={cards}
-        locale={{ emptyText: "Nenhum cartão cadastrado." }}
-        renderItem={(item: CardType) => (
-          <List.Item
-            actions={[
-              <Button
-                key="primary"
-                type="link"
-                disabled={item.isDefault}
-                loading={
-                  defaultMutation.isPending &&
-                  defaultMutation.variables?.id === item.id
-                }
-                onClick={() => handleSetDefault(item.id)}
-              >
-                Definir como principal
-              </Button>,
-              <Popconfirm
-                key="delete"
-                title="Remover cartão"
-                okText="Remover"
-                cancelText="Cancelar"
-                onConfirm={() => handleDelete(item.id)}
-              >
-                <Button
-                  type="link"
-                  danger
-                  loading={
-                    deleteMutation.isPending &&
-                    deleteMutation.variables === item.id
-                  }
-                >
-                  Remover
-                </Button>
-              </Popconfirm>,
-            ]}
-          >
-            <List.Item.Meta
-              title={
-                <Space>
+      {loading ? (
+        <div style={{ textAlign: "center", padding: "40px 0" }}>
+          <Spin />
+        </div>
+      ) : cards.length === 0 ? (
+        <Empty description="Nenhum cartão cadastrado." />
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: token.marginXS }}>
+          {cards.map((item: CardType) => (
+            <div
+              key={item.id}
+              style={{
+                display: "flex",
+                alignItems: "flex-start",
+                justifyContent: "space-between",
+                padding: `${token.paddingSM}px 0`,
+                borderBottom: `1px solid ${token.colorBorderSecondary}`,
+              }}
+            >
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <Space style={{ marginBottom: token.marginXS }}>
                   <Typography.Text strong>{item.holderName}</Typography.Text>
                   {item.isDefault ? <Tag color="gold">Principal</Tag> : null}
                 </Space>
-              }
-              description={
-                <Space orientation="vertical" size={0}>
+                <div>
                   <Typography.Text type="secondary">
                     {item.brand} • ****-{item.last4}
                   </Typography.Text>
+                  <br />
                   <Typography.Text type="secondary">
                     Validade {String(item.expMonth).padStart(2, "0")}/{String(item.expYear).slice(-2)}
                   </Typography.Text>
-                </Space>
-              }
-            />
-          </List.Item>
-        )}
-      />
+                </div>
+              </div>
+              <Space orientation="vertical" size={0} style={{ alignItems: "flex-end" }}>
+                <Button
+                  type="text"
+                  size="small"
+                  icon={item.isDefault ? <StarFilled style={{ color: "#faad14" }} /> : <StarOutlined />}
+                  disabled={item.isDefault}
+                  loading={
+                    defaultMutation.isPending &&
+                    defaultMutation.variables?.id === item.id
+                  }
+                  onClick={() => handleSetDefault(item.id)}
+                >
+                  {item.isDefault ? "Principal" : "Definir como principal"}
+                </Button>
+                <Popconfirm
+                  title="Remover cartão"
+                  okText="Remover"
+                  cancelText="Cancelar"
+                  onConfirm={() => handleDelete(item.id)}
+                >
+                  <Button
+                    type="link"
+                    size="small"
+                    danger
+                    icon={<DeleteOutlined />}
+                    loading={
+                      deleteMutation.isPending &&
+                      deleteMutation.variables === item.id
+                    }
+                  >
+                    Remover
+                  </Button>
+                </Popconfirm>
+              </Space>
+            </div>
+          ))}
+        </div>
+      )}
 
       <CardModal
         open={showModal}

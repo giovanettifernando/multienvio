@@ -23,7 +23,7 @@ export function TrackingTimeline({ events }: TrackingTimelineProps) {
       reverse
       items={events.map((event) => ({
         color: event.type === "DELIVERED" ? "green" : event.type === "ISSUE" ? "red" : "blue",
-        children: (
+        content: (
           <div>
             <Typography.Text strong>{TYPE_LABEL[event.type]}</Typography.Text>
             <Typography.Paragraph style={{ margin: 0 }}>

@@ -8,6 +8,11 @@ import type {
   CheckoutResponse,
 } from "@/types/cart";
 
+// Calcular peso cubado de um volume: (A × L × C) / 6000
+function calculateCubicWeight(alturaCm: number, larguraCm: number, comprimentoCm: number): number {
+  return (alturaCm * larguraCm * comprimentoCm) / 6000;
+}
+
 // Adapter: converte a nova estrutura do banco para a estrutura legada do frontend
 function adaptCartSnapshot(snapshot: {
   id: string;
@@ -16,46 +21,54 @@ function adaptCartSnapshot(snapshot: {
   items: CartItemSnapshot[];
 }): Cart {
   // Converter items da nova estrutura para a estrutura legada
-  const adaptedItems: CartItem[] = snapshot.items.map((item) => ({
-    id: item.id,
-    selectionId: "", // Não existe mais, usar string vazia
-    quoteId: "", // Não existe mais, usar string vazia
-    transportadora: item.selectedQuote.carrier,
-    modalidade: item.selectedQuote.serviceName,
-    prazoEstimadoDias: item.selectedQuote.deadlineDays,
-    prazoDias: item.selectedQuote.deadlineDays,
-    preco: item.selectedQuote.price,
-    quantidade: 1, // Nova estrutura não tem quantidade
-    origem: {
-      cep: item.originAddress.cep,
-      cidadeUF: `${item.originAddress.cidade}/${item.originAddress.uf}`,
-    },
-    destino: {
-      cep: item.destination.cep,
-      cidadeUF: `${item.destination.cidade}/${item.destination.uf}`,
-    },
-    destinatario: {
-      nome: item.destination.nome,
-      cidade: item.destination.cidade,
-      uf: item.destination.uf,
-    },
-    devolucao: item.preferences.reverse || false,
-    coleta: item.preferences.pickupRequested || false,
-    volumes: item.volumes.map((v) => ({
-      id: String(v.idx || 0),
-      comprimentoCm: v.comprimentoCm,
-      larguraCm: v.larguraCm,
-      alturaCm: v.alturaCm,
-      pesoKg: v.pesoKg,
-    })),
-    pesoTotalKg: item.volumes.reduce((sum, v) => sum + v.pesoKg, 0),
-    pesoCubadoTotalKg: item.volumes.reduce((sum, v) => sum + (v.pesoCubadoKg || 0), 0),
-    documento: "DECLARACAO", // Não temos essa info no snapshot
-    aceitouDeclaracao: false,
-    valorSeguro: item.insuranceValue,
-    avisoRecebimento: false,
-    status: "OK",
-  }));
+  const adaptedItems: CartItem[] = snapshot.items.map((item) => {
+    // Calcular peso cubado para cada volume (se não existir)
+    const volumesWithCubicWeight = item.volumes.map((v) => ({
+      ...v,
+      pesoCubadoKg: v.pesoCubadoKg ?? calculateCubicWeight(v.alturaCm, v.larguraCm, v.comprimentoCm),
+    }));
+
+    return {
+      id: item.id,
+      selectionId: "", // Não existe mais, usar string vazia
+      quoteId: "", // Não existe mais, usar string vazia
+      transportadora: item.selectedQuote.carrier,
+      modalidade: item.selectedQuote.serviceName,
+      prazoEstimadoDias: item.selectedQuote.deadlineDays,
+      prazoDias: item.selectedQuote.deadlineDays,
+      preco: item.selectedQuote.price,
+      quantidade: 1, // Nova estrutura não tem quantidade
+      origem: {
+        cep: item.originAddress.cep,
+        cidadeUF: `${item.originAddress.cidade}/${item.originAddress.uf}`,
+      },
+      destino: {
+        cep: item.destination.cep,
+        cidadeUF: `${item.destination.cidade}/${item.destination.uf}`,
+      },
+      destinatario: {
+        nome: item.destination.nome,
+        cidade: item.destination.cidade,
+        uf: item.destination.uf,
+      },
+      devolucao: item.preferences.reverse || false,
+      coleta: item.preferences.pickupRequested || false,
+      volumes: volumesWithCubicWeight.map((v) => ({
+        id: String(v.idx || 0),
+        comprimentoCm: v.comprimentoCm,
+        larguraCm: v.larguraCm,
+        alturaCm: v.alturaCm,
+        pesoKg: v.pesoKg,
+      })),
+      pesoTotalKg: item.volumes.reduce((sum, v) => sum + v.pesoKg, 0),
+      pesoCubadoTotalKg: volumesWithCubicWeight.reduce((sum, v) => sum + v.pesoCubadoKg, 0),
+      documento: "DECLARACAO", // Não temos essa info no snapshot
+      aceitouDeclaracao: false,
+      valorSeguro: item.insuranceValue,
+      avisoRecebimento: false,
+      status: "OK",
+    };
+  });
 
   // Retornar estrutura legada
   return {

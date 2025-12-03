@@ -12,6 +12,30 @@ const declarationItemSchema = z.object({
 
 export type DeclarationFormItem = z.infer<typeof declarationItemSchema>;
 
+// Schema para documento de um volume específico (NF-e ou Declaração)
+const volumeDocumentSchema = z.object({
+  volumeIndex: z.number(),
+  type: z.enum(["NFE", "DECLARACAO"]).nullable(), // null = não definido ainda
+  // Campos para NF-e
+  nfeKey: z.string().optional(),
+  nfeXmlId: z.string().nullable().optional(),
+  nfeItems: z.array(z.object({
+    id: z.string(),
+    sku: z.string().nullable().optional(),
+    descricao: z.string(),
+    ncm: z.string().nullable().optional(),
+    cfop: z.string().nullable().optional(),
+    quantidade: z.number(),
+    pesoLiquido: z.number().nullable().optional(),
+    valorUnitario: z.number(),
+    valorTotal: z.number(),
+  })).optional(),
+  // Campos para Declaração
+  declarationItems: z.array(declarationItemSchema).optional(),
+});
+
+export type VolumeDocument = z.infer<typeof volumeDocumentSchema>;
+
 // Schema para declaração de conteúdo de um volume específico
 const volumeDeclarationSchema = z.object({
   volumeIndex: z.number(),
@@ -91,6 +115,8 @@ export const finalizeFormSchema = z
   .object({
     document: z.object({
       type: z.enum(["NFE", "DECLARACAO"] as [DocumentType, DocumentType]),
+      // Novo formato: documento por volume (NFE ou Declaração para cada volume)
+      volumeDocuments: z.array(volumeDocumentSchema).optional(),
       // Campos legados para retrocompatibilidade
       nfeKey: z.string().optional(),
       nfeXml: z.string().optional().nullable(),
@@ -340,6 +366,91 @@ export function validateDeclarationOnSubmit(values: FinalizeFormValues): {
       message: "Adicione ao menos um item na declaração.",
     });
   }
+
+  return {
+    isValid: errors.length === 0,
+    errors,
+  };
+}
+
+/**
+ * Valida os documentos por volume (novo formato)
+ * Permite NF-e ou Declaração para cada volume independentemente
+ */
+export function validateVolumeDocumentsOnSubmit(values: FinalizeFormValues): {
+  isValid: boolean;
+  errors: Array<{ path: string; message: string; volumeIndex?: number }>;
+} {
+  const errors: Array<{ path: string; message: string; volumeIndex?: number }> = [];
+  const volumeDocuments = values.document.volumeDocuments;
+
+  // Se não há volumeDocuments, usar validação legada
+  if (!volumeDocuments || volumeDocuments.length === 0) {
+    return { isValid: true, errors: [] };
+  }
+
+  volumeDocuments.forEach((vol, idx) => {
+    // Verificar se o volume tem um tipo definido
+    if (!vol.type) {
+      errors.push({
+        path: `document.volumeDocuments.${idx}.type`,
+        message: `Selecione NF-e ou Declaração para o Volume ${idx + 1}.`,
+        volumeIndex: idx,
+      });
+      return;
+    }
+
+    // Validar NF-e
+    if (vol.type === "NFE") {
+      if (!vol.nfeKey || vol.nfeKey.length !== 44) {
+        errors.push({
+          path: `document.volumeDocuments.${idx}.nfeKey`,
+          message: `Informe a chave da NF-e (44 dígitos) para o Volume ${idx + 1}.`,
+          volumeIndex: idx,
+        });
+      }
+    }
+
+    // Validar Declaração
+    if (vol.type === "DECLARACAO") {
+      if (!vol.declarationItems || vol.declarationItems.length === 0) {
+        errors.push({
+          path: `document.volumeDocuments.${idx}.declarationItems`,
+          message: `Adicione ao menos um item na declaração do Volume ${idx + 1}.`,
+          volumeIndex: idx,
+        });
+        return;
+      }
+
+      // Verificar se há pelo menos um item válido
+      const hasValidItem = vol.declarationItems.some(
+        (item) =>
+          item.descricao &&
+          item.descricao.trim().length >= 3 &&
+          (item.valorUnitario ?? 0) > 0 &&
+          (item.quantidade ?? 0) > 0
+      );
+
+      if (!hasValidItem) {
+        errors.push({
+          path: `document.volumeDocuments.${idx}.declarationItems.0.descricao`,
+          message: `Preencha ao menos um item válido para o Volume ${idx + 1}.`,
+          volumeIndex: idx,
+        });
+      }
+
+      // Validar cada item
+      vol.declarationItems.forEach((item, itemIdx) => {
+        if (item.descricao && item.descricao.trim().length > 0 && item.descricao.trim().length < 3) {
+          errors.push({
+            path: `document.volumeDocuments.${idx}.declarationItems.${itemIdx}.descricao`,
+            message: "Descrição deve ter pelo menos 3 caracteres.",
+            volumeIndex: idx,
+          });
+        }
+      });
+    }
+  });
 
   return {
     isValid: errors.length === 0,

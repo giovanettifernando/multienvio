@@ -412,7 +412,7 @@ const handleSendMessage = async () => {
               items={ticket.messages.map((msg) => ({
                 key: msg.id,
                 color: msg.authorRole === 'admin' ? 'blue' : 'green',
-                children: (
+                content: (
                   <Space orientation="vertical" size={4} style={{ width: '100%' }}>
                     <Space>
                       <Text strong>
@@ -541,7 +541,7 @@ export function TicketDetailsDrawer({
       title={title}
       open={open}
       onClose={onClose}
-      width={700}
+      size="large"
     >
       <TicketDetailsContent
         ticketId={ticketId}

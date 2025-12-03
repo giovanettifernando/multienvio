@@ -22,6 +22,7 @@ import {
   FormProvider,
   useFieldArray,
   useForm,
+  useWatch,
   type UseFormReturn,
   type SubmitHandler,
 } from "react-hook-form";
@@ -452,7 +453,7 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
     }
   }, [selectedOriginId, selectedRecipientId, addresses, recipients, isReverse, destinationMode]);
 
-  const volumesValues = watch("volumes");
+  const volumesValues = useWatch({ control, name: "volumes" });
   const totals = useMemo(
     () => computeTotals(volumesValues),
     [volumesValues],
@@ -1253,7 +1254,7 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
             name="coleta"
             render={({ field }) => (
               <Space orientation="vertical" style={{ width: "100%" }}>
-                <Flex align="center" gap={12}>
+                <label style={{ display: "flex", alignItems: "center", gap: 12, cursor: calculateQuotes.isPending ? "not-allowed" : "pointer" }}>
                   <Switch
                     checked={field.value}
                     onChange={(checked) => {
@@ -1271,7 +1272,7 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
                       Disponível para CEPs com cobertura de coleta
                     </Typography.Text>
                   </div>
-                </Flex>
+                </label>
               </Space>
             )}
           />

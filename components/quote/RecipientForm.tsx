@@ -67,13 +67,16 @@ export function RecipientForm() {
     return (
       <Alert
         type="info"
-        message="Destinatário não definido"
+        title="Destinatário não definido"
         description={
           <Space orientation="vertical">
             <Typography.Text>
               Por favor, defina o destinatário na página de cotação.
             </Typography.Text>
-            <Button type="link" onClick={() => router.push("/cotacoes")}>
+            <Button type="link" onClick={() => {
+              sessionStorage.setItem("preserveQuoteState", "1");
+              router.push("/cotacoes");
+            }}>
               Voltar para Cotação
             </Button>
           </Space>
@@ -97,12 +100,13 @@ export function RecipientForm() {
           render={({ field, fieldState }) => (
             <Form.Item
               label="Nome completo"
+              htmlFor="recipient-nome"
               validateStatus={fieldState.error ? "error" : undefined}
               help={fieldState.error?.message}
               required
               style={{ marginBottom: 12 }}
             >
-              <Input {...field} placeholder="Nome do destinatário" prefix={<UserOutlined />} />
+              <Input {...field} id="recipient-nome" placeholder="Nome do destinatário" prefix={<UserOutlined />} />
             </Form.Item>
           )}
         />
@@ -114,6 +118,7 @@ export function RecipientForm() {
           render={({ field, fieldState }) => (
             <Form.Item
               label="Telefone"
+              htmlFor="recipient-telefone"
               validateStatus={fieldState.error ? "error" : undefined}
               help={fieldState.error?.message}
               required
@@ -121,6 +126,7 @@ export function RecipientForm() {
             >
               <Input
                 {...field}
+                id="recipient-telefone"
                 placeholder="(00) 00000-0000"
                 prefix={<PhoneOutlined />}
                 onChange={(event) =>
@@ -138,12 +144,13 @@ export function RecipientForm() {
           render={({ field, fieldState }) => (
             <Form.Item
               label="E-mail"
+              htmlFor="recipient-email"
               validateStatus={fieldState.error ? "error" : undefined}
               help={fieldState.error?.message}
               required
               style={{ marginBottom: 12 }}
             >
-              <Input {...field} type="email" placeholder="email@exemplo.com" prefix={<MailOutlined />} />
+              <Input {...field} id="recipient-email" type="email" placeholder="email@exemplo.com" prefix={<MailOutlined />} />
             </Form.Item>
           )}
         />
@@ -155,6 +162,7 @@ export function RecipientForm() {
           render={({ field, fieldState }) => (
             <Form.Item
               label="CPF/CNPJ"
+              htmlFor="recipient-documento"
               validateStatus={fieldState.error ? "error" : undefined}
               help={fieldState.error?.message}
               required
@@ -162,6 +170,7 @@ export function RecipientForm() {
             >
               <Input
                 {...field}
+                id="recipient-documento"
                 placeholder="Digite o CPF ou CNPJ"
                 prefix={<ContactsOutlined />}
                 onChange={(event) => {
@@ -182,12 +191,13 @@ export function RecipientForm() {
           render={({ field, fieldState }) => (
             <Form.Item
               label="Número"
+              htmlFor="recipient-numero"
               validateStatus={fieldState.error ? "error" : undefined}
               help={fieldState.error?.message}
               required
               style={{ marginBottom: 12 }}
             >
-              <Input {...field} placeholder="Número" />
+              <Input {...field} id="recipient-numero" placeholder="Número" />
             </Form.Item>
           )}
         />
@@ -197,8 +207,8 @@ export function RecipientForm() {
           control={control}
           name="recipient.manual.complemento"
           render={({ field }) => (
-            <Form.Item label="Complemento" style={{ marginBottom: 12 }}>
-              <Input {...field} placeholder="Apartamento, bloco, etc." />
+            <Form.Item label="Complemento" htmlFor="recipient-complemento" style={{ marginBottom: 12 }}>
+              <Input {...field} id="recipient-complemento" placeholder="Apartamento, bloco, etc." />
             </Form.Item>
           )}
         />
@@ -208,9 +218,10 @@ export function RecipientForm() {
           control={control}
           name="recipient.manual.observacoes"
           render={({ field }) => (
-            <Form.Item label="Observações" style={{ marginBottom: 12 }}>
+            <Form.Item label="Observações" htmlFor="recipient-observacoes" style={{ marginBottom: 12 }}>
               <Input.TextArea
                 {...field}
+                id="recipient-observacoes"
                 placeholder="Referências de entrega, horários, etc."
                 rows={3}
               />
@@ -225,12 +236,13 @@ export function RecipientForm() {
           render={({ field, fieldState }) => (
             <Form.Item
               label="CEP"
+              htmlFor="recipient-cep"
               validateStatus={fieldState.error ? "error" : undefined}
               help={fieldState.error?.message}
               required
               style={{ marginBottom: 12 }}
             >
-              <Input {...field} disabled />
+              <Input {...field} id="recipient-cep" disabled />
             </Form.Item>
           )}
         />
@@ -242,12 +254,13 @@ export function RecipientForm() {
           render={({ field, fieldState }) => (
             <Form.Item
               label="Logradouro"
+              htmlFor="recipient-logradouro"
               validateStatus={fieldState.error ? "error" : undefined}
               help={fieldState.error?.message}
               required
               style={{ marginBottom: 12 }}
             >
-              <Input {...field} disabled />
+              <Input {...field} id="recipient-logradouro" disabled />
             </Form.Item>
           )}
         />
@@ -259,12 +272,13 @@ export function RecipientForm() {
           render={({ field, fieldState }) => (
             <Form.Item
               label="Bairro"
+              htmlFor="recipient-bairro"
               validateStatus={fieldState.error ? "error" : undefined}
               help={fieldState.error?.message}
               required
               style={{ marginBottom: 12 }}
             >
-              <Input {...field} disabled />
+              <Input {...field} id="recipient-bairro" disabled />
             </Form.Item>
           )}
         />
@@ -276,12 +290,13 @@ export function RecipientForm() {
           render={({ field, fieldState }) => (
             <Form.Item
               label="Cidade"
+              htmlFor="recipient-cidade"
               validateStatus={fieldState.error ? "error" : undefined}
               help={fieldState.error?.message}
               required
               style={{ marginBottom: 12 }}
             >
-              <Input {...field} disabled />
+              <Input {...field} id="recipient-cidade" disabled />
             </Form.Item>
           )}
         />
@@ -293,12 +308,13 @@ export function RecipientForm() {
           render={({ field, fieldState }) => (
             <Form.Item
               label="UF"
+              htmlFor="recipient-uf"
               validateStatus={fieldState.error ? "error" : undefined}
               help={fieldState.error?.message}
               required
               style={{ marginBottom: 12 }}
             >
-              <Input {...field} disabled maxLength={2} />
+              <Input {...field} id="recipient-uf" disabled maxLength={2} />
             </Form.Item>
           )}
         />

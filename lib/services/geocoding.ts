@@ -5,6 +5,7 @@
  * CEPs brasileiros não são bem suportados pelo Nominatim, então usamos estratégias alternativas.
  *
  * Estratégia de geocodificação (em ordem de tentativa):
+ * 0. CACHE DB - Verificar tabela cep_locations no banco de dados
  * 1. TENTATIVA A - Endereço completo (rua + bairro + cidade + estado) → precision: 'address'
  * 2. TENTATIVA B - Bairro + cidade + estado (sem rua) → precision: 'zipcode' (neighborhood level)
  * 3. TENTATIVA B2 - Query estruturada com postalcode (raramente funciona no Brasil)
@@ -14,6 +15,7 @@
 
 import type { GeoCoordinates } from '@/lib/utils/geo';
 import { getUFCoordinates } from '@/lib/utils/geo';
+import prisma from '@/lib/db';
 
 /**
  * Tipos de precisão de geocodificação (do mais preciso ao menos preciso)
@@ -47,6 +49,44 @@ export interface AddressDetails {
  * Cache simples em memória para evitar geocodificar o mesmo CEP múltiplas vezes
  */
 const geocodingCache = new Map<string, { coordinates: GeoCoordinates; precision: GeocodingPrecision; provider: string }>();
+
+/**
+ * Salva coordenadas no cache (memória + banco de dados)
+ */
+async function cacheCoordinates(
+  cep: string,
+  coordinates: GeoCoordinates,
+  precision: GeocodingPrecision,
+  provider: string
+): Promise<void> {
+  // Salvar no cache em memória
+  geocodingCache.set(cep, { coordinates, precision, provider });
+
+  // Salvar no banco de dados (upsert para evitar duplicatas)
+  try {
+    await prisma.cepLocation.upsert({
+      where: { cep },
+      create: {
+        cep,
+        latitude: coordinates.lat,
+        longitude: coordinates.lng,
+        precision,
+        provider,
+      },
+      update: {
+        latitude: coordinates.lat,
+        longitude: coordinates.lng,
+        precision,
+        provider,
+        updatedAt: new Date(),
+      },
+    });
+    console.log(`[geocodeCEP] 💾 CEP ${cep} salvo no banco (${precision})`);
+  } catch (dbError) {
+    // Se falhar gravação no banco, não é crítico (já está no cache em memória)
+    console.warn('[geocodeCEP] Erro ao salvar no banco, usando apenas cache em memória', dbError);
+  }
+}
 
 /**
  * Controle de rate limiting para Nominatim (1 req/segundo)
@@ -116,7 +156,7 @@ export async function geocodeCEP(
     };
   }
 
-  // Verificar cache
+  // Verificar cache em memória
   const cacheKey = cleanCep;
   if (geocodingCache.has(cacheKey)) {
     const cached = geocodingCache.get(cacheKey)!;
@@ -126,6 +166,37 @@ export async function geocodeCEP(
       precision: cached.precision,
       provider: cached.provider,
     };
+  }
+
+  // Verificar cache no banco de dados (CepLocation)
+  try {
+    const dbCached = await prisma.cepLocation.findUnique({
+      where: { cep: cleanCep },
+    });
+
+    if (dbCached) {
+      const coordinates: GeoCoordinates = {
+        lat: dbCached.latitude,
+        lng: dbCached.longitude,
+      };
+      const precision = (dbCached.precision || 'unknown') as GeocodingPrecision;
+      const provider = dbCached.provider || 'database';
+
+      // Popular cache em memória
+      geocodingCache.set(cacheKey, { coordinates, precision, provider });
+
+      console.log(`[geocodeCEP] ✅ Cache DB hit para CEP ${cleanCep} (${precision})`);
+
+      return {
+        success: true,
+        coordinates,
+        precision,
+        provider,
+      };
+    }
+  } catch (dbError) {
+    // Se falhar leitura do banco, continuar com APIs externas
+    console.warn('[geocodeCEP] Erro ao consultar cache DB, continuando...', dbError);
   }
 
   try {
@@ -197,7 +268,7 @@ export async function geocodeCEP(
             };
 
             console.log(`[geocodeCEP] ✅ TENTATIVA A bem-sucedida (address):`, coordinates);
-            geocodingCache.set(cacheKey, { coordinates, precision: 'address', provider: 'nominatim' });
+            await cacheCoordinates(cacheKey, coordinates, 'address', 'nominatim');
 
             return {
               success: true,
@@ -250,7 +321,7 @@ export async function geocodeCEP(
             };
 
             console.log(`[geocodeCEP] ✅ TENTATIVA B bem-sucedida (neighborhood):`, coordinates);
-            geocodingCache.set(cacheKey, { coordinates, precision: 'zipcode', provider: 'nominatim' });
+            await cacheCoordinates(cacheKey, coordinates, 'zipcode', 'nominatim');
 
             return {
               success: true,
@@ -302,7 +373,7 @@ export async function geocodeCEP(
           };
 
           console.log(`[geocodeCEP] ✅ TENTATIVA B2 bem-sucedida (zipcode structured):`, coordinates);
-          geocodingCache.set(cacheKey, { coordinates, precision: 'zipcode', provider: 'nominatim' });
+          await cacheCoordinates(cacheKey, coordinates, 'zipcode', 'nominatim');
 
           return {
             success: true,
@@ -345,7 +416,7 @@ export async function geocodeCEP(
           };
 
           console.log(`[geocodeCEP] ⚠️  TENTATIVA C bem-sucedida (city_fallback):`, coordinates);
-          geocodingCache.set(cacheKey, { coordinates, precision: 'city_fallback', provider: 'nominatim' });
+          await cacheCoordinates(cacheKey, coordinates, 'city_fallback', 'nominatim');
 
           return {
             success: true,
@@ -372,7 +443,7 @@ export async function geocodeCEP(
     }
 
     console.log(`[geocodeCEP] ⚠️  TENTATIVA D - Estado (${cepData.state}) - BAIXA PRECISÃO`);
-    geocodingCache.set(cacheKey, { coordinates: stateCoordinates, precision: 'state_fallback', provider: 'hardcoded' });
+    await cacheCoordinates(cacheKey, stateCoordinates, 'state_fallback', 'hardcoded');
 
     return {
       success: true,

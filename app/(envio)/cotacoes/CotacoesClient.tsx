@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useEffect, useState } from "react";
+import { useMemo, useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import type { CompanyWizardData } from "@/lib/validation/company";
@@ -26,8 +26,6 @@ async function fetchCompany(): Promise<CompanyWizardData | null> {
 }
 
 export default function CotacoesClient() {
-  console.log('[COTACOES_PAGE] ========== COMPONENT RENDER ==========');
-
   const router = useRouter();
   const [resolveDebtOpen, setResolveDebtOpen] = useState(false);
 
@@ -43,84 +41,41 @@ export default function CotacoesClient() {
   const addresses = useAddressStore((s) => s.items);
   const reset = useQuoteStore((s) => s.reset);
   const clearDraft = useQuoteDraft((s) => s.clear);
+  const hasHydrated = useQuoteStore((s) => s._hasHydrated);
 
   // Usar updatedAt do form como key para forçar remontagem quando o store for resetado
   const formKey = useQuoteStore((s) => s.form?.updatedAt || 'empty');
 
-  console.log('[COTACOES_PAGE] Estado dos stores ANTES do useEffect:', JSON.stringify({
-    quoteStore: useQuoteStore.getState().form ? {
-      destinoCep: useQuoteStore.getState().form?.destinoCep,
-      coleta: useQuoteStore.getState().form?.coleta,
-      volumesCount: useQuoteStore.getState().form?.volumes?.length,
-    } : null,
-    quoteDraft: {
-      destination: useQuoteDraft.getState().destination,
-      pickupAtOrigin: useQuoteDraft.getState().pickupAtOrigin,
-    },
-    formKey,
-  }, null, 2));
+  // Ref para garantir que a lógica de reset/preserve execute apenas uma vez
+  // (React Strict Mode executa useEffect duas vezes em desenvolvimento)
+  const hasInitialized = useRef(false);
 
-  // Limpar estado da cotação quando a página é montada
-  // Isso garante que ao navegar para /cotacoes, sempre começamos com estado limpo
+  // Limpar estado da cotação quando a página é montada E o store já hidratou
+  // EXCETO se o usuário está voltando de /cotacoes/finalizar (preserveQuoteState em sessionStorage)
   useEffect(() => {
-    console.log('[COTACOES_PAGE] EFFECT: ========== EXECUTANDO RESET ==========');
-
-    // Verificar localStorage
-    if (typeof window !== 'undefined') {
-      console.log('[COTACOES_PAGE] EFFECT: localStorage ANTES do reset:', JSON.stringify({
-        'quote-flow': localStorage.getItem('quote-flow'),
-        'envio.quoteDraft.v1': localStorage.getItem('envio.quoteDraft.v1'),
-      }, null, 2));
+    // Aguardar hidratação do store antes de decidir se reseta
+    if (!hasHydrated) {
+      return;
     }
 
-    console.log('[COTACOES_PAGE] EFFECT: Estado ANTES do reset:', JSON.stringify({
-      quoteStore: useQuoteStore.getState().form ? {
-        destinoCep: useQuoteStore.getState().form?.destinoCep,
-        coleta: useQuoteStore.getState().form?.coleta,
-        volumesCount: useQuoteStore.getState().form?.volumes?.length,
-      } : null,
-      quoteDraft: {
-        destination: useQuoteDraft.getState().destination,
-        pickupAtOrigin: useQuoteDraft.getState().pickupAtOrigin,
-      },
-    }, null, 2));
+    // Evitar execução dupla (React Strict Mode)
+    if (hasInitialized.current) {
+      return;
+    }
+    hasInitialized.current = true;
 
-    console.log('[COTACOES_PAGE] EFFECT: Chamando reset({ keepForm: false })...');
+    // Verificar se devemos preservar o estado (usuário voltando de /cotacoes/finalizar)
+    const shouldPreserve = sessionStorage.getItem("preserveQuoteState") === "1";
+
+    if (shouldPreserve) {
+      // Limpar a flag para próximas navegações
+      sessionStorage.removeItem("preserveQuoteState");
+      return; // Não resetar o estado
+    }
+
     reset({ keepForm: false });
-
-    console.log('[COTACOES_PAGE] EFFECT: Estado APÓS reset (antes de clear draft):', JSON.stringify({
-      quoteStore: useQuoteStore.getState().form ? {
-        destinoCep: useQuoteStore.getState().form?.destinoCep,
-        coleta: useQuoteStore.getState().form?.coleta,
-        volumesCount: useQuoteStore.getState().form?.volumes?.length,
-      } : null,
-    }, null, 2));
-
-    console.log('[COTACOES_PAGE] EFFECT: Chamando clearDraft()...');
     clearDraft();
-
-    console.log('[COTACOES_PAGE] EFFECT: Estado FINAL após todos os resets:', JSON.stringify({
-      quoteStore: useQuoteStore.getState().form ? {
-        destinoCep: useQuoteStore.getState().form?.destinoCep,
-        coleta: useQuoteStore.getState().form?.coleta,
-        volumesCount: useQuoteStore.getState().form?.volumes?.length,
-      } : null,
-      quoteDraft: {
-        destination: useQuoteDraft.getState().destination,
-        pickupAtOrigin: useQuoteDraft.getState().pickupAtOrigin,
-      },
-    }, null, 2));
-
-    // Verificar localStorage APÓS reset
-    if (typeof window !== 'undefined') {
-      console.log('[COTACOES_PAGE] EFFECT: localStorage APÓS reset:', JSON.stringify({
-        'quote-flow': localStorage.getItem('quote-flow'),
-        'envio.quoteDraft.v1': localStorage.getItem('envio.quoteDraft.v1'),
-      }, null, 2));
-    }
-
-    console.log('[COTACOES_PAGE] EFFECT: ========== RESET CONCLUÍDO ==========');
-  }, [reset, clearDraft]); // Executar na montagem (refs são estáveis)
+  }, [reset, clearDraft, hasHydrated]);
 
   const defaultOrigin = useMemo(() => {
     const companyAddress = getCompanyDefaultAddress();
@@ -146,7 +101,7 @@ export default function CotacoesClient() {
     };
   }, [addresses]);
 
-  if (companyLoading || walletLoading) {
+  if (companyLoading || walletLoading || !hasHydrated) {
     return (
       <PageShell
         title="Cotar envio"

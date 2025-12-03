@@ -8,11 +8,11 @@ import {
   Button,
   Card,
   Input,
-  List,
   Radio,
   Space,
   Switch,
   Typography,
+  theme,
 } from "antd";
 import { useFormContext } from "react-hook-form";
 import { useShallow } from "zustand/react/shallow";
@@ -35,6 +35,7 @@ interface PickupPointWithDistance extends PickupPoint {
 
 export function PostingUnitPicker() {
   const { message } = App.useApp();
+  const { token } = theme.useToken();
   const { pickupAtOrigin, hydrated } = useQuoteDraft(
     useShallow((s) => ({ pickupAtOrigin: s.pickupAtOrigin, hydrated: s._hasHydrated }))
   );
@@ -307,6 +308,8 @@ export function PostingUnitPicker() {
         <Space orientation="vertical" size={16} style={{ width: "100%" }}>
           {/* Barra de pesquisa */}
           <Input
+            id="search-posting-units"
+            name="search-posting-units"
             placeholder="Busque por nome, bairro ou cidade"
             prefix={<SearchOutlined />}
             value={searchQuery}
@@ -330,14 +333,14 @@ export function PostingUnitPicker() {
             <Alert
               type="warning"
               showIcon
-              message="Nenhuma unidade cadastrada."
+              title="Nenhuma unidade cadastrada."
               description="Cadastre pontos de coleta no Admin."
             />
           ) : unidadesDisponiveis === 0 ? (
             <Alert
               type="info"
               showIcon
-              message="Nenhuma unidade encontrada para os filtros digitados."
+              title="Nenhuma unidade encontrada para os filtros digitados."
               description="Tente ajustar sua busca."
             />
           ) : (
@@ -346,10 +349,9 @@ export function PostingUnitPicker() {
               value={selectedUnit?.id}
               onChange={(event) => handleSelect(event.target.value)}
             >
-              <List
-                dataSource={unidades}
-                renderItem={(point) => (
-                  <List.Item
+              <div style={{ display: "flex", flexDirection: "column" }}>
+                {unidades.map((point) => (
+                  <div
                     key={point.id}
                     id={`pickup-point-${point.id}`}
                     tabIndex={0}
@@ -360,6 +362,10 @@ export function PostingUnitPicker() {
                       }
                     }}
                     aria-label={`Ponto de coleta: ${point.nomeFantasia || point.razaoSocial}`}
+                    style={{
+                      padding: `${token.paddingSM}px 0`,
+                      borderBottom: `1px solid ${token.colorBorderSecondary}`,
+                    }}
                   >
                     <Radio value={point.id} style={{ width: "100%" }}>
                       <Space orientation="vertical" size={4} style={{ width: "100%" }}>
@@ -377,14 +383,14 @@ export function PostingUnitPicker() {
                         </Typography.Text>
                       </Space>
                     </Radio>
-                  </List.Item>
-                )}
-              />
+                  </div>
+                ))}
+              </div>
             </Radio.Group>
           )}
 
           {/* Switch definir como padrão */}
-          <Space align="center">
+          <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: !selectedUnit ? "not-allowed" : "pointer" }}>
             <Switch
               checked={definirComoPadrao}
               disabled={!selectedUnit}
@@ -393,12 +399,11 @@ export function PostingUnitPicker() {
                   shouldDirty: true,
                 })
               }
-              aria-label="Definir unidade como padrão"
             />
             <Typography.Text style={{ opacity: selectedUnit ? 1 : 0.5 }}>
               Definir como unidade padrão
             </Typography.Text>
-          </Space>
+          </label>
 
           {/* Botão ver mapa */}
           <Button

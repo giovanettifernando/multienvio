@@ -152,6 +152,15 @@ export default function FinalizarClient() {
       return {
         document: {
           type: initialDoc,
+          // Novo formato unificado: documento por volume (NFE ou Declaração independentemente)
+          volumeDocuments: Array.from({ length: volumesCount }, (_, idx) => ({
+            volumeIndex: idx,
+            type: null, // Será definido quando o usuário preencher
+            nfeKey: undefined,
+            nfeXmlId: undefined,
+            nfeItems: undefined,
+            declarationItems: undefined,
+          })),
           nfeKey: "",
           nfeXml: null,
           // Novo formato: NF por pacote
@@ -257,11 +266,42 @@ export default function FinalizarClient() {
   const documentType = useWatch({ control, name: "document.type" });
   const declarationItems = useWatch({ control, name: "document.declarationItems" });
   const volumeDeclarations = useWatch({ control, name: "document.volumeDeclarations" });
+  const volumeDocuments = useWatch({ control, name: "document.volumeDocuments" });
   const nfePackages = useWatch({ control, name: "document.packages" });
   const nfeItems = useWatch({ control, name: "document.nfeItems" });
 
   // Helper: verificar se há pelo menos 1 item válido no documento
   const hasAtLeastOneDocumentItem = useMemo(() => {
+    // Novo formato unificado: volumeDocuments (cada volume pode ter NFE ou DECLARACAO)
+    if (volumeDocuments && Array.isArray(volumeDocuments) && volumeDocuments.length > 0) {
+      // Verificar se TODOS os volumes têm documento definido
+      const allVolumesHaveDoc = volumeDocuments.every((vol) => {
+        if (!vol?.type) return false;
+        if (vol.type === "NFE") {
+          return vol.nfeKey && vol.nfeKey.length === 44;
+        }
+        if (vol.type === "DECLARACAO") {
+          return vol.declarationItems && vol.declarationItems.length > 0 &&
+            vol.declarationItems.some((item) => item.descricao && item.descricao.trim().length > 0);
+        }
+        return false;
+      });
+
+      console.log('[DEBUG DOC ITEMS - volumeDocuments]', {
+        documentType,
+        allVolumesHaveDoc,
+        volumeDocumentsDetails: volumeDocuments.map((vol, idx) => ({
+          volumeIndex: idx,
+          type: vol?.type,
+          hasNfeKey: vol?.nfeKey && vol.nfeKey.length === 44,
+          hasDeclaration: vol?.declarationItems && vol.declarationItems.length > 0,
+        })),
+      });
+
+      if (allVolumesHaveDoc) return true;
+    }
+
+    // Fallback para formatos legados
     let hasContentItems = false;
     let hasInvoiceItems = false;
 
@@ -282,21 +322,7 @@ export default function FinalizarClient() {
         documentType,
         hasContentItems,
         volumeDeclarationsCount: volumeDeclarations?.length ?? 0,
-        volumeDeclarationsDetails: volumeDeclarations?.map((volDecl, idx) => ({
-          volumeIndex: idx,
-          itemsCount: volDecl.items?.length ?? 0,
-          items: volDecl.items?.map(item => ({
-            descricao: item.descricao,
-            quantidade: item.quantidade,
-            valorUnitario: item.valorUnitario,
-            isEmpty: !item.descricao || item.descricao.trim().length === 0,
-          })),
-        })),
         declarationItemsCount: declarationItems?.length ?? 0,
-        declarationItemsDetails: declarationItems?.map(item => ({
-          descricao: item.descricao,
-          isEmpty: !item.descricao || item.descricao.trim().length === 0,
-        })),
       });
 
       return hasContentItems;
@@ -329,7 +355,7 @@ export default function FinalizarClient() {
     });
 
     return false;
-  }, [documentType, declarationItems, volumeDeclarations, nfePackages, nfeItems]);
+  }, [documentType, declarationItems, volumeDeclarations, volumeDocuments, nfePackages, nfeItems]);
 
   // Debug: log whenever hasAtLeastOneDocumentItem changes
   useEffect(() => {
@@ -857,6 +883,8 @@ export default function FinalizarClient() {
         },
         document: {
           type: values.document.type,
+          // Novo formato unificado: documento por volume (cada volume pode ter NFE ou DECLARACAO)
+          volumeDocuments: values.document.volumeDocuments,
           // Novo formato: NF por pacote
           packages: values.document.type === "NFE" ? values.document.packages : undefined,
           // Campos legados para retrocompatibilidade
@@ -1034,7 +1062,11 @@ export default function FinalizarClient() {
           </Space>
 
           <QuoteNavigationButtons
-            onBack={() => router.back()}
+            onBack={() => {
+              // Marcar que devemos preservar o estado ao voltar para /cotacoes
+              sessionStorage.setItem("preserveQuoteState", "1");
+              router.push("/cotacoes");
+            }}
             backLabel="Voltar"
           />
         </form>

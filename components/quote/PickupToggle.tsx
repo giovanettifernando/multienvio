@@ -20,7 +20,7 @@ export function PickupToggle({ control, disabled, onPickupChange }: PickupToggle
       name="coleta"
       render={({ field }) => (
         <Space orientation="vertical" style={{ width: "100%" }}>
-          <Flex align="center" gap={12}>
+          <label style={{ display: "flex", alignItems: "center", gap: 12, cursor: disabled ? "not-allowed" : "pointer" }}>
             <Switch
               checked={field.value}
               onChange={(checked) => {
@@ -36,7 +36,7 @@ export function PickupToggle({ control, disabled, onPickupChange }: PickupToggle
                 Disponível para CEPs com cobertura de coleta
               </Typography.Text>
             </div>
-          </Flex>
+          </label>
         </Space>
       )}
     />

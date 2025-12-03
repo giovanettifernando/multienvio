@@ -4,13 +4,13 @@ import { useState, useMemo } from "react";
 import {
   Modal,
   Input,
-  List,
   Typography,
   Space,
   Button,
   Alert,
   Flex,
   Tag,
+  theme,
 } from "antd";
 import {
   EnvironmentOutlined,
@@ -86,6 +86,7 @@ export function MapModal({
   selectedPointId,
   onSelect,
 }: MapModalProps) {
+  const { token } = theme.useToken();
   const [searchQuery, setSearchQuery] = useState("");
   const [hoveredPointId, setHoveredPointId] = useState<string | null>(null);
 
@@ -148,7 +149,7 @@ export function MapModal({
             type="info"
             showIcon
             icon={<AimOutlined />}
-            message={
+            title={
               originCoords
                 ? `Origem: ${originInfo.cidade || originInfo.uf || 'Localização detectada'}`
                 : 'Localização aproximada — CEP de origem não informado'
@@ -163,6 +164,8 @@ export function MapModal({
 
         {/* Barra de pesquisa */}
         <Input
+          id="search-map-units"
+          name="search-map-units"
           placeholder="Buscar unidade por nome, bairro ou cidade"
           prefix={<SearchOutlined />}
           value={searchQuery}
@@ -208,32 +211,33 @@ export function MapModal({
               <Alert
                 type="info"
                 showIcon
-                message="Nenhuma unidade encontrada"
+                title="Nenhuma unidade encontrada"
                 description="Tente ajustar sua busca."
               />
             ) : (
-              <List
-                dataSource={filteredPoints}
-                renderItem={(point) => (
-                  <List.Item
+              <div style={{ display: "flex", flexDirection: "column" }}>
+                {filteredPoints.map((point) => (
+                  <div
                     key={point.id}
                     style={{
                       padding: '12px 8px',
                       cursor: 'pointer',
                       background:
                         selectedPointId === point.id
-                          ? '#e6f7ff'
+                          ? token.colorPrimaryBg
                           : hoveredPointId === point.id
-                          ? '#f5f5f5'
+                          ? token.colorBgTextHover
                           : 'transparent',
                       borderRadius: 4,
                       marginBottom: 4,
+                      borderBottom: `1px solid ${token.colorBorderSecondary}`,
                     }}
                     onClick={() => onSelect(point.id)}
                     onMouseEnter={() => setHoveredPointId(point.id)}
                     onMouseLeave={() => setHoveredPointId(null)}
                     onKeyDown={(e) => handleKeyDown(e, point.id)}
                     tabIndex={0}
+                    role="button"
                     aria-label={`Selecionar ${point.nomeFantasia || point.razaoSocial}`}
                   >
                     <Space orientation="vertical" size={4} style={{ width: '100%' }}>
@@ -281,9 +285,9 @@ export function MapModal({
                         </Button>
                       )}
                     </Space>
-                  </List.Item>
-                )}
-              />
+                  </div>
+                ))}
+              </div>
             )}
           </div>
         </Flex>

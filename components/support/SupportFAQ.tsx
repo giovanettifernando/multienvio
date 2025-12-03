@@ -158,7 +158,7 @@ export function SupportFAQ({
               items={faqItems}
               onChange={handleExpand}
               bordered={false}
-              expandIconPosition="end"
+              expandIconPlacement="end"
             />
           ),
           showArrow: false,
@@ -230,7 +230,7 @@ export function SupportFAQ({
           items={collapseItems}
           onChange={handleExpand}
           bordered={false}
-          expandIconPosition="end"
+          expandIconPlacement="end"
           style={{ background: 'transparent' }}
         />
       )}

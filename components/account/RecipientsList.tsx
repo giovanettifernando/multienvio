@@ -5,14 +5,17 @@ import {
   App,
   Button,
   Card,
+  Empty,
   Input,
-  List,
+  Pagination,
   Popconfirm,
   Space,
+  Spin,
   Tag,
   Typography,
+  theme,
 } from "antd";
-import { PlusOutlined, SearchOutlined } from "@ant-design/icons";
+import { PlusOutlined, SearchOutlined, EditOutlined, DeleteOutlined, StarOutlined, StarFilled } from "@ant-design/icons";
 import {
   useAccountRecipients,
   useRecipientCreate,
@@ -56,6 +59,7 @@ function formatPhoneForForm(value: string | null | undefined) {
 
 export default function RecipientsList() {
   const { message } = App.useApp();
+  const { token } = theme.useToken();
   const setAll = useRecipientsStore((s) => s.setAll);
 
   const [search, setSearch] = useState("");
@@ -206,90 +210,117 @@ export default function RecipientsList() {
           allowClear
         />
 
-        <List<Recipient>
-          dataSource={recipients}
-          loading={loadingList}
-          locale={{ emptyText: "Você ainda não cadastrou destinatários." }}
-          pagination={{
-            current: page,
-            pageSize,
-            total,
-            onChange: (nextPage) => setPage(nextPage),
-            showSizeChanger: false,
-          }}
-          renderItem={(item) => (
-            <List.Item
-              actions={[
-                <Button key="edit" type="link" onClick={() => handleOpenEdit(item)}>
-                  Editar
-                </Button>,
-                <Button
-                  key="default"
-                  type="link"
-                  disabled={item.isDefault}
-                  loading={
-                    makeDefaultMutation.isPending &&
-                    makeDefaultMutation.variables === item.id
-                  }
-                  onClick={() => handleSetDefault(item)}
+        {loadingList ? (
+          <div style={{ textAlign: "center", padding: "40px 0" }}>
+            <Spin />
+          </div>
+        ) : recipients.length === 0 ? (
+          <Empty description="Você ainda não cadastrou destinatários." />
+        ) : (
+          <>
+            <div style={{ display: "flex", flexDirection: "column", gap: token.marginXS }}>
+              {recipients.map((item) => (
+                <div
+                  key={item.id}
+                  style={{
+                    display: "flex",
+                    alignItems: "flex-start",
+                    justifyContent: "space-between",
+                    padding: `${token.paddingSM}px 0`,
+                    borderBottom: `1px solid ${token.colorBorderSecondary}`,
+                  }}
                 >
-                  Definir como padrão
-                </Button>,
-                <Popconfirm
-                  key="delete"
-                  title={`Remover destinatário "${item.name}"?`}
-                  description="Esta ação não pode ser desfeita."
-                  okText="Remover"
-                  cancelText="Cancelar"
-                  onConfirm={() => handleDelete(item)}
-                >
-                  <Button
-                    type="link"
-                    danger
-                    loading={
-                      deleteMutation.isPending &&
-                      deleteMutation.variables === item.id
-                    }
-                  >
-                    Remover
-                  </Button>
-                </Popconfirm>,
-              ]}
-            >
-              <List.Item.Meta
-                title={
-                  <Space>
-                    <Typography.Text strong>{item.name}</Typography.Text>
-                    {item.document ? (
-                      <Typography.Text type="secondary">· {item.document}</Typography.Text>
-                    ) : null}
-                    {item.isDefault ? <Tag color="gold">Padrão</Tag> : null}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <Space style={{ marginBottom: token.marginXS }}>
+                      <Typography.Text strong>{item.name}</Typography.Text>
+                      {item.document ? (
+                        <Typography.Text type="secondary">· {item.document}</Typography.Text>
+                      ) : null}
+                      {item.isDefault ? <Tag color="gold">Padrão</Tag> : null}
+                    </Space>
+                    <div>
+                      <Typography.Text type="secondary">
+                        {item.logradouro}, {item.numero}
+                        {item.complemento ? ` - ${item.complemento}` : ""} · {item.bairro}
+                      </Typography.Text>
+                      <br />
+                      <Typography.Text type="secondary">
+                        {item.cidade}/{item.uf} · CEP {item.cep}
+                      </Typography.Text>
+                      {item.phone ? (
+                        <>
+                          <br />
+                          <Typography.Text type="secondary">Tel: {item.phone}</Typography.Text>
+                        </>
+                      ) : null}
+                      {item.email ? (
+                        <>
+                          <br />
+                          <Typography.Text type="secondary">E-mail: {item.email}</Typography.Text>
+                        </>
+                      ) : null}
+                      {item.notes ? (
+                        <>
+                          <br />
+                          <Typography.Text type="secondary">Observações: {item.notes}</Typography.Text>
+                        </>
+                      ) : null}
+                    </div>
+                  </div>
+                  <Space orientation="vertical" size={0} style={{ alignItems: "flex-end" }}>
+                    <Button type="link" size="small" icon={<EditOutlined />} onClick={() => handleOpenEdit(item)}>
+                      Editar
+                    </Button>
+                    <Button
+                      type="text"
+                      size="small"
+                      icon={item.isDefault ? <StarFilled style={{ color: "#faad14" }} /> : <StarOutlined />}
+                      disabled={item.isDefault}
+                      loading={
+                        makeDefaultMutation.isPending &&
+                        makeDefaultMutation.variables === item.id
+                      }
+                      onClick={() => handleSetDefault(item)}
+                    >
+                      {item.isDefault ? "Padrão" : "Definir como padrão"}
+                    </Button>
+                    <Popconfirm
+                      title={`Remover destinatário "${item.name}"?`}
+                      description="Esta ação não pode ser desfeita."
+                      okText="Remover"
+                      cancelText="Cancelar"
+                      onConfirm={() => handleDelete(item)}
+                    >
+                      <Button
+                        type="link"
+                        size="small"
+                        danger
+                        icon={<DeleteOutlined />}
+                        loading={
+                          deleteMutation.isPending &&
+                          deleteMutation.variables === item.id
+                        }
+                      >
+                        Remover
+                      </Button>
+                    </Popconfirm>
                   </Space>
-                }
-                description={
-                  <Space orientation="vertical" size={0}>
-                    <Typography.Text type="secondary">
-                      {item.logradouro}, {item.numero}
-                      {item.complemento ? ` - ${item.complemento}` : ""} · {item.bairro}
-                    </Typography.Text>
-                    <Typography.Text type="secondary">
-                      {item.cidade}/{item.uf} · CEP {item.cep}
-                    </Typography.Text>
-                    {item.phone ? (
-                      <Typography.Text type="secondary">Tel: {item.phone}</Typography.Text>
-                    ) : null}
-                    {item.email ? (
-                      <Typography.Text type="secondary">E-mail: {item.email}</Typography.Text>
-                    ) : null}
-                    {item.notes ? (
-                      <Typography.Text type="secondary">Observações: {item.notes}</Typography.Text>
-                    ) : null}
-                  </Space>
-                }
-              />
-            </List.Item>
-          )}
-        />
+                </div>
+              ))}
+            </div>
+            {total > pageSize && (
+              <div style={{ marginTop: token.marginMD, textAlign: "right" }}>
+                <Pagination
+                  current={page}
+                  pageSize={pageSize}
+                  total={total}
+                  onChange={(nextPage) => setPage(nextPage)}
+                  showSizeChanger={false}
+                />
+              </div>
+            )}
+          </>
+        )}
       </Space>
 
       <RecipientModal

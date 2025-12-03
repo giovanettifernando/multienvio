@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Input, Spin, Typography } from "antd";
+import type { InputRef } from "antd";
 import { useRecurringItemsAutocomplete } from "@/hooks/useRecurringItemsAutocomplete";
 import styles from "./RecurringItemAutocomplete.module.css";
 
@@ -11,6 +12,7 @@ interface RecurringItemAutocompleteInputProps {
   onSelect?: (descricao: string, valorUnitario: number) => void;
   placeholder?: string;
   disabled?: boolean;
+  autoFocus?: boolean;
 }
 
 export function RecurringItemAutocompleteInput({
@@ -19,7 +21,9 @@ export function RecurringItemAutocompleteInput({
   onSelect,
   placeholder = "Ex.: Camiseta algodão",
   disabled,
+  autoFocus,
 }: RecurringItemAutocompleteInputProps) {
+  const inputRef = useRef<InputRef>(null);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [internalValue, setInternalValue] = useState(value);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -33,6 +37,13 @@ export function RecurringItemAutocompleteInput({
       setInternalValue(value);
     }
   }, [value]);
+
+  // Auto-focus quando solicitado
+  useEffect(() => {
+    if (autoFocus && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [autoFocus]);
 
   // Fechar dropdown ao clicar fora
   useEffect(() => {
@@ -89,6 +100,7 @@ export function RecurringItemAutocompleteInput({
   return (
     <div ref={wrapperRef} className={styles.autocompleteWrapper}>
       <Input
+        ref={inputRef}
         value={internalValue}
         onChange={handleInputChange}
         onFocus={handleFocus}

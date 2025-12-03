@@ -5,12 +5,13 @@ import {
   App,
   Button,
   Card,
-  List,
+  Empty,
   Popconfirm,
   Space,
   Tag,
   Typography,
   Spin,
+  theme,
 } from "antd";
 import { PlusOutlined, EditOutlined, DeleteOutlined, StarOutlined, StarFilled } from "@ant-design/icons";
 import { useAddresses, useAddressCreate } from "@/hooks/useAccount";
@@ -19,7 +20,8 @@ import type { Address } from "@/types/account";
 
 export default function AddressesList() {
   const { message } = App.useApp();
-  
+  const { token } = theme.useToken();
+
   const { data: addresses = [], isLoading, refetch } = useAddresses();
   const createMutation = useAddressCreate();
 
@@ -155,51 +157,27 @@ export default function AddressesList() {
           </Button>
         }
       >
-        <List
-          dataSource={addresses}
-          locale={{ emptyText: "Nenhum endereço cadastrado." }}
-          renderItem={(address) => (
-            <List.Item
-              actions={[
-                <Button
-                  key="default"
-                  type="text"
-                  icon={address.isDefault ? <StarFilled style={{ color: "#faad14" }} /> : <StarOutlined />}
-                  onClick={() => !address.isDefault && handleMakeDefault(address.id)}
-                  disabled={address.isDefault}
-                >
-                  {address.isDefault ? "Padrão" : "Tornar padrão"}
-                </Button>,
-                <Button
-                  key="edit"
-                  type="link"
-                  icon={<EditOutlined />}
-                  onClick={() => handleOpenEdit(address)}
-                >
-                  Editar
-                </Button>,
-                <Popconfirm
-                  key="delete"
-                  title="Tem certeza que deseja remover este endereço?"
-                  onConfirm={() => handleDelete(address.id)}
-                  okText="Remover"
-                  cancelText="Cancelar"
-                >
-                  <Button type="link" danger icon={<DeleteOutlined />}>
-                    Remover
-                  </Button>
-                </Popconfirm>,
-              ]}
-            >
-              <List.Item.Meta
-                title={
-                  <Space>
+        {addresses.length === 0 ? (
+          <Empty description="Nenhum endereço cadastrado." />
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: token.marginXS }}>
+            {addresses.map((address) => (
+              <div
+                key={address.id}
+                style={{
+                  display: "flex",
+                  alignItems: "flex-start",
+                  justifyContent: "space-between",
+                  padding: `${token.paddingSM}px 0`,
+                  borderBottom: `1px solid ${token.colorBorderSecondary}`,
+                }}
+              >
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <Space style={{ marginBottom: token.marginXS }}>
                     {address.label && <Tag color="blue">{address.label}</Tag>}
                     {address.isDefault && <Tag color="gold">Padrão</Tag>}
                   </Space>
-                }
-                description={
-                  <>
+                  <div>
                     <Typography.Text>
                       {address.logradouro}, {address.numero}
                       {address.complemento && ` - ${address.complemento}`}
@@ -210,12 +188,41 @@ export default function AddressesList() {
                     </Typography.Text>
                     <br />
                     <Typography.Text type="secondary">CEP: {address.cep}</Typography.Text>
-                  </>
-                }
-              />
-            </List.Item>
-          )}
-        />
+                  </div>
+                </div>
+                <Space orientation="vertical" size={0} style={{ alignItems: "flex-end" }}>
+                  <Button
+                    type="text"
+                    size="small"
+                    icon={address.isDefault ? <StarFilled style={{ color: "#faad14" }} /> : <StarOutlined />}
+                    onClick={() => !address.isDefault && handleMakeDefault(address.id)}
+                    disabled={address.isDefault}
+                  >
+                    {address.isDefault ? "Padrão" : "Tornar padrão"}
+                  </Button>
+                  <Button
+                    type="link"
+                    size="small"
+                    icon={<EditOutlined />}
+                    onClick={() => handleOpenEdit(address)}
+                  >
+                    Editar
+                  </Button>
+                  <Popconfirm
+                    title="Tem certeza que deseja remover este endereço?"
+                    onConfirm={() => handleDelete(address.id)}
+                    okText="Remover"
+                    cancelText="Cancelar"
+                  >
+                    <Button type="link" size="small" danger icon={<DeleteOutlined />}>
+                      Remover
+                    </Button>
+                  </Popconfirm>
+                </Space>
+              </div>
+            ))}
+          </div>
+        )}
       </Card>
 
       <AddressModal

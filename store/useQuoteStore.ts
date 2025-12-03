@@ -17,6 +17,7 @@ type QuoteStoreState = {
   results: QuoteResultsState | null;
   selection: QuoteSelectionState | null;
   lastDestination: { cep: string; cidade?: string; uf?: string } | null;
+  _hasHydrated: boolean;
   setForm: (summary: QuoteSummary) => void;
   patchForm: (patch: Partial<QuoteSummary>) => void;
   setVolumes: (volumes: QuoteVolume[]) => void;
@@ -113,11 +114,12 @@ const storage = createJSONStorage(() => {
 
 export const useQuoteStore = create<QuoteStoreState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       form: null,
       results: null,
       selection: null,
       lastDestination: null,
+      _hasHydrated: false,
       setForm: (summary) => set(() => ({ form: fromSummary(summary) })),
       patchForm: (patch) =>
         set((state) => {
@@ -163,51 +165,18 @@ export const useQuoteStore = create<QuoteStoreState>()(
       setSelection: (selection) => set(() => ({ selection })),
       clearSelection: () => set(() => ({ selection: null })),
       reset: (options) =>
-        set((state) => {
-          console.log('[useQuoteStore] reset() chamado com options:', options);
-          console.log('[useQuoteStore] Estado ANTES do reset:', JSON.stringify({
-            form: state.form ? {
-              destinoCep: state.form.destinoCep,
-              coleta: state.form.coleta,
-              volumesCount: state.form.volumes?.length,
-            } : null,
-            results: state.results ? { quoteId: state.results.quoteId } : null,
-            selection: state.selection,
-            lastDestination: state.lastDestination,
-          }, null, 2));
-
-          const newState = {
-            form: options?.keepForm
-              ? state.form
-                ? fromSummary(toSummary(state.form))
-                : emptyForm()
-              : emptyForm(),
-            results: null,
-            selection: null,
-            lastDestination: options?.keepForm
-              ? state.lastDestination
-              : null,
-          };
-
-          console.log('[useQuoteStore] Novo estado após reset:', JSON.stringify({
-            form: newState.form ? {
-              destinoCep: newState.form.destinoCep,
-              coleta: newState.form.coleta,
-              volumesCount: newState.form.volumes?.length,
-            } : null,
-            results: newState.results,
-            selection: newState.selection,
-            lastDestination: newState.lastDestination,
-          }, null, 2));
-
-          console.log('[useQuoteStore] emptyForm() retorna:', JSON.stringify({
-            destinoCep: emptyForm().destinoCep,
-            coleta: emptyForm().coleta,
-            volumesCount: emptyForm().volumes.length,
-          }, null, 2));
-
-          return newState;
-        }),
+        set((state) => ({
+          form: options?.keepForm
+            ? state.form
+              ? fromSummary(toSummary(state.form))
+              : emptyForm()
+            : emptyForm(),
+          results: null,
+          selection: null,
+          lastDestination: options?.keepForm
+            ? state.lastDestination
+            : null,
+        })),
       clearIfExpired: () => {
         const state = useQuoteStore.getState();
         if (!state.results) {
@@ -218,11 +187,6 @@ export const useQuoteStore = create<QuoteStoreState>()(
         const expiresAt = new Date(state.results.expiresAt);
 
         if (now >= expiresAt) {
-          console.log('[useQuoteStore] Cotação expirada detectada:', {
-            quoteId: state.results.quoteId,
-            expiresAt: state.results.expiresAt,
-            now: now.toISOString(),
-          });
           set({ results: null, selection: null });
           return true;
         }
@@ -239,6 +203,14 @@ export const useQuoteStore = create<QuoteStoreState>()(
         selection: state.selection,
         lastDestination: state.lastDestination,
       }),
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          // Usar queueMicrotask para garantir que o set seja chamado após o store estar pronto
+          queueMicrotask(() => {
+            useQuoteStore.setState({ _hasHydrated: true });
+          });
+        }
+      },
     },
   ),
 );

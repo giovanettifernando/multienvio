@@ -1,31 +1,61 @@
 "use client";
 
-import { Card, Tabs, Typography } from "antd";
+import { useEffect, useMemo } from "react";
+import { Card, Tabs, Typography, Space, Badge } from "antd";
+import { FileTextOutlined, FormOutlined } from "@ant-design/icons";
 import { useFormContext } from "react-hook-form";
 import type { DocumentType } from "@/types/quote";
-import type { FinalizeFormValues } from "@/types/quoteFinalize";
-import { NFeGridPerPackage } from "@/components/quote/NFeGridPerPackage";
-import { DeclarationItems } from "@/components/quote/DeclarationItems";
-import { VolumeDocuments } from "@/components/quote/VolumeDocuments";
+import type { FinalizeFormValues, VolumeDocument } from "@/types/quoteFinalize";
+import { useQuoteStore } from "@/store/useQuoteStore";
+import { VolumeNFeTab } from "@/components/quote/VolumeNFeTab";
+import { VolumeDeclarationTab } from "@/components/quote/VolumeDeclarationTab";
 
 export function DocumentChooser() {
-  const { watch, setValue } = useFormContext<FinalizeFormValues>();
+  const { watch, setValue, getValues } = useFormContext<FinalizeFormValues>();
   const activeKey = watch("document.type") ?? "DECLARACAO";
-  const volumeDeclarations = watch("document.volumeDeclarations");
+  const volumeDocuments = watch("document.volumeDocuments") ?? [];
+
+  // Obter quantidade de volumes da cotação
+  const volumes = useQuoteStore((s) => s.results?.resumo?.volumes);
+  const volumeCount = useMemo(() => {
+    if (Array.isArray(volumes) && volumes.length > 0) {
+      return volumes.length;
+    }
+    return 1;
+  }, [volumes]);
+
+  // Inicializar volumeDocuments se necessário
+  useEffect(() => {
+    const current = getValues("document.volumeDocuments");
+    if (!current || current.length !== volumeCount) {
+      const docs: VolumeDocument[] = Array.from({ length: volumeCount }, (_, i) => ({
+        volumeIndex: i,
+        type: current?.[i]?.type ?? null,
+        nfeKey: current?.[i]?.nfeKey ?? undefined,
+        nfeXmlId: current?.[i]?.nfeXmlId ?? undefined,
+        nfeItems: current?.[i]?.nfeItems ?? undefined,
+        declarationItems: current?.[i]?.declarationItems ?? undefined,
+      }));
+      setValue("document.volumeDocuments", docs, { shouldDirty: false });
+    }
+  }, [volumeCount, setValue, getValues]);
 
   const handleChange = (key: string) => {
     setValue("document.type", key as DocumentType, { shouldDirty: true });
   };
 
-  // Usar VolumeDocuments se houver múltiplos volumes com declarações
-  const useVolumeDeclarations = volumeDeclarations && volumeDeclarations.length > 0;
+  // Contar volumes com NF-e e declaração preenchidos
+  const nfeCount = volumeDocuments.filter((v) => v?.type === "NFE" && v?.nfeKey).length;
+  const declCount = volumeDocuments.filter(
+    (v) => v?.type === "DECLARACAO" && v?.declarationItems && v.declarationItems.length > 0
+  ).length;
 
   return (
     <Card>
       <Typography.Title level={5}>Qual documento usar?</Typography.Title>
       <Typography.Paragraph type="secondary">
-        {useVolumeDeclarations
-          ? "Preencha o documento para cada volume do envio."
+        {volumeCount > 1
+          ? "Selecione o tipo de documento para cada volume. Você pode usar NF-e para alguns volumes e Declaração para outros."
           : "Informe se você enviará com Nota Fiscal modelo 55 ou Declaração de conteúdo."}
       </Typography.Paragraph>
       <Tabs
@@ -34,13 +64,25 @@ export function DocumentChooser() {
         items={[
           {
             key: "NFE",
-            label: "Nota Fiscal",
-            children: <NFeGridPerPackage />,
+            label: (
+              <Space>
+                <FileTextOutlined />
+                <span>Nota Fiscal</span>
+                {nfeCount > 0 && <Badge count={nfeCount} style={{ backgroundColor: "#52c41a" }} />}
+              </Space>
+            ),
+            children: <VolumeNFeTab volumeCount={volumeCount} />,
           },
           {
             key: "DECLARACAO",
-            label: "Declaração de conteúdo",
-            children: useVolumeDeclarations ? <VolumeDocuments /> : <DeclarationItems />,
+            label: (
+              <Space>
+                <FormOutlined />
+                <span>Declaração de conteúdo</span>
+                {declCount > 0 && <Badge count={declCount} style={{ backgroundColor: "#1890ff" }} />}
+              </Space>
+            ),
+            children: <VolumeDeclarationTab volumeCount={volumeCount} />,
           },
         ]}
       />

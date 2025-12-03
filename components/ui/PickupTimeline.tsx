@@ -28,7 +28,7 @@ export function PickupTimeline({ events }: Props) {
             : event.type === "FAILED" || event.type === "CANCELED"
             ? "red"
             : "blue",
-        children: (
+        content: (
           <div>
             <Typography.Text strong>{LABELS[event.type]}</Typography.Text>
             <Typography.Paragraph style={{ margin: 0 }}>
