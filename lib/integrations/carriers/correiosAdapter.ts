@@ -59,10 +59,10 @@ export interface CorreiosShipmentInput {
   larguraCm: number;
   comprimentoCm: number;
 
-  // Remetente
+  // Remetente (documento é OBRIGATÓRIO para PPN v1)
   remetente: {
     nome: string;
-    documento?: string;
+    documento: string;   // CPF ou CNPJ - OBRIGATÓRIO
     telefone?: string;
     email?: string;
     cep: string;
@@ -423,7 +423,7 @@ export async function createCorreiosShipmentFromCheckout(params: {
   }>;
   remetente: {
     nome: string;
-    documento?: string;
+    documento: string;   // CPF ou CNPJ - OBRIGATÓRIO para PPN v1
     telefone?: string;
     email?: string;
     cep: string;
@@ -460,6 +460,17 @@ export async function createCorreiosShipmentFromCheckout(params: {
       erros: [{
         codigo: 'INVALID_SERVICE',
         mensagem: `ServiceId inválido para Correios: ${params.serviceId}`,
+      }],
+    };
+  }
+
+  // Validar documento do remetente (obrigatório para PPN v1)
+  if (!params.remetente.documento) {
+    return {
+      success: false,
+      erros: [{
+        codigo: 'MISSING_DOCUMENT',
+        mensagem: 'CPF/CNPJ do remetente é obrigatório para pré-postagem',
       }],
     };
   }

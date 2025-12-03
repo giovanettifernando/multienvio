@@ -30,10 +30,20 @@ export const CORREIOS_ENDPOINTS = {
   prazoNacional: '/prazo/v1/nacional',          // POST para múltiplos, GET /{coProduto} para um
 
   // Pré-Postagem Nacional (PPN) - API 36
-  // TODO: Confirmar endpoints corretos da API v2 com a documentação oficial CWS
-  prePostagemCriar: '/prepostagem/v2/prepostagens', // POST para criar
-  prePostagemConsulta: '/prepostagem/v2/prepostagens', // GET /{id}
-  prePostagemEtiqueta: '/prepostagem/v2/etiquetas', // GET para etiqueta
+  // Documentação oficial CWS - seção 5.3
+  // IMPORTANTE: Todos os endpoints de pré-postagem devem ter o prefixo /prepostagem
+  prePostagemCriar: '/prepostagem/v1/prepostagens',                    // POST para criar (retorna id)
+  prePostagemRotulo: '/prepostagem/v1/prepostagens/rotulo/assincrono/pdf', // POST para gerar rótulo PDF (async - retorna idRecibo)
+  prePostagemRotuloDownload: '/prepostagem/v1/prepostagens/rotulo/download/assincrono', // GET /{idRecibo} para baixar PDF após geração
+  prePostagemRotuloSync: '/prepostagem/v1/prepostagens/rotulo/pdf',    // POST para gerar rótulo PDF (sync - pode não funcionar)
+  prePostagemDeclaracao: '/prepostagem/v1/prepostagens/declaracaoconteudo', // GET /{ids}
+  prePostagemAR: '/prepostagem/v1/prepostagens/avisorecebimento',      // GET /{ids}
+  prePostagemConsulta: '/prepostagem/v2/prepostagens',                 // GET paginado para listar (CORRIGIDO: adicionado /prepostagem)
+  // Lote (cartas simples)
+  prePostagemLote: '/prepostagem/v1/prepostagens/lote',                // POST form-data
+  prePostagemRotuloLote: '/prepostagem/v1/prepostagens/rotulo',        // POST com idsPrePostagem
+  // Etiqueta por ID (para baixarEtiqueta - pode não funcionar no v1, usar gerarRotulo)
+  prePostagemEtiqueta: '/prepostagem/v1/prepostagens',                 // GET /{id} - endpoint para consulta/download
 
   // Rastro
   rastro: '/rastro/v1/objetos',

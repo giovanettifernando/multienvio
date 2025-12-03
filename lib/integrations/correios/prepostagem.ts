@@ -2,30 +2,38 @@
  * Módulo de Pré-Postagem (PPN) dos Correios
  *
  * Responsabilidades:
- * - Criar lote de pré-postagem
- * - Obter código de rastreio (SRO)
- * - Gerar/baixar etiquetas (PDF/ZPL)
+ * - Criar pré-postagem individual
+ * - Gerar rótulo (etiqueta) com código de rastreio
+ * - Baixar documentos adicionais (declaração, AR)
  *
- * Referência: Manual de Pré-Postagem CWS
+ * Referência: Manual de Pré-Postagem CWS - Seção 5.3
  *
- * Fluxo típico:
- * 1. POST /prepostagem/v2/prepostagens → criar lote
- * 2. GET /prepostagem/v2/prepostagens/{idLote} → consultar status e obter códigos SRO
- * 3. GET /prepostagem/v2/etiquetas/{codigoObjeto}?formato=pdf → baixar etiqueta
+ * Fluxo de Pré-Postagem Individual:
+ * 1. POST /prepostagem/v1/prepostagens → criar pré-postagem (retorna ID)
+ * 2. POST /prepostagem/v1/prepostagens/rotulo/assincrono/pdf → gerar rótulo PDF
+ *
+ * Gerenciamento:
+ * - GET /v2/prepostagens → listar/consultar pré-postagens
+ * - GET /prepostagem/v1/prepostagens/declaracaoconteudo/{ids} → declaração
+ * - GET /prepostagem/v1/prepostagens/avisorecebimento/{ids} → AR
  */
 
 import { correiosFetch, getCorreiosConfig } from './client';
 import {
   type CorreiosPrePostagemObjeto,
+  type CorreiosPrePostagemRequest,
   type CorreiosPrePostagemLoteRequest,
   type CorreiosPrePostagemLoteResponse,
+  type CorreiosPrePostagemIndividualResponse,
+  type CorreiosRotuloRequest,
+  type CorreiosRotuloResponse,
   type CorreiosDestinatario,
   type CorreiosRemetente,
   type CorreiosEtiquetaResponse,
   CorreiosApiError,
   CorreiosValidationError,
 } from './types';
-import { CORREIOS_ENDPOINTS, SERVICO_ADICIONAL, TIPO_OBJETO } from './constants';
+import { CORREIOS_ENDPOINTS, SERVICO_ADICIONAL } from './constants';
 
 // ============================================================================
 // Tipos Internos
@@ -40,6 +48,10 @@ export interface CreatePrePostagemInput {
   alturaCm?: number;
   larguraCm?: number;
   comprimentoCm?: number;
+
+  // Tipo de objeto (1=Envelope, 2=Caixa/Pacote, 3=Rolo/Prisma)
+  // Se não informado, será deduzido das dimensões (2=Caixa como padrão)
+  tipoObjeto?: number;
 
   // Destinatário
   destinatario: {
@@ -56,10 +68,10 @@ export interface CreatePrePostagemInput {
     uf: string;
   };
 
-  // Remetente
+  // Remetente (documento é OBRIGATÓRIO para PPN v1)
   remetente: {
     nome: string;
-    documento?: string;
+    documento: string;   // CPF ou CNPJ - OBRIGATÓRIO
     telefone?: string;
     email?: string;
     cep: string;
@@ -70,6 +82,16 @@ export interface CreatePrePostagemInput {
     cidade?: string;
     uf?: string;
   };
+
+  // Declaração de Conteúdo (obrigatório se não tiver NF-e)
+  itensDeclaracaoConteudo?: Array<{
+    conteudo: string;      // Descrição do item
+    quantidade: number;
+    valor: number;         // Valor unitário em reais
+  }>;
+
+  // Indica se contém objetos proibidos (padrão: false)
+  objetosProibidos?: boolean;
 
   // Opcionais
   valorDeclarado?: number;
@@ -111,11 +133,20 @@ function normalizeCep(cep: string): string {
 
 /**
  * Converte input interno para formato da API dos Correios
+ *
+ * IMPORTANTE: Estrutura FLAT conforme documentação oficial CWS!
+ * - Todos os campos ficam na RAIZ do request
+ * - NÃO usar wrapper "objeto"
+ * - Nomes de campos específicos:
+ *   - pesoInformado (não "peso")
+ *   - codigoFormatoObjetoInformado (não "formatoObjeto")
+ *   - cienteObjetoNaoProibido (não "objetosProibidos")
+ *   - alturaInformada, larguraInformada, comprimentoInformado (não "dimensao")
  */
-function buildObjetoPostal(input: CreatePrePostagemInput): CorreiosPrePostagemObjeto {
+function buildPrePostagemRequest(input: CreatePrePostagemInput): CorreiosPrePostagemRequest {
   // Montar destinatário
   const destinatario: CorreiosDestinatario = {
-    nome: input.destinatario.nome.substring(0, 60), // Limite de 60 chars
+    nome: input.destinatario.nome.substring(0, 60),
     cpfCnpj: input.destinatario.documento?.replace(/\D/g, ''),
     telefone: input.destinatario.telefone?.replace(/\D/g, ''),
     email: input.destinatario.email,
@@ -147,66 +178,418 @@ function buildObjetoPostal(input: CreatePrePostagemInput): CorreiosPrePostagemOb
     },
   };
 
-  // Montar serviços adicionais
-  const servicosAdicionais: Array<{
-    codigoServicoAdicional: string;
-    valorDeclarado?: number;
-  }> = [];
+  // Determinar formato do objeto (padrão: 2 = Caixa/Pacote)
+  // Valores: "1"=Envelope, "2"=Caixa/Pacote, "3"=Rolo/Prisma
+  const codigoFormatoObjetoInformado = String(input.tipoObjeto ?? 2);
 
-  if (input.servicosAdicionais) {
-    for (const codigo of input.servicosAdicionais) {
-      servicosAdicionais.push({ codigoServicoAdicional: codigo });
-    }
+  // Peso em gramas como STRING
+  const pesoInformado = String(Math.round(input.pesoGramas));
+
+  // Dimensões como STRING
+  const alturaInformada = input.alturaCm ? String(Math.round(input.alturaCm)) : undefined;
+  const larguraInformada = input.larguraCm ? String(Math.round(input.larguraCm)) : undefined;
+  const comprimentoInformado = input.comprimentoCm ? String(Math.round(input.comprimentoCm)) : undefined;
+
+  // Montar Declaração de Conteúdo (obrigatório se não tiver NF-e)
+  // IMPORTANTE: Todos os campos devem ser STRING!
+  let itensDeclaracaoConteudo: Array<{
+    conteudo: string;
+    quantidade: string;
+    valor: string;
+  }> | undefined;
+
+  if (input.itensDeclaracaoConteudo && input.itensDeclaracaoConteudo.length > 0) {
+    itensDeclaracaoConteudo = input.itensDeclaracaoConteudo.map((item) => ({
+      conteudo: item.conteudo.substring(0, 100),
+      quantidade: String(item.quantidade),
+      valor: String(item.valor),
+    }));
+  } else if (!input.chavesNFe || input.chavesNFe.length === 0) {
+    // Se não tem NF-e e não tem declaração, criar uma declaração padrão
+    itensDeclaracaoConteudo = [{
+      conteudo: input.conteudo || input.descricaoObjeto || 'Mercadoria',
+      quantidade: '1',
+      valor: String(input.valorDeclarado || 1),
+    }];
   }
 
-  // Adicionar valor declarado se informado
-  if (input.valorDeclarado && input.valorDeclarado > 0) {
-    const hasVD = servicosAdicionais.some(
-      (s) => s.codigoServicoAdicional === SERVICO_ADICIONAL.VALOR_DECLARADO
-    );
-
-    if (!hasVD) {
-      servicosAdicionais.push({
-        codigoServicoAdicional: SERVICO_ADICIONAL.VALOR_DECLARADO,
-        valorDeclarado: input.valorDeclarado,
-      });
-    }
-  }
-
-  // Montar objeto postal
-  const objeto: CorreiosPrePostagemObjeto = {
-    codigoServico: input.codigoServico,
-    pesoInformado: Math.round(input.pesoGramas),
-    alturaInformada: input.alturaCm ? Math.round(input.alturaCm) : undefined,
-    larguraInformada: input.larguraCm ? Math.round(input.larguraCm) : undefined,
-    comprimentoInformado: input.comprimentoCm ? Math.round(input.comprimentoCm) : undefined,
-    destinatario,
-    remetente,
-    valorDeclarado: input.valorDeclarado,
-    conteudo: input.conteudo?.substring(0, 100),
-    descricaoObjeto: input.descricaoObjeto?.substring(0, 200),
-    servicosAdicionais: servicosAdicionais.length > 0 ? servicosAdicionais : undefined,
-  };
-
-  // Adicionar NF-e se houver
+  // Montar NF-e se houver
+  let listaNotaFiscal: Array<{ chaveNFe: string }> | undefined;
   if (input.chavesNFe && input.chavesNFe.length > 0) {
-    objeto.notasFiscais = input.chavesNFe.map((chave) => ({
-      chaveNFe: chave.replace(/\D/g, ''), // Apenas números
+    listaNotaFiscal = input.chavesNFe.map((chave) => ({
+      chaveNFe: chave.replace(/\D/g, ''),
     }));
   }
 
-  return objeto;
+  // Montar request completo com estrutura FLAT
+  // IMPORTANTE: Todos os campos na RAIZ, sem wrapper "objeto"!
+  const request: CorreiosPrePostagemRequest = {
+    // Serviço
+    codigoServico: input.codigoServico,
+
+    // Partes
+    remetente,
+    destinatario,
+
+    // Peso e formato - OBRIGATÓRIOS, como STRING
+    pesoInformado,                           // Ex: "500"
+    codigoFormatoObjetoInformado,            // Ex: "2"
+
+    // Dimensões - como STRING
+    alturaInformada,                         // Ex: "10"
+    larguraInformada,                        // Ex: "15"
+    comprimentoInformado,                    // Ex: "20"
+
+    // Flag de objetos proibidos - OBRIGATÓRIO
+    cienteObjetoNaoProibido: '1',            // "1" = ciente que não contém objetos proibidos
+
+    // Declaração de Conteúdo
+    itensDeclaracaoConteudo,
+
+    // Valor declarado (opcional)
+    valorDeclarado: input.valorDeclarado ? String(input.valorDeclarado) : undefined,
+
+    // NF-e (opcional)
+    listaNotaFiscal,
+  };
+
+  return request;
 }
 
 // ============================================================================
-// Criação de Pré-Postagem
+// Criação de Pré-Postagem Individual (Fluxo v1)
+// ============================================================================
+
+/**
+ * Cria uma pré-postagem individual
+ * Fluxo em duas etapas conforme documentação CWS seção 5.3:
+ * 1. POST /prepostagem/v1/prepostagens → criar (retorna ID)
+ * 2. POST /prepostagem/v1/prepostagens/rotulo/assincrono/pdf → gerar rótulo
+ *
+ * @param input Dados da pré-postagem
+ * @returns Resultado com ID da pré-postagem
+ */
+export async function criarPrePostagemIndividual(
+  input: CreatePrePostagemInput
+): Promise<PrePostagemResult> {
+  const config = getCorreiosConfig();
+
+  // Converter para formato da API (nova estrutura com remetente/destinatário na raiz)
+  const requestBody = buildPrePostagemRequest(input);
+
+  console.log('[CORREIOS_PREPOSTAGEM] Creating individual pre-postagem:', {
+    servico: requestBody.codigoServico,
+    pesoInformado: requestBody.pesoInformado,                                     // string (gramas)
+    codigoFormatoObjetoInformado: requestBody.codigoFormatoObjetoInformado,       // string ("1", "2", "3")
+    cienteObjetoNaoProibido: requestBody.cienteObjetoNaoProibido,                 // string ("1")
+    endpoint: CORREIOS_ENDPOINTS.prePostagemCriar,
+    apiBase: config.apiBase,
+    fullUrl: `${config.apiBase}${CORREIOS_ENDPOINTS.prePostagemCriar}`,
+  });
+
+  // Log do body completo para debug
+  console.log('[CORREIOS_PREPOSTAGEM] Request body:', JSON.stringify(requestBody, null, 2));
+
+  try {
+    // Etapa 1: Criar pré-postagem
+    const response = await correiosFetch<CorreiosPrePostagemIndividualResponse>(
+      CORREIOS_ENDPOINTS.prePostagemCriar,
+      {
+        method: 'POST',
+        body: JSON.stringify(requestBody),
+      }
+    );
+
+    console.log('[CORREIOS_PREPOSTAGEM] Pre-postagem created:', {
+      id: response.id,
+      codigoObjeto: response.codigoObjeto,
+      status: response.status,
+      fullResponse: JSON.stringify(response),
+    });
+
+    // Verificar se teve erros
+    if (response.erros && response.erros.length > 0) {
+      return {
+        success: false,
+        erros: response.erros.map((e) => ({
+          codigo: e.codigo,
+          mensagem: e.mensagem,
+        })),
+        bruto: response,
+      };
+    }
+
+    return {
+      success: true,
+      idObjeto: response.id,
+      codigoRastreio: response.codigoObjeto,
+      status: response.status,
+      bruto: response,
+    };
+  } catch (error) {
+    console.error('[CORREIOS_PREPOSTAGEM] Failed to create pre-postagem:', error);
+
+    // Capturar detalhes do erro da API dos Correios
+    let errorDetails: unknown = null;
+    if (error instanceof CorreiosApiError && error.errorDetails) {
+      errorDetails = error.errorDetails;
+      console.error('[CORREIOS_PREPOSTAGEM] API error details:', JSON.stringify(error.errorDetails, null, 2));
+    }
+
+    return {
+      success: false,
+      erros: [{
+        codigo: 'API_ERROR',
+        mensagem: error instanceof Error ? error.message : 'Erro desconhecido',
+      }],
+      bruto: errorDetails,
+    };
+  }
+}
+
+/**
+ * Gera rótulo (etiqueta) para uma pré-postagem
+ * Etapa 2 do fluxo: POST /prepostagem/v1/prepostagens/rotulo/assincrono/pdf
+ *
+ * @param idPrePostagem ID retornado pela criação da pré-postagem
+ * @returns Buffer com o PDF do rótulo
+ */
+export async function gerarRotulo(
+  idPrePostagem: string
+): Promise<EtiquetaResult> {
+  console.log('[CORREIOS_PREPOSTAGEM] Generating label:', {
+    idPrePostagem,
+    endpoint: CORREIOS_ENDPOINTS.prePostagemRotulo,
+  });
+
+  try {
+    const requestBody: CorreiosRotuloRequest = {
+      idsPrePostagem: [idPrePostagem],
+    };
+
+    const response = await correiosFetch<CorreiosRotuloResponse>(
+      CORREIOS_ENDPOINTS.prePostagemRotulo,
+      {
+        method: 'POST',
+        body: JSON.stringify(requestBody),
+      }
+    );
+
+    console.log('[CORREIOS_PREPOSTAGEM] Label response:', {
+      id: response.id,
+      codigoObjeto: response.codigoObjeto,
+      status: response.status,
+      hasUrl: !!response.urlRotulo,
+    });
+
+    // Se tiver erros, retornar erro
+    if (response.erros && response.erros.length > 0) {
+      return {
+        success: false,
+        codigoRastreio: response.codigoObjeto || idPrePostagem,
+        erro: response.erros.map((e) => e.mensagem).join(', '),
+      };
+    }
+
+    // O código de rastreio deve vir na resposta do rótulo
+    return {
+      success: true,
+      codigoRastreio: response.codigoObjeto || idPrePostagem,
+      // TODO: Baixar PDF se urlRotulo estiver disponível
+      // content: await fetchPdf(response.urlRotulo),
+      contentType: 'application/pdf',
+      fileName: `rotulo_${response.codigoObjeto || idPrePostagem}.pdf`,
+    };
+  } catch (error) {
+    console.error('[CORREIOS_PREPOSTAGEM] Failed to generate label:', error);
+
+    let errorMsg = 'Erro ao gerar rótulo';
+    if (error instanceof CorreiosApiError && error.errorDetails) {
+      console.error('[CORREIOS_PREPOSTAGEM] API error details:', JSON.stringify(error.errorDetails, null, 2));
+      errorMsg = error.message;
+    }
+
+    return {
+      success: false,
+      codigoRastreio: idPrePostagem,
+      erro: errorMsg,
+    };
+  }
+}
+
+/**
+ * Interface para resposta da geração assíncrona de rótulo
+ */
+interface RotuloAsyncResponse {
+  idRecibo?: string;
+  id?: string;
+  status?: string;
+  erros?: Array<{ codigo: string; mensagem: string }>;
+}
+
+/**
+ * Baixa o rótulo (etiqueta) PDF para uma pré-postagem
+ * Usa fluxo ASSÍNCRONO em 2 etapas:
+ * 1. POST /prepostagem/v1/prepostagens/rotulo/assincrono/pdf → retorna idRecibo
+ * 2. GET /prepostagem/v1/prepostagens/rotulo/download/assincrono/{idRecibo} → retorna PDF
+ *
+ * @param idPrePostagem ID da pré-postagem (ex: PRNnhoiSb6SSKvvVJA13MiOA)
+ * @returns Buffer com o conteúdo do PDF
+ */
+export async function baixarRotuloPdf(
+  idPrePostagem: string
+): Promise<EtiquetaResult> {
+  console.log('[CORREIOS_PREPOSTAGEM] Downloading label PDF (async flow):', {
+    idPrePostagem,
+    step1Endpoint: CORREIOS_ENDPOINTS.prePostagemRotulo,
+    step2Endpoint: CORREIOS_ENDPOINTS.prePostagemRotuloDownload,
+  });
+
+  try {
+    // ETAPA 1: Solicitar geração do rótulo (assíncrono)
+    // Parâmetros obrigatórios conforme documentação CWS:
+    // - idsPrePostagem: Array de IDs
+    // - tipoRotulo: "P" (Papel A4), "R" (Rolo/Térmico ZPL)
+    const requestBody = {
+      idsPrePostagem: [idPrePostagem],
+      tipoRotulo: 'P',  // "P" = Papel A4 (PDF), "R" = Rolo/Térmico (ZPL)
+    };
+
+    console.log('[CORREIOS_PREPOSTAGEM] Step 1 - Requesting label generation:', {
+      endpoint: CORREIOS_ENDPOINTS.prePostagemRotulo,
+      body: requestBody,
+    });
+
+    const asyncResponse = await correiosFetch<RotuloAsyncResponse>(
+      CORREIOS_ENDPOINTS.prePostagemRotulo,
+      {
+        method: 'POST',
+        body: JSON.stringify(requestBody),
+      }
+    );
+
+    console.log('[CORREIOS_PREPOSTAGEM] Step 1 response:', JSON.stringify(asyncResponse, null, 2));
+
+    // Verificar se teve erros
+    if (asyncResponse.erros && asyncResponse.erros.length > 0) {
+      return {
+        success: false,
+        codigoRastreio: idPrePostagem,
+        erro: asyncResponse.erros.map((e) => e.mensagem).join(', '),
+      };
+    }
+
+    // Obter ID do recibo
+    const idRecibo = asyncResponse.idRecibo || asyncResponse.id;
+    if (!idRecibo) {
+      return {
+        success: false,
+        codigoRastreio: idPrePostagem,
+        erro: 'API não retornou idRecibo para download do PDF',
+      };
+    }
+
+    console.log('[CORREIOS_PREPOSTAGEM] Step 1 success, got idRecibo:', { idRecibo });
+
+    // Aguardar um momento para processamento (o Correios pode precisar de tempo)
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+
+    // ETAPA 2: Baixar o PDF usando o idRecibo
+    // A resposta vem em JSON com o PDF em base64
+    console.log('[CORREIOS_PREPOSTAGEM] Step 2 - Downloading PDF:', {
+      endpoint: `${CORREIOS_ENDPOINTS.prePostagemRotuloDownload}/${idRecibo}`,
+    });
+
+    const downloadResponse = await correiosFetch<{
+      rotulo?: string;       // PDF em base64
+      pdf?: string;          // Alternativa: PDF em base64
+      base64?: string;       // Alternativa: PDF em base64
+      status?: string;
+      erros?: Array<{ codigo: string; mensagem: string }>;
+    }>(
+      `${CORREIOS_ENDPOINTS.prePostagemRotuloDownload}/${idRecibo}`,
+      {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+        },
+      }
+    );
+
+    console.log('[CORREIOS_PREPOSTAGEM] Step 2 - Download response:', {
+      idPrePostagem,
+      idRecibo,
+      hasRotulo: !!downloadResponse.rotulo,
+      hasPdf: !!downloadResponse.pdf,
+      hasBase64: !!downloadResponse.base64,
+      status: downloadResponse.status,
+      responseKeys: Object.keys(downloadResponse),
+    });
+
+    // Verificar se teve erros
+    if (downloadResponse.erros && downloadResponse.erros.length > 0) {
+      return {
+        success: false,
+        codigoRastreio: idPrePostagem,
+        erro: downloadResponse.erros.map((e) => e.mensagem).join(', '),
+      };
+    }
+
+    // O PDF pode vir em diferentes campos (rotulo, pdf, ou base64)
+    const pdfBase64 = downloadResponse.rotulo || downloadResponse.pdf || downloadResponse.base64;
+
+    if (pdfBase64) {
+      // Converter base64 para Buffer
+      const pdfBuffer = Buffer.from(pdfBase64, 'base64');
+      console.log('[CORREIOS_PREPOSTAGEM] Step 2 - PDF decoded:', {
+        idPrePostagem,
+        size: pdfBuffer.length,
+      });
+
+      return {
+        success: true,
+        codigoRastreio: idPrePostagem,
+        content: pdfBuffer,
+        contentType: 'application/pdf',
+        fileName: `rotulo_${idPrePostagem}.pdf`,
+      };
+    }
+
+    // Se não encontrou o PDF no formato esperado, logar a resposta completa
+    console.error('[CORREIOS_PREPOSTAGEM] Step 2 - PDF not found in response:', JSON.stringify(downloadResponse, null, 2));
+
+    return {
+      success: false,
+      codigoRastreio: idPrePostagem,
+      erro: 'PDF não encontrado na resposta da API (etapa 2)',
+    };
+  } catch (error) {
+    console.error('[CORREIOS_PREPOSTAGEM] Failed to download label PDF:', error);
+
+    let errorMsg = 'Erro ao baixar rótulo PDF';
+    if (error instanceof CorreiosApiError && error.errorDetails) {
+      console.error('[CORREIOS_PREPOSTAGEM] API error details:', JSON.stringify(error.errorDetails, null, 2));
+      errorMsg = error.message;
+    }
+
+    return {
+      success: false,
+      codigoRastreio: idPrePostagem,
+      erro: errorMsg,
+    };
+  }
+}
+
+// ============================================================================
+// Criação de Pré-Postagem em Lote (mantido para compatibilidade)
 // ============================================================================
 
 /**
  * Cria um lote de pré-postagem com um ou mais objetos
+ * NOTA: Este método usa o fluxo individual internamente
  *
  * @param objetos Array de objetos para pré-postagem
- * @returns Resultado com idLote e códigos de rastreio
+ * @returns Resultado com IDs e códigos de rastreio
  */
 export async function criarLotePrePostagem(
   objetos: CreatePrePostagemInput[]
@@ -215,116 +598,25 @@ export async function criarLotePrePostagem(
     throw new CorreiosValidationError('Nenhum objeto informado para pré-postagem');
   }
 
-  const config = getCorreiosConfig();
+  console.log('[CORREIOS_PREPOSTAGEM] Creating batch of', objetos.length, 'pre-postagens');
 
-  // Converter objetos para formato da API
-  const objetosPostais = objetos.map(buildObjetoPostal);
+  // Processar cada objeto individualmente
+  const results: PrePostagemResult[] = [];
 
-  const request: CorreiosPrePostagemLoteRequest = {
-    idCorreios: `ppn_${Date.now()}`,
-    codigoRemetente: config.cartaoPostagem,
-    objetosPostais,
-  };
+  for (const input of objetos) {
+    const result = await criarPrePostagemIndividual(input);
+    results.push(result);
 
-  console.log('[CORREIOS_PREPOSTAGEM] Creating pre-postagem:', {
-    idCorreios: request.idCorreios,
-    quantidadeObjetos: objetosPostais.length,
-    servicos: objetosPostais.map((o) => o.codigoServico),
-    endpoint: CORREIOS_ENDPOINTS.prePostagemCriar,
-    apiBase: config.apiBase,
-    fullUrl: `${config.apiBase}${CORREIOS_ENDPOINTS.prePostagemCriar}`,
-    requestBody: JSON.stringify(request, null, 2), // Log full request for debugging
-  });
-
-  try {
-    const response = await correiosFetch<CorreiosPrePostagemLoteResponse>(
-      CORREIOS_ENDPOINTS.prePostagemCriar,
-      {
-        method: 'POST',
-        body: JSON.stringify(request),
-      }
-    );
-
-    console.log('[CORREIOS_PREPOSTAGEM] Batch created:', {
-      idLote: response.idLote,
-      status: response.status,
-      objetos: response.objetosPostais?.length || 0,
-    });
-
-    // Processar resultados
-    const results: PrePostagemResult[] = [];
-
-    if (response.objetosPostais) {
-      for (const obj of response.objetosPostais) {
-        const result: PrePostagemResult = {
-          success: !!obj.codigoObjeto,
-          idLote: response.idLote,
-          codigoRastreio: obj.codigoObjeto,
-          idObjeto: obj.idObjeto,
-          status: obj.status,
-          bruto: obj,
-        };
-
-        if (obj.erros && obj.erros.length > 0) {
-          result.success = false;
-          result.erros = obj.erros.map((e) => ({
-            codigo: e.codigo,
-            mensagem: e.mensagem,
-          }));
-        }
-
-        results.push(result);
+    // Se criou com sucesso e temos ID, tentar gerar rótulo
+    if (result.success && result.idObjeto) {
+      const rotuloResult = await gerarRotulo(result.idObjeto);
+      if (rotuloResult.success && rotuloResult.codigoRastreio) {
+        result.codigoRastreio = rotuloResult.codigoRastreio;
       }
     }
-
-    // Se não retornou objetos mas tem idLote, criar resultado genérico
-    if (results.length === 0 && response.idLote) {
-      results.push({
-        success: true,
-        idLote: response.idLote,
-        status: response.status,
-        bruto: response,
-      });
-    }
-
-    // Verificar erros no nível do lote
-    if (response.erros && response.erros.length > 0) {
-      console.error('[CORREIOS_PREPOSTAGEM] Batch errors:', response.erros);
-
-      // Se não tem resultados, criar um com os erros
-      if (results.length === 0) {
-        results.push({
-          success: false,
-          erros: response.erros.map((e) => ({
-            codigo: e.codigo,
-            mensagem: e.mensagem,
-          })),
-          bruto: response,
-        });
-      }
-    }
-
-    return results;
-  } catch (error) {
-    console.error('[CORREIOS_PREPOSTAGEM] Failed to create batch:', error);
-
-    // Capturar detalhes do erro da API dos Correios
-    let errorDetails: unknown = null;
-    if (error instanceof CorreiosApiError && error.errorDetails) {
-      errorDetails = error.errorDetails;
-      console.error('[CORREIOS_PREPOSTAGEM] API error details:', error.errorDetails);
-    }
-
-    // Retornar erro para cada objeto com detalhes da API
-    return objetos.map(() => ({
-      success: false,
-      erros: [{
-        codigo: 'API_ERROR',
-        mensagem: error instanceof Error ? error.message : 'Erro desconhecido',
-      }],
-      bruto: errorDetails, // Incluir resposta bruta do erro da API
-    }));
   }
+
+  return results;
 }
 
 /**
@@ -341,8 +633,97 @@ export async function criarPrePostagem(
 }
 
 // ============================================================================
-// Consulta de Lote
+// Consulta de Pré-Postagem
 // ============================================================================
+
+/**
+ * Interface para resultado de busca de pré-postagem
+ */
+export interface BuscaPrePostagemResult {
+  success: boolean;
+  idPrePostagem?: string;
+  codigoRastreio?: string;
+  status?: string;
+  erro?: string;
+}
+
+/**
+ * Busca uma pré-postagem pelo código de rastreio
+ * Usa o endpoint GET /v2/prepostagens com filtro por codigoObjeto
+ *
+ * @param codigoRastreio Código de rastreio (ex: AN312817735BR)
+ * @returns ID da pré-postagem para download do rótulo
+ */
+export async function buscarPrePostagemPorRastreio(
+  codigoRastreio: string
+): Promise<BuscaPrePostagemResult> {
+  console.log('[CORREIOS_PREPOSTAGEM] Searching for pre-postagem by tracking code:', {
+    codigoRastreio,
+  });
+
+  try {
+    // Tentar buscar via endpoint de consulta
+    // O endpoint /prepostagem/v2/prepostagens aceita parâmetros de filtro
+    const response = await correiosFetch<{
+      itens?: Array<{
+        id: string;
+        codigoObjeto: string;
+        statusAtual?: number;
+        descStatusAtual?: string;
+      }>;
+      prepostagens?: Array<{
+        id: string;
+        codigoObjeto: string;
+        status?: string;
+      }>;
+      content?: Array<{
+        id: string;
+        codigoObjeto: string;
+        status?: string;
+      }>;
+    }>(
+      `${CORREIOS_ENDPOINTS.prePostagemConsulta}?codigoObjeto=${codigoRastreio}`,
+      {
+        method: 'GET',
+      }
+    );
+
+    console.log('[CORREIOS_PREPOSTAGEM] Search response:', JSON.stringify(response, null, 2));
+
+    // A resposta pode vir em diferentes formatos (itens é o formato v2)
+    const prepostagens = response.itens || response.prepostagens || response.content || [];
+
+    if (prepostagens.length > 0) {
+      const found = prepostagens[0];
+      return {
+        success: true,
+        idPrePostagem: found.id,
+        codigoRastreio: found.codigoObjeto,
+        status: found.descStatusAtual || found.status,
+      };
+    }
+
+    return {
+      success: false,
+      erro: `Nenhuma pré-postagem encontrada para o código ${codigoRastreio}`,
+    };
+  } catch (error) {
+    console.error('[CORREIOS_PREPOSTAGEM] Search failed:', error);
+
+    let errorMsg = 'Erro ao buscar pré-postagem';
+    if (error instanceof CorreiosApiError) {
+      errorMsg = error.message;
+      if (error.errorDetails) {
+        console.error('[CORREIOS_PREPOSTAGEM] API error details:', JSON.stringify(error.errorDetails, null, 2));
+      }
+    }
+
+    return {
+      success: false,
+      erro: errorMsg,
+    };
+  }
+}
 
 /**
  * Consulta status de um lote de pré-postagem

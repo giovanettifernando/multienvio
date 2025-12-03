@@ -29,6 +29,7 @@ import {
   FileTextOutlined,
   ExperimentOutlined,
   CloudOutlined,
+  DownloadOutlined,
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
@@ -738,13 +739,16 @@ function TestPrePostagemTab() {
         alturaCm: values.alturaCm as number,
         larguraCm: values.larguraCm as number,
         comprimentoCm: values.comprimentoCm as number,
+        // Remetente (documento é OBRIGATÓRIO)
         remetenteNome: values.remetenteNome as string,
+        remetenteDocumento: (values.remetenteDocumento as string).replace(/\D/g, ''),
         remetenteCep: (values.remetenteCep as string).replace(/\D/g, ''),
         remetenteLogradouro: values.remetenteLogradouro as string,
         remetenteNumero: values.remetenteNumero as string,
         remetenteBairro: values.remetenteBairro as string,
         remetenteCidade: values.remetenteCidade as string,
         remetenteUf: (values.remetenteUf as string).toUpperCase(),
+        // Destinatário
         destinatarioNome: values.destinatarioNome as string,
         destinatarioCep: (values.destinatarioCep as string).replace(/\D/g, ''),
         destinatarioLogradouro: values.destinatarioLogradouro as string,
@@ -752,6 +756,9 @@ function TestPrePostagemTab() {
         destinatarioBairro: values.destinatarioBairro as string,
         destinatarioCidade: values.destinatarioCidade as string,
         destinatarioUf: (values.destinatarioUf as string).toUpperCase(),
+        // Declaração de Conteúdo (obrigatório se não tiver NF-e)
+        conteudoDescricao: values.conteudoDescricao as string,
+        conteudoValor: values.conteudoValor as number,
       });
       setResult(res);
     } catch (err) {
@@ -767,32 +774,83 @@ function TestPrePostagemTab() {
 
   return (
     <Space orientation="vertical" style={{ width: '100%' }} size="large">
-      <ApiUrlPreview endpoint="/prepostagem/v2/prepostagens" />
+      <ApiUrlPreview endpoint="/prepostagem/v1/prepostagens" />
 
       <Alert
-        type="info"
-        title="Teste de Pré-Postagem Real"
-        description="Este teste executa uma pré-postagem REAL na API dos Correios. No ambiente SANDBOX, não gera custos. Em PRODUÇÃO, pode gerar custos."
+        type="warning"
+        title="⚠️ Teste de Pré-Postagem REAL"
+        description={
+          <div>
+            <p style={{ margin: '4px 0' }}>
+              Este teste executa uma <strong>pré-postagem REAL</strong> na API dos Correios:
+            </p>
+            <ul style={{ margin: '4px 0', paddingLeft: 20 }}>
+              <li><strong>SANDBOX:</strong> Não gera custos, mas valida todos os campos</li>
+              <li><strong>PRODUÇÃO:</strong> Pode gerar custos e reservar código de rastreio real</li>
+            </ul>
+            <p style={{ margin: '4px 0' }}>
+              <strong>Fluxo v1:</strong> POST /prepostagem/v1/prepostagens → POST /prepostagem/v1/prepostagens/rotulo/assincrono/pdf
+            </p>
+          </div>
+        }
         showIcon
       />
+
+      <Collapse defaultActiveKey={['endpoints']}>
+        <Collapse.Panel
+          header={
+            <Space>
+              <ApiOutlined />
+              <span>Endpoints da API de Pré-Postagem v1</span>
+              <Tag color="blue">Referência</Tag>
+            </Space>
+          }
+          key="endpoints"
+        >
+          <div style={{ background: '#f5f5f5', padding: 12, borderRadius: 4, fontSize: 12 }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid #d9d9d9' }}>
+                  <th style={{ textAlign: 'left', padding: '4px 8px' }}>Ação</th>
+                  <th style={{ textAlign: 'left', padding: '4px 8px' }}>Método</th>
+                  <th style={{ textAlign: 'left', padding: '4px 8px' }}>Endpoint</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td style={{ padding: '4px 8px' }}>Criar Pré-Postagem</td><td>POST</td><td><code>/prepostagem/v1/prepostagens</code></td></tr>
+                <tr><td style={{ padding: '4px 8px' }}>Gerar Rótulo (async)</td><td>POST</td><td><code>/prepostagem/v1/prepostagens/rotulo/assincrono/pdf</code></td></tr>
+                <tr><td style={{ padding: '4px 8px' }}>Gerar Rótulo (sync)</td><td>POST</td><td><code>/prepostagem/v1/prepostagens/rotulo/pdf</code></td></tr>
+                <tr><td style={{ padding: '4px 8px' }}>Consultar Pré-Postagens</td><td>GET</td><td><code>/prepostagem/v2/prepostagens</code></td></tr>
+                <tr><td style={{ padding: '4px 8px' }}>Declaração de Conteúdo</td><td>GET</td><td><code>/prepostagem/v1/prepostagens/declaracaoconteudo/&#123;ids&#125;</code></td></tr>
+                <tr><td style={{ padding: '4px 8px' }}>Aviso de Recebimento</td><td>GET</td><td><code>/prepostagem/v1/prepostagens/avisorecebimento/&#123;ids&#125;</code></td></tr>
+                <tr><td style={{ padding: '4px 8px' }}>Cancelar por ID</td><td>DELETE</td><td><code>/prepostagem/v1/prepostagens/&#123;idPrePostagem&#125;</code></td></tr>
+                <tr><td style={{ padding: '4px 8px' }}>Cancelar por Rastreio</td><td>DELETE</td><td><code>/prepostagem/v1/prepostagens/objeto/&#123;codigoObjeto&#125;</code></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </Collapse.Panel>
+      </Collapse>
 
       <Form
         form={form}
         layout="vertical"
         onFinish={handleTest}
         initialValues={{
-          codigoServico: '03220',
+          codigoServico: '03298',
           pesoGramas: 500,
           alturaCm: 10,
           larguraCm: 15,
           comprimentoCm: 20,
+          // Remetente (use CNPJ real para testes em produção)
           remetenteNome: 'Empresa Teste Ltda',
+          remetenteDocumento: '',  // Preencha com CNPJ válido
           remetenteCep: '01310100',
           remetenteLogradouro: 'Av. Paulista',
           remetenteNumero: '1000',
           remetenteBairro: 'Bela Vista',
           remetenteCidade: 'São Paulo',
           remetenteUf: 'SP',
+          // Destinatário
           destinatarioNome: 'João da Silva',
           destinatarioCep: '22041080',
           destinatarioLogradouro: 'Rua Barata Ribeiro',
@@ -800,32 +858,116 @@ function TestPrePostagemTab() {
           destinatarioBairro: 'Copacabana',
           destinatarioCidade: 'Rio de Janeiro',
           destinatarioUf: 'RJ',
+          // Declaração de Conteúdo
+          conteudoDescricao: 'Mercadorias diversas',
+          conteudoValor: 100,
         }}
       >
-        <Card title="Serviço e Dimensões" size="small" style={{ marginBottom: 16 }}>
+        <Card
+          title={
+            <Space>
+              <span>📦 Serviço e Dimensões</span>
+              <Tag color="purple">Obrigatório</Tag>
+            </Space>
+          }
+          size="small"
+          style={{ marginBottom: 16 }}
+        >
           <Space wrap>
-            <Form.Item name="codigoServico" label="Código Serviço" rules={[{ required: true }]} extra="03220=SEDEX, 03298=PAC">
-              <Input placeholder="03220" maxLength={5} style={{ width: 100 }} />
+            <Form.Item
+              name="codigoServico"
+              label="Código Serviço"
+              rules={[{ required: true, message: 'Obrigatório' }]}
+              extra="03298=PAC, 03220=SEDEX"
+            >
+              <Input placeholder="03298" maxLength={5} style={{ width: 100 }} />
             </Form.Item>
             <Form.Item name="pesoGramas" label="Peso (g)" rules={[{ required: true }]}>
               <InputNumber min={1} max={30000} style={{ width: 100 }} />
             </Form.Item>
-            <Form.Item name="comprimentoCm" label="Comp. (cm)">
-              <InputNumber min={1} max={100} style={{ width: 80 }} />
+            <Form.Item name="comprimentoCm" label="Comp. (cm)" extra="mín: 16">
+              <InputNumber min={16} max={100} style={{ width: 80 }} />
             </Form.Item>
-            <Form.Item name="larguraCm" label="Larg. (cm)">
-              <InputNumber min={1} max={100} style={{ width: 80 }} />
+            <Form.Item name="larguraCm" label="Larg. (cm)" extra="mín: 11">
+              <InputNumber min={11} max={100} style={{ width: 80 }} />
             </Form.Item>
-            <Form.Item name="alturaCm" label="Alt. (cm)">
-              <InputNumber min={1} max={100} style={{ width: 80 }} />
+            <Form.Item name="alturaCm" label="Alt. (cm)" extra="mín: 2">
+              <InputNumber min={2} max={100} style={{ width: 80 }} />
             </Form.Item>
           </Space>
         </Card>
 
-        <Card title="Remetente" size="small" style={{ marginBottom: 16 }}>
+        <Card
+          title={
+            <Space>
+              <span>📝 Declaração de Conteúdo</span>
+              <Tag color="red">Obrigatório (sem NF-e)</Tag>
+            </Space>
+          }
+          size="small"
+          style={{ marginBottom: 16, borderColor: '#ff7a45' }}
+        >
+          <Alert
+            type="info"
+            title="A Declaração de Conteúdo é obrigatória quando não há NF-e vinculada"
+            style={{ marginBottom: 12 }}
+            showIcon
+          />
+          <Space wrap>
+            <Form.Item
+              name="conteudoDescricao"
+              label="Descrição do Conteúdo"
+              rules={[{ required: true, message: 'Obrigatório' }]}
+              style={{ minWidth: 300 }}
+            >
+              <Input placeholder="Mercadorias diversas" maxLength={100} />
+            </Form.Item>
+            <Form.Item
+              name="conteudoValor"
+              label="Valor Declarado (R$)"
+              rules={[{ required: true, message: 'Obrigatório' }]}
+            >
+              <InputNumber min={1} max={10000} prefix="R$" style={{ width: 120 }} />
+            </Form.Item>
+          </Space>
+        </Card>
+
+        <Card
+          title={
+            <Space>
+              <span>👤 Remetente</span>
+              <Tag color="red">CPF/CNPJ Obrigatório</Tag>
+            </Space>
+          }
+          size="small"
+          style={{ marginBottom: 16, borderColor: '#ff4d4f' }}
+        >
+          <Alert
+            type="error"
+            title="O CPF/CNPJ do remetente é OBRIGATÓRIO e deve ser VÁLIDO"
+            description="Use o CNPJ real da sua empresa. O Correios valida o documento na API."
+            style={{ marginBottom: 12 }}
+            showIcon
+          />
           <Space wrap style={{ width: '100%' }}>
-            <Form.Item name="remetenteNome" label="Nome" rules={[{ required: true }]} style={{ minWidth: 200 }}>
+            <Form.Item
+              name="remetenteNome"
+              label="Nome/Razão Social"
+              rules={[{ required: true, message: 'Obrigatório' }]}
+              style={{ minWidth: 200 }}
+            >
               <Input placeholder="Nome do remetente" />
+            </Form.Item>
+            <Form.Item
+              name="remetenteDocumento"
+              label="CPF/CNPJ"
+              rules={[
+                { required: true, message: 'Obrigatório' },
+                { min: 11, message: 'Mínimo 11 dígitos' },
+              ]}
+              extra="Apenas números"
+            >
+              <Input placeholder="00000000000000" maxLength={14} style={{ width: 160 }} />
             </Form.Item>
             <Form.Item name="remetenteCep" label="CEP" rules={[{ required: true }]}>
               <Input placeholder="00000000" maxLength={9} style={{ width: 110 }} />
@@ -848,7 +990,7 @@ function TestPrePostagemTab() {
           </Space>
         </Card>
 
-        <Card title="Destinatário" size="small" style={{ marginBottom: 16 }}>
+        <Card title="📍 Destinatário" size="small" style={{ marginBottom: 16 }}>
           <Space wrap style={{ width: '100%' }}>
             <Form.Item name="destinatarioNome" label="Nome" rules={[{ required: true }]} style={{ minWidth: 200 }}>
               <Input placeholder="Nome do destinatário" />
@@ -875,9 +1017,14 @@ function TestPrePostagemTab() {
         </Card>
 
         <Form.Item>
-          <Button type="primary" htmlType="submit" icon={<FileTextOutlined />} loading={loading} size="large">
-            Executar Pré-Postagem
-          </Button>
+          <Space>
+            <Button type="primary" htmlType="submit" icon={<FileTextOutlined />} loading={loading} size="large">
+              🚀 Executar Pré-Postagem
+            </Button>
+            <Button onClick={() => form.resetFields()}>
+              Limpar
+            </Button>
+          </Space>
         </Form.Item>
       </Form>
 
@@ -886,8 +1033,237 @@ function TestPrePostagemTab() {
   );
 }
 
+// ============================================================================
+// Rotulos Tab - Download de rótulos por ID
+// ============================================================================
+
+function RotulosTab() {
+  const [form] = Form.useForm();
+  const [loading, setLoading] = useState(false);
+  const [downloadResult, setDownloadResult] = useState<{ success: boolean; message: string; details?: unknown } | null>(null);
+
+  const handleDownload = async (values: { codigo: string }) => {
+    setLoading(true);
+    setDownloadResult(null);
+
+    const codigo = values.codigo.trim();
+
+    try {
+      const response = await fetch('/api/admin/integrations/correios/rotulo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ codigo }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        setDownloadResult({
+          success: false,
+          message: error.message || 'Erro ao baixar rótulo',
+          details: error,
+        });
+        throw new Error(error.message || 'Erro ao baixar rótulo');
+      }
+
+      // Criar blob e baixar
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `rotulo_${codigo}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      setDownloadResult({ success: true, message: 'Rótulo baixado com sucesso!' });
+      message.success('Rótulo baixado com sucesso!');
+    } catch (error) {
+      console.error('Erro ao baixar rótulo:', error);
+      const errorMsg = error instanceof Error ? error.message : 'Erro ao baixar rótulo';
+      if (!downloadResult) {
+        setDownloadResult({ success: false, message: errorMsg });
+      }
+      message.error(errorMsg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Space orientation="vertical" style={{ width: '100%' }} size="large">
+      <ApiUrlPreview endpoint="/prepostagem/v1/prepostagens/rotulo/pdf" />
+
+      <Alert
+        type="info"
+        message="Download de Rótulos"
+        description={
+          <div>
+            <p style={{ margin: '4px 0' }}>
+              Informe o <strong>código de rastreio</strong> ou o <strong>ID da pré-postagem</strong> para baixar o rótulo (etiqueta) em PDF.
+            </p>
+            <p style={{ margin: '4px 0' }}>
+              Formatos aceitos:
+            </p>
+            <ul style={{ margin: '4px 0 4px 20px', padding: 0 }}>
+              <li><code>AN312817735BR</code> - Código de rastreio</li>
+              <li><code>PRNnhoiSb6SSKvvVJA13MiOA</code> - ID da pré-postagem</li>
+            </ul>
+          </div>
+        }
+        showIcon
+      />
+
+      <Card title="📄 Baixar Rótulo" size="small">
+        <Form form={form} layout="vertical" onFinish={handleDownload}>
+          <Form.Item
+            name="codigo"
+            label="Código de Rastreio ou ID da Pré-Postagem"
+            rules={[{ required: true, message: 'Informe o código de rastreio ou ID da pré-postagem' }]}
+            extra="Ex: AN312817735BR ou PRNnhoiSb6SSKvvVJA13MiOA"
+          >
+            <Input
+              placeholder="Código de rastreio ou ID da pré-postagem"
+              style={{ maxWidth: 400 }}
+              allowClear
+            />
+          </Form.Item>
+
+          <Form.Item>
+            <Space>
+              <Button
+                type="primary"
+                htmlType="submit"
+                icon={<DownloadOutlined />}
+                loading={loading}
+                size="large"
+              >
+                📄 Baixar Rótulo PDF
+              </Button>
+              <Button onClick={() => { form.resetFields(); setDownloadResult(null); }}>
+                Limpar
+              </Button>
+            </Space>
+          </Form.Item>
+        </Form>
+
+        {downloadResult && (
+          <>
+            <Alert
+              type={downloadResult.success ? 'success' : 'error'}
+              message={downloadResult.message}
+              showIcon
+              style={{ marginTop: 16 }}
+            />
+            {!downloadResult.success && downloadResult.details && (
+              <Collapse style={{ marginTop: 16 }}>
+                <Collapse.Panel
+                  header={
+                    <Space>
+                      <FileTextOutlined />
+                      <span>Detalhes do Erro</span>
+                      <Tag color="red">API Response</Tag>
+                    </Space>
+                  }
+                  key="error-details"
+                >
+                  <pre style={{
+                    background: '#f5f5f5',
+                    padding: 12,
+                    borderRadius: 4,
+                    fontSize: 11,
+                    overflow: 'auto',
+                    maxHeight: 300,
+                  }}>
+                    {JSON.stringify(downloadResult.details, null, 2)}
+                  </pre>
+                </Collapse.Panel>
+              </Collapse>
+            )}
+          </>
+        )}
+      </Card>
+
+      <Collapse>
+        <Collapse.Panel
+          header={
+            <Space>
+              <ApiOutlined />
+              <span>Endpoints da API de Rótulos</span>
+              <Tag color="blue">Referência</Tag>
+            </Space>
+          }
+          key="endpoints"
+        >
+          <div style={{ background: '#f5f5f5', padding: 12, borderRadius: 4, fontSize: 12 }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid #d9d9d9' }}>
+                  <th style={{ textAlign: 'left', padding: '4px 8px' }}>Ação</th>
+                  <th style={{ textAlign: 'left', padding: '4px 8px' }}>Método</th>
+                  <th style={{ textAlign: 'left', padding: '4px 8px' }}>Endpoint</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td style={{ padding: '4px 8px' }}>Gerar Rótulo (sync)</td><td>POST</td><td><code>/prepostagem/v1/prepostagens/rotulo/pdf</code></td></tr>
+                <tr><td style={{ padding: '4px 8px' }}>Gerar Rótulo (async)</td><td>POST</td><td><code>/prepostagem/v1/prepostagens/rotulo/assincrono/pdf</code></td></tr>
+                <tr><td style={{ padding: '4px 8px' }}>Declaração de Conteúdo</td><td>GET</td><td><code>/prepostagem/v1/prepostagens/declaracaoconteudo/&#123;ids&#125;</code></td></tr>
+                <tr><td style={{ padding: '4px 8px' }}>Aviso de Recebimento</td><td>GET</td><td><code>/prepostagem/v1/prepostagens/avisorecebimento/&#123;ids&#125;</code></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </Collapse.Panel>
+      </Collapse>
+    </Space>
+  );
+}
+
 function TestResultDisplay({ result }: { result: TestResult }) {
   const isSuccess = result.success;
+  const [downloadingLabel, setDownloadingLabel] = useState(false);
+
+  // Extrair idObjeto da resposta de pré-postagem
+  const resultData = result.result as { idObjeto?: string; codigoRastreio?: string } | undefined;
+  const idObjeto = resultData?.idObjeto;
+  const codigoRastreio = resultData?.codigoRastreio;
+  const isPrePostagem = result.type === 'prepostagem' && isSuccess && idObjeto;
+
+  // Função para baixar o rótulo PDF
+  const handleDownloadLabel = async () => {
+    if (!idObjeto) return;
+
+    setDownloadingLabel(true);
+    try {
+      const response = await fetch('/api/admin/integrations/correios/rotulo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ codigo: idObjeto }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Erro ao baixar rótulo');
+      }
+
+      // Criar blob e baixar
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `rotulo_${codigoRastreio || idObjeto}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      message.success('Rótulo baixado com sucesso!');
+    } catch (error) {
+      console.error('Erro ao baixar rótulo:', error);
+      message.error(error instanceof Error ? error.message : 'Erro ao baixar rótulo');
+    } finally {
+      setDownloadingLabel(false);
+    }
+  };
 
   return (
     <Card
@@ -906,6 +1282,24 @@ function TestResultDisplay({ result }: { result: TestResult }) {
       style={{ borderColor: isSuccess ? '#52c41a' : '#ff4d4f' }}
     >
       <Alert type={isSuccess ? 'success' : 'error'} title={result.message} style={{ marginBottom: 16 }} />
+
+      {/* Botão para baixar rótulo (somente para pré-postagem bem-sucedida) */}
+      {isPrePostagem && (
+        <div style={{ marginBottom: 16 }}>
+          <Button
+            type="primary"
+            icon={<DownloadOutlined />}
+            onClick={handleDownloadLabel}
+            loading={downloadingLabel}
+            size="large"
+          >
+            📄 Baixar Rótulo PDF
+          </Button>
+          <Text type="secondary" style={{ marginLeft: 12 }}>
+            ID: {idObjeto} | Rastreio: {codigoRastreio}
+          </Text>
+        </div>
+      )}
 
       <Collapse>
         {/* Detalhes da resposta interna */}
@@ -1007,6 +1401,15 @@ export default function CorreiosClient() {
         </span>
       ),
       children: <TestPrePostagemTab />,
+    },
+    {
+      key: 'rotulos',
+      label: (
+        <span>
+          <DownloadOutlined /> Rótulos
+        </span>
+      ),
+      children: <RotulosTab />,
     },
   ];
 

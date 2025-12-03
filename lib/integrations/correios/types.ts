@@ -241,25 +241,97 @@ export interface CorreiosRemetente {
   };
 }
 
+/**
+ * Objeto dentro de uma pré-postagem (item de envio)
+ * Conforme documentação CWS seção 5.3
+ */
 export interface CorreiosPrePostagemObjeto {
   codigoServico: string;
-  pesoInformado: number;       // gramas
-  alturaInformada?: number;    // cm
-  larguraInformada?: number;   // cm
-  comprimentoInformado?: number; // cm
-  diametroInformado?: number;  // cm
-  destinatario: CorreiosDestinatario;
-  remetente: CorreiosRemetente;
+  peso: number;                // gramas
+  formatoObjeto: string;       // "1"=Envelope, "2"=Caixa/Pacote, "3"=Rolo/Prisma (OBRIGATÓRIO - string)
+  objetosProibidos: string;    // "S" ou "N" (OBRIGATÓRIO)
+  dimensao?: {
+    altura?: number;           // cm
+    largura?: number;          // cm
+    comprimento?: number;      // cm
+    diametro?: number;         // cm
+  };
   valorDeclarado?: number;     // reais
-  conteudo?: string;
   descricaoObjeto?: string;
-  servicosAdicionais?: Array<{
+  listaServicoAdicional?: Array<{
     codigoServicoAdicional: string;
     valorDeclarado?: number;
   }>;
+  // Declaração de Conteúdo (obrigatório se não tiver NF-e)
+  itensDeclaracaoConteudo?: Array<{
+    conteudo: string;          // Descrição do item
+    quantidade: number;
+    valor: number;             // Valor unitário em reais
+  }>;
   // NF-e (se aplicável)
-  notasFiscais?: Array<{
+  listaNotaFiscal?: Array<{
     chaveNFe: string;
+  }>;
+}
+
+/**
+ * Item da Declaração de Conteúdo
+ * Conforme documentação oficial CWS - todos os campos são STRINGS
+ */
+export interface CorreiosItemDeclaracaoConteudo {
+  conteudo: string;                   // Descrição do item (obrigatório)
+  quantidade: string;                 // Quantidade como string (obrigatório)
+  valor: string;                      // Valor unitário em reais como string (obrigatório)
+}
+
+/**
+ * Request body para criar pré-postagem
+ * Estrutura FLAT conforme documentação oficial CWS
+ * IMPORTANTE: Não usar wrapper "objeto" - todos os campos ficam na raiz!
+ *
+ * Campos com nomes corretos da API:
+ * - pesoInformado (não "peso")
+ * - codigoFormatoObjetoInformado (não "formatoObjeto")
+ * - cienteObjetoNaoProibido (não "objetosProibidos")
+ * - alturaInformada, larguraInformada, comprimentoInformado (não "dimensao")
+ */
+export interface CorreiosPrePostagemRequest {
+  // Serviço
+  codigoServico: string;                    // Código do serviço (obrigatório) - ex: "03298"
+
+  // Partes
+  remetente: CorreiosRemetente;             // Dados do remetente (obrigatório)
+  destinatario: CorreiosDestinatario;       // Dados do destinatário (obrigatório)
+
+  // Peso e Dimensões - TODOS COMO STRING e TOP-LEVEL (não dentro de objeto!)
+  pesoInformado: string;                    // Peso em gramas como string (obrigatório) - ex: "500"
+  codigoFormatoObjetoInformado: string;     // "1"=Envelope, "2"=Caixa, "3"=Rolo (obrigatório)
+  alturaInformada?: string;                 // Altura em cm como string
+  larguraInformada?: string;                // Largura em cm como string
+  comprimentoInformado?: string;            // Comprimento em cm como string
+  diametroInformado?: string;               // Diâmetro em cm como string (para rolos)
+
+  // Flag de objetos proibidos - OBRIGATÓRIO
+  cienteObjetoNaoProibido: string;          // "1" = ciente que não contém objetos proibidos
+
+  // Declaração de Conteúdo (obrigatório se não tiver NF-e)
+  itensDeclaracaoConteudo?: CorreiosItemDeclaracaoConteudo[];
+
+  // Valor declarado (opcional)
+  valorDeclarado?: string;                  // Valor em reais como string
+
+  // NF-e (se aplicável - alternativa à declaração de conteúdo)
+  listaNotaFiscal?: Array<{
+    chaveNFe: string;
+  }>;
+
+  // Campos opcionais adicionais
+  modalidadePagamento?: string;             // "1"=À vista, "2"=À faturar
+  numeroCartaoPostagem?: string;            // Número do cartão de postagem
+  logisticaReversa?: string;                // "S" ou "N"
+  servicosAdicionais?: Array<{
+    codigoServicoAdicional: string;
+    valorDeclarado?: string;
   }>;
 }
 
@@ -282,6 +354,34 @@ export interface CorreiosPrePostagemLoteResponse {
       mensagem: string;
     }>;
   }>;
+  erros?: Array<{
+    codigo: string;
+    mensagem: string;
+  }>;
+}
+
+// Pré-Postagem Individual (v1) - Fluxo em duas etapas
+export interface CorreiosPrePostagemIndividualResponse {
+  id: string;                 // ID da pré-postagem (usado para gerar rótulo)
+  codigoObjeto?: string;      // Código de rastreio (pode vir aqui ou no rótulo)
+  status?: string;
+  dataCriacao?: string;
+  erros?: Array<{
+    codigo: string;
+    mensagem: string;
+  }>;
+}
+
+export interface CorreiosRotuloRequest {
+  idsPrePostagem: string[];   // Array de IDs de pré-postagem
+}
+
+export interface CorreiosRotuloResponse {
+  // Pode retornar PDF binário ou objeto com dados
+  id?: string;
+  codigoObjeto?: string;      // Código de rastreio (SRO)
+  status?: string;
+  urlRotulo?: string;         // URL para download do rótulo
   erros?: Array<{
     codigo: string;
     mensagem: string;

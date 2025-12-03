@@ -65,8 +65,9 @@ const testSchema = z.discriminatedUnion('type', [
     alturaCm: z.number().min(1).max(100).optional(),
     larguraCm: z.number().min(1).max(100).optional(),
     comprimentoCm: z.number().min(1).max(100).optional(),
-    // Remetente
+    // Remetente (documento é OBRIGATÓRIO)
     remetenteNome: z.string().min(1, 'Nome do remetente é obrigatório'),
+    remetenteDocumento: z.string().min(11, 'CPF/CNPJ do remetente é obrigatório'),
     remetenteCep: z.string().length(8, 'CEP do remetente deve ter 8 dígitos'),
     remetenteLogradouro: z.string().min(1, 'Logradouro do remetente é obrigatório'),
     remetenteNumero: z.string().optional(),
@@ -81,6 +82,9 @@ const testSchema = z.discriminatedUnion('type', [
     destinatarioBairro: z.string().optional(),
     destinatarioCidade: z.string().min(1, 'Cidade do destinatário é obrigatória'),
     destinatarioUf: z.string().length(2, 'UF do destinatário deve ter 2 caracteres'),
+    // Declaração de Conteúdo (para teste)
+    conteudoDescricao: z.string().optional(),
+    conteudoValor: z.number().optional(),
   }),
 ]);
 
@@ -412,6 +416,7 @@ async function testPrePostagem(
       comprimentoCm: data.comprimentoCm,
       remetente: {
         nome: data.remetenteNome,
+        documento: data.remetenteDocumento, // CPF/CNPJ obrigatório
         cep: data.remetenteCep,
         logradouro: data.remetenteLogradouro,
         numero: data.remetenteNumero,
@@ -428,6 +433,12 @@ async function testPrePostagem(
         cidade: data.destinatarioCidade,
         uf: data.destinatarioUf,
       },
+      // Declaração de conteúdo (obrigatório se não tiver NF-e)
+      itensDeclaracaoConteudo: [{
+        conteudo: data.conteudoDescricao || 'Mercadoria para teste',
+        quantidade: 1,
+        valor: data.conteudoValor || 50,
+      }],
     };
 
     // Executar pré-postagem real na API dos Correios

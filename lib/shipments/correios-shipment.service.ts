@@ -126,6 +126,16 @@ export async function processCorreiosShipment(
   // 5. Montar dados para pré-postagem
   const senderAddress = shipment.sender?.addresses?.[0];
 
+  // Extrair documento do remetente (OBRIGATÓRIO para PPN v1)
+  const remetenteDocumento = shipment.sender?.cpf || shipment.sender?.cnpj;
+  if (!remetenteDocumento) {
+    console.error('[CORREIOS_SHIPMENT] Missing sender document (CPF/CNPJ)');
+    return {
+      success: false,
+      erro: 'CPF/CNPJ do remetente é obrigatório para pré-postagem dos Correios',
+    };
+  }
+
   // Extrair código do serviço
   const codigoServico = shipment.label?.service ||
                         extractCorreiosServiceCode(serviceId || '') ||
@@ -172,7 +182,7 @@ export async function processCorreiosShipment(
       })),
       remetente: {
         nome: shipment.sender?.name || 'Remetente',
-        documento: shipment.sender?.cpf || shipment.sender?.cnpj || undefined,
+        documento: remetenteDocumento,
         telefone: shipment.sender?.phone || undefined,
         email: shipment.sender?.email || undefined,
         cep: shipment.originCep,

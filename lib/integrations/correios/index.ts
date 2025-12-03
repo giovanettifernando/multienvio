@@ -74,7 +74,11 @@ export {
 // Pré-Postagem (geração de rastreio e etiqueta)
 export {
   criarPrePostagem,
+  criarPrePostagemIndividual,
   criarLotePrePostagem,
+  gerarRotulo,
+  baixarRotuloPdf,
+  buscarPrePostagemPorRastreio,
   consultarLotePrePostagem,
   baixarEtiqueta,
   baixarEtiquetasLote,
@@ -84,6 +88,7 @@ export {
   type EtiquetaResult,
   type FullPrePostagemResult,
   type EtiquetaFormato,
+  type BuscaPrePostagemResult,
 } from './prepostagem';
 
 // Rastreamento
