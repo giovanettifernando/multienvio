@@ -168,7 +168,7 @@ function ResetPasswordContent() {
           </Form.Item>
 
           <Form.Item style={{ marginBottom: 0 }}>
-            <Space direction="vertical" style={{ width: '100%' }} size={12}>
+            <Space orientation="vertical" style={{ width: '100%' }} size={12}>
               <Button
                 type="primary"
                 htmlType="submit"

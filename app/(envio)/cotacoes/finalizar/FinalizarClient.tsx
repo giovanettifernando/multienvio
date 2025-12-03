@@ -972,7 +972,7 @@ export default function FinalizarClient() {
                 title="Pagamento"
                 styles={{ body: { padding: "12px 16px" } }}
               >
-                <Space direction="vertical" size={8} style={{ width: "100%" }}>
+                <Space orientation="vertical" size={8} style={{ width: "100%" }}>
                   <Tooltip title={disabledTooltip}>
                     <Button
                       type="default"
@@ -1021,7 +1021,7 @@ export default function FinalizarClient() {
           </Row>
 
           {/* Formulários */}
-          <Space direction="vertical" size={24} style={{ width: "100%", marginTop: 24 }}>
+          <Space orientation="vertical" size={24} style={{ width: "100%", marginTop: 24 }}>
             <Row gutter={[24, 24]}>
               <Col xs={24} lg={14}>
                 <DocumentChooser />

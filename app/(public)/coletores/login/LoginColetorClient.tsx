@@ -111,7 +111,7 @@ function ColetorLoginForm() {
         >
           <Input.Password placeholder="••••••••" />
         </Form.Item>
-        <Space direction="vertical" style={{ width: '100%' }} size="middle">
+        <Space orientation="vertical" style={{ width: '100%' }} size="middle">
           <Button type="primary" htmlType="submit" block loading={loading} disabled={loading || googleLoading}>
             Entrar
           </Button>

@@ -141,7 +141,7 @@ export function MapModal({
         }
       }}
     >
-      <Space direction="vertical" size={16} style={{ width: '100%' }}>
+      <Space orientation="vertical" size={16} style={{ width: '100%' }}>
         {/* Info sobre origem */}
         {originInfo && (
           <Alert
@@ -236,7 +236,7 @@ export function MapModal({
                     tabIndex={0}
                     aria-label={`Selecionar ${point.nomeFantasia || point.razaoSocial}`}
                   >
-                    <Space direction="vertical" size={4} style={{ width: '100%' }}>
+                    <Space orientation="vertical" size={4} style={{ width: '100%' }}>
                       <Flex justify="space-between" align="center">
                         <Typography.Text
                           strong

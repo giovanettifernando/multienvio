@@ -199,7 +199,7 @@ export default function PickupPointReceptionsTab({ pointId }: PickupPointRecepti
   ];
 
   return (
-    <Space direction="vertical" style={{ width: "100%" }} size={16}>
+    <Space orientation="vertical" style={{ width: "100%" }} size={16}>
       {/* Filter */}
       <Card size="small">
         <Space>

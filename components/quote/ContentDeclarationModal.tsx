@@ -34,7 +34,7 @@ export function ContentDeclarationModal({
       footer={null}
       title="Declaração de conteúdo"
     >
-      <Space direction="vertical" size={16} style={{ width: "100%" }}>
+      <Space orientation="vertical" size={16} style={{ width: "100%" }}>
         <Typography.Paragraph>
           <SafetyOutlined style={{ marginRight: 8 }} />
           Ao seguir com a declaração de conteúdo você afirma que o envio não possui
@@ -49,7 +49,7 @@ export function ContentDeclarationModal({
           Lembrar da minha resposta e não exibir novamente.
         </Checkbox>
 
-        <Space direction="vertical" size={12} style={{ width: "100%" }}>
+        <Space orientation="vertical" size={12} style={{ width: "100%" }}>
           <Button
             type="primary"
             block

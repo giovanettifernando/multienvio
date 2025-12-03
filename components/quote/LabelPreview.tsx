@@ -49,7 +49,7 @@ export function LabelPreview({
       }}
       styles={{ body: { padding: "12px 16px" } }}
     >
-      <Space direction="vertical" size={8} style={{ width: "100%" }}>
+      <Space orientation="vertical" size={8} style={{ width: "100%" }}>
         {/* Transportadora e Modalidade */}
         <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
           <Space size={6}>

@@ -124,7 +124,7 @@ export default function ResetPasswordForm() {
         </Typography.Paragraph>
       }
     >
-      <Space direction="vertical" size={20} style={{ width: "100%" }}>
+      <Space orientation="vertical" size={20} style={{ width: "100%" }}>
         {tokenError ? (
           <Alert
             type="error"

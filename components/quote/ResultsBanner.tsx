@@ -70,7 +70,7 @@ export function ResultsBanner({ summary }: ResultsBannerProps) {
       }}
       styles={{ body: { padding: "12px 16px" } }}
     >
-      <Space direction="vertical" size={8} style={{ width: "100%" }}>
+      <Space orientation="vertical" size={8} style={{ width: "100%" }}>
         {/* Origem e Destino em uma linha */}
         <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
           {/* Origem */}
@@ -138,7 +138,7 @@ export function ResultsBanner({ summary }: ResultsBannerProps) {
                 {remainingVolumes.length > 0 && (
                   <Tooltip
                     title={
-                      <Space direction="vertical" size={2}>
+                      <Space orientation="vertical" size={2}>
                         {remainingVolumes.map((vol, idx) => (
                           <div key={vol.id} style={{ fontSize: 12 }}>
                             V{idx + 3}: {formatVolumeCompact(vol)}

@@ -184,7 +184,7 @@ export default function SuporteClient() {
               key: 'tickets',
               label: 'Meus Chamados',
               children: (
-                <Space direction="vertical" style={{ width: '100%' }} size="middle">
+                <Space orientation="vertical" style={{ width: '100%' }} size="middle">
                   {/* Filtros */}
                   <Space wrap>
                     <Input

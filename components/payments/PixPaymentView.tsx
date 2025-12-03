@@ -111,7 +111,7 @@ export function PixPaymentView({
       ]}
       width={600}
     >
-      <Space direction="vertical" size="large" style={{ width: '100%' }}>
+      <Space orientation="vertical" size="large" style={{ width: '100%' }}>
         {/* Polling status */}
         <div style={{
           display: 'flex',

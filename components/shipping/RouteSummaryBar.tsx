@@ -106,7 +106,7 @@ function SummaryPart({
 
   return (
     <Space
-      direction="vertical"
+      orientation="vertical"
       size={4}
       style={{ minWidth: 0, textAlign: align }}
     >

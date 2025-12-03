@@ -50,7 +50,7 @@ export function CartSummary({
 
   return (
     <Card title="Resumo do carrinho" styles={{ body: { paddingTop: 16 } }}>
-      <Space direction="vertical" size={16} style={{ width: "100%" }}>
+      <Space orientation="vertical" size={16} style={{ width: "100%" }}>
         <Flex justify="space-between">
           <Typography.Text>Subtotal</Typography.Text>
           <Typography.Text strong>
@@ -74,7 +74,7 @@ export function CartSummary({
           </Typography.Title>
         </Flex>
 
-        <Space direction="vertical" size={12} style={{ width: "100%" }}>
+        <Space orientation="vertical" size={12} style={{ width: "100%" }}>
           <Row gutter={8}>
             <Col xs={24} sm={12}>
               <Button

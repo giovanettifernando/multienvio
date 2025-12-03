@@ -19,7 +19,7 @@ export function PickupToggle({ control, disabled, onPickupChange }: PickupToggle
       control={control}
       name="coleta"
       render={({ field }) => (
-        <Space direction="vertical" style={{ width: "100%" }}>
+        <Space orientation="vertical" style={{ width: "100%" }}>
           <Flex align="center" gap={12}>
             <Switch
               checked={field.value}

@@ -176,7 +176,7 @@ export default function PickupDetailClient() {
         </Col>
 
         <Col xs={24} lg={10}>
-          <Space direction="vertical" size={24} style={{ width: '100%' }}>
+          <Space orientation="vertical" size={24} style={{ width: '100%' }}>
             <Card title="Atualizar status" variant="borderless">
               <Form
                 layout="vertical"

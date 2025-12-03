@@ -101,7 +101,7 @@ export default function RastreamentoClient() {
   return (
     <PageShell title="Rastreamento" gap="md">
       <Card variant="borderless">
-        <Space direction="vertical" size={16} style={{ width: "100%" }}>
+        <Space orientation="vertical" size={16} style={{ width: "100%" }}>
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
             <Input.Search
               placeholder="Buscar por ID do envio"

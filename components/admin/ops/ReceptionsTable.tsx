@@ -213,7 +213,7 @@ export default function ReceptionsTable({ dateStart, dateEnd }: ReceptionsTableP
         key: 'trackingCode',
         width: 180,
         render: (_, record) => (
-          <Space direction="vertical" size={0}>
+          <Space orientation="vertical" size={0}>
             <Text strong style={{ fontSize: 12 }}>
               {record.trackingCode}
             </Text>
@@ -230,7 +230,7 @@ export default function ReceptionsTable({ dateStart, dateEnd }: ReceptionsTableP
         key: 'pickupPoint',
         width: 180,
         render: (_, record) => (
-          <Space direction="vertical" size={0}>
+          <Space orientation="vertical" size={0}>
             <Text style={{ fontSize: 12 }}>
               <EnvironmentOutlined style={{ marginRight: 4 }} />
               {record.pickupPoint?.name || 'N/A'}
@@ -248,7 +248,7 @@ export default function ReceptionsTable({ dateStart, dateEnd }: ReceptionsTableP
         key: 'sender',
         width: 150,
         render: (_, record) => (
-          <Space direction="vertical" size={0}>
+          <Space orientation="vertical" size={0}>
             <Text style={{ fontSize: 12 }}>{record.senderName || record.sender?.name || '-'}</Text>
             {record.sender?.email && (
               <Tooltip title={record.sender.email}>
@@ -265,7 +265,7 @@ export default function ReceptionsTable({ dateStart, dateEnd }: ReceptionsTableP
         key: 'recipient',
         width: 150,
         render: (_, record) => (
-          <Space direction="vertical" size={0}>
+          <Space orientation="vertical" size={0}>
             <Text style={{ fontSize: 12 }}>{record.recipientName || '-'}</Text>
             <Text type="secondary" style={{ fontSize: 11 }}>
               {record.destinationCity}/{record.destinationState}
@@ -278,7 +278,7 @@ export default function ReceptionsTable({ dateStart, dateEnd }: ReceptionsTableP
         key: 'weightValue',
         width: 100,
         render: (_, record) => (
-          <Space direction="vertical" size={0}>
+          <Space orientation="vertical" size={0}>
             <Text style={{ fontSize: 11 }}>{record.weight?.toFixed(2) || '-'} kg</Text>
             {record.declaredValue && (
               <Text type="secondary" style={{ fontSize: 11 }}>

@@ -14,7 +14,7 @@ export function VolumesTotalizer({ volumeCount, totalPesoCubadoKg }: VolumesTota
 
   return (
     <div className={styles.resultsBanner} data-testid="results-banner">
-      <Space direction="vertical" size={6} style={{ width: "100%" }}>
+      <Space orientation="vertical" size={6} style={{ width: "100%" }}>
         {/* Linha de volumes */}
         <div style={{ display: "flex", alignItems: "center" }}>
           <Space align="center" size={8}>

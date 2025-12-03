@@ -21,7 +21,7 @@ const BRAND_LABEL: Record<CardMethod["brand"], string> = {
 export function PaymentMethodCard({ method, onSetDefault, onRemove }: Props) {
   return (
     <Card variant="borderless">
-      <Space direction="vertical" size={4} style={{ width: "100%" }}>
+      <Space orientation="vertical" size={4} style={{ width: "100%" }}>
         <Typography.Text strong>
           {BRAND_LABEL[method.brand]} •••• {method.last4}
         </Typography.Text>

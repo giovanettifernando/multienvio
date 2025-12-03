@@ -111,7 +111,7 @@ export default function ResolveDebtModal({ open, onClose }: ResolveDebtModalProp
       destroyOnHidden
     >
       <Spin spinning={isLoading}>
-        <Space direction="vertical" size="large" style={{ width: '100%' }}>
+        <Space orientation="vertical" size="large" style={{ width: '100%' }}>
           {/* Header */}
           <div style={{ textAlign: 'center', paddingTop: 16 }}>
             <WarningOutlined
@@ -159,7 +159,7 @@ export default function ResolveDebtModal({ open, onClose }: ResolveDebtModalProp
             onChange={(e) => setPaymentMethod(e.target.value)}
             style={{ width: '100%' }}
           >
-            <Space direction="vertical" style={{ width: '100%' }}>
+            <Space orientation="vertical" style={{ width: '100%' }}>
               <Card
                 hoverable
                 style={{
@@ -214,7 +214,7 @@ export default function ResolveDebtModal({ open, onClose }: ResolveDebtModalProp
                     onChange={(e) => setSelectedCardId(e.target.value)}
                     style={{ width: '100%' }}
                   >
-                    <Space direction="vertical" style={{ width: '100%' }}>
+                    <Space orientation="vertical" style={{ width: '100%' }}>
                       {cards.map((card) => (
                         <Radio key={card.id} value={card.id}>
                           <Space>

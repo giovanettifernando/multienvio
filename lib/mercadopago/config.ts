@@ -73,6 +73,7 @@ export async function getMercadoPagoConfig(): Promise<MercadoPagoConfig | null> 
       const config: MercadoPagoConfig = {
         publicKey,
         accessToken,
+        applicationId: credential.applicationId || undefined,
         webhookSecret: credential.secretKey ? decrypt(credential.secretKey) : undefined,
         sandboxMode: gateway.environment === 'SANDBOX',
       };

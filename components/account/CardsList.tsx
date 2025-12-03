@@ -139,7 +139,7 @@ export default function CardsList() {
                 </Space>
               }
               description={
-                <Space direction="vertical" size={0}>
+                <Space orientation="vertical" size={0}>
                   <Typography.Text type="secondary">
                     {item.brand} • ****-{item.last4}
                   </Typography.Text>

@@ -126,7 +126,7 @@ export default function PublicTrackingClient() {
 
   return (
     <div style={{ maxWidth: 800, margin: "0 auto", padding: "16px" }}>
-      <Space direction="vertical" size={16} style={{ width: "100%" }}>
+      <Space orientation="vertical" size={16} style={{ width: "100%" }}>
         {/* BLOCO 1: Status Atual + Código (compacto) */}
         <Card
           style={{
@@ -135,7 +135,7 @@ export default function PublicTrackingClient() {
           }}
           styles={{ body: { padding: "12px 16px" } }}
         >
-          <Space direction="vertical" size={8} style={{ width: "100%" }}>
+          <Space orientation="vertical" size={8} style={{ width: "100%" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
               <Text strong style={{ fontSize: 14 }}>Status:</Text>
               <Tag

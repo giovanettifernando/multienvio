@@ -34,7 +34,7 @@ export default function FinanceForm() {
   };
 
   return (
-    <Space direction="vertical" style={{ width: '100%' }} size={24}>
+    <Space orientation="vertical" style={{ width: '100%' }} size={24}>
       {/* Seção de Comissão */}
       <div>
         <Title level={5}>Modelo de Comissão</Title>

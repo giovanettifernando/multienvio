@@ -59,7 +59,7 @@ export default function CollectorsTable({
       dataIndex: 'pf.nome',
       key: 'nome',
       render: (_: unknown, record: Collector) => (
-        <Space direction="vertical" size={0}>
+        <Space orientation="vertical" size={0}>
           <Tooltip title={`Razão social: ${record.pj.razaoSocial}`}>
             <Button
               type="link"
@@ -83,7 +83,7 @@ export default function CollectorsTable({
       render: (_: unknown, record: Collector) => {
         const details = [record.vehicle.model, record.vehicle.year].filter(Boolean).join(' · ');
         return (
-          <Space direction="vertical" size={0}>
+          <Space orientation="vertical" size={0}>
             <Text strong>{record.vehicle.plate}</Text>
             <Text type="secondary" style={{ fontSize: 12 }}>
               {details || '—'}

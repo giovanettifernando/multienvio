@@ -45,7 +45,7 @@ export function VolumeDocuments() {
   });
 
   return (
-    <Space direction="vertical" size={16} style={{ width: "100%" }}>
+    <Space orientation="vertical" size={16} style={{ width: "100%" }}>
       <Typography.Paragraph type="secondary">
         Preencha a declaração de conteúdo para cada volume do envio.
       </Typography.Paragraph>

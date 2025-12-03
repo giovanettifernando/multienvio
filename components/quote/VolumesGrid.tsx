@@ -159,7 +159,7 @@ function VolumeItem({
         body: { padding: 12 },
       }}
     >
-      <Space direction="vertical" size={16} style={{ width: "100%" }}>
+      <Space orientation="vertical" size={16} style={{ width: "100%" }}>
         <Form.Item
           label={<span className={styles.fieldLabelSm}>Minhas embalagens</span>}
           style={{ marginBottom: 0 }}
@@ -366,7 +366,7 @@ export function VolumesGrid({
   const addDisabled = fields.length >= maxCount;
 
   return (
-    <Space direction="vertical" size={16} style={{ width: "100%" }}>
+    <Space orientation="vertical" size={16} style={{ width: "100%" }}>
       {fields.map((field, index) => {
         const volumeValue = values?.[index];
         const canRemove = !disableRemove && fields.length > 1;

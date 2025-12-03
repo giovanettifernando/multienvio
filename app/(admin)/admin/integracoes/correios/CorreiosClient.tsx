@@ -153,7 +153,7 @@ function CredentialsForm({
     <>
       <Alert
         type="info"
-        message={`Credenciais para ${isSandbox ? 'Homologação (Sandbox)' : 'Produção'}`}
+        title={`Credenciais para ${isSandbox ? 'Homologação (Sandbox)' : 'Produção'}`}
         description={
           <>
             Obtenha suas credenciais no portal{' '}
@@ -339,9 +339,9 @@ function ConfigTab() {
       {config?.configured && (
         <Alert
           type="success"
-          message="Integração Configurada"
+          title="Integração Configurada"
           description={
-            <Space direction="vertical" size="small">
+            <Space orientation="vertical" size="small">
               <Space>
                 <Text>Ambiente ativo:</Text>
                 <Tag color={config.activeEnvironment === 'sandbox' ? 'green' : 'red'}>
@@ -467,12 +467,12 @@ function TestAuthTab() {
   };
 
   return (
-    <Space direction="vertical" style={{ width: '100%' }} size="large">
+    <Space orientation="vertical" style={{ width: '100%' }} size="large">
       <ApiUrlPreview endpoint="/token/v1/autentica/cartaopostagem" />
 
       <Alert
         type="info"
-        message="Teste de Autenticação"
+        title="Teste de Autenticação"
         description="Verifica se as credenciais CWS estão corretas e obtém um token JWT válido."
         showIcon
       />
@@ -524,12 +524,12 @@ function TestQuoteTab() {
   };
 
   return (
-    <Space direction="vertical" style={{ width: '100%' }} size="large">
+    <Space orientation="vertical" style={{ width: '100%' }} size="large">
       <ApiUrlPreview endpoint="/preco/v1/nacional" />
 
       <Alert
         type="info"
-        message="Teste de Cotação"
+        title="Teste de Cotação"
         description="Consulta preços e prazos para todos os serviços habilitados."
         showIcon
       />
@@ -615,12 +615,12 @@ function TestTrackingTab() {
   };
 
   return (
-    <Space direction="vertical" style={{ width: '100%' }} size="large">
+    <Space orientation="vertical" style={{ width: '100%' }} size="large">
       <ApiUrlPreview endpoint="/rastro/v1/objetos/{codigo}" />
 
       <Alert
         type="info"
-        message="Teste de Rastreamento"
+        title="Teste de Rastreamento"
         description="Consulta eventos de rastreamento de um objeto pelo código SRO."
         showIcon
       />
@@ -686,7 +686,7 @@ function ApiUrlPreview({ endpoint }: { endpoint: string }) {
         borderColor: environment === 'sandbox' ? '#b7eb8f' : '#ffccc7',
       }}
     >
-      <Space direction="vertical" style={{ width: '100%' }} size="small">
+      <Space orientation="vertical" style={{ width: '100%' }} size="small">
         <Space>
           <Text strong>Ambiente:</Text>
           <Tag color={environment === 'sandbox' ? 'green' : 'red'}>
@@ -712,7 +712,7 @@ function ApiUrlPreview({ endpoint }: { endpoint: string }) {
         {environment === 'production' && (
           <Alert
             type="warning"
-            message="Atenção: Você está no ambiente de PRODUÇÃO. As requisições serão reais e podem gerar custos."
+            title="Atenção: Você está no ambiente de PRODUÇÃO. As requisições serão reais e podem gerar custos."
             style={{ marginTop: 8 }}
             showIcon
           />
@@ -766,12 +766,12 @@ function TestPrePostagemTab() {
   };
 
   return (
-    <Space direction="vertical" style={{ width: '100%' }} size="large">
+    <Space orientation="vertical" style={{ width: '100%' }} size="large">
       <ApiUrlPreview endpoint="/prepostagem/v2/prepostagens" />
 
       <Alert
         type="info"
-        message="Teste de Pré-Postagem Real"
+        title="Teste de Pré-Postagem Real"
         description="Este teste executa uma pré-postagem REAL na API dos Correios. No ambiente SANDBOX, não gera custos. Em PRODUÇÃO, pode gerar custos."
         showIcon
       />
@@ -905,7 +905,7 @@ function TestResultDisplay({ result }: { result: TestResult }) {
       }
       style={{ borderColor: isSuccess ? '#52c41a' : '#ff4d4f' }}
     >
-      <Alert type={isSuccess ? 'success' : 'error'} message={result.message} style={{ marginBottom: 16 }} />
+      <Alert type={isSuccess ? 'success' : 'error'} title={result.message} style={{ marginBottom: 16 }} />
 
       <Collapse>
         {/* Detalhes da resposta interna */}
@@ -1012,7 +1012,7 @@ export default function CorreiosClient() {
 
   return (
     <div style={{ padding: 24 }}>
-      <Space direction="vertical" style={{ width: '100%' }} size="large">
+      <Space orientation="vertical" style={{ width: '100%' }} size="large">
         <div>
           <Title level={3} style={{ margin: 0 }}>
             Integração Correios

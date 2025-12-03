@@ -43,6 +43,7 @@ export async function GET(req: NextRequest) {
       config: {
         environment: gateway.environment,
         publicKey: credential.publicKey || '',
+        applicationId: credential.applicationId || '',
         // NÃO retornar accessToken/webhookSecret por segurança
       },
     });
@@ -66,7 +67,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { environment, publicKey, accessToken, webhookSecret } = body;
+    const { environment, publicKey, accessToken, applicationId, webhookSecret } = body;
 
     if (!environment || !publicKey) {
       return NextResponse.json(
@@ -108,10 +109,16 @@ export async function POST(req: NextRequest) {
     const credentialData: {
       publicKey: string;
       accessToken?: string;
+      applicationId?: string;
       secretKey?: string;
     } = {
       publicKey,
     };
+
+    // Salvar applicationId se fornecido
+    if (applicationId) {
+      credentialData.applicationId = applicationId;
+    }
 
     // Criptografar accessToken se fornecido
     if (accessToken) {

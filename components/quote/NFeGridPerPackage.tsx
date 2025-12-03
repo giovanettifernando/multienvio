@@ -169,7 +169,7 @@ export function NFeGridPerPackage() {
   };
 
   return (
-    <Space direction="vertical" style={{ width: "100%" }} size={16}>
+    <Space orientation="vertical" style={{ width: "100%" }} size={16}>
       <Typography.Text type="secondary">
         {filledCount} de {packagesCount} NF-e(s) preenchidas
       </Typography.Text>

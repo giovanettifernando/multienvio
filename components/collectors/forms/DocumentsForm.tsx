@@ -45,7 +45,7 @@ export default function DocumentsForm({
   };
 
   return (
-    <Space direction="vertical" style={{ width: '100%' }} size={24}>
+    <Space orientation="vertical" style={{ width: '100%' }} size={24}>
       <Alert
         message="Envie os documentos obrigatórios"
         description="Todos os 3 documentos são obrigatórios. Aceito: PDF, JPG, PNG. Os arquivos serão salvos ao submeter o formulário."

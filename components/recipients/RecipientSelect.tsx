@@ -113,7 +113,7 @@ export function RecipientSelect({
 
   if (!loading && recipients.length === 0) {
     return (
-      <Space direction="vertical" style={{ width: "100%" }}>
+      <Space orientation="vertical" style={{ width: "100%" }}>
         <Empty
           image={Empty.PRESENTED_IMAGE_SIMPLE}
           description="Nenhum destinatário cadastrado"

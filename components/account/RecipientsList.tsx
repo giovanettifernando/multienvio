@@ -197,7 +197,7 @@ export default function RecipientsList() {
         </Button>
       }
     >
-      <Space direction="vertical" size={16} style={{ width: "100%" }}>
+      <Space orientation="vertical" size={16} style={{ width: "100%" }}>
         <Input
           placeholder="Buscar por nome, documento, cidade..."
           prefix={<SearchOutlined />}
@@ -267,7 +267,7 @@ export default function RecipientsList() {
                   </Space>
                 }
                 description={
-                  <Space direction="vertical" size={0}>
+                  <Space orientation="vertical" size={0}>
                     <Typography.Text type="secondary">
                       {item.logradouro}, {item.numero}
                       {item.complemento ? ` - ${item.complemento}` : ""} · {item.bairro}

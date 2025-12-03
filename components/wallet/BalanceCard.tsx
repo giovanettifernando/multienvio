@@ -23,7 +23,7 @@ export default function BalanceCard({ onAddFunds, onResolveDebt }: BalanceCardPr
     <Card loading={isLoading}>
       <Row gutter={[16, 16]}>
         <Col xs={24} lg={16}>
-          <Space direction="vertical" size="small" style={{ width: "100%" }}>
+          <Space orientation="vertical" size="small" style={{ width: "100%" }}>
             {/* Saldo disponível - destaque forte */}
             <Typography.Text type="secondary" style={{ fontSize: 14 }}>
               Saldo disponível

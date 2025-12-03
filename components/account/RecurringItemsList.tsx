@@ -267,7 +267,7 @@ export default function RecurringItemsList() {
   ];
 
   return (
-    <Space direction="vertical" size="large" style={{ width: "100%" }}>
+    <Space orientation="vertical" size="large" style={{ width: "100%" }}>
       {/* Barra superior com importação e formulário de adicionar */}
       <Flex justify="space-between" align="center" gap="middle">
         <Upload

@@ -435,7 +435,7 @@ export function PaymentModal({
             paymentDescription={description}
           />
         ) : (
-          <Space direction="vertical" size="large" style={{ width: "100%" }}>
+          <Space orientation="vertical" size="large" style={{ width: "100%" }}>
             <div style={{ marginBottom: 16 }}>
               <Text strong>Valor a pagar: </Text>
               <Text style={{ fontSize: 20, color: "#52c41a" }}>
@@ -450,7 +450,7 @@ export function PaymentModal({
               paymentType={mode === "topup" ? "wallet_topup" : "checkout_payment"}
             />
 
-            <Space direction="vertical" size="small" style={{ width: "100%" }}>
+            <Space orientation="vertical" size="small" style={{ width: "100%" }}>
               {hasSavedCards && (
                 <Button type="link" onClick={() => setUseSavedCard(true)} block>
                   Voltar para cartões salvos
@@ -552,7 +552,7 @@ export function PaymentModal({
         ]}
         width={600}
       >
-        <Space direction="vertical" size="large" style={{ width: "100%" }}>
+        <Space orientation="vertical" size="large" style={{ width: "100%" }}>
           {/* Status de polling */}
           <div
             style={{
@@ -654,7 +654,7 @@ export function PaymentModal({
       ]}
       width={600}
     >
-      <Space direction="vertical" size="large" style={{ width: "100%" }}>
+      <Space orientation="vertical" size="large" style={{ width: "100%" }}>
         {/* Campo de valor (apenas para topup) */}
         {mode === "topup" && (
           <Form.Item
@@ -712,7 +712,7 @@ export function PaymentModal({
               onChange={(e) => setSelectedMethod(e.target.value)}
               style={{ width: "100%" }}
             >
-              <Space direction="vertical" size="middle" style={{ width: "100%" }}>
+              <Space orientation="vertical" size="middle" style={{ width: "100%" }}>
                 {/* Carteira (apenas para checkout) */}
                 {allowWallet && (
                   <Radio value="wallet" disabled={isWalletDisabled} style={{ width: "100%" }}>

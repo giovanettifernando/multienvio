@@ -869,6 +869,7 @@ model PaymentCredential {
   clientSecret  String?
   accessToken   String?
   refreshToken  String?
+  applicationId String?  // Mercado Pago Application ID
   expiresAt     DateTime?
   isActive      Boolean                @default(true)
   createdAt     DateTime               @default(now())

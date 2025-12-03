@@ -457,7 +457,7 @@ export function QuoteResultsSection({
         style={{ height: "100%" }}
         styles={{ body: { padding: "16px 12px" } }}
       >
-        <Space direction="vertical" size={16} style={{ width: "100%" }}>
+        <Space orientation="vertical" size={16} style={{ width: "100%" }}>
           {/* Expiration warning - compact style */}
           {timeRemaining && (
             <div
@@ -544,7 +544,7 @@ export function QuoteResultsSection({
         okText="Confirmar"
         cancelText="Cancelar"
       >
-        <Space direction="vertical" size={12} style={{ width: "100%" }}>
+        <Space orientation="vertical" size={12} style={{ width: "100%" }}>
           <Typography.Paragraph>
             A transportadora exige a informação do valor segurado para concluir a
             seleção.

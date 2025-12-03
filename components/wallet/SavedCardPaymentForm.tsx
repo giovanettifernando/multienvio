@@ -327,7 +327,7 @@ export function SavedCardPaymentForm({
   if (availableCards.length === 0) {
     return (
       <AntCard>
-        <Space direction="vertical" size="middle" style={{ width: "100%" }}>
+        <Space orientation="vertical" size="middle" style={{ width: "100%" }}>
           <Alert
             message="Nenhum cartão cadastrado"
             description="Você ainda não possui cartões cadastrados. Adicione um novo cartão para continuar."
@@ -366,7 +366,7 @@ export function SavedCardPaymentForm({
       </Modal>
 
       <AntCard>
-        <Space direction="vertical" size="large" style={{ width: "100%" }}>
+        <Space orientation="vertical" size="large" style={{ width: "100%" }}>
           <div>
             <Text strong style={{ marginBottom: 8, display: "block" }}>
               Valor a pagar:
@@ -385,7 +385,7 @@ export function SavedCardPaymentForm({
             onChange={(e) => setSelectedCardId(e.target.value)}
             style={{ width: "100%" }}
           >
-            <Space direction="vertical" size="small" style={{ width: "100%" }}>
+            <Space orientation="vertical" size="small" style={{ width: "100%" }}>
               {availableCards.map((card) => (
                 <Radio
                   key={card.id}
@@ -447,7 +447,7 @@ export function SavedCardPaymentForm({
           />
         </Form.Item>
 
-          <Space direction="vertical" size="middle" style={{ width: "100%" }}>
+          <Space orientation="vertical" size="middle" style={{ width: "100%" }}>
             <Button
               type="primary"
               size="large"

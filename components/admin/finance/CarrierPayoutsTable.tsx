@@ -54,7 +54,7 @@ const shipmentColumns: ColumnsType<CarrierPayoutShipment> = [
     key: 'tracking',
     width: 180,
     render: (_, record) => (
-      <Space direction="vertical" size={0}>
+      <Space orientation="vertical" size={0}>
         <Text strong copyable={{ text: record.platformTrackingCode }}>
           {record.platformTrackingCode}
         </Text>
@@ -421,7 +421,7 @@ export function CarrierPayoutsTable() {
         {renderFilters()}
         <Empty
           description={
-            <Space direction="vertical">
+            <Space orientation="vertical">
               <Text>Erro ao carregar repasses</Text>
               <Text type="secondary">
                 {error instanceof Error ? error.message : 'Erro desconhecido'}

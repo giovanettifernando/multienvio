@@ -71,7 +71,7 @@ export default function SecurityForm() {
   return (
     <Card title="Segurança">
       <form onSubmit={handleSubmit}>
-        <Space direction="vertical" size={16} style={{ width: "100%" }}>
+        <Space orientation="vertical" size={16} style={{ width: "100%" }}>
           <Controller
             name="currentPassword"
             control={form.control}

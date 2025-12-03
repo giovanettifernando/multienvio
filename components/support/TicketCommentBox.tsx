@@ -75,7 +75,7 @@ export function TicketCommentBox({ ticketId, onSubmitted, mode = 'admin' }: Prop
       : undefined;
 
   return (
-    <Space direction="vertical" style={{ width: "100%" }} size={12}>
+    <Space orientation="vertical" style={{ width: "100%" }} size={12}>
       {mode === 'admin' && (
         <CannedReplySelect
           onSelect={(reply) => {

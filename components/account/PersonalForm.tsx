@@ -294,7 +294,7 @@ export default function PersonalForm() {
 
   return (
     <form onSubmit={handleSubmit} noValidate>
-      <Space direction="vertical" size={24} style={{ width: "100%" }}>
+      <Space orientation="vertical" size={24} style={{ width: "100%" }}>
         <Typography.Title level={4} style={{ margin: 0 }}>
           Dados Pessoais
         </Typography.Title>
@@ -403,7 +403,7 @@ export default function PersonalForm() {
           ) : null}
 
           <Card size="small" title="Dados pessoais" variant="outlined" style={{ borderRadius: 12 }}>
-            <Space direction="vertical" size={16} style={{ width: "100%" }}>
+            <Space orientation="vertical" size={16} style={{ width: "100%" }}>
               <Controller
                 name="fullName"
                 control={form.control}
@@ -493,7 +493,7 @@ export default function PersonalForm() {
             variant="outlined"
             style={{ borderRadius: 12 }}
           >
-            <Space direction="vertical" size={16} style={{ width: "100%" }}>
+            <Space orientation="vertical" size={16} style={{ width: "100%" }}>
               <Flex align="center" gap={8}>
                 <Typography.Text>Adicionar dados de empresa</Typography.Text>
                 <Switch

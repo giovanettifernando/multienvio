@@ -165,7 +165,7 @@ export default function CollectorPickupsTab({ collectorId }: CollectorPickupsTab
       title: "Origem",
       key: "origin",
       render: (_, record) => (
-        <Space direction="vertical" size={0}>
+        <Space orientation="vertical" size={0}>
           <Text>{record.originCity || "—"}/{record.originUf || "—"}</Text>
           <Text type="secondary" style={{ fontSize: 12 }}>
             CEP: {record.originCep}
@@ -177,7 +177,7 @@ export default function CollectorPickupsTab({ collectorId }: CollectorPickupsTab
       title: "Destino",
       key: "destination",
       render: (_, record) => (
-        <Space direction="vertical" size={0}>
+        <Space orientation="vertical" size={0}>
           <Text>
             {record.shipment?.destinationCity || "—"}/
             {record.shipment?.destinationState || "—"}
@@ -196,7 +196,7 @@ export default function CollectorPickupsTab({ collectorId }: CollectorPickupsTab
       title: "Remetente",
       key: "sender",
       render: (_, record) => (
-        <Space direction="vertical" size={0}>
+        <Space orientation="vertical" size={0}>
           <Text>{record.user?.name || "—"}</Text>
           <Text type="secondary" style={{ fontSize: 12 }}>
             {record.user?.email}
@@ -209,7 +209,7 @@ export default function CollectorPickupsTab({ collectorId }: CollectorPickupsTab
       key: "carrier",
       width: 140,
       render: (_, record) => (
-        <Space direction="vertical" size={0}>
+        <Space orientation="vertical" size={0}>
           <Text>{record.shipment?.carrier || "—"}</Text>
           {record.shipment?.service && (
             <Text type="secondary" style={{ fontSize: 12 }}>
@@ -243,7 +243,7 @@ export default function CollectorPickupsTab({ collectorId }: CollectorPickupsTab
   ];
 
   return (
-    <Space direction="vertical" style={{ width: "100%" }} size={16}>
+    <Space orientation="vertical" style={{ width: "100%" }} size={16}>
       {/* Filter */}
       <Card size="small">
         <Space>

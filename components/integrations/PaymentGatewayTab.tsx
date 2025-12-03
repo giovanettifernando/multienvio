@@ -187,7 +187,7 @@ export default function PaymentGatewayTab() {
         </Card>
 
         <Card title="Futuras Integrações" type="inner">
-          <Space direction="vertical" style={{ width: '100%' }}>
+          <Space orientation="vertical" style={{ width: '100%' }}>
             <div style={{ padding: '16px 0', color: '#999' }}>
               <p>Integrações planejadas para o futuro:</p>
               <ul style={{ paddingLeft: 24, margin: 0 }}>

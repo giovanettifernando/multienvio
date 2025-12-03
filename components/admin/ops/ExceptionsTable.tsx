@@ -193,7 +193,7 @@ export default function ExceptionsTable({ dateStart, dateEnd }: ExceptionsTableP
         key: 'description',
         width: 250,
         render: (_, record) => (
-          <Space direction="vertical" size={0}>
+          <Space orientation="vertical" size={0}>
             <Text style={{ fontSize: 12 }}>{record.description}</Text>
             {record.details && (
               <Text type="secondary" style={{ fontSize: 11 }} ellipsis>
@@ -210,7 +210,7 @@ export default function ExceptionsTable({ dateStart, dateEnd }: ExceptionsTableP
         render: (_, record) => {
           if (record.type === 'poc_issue' && record.pickupPoint) {
             return (
-              <Space direction="vertical" size={0}>
+              <Space orientation="vertical" size={0}>
                 <Text style={{ fontSize: 12 }}>
                   <EnvironmentOutlined style={{ marginRight: 4 }} />
                   {record.pickupPoint.name}
@@ -223,7 +223,7 @@ export default function ExceptionsTable({ dateStart, dateEnd }: ExceptionsTableP
           }
           if (record.type === 'pickup_attempt') {
             return (
-              <Space direction="vertical" size={0}>
+              <Space orientation="vertical" size={0}>
                 {record.collector && (
                   <Text style={{ fontSize: 12 }}>
                     <UserOutlined style={{ marginRight: 4 }} />
@@ -248,7 +248,7 @@ export default function ExceptionsTable({ dateStart, dateEnd }: ExceptionsTableP
         render: (_, record) => {
           if (record.shipment) {
             return (
-              <Space direction="vertical" size={0}>
+              <Space orientation="vertical" size={0}>
                 <Text style={{ fontSize: 12 }}>
                   {record.shipment.destinationCity}/{record.shipment.destinationState}
                 </Text>

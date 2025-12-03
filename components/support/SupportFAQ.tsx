@@ -137,7 +137,7 @@ export function SupportFAQ({
         </Space>
       ),
       children: (
-        <Space direction="vertical" style={{ width: '100%' }}>
+        <Space orientation="vertical" style={{ width: '100%' }}>
           <div
             style={{ whiteSpace: 'pre-wrap', lineHeight: 1.6 }}
             dangerouslySetInnerHTML={{ __html: item.answer.replace(/\n/g, '<br/>') }}
@@ -180,7 +180,7 @@ export function SupportFAQ({
   }
 
   return (
-    <Space direction="vertical" style={{ width: '100%' }} size="middle">
+    <Space orientation="vertical" style={{ width: '100%' }} size="middle">
       {showTitle && (
         <Title level={5} style={{ margin: 0 }}>
           <QuestionCircleOutlined style={{ marginRight: 8 }} />
@@ -188,7 +188,7 @@ export function SupportFAQ({
         </Title>
       )}
 
-      <Space direction="vertical" style={{ width: '100%' }} size="small">
+      <Space orientation="vertical" style={{ width: '100%' }} size="small">
         <Input
           placeholder="Buscar nas perguntas frequentes..."
           prefix={<SearchOutlined />}
@@ -211,7 +211,7 @@ export function SupportFAQ({
       </Space>
 
       {isLoading ? (
-        <Space direction="vertical" style={{ width: '100%' }}>
+        <Space orientation="vertical" style={{ width: '100%' }}>
           <Skeleton active paragraph={{ rows: 2 }} />
           <Skeleton active paragraph={{ rows: 2 }} />
           <Skeleton active paragraph={{ rows: 2 }} />

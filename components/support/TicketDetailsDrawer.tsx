@@ -287,7 +287,7 @@ const handleSendMessage = async () => {
   const renderContent = () => {
     if (isLoading) {
       return (
-        <Space direction="vertical" style={{ width: '100%' }} size="large">
+        <Space orientation="vertical" style={{ width: '100%' }} size="large">
           <Skeleton active paragraph={{ rows: 3 }} />
           <Skeleton active paragraph={{ rows: 6 }} />
           <Skeleton active paragraph={{ rows: 3 }} />
@@ -316,7 +316,7 @@ const handleSendMessage = async () => {
     }
 
     return (
-      <Space direction="vertical" style={{ width: '100%' }} size="large">
+      <Space orientation="vertical" style={{ width: '100%' }} size="large">
         <Space
           style={{ width: '100%', justifyContent: 'space-between', alignItems: 'flex-start' }}
           align="start"
@@ -345,7 +345,7 @@ const handleSendMessage = async () => {
         </Space>
 
         {userRole === 'admin' && (
-          <Space direction="vertical" style={{ width: '100%' }}>
+          <Space orientation="vertical" style={{ width: '100%' }}>
             <Space wrap>
               <Select
                 value={ticket.status}
@@ -377,7 +377,7 @@ const handleSendMessage = async () => {
 
         <Descriptions column={1} bordered size="small">
           <Descriptions.Item label="Solicitante">
-            <Space direction="vertical" size={0}>
+            <Space orientation="vertical" size={0}>
               <Text strong>{ticket.requester?.name || 'N/A'}</Text>
               <Text type="secondary">{ticket.requester?.email || 'N/A'}</Text>
               {ticket.requester?.phone && (
@@ -413,7 +413,7 @@ const handleSendMessage = async () => {
                 key: msg.id,
                 color: msg.authorRole === 'admin' ? 'blue' : 'green',
                 children: (
-                  <Space direction="vertical" size={4} style={{ width: '100%' }}>
+                  <Space orientation="vertical" size={4} style={{ width: '100%' }}>
                     <Space>
                       <Text strong>
                         {msg.authorRole === 'admin' ? '🔧' : '👤'} {msg.authorName}
@@ -424,7 +424,7 @@ const handleSendMessage = async () => {
                     </Space>
                     <Text>{msg.text}</Text>
                     {msg.attachments && msg.attachments.length > 0 ? (
-                      <Space direction="vertical" size={2} style={{ width: '100%' }}>
+                      <Space orientation="vertical" size={2} style={{ width: '100%' }}>
                         {msg.attachments.map((attachment) => {
                           if (!attachment.url) {
                             return null;

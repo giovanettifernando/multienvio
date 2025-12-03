@@ -658,7 +658,7 @@ export function ExpensesTable() {
         {renderFilters()}
         <Empty
           description={
-            <Space direction="vertical">
+            <Space orientation="vertical">
               <Text>Erro ao carregar despesas</Text>
               <Text type="secondary">
                 {error instanceof Error ? error.message : 'Erro desconhecido'}

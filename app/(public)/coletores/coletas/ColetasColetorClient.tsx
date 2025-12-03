@@ -307,7 +307,7 @@ function RegisterCollectionModal({ pickup, open, onClose, onSuccess }: RegisterC
       {pickup && (
         <div style={{ marginBottom: 24 }}>
           <Card size="small" style={{ backgroundColor: '#f5f5f5' }}>
-            <Space direction="vertical" size="small" style={{ width: '100%' }}>
+            <Space orientation="vertical" size="small" style={{ width: '100%' }}>
               <div>
                 <strong>Código:</strong> {pickup.shipment.trackingCode}
               </div>
@@ -443,7 +443,7 @@ function RegisterAttemptModal({ pickup, open, onClose, onSuccess }: RegisterAtte
         size="small"
         style={{ marginBottom: 20, backgroundColor: '#fafafa' }}
       >
-        <Space direction="vertical" size="small" style={{ width: '100%' }}>
+        <Space orientation="vertical" size="small" style={{ width: '100%' }}>
           <div>
             <strong>Código:</strong> {pickup.shipment.trackingCode}
           </div>
@@ -534,7 +534,7 @@ function PickupCard({
           <InboxOutlined style={{ fontSize: 16, color: '#1890ff' }} />
           <strong style={{ fontSize: 15 }}>{pickup.shipment.trackingCode}</strong>
         </div>
-        <Space direction="vertical" size={0} align="end">
+        <Space orientation="vertical" size={0} align="end">
           <Tag color={getStatusColor(pickup.status)}>{getStatusLabel(pickup.status)}</Tag>
           {pickup.attemptCount > 0 && (
             <span style={{ fontSize: 11, color: '#8c8c8c' }}>
@@ -605,7 +605,7 @@ function PickupCard({
       </div>
 
       {/* Linha 6: Botões de Ação */}
-      <Space direction="vertical" size="small" style={{ width: '100%' }}>
+      <Space orientation="vertical" size="small" style={{ width: '100%' }}>
         <Button
           type="primary"
           size="large"
@@ -708,7 +708,7 @@ export default function ColetasColetorClient() {
       key: 'sender',
       width: 200,
       render: (_, record: PickupRequest) => (
-        <Space direction="vertical" size={0} style={{ width: '100%' }}>
+        <Space orientation="vertical" size={0} style={{ width: '100%' }}>
           <strong style={{ fontSize: '14px' }}>{record.user.name}</strong>
           {record.user.phone && (
             <a
@@ -734,7 +734,7 @@ export default function ColetasColetorClient() {
 
         if (!addressInfo) {
           return (
-            <Space direction="vertical" size={0}>
+            <Space orientation="vertical" size={0}>
               <Space>
                 <EnvironmentOutlined />
                 <span style={{ color: '#8c8c8c' }}>Endereço não informado</span>
@@ -753,7 +753,7 @@ export default function ColetasColetorClient() {
             rel="noopener noreferrer"
             style={{ color: 'inherit', textDecoration: 'none' }}
           >
-            <Space direction="vertical" size={0}>
+            <Space orientation="vertical" size={0}>
               <Space>
                 <EnvironmentOutlined style={{ color: '#1890ff' }} />
                 <span style={{ color: '#1890ff', textDecoration: 'underline' }}>
@@ -806,7 +806,7 @@ export default function ColetasColetorClient() {
       key: 'status',
       width: 150,
       render: (status: string, record: PickupRequest) => (
-        <Space direction="vertical" size={0}>
+        <Space orientation="vertical" size={0}>
           <Tag color={getStatusColor(status)}>{getStatusLabel(status)}</Tag>
           {record.attemptCount > 0 && (
             <span style={{ fontSize: '12px', color: '#8c8c8c' }}>
@@ -822,7 +822,7 @@ export default function ColetasColetorClient() {
       width: 200,
       fixed: 'right',
       render: (_, record: PickupRequest) => (
-        <Space direction="vertical" size="small" style={{ width: '100%' }}>
+        <Space orientation="vertical" size="small" style={{ width: '100%' }}>
           <Button
             type="primary"
             size="middle"
@@ -883,7 +883,7 @@ export default function ColetasColetorClient() {
               {/* Paginação Mobile */}
               {data.total > pageSize && (
                 <div style={{ textAlign: 'center', marginTop: 16 }}>
-                  <Space direction="vertical" size="middle">
+                  <Space orientation="vertical" size="middle">
                     <div style={{ fontSize: 14, color: '#8c8c8c' }}>
                       Página {page} de {Math.ceil(data.total / pageSize)} • Total: {data.total} coletas
                     </div>

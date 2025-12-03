@@ -76,7 +76,7 @@ export function QuoteSummary({
         boxShadow: "0 6px 24px rgba(15, 23, 42, 0.06)",
       }}
     >
-      <Space direction="vertical" size={12}>
+      <Space orientation="vertical" size={12}>
         <div style={sectionStyle}>
           <Typography.Text type="secondary">Origem</Typography.Text>
           <Typography.Text strong>
@@ -124,7 +124,7 @@ export function QuoteSummary({
 
       <Divider style={{ margin: "0" }} />
 
-      <Space direction="vertical" size={4}>
+      <Space orientation="vertical" size={4}>
         <Typography.Text type="secondary">Total estimado</Typography.Text>
         <Typography.Title level={3} style={{ margin: 0 }}>
           {menorValor
@@ -136,7 +136,7 @@ export function QuoteSummary({
         </Typography.Title>
       </Space>
 
-      <Space direction="vertical" size={8}>
+      <Space orientation="vertical" size={8}>
         <Button
           onClick={onExportCsv}
           block

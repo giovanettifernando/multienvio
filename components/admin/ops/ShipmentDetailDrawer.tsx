@@ -766,7 +766,7 @@ export default function ShipmentDetailDrawer({
       children: (
         <div>
           {shipment.packages && shipment.packages.length > 0 ? (
-            <Space direction="vertical" style={{ width: '100%' }} size="middle">
+            <Space orientation="vertical" style={{ width: '100%' }} size="middle">
               {shipment.packages.map((pkg: PackageData) => (
                 <div key={pkg.id}>
                   <Title level={5}>Volume {pkg.packageNumber}</Title>

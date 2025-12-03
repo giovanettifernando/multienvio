@@ -25,157 +25,134 @@ async function getClient() {
     throw new Error('Mercado Pago não configurado');
   }
 
-  // Debug: verificar se accessToken está presente
-  // Log temporário para debug - verificar se o token está correto
-  const tokenEnd = config.accessToken ? config.accessToken.slice(-10) : 'VAZIO';
-  console.log('[MERCADO_PAGO_CLIENT] Config recuperada:', {
-    hasPublicKey: !!config.publicKey,
-    hasAccessToken: !!config.accessToken,
-    accessTokenLength: config.accessToken?.length || 0,
-    accessTokenStart: config.accessToken ? `${config.accessToken.substring(0, 25)}...` : 'VAZIO',
-    accessTokenEnd: `...${tokenEnd}`,
-    sandboxMode: config.sandboxMode,
-  });
-
   if (!config.accessToken || config.accessToken.trim().length === 0) {
     throw new Error('Access Token não configurado ou vazio');
   }
 
+  const sdkOptions = {
+    timeout: 30000,
+  };
+
   const client = new MercadoPagoConfig({
     accessToken: config.accessToken,
-    options: {
-      timeout: 30000,
-    },
+    options: sdkOptions,
   });
 
   return { client, config };
 }
 
 /**
- * Cria um pagamento no Mercado Pago
+ * Cria um pagamento no Mercado Pago via Checkout Transparente
  *
+ * Campos OBRIGATÓRIOS (mínimo para funcionar):
+ * - transaction_amount: valor do pagamento
+ * - token: token do cartão gerado no frontend ou backend
+ * - installments: número de parcelas (mínimo 1)
+ * - payment_method_id: bandeira do cartão (visa, master, etc)
+ * - payer.email: email do comprador
+ *
+ * Campos OPCIONAIS (melhoram rastreabilidade):
+ * - description: descrição do pagamento
+ * - payer.first_name, payer.last_name: nome do comprador
+ * - payer.identification: CPF/CNPJ do comprador
+ * - external_reference: referência externa para conciliação
+ *
+ * @see https://www.mercadopago.com.br/developers/pt/docs/checkout-api/integration-configuration/card/integrate-via-cardform
  * @param input Dados do pagamento
  * @returns Dados do pagamento criado
  */
 export async function createPayment(
   input: CreatePaymentInput
 ): Promise<MercadoPagoPaymentResponse> {
-  const { client, config } = await getClient();
-  const payment = new Payment(client);
+  const { config } = await getClient();
 
-  // Em sandbox mode, usar email de teste se configurado
+  // Email do pagador
+  // Em sandbox com MP_TEST_USER_EMAIL configurado, usa esse email
+  // Isso permite testar com usuários de teste do MP
   const payerEmail = config.sandboxMode && process.env.MP_TEST_USER_EMAIL
     ? process.env.MP_TEST_USER_EMAIL
     : input.payer.email;
 
-  // Usar nome do cartão (cardholderName) quando fornecido
-  // Em pagamentos com cartão, o nome deve coincidir com o titular do cartão
-  // Se o cartão está cadastrado como "APRO" (teste), o pagamento usará esse nome
-  let payerFirstName: string;
-  let payerLastName: string;
+  // Nome do pagador baseado nos dados do cartão
+  // Em sandbox, usar "APRO" simula aprovação automática
+  let payerFirstName: string | undefined;
+  let payerLastName: string | undefined;
 
   if (input.cardData?.cardholderName) {
-    // Usar nome do cartão (pode ser "APRO" em sandbox)
     const nameParts = input.cardData.cardholderName.trim().split(/\s+/);
-    payerFirstName = nameParts[0] || 'Nome';
-    payerLastName = nameParts.slice(1).join(' ') || nameParts[0] || 'Sobrenome';
+    payerFirstName = nameParts[0];
+    payerLastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : undefined;
   } else if (config.sandboxMode) {
-    // Fallback para sandbox sem cardData
     payerFirstName = 'APRO';
-    payerLastName = 'APRO';
-  } else {
-    // Produção sem cardData
-    payerFirstName = input.payer.firstName || 'Nome';
-    payerLastName = input.payer.lastName || 'Sobrenome';
+  } else if (input.payer.firstName) {
+    payerFirstName = input.payer.firstName;
+    payerLastName = input.payer.lastName;
   }
 
-  console.log('[MERCADO_PAGO] Dados do payer:', {
-    originalEmail: input.payer.email,
-    usedEmail: payerEmail,
-    cardholderName: input.cardData?.cardholderName,
-    usedFirstName: payerFirstName,
-    usedLastName: payerLastName,
-    sandboxMode: config.sandboxMode,
-    testEmailConfigured: !!process.env.MP_TEST_USER_EMAIL,
-  });
-
-  // Montar payload para o Mercado Pago
+  // Montar payload MÍNIMO obrigatório para Checkout Transparente
   const paymentData: Record<string, unknown> = {
+    // OBRIGATÓRIOS
     transaction_amount: input.transactionAmount,
-    description: input.description || 'Pagamento Envio Legal',
     payment_method_id: input.paymentMethodId,
     payer: {
       email: payerEmail,
-      first_name: payerFirstName,
-      last_name: payerLastName,
     },
   };
 
-  // Adicionar token se for pagamento com cartão
+  // Token e parcelas (obrigatórios para cartão)
   if (input.token) {
     paymentData.token = input.token;
     paymentData.installments = input.installments || 1;
   }
 
-  // Adicionar identificação se fornecida
-  if (input.payer.identification) {
-    const payer = paymentData.payer as Record<string, unknown>;
+  // OPCIONAIS - Adicionar apenas se fornecidos (melhora rastreabilidade)
+  if (input.description) {
+    paymentData.description = input.description;
+  }
+
+  // Nome do pagador (opcional, mas recomendado)
+  const payer = paymentData.payer as Record<string, unknown>;
+  if (payerFirstName) {
+    payer.first_name = payerFirstName;
+  }
+  if (payerLastName) {
+    payer.last_name = payerLastName;
+  }
+
+  // Identificação do pagador (opcional, melhora aprovação)
+  if (input.payer.identification?.number) {
     payer.identification = {
-      type: input.payer.identification.type,
+      type: input.payer.identification.type || 'CPF',
       number: input.payer.identification.number,
     };
   }
 
-  // Adicionar dados do cartão se fornecidos
-  if (input.cardData) {
-    const existingAdditionalInfo = (paymentData.additional_info as Record<string, unknown>) || {};
-    const existingPayer = (existingAdditionalInfo.payer as Record<string, unknown>) || {};
-
-    paymentData.additional_info = {
-      ...existingAdditionalInfo,
-      payer: {
-        ...existingPayer,
-        first_name: payerFirstName,
-        last_name: payerLastName,
-      },
-    };
-  }
-
-  // Adicionar external_reference se houver metadata
+  // Referência externa para conciliação (opcional)
   if (input.metadata) {
     paymentData.external_reference = JSON.stringify(input.metadata);
   }
 
-  // Log detalhado do payload que será enviado
-  console.log('[MERCADO_PAGO] Payload completo sendo enviado:', {
-    transaction_amount: paymentData.transaction_amount,
-    description: paymentData.description,
-    payment_method_id: paymentData.payment_method_id,
-    installments: paymentData.installments,
-    token: paymentData.token ? `${String(paymentData.token).substring(0, 20)}...` : undefined,
-    payer: paymentData.payer,
-    additional_info_payer: (paymentData.additional_info as Record<string, unknown>)?.payer,
-    external_reference: paymentData.external_reference,
-    sandboxMode: config.sandboxMode,
-  });
-
   try {
-    console.log('[MERCADO_PAGO] Chamando payment.create()...');
-    const response = await payment.create({ body: paymentData });
-    console.log('[MERCADO_PAGO] Pagamento criado com sucesso:', {
-      id: response.id,
-      status: response.status,
-      status_detail: response.status_detail,
-    });
-    return response as unknown as MercadoPagoPaymentResponse;
-  } catch (error: unknown) {
-    console.error('[MERCADO_PAGO] Erro ao criar pagamento:', error);
+    const { client } = await getClient();
+    const payment = new Payment(client);
 
-    // Extrair detalhes do erro do MP
-    const mpError = (error as { cause?: unknown[] }).cause?.[0] || error;
-    const errorObj = mpError as { description?: string; message?: string };
+    // Idempotency key para evitar pagamentos duplicados
+    const idempotencyKey = input.metadata?.transactionId
+      ? `tx-${input.metadata.transactionId}`
+      : `pay-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+
+    const result = await payment.create({
+      body: paymentData as Parameters<typeof payment.create>[0]['body'],
+      requestOptions: {
+        idempotencyKey,
+      },
+    });
+
+    return result as unknown as MercadoPagoPaymentResponse;
+  } catch (error: unknown) {
+    const errorObj = error as { message?: string };
     throw new Error(
-      `Erro ao criar pagamento: ${errorObj.description || errorObj.message || 'Erro desconhecido'}`
+      `Erro ao criar pagamento: ${errorObj.message || 'Erro desconhecido'}`
     );
   }
 }
@@ -194,7 +171,6 @@ export async function getPaymentById(paymentId: string): Promise<MercadoPagoPaym
     const response = await payment.get({ id: paymentId });
     return response as unknown as MercadoPagoPaymentResponse;
   } catch (error: unknown) {
-    console.error('[MERCADO_PAGO] Erro ao buscar pagamento:', error);
     const errorObj = error as { message?: string };
     throw new Error(`Erro ao buscar pagamento: ${errorObj.message || 'Erro desconhecido'}`);
   }
@@ -320,11 +296,6 @@ export async function createCardToken(cardData: {
   // https://www.mercadopago.com.br/developers/pt/docs/your-integrations/test/cards
   const cardholderName = config.sandboxMode ? 'APRO' : cardData.cardholderName;
 
-  console.log('[MERCADO_PAGO] Criando token de cartão no backend...', {
-    sandboxMode: config.sandboxMode,
-    cardholderName,
-  });
-
   try {
     const tokenData = await cardToken.create({
       body: {
@@ -344,12 +315,6 @@ export async function createCardToken(cardData: {
       },
     });
 
-    console.log('[MERCADO_PAGO] Token criado com sucesso:', {
-      id: tokenData.id,
-      first_six_digits: tokenData.first_six_digits,
-      last_four_digits: tokenData.last_four_digits,
-    });
-
     if (!tokenData.id) {
       throw new Error('Token ID não retornado pelo Mercado Pago');
     }
@@ -360,7 +325,6 @@ export async function createCardToken(cardData: {
       last_four_digits: tokenData.last_four_digits || '',
     };
   } catch (error: unknown) {
-    console.error('[MERCADO_PAGO] Erro ao criar token:', error);
     const errorObj = error as { message?: string };
     throw new Error(`Erro ao criar token: ${errorObj.message || 'Erro desconhecido'}`);
   }

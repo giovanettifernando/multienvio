@@ -43,7 +43,7 @@ export function PaymentMethodSelector({
   }
 
   return (
-    <Space direction="vertical" size="large" style={{ width: '100%' }}>
+    <Space orientation="vertical" size="large" style={{ width: '100%' }}>
       <div>
         <Text strong>Total a pagar: </Text>
         <Text style={{ fontSize: 20, color: '#1890ff' }}>{formatCurrency(totalAmount)}</Text>
@@ -64,7 +64,7 @@ export function PaymentMethodSelector({
           onChange={(e) => onMethodChange(e.target.value)}
           style={{ width: '100%' }}
         >
-          <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+          <Space orientation="vertical" size="middle" style={{ width: '100%' }}>
             {/* Wallet */}
             <Radio value="wallet" disabled={hasInsufficientBalance} style={{ width: '100%' }}>
               <Space>

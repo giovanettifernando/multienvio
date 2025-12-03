@@ -15,7 +15,7 @@ export default function NovoSupportClient() {
 
   return (
     <div style={{ maxWidth: 800, margin: '0 auto' }}>
-      <Space direction="vertical" style={{ width: '100%' }} size="large">
+      <Space orientation="vertical" style={{ width: '100%' }} size="large">
         <div>
           <Title level={2}>Abrir Novo Chamado</Title>
           <Text type="secondary">

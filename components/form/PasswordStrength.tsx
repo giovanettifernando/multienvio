@@ -49,7 +49,7 @@ export function PasswordStrength({ value }: PasswordStrengthProps) {
         strokeColor={getStrengthColor(score)}
         trailColor="#edf1f8"
       />
-      <Space direction="vertical" size={0}>
+      <Space orientation="vertical" size={0}>
         <Typography.Text strong>Sua senha deve conter:</Typography.Text>
         <ul style={{ margin: 0, paddingLeft: 18 }}>
           {requisitos.map((item) => {

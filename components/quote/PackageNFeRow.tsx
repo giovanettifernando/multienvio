@@ -45,10 +45,10 @@ export function PackageNFeRow({
   const fieldError = errors?.document?.packages?.[index]?.chave;
 
   return (
-    <Space direction="vertical" style={{ width: "100%" }} size={12}>
+    <Space orientation="vertical" style={{ width: "100%" }} size={12}>
       {/* Linha com identificador do pacote e campo de chave */}
       <Card size="small">
-        <Space direction="vertical" style={{ width: "100%" }} size={8}>
+        <Space orientation="vertical" style={{ width: "100%" }} size={8}>
           <Typography.Text strong>Pacote #{index + 1}</Typography.Text>
 
           <Form.Item

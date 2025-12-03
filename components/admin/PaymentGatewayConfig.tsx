@@ -8,6 +8,7 @@ interface GatewayConfig {
   environment: 'SANDBOX' | 'PRODUCTION';
   publicKey: string;
   accessToken: string;
+  applicationId?: string;
   webhookSecret?: string;
 }
 
@@ -30,6 +31,7 @@ export default function PaymentGatewayConfig() {
         form.setFieldsValue({
           environment: data.config.environment || 'SANDBOX',
           publicKey: data.config.publicKey || '',
+          applicationId: data.config.applicationId || '',
           accessToken: '', // Não retornamos o token por segurança
           webhookSecret: '', // Não retornamos o secret por segurança
         });
@@ -54,6 +56,10 @@ export default function PaymentGatewayConfig() {
         environment: values.environment,
         publicKey: values.publicKey,
       };
+
+      if (values.applicationId) {
+        payload.applicationId = values.applicationId;
+      }
 
       if (values.accessToken) {
         payload.accessToken = values.accessToken;
@@ -164,6 +170,17 @@ export default function PaymentGatewayConfig() {
               placeholder="Deixe vazio para não alterar"
               style={{ fontFamily: 'monospace' }}
               autoComplete="new-password"
+            />
+          </Form.Item>
+
+          <Form.Item
+            label="Application ID (Número da Aplicação)"
+            name="applicationId"
+            tooltip="ID da aplicação no Mercado Pago. Encontre em 'Detalhes da aplicação' > 'Número da aplicação'"
+          >
+            <Input
+              placeholder="4013981001613751"
+              style={{ fontFamily: 'monospace' }}
             />
           </Form.Item>
 

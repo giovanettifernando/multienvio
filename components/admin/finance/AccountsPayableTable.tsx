@@ -387,7 +387,7 @@ export function AccountsPayableTable() {
         <Card>
           <Empty
             description={
-              <Space direction="vertical">
+              <Space orientation="vertical">
                 <Text>Erro ao carregar contas a pagar</Text>
                 <Text type="secondary">
                   {error instanceof Error ? error.message : 'Erro desconhecido'}

@@ -184,7 +184,7 @@ export function PickupWizard({ sender, shipments }: PickupWizardProps) {
 
         {currentStep === 2 ? (
           <Card title="Agendamento" variant="borderless" style={{ marginBottom: 24 }}>
-            <Space direction="vertical" style={{ width: "100%" }} size={16}>
+            <Space orientation="vertical" style={{ width: "100%" }} size={16}>
               <Controller
                 name="schedule.date"
                 control={control}

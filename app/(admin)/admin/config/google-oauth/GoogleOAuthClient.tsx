@@ -158,7 +158,7 @@ export default function GoogleOAuthClient() {
 
   return (
     <div style={{ padding: 24, maxWidth: 800 }}>
-      <Space direction="vertical" style={{ width: '100%' }} size="large">
+      <Space orientation="vertical" style={{ width: '100%' }} size="large">
         {/* Header */}
         <div>
           <Title level={3} style={{ margin: 0 }}>

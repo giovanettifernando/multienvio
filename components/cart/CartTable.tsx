@@ -21,7 +21,7 @@ export function CartTable({ items, onRemove }: CartTableProps) {
         dataIndex: "transportadora",
         key: "transportadora",
         render: (_value, record) => (
-          <Space direction="vertical" size={0}>
+          <Space orientation="vertical" size={0}>
             <Typography.Text strong>{record.transportadora}</Typography.Text>
             <Typography.Text type="secondary">
               {record.modalidade}
@@ -33,7 +33,7 @@ export function CartTable({ items, onRemove }: CartTableProps) {
         title: "Rotas",
         key: "rotas",
         render: (_value, record) => (
-          <Space direction="vertical" size={0}>
+          <Space orientation="vertical" size={0}>
             <Typography.Text>
               Origem: {record.origem?.cep ?? "—"}{" "}
               {record.origem?.cidadeUF ? `(${record.origem?.cidadeUF})` : ""}
@@ -53,7 +53,7 @@ export function CartTable({ items, onRemove }: CartTableProps) {
         title: "Volumes",
         key: "volumes",
         render: (_value, record) => (
-          <Space direction="vertical" size={0}>
+          <Space orientation="vertical" size={0}>
             <Typography.Text>
               {record.volumes.length} volume(s)
             </Typography.Text>

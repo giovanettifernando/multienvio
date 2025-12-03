@@ -62,7 +62,7 @@ export function KpiCards({ items, loading }: KpiCardsProps) {
           styles={{ body: { padding: 16 } }}
           style={{ flex: "1 1 200px", minWidth: 180 }}
         >
-          <Space direction="vertical" size={4}>
+          <Space orientation="vertical" size={4}>
             <Typography.Text type="secondary">{item.label}</Typography.Text>
             <Typography.Title level={3} style={{ margin: 0 }}>
               {formatValue(item)}

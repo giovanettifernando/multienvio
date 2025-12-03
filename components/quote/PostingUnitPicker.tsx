@@ -304,7 +304,7 @@ export function PostingUnitPicker() {
   return (
     <>
       <Card title="Unidade de postagem">
-        <Space direction="vertical" size={16} style={{ width: "100%" }}>
+        <Space orientation="vertical" size={16} style={{ width: "100%" }}>
           {/* Barra de pesquisa */}
           <Input
             placeholder="Busque por nome, bairro ou cidade"
@@ -362,7 +362,7 @@ export function PostingUnitPicker() {
                     aria-label={`Ponto de coleta: ${point.nomeFantasia || point.razaoSocial}`}
                   >
                     <Radio value={point.id} style={{ width: "100%" }}>
-                      <Space direction="vertical" size={4} style={{ width: "100%" }}>
+                      <Space orientation="vertical" size={4} style={{ width: "100%" }}>
                         <Typography.Text strong>
                           {point.nomeFantasia || point.razaoSocial}
                           {point.distance !== undefined && (

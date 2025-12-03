@@ -1232,7 +1232,7 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
       info={isReverse ? destinoInfo : origemInfo}
       variant={isReverse ? "destination" : "origin"}
     >
-      <Space direction="vertical" size={16} style={{ width: "100%" }}>
+      <Space orientation="vertical" size={16} style={{ width: "100%" }}>
         <Form.Item
           label="Endereço selecionado"
           required
@@ -1252,7 +1252,7 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
             control={control}
             name="coleta"
             render={({ field }) => (
-              <Space direction="vertical" style={{ width: "100%" }}>
+              <Space orientation="vertical" style={{ width: "100%" }}>
                 <Flex align="center" gap={12}>
                   <Switch
                     checked={field.value}
@@ -1372,9 +1372,9 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
   return (
     <FormProvider {...formMethods}>
       <Form layout="vertical" onFinish={handleSubmit(onSubmit)}>
-        <Space direction="vertical" size={24} style={{ width: "100%" }}>
+        <Space orientation="vertical" size={24} style={{ width: "100%" }}>
           <Card>
-            <Space direction="vertical" size={16} style={{ width: "100%" }}>
+            <Space orientation="vertical" size={16} style={{ width: "100%" }}>
               <Flex justify="center">
                 <ReverseToggle
                   isReverse={isReverse}
@@ -1393,7 +1393,7 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
 
           <Row gutter={[24, 24]}>
             <Col xs={24} lg={10}>
-              <Space direction="vertical" size={16} style={{ width: "100%" }}>
+              <Space orientation="vertical" size={16} style={{ width: "100%" }}>
                 <InsuranceInput control={control} />
 
                 <VolumesTotalizer
@@ -1402,7 +1402,7 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
                 />
 
                 <Card>
-                  <Space direction="vertical" size={16} style={{ width: "100%" }}>
+                  <Space orientation="vertical" size={16} style={{ width: "100%" }}>
                     <div>
                       <Typography.Title level={5} style={{ marginBottom: 4 }}>
                         Volumes do envio

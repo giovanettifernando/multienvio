@@ -343,7 +343,7 @@ export default function EmailConfigForm() {
         okText="Enviar"
         cancelText="Cancelar"
       >
-        <Space direction="vertical" style={{ width: '100%' }}>
+        <Space orientation="vertical" style={{ width: '100%' }}>
           <Alert
             message="Email de Teste"
             description="Um email de teste será enviado usando a configuração SMTP atual. Certifique-se de que a configuração foi salva antes de enviar."

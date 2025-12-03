@@ -105,7 +105,7 @@ function CommissionSimulator({
         </Space>
       }
     >
-      <Space direction="vertical" style={{ width: '100%' }} size="middle">
+      <Space orientation="vertical" style={{ width: '100%' }} size="middle">
         <Row gutter={16}>
           <Col span={12}>
             <Text type="secondary">Valor base do frete:</Text>
@@ -245,7 +245,7 @@ export default function ComissoesClient() {
 
   return (
     <div style={{ padding: 24, maxWidth: 900 }}>
-      <Space direction="vertical" style={{ width: '100%' }} size="large">
+      <Space orientation="vertical" style={{ width: '100%' }} size="large">
         {/* Header */}
         <div>
           <Title level={3} style={{ margin: 0 }}>
@@ -264,7 +264,7 @@ export default function ComissoesClient() {
             type={config.isActive ? 'success' : 'warning'}
             message={config.isActive ? 'Comissões Ativas' : 'Comissões Desativadas'}
             description={
-              <Space direction="vertical" size="small">
+              <Space orientation="vertical" size="small">
                 <Space>
                   <TruckOutlined />
                   <Text>Frete: {config.shippingCommissionPercent}%</Text>

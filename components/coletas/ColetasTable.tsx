@@ -59,7 +59,7 @@ export function ColetasTable({ data, loading }: ColetasTableProps) {
       key: "origem",
       width: 250,
       render: (_, coleta) => (
-        <Space direction="vertical" size={0}>
+        <Space orientation="vertical" size={0}>
           <Typography.Text strong>{coleta.origem.nome}</Typography.Text>
           <Typography.Text type="secondary" style={{ fontSize: 12 }}>
             <EnvironmentOutlined /> {formatEndereco(coleta)}
@@ -72,7 +72,7 @@ export function ColetasTable({ data, loading }: ColetasTableProps) {
       key: "transportadora",
       width: 200,
       render: (_, coleta) => (
-        <Space direction="vertical" size={0}>
+        <Space orientation="vertical" size={0}>
           {coleta.transportadora && (
             <Typography.Text>{coleta.transportadora}</Typography.Text>
           )}

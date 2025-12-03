@@ -106,7 +106,7 @@ export function AddressSelect({
 
   if (!loading && addresses.length === 0) {
     return (
-      <Space direction="vertical" style={{ width: "100%" }}>
+      <Space orientation="vertical" style={{ width: "100%" }}>
         <Empty
           image={Empty.PRESENTED_IMAGE_SIMPLE}
           description="Nenhum endereço cadastrado"

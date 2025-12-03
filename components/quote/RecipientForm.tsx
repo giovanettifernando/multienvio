@@ -69,7 +69,7 @@ export function RecipientForm() {
         type="info"
         message="Destinatário não definido"
         description={
-          <Space direction="vertical">
+          <Space orientation="vertical">
             <Typography.Text>
               Por favor, defina o destinatário na página de cotação.
             </Typography.Text>
@@ -85,7 +85,7 @@ export function RecipientForm() {
 
   return (
     <Card title="Destinatário">
-      <Space direction="vertical" size={12} style={{ width: "100%" }}>
+      <Space orientation="vertical" size={12} style={{ width: "100%" }}>
         <Typography.Text type="secondary">
           Os dados de endereço foram pré-preenchidos com base na cotação.
         </Typography.Text>

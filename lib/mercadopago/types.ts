@@ -14,6 +14,7 @@ import { PaymentMethod, TransactionStatus } from '@prisma/client';
 export interface MercadoPagoConfig {
   publicKey: string;
   accessToken: string;
+  applicationId?: string;
   webhookSecret?: string;
   sandboxMode: boolean;
 }

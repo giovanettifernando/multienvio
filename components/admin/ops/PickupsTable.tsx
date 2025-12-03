@@ -197,7 +197,7 @@ export default function PickupsTable({ dateStart, dateEnd }: PickupsTableProps) 
         key: 'shipment',
         width: 180,
         render: (_, record) => (
-          <Space direction="vertical" size={0}>
+          <Space orientation="vertical" size={0}>
             <Text strong style={{ fontSize: 12 }}>
               {record.shipment?.trackingCode || '-'}
             </Text>
@@ -214,7 +214,7 @@ export default function PickupsTable({ dateStart, dateEnd }: PickupsTableProps) 
         key: 'origin',
         width: 200,
         render: (_, record) => (
-          <Space direction="vertical" size={0}>
+          <Space orientation="vertical" size={0}>
             <Text style={{ fontSize: 12 }}>
               <EnvironmentOutlined style={{ marginRight: 4 }} />
               {record.originCity || 'N/A'}/{record.originUf || 'N/A'}
@@ -237,7 +237,7 @@ export default function PickupsTable({ dateStart, dateEnd }: PickupsTableProps) 
         key: 'destination',
         width: 150,
         render: (_, record) => (
-          <Space direction="vertical" size={0}>
+          <Space orientation="vertical" size={0}>
             <Text style={{ fontSize: 12 }}>
               {record.shipment?.destinationCity || 'N/A'}/{record.shipment?.destinationState || 'N/A'}
             </Text>
@@ -258,7 +258,7 @@ export default function PickupsTable({ dateStart, dateEnd }: PickupsTableProps) 
             return <Tag color="warning">Não atribuído</Tag>;
           }
           return (
-            <Space direction="vertical" size={0}>
+            <Space orientation="vertical" size={0}>
               <Text style={{ fontSize: 12 }}>
                 <UserOutlined style={{ marginRight: 4 }} />
                 {record.collector.name}
@@ -280,7 +280,7 @@ export default function PickupsTable({ dateStart, dateEnd }: PickupsTableProps) 
         render: (_, record) => {
           if (!record.user) return '-';
           return (
-            <Space direction="vertical" size={0}>
+            <Space orientation="vertical" size={0}>
               <Text style={{ fontSize: 12 }}>{record.user.name || record.user.email}</Text>
               {record.user.phone && (
                 <Text type="secondary" style={{ fontSize: 11 }}>
@@ -296,7 +296,7 @@ export default function PickupsTable({ dateStart, dateEnd }: PickupsTableProps) 
         key: 'schedule',
         width: 130,
         render: (_, record) => (
-          <Space direction="vertical" size={0}>
+          <Space orientation="vertical" size={0}>
             {record.scheduleAt ? (
               <Text style={{ fontSize: 12 }}>{formatDate(record.scheduleAt)}</Text>
             ) : record.windowStart && record.windowEnd ? (

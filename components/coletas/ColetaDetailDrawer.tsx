@@ -126,7 +126,7 @@ export function ColetaDetailDrawer({
         </Space>
       }
     >
-      <Space direction="vertical" size="large" style={{ width: "100%" }}>
+      <Space orientation="vertical" size="large" style={{ width: "100%" }}>
         {/* Status Atual */}
         <div>
           <div style={{ marginBottom: 8, fontWeight: 500 }}>Status Atual</div>
@@ -197,7 +197,7 @@ export function ColetaDetailDrawer({
         <div>
           <div style={{ marginBottom: 8, fontWeight: 500 }}>Observações</div>
           {isEditing ? (
-            <Space direction="vertical" style={{ width: "100%" }}>
+            <Space orientation="vertical" style={{ width: "100%" }}>
               <TextArea
                 rows={4}
                 value={observacoes}

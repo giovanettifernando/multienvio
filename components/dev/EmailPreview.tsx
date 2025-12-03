@@ -24,7 +24,7 @@ export function EmailPreview({
       type="info"
       showIcon
       message={
-        <Space direction="vertical" size={4}>
+        <Space orientation="vertical" size={4}>
           <Typography.Text strong>
             Pré-visualização (dev)
           </Typography.Text>

@@ -463,7 +463,7 @@ export default function ReceptionsClient() {
   return (
     <PageShell title="Recepção de Envios" gap="md">
       <Card>
-        <Space direction="vertical" style={{ width: '100%' }} size="middle">
+        <Space orientation="vertical" style={{ width: '100%' }} size="middle">
           <Input.Search
             placeholder="Buscar por código, remetente ou destinatário..."
             allowClear
@@ -677,7 +677,7 @@ export default function ReceptionsClient() {
               </Form.Item>
 
               <Form.Item label="Foto da divergência (opcional)">
-                <Space direction="vertical" style={{ width: '100%' }}>
+                <Space orientation="vertical" style={{ width: '100%' }}>
                   {!photoPreview ? (
                     <div>
                       <input

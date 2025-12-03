@@ -103,7 +103,7 @@ export function ClientDrawer({ open, client, onClose, onStatusChange }: ClientDr
         </Space>
       }
     >
-      <Space direction="vertical" size="large" style={{ width: '100%' }}>
+      <Space orientation="vertical" size="large" style={{ width: '100%' }}>
         <Row gutter={16}>
           <Col span={8}>
             <Statistic title="Total de Envios" value={totalShipments} />

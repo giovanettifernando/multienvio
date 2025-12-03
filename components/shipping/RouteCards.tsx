@@ -74,7 +74,7 @@ function CardContainer({ children, variant }: CardContainerProps) {
   return (
     <div style={cardContainerStyles(token, variant)}>
       <Space
-        direction="vertical"
+        orientation="vertical"
         size={token.padding}
         style={{ width: "100%" }}
       >

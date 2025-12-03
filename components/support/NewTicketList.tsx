@@ -129,7 +129,7 @@ export function NewTicketList({
       dataIndex: 'requester',
       key: 'requester',
       render: (requester: SupportTicket['requester']) => (
-        <Space direction="vertical" size={0}>
+        <Space orientation="vertical" size={0}>
           <Text strong style={{ whiteSpace: 'nowrap' }}>{requester.name}</Text>
           <Text type="secondary" style={{ fontSize: 12, whiteSpace: 'nowrap' }}>{requester.email}</Text>
         </Space>
@@ -170,7 +170,7 @@ export function NewTicketList({
   ];
 
   return (
-    <Space direction="vertical" style={{ width: '100%' }} size="middle">
+    <Space orientation="vertical" style={{ width: '100%' }} size="middle">
       <Space style={{ width: '100%', justifyContent: 'space-between' }} align="start" wrap>
         <Space wrap>
           <Input

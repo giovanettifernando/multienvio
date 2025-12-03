@@ -364,7 +364,7 @@ export default function ColetasRealizadasClient() {
       key: 'sender',
       width: 200,
       render: (_, record: CompletedPickup) => (
-        <Space direction="vertical" size={0} style={{ width: '100%' }}>
+        <Space orientation="vertical" size={0} style={{ width: '100%' }}>
           <strong style={{ fontSize: '14px' }}>{record.user.name}</strong>
           {record.user.phone && (
             <a
@@ -390,7 +390,7 @@ export default function ColetasRealizadasClient() {
 
         if (!addressInfo) {
           return (
-            <Space direction="vertical" size={0}>
+            <Space orientation="vertical" size={0}>
               <Space>
                 <EnvironmentOutlined />
                 <span style={{ color: '#8c8c8c' }}>Endereço não informado</span>
@@ -409,7 +409,7 @@ export default function ColetasRealizadasClient() {
             rel="noopener noreferrer"
             style={{ color: 'inherit', textDecoration: 'none' }}
           >
-            <Space direction="vertical" size={0}>
+            <Space orientation="vertical" size={0}>
               <Space>
                 <EnvironmentOutlined style={{ color: '#1890ff' }} />
                 <span style={{ color: '#1890ff', textDecoration: 'underline' }}>
@@ -473,7 +473,7 @@ export default function ColetasRealizadasClient() {
     <PageShell title="Coletas realizadas" gap="md">
       {/* Filtros */}
       <Card style={{ marginBottom: 16 }}>
-        <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+        <Space orientation="vertical" size="middle" style={{ width: '100%' }}>
           {/* Totalizador e Botão de Entrega */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
             <Title level={5} style={{ margin: 0 }}>
@@ -494,7 +494,7 @@ export default function ColetasRealizadasClient() {
           {/* Filtros em linha ou empilhados */}
           {isMobile ? (
             // Mobile: empilhado
-            <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+            <Space orientation="vertical" size="middle" style={{ width: '100%' }}>
               <Input
                 placeholder="Buscar por código ou remetente"
                 prefix={<SearchOutlined />}
@@ -566,7 +566,7 @@ export default function ColetasRealizadasClient() {
               {/* Paginação Mobile */}
               {data.total > pageSize && (
                 <div style={{ textAlign: 'center', marginTop: 16 }}>
-                  <Space direction="vertical" size="middle">
+                  <Space orientation="vertical" size="middle">
                     <div style={{ fontSize: 14, color: '#8c8c8c' }}>
                       Página {page} de {Math.ceil(data.total / pageSize)} • Total: {data.total} coletas
                     </div>
