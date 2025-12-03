@@ -20,7 +20,7 @@ export async function GET(request: Request, { params }: RouteParams) {
 
     const { id } = await params;
 
-    // Buscar etiqueta com dados completos do shipment e sender
+    // Buscar etiqueta com dados completos do shipment, sender e packages
     const label = await prisma.label.findUnique({
       where: { id },
       include: {
@@ -33,6 +33,8 @@ export async function GET(request: Request, { params }: RouteParams) {
                 email: true,
                 phone: true,
                 razaoSocial: true,
+                cpf: true,
+                cnpj: true,
                 addresses: {
                   where: {
                     OR: [
@@ -44,6 +46,9 @@ export async function GET(request: Request, { params }: RouteParams) {
                   orderBy: { createdAt: 'desc' },
                 },
               },
+            },
+            packages: {
+              orderBy: { packageNumber: 'asc' },
             },
           },
         },
@@ -62,12 +67,42 @@ export async function GET(request: Request, { params }: RouteParams) {
     // Extrair dados do endereço do remetente
     const senderAddress = label.shipment.sender.addresses[0];
 
+    // Extrair endereço completo do destinatário
+    const destinationAddressParts = label.shipment.destinationAddress?.split(',') || [];
+    const destinationLogradouro = destinationAddressParts[0]?.trim() || '';
+    const destinationNumero = destinationAddressParts[1]?.trim() || 'S/N';
+
+    // Montar volumes a partir dos packages
+    const volumes = label.shipment.packages.length > 0
+      ? label.shipment.packages.map((pkg) => ({
+          packageNumber: pkg.packageNumber,
+          pesoKg: pkg.weight,
+          dimensoes: {
+            comprimento: pkg.length,
+            largura: pkg.width,
+            altura: pkg.height,
+          },
+        }))
+      : [
+          // Fallback: se não há packages, criar um volume com o peso total
+          {
+            packageNumber: 1,
+            pesoKg: label.shipment.weight,
+            dimensoes: {
+              comprimento: 20,
+              largura: 15,
+              altura: 10,
+            },
+          },
+        ];
+
     // Montar resposta com dados estruturados para impressão
     const response = {
       id: label.id,
       shipmentId: label.shipmentId,
       carrier: label.carrier,
       service: label.service,
+      serviceCode: label.shipment.service, // Código do serviço Correios (04014, etc) - pode ser o nome ou código
       status: label.status,
       isPrinted: label.isPrinted,
       printedAt: label.printedAt?.toISOString(),
@@ -77,29 +112,60 @@ export async function GET(request: Request, { params }: RouteParams) {
       platformTrackingCode: label.shipment.platformTrackingCode,
       carrierTrackingCode: label.shipment.carrierTrackingCode,
 
-      // Destinatário
+      // Destinatário (formato completo para etiquetas Correios)
       recipient: {
         name: label.recipientName || label.shipment.recipientName || 'Não informado',
         document: label.shipment.recipientDocument,
         phone: label.shipment.recipientPhone,
         email: label.shipment.recipientEmail,
+        // Campos estruturados para etiqueta
+        logradouro: destinationLogradouro,
+        numero: destinationNumero,
+        complemento: null, // TODO: adicionar campo no shipment se necessário
+        bairro: label.shipment.destinationNeighborhood || '',
+        cidade: label.shipment.destinationCity,
+        uf: label.shipment.destinationState,
+        cep: label.shipment.destinationCep,
+        // Campo legado para compatibilidade
         address: label.shipment.destinationAddress,
         neighborhood: label.shipment.destinationNeighborhood,
         city: label.shipment.destinationCity,
         state: label.shipment.destinationState,
-        cep: label.shipment.destinationCep,
       },
 
-      // Remetente
+      // Remetente (formato completo para etiquetas Correios)
       sender: {
         name: label.shipment.sender.razaoSocial || label.shipment.sender.name || 'Não informado',
+        document: label.shipment.sender.cnpj || label.shipment.sender.cpf || null,
+        phone: label.shipment.sender.phone,
+        email: label.shipment.sender.email,
+        // Campos estruturados para etiqueta
+        logradouro: senderAddress?.logradouro || '',
+        numero: senderAddress?.numero || 'S/N',
+        complemento: senderAddress?.complemento,
+        bairro: senderAddress?.bairro || '',
+        cidade: senderAddress?.cidade || '',
+        uf: senderAddress?.uf || '',
+        cep: label.shipment.originCep,
+        // Campo legado para compatibilidade
         address: senderAddress
           ? `${senderAddress.logradouro}${senderAddress.numero ? `, ${senderAddress.numero}` : ''}`
           : null,
         neighborhood: senderAddress?.bairro,
         city: senderAddress?.cidade,
         state: senderAddress?.uf,
-        cep: label.shipment.originCep,
+      },
+
+      // Volumes/Packages
+      volumes,
+      totalVolumes: volumes.length,
+
+      // Serviços adicionais
+      additionalServices: {
+        ar: false, // TODO: buscar do shipment se implementado
+        mp: false,
+        vd: label.shipment.declaredValue > 0 ? Math.round(label.shipment.declaredValue * 100) : undefined,
+        dd: false,
       },
 
       // Arquivo PDF (se existir)

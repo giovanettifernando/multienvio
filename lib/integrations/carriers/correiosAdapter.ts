@@ -15,6 +15,8 @@ import {
   criarPrePostagem,
   prePostagemCompleta,
   isCorreiosConfigured,
+  getCorreiosConfigAsync,
+  validateCorreiosConfig,
   getCorreiosServicos,
   type CorreiosPrecoPrazoInput,
   type CorreiosCotacaoCompleta,
@@ -213,10 +215,21 @@ export function shipmentInputToPrePostagem(
 // ============================================================================
 
 /**
- * Verifica se a integração dos Correios está disponível
+ * Verifica se a integração dos Correios está disponível (versão síncrona)
+ * NOTA: Pode retornar false na primeira chamada se o cache do DB não foi carregado
  */
 export function isCorreiosAvailable(): boolean {
   return isCorreiosConfigured();
+}
+
+/**
+ * Verifica se a integração dos Correios está disponível (versão assíncrona)
+ * Esta versão carrega a config do banco de dados se necessário
+ */
+export async function isCorreiosAvailableAsync(): Promise<boolean> {
+  const config = await getCorreiosConfigAsync();
+  const validation = validateCorreiosConfig(config);
+  return validation.valid;
 }
 
 /**
@@ -237,8 +250,9 @@ export async function quoteFromCorreios(
     volumes: request.volumes.length,
   });
 
-  // Verificar se integração está configurada
-  if (!isCorreiosConfigured()) {
+  // Verificar se integração está configurada (usa versão async para carregar config do DB)
+  const isConfigured = await isCorreiosAvailableAsync();
+  if (!isConfigured) {
     console.warn('[CORREIOS_ADAPTER] Integration not configured');
     return {
       results: [],
@@ -330,8 +344,9 @@ export async function createCorreiosShipment(
     destinoCep: input.destinatario.cep,
   });
 
-  // Verificar se integração está configurada
-  if (!isCorreiosConfigured()) {
+  // Verificar se integração está configurada (usa versão async para carregar config do DB)
+  const isConfigured = await isCorreiosAvailableAsync();
+  if (!isConfigured) {
     console.warn('[CORREIOS_ADAPTER] Integration not configured');
     return {
       success: false,

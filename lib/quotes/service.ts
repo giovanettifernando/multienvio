@@ -15,13 +15,8 @@ import type {
 } from '@/types/quote';
 import type { Quote, QuoteStatus } from '@prisma/client';
 import {
-  generateMockQuotes,
-  shouldUseMockFallback,
-  type CarrierCode,
-} from './mocks';
-import {
   quoteFromCorreios,
-  isCorreiosAvailable,
+  isCorreiosAvailableAsync,
 } from '@/lib/integrations/carriers/correiosAdapter';
 import { applyShippingCommission } from './commission';
 
@@ -78,143 +73,75 @@ export type QuoteDetail = Quote & {
 };
 
 // ============================================================================
-// Quote Calculation with Fallback
+// Quote Calculation - Correios Only
 // ============================================================================
 
 /**
- * Tenta cotar com uma transportadora específica
- * Em caso de falha de integração, retorna mock
- */
-async function quoteCarrier(
-  carrier: CarrierCode,
-  request: QuoteRequest
-): Promise<{ results: QuoteResultItem[]; source: 'real' | 'mock'; error?: string }> {
-  const requestId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-  const startTime = Date.now();
-
-  try {
-    console.info(`[QUOTE][${requestId}] Attempting real quote for ${carrier}`, {
-      origin: request.origem.cep,
-      dest: request.destino.cep,
-      volumes: request.volumes.length,
-    });
-
-    // ========================================
-    // CORREIOS - Integração Real
-    // ========================================
-    if (carrier === 'CORREIOS') {
-      // Verificar se integração está configurada
-      if (!isCorreiosAvailable()) {
-        console.info(`[QUOTE][${requestId}] Correios integration not configured, using mock`);
-        throw new Error('INTEGRATION_DISABLED');
-      }
-
-      // Chamar integração real dos Correios
-      const correiosResult = await quoteFromCorreios(request);
-
-      const duration = Date.now() - startTime;
-      console.info(`[QUOTE][${requestId}] Correios quote completed (${duration}ms)`, {
-        source: correiosResult.source,
-        results: correiosResult.results.length,
-      });
-
-      // Se obteve resultados reais, retornar
-      if (correiosResult.source === 'real' && correiosResult.results.length > 0) {
-        return correiosResult;
-      }
-
-      // Se falhou, deixar cair no fallback
-      throw new Error(correiosResult.error || 'No results from Correios');
-    }
-
-    // ========================================
-    // OUTRAS TRANSPORTADORAS - TODO: Implementar
-    // ========================================
-    // Por enquanto, simula integração não configurada para demonstrar fallback
-    // Em produção, adicionar integração para: JADLOG, LOGGI, JT, etc.
-    throw new Error('INTEGRATION_DISABLED');
-  } catch (error) {
-    const duration = Date.now() - startTime;
-    const shouldFallback = shouldUseMockFallback(error);
-
-    console.warn(`[QUOTE][${requestId}] Carrier ${carrier} failed (${duration}ms)`, {
-      shouldFallback,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
-
-    if (shouldFallback) {
-      // Usar mock como fallback
-      const mockResults = generateMockQuotes(carrier, request);
-      console.info(`[QUOTE][${requestId}] Using ${mockResults.length} mock quotes for ${carrier}`);
-
-      return {
-        results: mockResults,
-        source: 'mock',
-        error: error instanceof Error ? error.message : 'Integration unavailable',
-      };
-    }
-
-    // Erro crítico, não usar fallback
-    console.error(`[QUOTE][${requestId}] Critical error for ${carrier}, no fallback`, {
-      error,
-    });
-
-    return {
-      results: [],
-      source: 'mock',
-      error: error instanceof Error ? error.message : 'Critical error',
-    };
-  }
-}
-
-/**
- * Calcula cotações de todas as transportadoras com fallback automático
+ * Calcula cotações usando exclusivamente a integração dos Correios
+ * Sem fallback para mocks - retorna erro se integração não disponível
  */
 async function calculateShippingOptions(
   request: QuoteRequest
 ): Promise<QuoteResultItem[]> {
-  const carriers: CarrierCode[] = ['CORREIOS', 'JADLOG', 'LOGGI', 'JT'];
   const requestId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  const startTime = Date.now();
 
-  console.info(`[QUOTE][${requestId}] Starting quote calculation`, {
+  console.info(`[QUOTE][${requestId}] Starting Correios quote`, {
     origin: request.origem.cep,
     dest: request.destino.cep,
-    carriers: carriers.length,
+    volumes: request.volumes.length,
   });
 
-  // Cotar todas as transportadoras em paralelo
-  const quotePromises = carriers.map((carrier) => quoteCarrier(carrier, request));
-  const quoteResults = await Promise.all(quotePromises);
-
-  // Mesclar todos os resultados (reais + mocks)
-  const allResults: QuoteResultItem[] = [];
-  const stats = {
-    real: 0,
-    mock: 0,
-    failed: 0,
-  };
-
-  for (const result of quoteResults) {
-    if (result.results.length > 0) {
-      allResults.push(...result.results);
-      if (result.source === 'real') {
-        stats.real += result.results.length;
-      } else {
-        stats.mock += result.results.length;
-      }
-    } else {
-      stats.failed++;
-    }
+  // Verificar se integração dos Correios está disponível (usando versão async para carregar config do DB)
+  const isAvailable = await isCorreiosAvailableAsync();
+  if (!isAvailable) {
+    console.error(`[QUOTE][${requestId}] Correios integration not available`);
+    throw new Error('Integração com os Correios não está configurada. Entre em contato com o suporte.');
   }
 
-  console.info(`[QUOTE][${requestId}] Quote calculation completed`, {
-    total: allResults.length,
-    real: stats.real,
-    mock: stats.mock,
-    failed: stats.failed,
-  });
+  try {
+    // Chamar integração real dos Correios
+    const correiosResult = await quoteFromCorreios(request);
 
-  return allResults;
+    const duration = Date.now() - startTime;
+    console.info(`[QUOTE][${requestId}] Correios quote completed (${duration}ms)`, {
+      source: correiosResult.source,
+      results: correiosResult.results.length,
+      error: correiosResult.error,
+    });
+
+    // Se obteve resultados, retornar
+    if (correiosResult.results.length > 0) {
+      return correiosResult.results;
+    }
+
+    // Se não teve resultados, verificar qual foi o erro
+    const errorMessage = correiosResult.error || 'Nenhuma opção de frete disponível para este trecho';
+
+    // Traduzir erros comuns para mensagens amigáveis
+    if (errorMessage.includes('INTEGRATION_DISABLED')) {
+      throw new Error('Integração com os Correios não está configurada. Entre em contato com o suporte.');
+    }
+    if (errorMessage.includes('timeout') || errorMessage.includes('TIMEOUT')) {
+      throw new Error('Tempo limite excedido ao consultar os Correios. Tente novamente.');
+    }
+    if (errorMessage.includes('401') || errorMessage.includes('403') || errorMessage.includes('auth')) {
+      throw new Error('Erro de autenticação com os Correios. Entre em contato com o suporte.');
+    }
+
+    throw new Error(errorMessage);
+  } catch (error) {
+    const duration = Date.now() - startTime;
+    console.error(`[QUOTE][${requestId}] Correios quote failed (${duration}ms)`, {
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+
+    // Repassar erro para tratamento adequado
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error('Erro ao consultar frete nos Correios. Tente novamente.');
+  }
 }
 
 // ============================================================================

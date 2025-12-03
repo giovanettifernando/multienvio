@@ -1,0 +1,62 @@
+/**
+ * Estilos do Modal de Impressão de Etiquetas
+ */
+
+.shipmentInfo {
+  padding: 8px 12px;
+  background: #fafafa;
+  border-radius: 6px;
+  border: 1px solid #f0f0f0;
+}
+
+.loadingContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 24px;
+}
+
+.previewContainer {
+  transition: opacity 0.3s ease;
+}
+
+.labelsPreview {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  align-items: center;
+}
+
+.labelWrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.labelNumber {
+  font-size: 11px;
+  color: #666;
+  margin-bottom: 4px;
+  padding: 2px 8px;
+  background: #f5f5f5;
+  border-radius: 4px;
+}
+
+.labelPreview {
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  overflow: hidden;
+  background: white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Responsividade */
+@media (max-width: 480px) {
+  .labelPreview {
+    transform: scale(0.9);
+    transform-origin: top center;
+  }
+}

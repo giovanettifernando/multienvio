@@ -1,0 +1,240 @@
+/**
+ * Estilos da Etiqueta Genérica
+ * Dimensões: 84.7 x 101.6 mm (mesmo tamanho Correios)
+ */
+
+.label {
+  width: 84.7mm;
+  height: 101.6mm;
+  padding: 3mm;
+  box-sizing: border-box;
+  background: white;
+  border: 0.3mm solid #000;
+  font-family: Arial, Helvetica, sans-serif;
+  position: relative;
+  overflow: hidden;
+  page-break-inside: avoid;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Linha de corte pontilhada */
+.cutLine {
+  position: absolute;
+  top: -1mm;
+  left: -1mm;
+  right: -1mm;
+  bottom: -1mm;
+  border: 0.2mm dashed #ccc;
+  pointer-events: none;
+}
+
+/* ========================
+   CABEÇALHO
+   ======================== */
+
+.header {
+  text-align: center;
+  padding-bottom: 2mm;
+  border-bottom: 0.5mm solid #000;
+  margin-bottom: 2mm;
+}
+
+.carrierName {
+  font-size: 14pt;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
+.serviceName {
+  font-size: 10pt;
+  color: #333;
+  margin-top: 0.5mm;
+}
+
+.volumeInfo {
+  font-size: 8pt;
+  color: #666;
+  margin-top: 1mm;
+}
+
+/* ========================
+   SEÇÕES COMUNS
+   ======================== */
+
+.sectionLabel {
+  font-size: 6pt;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5mm;
+  margin-bottom: 0.5mm;
+  border-bottom: 0.2mm solid #ddd;
+  padding-bottom: 0.3mm;
+}
+
+/* ========================
+   SEÇÃO DESTINATÁRIO
+   ======================== */
+
+.recipientSection {
+  flex: 1;
+  min-height: 25mm;
+}
+
+.recipientName {
+  font-size: 12pt;
+  font-weight: bold;
+  margin-bottom: 1mm;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.recipientAddress {
+  font-size: 9pt;
+  margin-bottom: 0.5mm;
+  line-height: 1.3;
+}
+
+.recipientCityState {
+  font-size: 9pt;
+  margin-bottom: 0.5mm;
+}
+
+.recipientCep {
+  font-size: 12pt;
+  font-weight: bold;
+  margin-top: 1mm;
+}
+
+.recipientPhone {
+  font-size: 8pt;
+  color: #666;
+  margin-top: 0.5mm;
+}
+
+/* ========================
+   DIVISOR
+   ======================== */
+
+.divider {
+  height: 0.3mm;
+  background: #000;
+  margin: 2mm 0;
+}
+
+/* ========================
+   SEÇÃO REMETENTE
+   ======================== */
+
+.senderSection {
+  margin-bottom: 2mm;
+}
+
+.senderName {
+  font-size: 8pt;
+  font-weight: bold;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.senderAddress {
+  font-size: 7pt;
+  line-height: 1.2;
+}
+
+.senderCityState {
+  font-size: 7pt;
+}
+
+/* ========================
+   CÓDIGO DE RASTREAMENTO
+   ======================== */
+
+.trackingSection {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 2mm 0;
+  padding: 1mm;
+  border: 0.2mm solid #ddd;
+  border-radius: 1mm;
+}
+
+.trackingBarcode {
+  width: 100%;
+  height: 10mm;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.trackingBarcodeImg {
+  height: 100%;
+  width: auto;
+  max-width: 100%;
+  object-fit: contain;
+}
+
+.trackingCode {
+  font-size: 9pt;
+  font-weight: bold;
+  letter-spacing: 0.5mm;
+  text-align: center;
+  margin-top: 0.5mm;
+}
+
+/* ========================
+   ASSINATURA
+   ======================== */
+
+.signatureSection {
+  border-top: 0.2mm solid #999;
+  padding-top: 1mm;
+  margin-top: auto;
+}
+
+.signatureLabel {
+  font-size: 6pt;
+  color: #666;
+}
+
+.signatureLine {
+  height: 5mm;
+  border-bottom: 0.2mm solid #000;
+  margin: 0.5mm 0;
+}
+
+.signatureFields {
+  display: flex;
+  justify-content: space-between;
+  font-size: 5pt;
+  color: #666;
+}
+
+/* ========================
+   IMPRESSÃO
+   ======================== */
+
+@media print {
+  .label {
+    border: none;
+    box-shadow: none;
+    margin: 0;
+  }
+
+  .cutLine {
+    display: none;
+  }
+}
+
+/* ========================
+   VISUALIZAÇÃO EM TELA
+   ======================== */
+
+@media screen {
+  .label {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  }
+}

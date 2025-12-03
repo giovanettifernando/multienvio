@@ -42,6 +42,7 @@
     "@zxing/library": "^0.21.3",
     "antd": "^6.0.0",
     "bcrypt": "^6.0.0",
+    "bwip-js": "^4.8.0",
     "date-fns": "^4.1.0",
     "dayjs": "^1.11.19",
     "html2canvas": "^1.4.1",

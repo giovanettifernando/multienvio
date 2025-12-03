@@ -25,7 +25,7 @@ import {
   CorreiosApiError,
   CorreiosValidationError,
 } from './types';
-import { CORREIOS_ENDPOINTS, SERVICO_ADICIONAL } from './constants';
+import { CORREIOS_ENDPOINTS, SERVICO_ADICIONAL, TIPO_OBJETO } from './constants';
 
 // ============================================================================
 // Tipos Internos
@@ -226,15 +226,19 @@ export async function criarLotePrePostagem(
     objetosPostais,
   };
 
-  console.log('[CORREIOS_PREPOSTAGEM] Creating batch:', {
+  console.log('[CORREIOS_PREPOSTAGEM] Creating pre-postagem:', {
     idCorreios: request.idCorreios,
     quantidadeObjetos: objetosPostais.length,
     servicos: objetosPostais.map((o) => o.codigoServico),
+    endpoint: CORREIOS_ENDPOINTS.prePostagemCriar,
+    apiBase: config.apiBase,
+    fullUrl: `${config.apiBase}${CORREIOS_ENDPOINTS.prePostagemCriar}`,
+    requestBody: JSON.stringify(request, null, 2), // Log full request for debugging
   });
 
   try {
     const response = await correiosFetch<CorreiosPrePostagemLoteResponse>(
-      CORREIOS_ENDPOINTS.prePostagemLote,
+      CORREIOS_ENDPOINTS.prePostagemCriar,
       {
         method: 'POST',
         body: JSON.stringify(request),
@@ -304,13 +308,21 @@ export async function criarLotePrePostagem(
   } catch (error) {
     console.error('[CORREIOS_PREPOSTAGEM] Failed to create batch:', error);
 
-    // Retornar erro para cada objeto
+    // Capturar detalhes do erro da API dos Correios
+    let errorDetails: unknown = null;
+    if (error instanceof CorreiosApiError && error.errorDetails) {
+      errorDetails = error.errorDetails;
+      console.error('[CORREIOS_PREPOSTAGEM] API error details:', error.errorDetails);
+    }
+
+    // Retornar erro para cada objeto com detalhes da API
     return objetos.map(() => ({
       success: false,
       erros: [{
         codigo: 'API_ERROR',
         mensagem: error instanceof Error ? error.message : 'Erro desconhecido',
       }],
+      bruto: errorDetails, // Incluir resposta bruta do erro da API
     }));
   }
 }

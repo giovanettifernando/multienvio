@@ -29,11 +29,11 @@ export const CORREIOS_ENDPOINTS = {
   // Prazo
   prazoNacional: '/prazo/v1/nacional',          // POST para múltiplos, GET /{coProduto} para um
 
-  // Pré-Postagem (PPN)
-  prePostagemLote: '/prepostagem/v2/prepostagens', // Versão 2 é mais estável
-  prePostagemConsulta: '/prepostagem/v2/prepostagens',
-  prePostagemRecibo: '/prepostagem/v2/recibos',
-  prePostagemEtiqueta: '/prepostagem/v2/etiquetas',
+  // Pré-Postagem Nacional (PPN) - API 36
+  // TODO: Confirmar endpoints corretos da API v2 com a documentação oficial CWS
+  prePostagemCriar: '/prepostagem/v2/prepostagens', // POST para criar
+  prePostagemConsulta: '/prepostagem/v2/prepostagens', // GET /{id}
+  prePostagemEtiqueta: '/prepostagem/v2/etiquetas', // GET para etiqueta
 
   // Rastro
   rastro: '/rastro/v1/objetos',
