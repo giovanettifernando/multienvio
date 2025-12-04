@@ -4,6 +4,8 @@ import { getUserSessionFromRequest } from '@/lib/auth/user-session';
 import { baixarRotuloPdf } from '@/lib/integrations/correios/prepostagem';
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import bwipjs from 'bwip-js';
+import { readFile } from 'fs/promises';
+import { join } from 'path';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -181,6 +183,9 @@ export async function HEAD(request: Request, { params }: RouteParams) {
 
 /**
  * Cria o PDF final com header Envio Legal + código de barras + PDFs dos Correios
+ *
+ * IMPORTANTE: Mantém as dimensões ORIGINAIS do PDF dos Correios intactas.
+ * Apenas adiciona um header acima com o código da plataforma.
  */
 async function createEnvioLegalPdf(
   platformTrackingCode: string,
@@ -190,8 +195,18 @@ async function createEnvioLegalPdf(
   const pdfDoc = await PDFDocument.create();
   const helveticaBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
-  // Altura do header Envio Legal (compacto)
-  const headerHeight = 70;
+  // Altura do header Envio Legal
+  const headerHeight = 80;
+
+  // Carregar logo Envio Legal
+  let logoImage: Awaited<ReturnType<typeof pdfDoc.embedPng>> | null = null;
+  try {
+    const logoPath = join(process.cwd(), 'public', 'images', 'envio-legal-logo.png');
+    const logoBuffer = await readFile(logoPath);
+    logoImage = await pdfDoc.embedPng(logoBuffer);
+  } catch (e) {
+    console.warn('[LABEL_PDF] Failed to load logo:', e);
+  }
 
   // Gerar código de barras (Code128)
   let barcodeImage: Awaited<ReturnType<typeof pdfDoc.embedPng>> | null = null;
@@ -228,36 +243,39 @@ async function createEnvioLegalPdf(
 
     // Para cada página do PDF Correios
     for (const correioPage of correioPages) {
-      // Usar o tamanho da etiqueta Correios como base
-      const correioWidth = correioPage.getWidth();
-      const correioHeight = correioPage.getHeight();
+      // Dimensões ORIGINAIS do PDF dos Correios - NÃO ALTERAR
+      const pdfWidth = correioPage.getWidth();
+      const pdfHeight = correioPage.getHeight();
 
-      // Página final: mesma largura, altura = header + etiqueta Correios
-      const pageWidth = correioWidth;
-      const pageHeight = correioHeight + headerHeight;
+      // Página final: mesma largura, altura = original + header
+      const pageWidth = pdfWidth;
+      const pageHeight = pdfHeight + headerHeight;
 
       const page = pdfDoc.addPage([pageWidth, pageHeight]);
 
-      // === HEADER ENVIO LEGAL (fundo branco, sem cor) ===
+      // === HEADER ENVIO LEGAL ===
+      // O conteúdo visual da etiqueta Correios está no canto esquerdo (~320pt)
+      const CONTENT_WIDTH = 320; // largura aproximada do conteúdo visual
+      const headerCenterX = CONTENT_WIDTH / 2;
 
-      // Texto "ENVIO LEGAL" centralizado (preto)
-      const titleText = 'ENVIO LEGAL';
-      const titleSize = 14;
-      const titleWidth = helveticaBold.widthOfTextAtSize(titleText, titleSize);
-      page.drawText(titleText, {
-        x: (pageWidth - titleWidth) / 2,
-        y: pageHeight - 18,
-        size: titleSize,
-        font: helveticaBold,
-        color: rgb(0, 0, 0),
-      });
+      // Logo centralizado (proporção 2000x800 = 2.5:1)
+      const logoHeight = 28;
+      const logoWidth = logoHeight * 2.5; // 70pt
+      if (logoImage) {
+        page.drawImage(logoImage, {
+          x: headerCenterX - logoWidth / 2,
+          y: pageHeight - 32,
+          width: logoWidth,
+          height: logoHeight,
+        });
+      }
 
-      // Código de barras centralizado
+      // Código de barras centralizado abaixo do logo
       if (barcodeImage) {
-        const barcodeWidth = Math.min(200, pageWidth - 40);
+        const barcodeWidth = Math.min(200, CONTENT_WIDTH - 40);
         const barcodeHeight = 25;
-        const barcodeX = (pageWidth - barcodeWidth) / 2;
-        const barcodeY = pageHeight - 50;
+        const barcodeX = headerCenterX - barcodeWidth / 2;
+        const barcodeY = pageHeight - 62;
 
         page.drawImage(barcodeImage, {
           x: barcodeX,
@@ -267,13 +285,30 @@ async function createEnvioLegalPdf(
         });
       }
 
-      // Texto do código de rastreio centralizado abaixo do barcode
+      // "ENVIO LEGAL" + código de rastreio na mesma linha
+      const codeSize = 9;
+      const titleText = 'ENVIO LEGAL';
+      const titleWidth = helveticaBold.widthOfTextAtSize(titleText, codeSize);
+      const trackingText = platformTrackingCode || '';
+      const trackingWidth = helveticaBold.widthOfTextAtSize(trackingText, codeSize);
+      const gap = 8; // espaço entre título e código
+      const totalWidth = titleWidth + gap + trackingWidth;
+      const startX = headerCenterX - totalWidth / 2;
+
+      // Texto "ENVIO LEGAL"
+      page.drawText(titleText, {
+        x: startX,
+        y: pageHeight - 77,
+        size: codeSize,
+        font: helveticaBold,
+        color: rgb(0, 0, 0),
+      });
+
+      // Código de rastreio ao lado
       if (platformTrackingCode) {
-        const codeSize = 10;
-        const textWidth = helveticaBold.widthOfTextAtSize(platformTrackingCode, codeSize);
         page.drawText(platformTrackingCode, {
-          x: (pageWidth - textWidth) / 2,
-          y: pageHeight - 65,
+          x: startX + titleWidth + gap,
+          y: pageHeight - 77,
           size: codeSize,
           font: helveticaBold,
           color: rgb(0, 0, 0),
@@ -281,15 +316,15 @@ async function createEnvioLegalPdf(
       }
 
       // === CONTEÚDO DO CORREIOS ===
-      // Copiar a página do Correios para o documento (na parte inferior)
+      // Embeber e desenhar o PDF dos Correios SEM ALTERAÇÕES
       const [embeddedPage] = await pdfDoc.embedPdf(correioDoc, [correioPages.indexOf(correioPage)]);
 
-      // Desenhar a etiqueta Correios na parte inferior (mantendo tamanho original)
+      // Desenhar na parte inferior, mantendo dimensões originais
       page.drawPage(embeddedPage, {
         x: 0,
         y: 0,
-        width: correioWidth,
-        height: correioHeight,
+        width: pdfWidth,
+        height: pdfHeight,
       });
     }
   }
