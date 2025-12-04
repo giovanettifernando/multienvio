@@ -280,11 +280,13 @@ export async function POST(request: Request) {
         // 🚚 INTEGRAÇÃO COM TRANSPORTADORA: Criar pré-postagem e obter códigos de rastreio
         // Esta integração é best-effort - se falhar, o checkout continua com código interno
         try {
-          // Buscar dados do usuário para CPF/CNPJ, telefone e email
+          // Buscar dados do usuário para nome, CPF/CNPJ, telefone e email
+          // IMPORTANTE: O nome do remetente deve ser o nome do USUÁRIO, não do endereço!
           const user = await tx.user.findUnique({
             where: { id: session.userId },
             select: {
               name: true,
+              razaoSocial: true, // Para empresas (PJ)
               email: true,
               phone: true,
               cpf: true,
@@ -313,10 +315,11 @@ export async function POST(request: Request) {
             user?.cpf ||
             '';
 
-          // Dados do remetente - usa dados do originAddress (já completos)
-          // + dados pessoais do User (CPF/CNPJ, telefone, email)
+          // Dados do remetente - usa dados pessoais do User + endereço do originAddress
+          // IMPORTANTE: O nome do remetente deve ser o nome do USUÁRIO cadastrado em /minha-conta
+          // NÃO usar originData.nome pois esse é apenas o apelido/label do endereço (ex: "Casa", "Trabalho")
           const senderData = {
-            nome: originData.nome || user?.name || 'Remetente',
+            nome: user?.razaoSocial || user?.name || 'Remetente',
             documento: senderDocumento.replace(/\D/g, ''), // Remove formatação
             telefone: user?.phone || undefined,
             email: user?.email || undefined,

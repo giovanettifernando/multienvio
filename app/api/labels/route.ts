@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getUserSessionFromRequest } from "@/lib/auth/user-session";
-import type { LabelItem, LabelsResponse, PrintStatus } from "@/lib/types/label";
+import type { LabelItem, LabelsResponse, PrintStatus, PackageItem, PackageLabelStatus } from "@/lib/types/label";
 import type { Prisma } from "@prisma/client";
 
 
 /**
  * GET /api/labels
- * Lista etiquetas do usuário com filtros
+ * Lista etiquetas do usuário com filtros e dados expandidos (packages, origem)
  */
 export async function GET(request: Request) {
   try {
@@ -38,7 +38,8 @@ export async function GET(request: Request) {
       where.OR = [
         { trackingCode: { contains: q, mode: 'insensitive' } },
         { shipment: { platformTrackingCode: { contains: q, mode: 'insensitive' } } },
-        { shipmentId: q }, // ✅ Buscar por shipment ID exato
+        { shipment: { carrierTrackingCode: { contains: q, mode: 'insensitive' } } },
+        { shipmentId: q }, // Buscar por shipment ID exato
       ];
     }
 
@@ -66,6 +67,24 @@ export async function GET(request: Request) {
               recipientDocument: true,
               destinationCity: true,
               destinationState: true,
+              carrier: true,
+              service: true,
+              freightCost: true,
+              declaredValue: true,
+              document: true, // Contém originAddress com apelido
+              packages: {
+                orderBy: { packageNumber: 'asc' },
+                select: {
+                  id: true,
+                  packageNumber: true,
+                  weight: true,
+                  width: true,
+                  height: true,
+                  length: true,
+                  carrierTrackingCode: true,
+                  carrierPrePostageId: true,
+                },
+              },
             },
           },
         },
@@ -76,38 +95,117 @@ export async function GET(request: Request) {
     ]);
 
     // Mapear para formato do frontend
-    const items: LabelItem[] = labels.map((label) => ({
-      id: label.id,
-      shipmentId: label.shipmentId,
-      carrier: label.carrier,
-      service: label.service,
-      status: label.status as LabelItem['status'],
-      price: label.priceCents / 100, // Converter centavos para reais
-      currency: label.currency as 'BRL',
-      // Expor apenas platformTrackingCode aos clientes
-      trackingCode: label.shipment.platformTrackingCode ?? label.trackingCode ?? undefined,
-      isPrinted: label.isPrinted,
-      printedAt: label.printedAt?.toISOString() ?? undefined,
-      originCep: label.shipment.originCep,
-      destinationCep: label.shipment.destinationCep,
-      recipient: {
-        // Priorizar recipientName do label (denormalizado), fallback para shipment
-        name: label.recipientName || label.shipment.recipientName || 'Não informado',
-        document: label.shipment.recipientDocument ?? undefined,
-        city: label.shipment.destinationCity ?? undefined,
-        state: label.shipment.destinationState ?? undefined,
-      },
-      createdAt: label.createdAt.toISOString(),
-      updatedAt: label.updatedAt.toISOString(),
-      file: label.fileUrl || label.fileBase64
-        ? {
-            url: label.fileUrl ?? undefined,
-            base64: label.fileBase64 ?? undefined,
-            contentType: label.contentType ?? undefined,
-            sizeBytes: label.sizeBytes ?? undefined,
-          }
-        : undefined,
-    }));
+    const items: LabelItem[] = labels.map((label) => {
+      // Extrair dados da origem do document (JSON)
+      const doc = label.shipment.document as {
+        originAddress?: {
+          nome?: string;
+          cidade?: string;
+          uf?: string;
+          cep?: string;
+        };
+        itensDeclaracaoConteudo?: Array<{
+          conteudo: string;
+          quantidade: number;
+          valor: number;
+        }>;
+        chavesNFe?: string[];
+        valorDeclarado?: number;
+      } | null;
+
+      const originAddress = doc?.originAddress;
+
+      // Determinar status do package e conteúdo
+      const packages: PackageItem[] = label.shipment.packages.map((pkg) => {
+        // Determinar status da etiqueta do package
+        let labelStatus: PackageLabelStatus = 'pending';
+        if (pkg.carrierPrePostageId) {
+          labelStatus = 'generated';
+        }
+
+        // Determinar tipo de conteúdo e resumo
+        let contentType: PackageItem['contentType'] = 'unknown';
+        let contentSummary: string | undefined;
+        let contentValue: number | undefined;
+
+        // Verificar se tem NF-e
+        if (doc?.chavesNFe && doc.chavesNFe.length > 0) {
+          contentType = 'nfe';
+          const chave = doc.chavesNFe[0];
+          contentSummary = `NF-e: ${chave.substring(0, 8)}...${chave.substring(chave.length - 4)}`;
+          contentValue = doc.valorDeclarado || label.shipment.declaredValue;
+        }
+        // Verificar se tem declaração de conteúdo
+        else if (doc?.itensDeclaracaoConteudo && doc.itensDeclaracaoConteudo.length > 0) {
+          contentType = 'declaration';
+          const totalItens = doc.itensDeclaracaoConteudo.reduce((sum, item) => sum + item.quantidade, 0);
+          const totalValor = doc.itensDeclaracaoConteudo.reduce((sum, item) => sum + (item.quantidade * item.valor), 0);
+          contentSummary = `${totalItens} ${totalItens === 1 ? 'item' : 'itens'}`;
+          contentValue = totalValor;
+        }
+
+        return {
+          id: pkg.id,
+          packageNumber: pkg.packageNumber,
+          weight: pkg.weight,
+          width: pkg.width,
+          height: pkg.height,
+          length: pkg.length,
+          carrierTrackingCode: pkg.carrierTrackingCode,
+          carrierPrePostageId: pkg.carrierPrePostageId,
+          labelStatus,
+          contentType,
+          contentSummary,
+          contentValue,
+        };
+      });
+
+      return {
+        id: label.id,
+        shipmentId: label.shipmentId,
+        carrier: label.carrier,
+        service: label.service,
+        status: label.status as LabelItem['status'],
+        price: label.priceCents / 100, // Converter centavos para reais
+        currency: label.currency as 'BRL',
+        // Expor platformTrackingCode aos clientes
+        trackingCode: label.shipment.platformTrackingCode ?? label.trackingCode ?? undefined,
+        isPrinted: label.isPrinted,
+        printedAt: label.printedAt?.toISOString() ?? undefined,
+
+        // Dados da origem
+        origin: {
+          label: originAddress?.nome,
+          cep: label.shipment.originCep,
+          city: originAddress?.cidade,
+          state: originAddress?.uf,
+        },
+
+        // Dados do destino
+        destinationCep: label.shipment.destinationCep,
+        recipient: {
+          name: label.recipientName || label.shipment.recipientName || 'Não informado',
+          document: label.shipment.recipientDocument ?? undefined,
+          city: label.shipment.destinationCity ?? undefined,
+          state: label.shipment.destinationState ?? undefined,
+        },
+
+        // Packages
+        packages,
+        totalVolumes: packages.length,
+
+        createdAt: label.createdAt.toISOString(),
+        updatedAt: label.updatedAt.toISOString(),
+        file: label.fileUrl || label.fileBase64
+          ? {
+              url: label.fileUrl ?? undefined,
+              base64: label.fileBase64 ?? undefined,
+              contentType: label.contentType ?? undefined,
+              sizeBytes: label.sizeBytes ?? undefined,
+            }
+          : undefined,
+      };
+    });
 
     const response: LabelsResponse = {
       items,

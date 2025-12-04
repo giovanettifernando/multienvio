@@ -2,12 +2,46 @@ export type LabelStatus = 'pending' | 'paid' | 'issued' | 'canceled' | 'error';
 
 export type PrintStatus = 'printed' | 'not_printed' | 'all';
 
+export type PackageLabelStatus = 'pending' | 'generated' | 'canceled' | 'error';
+
 export interface LabelFile {
   // preferencialmente uma URL (quando existir). Se vier base64, marcar contentType.
   url?: string;           // ex.: "/api/labels/{id}/pdf" (mock no FE)
   base64?: string;        // se o mock devolver base64
   contentType?: string;   // "application/pdf"
   sizeBytes?: number | null;
+}
+
+/**
+ * Dados de um volume/package para exibição na tabela de etiquetas
+ */
+export interface PackageItem {
+  id: string;
+  packageNumber: number;
+  // Dimensões e peso
+  weight: number;           // kg
+  width: number;            // cm
+  height: number;           // cm
+  length: number;           // cm
+  // Rastreio Correios
+  carrierTrackingCode?: string | null;
+  carrierPrePostageId?: string | null;
+  // Status da etiqueta deste volume
+  labelStatus: PackageLabelStatus;
+  // Conteúdo declarado (simplificado para exibição)
+  contentType: 'declaration' | 'nfe' | 'unknown';
+  contentSummary?: string;  // Ex: "3 itens" ou "NF-e: 35241...789"
+  contentValue?: number;    // Valor declarado do conteúdo
+}
+
+/**
+ * Dados da origem para exibição
+ */
+export interface OriginInfo {
+  label?: string;           // Apelido do endereço (ex: "Casa", "Trabalho")
+  cep: string;
+  city?: string;
+  state?: string;
 }
 
 export interface LabelItem {
@@ -18,11 +52,14 @@ export interface LabelItem {
   status: LabelStatus;
   price: number;             // em REAIS para exibição
   currency: 'BRL';
-  trackingCode?: string | null;
+  trackingCode?: string | null;  // platformTrackingCode
   isPrinted: boolean;        // Status de impressão
   printedAt?: string | null; // ISO
-  // Dados do shipment
-  originCep: string;
+
+  // Dados da origem
+  origin: OriginInfo;
+
+  // Dados do destino (recipient)
   destinationCep: string;
   recipient: {
     name: string;            // **OBRIGATÓRIO EXIBIR NA LISTA**
@@ -30,6 +67,11 @@ export interface LabelItem {
     city?: string | null;
     state?: string | null;
   };
+
+  // Volumes/Packages
+  packages: PackageItem[];
+  totalVolumes: number;
+
   createdAt: string;         // ISO
   updatedAt?: string;
   file?: LabelFile | null;   // PDF metadata (emitida -> disponível)

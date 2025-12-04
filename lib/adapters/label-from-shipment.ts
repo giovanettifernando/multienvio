@@ -1,6 +1,11 @@
 import type { Shipment } from '@/lib/types/shipment';
 import type { LabelItem } from '@/lib/types/label';
 
+/**
+ * Adaptador básico para converter um Shipment simplificado em LabelItem
+ * Nota: Esta função usa dados mínimos já que o tipo Shipment é básico.
+ * Para dados completos de etiqueta, use a API /api/labels que acessa o banco diretamente.
+ */
 export function labelFromShipment(s: Shipment): LabelItem {
   return {
     id: `LBL-${s.id}`,
@@ -11,7 +16,9 @@ export function labelFromShipment(s: Shipment): LabelItem {
     price: s.price,
     currency: 'BRL',
     isPrinted: false,
-    originCep: '',
+    origin: {
+      cep: '',
+    },
     destinationCep: '',
     recipient: {
       name: s.recipient?.name ?? 'Destinatário',
@@ -19,6 +26,8 @@ export function labelFromShipment(s: Shipment): LabelItem {
       city: s.recipient?.city ?? null,
       state: s.recipient?.state ?? null,
     },
+    packages: [],
+    totalVolumes: 1,
     createdAt: s.createdAt || new Date().toISOString(),
     trackingCode: s.trackingCode ?? null,
     file: null,

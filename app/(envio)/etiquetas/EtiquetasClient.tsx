@@ -6,7 +6,7 @@ import { PrinterOutlined, DownloadOutlined, CloseOutlined } from '@ant-design/ic
 import { LabelsTable } from '@/components/labels/LabelsTable';
 import { LabelPrintModal } from '@/components/labels/LabelPrintModal';
 import { ShipmentLabelModal, type ShipmentLabelData } from '@/components/labels';
-import type { LabelItem } from '@/lib/types/label';
+import type { LabelItem, PackageItem } from '@/lib/types/label';
 import { PageShell } from '@/components/shared/PageShell';
 import { useQueryClient } from '@tanstack/react-query';
 
@@ -90,6 +90,8 @@ export default function EtiquetasClient() {
   const [pdfModalOpen, setPdfModalOpen] = useState(false);
   const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
   const [pdfLabelId, setPdfLabelId] = useState<string | null>(null);
+  const [pdfPackageId, setPdfPackageId] = useState<string | null>(null);
+  const [pdfFileName, setPdfFileName] = useState<string>('etiqueta');
   const [loadingLabel, setLoadingLabel] = useState(false);
 
   const handlePrintStatusChange = useCallback((labelId: string, isPrinted: boolean) => {
@@ -120,6 +122,8 @@ export default function EtiquetasClient() {
         // Abrir modal com PDF
         setPdfBlobUrl(blobUrl);
         setPdfLabelId(record.id);
+        setPdfPackageId(null);
+        setPdfFileName(`etiqueta_${record.trackingCode || record.id}`);
         setPdfModalOpen(true);
       } catch (error) {
         console.error('[LABEL_OPEN]', error);
@@ -189,6 +193,38 @@ export default function EtiquetasClient() {
     }
   }, [message]);
 
+  // Handler para abrir etiqueta de volume individual
+  const handleOpenPackage = useCallback(async (pkg: PackageItem, label: LabelItem) => {
+    setLoadingLabel(true);
+    try {
+      const url = `/api/packages/${pkg.id}/pdf`;
+
+      // Buscar PDF como blob
+      const response = await fetch(url);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Etiqueta não disponível');
+      }
+
+      // Criar blob URL para o iframe
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob) + '#navpanes=0&view=FitH';
+
+      // Abrir modal com PDF
+      setPdfBlobUrl(blobUrl);
+      setPdfLabelId(label.id);
+      setPdfPackageId(pkg.id);
+      setPdfFileName(`etiqueta_${label.trackingCode || label.id}_vol${pkg.packageNumber}`);
+      setPdfModalOpen(true);
+    } catch (error) {
+      console.error('[PACKAGE_OPEN]', error);
+      const errorMsg = error instanceof Error ? error.message : 'Erro ao carregar etiqueta do volume';
+      message.error(errorMsg);
+    } finally {
+      setLoadingLabel(false);
+    }
+  }, [message]);
+
   // Fechar modal PDF e limpar blob URL
   const handleClosePdfModal = useCallback(() => {
     setPdfModalOpen(false);
@@ -199,6 +235,8 @@ export default function EtiquetasClient() {
     }
     setPdfBlobUrl(null);
     setPdfLabelId(null);
+    setPdfPackageId(null);
+    setPdfFileName('etiqueta');
   }, [pdfBlobUrl]);
 
   // Download PDF
@@ -207,10 +245,10 @@ export default function EtiquetasClient() {
       const link = document.createElement('a');
       // Remove hash fragment para download
       link.href = pdfBlobUrl.split('#')[0];
-      link.download = `etiqueta_${pdfLabelId || 'envio'}.pdf`;
+      link.download = `${pdfFileName}.pdf`;
       link.click();
     }
-  }, [pdfBlobUrl, pdfLabelId]);
+  }, [pdfBlobUrl, pdfFileName]);
 
   // Imprimir PDF
   const handlePrintPdf = useCallback(async () => {
@@ -253,7 +291,7 @@ export default function EtiquetasClient() {
     <App>
       <PageShell title="Etiquetas" gap="md">
         <Spin spinning={loadingLabel} tip="Carregando etiqueta...">
-          <LabelsTable onOpenLabel={handleOpenLabel} />
+          <LabelsTable onOpenLabel={handleOpenLabel} onOpenPackage={handleOpenPackage} />
         </Spin>
 
         {/* Modal legado para transportadoras não-Correios */}

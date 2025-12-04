@@ -44,6 +44,8 @@ export const CORREIOS_ENDPOINTS = {
   prePostagemRotuloLote: '/prepostagem/v1/prepostagens/rotulo',        // POST com idsPrePostagem
   // Etiqueta por ID (para baixarEtiqueta - pode não funcionar no v1, usar gerarRotulo)
   prePostagemEtiqueta: '/prepostagem/v1/prepostagens',                 // GET /{id} - endpoint para consulta/download
+  // Cancelamento de pré-postagem
+  prePostagemCancelar: '/prepostagem/v1/prepostagens',                 // DELETE /{idPrePostagem} ou /objeto/{codigoObjeto}
 
   // Rastro (SRO - Sistema de Rastreamento de Objetos)
   // Conforme manual CWS: GET /srorastro/v1/objetos/{codigoObjeto}?resultado=T

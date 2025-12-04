@@ -1238,3 +1238,125 @@ export async function criarPrePostagemMultiVolume(
     errors: errors.length > 0 ? errors : undefined,
   };
 }
+
+// ============================================================================
+// Cancelamento de Pré-Postagem
+// ============================================================================
+
+/**
+ * Resultado do cancelamento de pré-postagem
+ */
+export interface CancelPrePostagemResult {
+  success: boolean;
+  message?: string;
+  erro?: string;
+}
+
+/**
+ * Cancela uma pré-postagem nos Correios
+ *
+ * A pré-postagem só pode ser cancelada se ainda não foi postada.
+ * Usa o endpoint DELETE /prepostagem/v1/prepostagens/{idPrePostagem}
+ *
+ * @param idPrePostagem ID da pré-postagem (ex: PRNnhoiSb6SSKvvVJA13MiOA)
+ * @returns Resultado do cancelamento
+ */
+export async function cancelarPrePostagem(
+  idPrePostagem: string
+): Promise<CancelPrePostagemResult> {
+  console.log('[CORREIOS_PREPOSTAGEM] Canceling pre-postagem:', {
+    idPrePostagem,
+    endpoint: `${CORREIOS_ENDPOINTS.prePostagemCancelar}/${idPrePostagem}`,
+  });
+
+  try {
+    // DELETE /prepostagem/v1/prepostagens/{idPrePostagem}
+    await correiosFetch<{ message?: string }>(
+      `${CORREIOS_ENDPOINTS.prePostagemCancelar}/${idPrePostagem}`,
+      {
+        method: 'DELETE',
+      }
+    );
+
+    console.log('[CORREIOS_PREPOSTAGEM] Pre-postagem canceled successfully:', {
+      idPrePostagem,
+    });
+
+    return {
+      success: true,
+      message: 'Pré-postagem cancelada com sucesso',
+    };
+  } catch (error) {
+    console.error('[CORREIOS_PREPOSTAGEM] Failed to cancel pre-postagem:', error);
+
+    let errorMsg = 'Erro ao cancelar pré-postagem';
+
+    if (error instanceof CorreiosApiError) {
+      errorMsg = error.message;
+
+      // Verificar se já foi postado (não pode cancelar)
+      if (error.errorDetails) {
+        console.error('[CORREIOS_PREPOSTAGEM] API error details:', JSON.stringify(error.errorDetails, null, 2));
+      }
+    }
+
+    return {
+      success: false,
+      erro: errorMsg,
+    };
+  }
+}
+
+/**
+ * Cancela uma pré-postagem pelo código de rastreio (codigoObjeto)
+ *
+ * Alternativa ao cancelamento por ID.
+ * Usa o endpoint DELETE /prepostagem/v1/prepostagens/objeto/{codigoObjeto}
+ *
+ * @param codigoObjeto Código de rastreio (ex: AN315713377BR)
+ * @returns Resultado do cancelamento
+ */
+export async function cancelarPrePostagemPorCodigo(
+  codigoObjeto: string
+): Promise<CancelPrePostagemResult> {
+  console.log('[CORREIOS_PREPOSTAGEM] Canceling pre-postagem by tracking code:', {
+    codigoObjeto,
+    endpoint: `${CORREIOS_ENDPOINTS.prePostagemCancelar}/objeto/${codigoObjeto}`,
+  });
+
+  try {
+    // DELETE /prepostagem/v1/prepostagens/objeto/{codigoObjeto}
+    await correiosFetch<{ message?: string }>(
+      `${CORREIOS_ENDPOINTS.prePostagemCancelar}/objeto/${codigoObjeto}`,
+      {
+        method: 'DELETE',
+      }
+    );
+
+    console.log('[CORREIOS_PREPOSTAGEM] Pre-postagem canceled successfully by tracking code:', {
+      codigoObjeto,
+    });
+
+    return {
+      success: true,
+      message: 'Pré-postagem cancelada com sucesso',
+    };
+  } catch (error) {
+    console.error('[CORREIOS_PREPOSTAGEM] Failed to cancel pre-postagem by tracking code:', error);
+
+    let errorMsg = 'Erro ao cancelar pré-postagem';
+
+    if (error instanceof CorreiosApiError) {
+      errorMsg = error.message;
+
+      if (error.errorDetails) {
+        console.error('[CORREIOS_PREPOSTAGEM] API error details:', JSON.stringify(error.errorDetails, null, 2));
+      }
+    }
+
+    return {
+      success: false,
+      erro: errorMsg,
+    };
+  }
+}

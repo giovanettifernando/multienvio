@@ -85,6 +85,8 @@ export {
   baixarEtiqueta,
   baixarEtiquetasLote,
   prePostagemCompleta,
+  cancelarPrePostagem,
+  cancelarPrePostagemPorCodigo,
   type CreatePrePostagemInput,
   type PrePostagemResult,
   type EtiquetaResult,
@@ -94,6 +96,7 @@ export {
   type VolumePrePostagemInput,
   type MultiVolumePrePostagemInput,
   type MultiVolumePrePostagemResult,
+  type CancelPrePostagemResult,
 } from './prepostagem';
 
 // Rastreamento
