@@ -15,21 +15,27 @@ export interface LabelsTableProps {
   onOpenPackage: (pkg: PackageItem, label: LabelItem) => void;
 }
 
-// Status badge para etiqueta principal
-function LabelStatusBadge({ status }: { status: LabelItem['status'] }) {
-  const statusConfig: Record<LabelItem['status'], { color: string; text: string }> = {
-    pending: { color: 'warning', text: 'Pendente' },
-    paid: { color: 'processing', text: 'Pago' },
-    issued: { color: 'success', text: 'Gerada' },
-    canceled: { color: 'error', text: 'Cancelada' },
-    error: { color: 'error', text: 'Erro' },
-  };
+// Status do envio (indica se todas as etiquetas foram geradas)
+function ShipmentStatusBadge({ record }: { record: LabelItem }) {
+  const totalPackages = record.packages.length;
+  const generatedPackages = record.packages.filter(p => p.labelStatus === 'generated').length;
 
-  const config = statusConfig[status] || { color: 'default', text: status };
-  return <Tag color={config.color}>{config.text}</Tag>;
+  if (totalPackages === 0) {
+    return <Tag color="default">Sem volumes</Tag>;
+  }
+
+  if (generatedPackages === totalPackages) {
+    return <Tag color="success">Todas geradas</Tag>;
+  }
+
+  if (generatedPackages === 0) {
+    return <Tag color="warning">Falta gerar</Tag>;
+  }
+
+  return <Tag color="processing">{generatedPackages}/{totalPackages} geradas</Tag>;
 }
 
-// Status badge para package
+// Status badge para package individual
 function PackageStatusBadge({ status }: { status: PackageLabelStatus }) {
   const statusConfig: Record<PackageLabelStatus, { color: string; text: string }> = {
     pending: { color: 'warning', text: 'Pendente' },
@@ -52,18 +58,22 @@ function formatCurrency(value: number | undefined): string {
 }
 
 // Resumo do envio (linha pai)
+// Formato: Origem (UF) → Nome Destinatário, CEP, Cidade (UF)
+//          X volumes • Correios SERVIÇO • R$ XX,XX
 function ShipmentSummary({ record }: { record: LabelItem }) {
-  const origin = record.origin.label || record.origin.city || 'Origem';
+  const originLabel = record.origin.label || 'Origem';
   const originState = record.origin.state ? ` (${record.origin.state})` : '';
+
   const destName = record.recipient.name;
+  const destCep = record.destinationCep;
   const destCity = record.recipient.city || '';
   const destState = record.recipient.state ? ` (${record.recipient.state})` : '';
 
   return (
     <Space direction="vertical" size={0}>
       <Text>
-        <Text strong>{origin}</Text>
-        {originState} → {destName}, {record.destinationCep}, {destCity}
+        <Text strong>{originLabel}</Text>
+        {originState} → {destName}, {destCep}, {destCity}
         {destState}
       </Text>
       <Text type="secondary" style={{ fontSize: 12 }}>
@@ -74,25 +84,31 @@ function ShipmentSummary({ record }: { record: LabelItem }) {
 }
 
 // Resumo do volume (linha filha)
+// Formato: Peso • Dimensões • NF-e: CHAVE...VALOR ou Declaração: X itens • R$ XX,XX
 function PackageSummary({ pkg }: { pkg: PackageItem }) {
-  const dimensions = `${pkg.length}x${pkg.width}x${pkg.height}cm`;
   const weight = `${pkg.weight.toFixed(2)}kg`;
+  const dimensions = `${pkg.length}x${pkg.width}x${pkg.height}cm`;
 
   let contentInfo = '';
   if (pkg.contentType === 'nfe' && pkg.contentSummary) {
-    contentInfo = pkg.contentSummary;
-  } else if (pkg.contentType === 'declaration' && pkg.contentSummary) {
-    contentInfo = `Declaração: ${pkg.contentSummary}`;
+    // NF-e: chave...valor
+    contentInfo = `NF-e: ${pkg.contentSummary}`;
+    if (pkg.contentValue !== undefined) {
+      contentInfo += ` • ${formatCurrency(pkg.contentValue)}`;
+    }
+  } else if (pkg.contentType === 'declaration') {
+    // Declaração: X itens • R$ XX,XX
+    contentInfo = pkg.contentSummary ? `Declaração: ${pkg.contentSummary}` : 'Declaração';
+    if (pkg.contentValue !== undefined) {
+      contentInfo += ` • ${formatCurrency(pkg.contentValue)}`;
+    }
   }
 
   return (
-    <Space direction="vertical" size={0}>
-      <Text type="secondary" style={{ fontSize: 12 }}>
-        {weight} • {dimensions}
-        {contentInfo && ` • ${contentInfo}`}
-        {pkg.contentValue !== undefined && ` • ${formatCurrency(pkg.contentValue)}`}
-      </Text>
-    </Space>
+    <Text type="secondary" style={{ fontSize: 13 }}>
+      {weight} • {dimensions}
+      {contentInfo && ` • ${contentInfo}`}
+    </Text>
   );
 }
 
@@ -105,6 +121,9 @@ export function LabelsTable({ onOpenLabel, onOpenPackage }: LabelsTableProps) {
   const [printStatus, setPrintStatus] = useState<PrintStatus | 'all'>('all');
   const [expandedRowKeys, setExpandedRowKeys] = useState<string[]>([]);
   const [cancelingPackage, setCancelingPackage] = useState<string | null>(null);
+
+  // Necessário para o handler de cancelamento mesmo que não usado diretamente
+  void onOpenLabel;
 
   const params = useMemo(() => ({
     page,
@@ -121,6 +140,7 @@ export function LabelsTable({ onOpenLabel, onOpenPackage }: LabelsTableProps) {
 
   // Handler para cancelar package
   const handleCancelPackage = async (pkg: PackageItem, labelId: string) => {
+    void labelId; // unused but kept for future use
     setCancelingPackage(pkg.id);
     try {
       const response = await fetch(`/api/packages/${pkg.id}/cancel`, {
@@ -142,14 +162,14 @@ export function LabelsTable({ onOpenLabel, onOpenPackage }: LabelsTableProps) {
     }
   };
 
-  // Colunas da tabela principal
+  // Colunas da tabela principal (envios)
   const columns: ColumnsType<LabelItem> = [
     {
       title: 'Código Plataforma',
       dataIndex: 'trackingCode',
-      width: 220,
+      width: 200,
       render: (trackingCode: string | null | undefined) => (
-        <Text copyable={!!trackingCode} style={{ fontFamily: 'monospace' }}>
+        <Text copyable={!!trackingCode} style={{ fontFamily: 'monospace', fontSize: 13 }}>
           {trackingCode || '-'}
         </Text>
       ),
@@ -160,59 +180,45 @@ export function LabelsTable({ onOpenLabel, onOpenPackage }: LabelsTableProps) {
       render: (_, record) => <ShipmentSummary record={record} />,
     },
     {
-      title: 'Status',
+      title: 'Status Etiqueta',
       key: 'status',
-      width: 120,
-      render: (_, record) => <LabelStatusBadge status={record.status} />,
+      width: 140,
+      render: (_, record) => <ShipmentStatusBadge record={record} />,
     },
     {
       title: 'Ações',
       key: 'actions',
       fixed: 'right',
-      width: 180,
-      render: (_, record) => (
-        <Space>
-          <Button
-            type="link"
-            icon={<EyeOutlined />}
-            onClick={() => onOpenLabel(record)}
-          >
-            Visualizar
-          </Button>
-        </Space>
+      width: 100,
+      render: () => (
+        // Ações apenas nos volumes, não no envio
+        <Text type="secondary" style={{ fontSize: 12 }}>-</Text>
       ),
     },
   ];
 
-  // Renderizar linhas expandidas (packages)
+  // Renderizar linhas expandidas (packages/volumes)
   const expandedRowRender = (record: LabelItem) => {
     const packageColumns: ColumnsType<PackageItem> = [
       {
         title: 'Volume',
         key: 'volume',
-        width: 220,
+        width: 100,
         render: (_, pkg) => (
-          <Space>
-            <Text style={{ fontFamily: 'monospace' }}>
-              Vol. {pkg.packageNumber}
-              {pkg.carrierTrackingCode && (
-                <Text type="secondary" style={{ marginLeft: 8 }}>
-                  ({pkg.carrierTrackingCode})
-                </Text>
-              )}
-            </Text>
-          </Space>
+          <Text strong style={{ fontSize: 13 }}>
+            Vol. {pkg.packageNumber}
+          </Text>
         ),
       },
       {
-        title: 'Detalhes',
+        title: 'Resumo do Volume',
         key: 'details',
         render: (_, pkg) => <PackageSummary pkg={pkg} />,
       },
       {
-        title: 'Status',
+        title: 'Status Etiqueta',
         key: 'status',
-        width: 120,
+        width: 140,
         render: (_, pkg) => <PackageStatusBadge status={pkg.labelStatus} />,
       },
       {
@@ -220,9 +226,10 @@ export function LabelsTable({ onOpenLabel, onOpenPackage }: LabelsTableProps) {
         key: 'actions',
         width: 180,
         render: (_, pkg) => (
-          <Space>
+          <Space size="small">
             <Button
               type="link"
+              size="small"
               icon={<EyeOutlined />}
               onClick={() => onOpenPackage(pkg, record)}
               disabled={pkg.labelStatus !== 'generated'}
@@ -239,6 +246,7 @@ export function LabelsTable({ onOpenLabel, onOpenPackage }: LabelsTableProps) {
             >
               <Button
                 type="link"
+                size="small"
                 danger
                 icon={<StopOutlined />}
                 loading={cancelingPackage === pkg.id}
@@ -260,7 +268,7 @@ export function LabelsTable({ onOpenLabel, onOpenPackage }: LabelsTableProps) {
         pagination={false}
         size="small"
         showHeader={false}
-        style={{ marginLeft: 48 }}
+        style={{ marginLeft: 32 }}
       />
     );
   };
@@ -304,7 +312,8 @@ export function LabelsTable({ onOpenLabel, onOpenPackage }: LabelsTableProps) {
           rowKey="id"
           dataSource={data?.items ?? []}
           columns={columns}
-          scroll={{ x: 900 }}
+          scroll={{ x: 800 }}
+          size="middle"
           expandable={{
             expandedRowRender,
             expandedRowKeys,
@@ -313,17 +322,17 @@ export function LabelsTable({ onOpenLabel, onOpenPackage }: LabelsTableProps) {
               record.packages.length > 0 ? (
                 expanded ? (
                   <DownOutlined
-                    style={{ cursor: 'pointer', marginRight: 8 }}
+                    style={{ cursor: 'pointer', marginRight: 8, color: '#1890ff' }}
                     onClick={(e) => onExpand(record, e)}
                   />
                 ) : (
                   <RightOutlined
-                    style={{ cursor: 'pointer', marginRight: 8 }}
+                    style={{ cursor: 'pointer', marginRight: 8, color: '#1890ff' }}
                     onClick={(e) => onExpand(record, e)}
                   />
                 )
               ) : (
-                <span style={{ width: 24, display: 'inline-block' }} />
+                <span style={{ width: 22, display: 'inline-block' }} />
               ),
             rowExpandable: (record) => record.packages.length > 0,
           }}

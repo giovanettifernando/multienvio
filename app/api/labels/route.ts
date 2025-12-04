@@ -132,8 +132,9 @@ export async function GET(request: Request) {
         if (doc?.chavesNFe && doc.chavesNFe.length > 0) {
           contentType = 'nfe';
           const chave = doc.chavesNFe[0];
-          contentSummary = `NF-e: ${chave.substring(0, 8)}...${chave.substring(chave.length - 4)}`;
-          contentValue = doc.valorDeclarado || label.shipment.declaredValue;
+          // Abreviar chave: primeiros 5 + ... + últimos 4
+          contentSummary = `${chave.substring(0, 5)}...${chave.substring(chave.length - 4)}`;
+          contentValue = doc.valorDeclarado || label.shipment.declaredValue || undefined;
         }
         // Verificar se tem declaração de conteúdo
         else if (doc?.itensDeclaracaoConteudo && doc.itensDeclaracaoConteudo.length > 0) {
@@ -141,7 +142,7 @@ export async function GET(request: Request) {
           const totalItens = doc.itensDeclaracaoConteudo.reduce((sum, item) => sum + item.quantidade, 0);
           const totalValor = doc.itensDeclaracaoConteudo.reduce((sum, item) => sum + (item.quantidade * item.valor), 0);
           contentSummary = `${totalItens} ${totalItens === 1 ? 'item' : 'itens'}`;
-          contentValue = totalValor;
+          contentValue = totalValor > 0 ? totalValor : undefined;
         }
 
         return {
