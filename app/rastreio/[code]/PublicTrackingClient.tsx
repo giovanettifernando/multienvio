@@ -2,21 +2,15 @@
 
 import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import {
-  Card,
-  Typography,
-  Space,
-  Skeleton,
-  Row,
-  Col,
-} from "antd";
+import { Card, Typography, App } from "antd";
 import { CopyOutlined } from "@ant-design/icons";
 import { TrackingTimeline, type TrackingEvent } from "@/components/track/TrackingTimeline";
 import { PublicShipmentItems, type PublicVolume } from "@/components/track/PublicShipmentItems";
-import { App } from "antd";
 import { ELButton } from "@/components/ui/ELButton";
 import { ELAlert } from "@/components/ui/ELAlert";
 import { ELStatusTag, type StatusVariant } from "@/components/ui/ELStatusTag";
+import { ELSkeleton } from "@/components/ui/ELSkeleton";
+import { ELGrid, ELFlex } from "@/components/ui/ELGrid";
 
 const { Text } = Typography;
 
@@ -100,7 +94,7 @@ export default function PublicTrackingClient() {
   if (isLoading) {
     return (
       <div style={{ maxWidth: 800, margin: "0 auto", padding: 16 }}>
-        <Skeleton active paragraph={{ rows: 8 }} />
+        <ELSkeleton lines={8} />
       </div>
     );
   }
@@ -125,7 +119,7 @@ export default function PublicTrackingClient() {
 
   return (
     <div style={{ maxWidth: 800, margin: "0 auto", padding: "16px" }}>
-      <Space orientation="vertical" size={16} style={{ width: "100%" }}>
+      <ELFlex direction="col" gap="md">
         {/* BLOCO 1: Status Atual + Código (compacto) */}
         <Card
           style={{
@@ -134,7 +128,7 @@ export default function PublicTrackingClient() {
           }}
           styles={{ body: { padding: "12px 16px" } }}
         >
-          <Space orientation="vertical" size={8} style={{ width: "100%" }}>
+          <ELFlex direction="col" gap="sm">
             <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
               <Text strong style={{ fontSize: 14 }}>Status:</Text>
               <ELStatusTag variant={STATUS_VARIANTS[data.status] || "default"}>
@@ -154,7 +148,7 @@ export default function PublicTrackingClient() {
                 Copiar
               </ELButton>
             </div>
-          </Space>
+          </ELFlex>
         </Card>
 
         {/* BLOCO 2: Timeline de Eventos */}
@@ -162,69 +156,53 @@ export default function PublicTrackingClient() {
 
         {/* BLOCO 3: Detalhes Essenciais */}
         <Card title="Detalhes do envio" styles={{ body: { padding: "16px" } }}>
-          <Row gutter={[16, 12]}>
-            <Col xs={24} sm={12}>
-              <div>
-                <Text type="secondary" style={{ fontSize: 12 }}>Transportadora</Text>
-                <div><Text strong>{data.carrier}</Text></div>
-              </div>
-            </Col>
-            <Col xs={24} sm={12}>
-              <div>
-                <Text type="secondary" style={{ fontSize: 12 }}>Serviço</Text>
-                <div><Text strong>{data.service}</Text></div>
-              </div>
-            </Col>
-            <Col xs={24} sm={12}>
-              <div>
-                <Text type="secondary" style={{ fontSize: 12 }}>Origem</Text>
-                <div><Text>{data.origin.cep}</Text></div>
-              </div>
-            </Col>
-            <Col xs={24} sm={12}>
-              <div>
-                <Text type="secondary" style={{ fontSize: 12 }}>Destino</Text>
-                <div><Text>{data.destination.city}/{data.destination.state} - {data.destination.cep}</Text></div>
-              </div>
-            </Col>
+          <ELGrid variant="2" gap="md">
+            <div>
+              <Text type="secondary" style={{ fontSize: 12 }}>Transportadora</Text>
+              <div><Text strong>{data.carrier}</Text></div>
+            </div>
+            <div>
+              <Text type="secondary" style={{ fontSize: 12 }}>Serviço</Text>
+              <div><Text strong>{data.service}</Text></div>
+            </div>
+            <div>
+              <Text type="secondary" style={{ fontSize: 12 }}>Origem</Text>
+              <div><Text>{data.origin.cep}</Text></div>
+            </div>
+            <div>
+              <Text type="secondary" style={{ fontSize: 12 }}>Destino</Text>
+              <div><Text>{data.destination.city}/{data.destination.state} - {data.destination.cep}</Text></div>
+            </div>
             {data.estimatedDays && (
-              <Col xs={24} sm={12}>
-                <div>
-                  <Text type="secondary" style={{ fontSize: 12 }}>Prazo estimado</Text>
-                  <div><Text>{data.estimatedDays} dias úteis</Text></div>
-                </div>
-              </Col>
+              <div>
+                <Text type="secondary" style={{ fontSize: 12 }}>Prazo estimado</Text>
+                <div><Text>{data.estimatedDays} dias úteis</Text></div>
+              </div>
             )}
             {data.weight && (
-              <Col xs={24} sm={12}>
-                <div>
-                  <Text type="secondary" style={{ fontSize: 12 }}>Peso</Text>
-                  <div><Text>{data.weight} kg</Text></div>
-                </div>
-              </Col>
+              <div>
+                <Text type="secondary" style={{ fontSize: 12 }}>Peso</Text>
+                <div><Text>{data.weight} kg</Text></div>
+              </div>
             )}
             {data.postedAt && (
-              <Col xs={24} sm={12}>
-                <div>
-                  <Text type="secondary" style={{ fontSize: 12 }}>Data de postagem</Text>
-                  <div><Text>{new Date(data.postedAt).toLocaleDateString("pt-BR")}</Text></div>
-                </div>
-              </Col>
+              <div>
+                <Text type="secondary" style={{ fontSize: 12 }}>Data de postagem</Text>
+                <div><Text>{new Date(data.postedAt).toLocaleDateString("pt-BR")}</Text></div>
+              </div>
             )}
             {data.deliveredAt && (
-              <Col xs={24} sm={12}>
-                <div>
-                  <Text type="secondary" style={{ fontSize: 12 }}>Data de entrega</Text>
-                  <div><Text>{new Date(data.deliveredAt).toLocaleDateString("pt-BR")}</Text></div>
-                </div>
-              </Col>
+              <div>
+                <Text type="secondary" style={{ fontSize: 12 }}>Data de entrega</Text>
+                <div><Text>{new Date(data.deliveredAt).toLocaleDateString("pt-BR")}</Text></div>
+              </div>
             )}
-          </Row>
+          </ELGrid>
         </Card>
 
         {/* BLOCO 4: Itens do Envio */}
         <PublicShipmentItems volumes={data.volumes} />
-      </Space>
+      </ELFlex>
     </div>
   );
 }

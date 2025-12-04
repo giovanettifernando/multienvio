@@ -3,8 +3,6 @@
 import { useMemo, useState } from 'react';
 import Table from 'antd/es/table';
 import Space from 'antd/es/space';
-import Flex from 'antd/es/flex';
-import Empty from 'antd/es/empty';
 import Tag from 'antd/es/tag';
 import Typography from 'antd/es/typography';
 import Popconfirm from 'antd/es/popconfirm';
@@ -16,8 +14,13 @@ import { ELInput } from '@/components/ui/ELInput';
 import { ELSelect } from '@/components/ui/ELSelect';
 import { ELButton } from '@/components/ui/ELButton';
 import { ELSkeleton } from '@/components/ui/ELSkeleton';
+import { ELEmpty } from '@/components/ui/ELEmpty';
+import { ELFlex } from '@/components/ui/ELGrid';
+import { DataTable, type DataTableColumn } from '@/components/ui/DataTable';
 import { fetchLabels } from '@/lib/api/labels';
 import type { LabelItem, PrintStatus, PackageItem, PackageLabelStatus } from '@/lib/types/label';
+
+// Table and ColumnsType still needed for expandedRowRender nested table
 
 const { Text } = Typography;
 
@@ -174,33 +177,41 @@ export function LabelsTable({ onOpenLabel, onOpenPackage }: LabelsTableProps) {
   };
 
   // Colunas da tabela principal (envios)
-  const columns: ColumnsType<LabelItem> = [
+  const columns: DataTableColumn<LabelItem>[] = [
     {
       title: 'Código Plataforma',
       dataIndex: 'trackingCode',
+      key: 'trackingCode',
       width: 200,
-      render: (trackingCode: string | null | undefined) => (
+      showInCard: true,
+      cardLabel: 'Código',
+      render: (trackingCode) => (
         <Text copyable={!!trackingCode} style={{ fontFamily: 'monospace', fontSize: 13 }}>
-          {trackingCode || '-'}
+          {(trackingCode as string) || '-'}
         </Text>
       ),
     },
     {
       title: 'Resumo do Envio',
       key: 'summary',
-      render: (_, record) => <ShipmentSummary record={record} />,
+      showInCard: true,
+      cardLabel: 'Resumo',
+      render: (_value, record) => <ShipmentSummary record={record} />,
     },
     {
       title: 'Status Etiqueta',
       key: 'status',
       width: 140,
-      render: (_, record) => <ShipmentStatusBadge record={record} />,
+      showInCard: true,
+      cardLabel: 'Status',
+      render: (_value, record) => <ShipmentStatusBadge record={record} />,
     },
     {
       title: 'Ações',
       key: 'actions',
       fixed: 'right',
       width: 100,
+      isActions: true,
       render: () => (
         // Ações apenas nos volumes, não no envio
         <Text type="secondary" style={{ fontSize: 12 }}>-</Text>
@@ -294,8 +305,8 @@ export function LabelsTable({ onOpenLabel, onOpenPackage }: LabelsTableProps) {
   };
 
   return (
-    <Flex vertical gap={12}>
-      <Flex wrap="wrap" gap={8} align="center">
+    <ELFlex direction="col" gap="md">
+      <ELFlex gap="sm">
         <ELInput.Search
           allowClear
           placeholder="Buscar por código do envio..."
@@ -312,19 +323,19 @@ export function LabelsTable({ onOpenLabel, onOpenPackage }: LabelsTableProps) {
             { label: 'Já impressas', value: 'printed' },
           ]}
         />
-      </Flex>
+      </ELFlex>
 
       {isLoading ? (
         <ELSkeleton />
       ) : isError ? (
-        <Empty description="Falha ao carregar etiquetas" />
+        <ELEmpty title="Falha ao carregar etiquetas" description="Tente novamente em alguns instantes" />
       ) : (
-        <Table<LabelItem>
+        <DataTable<LabelItem>
           rowKey="id"
-          dataSource={data?.items ?? []}
+          data={data?.items ?? []}
           columns={columns}
-          scroll={{ x: 800 }}
-          size="middle"
+          scrollX={800}
+          enableMobileCards
           expandable={{
             expandedRowRender,
             expandedRowKeys,
@@ -354,9 +365,10 @@ export function LabelsTable({ onOpenLabel, onOpenPackage }: LabelsTableProps) {
             showSizeChanger: true,
             onChange: (p, ps) => { setPage(p); setPageSize(ps); },
           }}
-          locale={{ emptyText: <Empty description="Nenhuma etiqueta encontrada" /> }}
+          emptyMessage="Nenhuma etiqueta encontrada"
+          emptyDescription="Ajuste os filtros de busca"
         />
       )}
-    </Flex>
+    </ELFlex>
   );
 }

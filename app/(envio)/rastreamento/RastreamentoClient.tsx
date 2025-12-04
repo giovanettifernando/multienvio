@@ -3,10 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQueries } from "@tanstack/react-query";
-import {
-  Card,
-  Table,
-} from "antd";
+import { Card } from "antd";
 import type { Shipment } from "@/types/shipment";
 import type { Tracking } from "@/types/tracking";
 import { TrackingStatusTag } from "@/components/ui/TrackingStatusTag";
@@ -14,6 +11,7 @@ import { PageShell } from "@/components/shared/PageShell";
 import { ELButton } from "@/components/ui/ELButton";
 import { ELInput } from "@/components/ui/ELInput";
 import { ELSelect } from "@/components/ui/ELSelect";
+import { DataTable, type DataTableColumn } from "@/components/ui/DataTable";
 import tableStyles from "@/components/ui/ELTableWrapper.module.css";
 
 async function fetchShipments(): Promise<{ dados: Shipment[] }> {
@@ -39,6 +37,12 @@ const STATUS_FILTERS = [
   { label: "Entregue", value: "DELIVERED" },
   { label: "Ocorrência", value: "ISSUE" },
 ];
+
+type TrackingRow = Omit<Shipment, "status"> & {
+  status: Tracking["status"];
+  atualizadoEm: string;
+  ultimoEvento: string;
+};
 
 export default function RastreamentoClient() {
   const router = useRouter();
@@ -72,7 +76,7 @@ export default function RastreamentoClient() {
     {},
   );
 
-  const dataSource = useMemo(() => {
+  const dataSource: TrackingRow[] = useMemo(() => {
     const list = shipmentsResult.data?.dados ?? [];
     return list
       .filter((item) => {
@@ -98,6 +102,67 @@ export default function RastreamentoClient() {
       });
   }, [shipmentsResult.data?.dados, search, statusFilter, trackingMap]);
 
+  const columns: DataTableColumn<TrackingRow>[] = [
+    {
+      title: "Envio",
+      dataIndex: "id",
+      key: "id",
+      showInCard: true,
+      cardLabel: "ID",
+    },
+    {
+      title: "Serviço",
+      dataIndex: "servico",
+      key: "servico",
+      showInCard: true,
+      cardLabel: "Serviço",
+    },
+    {
+      title: "Destinatário",
+      dataIndex: "cidadeDestino",
+      key: "cidadeDestino",
+      showInCard: true,
+      cardLabel: "Destino",
+    },
+    {
+      title: "Status",
+      dataIndex: "status",
+      key: "status",
+      showInCard: true,
+      cardLabel: "Status",
+      render: (value) => (
+        <TrackingStatusTag status={value as Tracking["status"]} />
+      ),
+    },
+    {
+      title: "Atualizado em",
+      dataIndex: "atualizadoEm",
+      key: "atualizadoEm",
+      showInCard: true,
+      cardLabel: "Atualizado",
+      render: (value) =>
+        new Date(value as string).toLocaleString("pt-BR"),
+    },
+    {
+      title: "Último evento",
+      dataIndex: "ultimoEvento",
+      key: "ultimoEvento",
+      showInCard: true,
+      cardLabel: "Evento",
+      ellipsis: true,
+    },
+    {
+      title: "Ações",
+      key: "actions",
+      isActions: true,
+      render: (_value, record) => (
+        <ELButton variant="link" onClick={() => router.push(`/rastreamento/${record.id}`)}>
+          Ver detalhes
+        </ELButton>
+      ),
+    },
+  ];
+
   return (
     <PageShell title="Rastreamento" gap="md">
       <div className={tableStyles.wrapper}>
@@ -111,7 +176,6 @@ export default function RastreamentoClient() {
               className={tableStyles.searchInput}
               style={{ maxWidth: 300 }}
             />
-
             <ELSelect
               style={{ minWidth: 160 }}
               value={statusFilter}
@@ -123,51 +187,20 @@ export default function RastreamentoClient() {
         </Card>
 
         <Card variant="borderless" style={{ marginTop: 16 }}>
-          <Table
+          <DataTable<TrackingRow>
             rowKey="id"
-            dataSource={dataSource}
+            data={dataSource}
             loading={shipmentsResult.isLoading}
-            pagination={{ pageSize: 10 }}
-            scroll={{ x: 900 }}
-            columns={[
-              {
-                title: "Envio",
-                dataIndex: "id",
-              },
-              {
-                title: "Serviço",
-                dataIndex: "servico",
-              },
-              {
-                title: "Destinatário",
-                dataIndex: "cidadeDestino",
-              },
-              {
-                title: "Status",
-                dataIndex: "status",
-                render: (value: Tracking["status"]) => (
-                  <TrackingStatusTag status={value} />
-                ),
-              },
-              {
-                title: "Atualizado em",
-                dataIndex: "atualizadoEm",
-                render: (value: string) =>
-                  new Date(value).toLocaleString("pt-BR"),
-              },
-              {
-                title: "Último evento",
-                dataIndex: "ultimoEvento",
-              },
-              {
-                title: "Ações",
-                render: (_, record) => (
-                  <ELButton variant="link" onClick={() => router.push(`/rastreamento/${record.id}`)}>
-                    Ver detalhes
-                  </ELButton>
-                ),
-              },
-            ]}
+            columns={columns}
+            enableMobileCards
+            scrollX={900}
+            emptyMessage="Nenhum rastreamento encontrado"
+            emptyDescription="Tente ajustar os filtros de busca"
+            pagination={{
+              pageSize: 10,
+              showSizeChanger: true,
+              showTotal: (total) => `Total: ${total} envios`,
+            }}
           />
         </Card>
       </div>

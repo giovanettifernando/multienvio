@@ -1,11 +1,17 @@
 'use client';
 
 import { useEffect } from 'react';
-import { Card, Form, Input, Button, Modal, Typography, Space, Flex, Tag, Row, Col, Select, Alert } from 'antd';
+import { Card, Form, Typography, Space, Flex, Row, Col } from 'antd';
 import { CalculatorOutlined, ArrowRightOutlined } from '@ant-design/icons';
 import { useRouter } from 'next/navigation';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/utils/api-fetch';
+import { ELButton } from '@/components/ui/ELButton';
+import { ELInput } from '@/components/ui/ELInput';
+import { ELSelect } from '@/components/ui/ELSelect';
+import { ELModal } from '@/components/ui/ELModal';
+import { ELAlert } from '@/components/ui/ELAlert';
+import { ELTag } from '@/components/ui/ELTag';
 
 const { Text } = Typography;
 
@@ -92,20 +98,19 @@ export function QuickCalculator() {
         styles={{ body: { padding: '12px 16px' } }}
       >
         {hasNoAddresses ? (
-          <Alert
-            message="Nenhum endereço cadastrado"
+          <ELAlert
+            variant="warning"
+            title="Nenhum endereço cadastrado"
             description={
-              <Button
-                type="link"
+              <ELButton
+                variant="link"
                 size="small"
                 style={{ padding: 0 }}
                 onClick={() => router.push("/minha-conta?tab=enderecos")}
               >
                 Cadastrar em Minha Conta → Endereços
-              </Button>
+              </ELButton>
             }
-            type="warning"
-            showIcon
             style={{ marginBottom: 12 }}
           />
         ) : null}
@@ -124,7 +129,7 @@ export function QuickCalculator() {
                 rules={[{ required: true, message: 'Selecione o endereço' }]}
                 style={{ marginBottom: 0 }}
               >
-                <Select
+                <ELSelect
                   placeholder="Selecione o endereço"
                   options={addressOptions}
                   loading={addressesQuery.isLoading}
@@ -142,7 +147,7 @@ export function QuickCalculator() {
                 rules={[{ required: true, message: 'Obrigatório' }]}
                 style={{ marginBottom: 0 }}
               >
-                <Input placeholder="00000-000" size="small" />
+                <ELInput placeholder="00000-000" size="small" />
               </Form.Item>
             </Col>
           </Row>
@@ -155,7 +160,7 @@ export function QuickCalculator() {
                 rules={[{ required: true, message: 'Obrigatório' }]}
                 style={{ marginBottom: 0 }}
               >
-                <Input type="number" placeholder="0.5" size="small" step="0.1" />
+                <ELInput type="number" placeholder="0.5" size="small" step="0.1" />
               </Form.Item>
             </Col>
             <Col xs={12} sm={6}>
@@ -164,7 +169,7 @@ export function QuickCalculator() {
                 name="height"
                 style={{ marginBottom: 0 }}
               >
-                <Input type="number" placeholder="cm" size="small" />
+                <ELInput type="number" placeholder="cm" size="small" />
               </Form.Item>
             </Col>
             <Col xs={12} sm={6}>
@@ -173,7 +178,7 @@ export function QuickCalculator() {
                 name="width"
                 style={{ marginBottom: 0 }}
               >
-                <Input type="number" placeholder="cm" size="small" />
+                <ELInput type="number" placeholder="cm" size="small" />
               </Form.Item>
             </Col>
             <Col xs={12} sm={6}>
@@ -182,13 +187,13 @@ export function QuickCalculator() {
                 name="length"
                 style={{ marginBottom: 0 }}
               >
-                <Input type="number" placeholder="cm" size="small" />
+                <ELInput type="number" placeholder="cm" size="small" />
               </Form.Item>
             </Col>
           </Row>
 
-          <Button
-            type="primary"
+          <ELButton
+            variant="primary"
             htmlType="submit"
             loading={quoteMutation.isPending}
             disabled={hasNoAddresses}
@@ -198,46 +203,46 @@ export function QuickCalculator() {
             style={{ marginTop: 12 }}
           >
             Calcular
-          </Button>
+          </ELButton>
         </Form>
       </Card>
 
-      <Modal
+      <ELModal
         title="Opções de Envio"
         open={quoteMutation.isSuccess}
         onCancel={() => quoteMutation.reset()}
         footer={null}
         width={500}
       >
-        <Space orientation="vertical" size={12} style={{ width: '100%' }}>
+        <Space direction="vertical" size={12} style={{ width: '100%' }}>
           {(quoteMutation.data || []).map((result, index) => (
             <Card key={index} size="small" variant="outlined">
               <Flex justify="space-between" align="center">
-                <Space orientation="vertical" size={0}>
+                <Space direction="vertical" size={0}>
                   <Text strong>{result.carrier}</Text>
                   <Text type="secondary" style={{ fontSize: '12px' }}>
                     {result.service} • {result.deliveryDays} {result.deliveryDays === 1 ? 'dia' : 'dias'}
                   </Text>
                 </Space>
-                <Space orientation="vertical" size={4} align="end">
-                  <Tag color="blue" style={{ margin: 0 }}>
+                <Space direction="vertical" size={4} align="end">
+                  <ELTag color="blue" style={{ margin: 0 }}>
                     R$ {result.price.toFixed(2)}
-                  </Tag>
-                  <Button
-                    type="link"
+                  </ELTag>
+                  <ELButton
+                    variant="link"
                     size="small"
                     icon={<ArrowRightOutlined />}
                     onClick={handleGoToQuote}
                     style={{ padding: 0, height: 'auto' }}
                   >
                     Cotação
-                  </Button>
+                  </ELButton>
                 </Space>
               </Flex>
             </Card>
           ))}
         </Space>
-      </Modal>
+      </ELModal>
     </>
   );
 }

@@ -1,8 +1,10 @@
 "use client";
 
 import React, { useRef, useState } from "react";
-import { Modal, Button, Space, App } from "antd";
+import { App, Space } from "antd";
 import { PrinterOutlined, DownloadOutlined } from "@ant-design/icons";
+import { ELModal } from "@/components/ui/ELModal";
+import { ELButton } from "@/components/ui/ELButton";
 
 interface StatementPDFModalProps {
   open: boolean;
@@ -84,7 +86,7 @@ export default function StatementPDFModal({
   };
 
   return (
-    <Modal
+    <ELModal
       title="Visualização do Extrato"
       open={open}
       onCancel={onClose}
@@ -93,17 +95,17 @@ export default function StatementPDFModal({
       styles={{ body: { padding: 0, height: 'calc(100vh - 200px)' } }}
       footer={
         <Space>
-          <Button onClick={onClose}>Fechar</Button>
-          <Button
+          <ELButton onClick={onClose}>Fechar</ELButton>
+          <ELButton
             icon={<DownloadOutlined />}
             onClick={handleDownload}
             loading={isDownloading}
           >
             Baixar PDF
-          </Button>
-          <Button type="primary" icon={<PrinterOutlined />} onClick={handlePrint}>
+          </ELButton>
+          <ELButton variant="primary" icon={<PrinterOutlined />} onClick={handlePrint}>
             Imprimir
-          </Button>
+          </ELButton>
         </Space>
       }
     >
@@ -118,6 +120,6 @@ export default function StatementPDFModal({
         }}
         title="Extrato da Carteira"
       />
-    </Modal>
+    </ELModal>
   );
 }

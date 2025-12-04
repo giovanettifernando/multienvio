@@ -3,16 +3,13 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  Button,
   InputNumber,
-  Modal,
   Radio,
   Space,
   Typography,
   App,
   Spin,
   Form,
-  Alert,
 } from "antd";
 import {
   QrcodeOutlined,
@@ -26,6 +23,9 @@ import {
 import { CardPaymentForm } from "@/components/wallet/CardPaymentForm";
 import { SavedCardPaymentForm } from "@/components/wallet/SavedCardPaymentForm";
 import { useCards } from "@/hooks/useAccount";
+import { ELModal } from "@/components/ui/ELModal";
+import { ELButton } from "@/components/ui/ELButton";
+import { ELAlert } from "@/components/ui/ELAlert";
 
 const { Text } = Typography;
 
@@ -415,7 +415,7 @@ export function PaymentModal({
     const shouldShowSavedCardForm = useSavedCard && hasSavedCards;
 
     return (
-      <Modal
+      <ELModal
         title="Pagamento com Cartão"
         open={open}
         onCancel={() => {
@@ -435,7 +435,7 @@ export function PaymentModal({
             paymentDescription={description}
           />
         ) : (
-          <Space orientation="vertical" size="large" style={{ width: "100%" }}>
+          <Space direction="vertical" size="large" style={{ width: "100%" }}>
             <div style={{ marginBottom: 16 }}>
               <Text strong>Valor a pagar: </Text>
               <Text style={{ fontSize: 20, color: "#52c41a" }}>
@@ -450,19 +450,19 @@ export function PaymentModal({
               paymentType={mode === "topup" ? "wallet_topup" : "checkout_payment"}
             />
 
-            <Space orientation="vertical" size="small" style={{ width: "100%" }}>
+            <Space direction="vertical" size="small" style={{ width: "100%" }}>
               {hasSavedCards && (
-                <Button type="link" onClick={() => setUseSavedCard(true)} block>
+                <ELButton variant="link" onClick={() => setUseSavedCard(true)} block>
                   Voltar para cartões salvos
-                </Button>
+                </ELButton>
               )}
-              <Button onClick={() => setShowCardForm(false)} block>
+              <ELButton onClick={() => setShowCardForm(false)} block>
                 Cancelar
-              </Button>
+              </ELButton>
             </Space>
           </Space>
         )}
-      </Modal>
+      </ELModal>
     );
   }
 
@@ -471,7 +471,7 @@ export function PaymentModal({
     // Status: PAGO
     if (pixStatus === "paid") {
       return (
-        <Modal
+        <ELModal
           title="Pagamento Confirmado"
           open={open}
           footer={null}
@@ -492,36 +492,37 @@ export function PaymentModal({
               <Spin indicator={<LoadingOutlined style={{ fontSize: 24 }} spin />} />
             </div>
           </div>
-        </Modal>
+        </ELModal>
       );
     }
 
     // Status: EXPIRADO
     if (pixStatus === "expired") {
       return (
-        <Modal
+        <ELModal
           title="PIX Expirado"
           open={open}
           closable={false}
           maskClosable={false}
           keyboard={false}
-          footer={[
-            <Button
-              key="retry"
-              type="primary"
-              onClick={() => {
-                setPixData(null);
-                setPixStatus("pending");
-                setPixExpireSeconds(30 * 60);
-                handleConfirm();
-              }}
-            >
-              Gerar Novo PIX
-            </Button>,
-            <Button key="cancel" danger onClick={handlePixCancel}>
-              Cancelar
-            </Button>,
-          ]}
+          footer={
+            <Space>
+              <ELButton
+                variant="primary"
+                onClick={() => {
+                  setPixData(null);
+                  setPixStatus("pending");
+                  setPixExpireSeconds(30 * 60);
+                  handleConfirm();
+                }}
+              >
+                Gerar Novo PIX
+              </ELButton>
+              <ELButton variant="danger" onClick={handlePixCancel}>
+                Cancelar
+              </ELButton>
+            </Space>
+          }
           width={500}
         >
           <div style={{ textAlign: "center", padding: "40px 20px" }}>
@@ -533,26 +534,26 @@ export function PaymentModal({
               O tempo para pagamento expirou. Você pode gerar um novo código ou cancelar.
             </Text>
           </div>
-        </Modal>
+        </ELModal>
       );
     }
 
     // Status: PENDENTE (aguardando pagamento)
     return (
-      <Modal
+      <ELModal
         title="Pagamento PIX"
         open={open}
         closable={false}
         maskClosable={false}
         keyboard={false}
-        footer={[
-          <Button key="cancel" danger onClick={handlePixCancel}>
+        footer={
+          <ELButton variant="danger" onClick={handlePixCancel}>
             Cancelar Pagamento
-          </Button>,
-        ]}
+          </ELButton>
+        }
         width={600}
       >
-        <Space orientation="vertical" size="large" style={{ width: "100%" }}>
+        <Space direction="vertical" size="large" style={{ width: "100%" }}>
           {/* Status de polling */}
           <div
             style={{
@@ -604,14 +605,15 @@ export function PaymentModal({
             </div>
           </div>
 
-          <Alert
-            message="PIX Copia e Cola"
+          <ELAlert
+            variant="warning"
+            title="PIX Copia e Cola"
             description={
               <div style={{ wordBreak: "break-all", fontSize: 12 }}>
                 {pixData.payment.pixQrCode}
                 <br />
-                <Button
-                  type="link"
+                <ELButton
+                  variant="link"
                   size="small"
                   onClick={() => {
                     navigator.clipboard.writeText(pixData.payment.pixQrCode!);
@@ -620,41 +622,41 @@ export function PaymentModal({
                   style={{ paddingLeft: 0 }}
                 >
                   Copiar código
-                </Button>
+                </ELButton>
               </div>
             }
-            type="warning"
           />
 
         </Space>
-      </Modal>
+      </ELModal>
     );
   }
 
   // Renderizar seleção de método de pagamento
   return (
-    <Modal
+    <ELModal
       title={getModalTitle()}
       open={open}
       onCancel={handleClose}
-      footer={[
-        <Button key="cancel" onClick={handleClose} disabled={loading}>
-          Cancelar
-        </Button>,
-        <Button
-          key="confirm"
-          type="primary"
-          onClick={handleConfirm}
-          loading={loading}
-          disabled={isConfirmDisabled}
-          icon={<CheckCircleOutlined />}
-        >
-          {getConfirmButtonText()}
-        </Button>,
-      ]}
+      footer={
+        <Space>
+          <ELButton onClick={handleClose} disabled={loading}>
+            Cancelar
+          </ELButton>
+          <ELButton
+            variant="primary"
+            onClick={handleConfirm}
+            loading={loading}
+            disabled={isConfirmDisabled}
+            icon={<CheckCircleOutlined />}
+          >
+            {getConfirmButtonText()}
+          </ELButton>
+        </Space>
+      }
       width={600}
     >
-      <Space orientation="vertical" size="large" style={{ width: "100%" }}>
+      <Space direction="vertical" size="large" style={{ width: "100%" }}>
         {/* Campo de valor (apenas para topup) */}
         {mode === "topup" && (
           <Form.Item
@@ -712,7 +714,7 @@ export function PaymentModal({
               onChange={(e) => setSelectedMethod(e.target.value)}
               style={{ width: "100%" }}
             >
-              <Space orientation="vertical" size="middle" style={{ width: "100%" }}>
+              <Space direction="vertical" size="middle" style={{ width: "100%" }}>
                 {/* Carteira (apenas para checkout) */}
                 {allowWallet && (
                   <Radio value="wallet" disabled={isWalletDisabled} style={{ width: "100%" }}>
@@ -784,7 +786,7 @@ export function PaymentModal({
           </div>
         )}
       </Space>
-    </Modal>
+    </ELModal>
   );
 }
 

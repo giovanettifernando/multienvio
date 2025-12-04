@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Card, Empty, Table, Tag, Space, Spin, App, DatePicker, Input, Row, Col, Typography, Button, Modal, Form } from 'antd';
+import { Card, Table, Tag, Space, Spin, App, DatePicker, Input, Row, Col, Typography, Button, Modal, Form } from 'antd';
+import { ELEmpty } from '@/components/ui/ELEmpty';
 import { EnvironmentOutlined, InboxOutlined, PhoneOutlined, SearchOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import type { TableRowSelection } from 'antd/es/table/interface';
 import dayjs, { Dayjs } from 'dayjs';
@@ -550,9 +551,9 @@ export default function ColetasRealizadasClient() {
         </div>
       ) : !data || data.items.length === 0 ? (
         <Card>
-          <Empty
+          <ELEmpty
+            message="Nenhuma coleta realizada"
             description="Você não tem coletas realizadas no período selecionado."
-            image={Empty.PRESENTED_IMAGE_SIMPLE}
           />
         </Card>
       ) : (

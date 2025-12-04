@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useCallback, useRef } from 'react';
-import { App, Spin, Modal, Space } from 'antd';
+import { App, Spin, Space } from 'antd';
 import { PrinterOutlined, DownloadOutlined, CloseOutlined } from '@ant-design/icons';
+import { ELModal } from '@/components/ui/ELModal';
 import { LabelsTable } from '@/components/labels/LabelsTable';
 import { LabelPrintModal } from '@/components/labels/LabelPrintModal';
 import { ShipmentLabelModal, type ShipmentLabelData } from '@/components/labels';
@@ -313,7 +314,7 @@ export default function EtiquetasClient() {
         />
 
         {/* Modal PDF - Etiqueta Envio Legal */}
-        <Modal
+        <ELModal
           open={pdfModalOpen}
           onCancel={handleClosePdfModal}
           title="Etiqueta de Envio"
@@ -352,7 +353,7 @@ export default function EtiquetasClient() {
               title="Etiqueta PDF"
             />
           )}
-        </Modal>
+        </ELModal>
       </PageShell>
     </App>
   );

@@ -3,19 +3,15 @@
 import React, { useMemo, useState, useCallback } from "react";
 import {
   Card,
-  Tag,
-  Table,
   Space,
   Tooltip,
   App,
-  Modal,
   Descriptions,
   Image,
   Typography,
 } from "antd";
 import {
   PrinterOutlined,
-  SearchOutlined,
   EyeOutlined,
   StopOutlined,
   GlobalOutlined,
@@ -26,13 +22,16 @@ import Link from "next/link";
 import { useShipments, useShipmentCancel } from "@/hooks/useShipments";
 import type { Shipment, ShipmentStatus } from "@/types/shipments";
 import type { LabelItem } from "@/lib/types/label";
-import type { ColumnsType } from "antd/es/table";
 import { PageShell } from "@/components/shared/PageShell";
 import { useQuery } from "@tanstack/react-query";
 import { ELButton } from "@/components/ui/ELButton";
 import { ELInput } from "@/components/ui/ELInput";
 import { ELSelect } from "@/components/ui/ELSelect";
 import { ELStatusTag, type StatusVariant } from "@/components/ui/ELStatusTag";
+import { ELModal } from "@/components/ui/ELModal";
+import { ELTag } from "@/components/ui/ELTag";
+import { ELSkeleton } from "@/components/ui/ELSkeleton";
+import { DataTable, type DataTableColumn } from "@/components/ui/DataTable";
 import tableStyles from "@/components/ui/ELTableWrapper.module.css";
 
 const { Text } = Typography;
@@ -98,7 +97,6 @@ export default function ShipmentsClient() {
   const items = data?.items ?? [];
   const pagination = data?.pagination;
 
-  // Handlers que resetam a página ao mudar filtros
   const handleQueryChange = useCallback((newQuery: string) => {
     setQuery(newQuery);
     setPage(1);
@@ -113,11 +111,10 @@ export default function ShipmentsClient() {
     setPage(newPage);
     if (newPageSize !== pageSize) {
       setPageSize(newPageSize);
-      setPage(1); // Reset to first page when changing page size
+      setPage(1);
     }
   }, [pageSize]);
 
-  // Query para buscar divergências quando modal abrir
   const { data: divergencesData, isLoading: divergencesLoading } = useQuery<{
     divergences: ShipmentVolumeDivergence[];
   }>({
@@ -142,23 +139,15 @@ export default function ShipmentsClient() {
     setSelectedShipmentId(null);
   }, []);
 
-  // Função para imprimir etiqueta e marcar como impressa
   const handlePrintLabel = useCallback(async (shipmentId: string, labelUrl: string) => {
     try {
-      // Abrir etiqueta para impressão
       window.open(labelUrl, "_blank");
-
-      // Buscar ID da label associada ao shipment
       const response = await fetch(`/api/labels?q=${shipmentId}`);
       if (response.ok) {
         const data = await response.json();
         const label = data.items?.find((item: LabelItem) => item.shipmentId === shipmentId);
-
         if (label) {
-          // Marcar como impressa
-          await fetch(`/api/labels?id=${label.id}`, {
-            method: 'PATCH',
-          });
+          await fetch(`/api/labels?id=${label.id}`, { method: 'PATCH' });
           message.success('Etiqueta marcada como impressa');
           refetch();
         }
@@ -168,60 +157,42 @@ export default function ShipmentsClient() {
     }
   }, [message, refetch]);
 
-  const columns: ColumnsType<Shipment> = useMemo(
+  const columns: DataTableColumn<Shipment>[] = useMemo(
     () => [
       {
         title: "Código de rastreio",
         dataIndex: "trackingCode",
+        key: "trackingCode",
+        showInCard: true,
+        cardLabel: "Rastreio",
         sorter: (a, b) => a.trackingCode.localeCompare(b.trackingCode),
-        render: (trackingCode: string, row: Shipment) => (
+        render: (_value, row: Shipment) => (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <Text style={{ fontSize: 14, fontWeight: 600 }}>{trackingCode}</Text>
+            <Text style={{ fontSize: 14, fontWeight: 600 }}>{row.trackingCode}</Text>
             {row.hasVolumeDivergence && (
-              <button
-                type="button"
+              <ELButton
+                variant="danger"
+                size="small"
+                icon={<WarningOutlined />}
                 onClick={() => handleOpenDivergenceModal(row.id)}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 6,
-                  borderRadius: 9999,
-                  padding: '6px 12px',
-                  fontSize: 11,
-                  fontWeight: 600,
-                  backgroundColor: '#dc2626',
-                  color: '#fff',
-                  border: 'none',
-                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.2)',
-                  cursor: 'pointer',
-                  transition: 'background-color 0.2s',
-                  width: 'fit-content',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = '#b91c1c';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = '#dc2626';
-                }}
+                style={{ width: 'fit-content' }}
               >
-                <WarningOutlined style={{ fontSize: 13, opacity: 0.9 }} />
-                <span>Divergência registrada</span>
-              </button>
+                Divergência registrada
+              </ELButton>
             )}
           </div>
         ),
       },
       {
         title: "Destinatário",
+        key: "recipient",
+        showInCard: true,
+        cardLabel: "Destinatário",
         sorter: (a, b) => (a.recipientName || '').localeCompare(b.recipientName || ''),
         render: (_value, row) => {
           const name = row.recipientName ?? "";
           const locality = row.recipientCityUf ?? "";
-
-          if (name && locality) {
-            return <span>{name} · {locality}</span>;
-          }
+          if (name && locality) return <span>{name} · {locality}</span>;
           if (name) return <span>{name}</span>;
           if (locality) return <span>{locality}</span>;
           return <span>—</span>;
@@ -229,30 +200,30 @@ export default function ShipmentsClient() {
       },
       {
         title: "Transportadora",
+        key: "carrier",
+        showInCard: true,
+        cardLabel: "Transportadora",
         sorter: (a, b) => (a.carrierName || a.serviceName || '').localeCompare(b.carrierName || b.serviceName || ''),
         render: (_value, row) => row.carrierName ?? row.serviceName ?? "—",
       },
       {
         title: "Status",
         dataIndex: "status",
+        key: "status",
+        showInCard: true,
+        cardLabel: "Status",
         sorter: (a, b) => {
-          // Ordenar por ordem de prioridade dos status
           const statusOrder: Record<ShipmentStatus, number> = {
-            "Aguardando coleta": 1,
-            "Aguardando postagem": 2,
-            "Postado": 3,
-            "Em trânsito": 4,
-            "Em rota de entrega": 5,
-            "Entregue": 6,
-            "Cancelado": 7,
-            "Devolvido": 8,
+            "Aguardando coleta": 1, "Aguardando postagem": 2, "Postado": 3,
+            "Em trânsito": 4, "Em rota de entrega": 5, "Entregue": 6,
+            "Cancelado": 7, "Devolvido": 8,
           };
           return (statusOrder[a.status] || 0) - (statusOrder[b.status] || 0);
         },
-        render: (value: ShipmentStatus, row: Shipment) => (
-          <Space orientation="vertical" size={4}>
-            <ELStatusTag variant={STATUS_VARIANTS[value] ?? "default"}>
-              {value}
+        render: (_value, row: Shipment) => (
+          <Space direction="vertical" size={4}>
+            <ELStatusTag variant={STATUS_VARIANTS[row.status] ?? "default"}>
+              {row.status}
             </ELStatusTag>
             {row.pickupRequest && row.pickupRequest.status !== 'CANCELED' && row.pickupRequest.status !== 'COMPLETED' && (
               <ELStatusTag
@@ -268,20 +239,22 @@ export default function ShipmentsClient() {
       {
         title: "Data de criação",
         dataIndex: "createdAt",
+        key: "createdAt",
+        showInCard: true,
+        cardLabel: "Criado em",
         sorter: (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
-        render: (value: string) => {
-          const date = new Date(value);
+        render: (value) => {
+          const date = new Date(value as string);
           return date.toLocaleDateString('pt-BR', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
+            day: '2-digit', month: '2-digit', year: 'numeric',
+            hour: '2-digit', minute: '2-digit',
           });
         },
       },
       {
-        title: "Data prevista de entrega",
+        title: "Data prevista",
+        key: "expectedDelivery",
+        showInCard: false,
         sorter: (a, b) => {
           const dateA = a.expectedDeliveryDate
             ? new Date(a.expectedDeliveryDate)
@@ -301,194 +274,75 @@ export default function ShipmentsClient() {
       {
         title: "Valor do frete",
         dataIndex: "freightValue",
-        align: "right" as const,
+        key: "freightValue",
+        showInCard: true,
+        cardLabel: "Frete",
         sorter: (a, b) => (a.freightValue || 0) - (b.freightValue || 0),
-        render: (value: number) => {
+        render: (value) => {
           const formatted = Number(value ?? 0).toLocaleString('pt-BR', {
-            style: 'currency',
-            currency: 'BRL',
+            style: 'currency', currency: 'BRL',
           });
           return <span style={{ fontWeight: 500 }}>{formatted}</span>;
         },
       },
       {
         title: "Ações",
-        align: "center" as const,
-        render: (_value, row) => (
-          <div style={{ display: 'flex', gap: 6, justifyContent: 'center', alignItems: 'center' }}>
-            {/* Visualizar detalhes - Verde */}
-            <Tooltip title="Ver detalhes">
-              <Link href={`/shipments/${row.id}`}>
-                <button
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    width: 28,
-                    height: 28,
-                    borderRadius: 9999,
-                    backgroundColor: '#dcfce7',
-                    border: 'none',
-                    cursor: 'pointer',
-                    transition: 'background-color 0.2s',
-                  }}
-                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#bbf7d0'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#dcfce7'; }}
-                >
-                  <EyeOutlined style={{ fontSize: 14, color: '#16a34a' }} />
-                </button>
-              </Link>
-            </Tooltip>
+        key: "actions",
+        isActions: true,
+        render: (_value, row) => {
+          const finalStatuses: ShipmentStatus[] = ["Entregue", "Cancelado", "Devolvido"];
+          const isFinalStatus = finalStatuses.includes(row.status);
 
-            {/* Imprimir etiqueta - Cinza escuro */}
-            <Tooltip title="Imprimir etiqueta">
-              <button
-                disabled={!row.labelUrl}
-                onClick={() => {
-                  if (row.labelUrl) handlePrintLabel(row.id, row.labelUrl);
-                }}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: 28,
-                  height: 28,
-                  borderRadius: 9999,
-                  backgroundColor: row.labelUrl ? '#374151' : '#e5e7eb',
-                  border: 'none',
-                  cursor: row.labelUrl ? 'pointer' : 'not-allowed',
-                  transition: 'background-color 0.2s',
-                  opacity: row.labelUrl ? 1 : 0.5,
-                }}
-                onMouseEnter={(e) => {
-                  if (row.labelUrl) e.currentTarget.style.backgroundColor = '#1f2937';
-                }}
-                onMouseLeave={(e) => {
-                  if (row.labelUrl) e.currentTarget.style.backgroundColor = '#374151';
-                }}
-              >
-                <PrinterOutlined style={{ fontSize: 14, color: row.labelUrl ? '#fff' : '#9ca3af' }} />
-              </button>
-            </Tooltip>
-
-            {/* Rastreio público - Roxo */}
-            <Tooltip title="Abrir rastreio">
-              <button
-                disabled={!row.trackingUrl}
-                onClick={() => {
-                  if (row.trackingUrl) window.open(row.trackingUrl, "_blank");
-                }}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: 28,
-                  height: 28,
-                  borderRadius: 9999,
-                  backgroundColor: row.trackingUrl ? '#7c3aed' : '#e5e7eb',
-                  border: 'none',
-                  cursor: row.trackingUrl ? 'pointer' : 'not-allowed',
-                  transition: 'background-color 0.2s',
-                  opacity: row.trackingUrl ? 1 : 0.5,
-                }}
-                onMouseEnter={(e) => {
-                  if (row.trackingUrl) e.currentTarget.style.backgroundColor = '#6d28d9';
-                }}
-                onMouseLeave={(e) => {
-                  if (row.trackingUrl) e.currentTarget.style.backgroundColor = '#7c3aed';
-                }}
-              >
-                <GlobalOutlined style={{ fontSize: 14, color: row.trackingUrl ? '#fff' : '#9ca3af' }} />
-              </button>
-            </Tooltip>
-
-            {/* Ver coleta - Amarelo (sempre renderizado) */}
-            <Tooltip title={row.pickupRequest ? "Ver coleta" : "Coleta não disponível para este envio"}>
-              {row.pickupRequest ? (
-                <Link href={`/coletas?shipmentId=${row.id}`}>
-                  <button
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      width: 28,
-                      height: 28,
-                      borderRadius: 9999,
-                      backgroundColor: '#fef08a',
-                      border: 'none',
-                      cursor: 'pointer',
-                      transition: 'background-color 0.2s',
-                    }}
-                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#fde047'; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#fef08a'; }}
-                  >
-                    <CarOutlined style={{ fontSize: 14, color: '#854d0e' }} />
-                  </button>
+          return (
+            <Space size={4}>
+              <Tooltip title="Ver detalhes">
+                <Link href={`/shipments/${row.id}`}>
+                  <ELButton variant="ghost" size="small" icon={<EyeOutlined />} />
                 </Link>
-              ) : (
-                <button
-                  disabled
-                  aria-disabled="true"
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    width: 28,
-                    height: 28,
-                    borderRadius: 9999,
-                    backgroundColor: '#e5e7eb',
-                    border: 'none',
-                    cursor: 'not-allowed',
-                    opacity: 0.5,
-                  }}
-                >
-                  <CarOutlined style={{ fontSize: 14, color: '#9ca3af' }} />
-                </button>
-              )}
-            </Tooltip>
+              </Tooltip>
 
-            {/* Cancelar envio - Vermelho */}
-            {(() => {
-              // Status finais que não podem ser cancelados
-              const finalStatuses: ShipmentStatus[] = ["Entregue", "Cancelado", "Devolvido"];
-              const isFinalStatus = finalStatuses.includes(row.status);
+              <Tooltip title="Imprimir etiqueta">
+                <ELButton
+                  variant="ghost"
+                  size="small"
+                  icon={<PrinterOutlined />}
+                  disabled={!row.labelUrl}
+                  onClick={() => row.labelUrl && handlePrintLabel(row.id, row.labelUrl)}
+                />
+              </Tooltip>
 
-              return (
-                <Tooltip title={isFinalStatus ? "Não é possível cancelar" : "Cancelar envio"}>
-                  <button
-                    disabled={isFinalStatus || cancelMut.isPending}
-                    onClick={() => cancelMut.mutate(row.id)}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      width: 28,
-                      height: 28,
-                      borderRadius: 9999,
-                      backgroundColor: isFinalStatus ? '#e5e7eb' : '#dc2626',
-                      border: 'none',
-                      cursor: isFinalStatus ? 'not-allowed' : 'pointer',
-                      transition: 'background-color 0.2s',
-                      opacity: isFinalStatus ? 0.5 : 1,
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!isFinalStatus) {
-                        e.currentTarget.style.backgroundColor = '#b91c1c';
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!isFinalStatus) {
-                        e.currentTarget.style.backgroundColor = '#dc2626';
-                      }
-                    }}
-                  >
-                    <StopOutlined style={{ fontSize: 14, color: isFinalStatus ? '#9ca3af' : '#fff' }} />
-                  </button>
-                </Tooltip>
-              );
-            })()}
-          </div>
-        ),
+              <Tooltip title="Abrir rastreio">
+                <ELButton
+                  variant="ghost"
+                  size="small"
+                  icon={<GlobalOutlined />}
+                  disabled={!row.trackingUrl}
+                  onClick={() => row.trackingUrl && window.open(row.trackingUrl, "_blank")}
+                />
+              </Tooltip>
+
+              <Tooltip title={row.pickupRequest ? "Ver coleta" : "Coleta não disponível"}>
+                {row.pickupRequest ? (
+                  <Link href={`/coletas?shipmentId=${row.id}`}>
+                    <ELButton variant="ghost" size="small" icon={<CarOutlined />} />
+                  </Link>
+                ) : (
+                  <ELButton variant="ghost" size="small" icon={<CarOutlined />} disabled />
+                )}
+              </Tooltip>
+
+              <Tooltip title={isFinalStatus ? "Não é possível cancelar" : "Cancelar envio"}>
+                <ELButton
+                  variant="danger"
+                  size="small"
+                  icon={<StopOutlined />}
+                  disabled={isFinalStatus || cancelMut.isPending}
+                  onClick={() => cancelMut.mutate(row.id)}
+                />
+              </Tooltip>
+            </Space>
+          );
+        },
       },
     ],
     [cancelMut, handlePrintLabel, handleOpenDivergenceModal],
@@ -512,61 +366,59 @@ export default function ShipmentsClient() {
               placeholder="Filtrar por status"
               value={status}
               onChange={handleStatusChange}
-              options={STATUS_OPTIONS.map((opt) => ({
-                label: opt,
-                value: opt,
-              }))}
+              options={STATUS_OPTIONS.map((opt) => ({ label: opt, value: opt }))}
             />
             <ELButton onClick={() => refetch()} disabled={isLoading}>
               Atualizar
             </ELButton>
           </div>
 
-          <Table<Shipment>
+          <DataTable<Shipment>
             rowKey="id"
             loading={isLoading}
-            dataSource={items}
+            data={items}
+            columns={columns}
+            enableMobileCards
+            scrollX={1200}
+            emptyMessage="Nenhum envio encontrado"
+            emptyDescription="Tente ajustar os filtros de busca"
             pagination={{
               current: page,
               pageSize: pageSize,
               total: pagination?.total ?? 0,
               showSizeChanger: true,
-              showTotal: (total, range) => `${range[0]}-${range[1]} de ${total} envios`,
-              pageSizeOptions: ['10', '20', '50', '100'],
+              showTotal: (total) => `Total: ${total} envios`,
               onChange: handlePaginationChange,
             }}
-            columns={columns}
-            scroll={{ x: 1200 }}
           />
         </Card>
       </div>
 
-      {/* Modal de Divergências */}
-      <Modal
+      <ELModal
         title="Divergências de Volumes"
         open={divergenceModalOpen}
         onCancel={handleCloseDivergenceModal}
-        footer={[
-          <ELButton key="close" onClick={handleCloseDivergenceModal}>
+        footer={
+          <ELButton onClick={handleCloseDivergenceModal}>
             Fechar
-          </ELButton>,
-        ]}
+          </ELButton>
+        }
         width={800}
       >
         {divergencesLoading ? (
-          <div style={{ textAlign: 'center', padding: 32 }}>Carregando...</div>
+          <ELSkeleton active paragraph={{ rows: 4 }} />
         ) : divergencesData?.divergences && divergencesData.divergences.length > 0 ? (
-          <Space orientation="vertical" size="large" style={{ width: '100%' }}>
+          <Space direction="vertical" size="large" style={{ width: '100%' }}>
             {divergencesData.divergences.map((divergence) => (
               <div key={divergence.id} style={{ borderBottom: '1px solid #f0f0f0', paddingBottom: 16 }}>
                 <Text strong style={{ fontSize: 16, marginBottom: 12, display: 'block' }}>
                   Volume {divergence.volumeLabel}
                 </Text>
-                <Tag color="red" style={{ marginBottom: 12 }}>
+                <ELTag color="red" style={{ marginBottom: 12 }}>
                   {divergence.type === 'DIMENSAO' && 'Divergência de Dimensão'}
                   {divergence.type === 'PESO' && 'Divergência de Peso'}
                   {divergence.type === 'DIMENSAO_E_PESO' && 'Divergência de Dimensão e Peso'}
-                </Tag>
+                </ELTag>
 
                 <Descriptions column={2} size="small" bordered>
                   {divergence.registeredDimensions && (
@@ -583,7 +435,6 @@ export default function ShipmentsClient() {
                       )}
                     </>
                   )}
-
                   {divergence.registeredWeightKg !== undefined && (
                     <>
                       <Descriptions.Item label="Peso declarado">
@@ -591,26 +442,21 @@ export default function ShipmentsClient() {
                       </Descriptions.Item>
                       {divergence.newWeightKg !== undefined && (
                         <Descriptions.Item label="Peso registrado">
-                          <Text type="danger" strong>
-                            {divergence.newWeightKg} kg
-                          </Text>
+                          <Text type="danger" strong>{divergence.newWeightKg} kg</Text>
                         </Descriptions.Item>
                       )}
                     </>
                   )}
-
                   {divergence.observations && (
                     <Descriptions.Item label="Observações" span={2}>
                       {divergence.observations}
                     </Descriptions.Item>
                   )}
-
                   {divergence.collectorName && (
                     <Descriptions.Item label="Registrado por">
                       {divergence.collectorName}
                     </Descriptions.Item>
                   )}
-
                   <Descriptions.Item label="Data/hora">
                     {new Date(divergence.createdAt).toLocaleString('pt-BR')}
                   </Descriptions.Item>
@@ -636,7 +482,7 @@ export default function ShipmentsClient() {
             <Text type="secondary">Nenhuma divergência encontrada</Text>
           </div>
         )}
-      </Modal>
+      </ELModal>
     </PageShell>
   );
 }

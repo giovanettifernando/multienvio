@@ -1,9 +1,11 @@
 'use client';
 
-import { Modal, Button, Typography, Space } from 'antd';
+import { Typography, Space } from 'antd';
 import { SavedCardPaymentForm } from '@/components/wallet/SavedCardPaymentForm';
 import { CardPaymentForm } from '@/components/wallet/CardPaymentForm';
 import { formatCurrency } from './checkoutTypes';
+import { ELModal } from '@/components/ui/ELModal';
+import { ELButton } from '@/components/ui/ELButton';
 
 const { Text } = Typography;
 
@@ -34,7 +36,7 @@ export function CardPaymentView({
   const shouldShowSavedCardForm = useSavedCard && hasSavedCards;
 
   return (
-    <Modal
+    <ELModal
       title="Pagamento com Cartão"
       open={open}
       onCancel={onCancel}
@@ -51,7 +53,7 @@ export function CardPaymentView({
           paymentDescription={`Pagamento de ${itemCount} envio(s) - Envio Legal`}
         />
       ) : (
-        <Space orientation="vertical" size="large" style={{ width: '100%' }}>
+        <Space direction="vertical" size="large" style={{ width: '100%' }}>
           <div style={{ marginBottom: 16 }}>
             <Text strong>Valor a pagar: </Text>
             <Text style={{ fontSize: 20, color: '#52c41a' }}>
@@ -70,18 +72,18 @@ export function CardPaymentView({
             paymentType="checkout_payment"
           />
 
-          <Space orientation="vertical" size="small" style={{ width: '100%' }}>
+          <Space direction="vertical" size="small" style={{ width: '100%' }}>
             {hasSavedCards && (
-              <Button type="link" onClick={() => onUseSavedCard(true)} block>
+              <ELButton variant="link" onClick={() => onUseSavedCard(true)} block>
                 Voltar para cartões salvos
-              </Button>
+              </ELButton>
             )}
-            <Button onClick={onCancel} block>
+            <ELButton onClick={onCancel} block>
               Cancelar
-            </Button>
+            </ELButton>
           </Space>
         </Space>
       )}
-    </Modal>
+    </ELModal>
   );
 }

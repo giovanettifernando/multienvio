@@ -1,7 +1,8 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { Alert, Row, Col } from "antd";
+import { ELAlert } from "@/components/ui/ELAlert";
+import { ELGrid, ELFlex } from "@/components/ui/ELGrid";
 import { PageShell } from "@/components/shared/PageShell";
 import { QuickCalculator } from "@/components/dashboard/QuickCalculator";
 import { ShipmentsStatusBoard } from "@/components/dashboard/ShipmentsStatusBoard";
@@ -45,7 +46,7 @@ export default function OverviewClient() {
     <PageShell title="Painel de Controle" gap="md">
       {/* Errors Display */}
       {shipmentsQuery.isError && (
-        <Alert
+        <ELAlert
           type="error"
           message="Não foi possível carregar os envios."
           showIcon
@@ -54,50 +55,32 @@ export default function OverviewClient() {
       )}
 
       {/* Row 1: Status de envios (filas ativas) + Resumo (entregues/cancelados) */}
-      <Row gutter={[12, 12]}>
-        <Col xs={24} lg={16}>
-          <ShipmentsStatusBoard
-            shipments={shipmentsQuery.data ?? []}
-            loading={shipmentsQuery.isLoading}
-          />
-        </Col>
-        <Col xs={24} lg={8}>
-          <ShipmentsSummaryCard
-            shipments={shipmentsQuery.data ?? []}
-            loading={shipmentsQuery.isLoading}
-          />
-        </Col>
-      </Row>
+      <ELGrid variant="dashboard" gap="md">
+        <ShipmentsStatusBoard
+          shipments={shipmentsQuery.data ?? []}
+          loading={shipmentsQuery.isLoading}
+        />
+        <ShipmentsSummaryCard
+          shipments={shipmentsQuery.data ?? []}
+          loading={shipmentsQuery.isLoading}
+        />
+      </ELGrid>
 
       {/* Row 2: Calculadora + Carteira | Transações + Suporte */}
-      <Row gutter={[12, 12]}>
-        <Col xs={24} md={12} lg={8}>
-          <Row gutter={[12, 12]}>
-            <Col xs={24}>
-              <QuickCalculator />
-            </Col>
-            <Col xs={24}>
-              <WalletCard />
-            </Col>
-          </Row>
-        </Col>
-        <Col xs={24} md={12} lg={8}>
-          <WalletRecent />
-        </Col>
-        <Col xs={24} md={24} lg={8}>
-          <SupportQuickView />
-        </Col>
-      </Row>
+      <ELGrid variant="3" gap="md">
+        <ELFlex direction="col" gap="md">
+          <QuickCalculator />
+          <WalletCard />
+        </ELFlex>
+        <WalletRecent />
+        <SupportQuickView />
+      </ELGrid>
 
-      {/* Row 4: Coletas agendadas + Envios pendentes em pontos de coleta */}
-      <Row gutter={[12, 12]}>
-        <Col xs={24} md={12}>
-          <PickupSchedule />
-        </Col>
-        <Col xs={24} md={12}>
-          <PendingPickupPointShipments />
-        </Col>
-      </Row>
+      {/* Row 3: Coletas agendadas + Envios pendentes em pontos de coleta */}
+      <ELGrid variant="2" gap="md">
+        <PickupSchedule />
+        <PendingPickupPointShipments />
+      </ELGrid>
     </PageShell>
   );
 }

@@ -1,15 +1,9 @@
 "use client";
 
 import React, { useState } from "react";
-import {
-  Table,
-  Space,
-  DatePicker,
-  Card,
-} from "antd";
+import { DatePicker, Card } from "antd";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import type { ColumnsType } from "antd/es/table";
 import type { PickupRequestWithShipment, PickupStatus } from "@/lib/types/pickup";
 import dayjs, { type Dayjs } from "dayjs";
 import { PageShell } from "@/components/shared/PageShell";
@@ -17,6 +11,7 @@ import { ELButton } from "@/components/ui/ELButton";
 import { ELInput } from "@/components/ui/ELInput";
 import { ELSelect } from "@/components/ui/ELSelect";
 import { ELStatusTag, type StatusVariant } from "@/components/ui/ELStatusTag";
+import { DataTable, type DataTableColumn } from "@/components/ui/DataTable";
 import tableStyles from "@/components/ui/ELTableWrapper.module.css";
 
 const { RangePicker } = DatePicker;
@@ -48,15 +43,13 @@ const STATUS_LABELS: Record<PickupStatus, string> = {
 
 export default function ColetasClient() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [status, setStatus] = useState<PickupStatus | "all">("all"); // Padrão: usar padrão do backend (PENDING+SCHEDULED)
+  const [status, setStatus] = useState<PickupStatus | "all">("all");
   const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null]>([null, null]);
 
-  // Fetch pickups with filters
   const { data, isLoading, refetch } = useQuery({
     queryKey: ["pickups", searchQuery, status, dateRange],
     queryFn: async () => {
       const params = new URLSearchParams();
-
       if (searchQuery) params.append("q", searchQuery);
       if (status !== "all") params.append("status", status);
       if (dateRange[0]) params.append("dateStart", dateRange[0].toISOString());
@@ -72,14 +65,17 @@ export default function ColetasClient() {
 
   const items = data?.items ?? [];
 
-  const columns: ColumnsType<PickupRequestWithShipment> = [
+  const columns: DataTableColumn<PickupRequestWithShipment>[] = [
     {
       title: "Código de rastreio",
-      dataIndex: ["shipment", "trackingCode"],
+      dataIndex: "shipment.trackingCode",
+      key: "trackingCode",
       width: 180,
-      render: (trackingCode: string, record) => (
+      showInCard: true,
+      cardLabel: "Rastreio",
+      render: (_value, record) => (
         <Link href={`/shipments/${record.shipmentId}`} style={{ fontWeight: 500 }}>
-          {trackingCode}
+          {record.shipment?.trackingCode ?? "—"}
         </Link>
       ),
     },
@@ -87,6 +83,8 @@ export default function ColetasClient() {
       title: "Nome do Coletor",
       key: "collector",
       width: 200,
+      showInCard: true,
+      cardLabel: "Coletor",
       render: (_value, row) => {
         if (row.collector) {
           return row.collector.name;
@@ -97,10 +95,13 @@ export default function ColetasClient() {
     {
       title: "Data e hora agendadas",
       dataIndex: "scheduleAt",
+      key: "scheduleAt",
       width: 180,
-      render: (value: string | null) => {
+      showInCard: true,
+      cardLabel: "Agendamento",
+      render: (value) => {
         if (value) {
-          return dayjs(value).format("DD/MM/YYYY HH:mm");
+          return dayjs(value as string).format("DD/MM/YYYY HH:mm");
         }
         return <span style={{ color: '#8c8c8c' }}>Não agendado</span>;
       },
@@ -108,26 +109,28 @@ export default function ColetasClient() {
     {
       title: "Status",
       dataIndex: "status",
+      key: "status",
       width: 130,
-      render: (value: PickupStatus) => (
-        <ELStatusTag variant={STATUS_VARIANTS[value] ?? "default"}>
-          {STATUS_LABELS[value] ?? value}
+      showInCard: true,
+      cardLabel: "Status",
+      render: (value) => (
+        <ELStatusTag variant={STATUS_VARIANTS[value as PickupStatus] ?? "default"}>
+          {STATUS_LABELS[value as PickupStatus] ?? value}
         </ELStatusTag>
       ),
     },
     {
       title: "Tentativas de Coleta",
       dataIndex: "attemptCount",
+      key: "attemptCount",
       width: 150,
-      align: "center",
-      render: (count: number) => {
-        if (count === 0) {
-          return "0";
-        } else if (count === 1) {
-          return "1 tentativa";
-        } else {
-          return `${count} tentativas`;
-        }
+      showInCard: true,
+      cardLabel: "Tentativas",
+      render: (count) => {
+        const num = count as number;
+        if (num === 0) return "0";
+        if (num === 1) return "1 tentativa";
+        return `${num} tentativas`;
       },
     },
   ];
@@ -165,13 +168,20 @@ export default function ColetasClient() {
             </ELButton>
           </div>
 
-          <Table<PickupRequestWithShipment>
+          <DataTable<PickupRequestWithShipment>
             rowKey="id"
             loading={isLoading}
-            dataSource={items}
-            pagination={{ pageSize: 20 }}
+            data={items}
             columns={columns}
-            scroll={{ x: 900 }}
+            enableMobileCards
+            scrollX={900}
+            emptyMessage="Nenhuma coleta encontrada"
+            emptyDescription="Tente ajustar os filtros de busca"
+            pagination={{
+              pageSize: 20,
+              showSizeChanger: true,
+              showTotal: (total) => `Total: ${total} coletas`,
+            }}
           />
         </Card>
       </div>

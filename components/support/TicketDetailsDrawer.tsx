@@ -1,12 +1,10 @@
 'use client';
 
 import {
-  Drawer,
   Descriptions,
   Tag,
   Timeline,
   Input,
-  Button,
   Space,
   Typography,
   Select,
@@ -31,6 +29,9 @@ import type { Status, Priority, AuthorRole } from '@/lib/validation/support';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/pt-br';
+import { ELDrawer } from '@/components/ui/ELDrawer';
+import { ELButton } from '@/components/ui/ELButton';
+import { ELSelect } from '@/components/ui/ELSelect';
 
 dayjs.extend(relativeTime);
 dayjs.locale('pt-br');
@@ -287,7 +288,7 @@ const handleSendMessage = async () => {
   const renderContent = () => {
     if (isLoading) {
       return (
-        <Space orientation="vertical" style={{ width: '100%' }} size="large">
+        <Space direction="vertical" style={{ width: '100%' }} size="large">
           <Skeleton active paragraph={{ rows: 3 }} />
           <Skeleton active paragraph={{ rows: 6 }} />
           <Skeleton active paragraph={{ rows: 3 }} />
@@ -303,9 +304,9 @@ const handleSendMessage = async () => {
           title="Não foi possível carregar o chamado"
           subTitle={errorMessage}
           extra={
-            <Button type="primary" onClick={() => ticketQuery.refetch()}>
+            <ELButton variant="primary" onClick={() => ticketQuery.refetch()}>
               Tentar novamente
-            </Button>
+            </ELButton>
           }
         />
       );
@@ -316,7 +317,7 @@ const handleSendMessage = async () => {
     }
 
     return (
-      <Space orientation="vertical" style={{ width: '100%' }} size="large">
+      <Space direction="vertical" style={{ width: '100%' }} size="large">
         <Space
           style={{ width: '100%', justifyContent: 'space-between', alignItems: 'flex-start' }}
           align="start"
@@ -332,22 +333,21 @@ const handleSendMessage = async () => {
               ))}
             </Space>
           </div>
-          <Button
+          <ELButton
             icon={<ReloadOutlined />}
             onClick={() => {
               void ticketQuery.refetch();
             }}
             loading={ticketQuery.isFetching}
-            variant="outlined"
           >
             Atualizar
-          </Button>
+          </ELButton>
         </Space>
 
         {userRole === 'admin' && (
-          <Space orientation="vertical" style={{ width: '100%' }}>
+          <Space direction="vertical" style={{ width: '100%' }}>
             <Space wrap>
-              <Select
+              <ELSelect
                 value={ticket.status}
                 onChange={handleStatusChange}
                 style={{ width: 200 }}
@@ -377,7 +377,7 @@ const handleSendMessage = async () => {
 
         <Descriptions column={1} bordered size="small">
           <Descriptions.Item label="Solicitante">
-            <Space orientation="vertical" size={0}>
+            <Space direction="vertical" size={0}>
               <Text strong>{ticket.requester?.name || 'N/A'}</Text>
               <Text type="secondary">{ticket.requester?.email || 'N/A'}</Text>
               {ticket.requester?.phone && (
@@ -412,8 +412,8 @@ const handleSendMessage = async () => {
               items={ticket.messages.map((msg) => ({
                 key: msg.id,
                 color: msg.authorRole === 'admin' ? 'blue' : 'green',
-                content: (
-                  <Space orientation="vertical" size={4} style={{ width: '100%' }}>
+                children: (
+                  <Space direction="vertical" size={4} style={{ width: '100%' }}>
                     <Space>
                       <Text strong>
                         {msg.authorRole === 'admin' ? '🔧' : '👤'} {msg.authorName}
@@ -424,7 +424,7 @@ const handleSendMessage = async () => {
                     </Space>
                     <Text>{msg.text}</Text>
                     {msg.attachments && msg.attachments.length > 0 ? (
-                      <Space orientation="vertical" size={2} style={{ width: '100%' }}>
+                      <Space direction="vertical" size={2} style={{ width: '100%' }}>
                         {msg.attachments.map((attachment) => {
                           if (!attachment.url) {
                             return null;
@@ -490,10 +490,10 @@ const handleSendMessage = async () => {
             aria-label="Anexar arquivos à resposta"
             style={{ marginTop: 8 }}
           >
-            <Button variant="outlined">Anexar arquivo</Button>
+            <ELButton style={{ marginTop: 8 }}>Anexar arquivo</ELButton>
           </Upload>
-          <Button
-            type="primary"
+          <ELButton
+            variant="primary"
             icon={<SendOutlined />}
             onClick={handleSendMessage}
             loading={sending || postMessage.isPending}
@@ -501,7 +501,7 @@ const handleSendMessage = async () => {
             style={{ marginTop: 8 }}
           >
             Enviar
-          </Button>
+          </ELButton>
         </div>
       </Space>
     );
@@ -537,11 +537,11 @@ export function TicketDetailsDrawer({
   }, [open]);
 
   return (
-    <Drawer
+    <ELDrawer
       title={title}
       open={open}
       onClose={onClose}
-      size="large"
+      drawerSize="lg"
     >
       <TicketDetailsContent
         ticketId={ticketId}
@@ -550,6 +550,6 @@ export function TicketDetailsDrawer({
         enableQuery={Boolean(open && ticketId)}
         onComposingChange={onComposingChange}
       />
-    </Drawer>
+    </ELDrawer>
   );
 }

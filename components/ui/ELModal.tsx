@@ -8,8 +8,10 @@ import "./ELModal.module.css";
 export type ELModalSize = "sm" | "md" | "lg" | "xl" | "fullscreen";
 
 export interface ELModalProps extends Omit<ModalProps, "width" | "wrapClassName"> {
-  /** Tamanho do modal */
+  /** Tamanho do modal (preset) */
   size?: ELModalSize;
+  /** Largura customizada (sobrescreve size) */
+  width?: number | string;
   /** Esconder footer */
   hideFooter?: boolean;
   /** Centralizar conteúdo */
@@ -37,6 +39,7 @@ const sizeWidths: Record<ELModalSize, number | string> = {
  */
 export function ELModal({
   size = "md",
+  width,
   hideFooter = false,
   centered = true,
   wrapClassName,
@@ -50,11 +53,14 @@ export function ELModal({
     wrapClassName
   );
 
+  // Se width foi especificado, usa ele; senão usa o preset de size
+  const modalWidth = width ?? sizeWidths[size];
+
   return (
     <Modal
       {...props}
       centered={centered}
-      width={sizeWidths[size]}
+      width={modalWidth}
       wrapClassName={modalClasses}
     >
       {children}

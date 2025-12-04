@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { Modal, Button, App, Spin } from 'antd';
+import { App, Spin, Space } from 'antd';
 import { CheckCircleOutlined, LoadingOutlined } from '@ant-design/icons';
 import { useRouter } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -11,6 +11,8 @@ import { PixPaymentView } from './PixPaymentView';
 import { CardPaymentView } from './CardPaymentView';
 import { PaymentMethodSelector } from './PaymentMethodSelector';
 import type { CheckoutCartModalProps, WalletData, PaymentMethod } from './checkoutTypes';
+import { ELModal } from '@/components/ui/ELModal';
+import { ELButton } from '@/components/ui/ELButton';
 
 export function CheckoutCartModal({
   open,
@@ -251,27 +253,28 @@ export function CheckoutCartModal({
 
   // Render payment method selection (main screen)
   return (
-    <Modal
+    <ELModal
       title="Escolha o método de pagamento"
       open={open}
       onCancel={handleClose}
       closable={!loading}
       maskClosable={!loading}
-      footer={[
-        <Button key="cancel" onClick={handleClose} disabled={loading}>
-          Cancelar
-        </Button>,
-        <Button
-          key="confirm"
-          type="primary"
-          onClick={handleConfirm}
-          loading={loading}
-          disabled={isConfirmDisabled}
-          icon={<CheckCircleOutlined />}
-        >
-          Confirmar pagamento
-        </Button>,
-      ]}
+      footer={
+        <Space>
+          <ELButton onClick={handleClose} disabled={loading}>
+            Cancelar
+          </ELButton>
+          <ELButton
+            variant="primary"
+            onClick={handleConfirm}
+            loading={loading}
+            disabled={isConfirmDisabled}
+            icon={<CheckCircleOutlined />}
+          >
+            Confirmar pagamento
+          </ELButton>
+        </Space>
+      }
       width={600}
     >
       <Spin
@@ -291,6 +294,6 @@ export function CheckoutCartModal({
           isLoading={isLoading}
         />
       </Spin>
-    </Modal>
+    </ELModal>
   );
 }

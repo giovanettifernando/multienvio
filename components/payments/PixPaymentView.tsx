@@ -1,9 +1,12 @@
 'use client';
 
-import { Modal, Button, Typography, Space, Alert, Spin } from 'antd';
+import { Typography, Space, Spin } from 'antd';
 import { LoadingOutlined, CheckCircleFilled, CloseCircleFilled } from '@ant-design/icons';
 import type { MercadoPagoPaymentResult, PixPaymentStatus } from './checkoutTypes';
 import { formatCurrency } from './checkoutTypes';
+import { ELModal } from '@/components/ui/ELModal';
+import { ELButton } from '@/components/ui/ELButton';
+import { ELAlert } from '@/components/ui/ELAlert';
 
 const { Text } = Typography;
 
@@ -41,7 +44,7 @@ export function PixPaymentView({
   // Status: PAID
   if (pixStatus === 'paid') {
     return (
-      <Modal
+      <ELModal
         title="Pagamento Confirmado"
         open={open}
         footer={null}
@@ -60,27 +63,29 @@ export function PixPaymentView({
             <Spin indicator={<LoadingOutlined style={{ fontSize: 24 }} spin />} />
           </div>
         </div>
-      </Modal>
+      </ELModal>
     );
   }
 
   // Status: EXPIRED
   if (pixStatus === 'expired') {
     return (
-      <Modal
+      <ELModal
         title="PIX Expirado"
         open={open}
         closable={false}
         maskClosable={false}
         keyboard={false}
-        footer={[
-          <Button key="retry" type="primary" onClick={onRetry}>
-            Gerar Novo PIX
-          </Button>,
-          <Button key="cancel" danger onClick={onCancel}>
-            Cancelar
-          </Button>,
-        ]}
+        footer={
+          <Space>
+            <ELButton variant="primary" onClick={onRetry}>
+              Gerar Novo PIX
+            </ELButton>
+            <ELButton variant="danger" onClick={onCancel}>
+              Cancelar
+            </ELButton>
+          </Space>
+        }
         width={500}
       >
         <div style={{ textAlign: 'center', padding: '40px 20px' }}>
@@ -92,26 +97,26 @@ export function PixPaymentView({
             O tempo para pagamento expirou. Você pode gerar um novo código ou cancelar.
           </Text>
         </div>
-      </Modal>
+      </ELModal>
     );
   }
 
   // Status: PENDING (waiting for payment)
   return (
-    <Modal
+    <ELModal
       title="Pagamento PIX"
       open={open}
       closable={false}
       maskClosable={false}
       keyboard={false}
-      footer={[
-        <Button key="cancel" danger onClick={onCancel}>
+      footer={
+        <ELButton variant="danger" onClick={onCancel}>
           Cancelar Pagamento
-        </Button>,
-      ]}
+        </ELButton>
+      }
       width={600}
     >
-      <Space orientation="vertical" size="large" style={{ width: '100%' }}>
+      <Space direction="vertical" size="large" style={{ width: '100%' }}>
         {/* Polling status */}
         <div style={{
           display: 'flex',
@@ -165,25 +170,25 @@ export function PixPaymentView({
           </div>
         </div>
 
-        <Alert
-          message="PIX Copia e Cola"
+        <ELAlert
+          variant="warning"
+          title="PIX Copia e Cola"
           description={
             <div style={{ wordBreak: 'break-all', fontSize: 12 }}>
               {pixData.payment.pixQrCode}
               <br />
-              <Button
-                type="link"
+              <ELButton
+                variant="link"
                 size="small"
                 onClick={onCopyCode}
                 style={{ paddingLeft: 0 }}
               >
                 Copiar código
-              </Button>
+              </ELButton>
             </div>
           }
-          type="warning"
         />
       </Space>
-    </Modal>
+    </ELModal>
   );
 }

@@ -2,6 +2,7 @@
 
 import { Suspense } from 'react';
 import dynamic from 'next/dynamic';
+import { ELSkeleton } from '@/components/ui/ELSkeleton';
 
 const EnvioLayoutClient = dynamic(() => import('./EnvioLayoutClient'), {
   ssr: false,
@@ -10,16 +11,8 @@ const EnvioLayoutClient = dynamic(() => import('./EnvioLayoutClient'), {
 export default function LayoutWrapper({ children }: { children: React.ReactNode }) {
   return (
     <Suspense fallback={
-      <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center' }}>
-        <div style={{
-          width: '40px',
-          height: '40px',
-          border: '3px solid #f3f3f3',
-          borderTop: '3px solid #1890ff',
-          borderRadius: '50%',
-          animation: 'spin 1s linear infinite'
-        }} />
-        <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
+      <div style={{ minHeight: '100vh', padding: 24 }}>
+        <ELSkeleton active paragraph={{ rows: 6 }} />
       </div>
     }>
       <EnvioLayoutClient>{children}</EnvioLayoutClient>

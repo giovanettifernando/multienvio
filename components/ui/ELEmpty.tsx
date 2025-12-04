@@ -14,7 +14,11 @@ type ActionConfig = {
 
 export interface ELEmptyProps
   extends Omit<EmptyProps, "description" | "imageStyle"> {
+  /** Título principal */
   title?: ReactNode;
+  /** Alias para title (compatibilidade) */
+  message?: ReactNode;
+  /** Descrição/subtítulo */
   description?: ReactNode;
   primaryAction?: ActionConfig;
   secondaryAction?: ActionConfig;
@@ -22,6 +26,7 @@ export interface ELEmptyProps
 
 export function ELEmpty({
   title,
+  message,
   description,
   primaryAction,
   secondaryAction,
@@ -29,6 +34,9 @@ export function ELEmpty({
   image,
   ...emptyProps
 }: ELEmptyProps) {
+  // Suportar alias message → title
+  const effectiveTitle = title ?? message;
+
   return (
     <div className={cn(styles.empty, className)}>
       <Empty
@@ -36,7 +44,7 @@ export function ELEmpty({
         image={image ?? Empty.PRESENTED_IMAGE_SIMPLE}
         description={null}
       />
-      {title ? <Typography.Title level={4} className={styles.title}>{title}</Typography.Title> : null}
+      {effectiveTitle ? <Typography.Title level={4} className={styles.title}>{effectiveTitle}</Typography.Title> : null}
       {description ? (
         <Typography.Paragraph className={styles.description}>
           {description}

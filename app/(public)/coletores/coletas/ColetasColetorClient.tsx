@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Card, Empty, Table, Tag, Button, Space, Spin, App, Modal, Form, Input, DatePicker } from 'antd';
+import { Card, Table, Tag, Button, Space, Spin, App, Modal, Form, Input, DatePicker } from 'antd';
+import { ELEmpty } from '@/components/ui/ELEmpty';
 import { EnvironmentOutlined, InboxOutlined, CameraOutlined, CheckCircleOutlined, PhoneOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import dayjs, { Dayjs } from 'dayjs';
 import { PageShell } from '@/components/shared/PageShell';
@@ -861,9 +862,9 @@ export default function ColetasColetorClient() {
         </div>
       ) : !data || data.items.length === 0 ? (
         <Card>
-          <Empty
+          <ELEmpty
+            message="Nenhuma coleta pendente"
             description="Você não tem coletas pendentes no momento."
-            image={Empty.PRESENTED_IMAGE_SIMPLE}
           />
         </Card>
       ) : (

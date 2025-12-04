@@ -1,9 +1,11 @@
 'use client';
 
-import { useEffect, useState, useRef, Suspense } from 'react';
-import { Modal, Space, Button, Checkbox, App, Spin, Divider } from 'antd';
+import { useEffect, useState, useRef } from 'react';
+import { Checkbox, App, Spin, Divider, Space } from 'antd';
 import { PrinterOutlined, DownloadOutlined, LoadingOutlined } from '@ant-design/icons';
 import dynamic from 'next/dynamic';
+import { ELModal } from '@/components/ui/ELModal';
+import { ELButton } from '@/components/ui/ELButton';
 
 // Lazy load react-barcode para reduzir bundle inicial
 const Barcode = dynamic(() => import('react-barcode'), {
@@ -384,7 +386,7 @@ export function LabelPrintModal({
   };
 
   return (
-    <Modal
+    <ELModal
       width={480}
       open={open}
       onCancel={onClose}
@@ -400,24 +402,24 @@ export function LabelPrintModal({
           </Checkbox>
 
           <Space style={{ justifyContent: 'flex-end' }}>
-            <Button onClick={onClose}>Fechar</Button>
-            <Button
+            <ELButton onClick={onClose}>Fechar</ELButton>
+            <ELButton
               icon={<DownloadOutlined />}
               onClick={handleDownloadPdf}
               disabled={!data || loading}
               loading={actionLoading}
             >
               Baixar PDF
-            </Button>
-            <Button
-              type="primary"
+            </ELButton>
+            <ELButton
+              variant="primary"
               icon={<PrinterOutlined />}
               onClick={handlePrint}
               disabled={!data || loading}
               loading={actionLoading}
             >
               Imprimir
-            </Button>
+            </ELButton>
           </Space>
         </div>
       }
@@ -436,7 +438,7 @@ export function LabelPrintModal({
           Etiqueta não encontrada
         </div>
       )}
-    </Modal>
+    </ELModal>
   );
 }
 

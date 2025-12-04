@@ -4,13 +4,17 @@ import { CloseOutlined, CheckCircleOutlined, ExclamationCircleOutlined, InfoCirc
 import { cn } from "@/lib/utils/cn";
 import styles from "./ELAlert.module.css";
 
-export type AlertVariant = "success" | "warning" | "danger" | "info";
+export type AlertVariant = "success" | "warning" | "danger" | "info" | "error";
 
 export interface ELAlertProps {
   /** Variante de cor */
   variant?: AlertVariant;
+  /** Alias para variant (compatibilidade com AntD) */
+  type?: AlertVariant;
   /** Título do alerta */
   title?: React.ReactNode;
+  /** Alias para title (compatibilidade com AntD) */
+  message?: React.ReactNode;
   /** Descrição/conteúdo do alerta */
   description?: React.ReactNode;
   /** Mostrar ícone */
@@ -37,6 +41,7 @@ const defaultIcons: Record<AlertVariant, React.ReactNode> = {
   success: <CheckCircleOutlined />,
   warning: <WarningOutlined />,
   danger: <ExclamationCircleOutlined />,
+  error: <ExclamationCircleOutlined />,
   info: <InfoCircleOutlined />,
 };
 
@@ -50,8 +55,10 @@ const defaultIcons: Record<AlertVariant, React.ReactNode> = {
  * - Modo banner e compacto
  */
 export function ELAlert({
-  variant = "info",
+  variant,
+  type,
   title,
+  message,
   description,
   showIcon = true,
   icon,
@@ -63,13 +70,19 @@ export function ELAlert({
   className,
   style,
 }: ELAlertProps) {
-  const alertIcon = icon ?? defaultIcons[variant];
+  // Suportar aliases (type → variant, message → title)
+  const effectiveVariant = variant ?? type ?? "info";
+  // Map "error" to "danger" for consistent styling
+  const normalizedVariant = effectiveVariant === "error" ? "danger" : effectiveVariant;
+  const effectiveTitle = title ?? message;
+
+  const alertIcon = icon ?? defaultIcons[effectiveVariant];
 
   return (
     <div
       className={cn(
         styles.alert,
-        styles[variant],
+        styles[normalizedVariant],
         banner && styles.banner,
         compact && styles.compact,
         className
@@ -80,7 +93,7 @@ export function ELAlert({
       {showIcon && <span className={styles.icon}>{alertIcon}</span>}
 
       <div className={styles.content}>
-        {title && <p className={styles.title}>{title}</p>}
+        {effectiveTitle && <p className={styles.title}>{effectiveTitle}</p>}
         {description && <p className={styles.description}>{description}</p>}
         {actions && <div className={styles.actions}>{actions}</div>}
       </div>

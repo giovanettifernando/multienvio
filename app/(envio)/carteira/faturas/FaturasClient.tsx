@@ -2,11 +2,13 @@
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Card, InputNumber, Modal, Table, message } from "antd";
+import { Card, InputNumber, message } from "antd";
 import { PageShell } from "@/components/shared/PageShell";
 import type { Invoice } from "@/types/billing";
 import { ELButton } from "@/components/ui/ELButton";
 import { ELAlert } from "@/components/ui/ELAlert";
+import { ELModal } from "@/components/ui/ELModal";
+import { DataTable, type DataTableColumn } from "@/components/ui/DataTable";
 import tableStyles from "@/components/ui/ELTableWrapper.module.css";
 
 async function fetchInvoices(): Promise<Invoice[]> {
@@ -27,7 +29,7 @@ export default function FaturasClient() {
     queryFn: fetchInvoices,
   });
 
-    const generateMutation = useMutation<Invoice, Error, void>({
+  const generateMutation = useMutation<Invoice, Error, void>({
     mutationFn: async () => {
       const response = await fetch("/api/invoices", {
         method: "POST",
@@ -52,9 +54,49 @@ export default function FaturasClient() {
     },
   });
 
+  const columns: DataTableColumn<Invoice>[] = [
+    {
+      title: "Número",
+      dataIndex: "number",
+      key: "number",
+      showInCard: true,
+      cardLabel: "Nº",
+    },
+    {
+      title: "Valor",
+      dataIndex: "amount",
+      key: "amount",
+      showInCard: true,
+      cardLabel: "Valor",
+      render: (value) =>
+        (value as number).toLocaleString("pt-BR", {
+          style: "currency",
+          currency: "BRL",
+        }),
+    },
+    {
+      title: "Gerada em",
+      dataIndex: "createdAt",
+      key: "createdAt",
+      showInCard: true,
+      cardLabel: "Data",
+      render: (value) => new Date(value as string).toLocaleString("pt-BR"),
+    },
+    {
+      title: "Ações",
+      key: "actions",
+      isActions: true,
+      render: (_value, record) => (
+        <ELButton variant="link" href={record.pdfUrl} target="_blank">
+          Baixar PDF
+        </ELButton>
+      ),
+    },
+  ];
+
   return (
     <>
-      <Modal
+      <ELModal
         title="Gerar fatura"
         open={modalOpen}
         onCancel={() => setModalOpen(false)}
@@ -68,7 +110,7 @@ export default function FaturasClient() {
           onChange={(value) => setAmount(value ?? 10)}
           style={{ width: "100%" }}
         />
-      </Modal>
+      </ELModal>
 
       <PageShell title="Faturas e recibos" gap="md">
         <ELAlert
@@ -84,39 +126,20 @@ export default function FaturasClient() {
 
         <div className={tableStyles.wrapper}>
           <Card variant="borderless">
-            <Table
+            <DataTable<Invoice>
               rowKey="id"
               loading={isLoading}
-              dataSource={data ?? []}
-              scroll={{ x: 600 }}
-              columns={[
-                {
-                  title: "Número",
-                  dataIndex: "number",
-                },
-                {
-                  title: "Valor",
-                  dataIndex: "amount",
-                  render: (value: number) =>
-                    value.toLocaleString("pt-BR", {
-                      style: "currency",
-                      currency: "BRL",
-                    }),
-                },
-                {
-                  title: "Gerada em",
-                  dataIndex: "createdAt",
-                  render: (value: string) => new Date(value).toLocaleString("pt-BR"),
-                },
-                {
-                  title: "Ações",
-                  render: (_, record: Invoice) => (
-                    <ELButton variant="link" href={record.pdfUrl} target="_blank">
-                      Baixar PDF
-                    </ELButton>
-                  ),
-                },
-              ]}
+              data={data ?? []}
+              columns={columns}
+              enableMobileCards
+              scrollX={600}
+              emptyMessage="Nenhuma fatura encontrada"
+              emptyDescription="Gere uma nova fatura para começar"
+              pagination={{
+                pageSize: 10,
+                showSizeChanger: true,
+                showTotal: (total) => `Total: ${total} faturas`,
+              }}
             />
           </Card>
         </div>

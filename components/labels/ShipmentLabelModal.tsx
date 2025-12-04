@@ -7,12 +7,15 @@
  */
 
 import { useRef, useCallback, useState, useEffect } from "react";
-import { Modal, Button, Space, Typography, Divider, Alert, Spin } from "antd";
+import { Space, Typography, Divider, Spin } from "antd";
 import { PrinterOutlined, CloseOutlined, LoadingOutlined, FilePdfOutlined } from "@ant-design/icons";
 import { jsPDF } from "jspdf";
 import html2canvas from "html2canvas";
 import { LabelRenderer, type LabelData } from "./LabelRenderer";
 import styles from "./ShipmentLabelModal.module.css";
+import { ELModal } from "@/components/ui/ELModal";
+import { ELButton } from "@/components/ui/ELButton";
+import { ELAlert } from "@/components/ui/ELAlert";
 
 export interface ShipmentLabelData {
   /** ID do envio */
@@ -306,7 +309,7 @@ export function ShipmentLabelModal({
     shipment.carrier.toLowerCase().includes("pac");
 
   return (
-    <Modal
+    <ELModal
       open={open}
       onCancel={onClose}
       title={
@@ -318,26 +321,26 @@ export function ShipmentLabelModal({
       width={450}
       footer={
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, flexWrap: "wrap" }}>
-          <Button icon={<CloseOutlined />} onClick={onClose} disabled={printing || savingPdf}>
+          <ELButton icon={<CloseOutlined />} onClick={onClose} disabled={printing || savingPdf}>
             Fechar
-          </Button>
-          <Button
+          </ELButton>
+          <ELButton
             icon={savingPdf ? <LoadingOutlined spin /> : <FilePdfOutlined />}
             onClick={handleSavePdf}
             disabled={!labelsReady || savingPdf || printing}
             loading={savingPdf}
           >
             {savingPdf ? "Gerando..." : "PDF"}
-          </Button>
-          <Button
-            type="primary"
+          </ELButton>
+          <ELButton
+            variant="primary"
             icon={printing ? <LoadingOutlined spin /> : <PrinterOutlined />}
             onClick={handlePrint}
             disabled={!labelsReady || printing || savingPdf}
             loading={printing}
           >
             {printing ? "Imprimindo..." : "Imprimir"}
-          </Button>
+          </ELButton>
         </div>
       }
       styles={{
@@ -362,15 +365,14 @@ export function ShipmentLabelModal({
       <Divider style={{ margin: "12px 0" }} />
 
       {/* Aviso sobre impressão */}
-      <Alert
-        type="info"
-        message="Configuração de impressão"
+      <ELAlert
+        variant="info"
+        title="Configuração de impressão"
         description={
           isCorreios
             ? "Use papel para etiquetas 84.7 x 101.6 mm (padrão Correios). Configure a impressora sem margens e sem ajuste de escala."
             : "Configure a impressora conforme o tipo de etiqueta disponível. Recomendado: 84.7 x 101.6 mm."
         }
-        showIcon
         style={{ marginBottom: 16 }}
       />
 
@@ -432,7 +434,7 @@ export function ShipmentLabelModal({
           ))}
         </div>
       </div>
-    </Modal>
+    </ELModal>
   );
 }
 
