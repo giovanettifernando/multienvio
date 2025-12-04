@@ -57,7 +57,10 @@ export function ELDrawer({
     <Drawer
       {...props}
       placement={placement}
-      width={sizeWidths[drawerSize]}
+      styles={{
+        wrapper: { width: sizeWidths[drawerSize] },
+        ...props.styles,
+      }}
       rootClassName={drawerClasses}
     >
       {children}

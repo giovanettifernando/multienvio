@@ -64,6 +64,10 @@ export async function GET(
           select: {
             id: true,
             packageNumber: true,
+            height: true,
+            width: true,
+            length: true,
+            weight: true,
           },
           orderBy: {
             packageNumber: 'asc',
@@ -116,6 +120,11 @@ export async function GET(
       index: number;
       documentType: 'DECLARATION' | 'NF';
       nfKey?: string;
+      // Dimensões do volume
+      height?: number;
+      width?: number;
+      length?: number;
+      weight?: number;
       items: Array<{
         description: string;
         quantity: number;
@@ -138,6 +147,7 @@ export async function GET(
       valor?: number;
       subtotal?: number;
       total?: number;
+      valorTotal?: number; // Usado no novo formato de NF-e
     };
 
     type VolumeDeclaration = {
@@ -160,61 +170,171 @@ export async function GET(
     console.log('[PUBLIC_TRACK] Processando volumes:', {
       hasDocument: !!doc,
       documentType: doc?.type,
+      // NFE novo formato
+      hasDocPackages: !!(doc as { packages?: unknown[] })?.packages,
+      docPackagesCount: ((doc as { packages?: unknown[] })?.packages || []).length,
+      // NFE legado
+      hasNfeItems: !!(doc as { nfeItems?: unknown[] })?.nfeItems,
+      hasNfeKeys: !!doc?.nfeKeys,
+      // Declaração novo formato
       hasVolumeDeclarations: !!doc?.volumeDeclarations,
+      // Declaração legado
       hasDeclarationItems: !!doc?.declarationItems,
-      hasItems: !!doc?.items,
+      // Packages físicos
       packagesCount: packageVolumes.length,
+      // Debug: mostrar estrutura real do documento
+      documentKeys: doc ? Object.keys(doc) : [],
+      documentRaw: doc ? JSON.stringify(doc).substring(0, 500) : null,
     });
 
-    if (doc) {
-      const documentType = doc.type || 'DECLARACAO';
+    // Tipo para package no documento NFE (novo formato)
+    type DocumentPackage = {
+      chave?: string;
+      xmlId?: string | null;
+      items?: DocumentItem[];
+    };
 
-      if (documentType === 'NFE') {
-        // NF-e
-        const docNfeKey = (doc as { nfKey?: string }).nfKey;
-        const nfeKeys = doc.nfeKeys || (docNfeKey ? [docNfeKey] : []);
-        const nfeItems = doc.items || [];
+    // Tipo para volume no formato de cotação (legado)
+    type QuoteVolume = {
+      pesoKg?: number;
+      alturaCm?: number;
+      larguraCm?: number;
+      comprimentoCm?: number;
+      items?: DocumentItem[];
+    };
 
-        if (nfeItems.length > 0) {
-          if (packageVolumes.length > 0) {
-            // Criar um volume para cada package (todos com os mesmos itens da NF)
-            packageVolumes.forEach((pkg) => {
+    // Tipo estendido do documento que inclui formato de cotação
+    interface ExtendedDocument extends ShipmentDocument {
+      volumes?: QuoteVolume[];
+      packages?: DocumentPackage[];
+      nfeItems?: DocumentItem[];
+    }
+
+    const extDoc = doc as ExtendedDocument | null;
+
+    if (extDoc) {
+      const documentType = extDoc.type || 'DECLARACAO';
+
+      // Criar mapa de packages por número para buscar dimensões
+      const packageByNumber = new Map(
+        packageVolumes.map(pkg => [pkg.packageNumber, pkg])
+      );
+
+      // CASO ESPECIAL: Formato de cotação (legado) - doc.volumes contém dimensões
+      // Este formato não tem items detalhados, apenas dimensões físicas
+      if (!extDoc.type && extDoc.volumes && Array.isArray(extDoc.volumes)) {
+        console.log('[PUBLIC_TRACK] Detectado formato de cotação (legado)');
+
+        // Extrair dimensões do doc.volumes ou usar packages físicos
+        extDoc.volumes.forEach((vol: QuoteVolume, idx: number) => {
+          const volumeIndex = idx + 1;
+          const pkgData = packageByNumber.get(volumeIndex);
+
+          // Verificar se o volume tem items (formato híbrido)
+          const volItems = vol.items || [];
+
+          volumes.push({
+            index: volumeIndex,
+            documentType: 'DECLARATION',
+            // Priorizar dimensões do package físico, fallback para doc.volumes
+            height: pkgData?.height ?? vol.alturaCm ?? undefined,
+            width: pkgData?.width ?? vol.larguraCm ?? undefined,
+            length: pkgData?.length ?? vol.comprimentoCm ?? undefined,
+            weight: pkgData?.weight ?? vol.pesoKg ?? undefined,
+            items: volItems.map((item: DocumentItem) => ({
+              description: item.descricao || item.description || item.produto || 'Item',
+              quantity: item.quantidade || item.quantity || 1,
+              unitValue: item.valorUnitario || item.unitValue || item.valor,
+              subtotal: item.subtotal || item.total,
+            })),
+          });
+        });
+      }
+      // Formato com type definido (novo formato)
+      else if (documentType === 'NFE') {
+        // NF-e - Novo formato: packages (NF por pacote com items)
+        const docPackages = extDoc.packages;
+
+        if (docPackages && Array.isArray(docPackages) && docPackages.length > 0) {
+          // Novo formato: cada package tem sua chave e items
+          docPackages.forEach((docPkg: DocumentPackage, pkgIndex: number) => {
+            const volumeIndex = pkgIndex + 1;
+            const pkgData = packageByNumber.get(volumeIndex);
+            const items = docPkg.items || [];
+
+            volumes.push({
+              index: volumeIndex,
+              documentType: 'NF',
+              nfKey: docPkg.chave,
+              height: pkgData?.height ?? undefined,
+              width: pkgData?.width ?? undefined,
+              length: pkgData?.length ?? undefined,
+              weight: pkgData?.weight ?? undefined,
+              items: items.map((item: DocumentItem) => ({
+                description: item.descricao || item.description || item.produto || 'Item',
+                quantity: item.quantidade || item.quantity || 1,
+                unitValue: item.valorUnitario || item.unitValue || item.valor,
+                subtotal: item.subtotal || item.total || item.valorTotal,
+              })),
+            });
+          });
+        }
+        // Formato legado: nfeItems (lista única de itens) + nfeKeys (lista de chaves)
+        else {
+          const nfeItems = extDoc.nfeItems || [];
+          const nfeKeys = extDoc.nfeKeys || [];
+
+          if (nfeItems.length > 0) {
+            if (packageVolumes.length > 0) {
+              // Criar um volume para cada package (todos com os mesmos itens da NF)
+              packageVolumes.forEach((pkg, pkgIndex) => {
+                volumes.push({
+                  index: pkg.packageNumber,
+                  documentType: 'NF',
+                  nfKey: nfeKeys[pkgIndex] || nfeKeys[0], // Usar chave correspondente ou primeira
+                  height: pkg.height ?? undefined,
+                  width: pkg.width ?? undefined,
+                  length: pkg.length ?? undefined,
+                  weight: pkg.weight ?? undefined,
+                  items: nfeItems.map((item: DocumentItem) => ({
+                    description: item.descricao || item.description || item.produto || 'Item',
+                    quantity: item.quantidade || item.quantity || 1,
+                    unitValue: item.valorUnitario || item.unitValue || item.valor,
+                    subtotal: item.subtotal || item.total || item.valorTotal,
+                  })),
+                });
+              });
+            } else {
+              // Sem packages, criar volume único
               volumes.push({
-                index: pkg.packageNumber,
+                index: 1,
                 documentType: 'NF',
-                nfKey: nfeKeys[0], // Usar primeira chave
+                nfKey: nfeKeys[0],
                 items: nfeItems.map((item: DocumentItem) => ({
                   description: item.descricao || item.description || item.produto || 'Item',
                   quantity: item.quantidade || item.quantity || 1,
                   unitValue: item.valorUnitario || item.unitValue || item.valor,
-                  subtotal: item.subtotal || item.total,
+                  subtotal: item.subtotal || item.total || item.valorTotal,
                 })),
               });
-            });
-          } else {
-            // Sem packages, criar volume único
-            volumes.push({
-              index: 1,
-              documentType: 'NF',
-              nfKey: nfeKeys[0],
-              items: nfeItems.map((item: DocumentItem) => ({
-                description: item.descricao || item.description || item.produto || 'Item',
-                quantity: item.quantidade || item.quantity || 1,
-                unitValue: item.valorUnitario || item.unitValue || item.valor,
-                subtotal: item.subtotal || item.total,
-              })),
-            });
+            }
           }
         }
       } else {
         // Declaração de conteúdo
         // Novo formato: volumeDeclarations
-        if (doc.volumeDeclarations && Array.isArray(doc.volumeDeclarations)) {
-          doc.volumeDeclarations.forEach((volDecl: VolumeDeclaration) => {
+        if (extDoc.volumeDeclarations && Array.isArray(extDoc.volumeDeclarations)) {
+          extDoc.volumeDeclarations.forEach((volDecl: VolumeDeclaration) => {
             const items = volDecl.items || [];
+            const volumeIndex = volDecl.volumeIndex || 1;
+            const pkg = packageByNumber.get(volumeIndex);
             volumes.push({
-              index: volDecl.volumeIndex || 1,
+              index: volumeIndex,
               documentType: 'DECLARATION',
+              height: pkg?.height ?? undefined,
+              width: pkg?.width ?? undefined,
+              length: pkg?.length ?? undefined,
+              weight: pkg?.weight ?? undefined,
               items: items.map((item: DocumentItem) => ({
                 description: item.descricao || item.description || item.produto || 'Item',
                 quantity: item.quantidade || item.quantity || 1,
@@ -225,11 +345,16 @@ export async function GET(
           });
         }
         // Formato legado: declarationItems
-        else if (doc.declarationItems && Array.isArray(doc.declarationItems)) {
+        else if (extDoc.declarationItems && Array.isArray(extDoc.declarationItems)) {
+          const pkg = packageByNumber.get(1);
           volumes.push({
             index: 1,
             documentType: 'DECLARATION',
-            items: doc.declarationItems.map((item: DocumentItem) => ({
+            height: pkg?.height ?? undefined,
+            width: pkg?.width ?? undefined,
+            length: pkg?.length ?? undefined,
+            weight: pkg?.weight ?? undefined,
+            items: extDoc.declarationItems.map((item: DocumentItem) => ({
               description: item.descricao || item.description || item.produto || 'Item',
               quantity: item.quantidade || item.quantity || 1,
               unitValue: item.valorUnitario || item.unitValue || item.valor,
@@ -238,6 +363,31 @@ export async function GET(
           });
         }
       }
+    }
+
+    // Se não conseguimos processar volumes do document, mas temos packages, criar volumes a partir deles
+    if (volumes.length === 0 && packageVolumes.length > 0) {
+      packageVolumes.forEach((pkg) => {
+        volumes.push({
+          index: pkg.packageNumber,
+          documentType: 'DECLARATION',
+          height: pkg.height ?? undefined,
+          width: pkg.width ?? undefined,
+          length: pkg.length ?? undefined,
+          weight: pkg.weight ?? undefined,
+          items: [], // Sem itens detalhados
+        });
+      });
+    }
+
+    // Fallback final: se ainda não temos volumes mas temos peso no shipment, criar volume único
+    if (volumes.length === 0 && shipment.weight) {
+      volumes.push({
+        index: 1,
+        documentType: 'DECLARATION',
+        weight: shipment.weight,
+        items: [],
+      });
     }
 
     console.log('[PUBLIC_TRACK] Volumes processados:', volumes.length);

@@ -1,7 +1,13 @@
 # CLIENT-FACING PAGES STRUCTURE & STYLING ANALYSIS
 
+> ⚠️ **DOCUMENTO DESATUALIZADO** - Este documento foi escrito antes da migração completa do tema.
+> - O route group atual é `app/(envio)` (não mais `app/(dashboard)`)
+> - A feature flag `NEW_THEME_ENABLED` foi removida (tema novo é padrão)
+> - Componentes EL* (ELButton, ELInput, etc.) são o padrão em todas as páginas
+> - Consulte `docs/plano-modernizacao-ui-envio-legal.md` para estado atual
+
 ## Executive Summary
-The Next.js application has a well-established client dashboard structure with **24 main client pages** organized under the `app/(dashboard)` route group. A new theme system is being gradually rolled out (NEW_THEME_ENABLED flag), with custom wrapper components (ELCard, ELButton, ELInput, etc.) to manage styling consistency. There are significant inconsistencies in layout patterns, spacing, and component usage across different pages that need standardization.
+The Next.js application has a well-established client dashboard structure organized under the `app/(envio)` route group. Custom wrapper components (ELButton, ELInput, ELSelect, ELModal, etc.) manage styling consistency with tokenized CSS variables.
 
 ---
 

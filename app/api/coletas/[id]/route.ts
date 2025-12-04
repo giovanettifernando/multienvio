@@ -77,7 +77,7 @@ export async function PATCH(
 
 /**
  * GET /api/coletas/[id]
- * Retorna uma pickup request específica
+ * Retorna uma pickup request específica com dados completos
  */
 export async function GET(
   request: NextRequest,
@@ -105,6 +105,12 @@ export async function GET(
             recipientName: true,
           },
         },
+        collector: {
+          select: {
+            id: true,
+            pfNome: true,
+          },
+        },
       },
     });
 
@@ -115,6 +121,11 @@ export async function GET(
     if (pickupRequest.userId !== session.userId) {
       return NextResponse.json({ message: 'Acesso negado' }, { status: 403 });
     }
+
+    // Map collector.pfNome to name for frontend compatibility
+    const collectorData = pickupRequest.collector
+      ? { id: pickupRequest.collector.id, name: pickupRequest.collector.pfNome }
+      : null;
 
     return NextResponse.json({
       id: pickupRequest.id,
@@ -127,11 +138,17 @@ export async function GET(
       originUf: pickupRequest.originUf,
       windowStart: pickupRequest.windowStart?.toISOString() ?? null,
       windowEnd: pickupRequest.windowEnd?.toISOString() ?? null,
+      scheduleAt: pickupRequest.scheduleAt?.toISOString() ?? null,
       status: pickupRequest.status,
       notes: pickupRequest.notes,
+      attemptCount: pickupRequest.attemptCount,
+      attemptNotes: pickupRequest.attemptNotes ?? [],
+      collectedAt: pickupRequest.collectedAt?.toISOString() ?? null,
+      collectedBy: pickupRequest.collectedBy,
       createdAt: pickupRequest.createdAt.toISOString(),
       updatedAt: pickupRequest.updatedAt.toISOString(),
       shipment: pickupRequest.shipment,
+      collector: collectorData,
     }, { status: 200 });
   } catch (error) {
     console.error('[COLETAS_GET_BY_ID]', error);

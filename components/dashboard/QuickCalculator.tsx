@@ -12,6 +12,7 @@ import { ELSelect } from '@/components/ui/ELSelect';
 import { ELModal } from '@/components/ui/ELModal';
 import { ELAlert } from '@/components/ui/ELAlert';
 import { ELTag } from '@/components/ui/ELTag';
+import type { QuoteResultItem, QuoteCalculateResponse } from '@/types/quote';
 
 const { Text } = Typography;
 
@@ -20,6 +21,15 @@ interface QuoteResult {
   price: number;
   deliveryDays: number;
   service: string;
+}
+
+function mapApiResultToQuoteResult(item: QuoteResultItem): QuoteResult {
+  return {
+    carrier: item.carrier,
+    price: item.preco,
+    deliveryDays: item.prazoDias,
+    service: item.modalidade,
+  };
 }
 
 type UserAddress = {
@@ -67,14 +77,32 @@ export function QuickCalculator() {
 
   const quoteMutation = useMutation({
     mutationFn: async (values: { originCep: string; destCep: string; weight: number; height?: number; width?: number; length?: number }) => {
-      // Mock results - replace with actual API call
-      await new Promise(resolve => setTimeout(resolve, 800));
-      const mockResults: QuoteResult[] = [
-        { carrier: 'Correios', price: 25.50, deliveryDays: 5, service: 'PAC' },
-        { carrier: 'Jadlog', price: 32.00, deliveryDays: 3, service: 'Expresso' },
-        { carrier: 'Loggi', price: 45.00, deliveryDays: 1, service: 'Same Day' },
-      ];
-      return mockResults;
+      // Usar valores default para dimensões se não fornecidas
+      const height = values.height || 10;
+      const width = values.width || 15;
+      const length = values.length || 20;
+
+      const payload = {
+        origem: { cep: values.originCep },
+        destino: { cep: values.destCep },
+        volumes: [
+          {
+            comprimentoCm: length,
+            larguraCm: width,
+            alturaCm: height,
+            pesoKg: values.weight,
+          },
+        ],
+        coleta: false,
+        devolucao: false,
+      };
+
+      const response = await apiFetch<QuoteCalculateResponse>('/api/cotacoes', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+
+      return response.results.map(mapApiResultToQuoteResult);
     },
   });
 
@@ -215,33 +243,63 @@ export function QuickCalculator() {
         width={500}
       >
         <Space direction="vertical" size={12} style={{ width: '100%' }}>
-          {(quoteMutation.data || []).map((result, index) => (
-            <Card key={index} size="small" variant="outlined">
-              <Flex justify="space-between" align="center">
-                <Space direction="vertical" size={0}>
-                  <Text strong>{result.carrier}</Text>
-                  <Text type="secondary" style={{ fontSize: '12px' }}>
-                    {result.service} • {result.deliveryDays} {result.deliveryDays === 1 ? 'dia' : 'dias'}
-                  </Text>
-                </Space>
-                <Space direction="vertical" size={4} align="end">
-                  <ELTag color="blue" style={{ margin: 0 }}>
-                    R$ {result.price.toFixed(2)}
-                  </ELTag>
-                  <ELButton
-                    variant="link"
-                    size="small"
-                    icon={<ArrowRightOutlined />}
-                    onClick={handleGoToQuote}
-                    style={{ padding: 0, height: 'auto' }}
-                  >
-                    Cotação
-                  </ELButton>
-                </Space>
-              </Flex>
-            </Card>
-          ))}
+          {(quoteMutation.data || []).length === 0 ? (
+            <ELAlert
+              variant="warning"
+              title="Nenhuma opção disponível"
+              description="Não foram encontradas opções de frete para este trecho."
+            />
+          ) : (
+            (quoteMutation.data || []).map((result, index) => (
+              <Card key={index} size="small" variant="outlined">
+                <Flex justify="space-between" align="center">
+                  <Space direction="vertical" size={0}>
+                    <Text strong>{result.carrier}</Text>
+                    <Text type="secondary" style={{ fontSize: '12px' }}>
+                      {result.service} • {result.deliveryDays} {result.deliveryDays === 1 ? 'dia' : 'dias'}
+                    </Text>
+                  </Space>
+                  <Space direction="vertical" size={4} align="end">
+                    <ELTag color="blue" style={{ margin: 0 }}>
+                      R$ {result.price.toFixed(2)}
+                    </ELTag>
+                    <ELButton
+                      variant="link"
+                      size="small"
+                      icon={<ArrowRightOutlined />}
+                      onClick={handleGoToQuote}
+                      style={{ padding: 0, height: 'auto' }}
+                    >
+                      Cotação
+                    </ELButton>
+                  </Space>
+                </Flex>
+              </Card>
+            ))
+          )}
         </Space>
+      </ELModal>
+
+      <ELModal
+        title="Erro na Cotação"
+        open={quoteMutation.isError}
+        onCancel={() => quoteMutation.reset()}
+        footer={
+          <ELButton variant="primary" onClick={() => quoteMutation.reset()}>
+            Fechar
+          </ELButton>
+        }
+        width={400}
+      >
+        <ELAlert
+          variant="danger"
+          title="Não foi possível calcular o frete"
+          description={
+            quoteMutation.error instanceof Error
+              ? quoteMutation.error.message
+              : 'Tente novamente ou acesse a página de cotações para mais opções.'
+          }
+        />
       </ELModal>
     </>
   );

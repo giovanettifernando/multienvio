@@ -1,24 +1,22 @@
 "use client";
 
-import type { PickupStatus } from "@/types/pickup";
+import type { PickupStatus } from "@/lib/types/pickup";
 import { ELStatusTag, type StatusVariant } from "./ELStatusTag";
 
 const STATUS_VARIANT: Record<PickupStatus, StatusVariant> = {
-  REQUESTED: "default",
+  PENDING: "warning",
   SCHEDULED: "processing",
-  ASSIGNED: "info",
-  PICKED_UP: "success",
-  FAILED: "warning",
-  CANCELED: "danger",
+  FAILED: "danger",
+  CANCELED: "default",
+  COMPLETED: "success",
 };
 
 const STATUS_LABEL: Record<PickupStatus, string> = {
-  REQUESTED: "Solicitada",
+  PENDING: "Pendente",
   SCHEDULED: "Agendada",
-  ASSIGNED: "Motorista atribuído",
-  PICKED_UP: "Coletada",
-  FAILED: "Falha",
+  FAILED: "Falhou",
   CANCELED: "Cancelada",
+  COMPLETED: "Concluída",
 };
 
 type Props = {
@@ -27,9 +25,11 @@ type Props = {
 };
 
 export function PickupStatusTag({ status, showDot }: Props) {
+  const variant = STATUS_VARIANT[status] ?? "default";
+  const label = STATUS_LABEL[status] ?? status;
   return (
-    <ELStatusTag variant={STATUS_VARIANT[status]} showDot={showDot}>
-      {STATUS_LABEL[status]}
+    <ELStatusTag variant={variant} showDot={showDot}>
+      {label}
     </ELStatusTag>
   );
 }

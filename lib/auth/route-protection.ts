@@ -42,8 +42,6 @@ const AUTH_ROUTES = [
   '/carteira/*',
   '/rastreamento',
   '/rastreamento/*',
-  '/devolucoes',
-  '/devolucoes/*',
 ];
 
 /**

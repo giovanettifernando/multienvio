@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useRef, useState } from "react";
-import { App, Space } from "antd";
-import { PrinterOutlined, DownloadOutlined } from "@ant-design/icons";
+import { useRef, useState, useEffect } from "react";
+import { App, Space, Spin, Result } from "antd";
+import { PrinterOutlined, DownloadOutlined, ReloadOutlined } from "@ant-design/icons";
 import { ELModal } from "@/components/ui/ELModal";
 import { ELButton } from "@/components/ui/ELButton";
 
@@ -24,15 +24,50 @@ export default function StatementPDFModal({
   const { message } = App.useApp();
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [htmlContent, setHtmlContent] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Construir URL do PDF com filtros
-  const params = new URLSearchParams();
-  params.set('dateFrom', dateFrom);
-  params.set('dateTo', dateTo);
-  if (search) {
-    params.set('search', search);
-  }
-  const pdfUrl = `/api/wallet/statement/pdf?${params.toString()}`;
+  // Carregar conteúdo HTML quando o modal abrir
+  useEffect(() => {
+    if (open) {
+      loadContent();
+    } else {
+      // Limpar estado quando fechar
+      setHtmlContent(null);
+      setError(null);
+    }
+  }, [open, dateFrom, dateTo, search]);
+
+  const loadContent = async () => {
+    setIsLoading(true);
+    setError(null);
+    setHtmlContent(null);
+
+    try {
+      const params = new URLSearchParams();
+      params.set('dateFrom', dateFrom);
+      params.set('dateTo', dateTo);
+      if (search) {
+        params.set('search', search);
+      }
+
+      const response = await fetch(`/api/wallet/statement/pdf?${params.toString()}`);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Erro ao carregar extrato');
+      }
+
+      const html = await response.text();
+      setHtmlContent(html);
+    } catch (err) {
+      console.error('Error loading statement:', err);
+      setError(err instanceof Error ? err.message : 'Erro ao carregar extrato');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handlePrint = () => {
     if (iframeRef.current && iframeRef.current.contentWindow) {
@@ -85,6 +120,57 @@ export default function StatementPDFModal({
     }
   };
 
+  const renderContent = () => {
+    if (isLoading) {
+      return (
+        <div style={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          height: '100%',
+          flexDirection: 'column',
+          gap: 16
+        }}>
+          <Spin size="large" />
+          <span style={{ color: '#8c8c8c' }}>Carregando extrato...</span>
+        </div>
+      );
+    }
+
+    if (error) {
+      return (
+        <Result
+          status="error"
+          title="Erro ao carregar extrato"
+          subTitle={error}
+          extra={
+            <ELButton icon={<ReloadOutlined />} onClick={loadContent}>
+              Tentar novamente
+            </ELButton>
+          }
+        />
+      );
+    }
+
+    if (htmlContent) {
+      return (
+        <iframe
+          ref={iframeRef}
+          srcDoc={htmlContent}
+          style={{
+            width: '100%',
+            height: '100%',
+            border: 'none',
+            display: 'block',
+          }}
+          title="Extrato da Carteira"
+        />
+      );
+    }
+
+    return null;
+  };
+
   return (
     <ELModal
       title="Visualização do Extrato"
@@ -100,26 +186,22 @@ export default function StatementPDFModal({
             icon={<DownloadOutlined />}
             onClick={handleDownload}
             loading={isDownloading}
+            disabled={!htmlContent}
           >
             Baixar PDF
           </ELButton>
-          <ELButton variant="primary" icon={<PrinterOutlined />} onClick={handlePrint}>
+          <ELButton
+            variant="primary"
+            icon={<PrinterOutlined />}
+            onClick={handlePrint}
+            disabled={!htmlContent}
+          >
             Imprimir
           </ELButton>
         </Space>
       }
     >
-      <iframe
-        ref={iframeRef}
-        src={pdfUrl}
-        style={{
-          width: '100%',
-          height: '100%',
-          border: 'none',
-          display: 'block',
-        }}
-        title="Extrato da Carteira"
-      />
+      {renderContent()}
     </ELModal>
   );
 }

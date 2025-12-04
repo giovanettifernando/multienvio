@@ -20,15 +20,24 @@ import type { CardMethod } from "@/types/billing";
 import { PaymentMethodCard } from "@/components/wallet/PaymentMethodCard";
 
 async function fetchCards(): Promise<CardMethod[]> {
-  // ✅ Migrado para endpoint real (Prisma) ao invés de mock
-  // Usando /api/cards que já faz o mapeamento holderName → holder
-  const response = await fetch("/api/cards");
+  const response = await fetch("/api/account/cards");
   if (!response.ok) {
     throw new Error("Não foi possível carregar cartões");
   }
-  const data = await response.json();
-  // O endpoint /api/cards retorna array direto com o mapeamento correto
-  return Array.isArray(data) ? data : [];
+  const result = await response.json();
+  // O endpoint retorna { data: { items, pagination } }
+  const items = result?.data?.items ?? result?.items ?? [];
+  // Mapear holderName → holder e brand para lowercase
+  return items.map((card: { id: string; brand: string; last4: string; holderName?: string; holder?: string; expMonth: number; expYear: number; isDefault?: boolean; mpToken?: string }) => ({
+    id: card.id,
+    brand: (card.brand?.toLowerCase() ?? "other") as CardMethod["brand"],
+    last4: card.last4,
+    holder: card.holderName ?? card.holder ?? "",
+    expMonth: card.expMonth,
+    expYear: card.expYear,
+    isDefault: card.isDefault,
+    token: card.mpToken ?? "",
+  }));
 }
 
 export default function MetodosClient() {

@@ -23,9 +23,46 @@ export interface PickupRequest {
 export interface PickupRequestWithShipment extends PickupRequest {
   shipment: {
     id: string;
-    trackingCode: string;
+    trackingCode?: string | null;
+    platformTrackingCode?: string | null;
     carrier?: string | null;
     service?: string | null;
+    originCep?: string | null;
+    destinationCep?: string | null;
+    recipientName?: string | null;
+  };
+  collector?: {
+    id: string;
+    name: string;
+  } | null;
+}
+
+/**
+ * Estrutura de uma tentativa de coleta armazenada no campo attemptNotes
+ */
+export interface PickupAttemptNote {
+  date: string; // ISO date string
+  note: string;
+  operator?: string;
+  success?: boolean;
+}
+
+/**
+ * Dados completos de uma coleta para a página de detalhes
+ */
+export interface PickupRequestDetail extends Omit<PickupRequest, 'attemptCount'> {
+  attemptCount: number;
+  attemptNotes: PickupAttemptNote[];
+  collectedAt?: string | null;
+  collectedBy?: string | null;
+  shipment: {
+    id: string;
+    platformTrackingCode?: string | null;
+    carrier?: string | null;
+    service?: string | null;
+    originCep?: string | null;
+    destinationCep?: string | null;
+    recipientName?: string | null;
   };
   collector?: {
     id: string;

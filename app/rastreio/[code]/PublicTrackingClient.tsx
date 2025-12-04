@@ -14,37 +14,28 @@ import { ELGrid, ELFlex } from "@/components/ui/ELGrid";
 
 const { Text } = Typography;
 
-const STATUS_LABELS: Record<string, string> = {
-  criado: "Criado",
-  pending_payment: "Aguardando pagamento",
-  awaiting_pickup: "Aguardando coleta",
-  awaiting_posting: "Aguardando postagem",
-  ready_for_posting: "Pronto para postagem",
-  posted: "Postado",
-  in_transit: "Em trânsito",
-  out_for_delivery: "Em rota de entrega",
-  delivered: "Entregue",
-  cancelled: "Cancelado",
-  payment_failed: "Falha no pagamento",
-};
-
-const STATUS_VARIANTS: Record<string, StatusVariant> = {
-  criado: "default",
-  pending_payment: "warning",
-  awaiting_pickup: "processing",
-  awaiting_posting: "default",
-  ready_for_posting: "processing",
-  posted: "processing",
-  in_transit: "processing",
-  out_for_delivery: "warning",
-  delivered: "success",
-  cancelled: "danger",
-  payment_failed: "danger",
+// Mapeamento de status público para variante visual
+const PUBLIC_STATUS_VARIANTS: Record<string, StatusVariant> = {
+  DADOS_RECEBIDOS: "default",
+  AGUARDANDO_POSTAGEM: "warning",
+  POSTADO_ORIGEM: "processing",
+  EM_TRANSITO: "processing",
+  EM_DESTINO: "processing",
+  EM_ROTA_ENTREGA: "warning",
+  DISPONIVEL_RETIRADA: "warning",
+  TENTATIVA_NAO_REALIZADA: "warning",
+  ENTREGUE: "success",
+  RETORNANDO_REMETENTE: "warning",
+  DEVOLVIDO_REMETENTE: "danger",
+  ENVIO_CANCELADO: "danger",
 };
 
 type TrackingData = {
   trackingCode: string;
   status: string;
+  publicStatus: string;
+  publicStatusTitle: string;
+  publicStatusDescription: string;
   carrier: string;
   service: string;
   origin: {
@@ -111,30 +102,29 @@ export default function PublicTrackingClient() {
     );
   }
 
-  console.log('[PublicTrackingPage] Data recebida:', {
-    hasVolumes: !!data.volumes,
-    volumesCount: data.volumes?.length,
-    volumes: data.volumes
-  });
-
   return (
     <div style={{ maxWidth: 800, margin: "0 auto", padding: "16px" }}>
       <ELFlex direction="col" gap="md">
         {/* BLOCO 1: Status Atual + Código (compacto) */}
         <Card
           style={{
-            backgroundColor: "#fafafa",
-            border: "1px solid #d9d9d9",
+            backgroundColor: "var(--el-color-bg-container, #fafafa)",
+            border: "1px solid var(--el-color-border, #d9d9d9)",
           }}
           styles={{ body: { padding: "12px 16px" } }}
         >
           <ELFlex direction="col" gap="sm">
             <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
               <Text strong style={{ fontSize: 14 }}>Status:</Text>
-              <ELStatusTag variant={STATUS_VARIANTS[data.status] || "default"}>
-                {STATUS_LABELS[data.status] || data.status}
+              <ELStatusTag variant={PUBLIC_STATUS_VARIANTS[data.publicStatus] || "default"}>
+                {data.publicStatusTitle}
               </ELStatusTag>
             </div>
+            {data.publicStatusDescription && (
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                {data.publicStatusDescription}
+              </Text>
+            )}
             <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
               <Text style={{ fontSize: 13 }}>Código:</Text>
               <Text code style={{ fontSize: 12 }}>{data.trackingCode}</Text>

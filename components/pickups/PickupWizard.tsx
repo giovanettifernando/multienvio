@@ -98,26 +98,60 @@ export function PickupWizard({ sender, shipments }: PickupWizardProps) {
   }, [selectedShipments]);
 
   const onSubmit = async (values: WizardForm) => {
-    const payload = {
-      ...values,
-      totals,
-    };
+    // Criar uma pickup request para cada envio selecionado
+    const { shipmentsIds, schedule, notes } = values;
 
-    const response = await fetch("/api/pickups", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-
-    if (!response.ok) {
-      const body = await response.json().catch(() => undefined);
-      messageApi.error(body?.mensagem ?? "Não foi possível criar a coleta");
+    if (shipmentsIds.length === 0) {
+      messageApi.warning("Selecione pelo menos um envio");
       return;
     }
 
-    const created = await response.json();
-    messageApi.success("Coleta solicitada com sucesso");
-    router.replace(`/coletas/${created.id}`);
+    // Converter horários para ISO datetime combinando com a data
+    const baseDate = schedule.date;
+    const windowStart = baseDate && schedule.windowStart
+      ? `${baseDate}T${schedule.windowStart}:00`
+      : undefined;
+    const windowEnd = baseDate && schedule.windowEnd
+      ? `${baseDate}T${schedule.windowEnd}:00`
+      : undefined;
+
+    const results = await Promise.allSettled(
+      shipmentsIds.map(async (shipmentId) => {
+        const response = await fetch("/api/coletas", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            shipmentId,
+            windowStart,
+            windowEnd,
+            notes,
+          }),
+        });
+
+        if (!response.ok) {
+          const body = await response.json().catch(() => ({}));
+          throw new Error(body.message ?? "Erro ao criar coleta");
+        }
+
+        return response.json();
+      })
+    );
+
+    const successes = results.filter((r) => r.status === "fulfilled");
+    const failures = results.filter((r) => r.status === "rejected");
+
+    if (failures.length > 0 && successes.length === 0) {
+      messageApi.error("Não foi possível criar as coletas");
+      return;
+    }
+
+    if (failures.length > 0) {
+      messageApi.warning(`${successes.length} coleta(s) criada(s), ${failures.length} falhou`);
+    } else {
+      messageApi.success(`${successes.length} coleta(s) solicitada(s) com sucesso`);
+    }
+
+    router.replace("/coletas");
   };
 
   const nextStep = async () => {

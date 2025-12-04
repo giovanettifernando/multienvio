@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
-import { Card, Row, Col, DatePicker, Space, App } from "antd";
+import { useState } from "react";
+import { Card, DatePicker, Space, App } from "antd";
 import { PrinterOutlined } from "@ant-design/icons";
 import { useRouter } from "next/navigation";
 import dayjs, { Dayjs } from "dayjs";
@@ -13,6 +13,8 @@ import { PageShell } from "@/components/shared/PageShell";
 import { ELButton } from "@/components/ui/ELButton";
 import { ELInput } from "@/components/ui/ELInput";
 import tableStyles from "@/components/ui/ELTableWrapper.module.css";
+import gridStyles from "@/components/ui/ELGrid.module.css";
+import { cn } from "@/lib/utils/cn";
 
 const { RangePicker } = DatePicker;
 
@@ -111,30 +113,33 @@ export default function ExtratoClient() {
         </Card>
       </div>
 
-      {/* Resumo do período */}
-      {summary && (
-        <PeriodSummaryCard summary={summary} loading={isLoading} />
-      )}
+      {/* Grid: Resumo + Transações lado a lado */}
+      <div className={cn(gridStyles.grid, gridStyles.gridSidebar)}>
+        {/* Resumo do período */}
+        {summary && (
+          <PeriodSummaryCard summary={summary} loading={isLoading} />
+        )}
 
-      {/* Tabela de transações */}
-      <Card title="Transações">
-        <StatementTable
-          transactions={transactions}
-          loading={isLoading}
-          pagination={
-            pagination
-              ? {
-                  current: pagination.page,
-                  pageSize: pagination.limit,
-                  total: pagination.total,
-                  onChange: (newPage) => setPage(newPage),
-                  showSizeChanger: false,
-                  showTotal: (total: number) => `Total: ${total} transações`,
-                }
-              : undefined
-          }
-        />
-      </Card>
+        {/* Tabela de transações */}
+        <Card title="Transações">
+          <StatementTable
+            transactions={transactions}
+            loading={isLoading}
+            pagination={
+              pagination
+                ? {
+                    current: pagination.page,
+                    pageSize: pagination.limit,
+                    total: pagination.total,
+                    onChange: (newPage) => setPage(newPage),
+                    showSizeChanger: false,
+                    showTotal: (total: number) => `Total: ${total} transações`,
+                  }
+                : undefined
+            }
+          />
+        </Card>
+      </div>
 
       {/* Modal de visualização de PDF */}
       <StatementPDFModal

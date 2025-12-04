@@ -127,13 +127,13 @@ function NFeDetails({
   ];
 
   return (
-    <Space direction="vertical" style={{ width: "100%" }} size={12}>
+    <Space orientation="vertical" style={{ width: "100%" }} size={12}>
       {/* Header com chave e ações */}
       <Alert
         type="success"
         icon={<CheckCircleOutlined />}
-        message={
-          <Space direction="vertical" size={4} style={{ width: "100%" }}>
+        title={
+          <Space orientation="vertical" size={4} style={{ width: "100%" }}>
             <Typography.Text strong>
               <FileTextOutlined style={{ marginRight: 8 }} />
               NF-e carregada com sucesso
@@ -446,7 +446,7 @@ export function VolumeNFeTab({ volumeCount }: VolumeNFeTabProps) {
   });
 
   return (
-    <Space direction="vertical" size={16} style={{ width: "100%" }}>
+    <Space orientation="vertical" size={16} style={{ width: "100%" }}>
       <Space>
         <Typography.Text type="secondary">
           {filledCount} de {volumeCount} volume(s) com NF-e

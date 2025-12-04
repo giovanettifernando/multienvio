@@ -5,7 +5,6 @@ import {
   CloudUploadOutlined,
   ExperimentOutlined,
   FileAddOutlined,
-  RocketOutlined,
   SearchOutlined,
 } from "@ant-design/icons";
 import { Button, Card, Flex, Tooltip } from "antd";
@@ -40,12 +39,6 @@ const ACTIONS: Array<{
     description: "Agendar retirada",
     href: "/coletas/nova",
     icon: <CalendarOutlined />,
-  },
-  {
-    label: "Criar devolução",
-    description: "Fluxo logística reversa",
-    href: "/devolucoes/nova",
-    icon: <RocketOutlined />,
   },
   {
     label: "Simular em massa",

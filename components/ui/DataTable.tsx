@@ -229,14 +229,14 @@ export function DataTable<T extends object>({
           ))}
 
           {/* Paginação para card mode */}
-          {pagination !== false && (
+          {pagination !== false && pagination?.onChange && (
             <Pagination
-              current={pagination?.current}
-              pageSize={pagination?.pageSize ?? 10}
-              total={pagination?.total ?? data.length}
-              onChange={pagination?.onChange}
-              showSizeChanger={pagination?.showSizeChanger ?? true}
-              showTotal={pagination?.showTotal}
+              current={pagination.current}
+              pageSize={pagination.pageSize ?? 10}
+              total={pagination.total ?? data.length}
+              onChange={pagination.onChange}
+              showSizeChanger={pagination.showSizeChanger ?? true}
+              showTotal={pagination.showTotal}
               style={{ marginTop: 16, textAlign: 'center' }}
             />
           )}

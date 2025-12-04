@@ -221,7 +221,7 @@ export default function ShipmentsClient() {
           return (statusOrder[a.status] || 0) - (statusOrder[b.status] || 0);
         },
         render: (_value, row: Shipment) => (
-          <Space direction="vertical" size={4}>
+          <Space orientation="vertical" size={4}>
             <ELStatusTag variant={STATUS_VARIANTS[row.status] ?? "default"}>
               {row.status}
             </ELStatusTag>
@@ -408,7 +408,7 @@ export default function ShipmentsClient() {
         {divergencesLoading ? (
           <ELSkeleton active paragraph={{ rows: 4 }} />
         ) : divergencesData?.divergences && divergencesData.divergences.length > 0 ? (
-          <Space direction="vertical" size="large" style={{ width: '100%' }}>
+          <Space orientation="vertical" size="large" style={{ width: '100%' }}>
             {divergencesData.divergences.map((divergence) => (
               <div key={divergence.id} style={{ borderBottom: '1px solid #f0f0f0', paddingBottom: 16 }}>
                 <Text strong style={{ fontSize: 16, marginBottom: 12, display: 'block' }}>

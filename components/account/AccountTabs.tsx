@@ -1,7 +1,14 @@
 "use client";
 
-import React, { useEffect, useSyncExternalStore } from "react";
-import { Tabs } from "antd";
+import { useEffect, useSyncExternalStore } from "react";
+import { Tabs, Space } from "antd";
+import {
+  EnvironmentOutlined,
+  CreditCardOutlined,
+  TeamOutlined,
+  InboxOutlined,
+  LockOutlined,
+} from "@ant-design/icons";
 import AddressesList from "./AddressesList";
 import CardsList from "./CardsList";
 import RecipientsList from "./RecipientsList";
@@ -53,11 +60,31 @@ export default function AccountTabs() {
       activeKey={activeKey}
       onChange={handleChange}
       items={[
-        { key: "addresses", label: "Endereços", children: <AddressesList /> },
-        { key: "cards", label: "Cartões", children: <CardsList /> },
-        { key: "recipients", label: "Destinatários recorrentes", children: <RecipientsList /> },
-        { key: "recurring-items", label: "Itens recorrentes", children: <RecurringItemsList /> },
-        { key: "security", label: "Segurança", children: <SecurityForm /> },
+        {
+          key: "addresses",
+          label: <Space><EnvironmentOutlined />Meus endereços</Space>,
+          children: <AddressesList />,
+        },
+        {
+          key: "cards",
+          label: <Space><CreditCardOutlined />Cartões</Space>,
+          children: <CardsList />,
+        },
+        {
+          key: "recipients",
+          label: <Space><TeamOutlined />Destinatários recorrentes</Space>,
+          children: <RecipientsList />,
+        },
+        {
+          key: "recurring-items",
+          label: <Space><InboxOutlined />Itens recorrentes</Space>,
+          children: <RecurringItemsList />,
+        },
+        {
+          key: "security",
+          label: <Space><LockOutlined />Segurança</Space>,
+          children: <SecurityForm />,
+        },
       ]}
     />
   );
