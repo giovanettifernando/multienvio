@@ -1,0 +1,66 @@
+/**
+ * ELStatusTag - Estilos para tags de status usando tokens CSS
+ */
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--el-spacing-xs, 4px);
+  padding: 2px 10px;
+  border-radius: 100px;
+  font-size: var(--el-font-size-xs, 12px);
+  font-weight: 500;
+  line-height: 1.5;
+  border: none;
+  white-space: nowrap;
+}
+
+/* Status variants */
+.success {
+  background-color: var(--status-success-bg);
+  color: var(--status-success-text);
+}
+
+.warning {
+  background-color: var(--status-warning-bg);
+  color: var(--status-warning-text);
+}
+
+.danger {
+  background-color: var(--status-danger-bg);
+  color: var(--status-danger-text);
+}
+
+.info {
+  background-color: var(--status-info-bg);
+  color: var(--status-info-text);
+}
+
+.processing {
+  background-color: var(--status-processing-bg);
+  color: var(--status-processing-text);
+}
+
+.default {
+  background-color: var(--status-default-bg);
+  color: var(--status-default-text);
+}
+
+/* Size variants */
+.small {
+  padding: 1px 8px;
+  font-size: 11px;
+}
+
+.large {
+  padding: 4px 14px;
+  font-size: var(--el-font-size-sm, 13px);
+}
+
+/* With dot indicator */
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: currentColor;
+}

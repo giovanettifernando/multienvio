@@ -12,12 +12,10 @@ import Checkbox from "antd/es/checkbox";
 import Form from "antd/es/form";
 import Typography from "antd/es/typography";
 import { GoogleOutlined } from "@ant-design/icons";
-import { FormCard } from "@/components/ui/FormCard";
 import { ELButton } from "@/components/ui/ELButton";
 import { ELCard } from "@/components/ui/ELCard";
 import { ELFormItem } from "@/components/ui/ELFormItem";
 import { ELInput } from "@/components/ui/ELInput";
-import { NEW_THEME_ENABLED } from "@/lib/features/new-theme";
 import { spacing } from "@/lib/ui/theme";
 import {
   loginSchema,
@@ -120,18 +118,14 @@ export default function LoginClient() {
         requiredMark={false}
         onFinish={handleSubmit(onSubmit)}
         aria-live="polite"
-        className={NEW_THEME_ENABLED ? styles.form : undefined}
+        className={styles.form}
       >
         {formError ? (
           <Alert
             type="error"
             message={formError}
             showIcon
-            style={
-              NEW_THEME_ENABLED
-                ? { marginBottom: spacing.md }
-                : { marginBottom: 16 }
-            }
+            style={{ marginBottom: spacing.md }}
           />
         ) : null}
 
@@ -176,7 +170,7 @@ export default function LoginClient() {
           )}
         />
 
-        <div className={NEW_THEME_ENABLED ? styles.inlineRow : undefined}>
+        <div className={styles.inlineRow}>
           <Controller
             name="lembrarEmail"
             control={control}
@@ -185,21 +179,18 @@ export default function LoginClient() {
                 {...field}
                 checked={field.value}
                 aria-checked={field.value}
-                className={NEW_THEME_ENABLED ? styles.checkboxLabel : undefined}
+                className={styles.checkboxLabel}
               >
                 Lembrar meu e-mail
               </Checkbox>
             )}
           />
-          <Link href="/auth/forgot-password" className={NEW_THEME_ENABLED ? styles.link : undefined}>
+          <Link href="/auth/forgot-password" className={styles.link}>
             Esqueci minha senha
           </Link>
         </div>
 
-        <div
-          className={NEW_THEME_ENABLED ? styles.actionsColumn : undefined}
-          style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 12 }}
-        >
+        <div className={styles.actionsColumn}>
           <ELButton
             variant="primary"
             htmlType="submit"
@@ -238,21 +229,6 @@ export default function LoginClient() {
       onSubmit,
     ],
   );
-
-  if (!NEW_THEME_ENABLED) {
-    return (
-      <FormCard
-        titulo="Entrar"
-        footer={
-          <Typography.Paragraph style={{ margin: 0 }} type="secondary">
-            Ainda não tem conta? <Link href="/auth/cadastro">Crie agora mesmo</Link>
-          </Typography.Paragraph>
-        }
-      >
-        {formContent}
-      </FormCard>
-    );
-  }
 
   return (
     <div className={styles.container}>

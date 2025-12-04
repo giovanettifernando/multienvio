@@ -2,8 +2,11 @@
  * SearchFilters - Componente padrão para filtros de busca
  */
 import React from "react";
-import { Input, Select, Flex, Button } from "antd";
+import Flex from "antd/es/flex";
 import { SearchOutlined, ReloadOutlined } from "@ant-design/icons";
+import { ELInput } from "@/components/ui/ELInput";
+import { ELSelect } from "@/components/ui/ELSelect";
+import { ELButton } from "@/components/ui/ELButton";
 import { spacing } from "@/lib/ui/theme";
 
 interface SearchFiltersProps {
@@ -32,7 +35,7 @@ export function SearchFilters({
   return (
     <Flex gap={spacing.md} wrap="wrap" align="center">
       {onSearchChange && (
-        <Input
+        <ELInput
           prefix={<SearchOutlined />}
           placeholder={searchPlaceholder}
           value={searchValue}
@@ -42,7 +45,7 @@ export function SearchFilters({
         />
       )}
       {filters?.map((filter, index) => (
-        <Select
+        <ELSelect
           key={index}
           value={filter.value}
           onChange={filter.onChange}
@@ -52,9 +55,9 @@ export function SearchFilters({
         />
       ))}
       {onReset && (
-        <Button icon={<ReloadOutlined />} onClick={onReset}>
+        <ELButton icon={<ReloadOutlined />} onClick={onReset}>
           Resetar
-        </Button>
+        </ELButton>
       )}
       {extra && <div style={{ marginLeft: "auto" }}>{extra}</div>}
     </Flex>

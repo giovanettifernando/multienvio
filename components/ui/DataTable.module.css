@@ -1,0 +1,166 @@
+/**
+ * DataTable - Estilos responsivos para tabelas de dados
+ */
+
+.tableContainer {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Tabela base usando tokens */
+.table :global(.ant-table) {
+  font-size: var(--el-font-size-sm, 13px);
+}
+
+.table :global(.ant-table-thead > tr > th) {
+  background-color: var(--color-background, #F7F8FA);
+  font-weight: 600;
+  font-size: var(--el-font-size-xs, 12px);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: var(--color-text-secondary, #4A6076);
+  padding: var(--el-spacing-md, 12px) var(--el-spacing-lg, 16px);
+  border-bottom: 1px solid var(--color-border, #CFD8E6);
+}
+
+.table :global(.ant-table-tbody > tr > td) {
+  padding: var(--el-spacing-md, 12px) var(--el-spacing-lg, 16px);
+  border-bottom: 1px solid var(--color-border-secondary, #E5EBF4);
+  vertical-align: middle;
+}
+
+.table :global(.ant-table-tbody > tr:hover > td) {
+  background-color: rgba(0, 56, 115, 0.02);
+}
+
+.table :global(.ant-table-tbody > tr:last-child > td) {
+  border-bottom: none;
+}
+
+/* Paginação */
+.table :global(.ant-pagination) {
+  margin-top: var(--el-spacing-lg, 16px);
+}
+
+.table :global(.ant-pagination-item-active) {
+  background-color: var(--color-primary, #003873);
+  border-color: var(--color-primary, #003873);
+}
+
+.table :global(.ant-pagination-item-active a) {
+  color: #ffffff;
+}
+
+/* Card mode para telas muito pequenas */
+.cardList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--el-spacing-md, 12px);
+}
+
+.card {
+  background: var(--color-surface, #FFFFFF);
+  border: 1px solid var(--color-border-secondary, #E5EBF4);
+  border-radius: var(--el-radius-base, 12px);
+  padding: var(--el-spacing-lg, 16px);
+}
+
+.cardRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--el-spacing-sm, 8px);
+  padding: var(--el-spacing-xs, 4px) 0;
+}
+
+.cardRow:not(:last-child) {
+  border-bottom: 1px solid var(--color-border-secondary, #E5EBF4);
+}
+
+.cardLabel {
+  font-size: var(--el-font-size-xs, 12px);
+  color: var(--color-text-secondary, #4A6076);
+  font-weight: 500;
+  min-width: 100px;
+  flex-shrink: 0;
+}
+
+.cardValue {
+  font-size: var(--el-font-size-sm, 13px);
+  color: var(--color-text, #182235);
+  text-align: right;
+  flex: 1;
+}
+
+.cardActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--el-spacing-sm, 8px);
+  margin-top: var(--el-spacing-md, 12px);
+  padding-top: var(--el-spacing-md, 12px);
+  border-top: 1px solid var(--color-border-secondary, #E5EBF4);
+}
+
+/* Loading state */
+.loading {
+  padding: var(--el-spacing-xxl, 32px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Empty state */
+.empty {
+  padding: var(--el-spacing-xxl, 32px) var(--el-spacing-xl, 24px);
+  text-align: center;
+}
+
+/* Tamanhos compactos */
+.compact :global(.ant-table-thead > tr > th),
+.compact :global(.ant-table-tbody > tr > td) {
+  padding: var(--el-spacing-sm, 8px) var(--el-spacing-md, 12px);
+}
+
+/* Scroll indicator para mobile */
+@media (max-width: 768px) {
+  .tableContainer::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 24px;
+    background: linear-gradient(to right, transparent, rgba(0, 0, 0, 0.05));
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  }
+
+  .tableContainer.hasScroll::after {
+    opacity: 1;
+  }
+
+  .table :global(.ant-table-thead > tr > th),
+  .table :global(.ant-table-tbody > tr > td) {
+    padding: var(--el-spacing-sm, 8px) var(--el-spacing-md, 12px);
+    font-size: var(--el-font-size-xs, 12px);
+  }
+}
+
+/* Breakpoint para card mode */
+@media (max-width: 480px) {
+  .mobileCards .tableContainer {
+    display: none;
+  }
+
+  .mobileCards .cardList {
+    display: flex;
+  }
+}
+
+@media (min-width: 481px) {
+  .cardList {
+    display: none;
+  }
+}

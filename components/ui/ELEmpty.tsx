@@ -2,7 +2,6 @@ import Empty from "antd/es/empty";
 import Typography from "antd/es/typography";
 import type { EmptyProps } from "antd/es/empty";
 import type { ReactNode } from "react";
-import { NEW_THEME_ENABLED } from "@/lib/features/new-theme";
 import { cn } from "@/lib/utils/cn";
 import { ELButton } from "./ELButton";
 import styles from "./ELEmpty.module.css";
@@ -30,18 +29,6 @@ export function ELEmpty({
   image,
   ...emptyProps
 }: ELEmptyProps) {
-  if (!NEW_THEME_ENABLED) {
-    const fallbackDescription = description ?? title ?? undefined;
-    return (
-      <Empty
-        {...emptyProps}
-        image={image}
-        description={fallbackDescription}
-        className={className}
-      />
-    );
-  }
-
   return (
     <div className={cn(styles.empty, className)}>
       <Empty

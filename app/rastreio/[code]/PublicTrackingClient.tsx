@@ -5,11 +5,8 @@ import { useQuery } from "@tanstack/react-query";
 import {
   Card,
   Typography,
-  Button,
   Space,
   Skeleton,
-  Alert,
-  Tag,
   Row,
   Col,
 } from "antd";
@@ -17,6 +14,9 @@ import { CopyOutlined } from "@ant-design/icons";
 import { TrackingTimeline, type TrackingEvent } from "@/components/track/TrackingTimeline";
 import { PublicShipmentItems, type PublicVolume } from "@/components/track/PublicShipmentItems";
 import { App } from "antd";
+import { ELButton } from "@/components/ui/ELButton";
+import { ELAlert } from "@/components/ui/ELAlert";
+import { ELStatusTag, type StatusVariant } from "@/components/ui/ELStatusTag";
 
 const { Text } = Typography;
 
@@ -34,18 +34,18 @@ const STATUS_LABELS: Record<string, string> = {
   payment_failed: "Falha no pagamento",
 };
 
-const STATUS_COLORS: Record<string, string> = {
+const STATUS_VARIANTS: Record<string, StatusVariant> = {
   criado: "default",
   pending_payment: "warning",
   awaiting_pickup: "processing",
   awaiting_posting: "default",
   ready_for_posting: "processing",
-  posted: "blue",
-  in_transit: "blue",
-  out_for_delivery: "orange",
+  posted: "processing",
+  in_transit: "processing",
+  out_for_delivery: "warning",
   delivered: "success",
-  cancelled: "error",
-  payment_failed: "error",
+  cancelled: "danger",
+  payment_failed: "danger",
 };
 
 type TrackingData = {
@@ -108,11 +108,10 @@ export default function PublicTrackingClient() {
   if (error || !data) {
     return (
       <div style={{ maxWidth: 800, margin: "0 auto", padding: 16 }}>
-        <Alert
-          type="error"
-          message="Envio não encontrado"
+        <ELAlert
+          variant="danger"
+          title="Envio não encontrado"
           description="Verifique se o código de rastreamento está correto e tente novamente."
-          showIcon
         />
       </div>
     );
@@ -138,25 +137,22 @@ export default function PublicTrackingClient() {
           <Space orientation="vertical" size={8} style={{ width: "100%" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
               <Text strong style={{ fontSize: 14 }}>Status:</Text>
-              <Tag
-                color={STATUS_COLORS[data.status] || "default"}
-                style={{ fontSize: 13, margin: 0 }}
-              >
+              <ELStatusTag variant={STATUS_VARIANTS[data.status] || "default"}>
                 {STATUS_LABELS[data.status] || data.status}
-              </Tag>
+              </ELStatusTag>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
               <Text style={{ fontSize: 13 }}>Código:</Text>
               <Text code style={{ fontSize: 12 }}>{data.trackingCode}</Text>
-              <Button
+              <ELButton
                 size="small"
-                type="text"
+                variant="ghost"
                 icon={<CopyOutlined />}
                 onClick={handleCopyTrackingCode}
                 style={{ padding: "0 8px", height: 24 }}
               >
                 Copiar
-              </Button>
+              </ELButton>
             </div>
           </Space>
         </Card>

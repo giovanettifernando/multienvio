@@ -1,9 +1,9 @@
 "use client";
 
-import { Tag } from "antd";
 import type { Status } from "@/lib/validation/support";
+import { ELStatusTag, type StatusVariant } from "@/components/ui/ELStatusTag";
 
-const STATUS_COLOR: Record<Status, string> = {
+const STATUS_VARIANT: Record<Status, StatusVariant> = {
   aberto: "processing",
   em_atendimento: "warning",
   resolvido: "success",
@@ -19,8 +19,13 @@ const STATUS_LABEL: Record<Status, string> = {
 
 type Props = {
   status: Status;
+  showDot?: boolean;
 };
 
-export function TicketStatusTag({ status }: Props) {
-  return <Tag color={STATUS_COLOR[status]}>{STATUS_LABEL[status]}</Tag>;
+export function TicketStatusTag({ status, showDot }: Props) {
+  return (
+    <ELStatusTag variant={STATUS_VARIANT[status]} showDot={showDot}>
+      {STATUS_LABEL[status]}
+    </ELStatusTag>
+  );
 }

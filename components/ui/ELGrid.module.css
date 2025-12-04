@@ -1,0 +1,139 @@
+/**
+ * ELGrid - Sistema de grid padronizado usando tokens CSS
+ */
+
+/* Grid container base */
+.grid {
+  display: grid;
+  gap: var(--el-spacing-lg, 16px);
+}
+
+/* Grid de 2 colunas */
+.grid2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+/* Grid de 3 colunas */
+.grid3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+/* Grid de 4 colunas */
+.grid4 {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+/* Grid auto-fill responsivo */
+.gridAuto {
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+}
+
+/* Grid de sidebar (1.1fr + 1.4fr) */
+.gridSidebar {
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.4fr);
+  align-items: start;
+}
+
+/* Grid de dashboard (2:1 ratio) */
+.gridDashboard {
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  align-items: start;
+}
+
+/* Gap variants */
+.gapSm {
+  gap: var(--el-spacing-sm, 8px);
+}
+
+.gapMd {
+  gap: var(--el-spacing-md, 12px);
+}
+
+.gapLg {
+  gap: var(--el-spacing-lg, 16px);
+}
+
+.gapXl {
+  gap: var(--el-spacing-xl, 24px);
+}
+
+/* Row/Col gap variants */
+.gapRowLg {
+  row-gap: var(--el-spacing-lg, 16px);
+}
+
+.gapColXl {
+  column-gap: var(--el-spacing-xl, 24px);
+}
+
+/* Responsive breakpoints */
+@media (max-width: 1024px) {
+  .grid4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .gridDashboard {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .grid2,
+  .grid3,
+  .grid4,
+  .gridSidebar,
+  .gridDashboard {
+    grid-template-columns: 1fr;
+  }
+
+  .grid {
+    gap: var(--el-spacing-md, 12px);
+  }
+
+  .gapXl {
+    gap: var(--el-spacing-lg, 16px);
+  }
+}
+
+/* Flex container alternativo */
+.flex {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--el-spacing-lg, 16px);
+}
+
+.flexRow {
+  flex-direction: row;
+}
+
+.flexCol {
+  flex-direction: column;
+}
+
+.flexCenter {
+  align-items: center;
+  justify-content: center;
+}
+
+.flexBetween {
+  justify-content: space-between;
+}
+
+.flexEnd {
+  justify-content: flex-end;
+}
+
+/* Span utilities */
+.spanFull {
+  grid-column: 1 / -1;
+}
+
+.span2 {
+  grid-column: span 2;
+}
+
+@media (max-width: 768px) {
+  .span2 {
+    grid-column: span 1;
+  }
+}

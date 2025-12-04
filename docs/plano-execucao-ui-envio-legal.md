@@ -1,220 +1,191 @@
-# Plano de execução por fases – Modernização da UI (Envio Legal)
+# Plano de execução por fases – Modernização da UI (Envio Legal) — v2
+
+Estado atual pós-execução inicial: tokens/vars aplicados em `globals.css`, wrappers EL adotados em filtros/forms principais, novos componentes base (DataTable, ELModal/Drawer, ELAlert, ELStatusTag, ELGrid, PageShell CSS) criados, mas DataTable/modais/ações inline ainda não foram migrados e há legados (`NEW_THEME_ENABLED` nos imports, loaders inline, Table padrão nas listas).
 
 ## Visão geral do plano de execução
-- Escopo: somente interface do remetente em `app/(envio)` e páginas públicas relacionadas (ex.: `/rastreio/[code]`) e auth. Admin/coletores ficam fora.
-- Estrutura em 4 fases sequenciais que entregam valor incremental e reduzem risco de big bang.
-- Cada fase fecha um conjunto claro de páginas/rotas e componentes, com critérios de aceite e checklist de QA.
+- Escopo: interface do remetente (`app/(envio)` + páginas públicas de rastreio e auth). Fora de escopo: `/admin`, `/coletores`/`/collectors`.
+- Fases sequenciais com entregas pequenas e percebíveis; mantêm a stack atual (AntD + wrappers EL).
 
-## Fase 1 – Fundamentos de tema e wrappers base
-**Objetivo**: Consolidar tokens de tema e eliminar bifurcações (`NEW_THEME_ENABLED`), garantindo que botões, inputs e formulários usem wrappers EL com os tokens centralizados.
+## Fase 1 – Consolidação de fundações e limpeza de legados
+**Objetivo**: remover bifurcações remanescentes, alinhar tokens/vars e garantir que wrappers e layouts base estejam consistentes antes de tocar listas e modais.
 
-**Escopo**: ajustes em tema/tokens globais, wrappers EL e páginas de auth + formulários principais. Fora: tabelas, layouts de página, modais, responsividade avançada.
+**Escopo**: limpeza de `NEW_THEME_ENABLED`, tokens e loaders; revisão de wrappers faltantes; ajustes rápidos no `DashboardShell/PageShell`. Fora: tabelas e modais (fases seguintes).
 
-### Tarefas (numeradas)
-1) Padronizar tokens e variáveis globais  
-   - Descrição: alinhar `app/globals.css` às cores/tokens de `lib/ui/theme.ts`, remover duplicatas e hardcodes básicos (`#0A2955` da sidebar só depois na fase 3).  
-   - Arquivos/rotas: `app/globals.css`, `lib/ui/theme.ts` (somente ajustes de var mapping).  
+### Tarefas
+1) Remover flag legacy e imports de `NEW_THEME_ENABLED`  
+   - Descrição: excluir uso do flag nas páginas de auth e qualquer condicional restante; documentar que o tema é único.  
+   - Arquivos/rotas: `lib/features/new-theme.ts`, `app/(auth)/auth/*`, eventuais imports em componentes.  
    - Dependências: nenhuma.  
-   - Benefício: fonte única de verdade para cores e espaçamentos.  
-   - Prioridade: Alta | Esforço: Baixo | Branch: `feat/ui-fase1-tokens`.  
-   - Riscos: impacto global de CSS; validar em smoke geral.
+   - Benefício: elimina bifurcação de código e risco de regressão de tema.  
+   - Prioridade: Alta | Esforço: Baixo | Branch: `feat/ui-fase1-remover-flag`.  
+   - Riscos: mínimos; testar fluxos de auth.
 
-2) Remover `NEW_THEME_ENABLED` e unificar wrappers EL  
-   - Descrição: eliminar checks de feature flag em `ELButton`, `ELInput`, `ELSelect`, `ELFormItem`, auth pages; garantir uso direto do estilo novo.  
-   - Arquivos/rotas: `components/ui/EL*.tsx`, `app/(auth)/auth/*`, `components/ui/FormCard`.  
-   - Dependências: Tarefa 1.  
-   - Benefício: evita bifurcação de estilos e reduz dívida.  
-   - Prioridade: Alta | Esforço: Médio | Branch: `feat/ui-fase1-wrappers`.  
-   - Riscos: login/signup são críticos; testar todos fluxos de auth.
+2) Revisar wrappers EL faltantes em formulários/filtros pontuais  
+   - Descrição: trocar `Input/Select/Button` puros em `QuickCalculator`, modais de pagamento/checkout, filtros de Etiquetas e ações em `CheckoutModal/CheckoutCartModal`.  
+   - Arquivos/rotas: `components/dashboard/QuickCalculator.tsx`, `components/payments/*`, `app/(envio)/etiquetas/EtiquetasClient.tsx`, `app/(envio)/cotacoes/finalizar/*`.  
+   - Dependências: nenhuma.  
+   - Benefício: consistência visual e estados de foco/erro padronizados.  
+   - Prioridade: Média | Esforço: Médio | Branch: `feat/ui-fase1-wrappers-restantes`.  
+   - Riscos: mudanças em fluxos críticos de checkout; testar.
 
-3) Migrar uso direto de Button/Input/Select para wrappers EL em formulários e filtros simples  
-   - Descrição: trocar componentes puros AntD por wrappers EL em filtros básicos e forms menores (Coletas, Shipments, Rastreamento, Carteira filtros, Public Tracking, Support).  
-   - Arquivos/rotas: `app/(envio)/coletas/page.tsx`, `shipments/page.tsx`, `rastreamento/page.tsx`, `carteira/extrato`, `carteira/faturas`, `rastreio/[code]`, `suporte/*.tsx`, `QuickCalculator`.  
-   - Dependências: Tarefa 2.  
-   - Benefício: consistência visual e foco no tema central.  
-   - Prioridade: Média | Esforço: Médio | Branch: `feat/ui-fase1-forms-filtros`.  
-   - Riscos: filtros podem mudar altura; revisar layout após troca.
+3) Ajustar PageShell/Sidebar/DashboardShell para overflow e padding padrão  
+   - Descrição: garantir padding 24/16, remover `height: 100vh`/`overflow: hidden` que afeta mobile, revisar sticky em mobile.  
+   - Arquivos: `components/shared/PageShell.tsx`, `components/layout/dashboard-shell.tsx`, `components/layout/Sidebar.tsx`.  
+   - Dependências: nenhuma.  
+   - Benefício: navegação sem cortes em mobile e ritmo visual consistente.  
+   - Prioridade: Média | Esforço: Médio | Branch: `feat/ui-fase1-layout-base`.  
+   - Riscos: comportamento de colapso da sidebar; validar breakpoints.
 
-4) Definir tokens de tipografia e aplicar em headers principais  
-   - Descrição: documentar escala (display/h1/h2/h3/body/caption) e aplicar em `PageShell` e títulos de páginas sem wrapper (devolucoes, conta/perfil, rastreio público).  
-   - Arquivos/rotas: `components/shared/PageShell.tsx`, `app/(envio)/devolucoes/page.tsx`, `app/(envio)/conta/perfil/page.tsx`, `app/rastreio/[code]/PublicTrackingClient.tsx`.  
-   - Dependências: Tarefa 1.  
-   - Benefício: hierarquia visual coerente.  
-   - Prioridade: Média | Esforço: Baixo-Médio | Branch: `feat/ui-fase1-tipografia`.  
-   - Riscos: mínimos; conferir contraste.
-
-**Critérios de aceite da fase**
-- Nenhum uso de `NEW_THEME_ENABLED` nos wrappers e páginas de auth.
-- Tokens e CSS vars alinhados (cores primária/secondary/border/bg) sem duplicações conflitantes.
-- Filtros e formulários mencionados usam `ELButton/ELInput/ELSelect/ELFormItem`.
-- Títulos de páginas básicas usam escala tipográfica definida.
-
-**Checklist de QA/Testes**
-- Fluxos de auth: login, cadastro, reset/verify.  
-- Filtros: coletas, shipments, rastreamento, extrato, faturas.  
-- Navegação geral para validar cores e fontes globais.  
-- Verificar contraste e foco em botões/inputs.
-
-## Fase 2 – Tabelas e responsividade de listas
-**Objetivo**: Criar e aplicar um wrapper `DataTable` responsivo, com toolbar de filtros consistente, reduzindo scroll horizontal bruto em mobile.
-
-**Escopo**: tabelas e blocos de filtros associados das páginas de listas. Fora: ajustes de layout de dashboard e modais.
-
-### Tarefas
-1) Criar `DataTable` responsivo em `components/ui`  
-   - Descrição: componente que encapsula headerBg, radius 12, empty state padrão, `scroll` inteligente (`max-content`), densidades e toolbar de filtros stackable.  
-   - Arquivos: `components/ui/DataTable` (novo), reuse tokens de `lib/ui/theme.ts`.  
-   - Dependências: Fase 1 tokens.  
-   - Benefício: base única para listas.  
-   - Prioridade: Alta | Esforço: Médio | Branch: `feat/ui-fase2-datatable`.
-
-2) Aplicar `DataTable` em Shipments e Coletas  
-   - Descrição: substituir `Table` manual e Tag colors por versão com toolbar responsiva; mapear status via tokens semânticos.  
-   - Arquivos/rotas: `app/(envio)/shipments/page.tsx`, `app/(envio)/coletas/page.tsx`.  
-   - Dependências: Tarefa 1; status tokens na fase 4 são desejáveis mas não bloqueiam.  
-   - Benefício: maior uso mobile e consistência.  
-   - Prioridade: Alta | Esforço: Médio | Branch: `feat/ui-fase2-datatable-shipments-coletas`.  
-   - Riscos: ações críticas (cancelar, divergência) devem continuar acessíveis.
-
-3) Aplicar `DataTable` em Rastreamento e Etiquetas  
-   - Descrição: migrar tabelas de `/rastreamento` e `/etiquetas` para o wrapper, revisando colunas mínimas e ações (abrir modal/imprimir).  
-   - Arquivos/rotas: `app/(envio)/rastreamento/page.tsx`, `app/(envio)/etiquetas/EtiquetasClient.tsx`.  
-   - Dependências: Tarefa 1.  
-   - Benefício: UX mobile e empty states padronizados.  
-   - Prioridade: Média | Esforço: Médio | Branch: `feat/ui-fase2-datatable-rastreamento-etiquetas`.  
-   - Riscos: largura de colunas; validar modais de etiquetas.
-
-4) Aplicar `DataTable` em Carteira (Extrato/Faturas)  
-   - Descrição: migrar tabelas financeiras, garantir filtros stack em mobile, ajustar `scroll`.  
-   - Arquivos/rotas: `app/(envio)/carteira/extrato`, `app/(envio)/carteira/faturas`.  
-   - Dependências: Tarefa 1.  
-   - Benefício: leitura em telas pequenas e consistência com financeiro.  
-   - Prioridade: Média | Esforço: Médio | Branch: `feat/ui-fase2-datatable-carteira`.  
-   - Riscos: formatos de moeda/data; rever paginação.
-
-**Critérios de aceite da fase**
-- Shipments, Coletas, Rastreamento, Etiquetas, Extrato e Faturas usando `DataTable` com toolbar responsiva.
-- Nenhum overflow horizontal bruto em mobile para essas listas.
-- Empty states padronizados (mensagem/ação) nas tabelas migradas.
-
-**Checklist de QA/Testes**
-- Responsividade: breakpoints sm/md/lg para cada lista.  
-- Ações principais: imprimir etiquetas, cancelar/envio, abrir detalhes, filtros.  
-- Paginação e ordenação permanecem funcionais.  
-- Empty/loading states exibidos corretamente.
-
-## Fase 3 – Layouts, grids e PageShell
-**Objetivo**: Harmonizar espaçamentos, gutters e containers, reduzindo CSS inline e diferenças de layout entre páginas.
-
-**Escopo**: PageShell, DashboardShell/Sidebar, páginas de overview, carteira, suporte, minha conta, e containers públicos. Fora: modais/drawers (fase 4).
-
-### Tarefas
-1) Padronizar PageShell (padding/gap por breakpoint)  
-   - Descrição: expor props para `containerWidth` e ajustes de sticky em mobile; definir padding 24/16 (desk/mobile).  
-   - Arquivos: `components/shared/PageShell.tsx`.  
-   - Dependências: Fase 1 tipografia.  
-   - Benefício: ritmo visual consistente.  
-   - Prioridade: Alta | Esforço: Baixo | Branch: `feat/ui-fase3-pageshell`.
-
-2) Ajustar DashboardShell/Sidebar para tokens de cor e altura fluida  
-   - Descrição: substituir hardcode do sidebar (#0A2955) por token brand ou primário, remover `height: 100vh`/`overflow: hidden` no Content em mobile, alinhar trigger/header com spacing tokens.  
-   - Arquivos: `components/layout/dashboard-shell.tsx`, `components/layout/Sidebar.tsx`.  
-   - Dependências: Fase 1 tokens.  
-   - Benefício: navegação consistente e sem cortes em mobile.  
-   - Prioridade: Alta | Esforço: Médio | Branch: `feat/ui-fase3-dashboard-shell`.  
-   - Riscos: comportamento de colapso em breakpoints; testar.
-
-3) Harmonizar grids e gutters em Overview, Carteira, Suporte e Minha Conta  
-   - Descrição: aplicar padrões de gutter `[12,12]`/`[16,16]` e padding de seções, remover `style` inline e `Card` borderless ad-hoc; usar `ELCard` onde fizer sentido.  
-   - Arquivos/rotas: `app/(envio)/(overview)/OverviewClient.tsx`, `app/(envio)/carteira/page.tsx`, `suporte/*.tsx`, `minha-conta/MinhaContaClient.tsx`.  
-   - Dependências: Tarefa 1 da fase e Fase 1 wrappers.  
-   - Benefício: legibilidade e consistência.  
-   - Prioridade: Média | Esforço: Médio | Branch: `feat/ui-fase3-layouts-principais`.  
-   - Riscos: alturas de cards do dashboard; revisar em desktop/mobile.
-
-4) Normalizar containers públicos e placeholders  
-   - Descrição: aplicar PageShell/variante pública em `/rastreio/[code]`, `/devolucoes`, `/conta/perfil`, removendo estilos inline e alinhando padding.  
-   - Arquivos/rotas: `app/rastreio/[code]/PublicTrackingClient.tsx`, `app/(envio)/devolucoes/page.tsx`, `app/(envio)/conta/perfil/page.tsx`.  
-   - Dependências: Tarefa 1 da fase.  
-   - Benefício: experiência coesa também fora do dashboard.  
-   - Prioridade: Baixa | Esforço: Baixo | Branch: `feat/ui-fase3-public-containers`.  
+4) Substituir loaders inline por presets (`ELSkeleton`/`ELAlert`)  
+   - Descrição: retirar spinners inline em `app/(envio)/layout.tsx`, `LayoutWrapper`, modais; usar skeleton/alerta padronizado.  
+   - Arquivos: `app/(envio)/layout.tsx`, `app/(envio)/LayoutWrapper.tsx`, modais que mostram “Carregando...”.  
+   - Dependências: nenhuma.  
+   - Benefício: UX consistente e acessível.  
+   - Prioridade: Baixa | Esforço: Baixo | Branch: `feat/ui-fase1-loaders`.  
    - Riscos: mínimos.
 
 **Critérios de aceite da fase**
-- PageShell com padding/gap documentados e aderidos nas páginas citadas.
-- Sidebar e DashboardShell usam cores/token e não causam overflow em mobile.
-- Overview, Carteira, Suporte, Minha Conta sem CSS inline de layout/gutter divergente.
-- Páginas públicas/placeholders com container consistente.
+- Nenhum import/uso de `NEW_THEME_ENABLED`.
+- Filtros/forms citados usam `ELButton/ELInput/ELSelect`.
+- PageShell/Sidebar não causam overflow em mobile; padding/gaps seguem tokens.
+- Loaders inline substituídos por `ELSkeleton`/`ELAlert` onde cabível.
 
-**Checklist de QA/Testes**
-- Responsividade do layout geral (abrir/fechar sidebar em mobile).  
-- Páginas: overview, carteira, suporte, minha conta, rastreio público.  
-- Scroll vertical não é bloqueado em mobile.  
-- Checar alinhamento de títulos/ações no sticky do PageShell.
+**Checklist de QA**
+- Fluxos de auth e checkout (cotação finalizada, pagamento do carrinho).
+- Navegação mobile com sidebar colapsando corretamente.
+- Verificar telas com novo loader (overview, layout fallback).
 
-## Fase 4 – Modais, status e refinamentos de UX
-**Objetivo**: Unificar modais/drawers, tokens de status e feedbacks (alerts/empty), e ajustar botões de ação customizados.
+## Fase 2 – Listas responsivas com DataTable
+**Objetivo**: substituir `Table` + `ELTableWrapper` por `DataTable` com card-mode mobile e toolbar de filtros integrada.
 
-**Escopo**: modais/drawers de checkout, pagamentos, etiquetas, suporte; tags/status; alerts/empty states; botões customizados. Fora: tema/base já cobertos.
+**Escopo**: todas as listas principais do remetente. Fora: modais/drawers (fase 3).
 
 ### Tarefas
-1) Criar presets de modal/drawer  
-   - Descrição: definir estilos padrão (radius 12, header denso, footer alinhado, larguras por tipo) e aplicar em `CheckoutModal`, `CheckoutCartModal`, `LabelPrintModal`, `ShipmentLabelModal`, `StatementPDFModal`, `TicketDetailsDrawer`.  
-   - Arquivos/rotas: `components/payments/*Modal.tsx`, `components/labels/*Modal.tsx`, `app/(envio)/shipments/ShipmentsClient.tsx` (modal de divergência), `components/support/TicketDetailsDrawer.tsx`.  
+1) Shipments e Coletas no `DataTable`  
+   - Descrição: mapear colunas para `DataTableColumn`, definir `cardLabel` e `showInCard`, mover filtros para toolbar do DataTable; substituir `Tag` por `ELStatusTag`; substituir ações inline por `ELButton` icon-only.  
+   - Arquivos/rotas: `app/(envio)/shipments/ShipmentsClient.tsx`, `app/(envio)/coletas/ColetasClient.tsx`.  
    - Dependências: Fase 1 wrappers.  
-   - Benefício: UX previsível e acessível.  
-   - Prioridade: Alta | Esforço: Médio | Branch: `feat/ui-fase4-modais`.
+   - Benefício: uso confortável em mobile e códigos de status sem hardcodes.  
+   - Prioridade: Alta | Esforço: Médio-Alto | Branch: `feat/ui-fase2-datatable-shipments-coletas`.  
+   - Riscos: ações críticas (cancelar, divergência); validar.
 
-2) Unificar tokens de status/tags  
-   - Descrição: criar mapa central de status/cores e aplicar em `TrackingStatusTag`, `PickupStatusTag`, status em Shipments/Coletas/Rastreamento/Support; remover hardcodes de `STATUS_COLORS`.  
-   - Arquivos/rotas: `components/ui/TrackingStatusTag.tsx`, `components/ui/PickupStatusTag.tsx`, `app/(envio)/shipments/ShipmentsClient.tsx`, `app/(envio)/coletas/ColetasClient.tsx`, `app/(envio)/rastreamento/page.tsx`, `support` components.  
-   - Dependências: Tarefa 1 (pode ser paralelo).  
-   - Benefício: semântica e manutenção simples.  
-   - Prioridade: Alta | Esforço: Médio | Branch: `feat/ui-fase4-status-tokens`.  
-   - Riscos: garantir contraste e legendas corretas.
+2) Rastreamento e Etiquetas no `DataTable`  
+   - Descrição: aplicar DataTable em `/rastreamento` e `/etiquetas`, garantindo colunas mínimas e ações (abrir detalhes/imprimir) em card-mode.  
+   - Arquivos/rotas: `app/(envio)/rastreamento/RastreamentoClient.tsx`, `app/(envio)/etiquetas/EtiquetasClient.tsx`, `components/labels/LabelsTable.tsx`.  
+   - Dependências: Tarefa 1.  
+   - Benefício: leitura em mobile e empty/loading padronizados.  
+   - Prioridade: Média | Esforço: Médio | Branch: `feat/ui-fase2-datatable-rastreio-etiquetas`.  
+   - Riscos: ações de impressão devem permanecer acessíveis.
 
-3) Padronizar alerts/empty e botões de ação custom  
-   - Descrição: substituir alerts/empty avulsos por `ELEmpty` e alerts tonais, ajustar botões custom (ex.: divergência em shipments, copiar código em rastreio público) para `ELButton` com ícones/tamanhos.  
-   - Arquivos/rotas: `app/(envio)/shipments/ShipmentsClient.tsx`, `app/(envio)/carteira/*.tsx`, `app/(envio)/cotacoes/*` (banners), `app/rastreio/[code]/PublicTrackingClient.tsx`, `suporte/*.tsx`.  
-   - Dependências: Fase 1 wrappers.  
-   - Benefício: feedback visual consistente e acessível.  
-   - Prioridade: Média | Esforço: Médio | Branch: `feat/ui-fase4-feedbacks`.  
-   - Riscos: não perder mensagens críticas de erro.
-
-4) Ajustar wizards e fluxos multi-step  
-   - Descrição: alinhar padrões de steps/footer sticky em `cotacoes/finalizar` e `PickupWizard`; remover CSS inline de loading em `layout.tsx`/`LayoutWrapper` em favor de presets.  
-   - Arquivos/rotas: `app/(envio)/cotacoes/finalizar/*`, `components/pickups/PickupWizard.tsx`, `app/(envio)/LayoutWrapper.tsx`.  
-   - Dependências: Fase 1/3 (layout/padding).  
-   - Benefício: ergonomia em fluxos longos.  
-   - Prioridade: Média | Esforço: Médio-Alto | Branch: `feat/ui-fase4-wizards`.  
-   - Riscos: fluxo de compra; testar end-to-end.
+3) Financeiro (Extrato/Faturas) no `DataTable`  
+   - Descrição: mover tabelas de extrato e faturas para DataTable, com filtros stackáveis e paginação integrada; usar `ELAlert` para banners.  
+   - Arquivos/rotas: `app/(envio)/carteira/extrato`, `app/(envio)/carteira/faturas`.  
+   - Dependências: Tarefa 1.  
+   - Benefício: UX mobile e toolbar unificada.  
+   - Prioridade: Média | Esforço: Médio | Branch: `feat/ui-fase2-datatable-financeiro`.  
+   - Riscos: formatos de moeda/data; validar paginação.
 
 **Critérios de aceite da fase**
-- Modais/drawers citados usam preset com radius/padding/largura padrão e botões alinhados.
-- Status em Shipments/Coletas/Rastreamento/Support usam mapa central sem hardcodes.
-- Botões custom migrados para ELButton; alerts/empty padronizados.
-- Wizards com footer sticky consistente e sem loaders inline improvisados.
+- Shipments, Coletas, Rastreamento, Etiquetas, Extrato e Faturas usam `DataTable` com card-mode mobile (sem overflow horizontal bruto).
+- Ações principais acessíveis em mobile; empty/loading states padronizados.
 
-**Checklist de QA/Testes**
-- Fluxo de checkout (cotacoes/finalizar), pagamento do carrinho, geração de etiquetas.  
-- Modais: checkout, faturas, etiquetas, divergência, suporte.  
-- Status/tags em tabelas e timelines.  
-- Responsividade de modais/drawers em sm/md.
+**Checklist de QA**
+- Breakpoints sm/md/lg para todas as listas.
+- Ações: imprimir etiqueta, cancelar envio, abrir detalhe, filtros/paginação.
+- Empty e loading exibidos corretamente.
+
+## Fase 3 – Modais, drawers e feedbacks
+**Objetivo**: padronizar modais/drawers e feedbacks (alerts/empty) com os novos componentes EL.
+
+**Escopo**: modais/drawers de checkout, pagamentos, etiquetas, suporte; alerts/empty nos fluxos principais. Fora: layouts/base (já tratados).
+
+### Tarefas
+1) Adotar `ELModal`/`ELDrawer` nos fluxos críticos  
+   - Descrição: substituir modais existentes por `ELModal` (presets de tamanho/radius) e `ELDrawer` (detalhes de ticket); ajustar footers com `ELButton`.  
+   - Arquivos/rotas: `components/payments/CheckoutModal.tsx`, `components/payments/CheckoutCartModal.tsx`, `components/labels/*Modal.tsx`, `components/support/TicketDetailsDrawer.tsx`, `components/pickups/PickupWizard.tsx` (steps/footers).  
+   - Dependências: Fase 1 (wrappers).  
+   - Benefício: UX previsível, acessibilidade e tokens aplicados.  
+   - Prioridade: Alta | Esforço: Médio | Branch: `feat/ui-fase3-modais`.
+
+2) Padronizar alerts/empty states  
+   - Descrição: trocar `Alert`/`message` avulsos por `ELAlert` tonais e `ELEmpty` em tabelas/wizards; banners informativos em Carteira/Faturas/Rastreio público usam `ELAlert`.  
+   - Arquivos/rotas: `app/(envio)/shipments/ShipmentsClient.tsx`, `app/(envio)/coletas/ColetasClient.tsx`, `app/(envio)/etiquetas/EtiquetasClient.tsx`, `app/rastreio/[code]/PublicTrackingClient.tsx`, carteiras.  
+   - Dependências: nenhuma.  
+   - Benefício: feedback consistente e acessível.  
+   - Prioridade: Média | Esforço: Médio | Branch: `feat/ui-fase3-feedbacks`.  
+   - Riscos: não perder mensagens críticas.
+
+3) Botões de ação icon-only e status unificados  
+   - Descrição: substituir botões inline com cores hardcoded (Shipments, Etiquetas, Rastreamento público) por `ELButton` icon-only e `ELStatusTag`; remover `Tag` com cores custom.  
+   - Arquivos/rotas: `app/(envio)/shipments/ShipmentsClient.tsx`, `app/(envio)/etiquetas/EtiquetasClient.tsx`, `app/rastreio/[code]/PublicTrackingClient.tsx`.  
+   - Dependências: Tarefa 1.  
+   - Benefício: consistência de ações e status, melhor acessibilidade.  
+   - Prioridade: Média | Esforço: Médio | Branch: `feat/ui-fase3-actions-status`.  
+   - Riscos: garantir tooltips/aria-labels.
+
+**Critérios de aceite da fase**
+- Modais/drawers citados usam `ELModal/ELDrawer` com radius/padding padrão.
+- Alerts/empties padronizados em listas e fluxos de erro.
+- Ações de linha usam `ELButton` icon-only; status via `ELStatusTag`.
+
+**Checklist de QA**
+- Fluxo de checkout (cotação e carrinho), geração/impressão de etiquetas.
+- Suporte: abrir/fechar drawer, mudar status de ticket.
+- Modais em mobile (scroll e largura).
+
+## Fase 4 – Layouts, grids e páginas públicas
+**Objetivo**: alinhar containers, gutters e grids usando `ELGrid/PageShell`, e concluir páginas públicas/placeholders.
+
+**Escopo**: Overview, Suporte, Etiquetas, Rastreamento público, placeholders de Devoluções/Perfil. Fora: tabelas (já migradas na fase 2).
+
+### Tarefas
+1) Aplicar `ELGrid` e gutters padrão em Overview e Suporte/Etiquetas  
+   - Descrição: substituir Row/Col/padding inline por `ELGrid` e gaps tokenizados; equalizar alturas dos cards principais do dashboard.  
+   - Arquivos/rotas: `app/(envio)/(overview)/OverviewClient.tsx`, `app/(envio)/suporte/*.tsx`, `app/(envio)/etiquetas/EtiquetasClient.tsx`.  
+   - Dependências: Fase 2 (para tabelas de Etiquetas).  
+   - Benefício: ritmo visual e responsividade consistente.  
+   - Prioridade: Média | Esforço: Médio | Branch: `feat/ui-fase4-layouts-grid`.  
+   - Riscos: ajustes de altura dos cards do dashboard.
+
+2) Normalizar páginas públicas/placeholders com PageShell pública  
+   - Descrição: aplicar variante de `PageShell`/container público em `/rastreio/[code]`, `/devolucoes`, `/conta/perfil`; remover padding inline.  
+   - Arquivos/rotas: `app/rastreio/[code]/PublicTrackingClient.tsx`, `app/(envio)/devolucoes/page.tsx`, `app/(envio)/conta/perfil/page.tsx`.  
+   - Dependências: Fase 3 (alerts/feedbacks).  
+   - Benefício: experiência coesa fora do dashboard.  
+   - Prioridade: Baixa | Esforço: Baixo-Médio | Branch: `feat/ui-fase4-public`.  
+   - Riscos: mínimos.
+
+3) Revisar Sidebar theme (brand dark vs light)  
+   - Descrição: decidir se mantém brand dark ou passa para light; ajustar vars (`--sidebar-*`) e contraste de ícones/trigger.  
+   - Arquivos: `components/layout/Sidebar.tsx`, `Sidebar.module.css`, `app/globals.css`.  
+   - Dependências: Fase 1 (tokens).  
+   - Benefício: alinhamento ao tema geral e contraste.  
+   - Prioridade: Baixa | Esforço: Baixo | Branch: `feat/ui-fase4-sidebar-theme`.  
+   - Riscos: aceitação de branding; validar com PO.
+
+**Critérios de aceite da fase**
+- Overview, Suporte, Etiquetas usam `ELGrid`/gaps padronizados (sem paddings inline).
+- Páginas públicas/placeholders com container consistente.
+- Sidebar com tema definido e documentado (dark brand ou light).
+
+**Checklist de QA**
+- Responsividade dos grids no dashboard e suporte.
+- Páginas públicas em mobile (rastreio público).
+- Verificar contraste da sidebar no tema escolhido.
 
 ## Cronograma sugerido
-1. Fase 1 (Fundamentos) – desbloqueia demais fases.  
-2. Fase 2 (Tabelas) – depende dos tokens/wrappers.  
-3. Fase 3 (Layouts) – pode rodar em paralelo ao final da Fase 2, mas publicar depois para evitar conflitos de padding.  
-4. Fase 4 (Modais/Status/UX) – após Fase 2 (para status em tabelas) e com PageShell ajustado (Fase 3) para wizards.
+1. Fase 1 (fundação/limpeza) – 1 sprint curto; destrava demais fases.  
+2. Fase 2 (DataTable) – 1-2 sprints; prioridade alta para listas críticas.  
+3. Fase 3 (modais/feedbacks) – 1 sprint após DataTable nas listas principais.  
+4. Fase 4 (layouts/public) – 1 sprint final, pode rodar paralelo ao final da Fase 3.
 
 ## Riscos gerais e mitigação
-- **Impacto em rotas críticas (cotação, checkout, wallet)**: manter branches pequenos e feature flags se necessário; smoke test diário.  
-- **Quebra de responsividade ao trocar componentes**: validar breakpoints e usar `DataTable` com variações antes de remover tabelas antigas.  
-- **Sidebar/header afetando navegação**: testar em dispositivos reais/DevTools mobile.  
-- **Degradação de acessibilidade**: garantir foco visível em ELButton e aria-labels em ações icônicas.
+- **Fluxos críticos (checkout/financeiro)**: manter branches pequenos, testes E2E básicos antes de merge.  
+- **Quebra de responsividade ao migrar tabelas**: validar card-mode em dispositivos reais/DevTools.  
+- **Ações inline perdidas**: garantir `aria-label`/tooltips ao trocar botões por icon-only.  
+- **Tema da sidebar**: alinhar com PO/Brand antes de alterar.
 
 ## Observações finais
-- Manter alinhamento com UX/PO para escolhas de cores de status e comportamento de wizards.  
-- Evitar adicionar novas dependências; aproveitar AntD e wrappers EL existentes.  
-- Cada branch deve ser pequena e revisada com checklist de QA da fase correspondente.  
-- Registrar decisões de tokens/status em documentação curta no repositório (README de UI ou docs/).  
+- Não adicionar dependências de UI; usar AntD + wrappers EL recém-criados.  
+- Documentar mapa de status/cores junto ao `ELStatusTag` para reuso.  
+- Manter checklist de QA por fase no PR e registrar migrações (lista de páginas migradas para DataTable/ELModal).  

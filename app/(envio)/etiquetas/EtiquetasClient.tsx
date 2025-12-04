@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useRef } from 'react';
-import { App, Spin, Modal, Button, Space } from 'antd';
+import { App, Spin, Modal, Space } from 'antd';
 import { PrinterOutlined, DownloadOutlined, CloseOutlined } from '@ant-design/icons';
 import { LabelsTable } from '@/components/labels/LabelsTable';
 import { LabelPrintModal } from '@/components/labels/LabelPrintModal';
@@ -9,6 +9,7 @@ import { ShipmentLabelModal, type ShipmentLabelData } from '@/components/labels'
 import type { LabelItem, PackageItem } from '@/lib/types/label';
 import { PageShell } from '@/components/shared/PageShell';
 import { useQueryClient } from '@tanstack/react-query';
+import { ELButton } from '@/components/ui/ELButton';
 
 // Verificar se é transportadora Correios
 function isCorreiosCarrier(carrier: string): boolean {
@@ -320,15 +321,15 @@ export default function EtiquetasClient() {
           centered
           footer={
             <Space>
-              <Button icon={<CloseOutlined />} onClick={handleClosePdfModal}>
+              <ELButton icon={<CloseOutlined />} onClick={handleClosePdfModal}>
                 Fechar
-              </Button>
-              <Button icon={<DownloadOutlined />} onClick={handleDownloadPdf}>
+              </ELButton>
+              <ELButton icon={<DownloadOutlined />} onClick={handleDownloadPdf}>
                 Download PDF
-              </Button>
-              <Button type="primary" icon={<PrinterOutlined />} onClick={handlePrintPdf}>
+              </ELButton>
+              <ELButton variant="primary" icon={<PrinterOutlined />} onClick={handlePrintPdf}>
                 Imprimir
-              </Button>
+              </ELButton>
             </Space>
           }
           styles={{

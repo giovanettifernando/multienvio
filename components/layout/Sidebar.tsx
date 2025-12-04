@@ -2,7 +2,9 @@
 
 import { useMemo } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { Layout, Menu, Flex } from 'antd';
+import Layout from 'antd/es/layout';
+import Menu from 'antd/es/menu';
+import Flex from 'antd/es/flex';
 import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
@@ -10,6 +12,7 @@ import {
 import { sidebarItems } from './sidebar-items';
 import { UserPanel } from './UserPanel';
 import type { MenuProps } from 'antd';
+import styles from './Sidebar.module.css';
 
 const { Sider } = Layout;
 
@@ -53,40 +56,17 @@ export function Sidebar({ collapsed, onCollapse }: SidebarProps) {
 
   // Sidebar content
   const sidebarContent = (
-    <Flex vertical style={{ height: '100%' }}>
+    <div className={styles.content}>
       {/* Logo */}
-      <div
-        style={{
-          height: 64,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '16px 24px',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
-        }}
-      >
+      <div className={styles.logo}>
         {collapsed ? (
-          <div
-            style={{
-              color: '#fff',
-              fontWeight: 700,
-              fontSize: 18,
-              letterSpacing: 2,
-            }}
-          >
-            EL
-          </div>
+          <div className={styles.logoText}>EL</div>
         ) : (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src="/assets/logo-envio-legal-branca.svg"
             alt="Envio Legal"
-            style={{
-              width: 160,
-              height: 'auto',
-              maxHeight: 40,
-              objectFit: 'contain',
-            }}
+            className={styles.logoImage}
           />
         )}
       </div>
@@ -95,7 +75,7 @@ export function Sidebar({ collapsed, onCollapse }: SidebarProps) {
       <UserPanel collapsed={collapsed} />
 
       {/* Menu */}
-      <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
+      <div className={styles.menuWrapper}>
         <Menu
           mode="inline"
           theme="dark"
@@ -105,11 +85,11 @@ export function Sidebar({ collapsed, onCollapse }: SidebarProps) {
           style={{
             border: 0,
             padding: '16px 8px',
-            background: '#0A2955',
+            background: 'var(--sidebar-bg)',
           }}
         />
       </div>
-    </Flex>
+    </div>
   );
 
   return (
@@ -126,30 +106,11 @@ export function Sidebar({ collapsed, onCollapse }: SidebarProps) {
       }}
       collapsible
       trigger={
-        <Flex
-          align="center"
-          justify="center"
-          style={{
-            height: 48,
-            cursor: 'pointer',
-            transition: 'all 0.2s',
-            color: '#fff',
-          }}
-        >
+        <div className={styles.trigger}>
           {collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
-        </Flex>
+        </div>
       }
-      style={{
-        background: '#0A2955',
-        borderRight: '1px solid rgba(255, 255, 255, 0.1)',
-        overflow: 'hidden',
-        position: 'fixed',
-        left: 0,
-        top: 0,
-        bottom: 0,
-        height: '100vh',
-        zIndex: 1000,
-      }}
+      className={styles.sidebar}
     >
       {sidebarContent}
       <style jsx global>{`
@@ -174,29 +135,29 @@ export function Sidebar({ collapsed, onCollapse }: SidebarProps) {
 
         /* Blue theme for dark menu */
         .ant-layout-sider {
-          background: #0A2955 !important;
+          background: var(--sidebar-bg) !important;
         }
 
         .ant-menu-dark,
         .ant-menu-dark .ant-menu-sub {
-          background: #0A2955;
+          background: var(--sidebar-bg);
         }
 
         .ant-menu-dark .ant-menu-item,
         .ant-menu-dark .ant-menu-submenu-title {
-          color: #E6EEF7;
-          border-radius: 12px;
+          color: var(--sidebar-text);
+          border-radius: var(--el-radius-base);
           margin: 4px 8px;
           padding-inline: 12px !important;
         }
 
         .ant-menu-dark .ant-menu-item:hover {
-          background: rgba(255, 255, 255, 0.08);
+          background: var(--sidebar-hover);
         }
 
         .ant-menu-dark .ant-menu-item-selected {
-          background: rgba(255, 255, 255, 0.18) !important;
-          color: #fff !important;
+          background: var(--sidebar-active) !important;
+          color: var(--sidebar-text-active) !important;
           font-weight: 500;
         }
 
@@ -206,7 +167,7 @@ export function Sidebar({ collapsed, onCollapse }: SidebarProps) {
 
         .ant-menu-dark .ant-menu-item .anticon,
         .ant-menu-dark .ant-menu-submenu-title .anticon {
-          color: #fff;
+          color: var(--sidebar-text-active);
           font-size: 18px;
         }
 
@@ -220,7 +181,7 @@ export function Sidebar({ collapsed, onCollapse }: SidebarProps) {
           height: 22px;
           align-items: center;
           justify-content: center;
-          color: #fff !important;
+          color: var(--sidebar-text-active) !important;
         }
 
         /* Hide only the text when collapsed (AntD handles this, we ensure) */
@@ -267,12 +228,12 @@ export function Sidebar({ collapsed, onCollapse }: SidebarProps) {
         /* Sider trigger styling */
         .ant-layout-sider-trigger {
           background: rgba(0, 0, 0, 0.2) !important;
-          border-top: 1px solid rgba(255, 255, 255, 0.1);
+          border-top: 1px solid var(--sidebar-border);
         }
 
         /* Red logout button in UserPanel */
         .user-panel-logout {
-          color: #ff4d4f !important;
+          color: var(--color-danger) !important;
           padding: 0;
         }
 
@@ -282,7 +243,7 @@ export function Sidebar({ collapsed, onCollapse }: SidebarProps) {
         }
 
         .user-panel-logout:focus {
-          color: #ff4d4f !important;
+          color: var(--color-danger) !important;
         }
 
         /* Hide menu tooltips on mobile to avoid overlap with content */

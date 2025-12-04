@@ -1,10 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { Table, Button, Typography, Select, Space, Alert } from "antd";
+import Table from "antd/es/table";
+import Typography from "antd/es/typography";
+import Space from "antd/es/space";
+import Alert from "antd/es/alert";
 import { EnvironmentOutlined, EyeOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
+import { ELButton } from "@/components/ui/ELButton";
+import { ELSelect } from "@/components/ui/ELSelect";
 import {
   CollectionStatus,
   COLLECTION_STATUS_LABELS,
@@ -93,10 +98,10 @@ export function ColetasTable({ data, loading }: ColetasTableProps) {
       key: "status",
       width: 150,
       render: (status: ColetaStatus, record) => (
-        <Select
+        <ELSelect
           value={status}
           style={{ width: "100%" }}
-          onChange={(newStatus) => handleStatusChange(record.id, newStatus)}
+          onChange={(newStatus) => handleStatusChange(record.id, newStatus as ColetaStatus)}
           options={[
             {
               label: COLLECTION_STATUS_LABELS[CollectionStatus.ABERTA],
@@ -148,8 +153,8 @@ export function ColetasTable({ data, loading }: ColetasTableProps) {
       fixed: "right",
       render: (_, coleta) => (
         <Space size="small">
-          <Button
-            type="link"
+          <ELButton
+            variant="link"
             icon={<EyeOutlined />}
             size="small"
             onClick={() => {
@@ -158,15 +163,15 @@ export function ColetasTable({ data, loading }: ColetasTableProps) {
             }}
           >
             Detalhes
-          </Button>
-          <Button
-            type="link"
+          </ELButton>
+          <ELButton
+            variant="link"
             danger
             size="small"
             onClick={() => handleRemove(coleta.id)}
           >
             Remover
-          </Button>
+          </ELButton>
         </Space>
       ),
     },

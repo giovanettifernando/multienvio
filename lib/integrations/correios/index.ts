@@ -110,3 +110,16 @@ export {
   type TrackingResult,
   type ResultadoRastro,
 } from './rastro';
+
+// CEP (Consulta de Endereços)
+export {
+  consultarCep,
+  consultarCepCorreios,
+  consultarCepBrasilApi,
+  normalizeCep,
+  isValidCep,
+  formatCep,
+  CepError,
+  type CepResult,
+  type CorreiosCepResponse,
+} from './cep';

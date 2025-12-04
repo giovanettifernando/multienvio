@@ -1,0 +1,77 @@
+/**
+ * PageShell - Estilos usando tokens CSS do sistema de design
+ */
+
+.shell {
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background-color: var(--color-primary, #003873);
+  padding: var(--el-spacing-lg, 16px) var(--el-spacing-xl, 24px);
+  margin-left: calc(-1 * var(--el-spacing-xl, 24px));
+  margin-right: calc(-1 * var(--el-spacing-xl, 24px));
+  margin-bottom: var(--el-spacing-lg, 16px);
+}
+
+.headerContent {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--el-spacing-md, 12px);
+}
+
+.title {
+  margin: 0 !important;
+  font-size: var(--el-font-size-xl, 20px) !important;
+  font-weight: 600 !important;
+  color: #ffffff !important;
+  line-height: var(--el-line-height-tight, 1.25) !important;
+}
+
+.extra {
+  color: #ffffff;
+}
+
+/* Gap variants */
+.gapXs {
+  gap: var(--el-spacing-xs, 4px);
+}
+
+.gapSm {
+  gap: var(--el-spacing-sm, 8px);
+}
+
+.gapMd {
+  gap: var(--el-spacing-md, 12px);
+}
+
+.gapLg {
+  gap: var(--el-spacing-lg, 16px);
+}
+
+.gapXl {
+  gap: var(--el-spacing-xl, 24px);
+}
+
+.gapXxl {
+  gap: var(--el-spacing-xxl, 32px);
+}
+
+/* Responsivo */
+@media (max-width: 768px) {
+  .header {
+    padding: var(--el-spacing-md, 12px) var(--el-spacing-lg, 16px);
+    margin-left: calc(-1 * var(--el-spacing-lg, 16px));
+    margin-right: calc(-1 * var(--el-spacing-lg, 16px));
+  }
+
+  .title {
+    font-size: var(--el-font-size-lg, 18px) !important;
+  }
+}

@@ -2,12 +2,13 @@
 
 import { useState } from 'react';
 import { PlusOutlined } from '@ant-design/icons';
-import { Button, Card, Typography } from 'antd';
+import { Card, Typography } from 'antd';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { NewTicketList } from '@/components/support/NewTicketList';
 import { TicketDetailsDrawer } from '@/components/support/TicketDetailsDrawer';
 import { SupportFAQ } from '@/components/support/SupportFAQ';
 import { PageShell } from '@/components/shared/PageShell';
+import { ELButton } from '@/components/ui/ELButton';
 
 const { Title } = Typography;
 
@@ -32,14 +33,13 @@ export default function SuporteClient() {
       title="Central de Suporte"
       gap="md"
       extra={
-        <Button
-          type="primary"
-          variant="solid"
+        <ELButton
+          variant="primary"
           icon={<PlusOutlined />}
           onClick={() => router.push('/suporte/novo')}
         >
           Abrir ticket
-        </Button>
+        </ELButton>
       }
     >
       {/* Seção FAQ */}

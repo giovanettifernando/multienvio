@@ -7,18 +7,18 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import type { Resolver } from "react-hook-form";
 import {
-  Button,
   Card,
   DatePicker,
   Form,
-  Input,
-  Select,
   Space,
   Steps,
   TimePicker,
   Typography,
   message,
 } from "antd";
+import { ELButton } from "@/components/ui/ELButton";
+import { ELInput } from "@/components/ui/ELInput";
+import { ELSelect } from "@/components/ui/ELSelect";
 import dayjs from "dayjs";
 import type { CompanyWizardData } from "@/lib/validation/company";
 import { getCompanyDisplayName } from "@/lib/validation/company";
@@ -257,7 +257,7 @@ export function PickupWizard({ sender, shipments }: PickupWizardProps) {
                 control={control}
                 render={({ field }) => (
                   <Form.Item label="Transportadora preferencial">
-                    <Select {...field} options={carrierOptions} style={{ width: 200 }} />
+                    <ELSelect {...field} options={carrierOptions} style={{ width: 200 }} />
                   </Form.Item>
                 )}
               />
@@ -267,7 +267,7 @@ export function PickupWizard({ sender, shipments }: PickupWizardProps) {
                 control={control}
                 render={({ field }) => (
                   <Form.Item label="Observações">
-                    <Input.TextArea {...field} rows={3} maxLength={500} />
+                    <ELInput.TextArea {...field} rows={3} maxLength={500} />
                   </Form.Item>
                 )}
               />
@@ -276,15 +276,15 @@ export function PickupWizard({ sender, shipments }: PickupWizardProps) {
         ) : null}
 
         <Space>
-          {currentStep > 0 ? <Button onClick={previousStep}>Voltar</Button> : null}
+          {currentStep > 0 ? <ELButton onClick={previousStep}>Voltar</ELButton> : null}
           {currentStep < 2 ? (
-            <Button type="primary" onClick={nextStep}>
+            <ELButton variant="primary" onClick={nextStep}>
               Próximo
-            </Button>
+            </ELButton>
           ) : (
-            <Button type="primary" htmlType="submit">
+            <ELButton variant="primary" htmlType="submit">
               Confirmar coleta
-            </Button>
+            </ELButton>
           )}
         </Space>
       </form>

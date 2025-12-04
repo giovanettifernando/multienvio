@@ -2,12 +2,12 @@ import type {
   InputProps,
   PasswordProps,
   TextAreaProps,
+  SearchProps,
   InputRef,
 } from "antd/es/input";
 import Input from "antd/es/input";
 import type { ForwardRefExoticComponent, RefAttributes } from "react";
 import { forwardRef } from "react";
-import { NEW_THEME_ENABLED } from "@/lib/features/new-theme";
 import { cn } from "@/lib/utils/cn";
 import styles from "./ELInput.module.css";
 
@@ -20,21 +20,13 @@ type ComposedELInput = ForwardRefExoticComponent<
   TextArea: ForwardRefExoticComponent<
     TextAreaProps & RefAttributes<HTMLTextAreaElement>
   >;
+  Search: ForwardRefExoticComponent<
+    SearchProps & RefAttributes<InputRef>
+  >;
 };
 
 const BaseInput = forwardRef<InputRef, InputProps>(
   ({ className, size, ...props }, ref) => {
-    if (!NEW_THEME_ENABLED) {
-      return (
-        <Input
-          {...props}
-          className={className}
-          ref={ref}
-          size={size}
-        />
-      );
-    }
-
     return (
       <Input
         {...props}
@@ -49,17 +41,6 @@ BaseInput.displayName = "ELInput";
 
 const PasswordInput = forwardRef<InputRef, PasswordProps>(
   ({ className, size, ...props }, ref) => {
-    if (!NEW_THEME_ENABLED) {
-      return (
-        <Input.Password
-          {...props}
-          className={className}
-          ref={ref}
-          size={size}
-        />
-      );
-    }
-
     return (
       <Input.Password
         {...props}
@@ -74,16 +55,6 @@ PasswordInput.displayName = "ELInput.Password";
 
 const TextAreaInput = forwardRef<HTMLTextAreaElement, TextAreaProps>(
   ({ className, ...props }, ref) => {
-    if (!NEW_THEME_ENABLED) {
-      return (
-        <Input.TextArea
-          {...props}
-          className={className}
-          ref={ref}
-        />
-      );
-    }
-
     return (
       <Input.TextArea
         {...props}
@@ -96,6 +67,21 @@ const TextAreaInput = forwardRef<HTMLTextAreaElement, TextAreaProps>(
 );
 TextAreaInput.displayName = "ELInput.TextArea";
 
+const SearchInput = forwardRef<InputRef, SearchProps>(
+  ({ className, size, ...props }, ref) => {
+    return (
+      <Input.Search
+        {...props}
+        ref={ref}
+        className={cn(styles.search, className)}
+        size={size ?? "large"}
+      />
+    );
+  },
+);
+SearchInput.displayName = "ELInput.Search";
+
 export const ELInput = BaseInput as ComposedELInput;
 ELInput.Password = PasswordInput;
 ELInput.TextArea = TextAreaInput;
+ELInput.Search = SearchInput;

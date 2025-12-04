@@ -2,9 +2,12 @@
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Button, Card, InputNumber, Modal, Table, message, Alert } from "antd";
+import { Card, InputNumber, Modal, Table, message } from "antd";
 import { PageShell } from "@/components/shared/PageShell";
 import type { Invoice } from "@/types/billing";
+import { ELButton } from "@/components/ui/ELButton";
+import { ELAlert } from "@/components/ui/ELAlert";
+import tableStyles from "@/components/ui/ELTableWrapper.module.css";
 
 async function fetchInvoices(): Promise<Invoice[]> {
   const response = await fetch("/api/invoices");
@@ -68,55 +71,55 @@ export default function FaturasClient() {
       </Modal>
 
       <PageShell title="Faturas e recibos" gap="md">
-        <Alert
-          message="⚠️ Modo de Demonstração"
+        <ELAlert
+          variant="info"
+          title="Modo de Demonstração"
           description="Esta seção está usando dados simulados (mock). A funcionalidade de faturas será implementada quando a integração com o gateway de pagamento estiver completa."
-          type="info"
-          showIcon
           closable
-          style={{ marginBottom: 16 }}
         />
 
-        <Button type="primary" onClick={() => setModalOpen(true)}>
+        <ELButton variant="primary" onClick={() => setModalOpen(true)}>
           Gerar nova fatura
-        </Button>
+        </ELButton>
 
-        <Card variant="borderless">
-          <Table
-            rowKey="id"
-            loading={isLoading}
-            dataSource={data ?? []}
-            scroll={{ x: 600 }}
-            columns={[
-              {
-                title: "Número",
-                dataIndex: "number",
-              },
-              {
-                title: "Valor",
-                dataIndex: "amount",
-                render: (value: number) =>
-                  value.toLocaleString("pt-BR", {
-                    style: "currency",
-                    currency: "BRL",
-                  }),
-              },
-              {
-                title: "Gerada em",
-                dataIndex: "createdAt",
-                render: (value: string) => new Date(value).toLocaleString("pt-BR"),
-              },
-              {
-                title: "Ações",
-                render: (_, record: Invoice) => (
-                  <Button type="link" href={record.pdfUrl} target="_blank">
-                    Baixar PDF
-                  </Button>
-                ),
-              },
-            ]}
-          />
-        </Card>
+        <div className={tableStyles.wrapper}>
+          <Card variant="borderless">
+            <Table
+              rowKey="id"
+              loading={isLoading}
+              dataSource={data ?? []}
+              scroll={{ x: 600 }}
+              columns={[
+                {
+                  title: "Número",
+                  dataIndex: "number",
+                },
+                {
+                  title: "Valor",
+                  dataIndex: "amount",
+                  render: (value: number) =>
+                    value.toLocaleString("pt-BR", {
+                      style: "currency",
+                      currency: "BRL",
+                    }),
+                },
+                {
+                  title: "Gerada em",
+                  dataIndex: "createdAt",
+                  render: (value: string) => new Date(value).toLocaleString("pt-BR"),
+                },
+                {
+                  title: "Ações",
+                  render: (_, record: Invoice) => (
+                    <ELButton variant="link" href={record.pdfUrl} target="_blank">
+                      Baixar PDF
+                    </ELButton>
+                  ),
+                },
+              ]}
+            />
+          </Card>
+        </div>
       </PageShell>
     </>
   );

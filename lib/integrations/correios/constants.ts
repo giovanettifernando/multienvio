@@ -51,8 +51,9 @@ export const CORREIOS_ENDPOINTS = {
   // Conforme manual CWS: GET /srorastro/v1/objetos/{codigoObjeto}?resultado=T
   rastro: '/srorastro/v1/objetos',
 
-  // CEP
-  cep: '/cep/v2/enderecos',
+  // CEP - Consulta de endereço por CEP
+  // Endpoint: GET /cep/v1/enderecos/{cep}
+  cep: '/cep/v1/enderecos',
 } as const;
 
 // ============================================================================

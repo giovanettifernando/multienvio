@@ -1,8 +1,11 @@
 "use client";
 
 import React, { useState } from "react";
-import { Alert, Card, Typography, Row, Col, Button } from "antd";
+import Card from "antd/es/card";
+import Typography from "antd/es/typography";
 import { useRouter } from "next/navigation";
+import { ELButton } from "@/components/ui/ELButton";
+import { ELAlert } from "@/components/ui/ELAlert";
 import BalanceCard from "@/components/wallet/BalanceCard";
 import MonthlySummaryCard from "@/components/wallet/MonthlySummaryCard";
 import AddFundsModal from "@/components/wallet/AddFundsModal";
@@ -11,6 +14,8 @@ import TransactionsTable from "@/components/wallet/TransactionsTable";
 import { useWallet } from "@/hooks/useWallet";
 import { useCards } from "@/hooks/useAccount";
 import { PageShell } from "@/components/shared/PageShell";
+import gridStyles from "@/components/ui/ELGrid.module.css";
+import { cn } from "@/lib/utils/cn";
 
 export default function CarteiraClient() {
   const [open, setOpen] = useState(false);
@@ -22,9 +27,8 @@ export default function CarteiraClient() {
   return (
     <PageShell title="Carteira" gap="md">
       {(cards?.length ?? 0) === 0 ? (
-        <Alert
-          type="info"
-          showIcon
+        <ELAlert
+          variant="info"
           title="Sem cartões cadastrados"
           description={
             <span>
@@ -37,26 +41,22 @@ export default function CarteiraClient() {
         />
       ) : null}
 
-      <Row gutter={[24, 16]}>
-        <Col xs={24} lg={12}>
-          <BalanceCard
-            onAddFunds={() => setOpen(true)}
-            onResolveDebt={() => setResolveDebtOpen(true)}
-          />
-        </Col>
-        <Col xs={24} lg={12}>
-          {data?.monthlySummary && (
-            <MonthlySummaryCard summary={data.monthlySummary} loading={isLoading} />
-          )}
-        </Col>
-      </Row>
+      <div className={cn(gridStyles.grid, gridStyles.grid2, gridStyles.gapXl)}>
+        <BalanceCard
+          onAddFunds={() => setOpen(true)}
+          onResolveDebt={() => setResolveDebtOpen(true)}
+        />
+        {data?.monthlySummary && (
+          <MonthlySummaryCard summary={data.monthlySummary} loading={isLoading} />
+        )}
+      </div>
 
       <Card
         title="Últimas transações"
         extra={
-          <Button onClick={() => router.push("/carteira/extrato")}>
+          <ELButton onClick={() => router.push("/carteira/extrato")}>
             Ver extrato completo
-          </Button>
+          </ELButton>
         }
       >
         <TransactionsTable />

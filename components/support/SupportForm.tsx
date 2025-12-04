@@ -1,14 +1,18 @@
 'use client';
 
 import { useEffect } from 'react';
-import { Form, Input, Select, Button, App, Space, Alert } from 'antd';
+import Form from 'antd/es/form';
+import App from 'antd/es/app';
+import Space from 'antd/es/space';
+import Alert from 'antd/es/alert';
 import { InfoCircleOutlined } from '@ant-design/icons';
+import { ELInput } from '@/components/ui/ELInput';
+import { ELSelect } from '@/components/ui/ELSelect';
+import { ELButton } from '@/components/ui/ELButton';
 import { useCreateTicket } from '@/hooks/useSupport';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useCollectorSession } from '@/stores/useCollectorSession';
 import { NewTicketInputSchema, type Priority } from '@/lib/validation/support';
-
-const { TextArea } = Input;
 
 type Audience = 'user' | 'admin' | 'collector';
 
@@ -140,7 +144,7 @@ export function SupportForm({ onSuccess, audience = 'user', defaultValues }: Sup
           rules={[{ required: true, message: 'Nome é obrigatório' }]}
           tooltip={isLoggedIn ? 'Preenchido automaticamente da sua conta' : undefined}
         >
-          <Input
+          <ELInput
             placeholder="Seu nome completo"
             readOnly={isLoggedIn}
             disabled={isLoggedIn}
@@ -156,7 +160,7 @@ export function SupportForm({ onSuccess, audience = 'user', defaultValues }: Sup
           ]}
           tooltip={isLoggedIn ? 'Preenchido automaticamente da sua conta' : undefined}
         >
-          <Input
+          <ELInput
             placeholder="seu@email.com"
             readOnly={isLoggedIn}
             disabled={isLoggedIn}
@@ -168,7 +172,7 @@ export function SupportForm({ onSuccess, audience = 'user', defaultValues }: Sup
           label="Telefone (opcional)"
           tooltip={!usuario?.phone ? 'Você pode adicionar seu telefone aqui' : undefined}
         >
-          <Input placeholder="(00) 00000-0000" />
+          <ELInput placeholder="(00) 00000-0000" />
         </Form.Item>
 
       <Form.Item
@@ -176,7 +180,7 @@ export function SupportForm({ onSuccess, audience = 'user', defaultValues }: Sup
         label="Assunto"
         rules={[{ required: true, message: 'Assunto é obrigatório', min: 3 }]}
       >
-        <Input placeholder="Descreva brevemente o problema" />
+        <ELInput placeholder="Descreva brevemente o problema" />
       </Form.Item>
 
       <Form.Item
@@ -184,7 +188,7 @@ export function SupportForm({ onSuccess, audience = 'user', defaultValues }: Sup
         label="Prioridade"
         rules={[{ required: true }]}
       >
-        <Select
+        <ELSelect
           options={[
             { value: 'baixa', label: 'Baixa' },
             { value: 'media', label: 'Média' },
@@ -199,7 +203,7 @@ export function SupportForm({ onSuccess, audience = 'user', defaultValues }: Sup
         label="Descrição"
         rules={[{ required: true, message: 'Descrição é obrigatória', min: 3 }]}
       >
-        <TextArea
+        <ELInput.TextArea
           rows={4}
           placeholder="Descreva o problema em detalhes"
           showCount
@@ -209,10 +213,10 @@ export function SupportForm({ onSuccess, audience = 'user', defaultValues }: Sup
 
       <Form.Item>
         <Space>
-          <Button type="primary" htmlType="submit" loading={createTicket.isPending}>
+          <ELButton variant="primary" htmlType="submit" loading={createTicket.isPending}>
             Abrir chamado
-          </Button>
-          <Button onClick={() => {
+          </ELButton>
+          <ELButton onClick={() => {
             if (isLoggedIn) {
               // Se logado, resetar apenas campos não relacionados ao usuário
               form.setFieldsValue({
@@ -226,7 +230,7 @@ export function SupportForm({ onSuccess, audience = 'user', defaultValues }: Sup
             }
           }}>
             Limpar
-          </Button>
+          </ELButton>
         </Space>
       </Form.Item>
     </Form>

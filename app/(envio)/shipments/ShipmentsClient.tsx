@@ -2,12 +2,9 @@
 
 import React, { useMemo, useState, useCallback } from "react";
 import {
-  Button,
   Card,
   Tag,
   Table,
-  Input,
-  Select,
   Space,
   Tooltip,
   App,
@@ -32,6 +29,11 @@ import type { LabelItem } from "@/lib/types/label";
 import type { ColumnsType } from "antd/es/table";
 import { PageShell } from "@/components/shared/PageShell";
 import { useQuery } from "@tanstack/react-query";
+import { ELButton } from "@/components/ui/ELButton";
+import { ELInput } from "@/components/ui/ELInput";
+import { ELSelect } from "@/components/ui/ELSelect";
+import { ELStatusTag, type StatusVariant } from "@/components/ui/ELStatusTag";
+import tableStyles from "@/components/ui/ELTableWrapper.module.css";
 
 const { Text } = Typography;
 
@@ -47,15 +49,15 @@ const STATUS_OPTIONS: Array<ShipmentStatus | "Todos"> = [
   "Devolvido",
 ];
 
-const STATUS_COLORS: Record<ShipmentStatus, string> = {
+const STATUS_VARIANTS: Record<ShipmentStatus, StatusVariant> = {
   "Aguardando coleta": "default",
   "Aguardando postagem": "default",
-  Postado: "geekblue",
-  "Em trânsito": "blue",
-  "Em rota de entrega": "gold",
-  Entregue: "green",
-  Cancelado: "red",
-  Devolvido: "orange",
+  Postado: "processing",
+  "Em trânsito": "processing",
+  "Em rota de entrega": "warning",
+  Entregue: "success",
+  Cancelado: "danger",
+  Devolvido: "warning",
 };
 
 type ShipmentVolumeDivergence = {
@@ -249,30 +251,16 @@ export default function ShipmentsClient() {
         },
         render: (value: ShipmentStatus, row: Shipment) => (
           <Space orientation="vertical" size={4}>
-            <Tag
-              color={STATUS_COLORS[value] ?? "default"}
-              style={{
-                borderRadius: 9999,
-                fontSize: 11,
-                fontWeight: 500,
-                padding: '2px 10px',
-                border: 'none',
-              }}
-            >
+            <ELStatusTag variant={STATUS_VARIANTS[value] ?? "default"}>
               {value}
-            </Tag>
+            </ELStatusTag>
             {row.pickupRequest && row.pickupRequest.status !== 'CANCELED' && row.pickupRequest.status !== 'COMPLETED' && (
-              <Tag
-                color={row.pickupRequest.status === 'PENDING' ? 'orange' : 'blue'}
-                style={{
-                  fontSize: 10,
-                  borderRadius: 9999,
-                  padding: '1px 8px',
-                  border: 'none',
-                }}
+              <ELStatusTag
+                variant={row.pickupRequest.status === 'PENDING' ? 'warning' : 'processing'}
+                size="small"
               >
                 Coleta: {row.pickupRequest.status === 'PENDING' ? 'Pendente' : row.pickupRequest.status === 'SCHEDULED' ? 'Agendada' : row.pickupRequest.status}
-              </Tag>
+              </ELStatusTag>
             )}
           </Space>
         ),
@@ -508,19 +496,19 @@ export default function ShipmentsClient() {
 
   return (
     <PageShell title="Gestão de envios" gap="md">
-      <Card>
-        <Space orientation="vertical" size={16} style={{ width: '100%' }}>
-          <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-            <Input
+      <div className={tableStyles.wrapper}>
+        <Card>
+          <div className={tableStyles.filterBar}>
+            <ELInput.Search
               allowClear
-              style={{ flex: 1, minWidth: 200, maxWidth: '100%' }}
+              className={tableStyles.searchInput}
               placeholder="Buscar por rastreio, destinatário, cidade ou transportadora"
-              prefix={<SearchOutlined />}
               value={query}
               onChange={(event) => handleQueryChange(event.target.value)}
+              onSearch={(value) => handleQueryChange(value)}
             />
-            <Select
-              style={{ minWidth: 160, flex: '0 1 auto' }}
+            <ELSelect
+              style={{ minWidth: 160 }}
               placeholder="Filtrar por status"
               value={status}
               onChange={handleStatusChange}
@@ -529,9 +517,9 @@ export default function ShipmentsClient() {
                 value: opt,
               }))}
             />
-            <Button onClick={() => refetch()} disabled={isLoading}>
+            <ELButton onClick={() => refetch()} disabled={isLoading}>
               Atualizar
-            </Button>
+            </ELButton>
           </div>
 
           <Table<Shipment>
@@ -550,8 +538,8 @@ export default function ShipmentsClient() {
             columns={columns}
             scroll={{ x: 1200 }}
           />
-        </Space>
-      </Card>
+        </Card>
+      </div>
 
       {/* Modal de Divergências */}
       <Modal
@@ -559,12 +547,11 @@ export default function ShipmentsClient() {
         open={divergenceModalOpen}
         onCancel={handleCloseDivergenceModal}
         footer={[
-          <Button key="close" onClick={handleCloseDivergenceModal}>
+          <ELButton key="close" onClick={handleCloseDivergenceModal}>
             Fechar
-          </Button>,
+          </ELButton>,
         ]}
-        width="90%"
-        style={{ maxWidth: 800 }}
+        width={800}
       >
         {divergencesLoading ? (
           <div style={{ textAlign: 'center', padding: 32 }}>Carregando...</div>

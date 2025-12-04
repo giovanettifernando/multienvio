@@ -4,17 +4,17 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQueries } from "@tanstack/react-query";
 import {
-  Button,
   Card,
-  Input,
-  Space,
   Table,
-  Tag,
 } from "antd";
 import type { Shipment } from "@/types/shipment";
 import type { Tracking } from "@/types/tracking";
 import { TrackingStatusTag } from "@/components/ui/TrackingStatusTag";
 import { PageShell } from "@/components/shared/PageShell";
+import { ELButton } from "@/components/ui/ELButton";
+import { ELInput } from "@/components/ui/ELInput";
+import { ELSelect } from "@/components/ui/ELSelect";
+import tableStyles from "@/components/ui/ELTableWrapper.module.css";
 
 async function fetchShipments(): Promise<{ dados: Shipment[] }> {
   const response = await fetch("/api/shipments");
@@ -100,80 +100,77 @@ export default function RastreamentoClient() {
 
   return (
     <PageShell title="Rastreamento" gap="md">
-      <Card variant="borderless">
-        <Space orientation="vertical" size={16} style={{ width: "100%" }}>
-          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
-            <Input.Search
+      <div className={tableStyles.wrapper}>
+        <Card variant="borderless">
+          <div className={tableStyles.filterBar}>
+            <ELInput.Search
               placeholder="Buscar por ID do envio"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              style={{ flex: 1, minWidth: 180, maxWidth: 300 }}
+              onSearch={(value) => setSearch(value)}
+              className={tableStyles.searchInput}
+              style={{ maxWidth: 300 }}
             />
 
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              {STATUS_FILTERS.map((filter) => (
-                <Tag
-                  key={filter.value}
-                  color={statusFilter === filter.value ? "blue" : undefined}
-                  onClick={() => setStatusFilter(filter.value)}
-                  style={{ cursor: "pointer", margin: 0 }}
-                >
-                  {filter.label}
-                </Tag>
-              ))}
-            </div>
+            <ELSelect
+              style={{ minWidth: 160 }}
+              value={statusFilter}
+              onChange={(value) => setStatusFilter(value)}
+              options={STATUS_FILTERS}
+              placeholder="Filtrar por status"
+            />
           </div>
-        </Space>
-      </Card>
+        </Card>
 
-      <Card variant="borderless">
-        <Table
-          rowKey="id"
-          dataSource={dataSource}
-          loading={shipmentsResult.isLoading}
-          pagination={{ pageSize: 5 }}
-          scroll={{ x: 900 }}
-          columns={[
-            {
-              title: "Envio",
-              dataIndex: "id",
-            },
-            {
-              title: "Serviço",
-              dataIndex: "servico",
-            },
-            {
-              title: "Destinatário",
-              dataIndex: "cidadeDestino",
-            },
-            {
-              title: "Status",
-              dataIndex: "status",
-              render: (value: Tracking["status"]) => (
-                <TrackingStatusTag status={value} />
-              ),
-            },
-            {
-              title: "Atualizado em",
-              dataIndex: "atualizadoEm",
-              render: (value: string) =>
-                new Date(value).toLocaleString("pt-BR"),
-            },
-            {
-              title: "Último evento",
-              dataIndex: "ultimoEvento",
-            },
-            {
-              title: "Ações",
-              render: (_, record) => (
-                <Button type="link" onClick={() => router.push(`/rastreamento/${record.id}`)}>
-                  Ver detalhes
-                </Button>
-              ),
-            },
-          ]}
-        />
-      </Card>
+        <Card variant="borderless" style={{ marginTop: 16 }}>
+          <Table
+            rowKey="id"
+            dataSource={dataSource}
+            loading={shipmentsResult.isLoading}
+            pagination={{ pageSize: 10 }}
+            scroll={{ x: 900 }}
+            columns={[
+              {
+                title: "Envio",
+                dataIndex: "id",
+              },
+              {
+                title: "Serviço",
+                dataIndex: "servico",
+              },
+              {
+                title: "Destinatário",
+                dataIndex: "cidadeDestino",
+              },
+              {
+                title: "Status",
+                dataIndex: "status",
+                render: (value: Tracking["status"]) => (
+                  <TrackingStatusTag status={value} />
+                ),
+              },
+              {
+                title: "Atualizado em",
+                dataIndex: "atualizadoEm",
+                render: (value: string) =>
+                  new Date(value).toLocaleString("pt-BR"),
+              },
+              {
+                title: "Último evento",
+                dataIndex: "ultimoEvento",
+              },
+              {
+                title: "Ações",
+                render: (_, record) => (
+                  <ELButton variant="link" onClick={() => router.push(`/rastreamento/${record.id}`)}>
+                    Ver detalhes
+                  </ELButton>
+                ),
+              },
+            ]}
+          />
+        </Card>
+      </div>
     </PageShell>
   );
 }

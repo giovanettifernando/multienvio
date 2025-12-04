@@ -1,10 +1,21 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Table, Space, Button, Input, Select, Flex, Skeleton, Empty, Tag, Typography, Popconfirm, App } from 'antd';
+import Table from 'antd/es/table';
+import Space from 'antd/es/space';
+import Flex from 'antd/es/flex';
+import Empty from 'antd/es/empty';
+import Tag from 'antd/es/tag';
+import Typography from 'antd/es/typography';
+import Popconfirm from 'antd/es/popconfirm';
+import App from 'antd/es/app';
 import type { ColumnsType } from 'antd/es/table';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { EyeOutlined, StopOutlined, DownOutlined, RightOutlined } from '@ant-design/icons';
+import { ELInput } from '@/components/ui/ELInput';
+import { ELSelect } from '@/components/ui/ELSelect';
+import { ELButton } from '@/components/ui/ELButton';
+import { ELSkeleton } from '@/components/ui/ELSkeleton';
 import { fetchLabels } from '@/lib/api/labels';
 import type { LabelItem, PrintStatus, PackageItem, PackageLabelStatus } from '@/lib/types/label';
 
@@ -227,15 +238,15 @@ export function LabelsTable({ onOpenLabel, onOpenPackage }: LabelsTableProps) {
         width: 180,
         render: (_, pkg) => (
           <Space size="small">
-            <Button
-              type="link"
+            <ELButton
+              variant="link"
               size="small"
               icon={<EyeOutlined />}
               onClick={() => onOpenPackage(pkg, record)}
               disabled={pkg.labelStatus !== 'generated'}
             >
               Visualizar
-            </Button>
+            </ELButton>
             <Popconfirm
               title="Cancelar pré-postagem"
               description="Tem certeza que deseja cancelar esta etiqueta?"
@@ -244,8 +255,8 @@ export function LabelsTable({ onOpenLabel, onOpenPackage }: LabelsTableProps) {
               cancelText="Não"
               okButtonProps={{ danger: true }}
             >
-              <Button
-                type="link"
+              <ELButton
+                variant="link"
                 size="small"
                 danger
                 icon={<StopOutlined />}
@@ -253,7 +264,7 @@ export function LabelsTable({ onOpenLabel, onOpenPackage }: LabelsTableProps) {
                 disabled={pkg.labelStatus !== 'generated'}
               >
                 Cancelar
-              </Button>
+              </ELButton>
             </Popconfirm>
           </Space>
         ),
@@ -285,13 +296,13 @@ export function LabelsTable({ onOpenLabel, onOpenPackage }: LabelsTableProps) {
   return (
     <Flex vertical gap={12}>
       <Flex wrap="wrap" gap={8} align="center">
-        <Input.Search
+        <ELInput.Search
           allowClear
           placeholder="Buscar por código do envio..."
           onSearch={(v) => { setPage(1); setQ(v); }}
           style={{ maxWidth: 300 }}
         />
-        <Select
+        <ELSelect
           value={printStatus}
           onChange={(v) => { setPage(1); setPrintStatus(v as PrintStatus | 'all'); }}
           style={{ width: 200 }}
@@ -304,7 +315,7 @@ export function LabelsTable({ onOpenLabel, onOpenPackage }: LabelsTableProps) {
       </Flex>
 
       {isLoading ? (
-        <Skeleton active />
+        <ELSkeleton />
       ) : isError ? (
         <Empty description="Falha ao carregar etiquetas" />
       ) : (

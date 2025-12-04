@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
-import { Card, Button, Row, Col, DatePicker, Input, Space, App } from "antd";
-import { PrinterOutlined, SearchOutlined } from "@ant-design/icons";
+import { Card, Row, Col, DatePicker, Space, App } from "antd";
+import { PrinterOutlined } from "@ant-design/icons";
 import { useRouter } from "next/navigation";
 import dayjs, { Dayjs } from "dayjs";
 import { useWalletTransactions } from "@/hooks/useWalletTransactions";
@@ -10,9 +10,11 @@ import PeriodSummaryCard from "@/components/wallet/PeriodSummaryCard";
 import StatementTable from "@/components/wallet/StatementTable";
 import StatementPDFModal from "@/components/wallet/StatementPDFModal";
 import { PageShell } from "@/components/shared/PageShell";
+import { ELButton } from "@/components/ui/ELButton";
+import { ELInput } from "@/components/ui/ELInput";
+import tableStyles from "@/components/ui/ELTableWrapper.module.css";
 
 const { RangePicker } = DatePicker;
-const { Search } = Input;
 
 // Limite máximo de meses para o período de busca
 const MAX_MONTHS_RANGE = 12;
@@ -52,24 +54,24 @@ export default function ExtratoClient() {
       gap="md"
       extra={
         <Space>
-          <Button onClick={() => router.push("/carteira")}>
+          <ELButton onClick={() => router.push("/carteira")}>
             Voltar
-          </Button>
-          <Button
-            type="primary"
+          </ELButton>
+          <ELButton
+            variant="primary"
             icon={<PrinterOutlined />}
             onClick={handlePrintPDF}
             disabled={!transactions.length}
           >
             Imprimir / PDF
-          </Button>
+          </ELButton>
         </Space>
       }
     >
       {/* Filtros */}
-      <Card>
-        <Row gutter={[24, 16]}>
-          <Col xs={24} md={12}>
+      <div className={tableStyles.wrapper}>
+        <Card>
+          <div className={tableStyles.filterBar}>
             <RangePicker
               value={dateRange}
               onChange={(dates) => {
@@ -94,23 +96,20 @@ export default function ExtratoClient() {
                 }
               }}
               format="DD/MM/YYYY"
-              style={{ width: '100%' }}
+              style={{ minWidth: 240 }}
               placeholder={['Data inicial', 'Data final']}
             />
-          </Col>
-          <Col xs={24} md={12}>
-            <Search
+            <ELInput.Search
               placeholder="Buscar por descrição, tipo ou referência..."
               allowClear
-              enterButton={<SearchOutlined />}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               onSearch={() => setPage(1)} // Reset para primeira página
-              style={{ width: '100%' }}
+              className={tableStyles.searchInput}
             />
-          </Col>
-        </Row>
-      </Card>
+          </div>
+        </Card>
+      </div>
 
       {/* Resumo do período */}
       {summary && (

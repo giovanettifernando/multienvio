@@ -1,0 +1,104 @@
+/**
+ * ELAlert - Estilos para alertas usando tokens CSS
+ */
+
+.alert {
+  border-radius: var(--el-radius-base, 12px);
+  padding: var(--el-spacing-lg, 16px);
+  display: flex;
+  gap: var(--el-spacing-md, 12px);
+  align-items: flex-start;
+}
+
+.icon {
+  font-size: 20px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.content {
+  flex: 1;
+  min-width: 0;
+}
+
+.title {
+  font-size: var(--el-font-size-sm, 13px);
+  font-weight: 600;
+  margin: 0 0 var(--el-spacing-xs, 4px) 0;
+  line-height: var(--el-line-height-tight, 1.25);
+}
+
+.description {
+  font-size: var(--el-font-size-sm, 13px);
+  margin: 0;
+  line-height: var(--el-line-height-base, 1.5);
+  opacity: 0.9;
+}
+
+.actions {
+  margin-top: var(--el-spacing-md, 12px);
+  display: flex;
+  gap: var(--el-spacing-sm, 8px);
+}
+
+/* Variants */
+.success {
+  background-color: var(--status-success-bg);
+  color: var(--status-success-text);
+}
+
+.warning {
+  background-color: var(--status-warning-bg);
+  color: var(--status-warning-text);
+}
+
+.danger {
+  background-color: var(--status-danger-bg);
+  color: var(--status-danger-text);
+}
+
+.info {
+  background-color: var(--status-info-bg);
+  color: var(--status-info-text);
+}
+
+/* Banner variant (full width, no radius) */
+.banner {
+  border-radius: 0;
+  padding: var(--el-spacing-md, 12px) var(--el-spacing-xl, 24px);
+}
+
+/* Compact variant */
+.compact {
+  padding: var(--el-spacing-sm, 8px) var(--el-spacing-md, 12px);
+  gap: var(--el-spacing-sm, 8px);
+}
+
+.compact .icon {
+  font-size: 16px;
+}
+
+.compact .title {
+  font-size: var(--el-font-size-xs, 12px);
+}
+
+.compact .description {
+  font-size: var(--el-font-size-xs, 12px);
+}
+
+/* Closable */
+.close {
+  flex-shrink: 0;
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity 0.2s ease;
+  padding: 0;
+  background: none;
+  border: none;
+  color: inherit;
+  font-size: 14px;
+}
+
+.close:hover {
+  opacity: 1;
+}

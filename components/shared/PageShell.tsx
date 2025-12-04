@@ -9,8 +9,11 @@
  * - Ocupa toda a largura do container de conteúdo
  */
 import React from "react";
-import { Flex, Typography, theme } from "antd";
-import { spacing } from "@/lib/ui/theme";
+import Typography from "antd/es/typography";
+import { cn } from "@/lib/utils/cn";
+import styles from "./PageShell.module.css";
+
+type GapSize = "xs" | "sm" | "md" | "lg" | "xl" | "xxl";
 
 interface PageShellProps {
   title?: string;
@@ -18,9 +21,19 @@ interface PageShellProps {
   description?: string;
   extra?: React.ReactNode;
   children: React.ReactNode;
-  gap?: keyof typeof spacing;
+  gap?: GapSize;
   style?: React.CSSProperties;
+  className?: string;
 }
+
+const gapClasses: Record<GapSize, string> = {
+  xs: styles.gapXs,
+  sm: styles.gapSm,
+  md: styles.gapMd,
+  lg: styles.gapLg,
+  xl: styles.gapXl,
+  xxl: styles.gapXxl,
+};
 
 export function PageShell({
   title,
@@ -28,43 +41,23 @@ export function PageShell({
   children,
   gap = "xl",
   style,
+  className,
 }: PageShellProps) {
-  const { token } = theme.useToken();
-
   return (
-    <Flex vertical gap={spacing[gap]} style={style}>
+    <div className={cn(styles.shell, gapClasses[gap], className)} style={style}>
       {(title || extra) && (
-        <div
-          style={{
-            position: "sticky",
-            top: 0,
-            zIndex: 100,
-            backgroundColor: token.colorPrimary,
-            padding: `${spacing.lg}px ${spacing.xl}px`,
-            marginLeft: -spacing.xl,
-            marginRight: -spacing.xl,
-            marginBottom: spacing.lg,
-          }}
-        >
-          <Flex justify="space-between" align="center" wrap="wrap" gap={spacing.md}>
+        <div className={styles.header}>
+          <div className={styles.headerContent}>
             {title && (
-              <Typography.Title
-                level={3}
-                style={{
-                  margin: 0,
-                  fontSize: 20,
-                  fontWeight: 600,
-                  color: '#ffffff',
-                }}
-              >
+              <Typography.Title level={3} className={styles.title}>
                 {title}
               </Typography.Title>
             )}
-            {extra && <div style={{ color: '#ffffff' }}>{extra}</div>}
-          </Flex>
+            {extra && <div className={styles.extra}>{extra}</div>}
+          </div>
         </div>
       )}
       {children}
-    </Flex>
+    </div>
   );
 }

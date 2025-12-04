@@ -44,6 +44,32 @@
   color: #004a9b !important;
 }
 
+.buttonDanger {
+  background-color: var(--color-danger, #D64545) !important;
+  border-color: var(--color-danger, #D64545) !important;
+  color: #ffffff !important;
+}
+
+.buttonDanger:hover,
+.buttonDanger:focus {
+  background-color: #c23030 !important;
+  border-color: #c23030 !important;
+  box-shadow: 0 10px 24px rgba(214, 69, 69, 0.32);
+}
+
+.buttonGhost {
+  background-color: transparent !important;
+  border-color: transparent !important;
+  color: var(--color-text-secondary, #4A6076) !important;
+  padding-inline: 12px !important;
+}
+
+.buttonGhost:hover,
+.buttonGhost:focus {
+  background-color: rgba(0, 56, 115, 0.06) !important;
+  color: var(--color-text, #182235) !important;
+}
+
 .button:focus-visible {
   outline: 3px solid rgba(0, 56, 115, 0.35);
   outline-offset: 2px;

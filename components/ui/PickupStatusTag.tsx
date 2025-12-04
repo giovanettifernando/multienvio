@@ -1,15 +1,15 @@
 "use client";
 
-import { Tag } from "antd";
 import type { PickupStatus } from "@/types/pickup";
+import { ELStatusTag, type StatusVariant } from "./ELStatusTag";
 
-const STATUS_COLOR: Record<PickupStatus, string> = {
+const STATUS_VARIANT: Record<PickupStatus, StatusVariant> = {
   REQUESTED: "default",
   SCHEDULED: "processing",
-  ASSIGNED: "blue",
+  ASSIGNED: "info",
   PICKED_UP: "success",
   FAILED: "warning",
-  CANCELED: "error",
+  CANCELED: "danger",
 };
 
 const STATUS_LABEL: Record<PickupStatus, string> = {
@@ -23,8 +23,13 @@ const STATUS_LABEL: Record<PickupStatus, string> = {
 
 type Props = {
   status: PickupStatus;
+  showDot?: boolean;
 };
 
-export function PickupStatusTag({ status }: Props) {
-  return <Tag color={STATUS_COLOR[status]}>{STATUS_LABEL[status]}</Tag>;
+export function PickupStatusTag({ status, showDot }: Props) {
+  return (
+    <ELStatusTag variant={STATUS_VARIANT[status]} showDot={showDot}>
+      {STATUS_LABEL[status]}
+    </ELStatusTag>
+  );
 }

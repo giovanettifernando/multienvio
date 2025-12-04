@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   App,
-  Button,
   Card,
   Col,
   Row,
@@ -13,6 +12,7 @@ import {
   Tooltip,
 } from "antd";
 import { PageShell } from "@/components/shared/PageShell";
+import { ELButton } from "@/components/ui/ELButton";
 import {
   FormProvider,
   SubmitHandler,
@@ -1055,8 +1055,7 @@ export default function FinalizarClient() {
               >
                 <Space orientation="vertical" size={8} style={{ width: "100%" }}>
                   <Tooltip title={disabledTooltip}>
-                    <Button
-                      type="default"
+                    <ELButton
                       htmlType="button"
                       block
                       size="small"
@@ -1065,11 +1064,11 @@ export default function FinalizarClient() {
                       onClick={onAddToCartClick}
                     >
                       Adicionar ao carrinho
-                    </Button>
+                    </ELButton>
                   </Tooltip>
                   <Tooltip title={disabledTooltip}>
-                    <Button
-                      type="primary"
+                    <ELButton
+                      variant="primary"
                       htmlType="button"
                       block
                       size="small"
@@ -1094,7 +1093,7 @@ export default function FinalizarClient() {
                       }}
                     >
                       Pagar agora
-                    </Button>
+                    </ELButton>
                   </Tooltip>
                 </Space>
               </Card>

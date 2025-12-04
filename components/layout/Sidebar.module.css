@@ -1,0 +1,73 @@
+/**
+ * Sidebar - Estilos usando tokens CSS
+ */
+
+.sidebar {
+  background: var(--sidebar-bg) !important;
+  border-right: 1px solid var(--sidebar-border);
+  overflow: hidden;
+  position: fixed;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  height: 100vh;
+  z-index: 1000;
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.logo {
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--el-spacing-lg) var(--el-spacing-xl);
+  border-bottom: 1px solid var(--sidebar-border);
+}
+
+.logoText {
+  color: var(--sidebar-text-active);
+  font-weight: 700;
+  font-size: var(--el-font-size-lg);
+  letter-spacing: 2px;
+}
+
+.logoImage {
+  width: 160px;
+  height: auto;
+  max-height: 40px;
+  object-fit: contain;
+}
+
+.menuWrapper {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.trigger {
+  height: 48px;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: var(--sidebar-text-active);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Responsive */
+@media (min-width: 768px) {
+  .sidebar {
+    position: fixed !important;
+  }
+}
+
+@media (max-width: 767px) {
+  .sidebar {
+    position: relative !important;
+  }
+}

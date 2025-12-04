@@ -3,21 +3,21 @@
 import React, { useState } from "react";
 import {
   Table,
-  Tag,
   Space,
-  Input,
   DatePicker,
-  Select,
-  Button,
   Card,
 } from "antd";
-import { SearchOutlined } from "@ant-design/icons";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import type { ColumnsType } from "antd/es/table";
 import type { PickupRequestWithShipment, PickupStatus } from "@/lib/types/pickup";
 import dayjs, { type Dayjs } from "dayjs";
 import { PageShell } from "@/components/shared/PageShell";
+import { ELButton } from "@/components/ui/ELButton";
+import { ELInput } from "@/components/ui/ELInput";
+import { ELSelect } from "@/components/ui/ELSelect";
+import { ELStatusTag, type StatusVariant } from "@/components/ui/ELStatusTag";
+import tableStyles from "@/components/ui/ELTableWrapper.module.css";
 
 const { RangePicker } = DatePicker;
 
@@ -30,12 +30,12 @@ const STATUS_OPTIONS: Array<{ label: string; value: PickupStatus | "all" }> = [
   { label: "Concluída", value: "COMPLETED" },
 ];
 
-const STATUS_COLORS: Record<PickupStatus, string> = {
-  PENDING: "orange",
-  SCHEDULED: "blue",
-  FAILED: "red",
+const STATUS_VARIANTS: Record<PickupStatus, StatusVariant> = {
+  PENDING: "warning",
+  SCHEDULED: "processing",
+  FAILED: "danger",
   CANCELED: "default",
-  COMPLETED: "green",
+  COMPLETED: "success",
 };
 
 const STATUS_LABELS: Record<PickupStatus, string> = {
@@ -110,9 +110,9 @@ export default function ColetasClient() {
       dataIndex: "status",
       width: 130,
       render: (value: PickupStatus) => (
-        <Tag color={STATUS_COLORS[value] ?? "default"}>
+        <ELStatusTag variant={STATUS_VARIANTS[value] ?? "default"}>
           {STATUS_LABELS[value] ?? value}
-        </Tag>
+        </ELStatusTag>
       ),
     },
     {
@@ -134,18 +134,19 @@ export default function ColetasClient() {
 
   return (
     <PageShell title="Gerenciar Coletas" gap="md">
-      <Card>
-        <Space orientation="vertical" size={16} style={{ width: "100%" }}>
-          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
-            <Input
+      <div className={tableStyles.wrapper}>
+        <Card>
+          <div className={tableStyles.filterBar}>
+            <ELInput.Search
               allowClear
-              style={{ flex: 1, minWidth: 180, maxWidth: 300 }}
+              className={tableStyles.searchInput}
+              style={{ maxWidth: 300 }}
               placeholder="Buscar por código de rastreio"
-              prefix={<SearchOutlined />}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              onSearch={(value) => setSearchQuery(value)}
             />
-            <Select
+            <ELSelect
               style={{ minWidth: 140 }}
               value={status}
               onChange={setStatus}
@@ -159,9 +160,9 @@ export default function ColetasClient() {
               onChange={(dates) => setDateRange(dates as [Dayjs | null, Dayjs | null])}
               style={{ minWidth: 240 }}
             />
-            <Button onClick={() => refetch()} disabled={isLoading}>
+            <ELButton onClick={() => refetch()} disabled={isLoading}>
               Atualizar
-            </Button>
+            </ELButton>
           </div>
 
           <Table<PickupRequestWithShipment>
@@ -172,8 +173,8 @@ export default function ColetasClient() {
             columns={columns}
             scroll={{ x: 900 }}
           />
-        </Space>
-      </Card>
+        </Card>
+      </div>
     </PageShell>
   );
 }

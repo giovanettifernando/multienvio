@@ -1,10 +1,9 @@
 import type { ButtonProps } from "antd/es/button";
 import Button from "antd/es/button";
-import { NEW_THEME_ENABLED } from "@/lib/features/new-theme";
 import { cn } from "@/lib/utils/cn";
 import styles from "./ELButton.module.css";
 
-export type ELButtonVariant = "primary" | "default" | "link";
+export type ELButtonVariant = "primary" | "default" | "link" | "danger" | "ghost";
 
 export interface ELButtonProps extends Omit<ButtonProps, "variant"> {
   variant?: ELButtonVariant;
@@ -13,34 +12,34 @@ export interface ELButtonProps extends Omit<ButtonProps, "variant"> {
 export function ELButton({
   variant = "default",
   className,
-  type,
+  danger,
   ...props
 }: ELButtonProps) {
-  if (!NEW_THEME_ENABLED) {
-    const fallbackType =
-      variant === "primary"
-        ? "primary"
-        : variant === "link"
-        ? "link"
-        : type;
-
-    return <Button {...props} className={className} type={fallbackType} />;
-  }
-
   const computedType =
-    variant === "primary" ? "primary" : variant === "link" ? "link" : "default";
+    variant === "primary"
+      ? "primary"
+      : variant === "link"
+      ? "link"
+      : variant === "ghost"
+      ? "text"
+      : "default";
 
   const variantClass =
     variant === "primary"
       ? styles.buttonPrimary
       : variant === "link"
       ? styles.buttonLink
+      : variant === "danger"
+      ? styles.buttonDanger
+      : variant === "ghost"
+      ? styles.buttonGhost
       : styles.buttonDefault;
 
   return (
     <Button
       {...props}
       type={computedType}
+      danger={variant === "danger" || danger}
       className={cn(styles.button, variantClass, className)}
     />
   );
