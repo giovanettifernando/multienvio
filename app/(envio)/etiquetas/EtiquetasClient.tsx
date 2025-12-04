@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
-import { App, Spin } from 'antd';
+import { useState, useCallback, useRef } from 'react';
+import { App, Spin, Modal, Button, Space } from 'antd';
+import { PrinterOutlined, DownloadOutlined, CloseOutlined } from '@ant-design/icons';
 import { LabelsTable } from '@/components/labels/LabelsTable';
 import { LabelPrintModal } from '@/components/labels/LabelPrintModal';
 import { ShipmentLabelModal, type ShipmentLabelData } from '@/components/labels';
@@ -75,14 +76,20 @@ interface LabelDetailResponse {
 export default function EtiquetasClient() {
   const { message } = App.useApp();
   const queryClient = useQueryClient();
+  const iframeRef = useRef<HTMLIFrameElement>(null);
 
   // Estado para modal legado (não-Correios)
   const [selectedLabelId, setSelectedLabelId] = useState<string | null>(null);
   const [legacyModalOpen, setLegacyModalOpen] = useState(false);
 
-  // Estado para modal Correios
+  // Estado para modal Correios (fallback)
   const [correiosModalOpen, setCorreiosModalOpen] = useState(false);
   const [correiosShipment, setCorreiosShipment] = useState<ShipmentLabelData | null>(null);
+
+  // Estado para modal PDF
+  const [pdfModalOpen, setPdfModalOpen] = useState(false);
+  const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
+  const [pdfLabelId, setPdfLabelId] = useState<string | null>(null);
   const [loadingLabel, setLoadingLabel] = useState(false);
 
   const handlePrintStatusChange = useCallback((labelId: string, isPrinted: boolean) => {
@@ -93,58 +100,85 @@ export default function EtiquetasClient() {
   const handleOpenLabel = useCallback(async (record: LabelItem) => {
     // Verificar se é Correios
     if (isCorreiosCarrier(record.carrier)) {
-      // Buscar dados completos para etiqueta Correios
+      // Para Correios, mostrar PDF no modal
       setLoadingLabel(true);
       try {
-        const response = await fetch(`/api/labels/${record.id}`);
+        const url = `/api/labels/${record.id}/pdf`;
+
+        // Buscar PDF como blob
+        const response = await fetch(url);
         if (!response.ok) {
-          throw new Error('Erro ao carregar etiqueta');
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.message || 'Etiqueta não disponível');
         }
-        const data: LabelDetailResponse = await response.json();
 
-        // Converter para formato do ShipmentLabelModal
-        const shipmentData: ShipmentLabelData = {
-          id: data.shipmentId,
-          carrier: data.carrier,
-          serviceCode: data.serviceCode,
-          serviceName: data.service,
-          trackingCode: data.carrierTrackingCode || data.platformTrackingCode,
-          sender: {
-            nome: data.sender.name,
-            logradouro: data.sender.logradouro,
-            numero: data.sender.numero,
-            complemento: data.sender.complemento,
-            bairro: data.sender.bairro,
-            cidade: data.sender.cidade,
-            uf: data.sender.uf,
-            cep: data.sender.cep,
-            telefone: data.sender.phone,
-            documento: data.sender.document,
-          },
-          recipient: {
-            nome: data.recipient.name,
-            logradouro: data.recipient.logradouro,
-            numero: data.recipient.numero,
-            complemento: data.recipient.complemento,
-            bairro: data.recipient.bairro,
-            cidade: data.recipient.cidade,
-            uf: data.recipient.uf,
-            cep: data.recipient.cep,
-            telefone: data.recipient.phone,
-            documento: data.recipient.document,
-          },
-          volumes: data.volumes.map((vol) => ({
-            pesoKg: vol.pesoKg,
-            dimensoes: vol.dimensoes,
-          })),
-          additionalServices: data.additionalServices,
-        };
+        // Criar blob URL para o iframe
+        // Adiciona #navpanes=0 para esconder o painel de miniaturas do PDF viewer
+        const blob = await response.blob();
+        const blobUrl = URL.createObjectURL(blob) + '#navpanes=0&view=FitH';
 
-        setCorreiosShipment(shipmentData);
-        setCorreiosModalOpen(true);
+        // Abrir modal com PDF
+        setPdfBlobUrl(blobUrl);
+        setPdfLabelId(record.id);
+        setPdfModalOpen(true);
       } catch (error) {
         console.error('[LABEL_OPEN]', error);
-        message.error('Erro ao carregar etiqueta');
+        const errorMsg = error instanceof Error ? error.message : 'Erro ao carregar etiqueta';
+
+        // Fallback: tentar abrir modal alternativo se o PDF não estiver disponível
+        if (errorMsg.includes('Pré-postagem não gerada')) {
+          message.warning('Pré-postagem ainda não gerada. Usando visualização alternativa...');
+          try {
+            const response = await fetch(`/api/labels/${record.id}`);
+            if (response.ok) {
+              const data: LabelDetailResponse = await response.json();
+              const shipmentData: ShipmentLabelData = {
+                id: data.shipmentId,
+                carrier: data.carrier,
+                serviceCode: data.serviceCode,
+                serviceName: data.service,
+                trackingCode: data.carrierTrackingCode || data.platformTrackingCode,
+                sender: {
+                  nome: data.sender.name,
+                  logradouro: data.sender.logradouro,
+                  numero: data.sender.numero,
+                  complemento: data.sender.complemento,
+                  bairro: data.sender.bairro,
+                  cidade: data.sender.cidade,
+                  uf: data.sender.uf,
+                  cep: data.sender.cep,
+                  telefone: data.sender.phone,
+                  documento: data.sender.document,
+                },
+                recipient: {
+                  nome: data.recipient.name,
+                  logradouro: data.recipient.logradouro,
+                  numero: data.recipient.numero,
+                  complemento: data.recipient.complemento,
+                  bairro: data.recipient.bairro,
+                  cidade: data.recipient.cidade,
+                  uf: data.recipient.uf,
+                  cep: data.recipient.cep,
+                  telefone: data.recipient.phone,
+                  documento: data.recipient.document,
+                },
+                volumes: data.volumes.map((vol) => ({
+                  pesoKg: vol.pesoKg,
+                  dimensoes: vol.dimensoes,
+                })),
+                additionalServices: data.additionalServices,
+              };
+              setCorreiosShipment(shipmentData);
+              setCorreiosModalOpen(true);
+            } else {
+              message.error(errorMsg);
+            }
+          } catch {
+            message.error(errorMsg);
+          }
+        } else {
+          message.error(errorMsg);
+        }
       } finally {
         setLoadingLabel(false);
       }
@@ -154,6 +188,51 @@ export default function EtiquetasClient() {
       setLegacyModalOpen(true);
     }
   }, [message]);
+
+  // Fechar modal PDF e limpar blob URL
+  const handleClosePdfModal = useCallback(() => {
+    setPdfModalOpen(false);
+    if (pdfBlobUrl) {
+      // Remove hash fragment antes de revogar o blob URL
+      const blobUrlBase = pdfBlobUrl.split('#')[0];
+      URL.revokeObjectURL(blobUrlBase);
+    }
+    setPdfBlobUrl(null);
+    setPdfLabelId(null);
+  }, [pdfBlobUrl]);
+
+  // Download PDF
+  const handleDownloadPdf = useCallback(() => {
+    if (pdfBlobUrl) {
+      const link = document.createElement('a');
+      // Remove hash fragment para download
+      link.href = pdfBlobUrl.split('#')[0];
+      link.download = `etiqueta_${pdfLabelId || 'envio'}.pdf`;
+      link.click();
+    }
+  }, [pdfBlobUrl, pdfLabelId]);
+
+  // Imprimir PDF
+  const handlePrintPdf = useCallback(async () => {
+    if (iframeRef.current) {
+      try {
+        iframeRef.current.contentWindow?.print();
+
+        // Marcar como impressa
+        if (pdfLabelId) {
+          await fetch(`/api/labels/${pdfLabelId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ isPrinted: true }),
+          });
+          queryClient.invalidateQueries({ queryKey: ['labels'] });
+        }
+      } catch (error) {
+        console.error('[LABEL_PRINT]', error);
+        message.error('Erro ao imprimir');
+      }
+    }
+  }, [pdfLabelId, queryClient, message]);
 
   const handleCloseCorreiosModal = useCallback(() => {
     setCorreiosModalOpen(false);
@@ -185,7 +264,7 @@ export default function EtiquetasClient() {
           onPrintStatusChange={handlePrintStatusChange}
         />
 
-        {/* Modal Correios com formato oficial */}
+        {/* Modal Correios com formato oficial (fallback) */}
         <ShipmentLabelModal
           open={correiosModalOpen}
           shipment={correiosShipment}
@@ -193,6 +272,48 @@ export default function EtiquetasClient() {
           onPrint={handleCorreiosPrint}
           title="Etiqueta Correios"
         />
+
+        {/* Modal PDF - Etiqueta Envio Legal */}
+        <Modal
+          open={pdfModalOpen}
+          onCancel={handleClosePdfModal}
+          title="Etiqueta de Envio"
+          width={650}
+          centered
+          footer={
+            <Space>
+              <Button icon={<CloseOutlined />} onClick={handleClosePdfModal}>
+                Fechar
+              </Button>
+              <Button icon={<DownloadOutlined />} onClick={handleDownloadPdf}>
+                Download PDF
+              </Button>
+              <Button type="primary" icon={<PrinterOutlined />} onClick={handlePrintPdf}>
+                Imprimir
+              </Button>
+            </Space>
+          }
+          styles={{
+            body: {
+              padding: 0,
+              height: '70vh',
+              overflow: 'hidden',
+            },
+          }}
+        >
+          {pdfBlobUrl && (
+            <iframe
+              ref={iframeRef}
+              src={pdfBlobUrl}
+              style={{
+                width: '100%',
+                height: '100%',
+                border: 'none',
+              }}
+              title="Etiqueta PDF"
+            />
+          )}
+        </Modal>
       </PageShell>
     </App>
   );

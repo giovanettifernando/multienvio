@@ -5,8 +5,10 @@
  * - Consultar status de rastreamento de objetos
  * - Converter eventos dos Correios para formato interno
  *
- * Referência: API Rastro CWS
- * Endpoint: GET /rastro/v1/objetos/{codigo}
+ * Referência: API Rastro CWS (SRO - Sistema de Rastreamento de Objetos)
+ * Endpoint: GET /srorastro/v1/objetos/{codigoObjeto}?resultado=T
+ * Parâmetros:
+ * - resultado: T = todos os eventos, U = último evento
  */
 
 import { correiosFetch } from './client';
@@ -145,6 +147,9 @@ export async function rastrearObjeto(
       `${CORREIOS_ENDPOINTS.rastro}/${codigo}?resultado=${resultado}`,
       {
         method: 'GET',
+        headers: {
+          'Accept-Language': 'pt-BR',  // Obrigatório: pt-BR, en ou es-ES
+        },
       }
     );
 
@@ -207,6 +212,9 @@ export async function rastrearObjetos(
       `${CORREIOS_ENDPOINTS.rastro}/${codigosParam}?resultado=${resultado}`,
       {
         method: 'GET',
+        headers: {
+          'Accept-Language': 'pt-BR',  // Obrigatório: pt-BR, en ou es-ES
+        },
       }
     );
 

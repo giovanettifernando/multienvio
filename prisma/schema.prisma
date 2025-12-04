@@ -182,7 +182,8 @@ model CartItem {
 model Shipment {
   id                      String          @id @default(uuid())
   platformTrackingCode    String          @unique // Código interno Envio Legal (customer-facing)
-  carrierTrackingCode     String?         // Código da transportadora (para etiquetas)
+  carrierTrackingCode     String?         // Código da transportadora - primeiro volume ou único (para compatibilidade)
+  carrierMetadata         Json?           // Metadados resumidos (serviceCode, serviceName, totalPrice, isMultiVolume)
   senderId                String
   recipientId             String?
   recipientName           String?
@@ -273,6 +274,10 @@ model Package {
   height                Float               // Altura em cm
   length                Float               // Comprimento em cm
   weight                Float               // Peso em kg
+  // Dados específicos da transportadora (Correios)
+  carrierTrackingCode   String?             // Código de rastreio deste volume (ex: AB123456789BR)
+  carrierPrePostageId   String?             // ID da pré-postagem (ex: PRNnhoiSb6SSKvvVJA13MiOA)
+  carrierQuotePrice     Float?              // Preço do frete deste volume
   hasDivergence         Boolean             @default(false)
   divergenceType        String?             // "DIMENSAO", "PESO", "DIMENSAO_E_PESO"
   divergenceNotes       String?             @db.Text
@@ -293,6 +298,7 @@ model Package {
   @@index([shipmentId])
   @@index([hasDivergence])
   @@index([checkedAt])
+  @@index([carrierTrackingCode])  // Busca por código de rastreio do volume
   @@map("packages")
 }
 

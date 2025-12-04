@@ -132,6 +132,67 @@ function normalizeCep(cep: string): string {
 }
 
 /**
+ * Classifica um número de telefone como fixo ou celular
+ *
+ * Telefone brasileiro:
+ * - Celular: 11 dígitos (DDD + 9 + 8 dígitos), ex: 44988076116
+ * - Fixo: 10 dígitos (DDD + 8 dígitos), ex: 4430251234
+ *
+ * IMPORTANTE: A API dos Correios espera:
+ * - telefone: 10 dígitos (DDD + número fixo)
+ * - celular: 9 dígitos (sem DDD, apenas o número do celular)
+ *
+ * @returns { telefone?: string, celular?: string }
+ */
+function classifyPhone(phone?: string): { telefone?: string; celular?: string } {
+  if (!phone) return {};
+
+  let digits = phone.replace(/\D/g, '');
+
+  // Remover código de país 55 se presente (telefones brasileiros)
+  // Ex: 5544988076116 → 44988076116
+  if (digits.length === 13 && digits.startsWith('55')) {
+    digits = digits.substring(2);
+  }
+  // Também pode vir com +55 que já foi removido mas com 12 dígitos para fixo
+  if (digits.length === 12 && digits.startsWith('55')) {
+    digits = digits.substring(2);
+  }
+
+  // Celular: 11 dígitos (DDD + 9 + 8 dígitos)
+  // Correios espera apenas 9 dígitos (sem DDD)
+  if (digits.length === 11 && digits[2] === '9') {
+    // Extrair apenas os 9 dígitos do celular (remover DDD)
+    const celularSemDdd = digits.substring(2); // 988076116
+    return { celular: celularSemDdd };
+  }
+
+  // Telefone fixo: 10 dígitos (DDD + número)
+  if (digits.length === 10) {
+    return { telefone: digits };
+  }
+
+  // Se tem 9 dígitos começando com 9, é celular sem DDD
+  if (digits.length === 9 && digits[0] === '9') {
+    return { celular: digits };
+  }
+
+  // Se tem 8 dígitos, é telefone fixo sem DDD
+  if (digits.length === 8) {
+    return { telefone: digits };
+  }
+
+  // Se não se encaixa em nenhum padrão válido, NÃO enviar para evitar erro na API
+  // Correios exige max 12 caracteres - melhor não enviar do que enviar inválido
+  console.warn('[CORREIOS_PHONE] Telefone em formato não reconhecido, será omitido:', {
+    original: phone,
+    digits: digits,
+    length: digits.length,
+  });
+  return {};
+}
+
+/**
  * Converte input interno para formato da API dos Correios
  *
  * IMPORTANTE: Estrutura FLAT conforme documentação oficial CWS!
@@ -144,11 +205,15 @@ function normalizeCep(cep: string): string {
  *   - alturaInformada, larguraInformada, comprimentoInformado (não "dimensao")
  */
 function buildPrePostagemRequest(input: CreatePrePostagemInput): CorreiosPrePostagemRequest {
+  // Classificar telefone do destinatário (fixo vs celular)
+  const destPhone = classifyPhone(input.destinatario.telefone);
+
   // Montar destinatário
   const destinatario: CorreiosDestinatario = {
     nome: input.destinatario.nome.substring(0, 60),
     cpfCnpj: input.destinatario.documento?.replace(/\D/g, ''),
-    telefone: input.destinatario.telefone?.replace(/\D/g, ''),
+    telefone: destPhone.telefone,
+    celular: destPhone.celular,
     email: input.destinatario.email,
     endereco: {
       cep: normalizeCep(input.destinatario.cep),
@@ -161,11 +226,15 @@ function buildPrePostagemRequest(input: CreatePrePostagemInput): CorreiosPrePost
     },
   };
 
+  // Classificar telefone do remetente (fixo vs celular)
+  const remPhone = classifyPhone(input.remetente.telefone);
+
   // Montar remetente
   const remetente: CorreiosRemetente = {
     nome: input.remetente.nome.substring(0, 60),
     cpfCnpj: input.remetente.documento?.replace(/\D/g, ''),
-    telefone: input.remetente.telefone?.replace(/\D/g, ''),
+    telefone: remPhone.telefone,
+    celular: remPhone.celular,
     email: input.remetente.email,
     endereco: {
       cep: normalizeCep(input.remetente.cep),
@@ -612,14 +681,8 @@ export async function criarLotePrePostagem(
   for (const input of objetos) {
     const result = await criarPrePostagemIndividual(input);
     results.push(result);
-
-    // Se criou com sucesso e temos ID, tentar gerar rótulo
-    if (result.success && result.idObjeto) {
-      const rotuloResult = await gerarRotulo(result.idObjeto);
-      if (rotuloResult.success && rotuloResult.codigoRastreio) {
-        result.codigoRastreio = rotuloResult.codigoRastreio;
-      }
-    }
+    // Nota: O rótulo (PDF) será gerado on-demand na página /etiquetas
+    // O código de rastreio já vem na resposta de criarPrePostagemIndividual
   }
 
   return results;
@@ -701,11 +764,14 @@ export async function buscarPrePostagemPorRastreio(
 
     if (prepostagens.length > 0) {
       const found = prepostagens[0];
+      // Cast para acessar propriedades que podem ou não existir
+      const status = ('descStatusAtual' in found ? found.descStatusAtual : null)
+        || ('status' in found ? found.status : undefined);
       return {
         success: true,
         idPrePostagem: found.id,
         codigoRastreio: found.codigoObjeto,
-        status: found.descStatusAtual || found.status,
+        status,
       };
     }
 
@@ -907,4 +973,268 @@ export async function prePostagemCompleta(
   }
 
   return result;
+}
+
+// ============================================================================
+// Pré-Postagem Multi-Volume
+// ============================================================================
+
+import type {
+  CorreiosPackageUpdate,
+  CorreiosShipmentMetadata,
+} from './types';
+
+/**
+ * Input para pré-postagem de um volume individual
+ */
+export interface VolumePrePostagemInput {
+  packageNumber: number;          // Número sequencial do volume (1, 2, 3...)
+  weight: number;                 // Peso em kg
+  width: number;                  // Largura em cm
+  height: number;                 // Altura em cm
+  length: number;                 // Comprimento em cm
+  declaredValue?: number;         // Valor declarado deste volume (opcional)
+  quotePrice?: number;            // Preço da cotação deste volume (opcional)
+}
+
+/**
+ * Input para pré-postagem multi-volume
+ */
+export interface MultiVolumePrePostagemInput {
+  // Serviço Correios
+  codigoServico: string;
+  serviceName: string;
+
+  // Volumes
+  volumes: VolumePrePostagemInput[];
+
+  // Destinatário (comum para todos os volumes)
+  destinatario: {
+    nome: string;
+    documento?: string;
+    telefone?: string;
+    email?: string;
+    cep: string;
+    logradouro: string;
+    numero?: string;
+    complemento?: string;
+    bairro?: string;
+    cidade: string;
+    uf: string;
+  };
+
+  // Remetente (comum para todos os volumes)
+  remetente: {
+    nome: string;
+    documento: string;
+    telefone?: string;
+    email?: string;
+    cep: string;
+    logradouro?: string;
+    numero?: string;
+    complemento?: string;
+    bairro?: string;
+    cidade?: string;
+    uf?: string;
+  };
+
+  // Declaração de Conteúdo (comum para todos ou rateada)
+  itensDeclaracaoConteudo?: Array<{
+    conteudo: string;
+    quantidade: number;
+    valor: number;
+  }>;
+
+  // Valor declarado total (será rateado entre volumes)
+  valorDeclaradoTotal?: number;
+
+  // NF-e (se aplicável)
+  chavesNFe?: string[];
+}
+
+/**
+ * Resultado de pré-postagem multi-volume
+ * Retorna dados para atualizar Package e Shipment
+ */
+export interface MultiVolumePrePostagemResult {
+  success: boolean;
+  // Dados para atualizar cada Package no banco
+  packageUpdates: CorreiosPackageUpdate[];
+  // Metadados resumidos para Shipment.carrierMetadata
+  shipmentMetadata?: CorreiosShipmentMetadata;
+  // Código de rastreio do primeiro volume (para Shipment.carrierTrackingCode)
+  primaryTrackingCode?: string;
+  // Erros por volume
+  errors?: Array<{
+    packageNumber: number;
+    error: string;
+  }>;
+}
+
+/**
+ * Cria pré-postagens para múltiplos volumes de um mesmo embarque
+ *
+ * Para cada volume, cria uma pré-postagem individual (N volumes = N códigos de rastreio).
+ * Retorna dados para atualizar Package e Shipment no banco.
+ *
+ * @param input Dados do embarque com múltiplos volumes
+ * @returns Dados para atualizar Package e Shipment
+ */
+export async function criarPrePostagemMultiVolume(
+  input: MultiVolumePrePostagemInput
+): Promise<MultiVolumePrePostagemResult> {
+  const { volumes, codigoServico, serviceName, destinatario, remetente } = input;
+
+  if (volumes.length === 0) {
+    return {
+      success: false,
+      packageUpdates: [],
+      errors: [{ packageNumber: 0, error: 'Nenhum volume informado' }],
+    };
+  }
+
+  console.log('[CORREIOS_MULTI_VOLUME] Creating pre-postagens:', {
+    codigoServico,
+    serviceName,
+    totalVolumes: volumes.length,
+    volumes: volumes.map((v) => ({
+      packageNumber: v.packageNumber,
+      weight: v.weight,
+      dimensions: `${v.width}x${v.height}x${v.length}`,
+    })),
+  });
+
+  // Ratear valor declarado entre volumes (se houver)
+  const valorPorVolume = input.valorDeclaradoTotal
+    ? input.valorDeclaradoTotal / volumes.length
+    : undefined;
+
+  // Ratear itens de declaração de conteúdo entre volumes
+  const itensDeclaracaoPorVolume = input.itensDeclaracaoConteudo?.map((item) => ({
+    conteudo: item.conteudo,
+    quantidade: Math.ceil(item.quantidade / volumes.length),
+    valor: item.valor / volumes.length,
+  }));
+
+  // Criar pré-postagem para cada volume
+  const packageUpdates: CorreiosPackageUpdate[] = [];
+  const errors: Array<{ packageNumber: number; error: string }> = [];
+  let totalPrice = 0;
+
+  for (const volume of volumes) {
+    console.log('[CORREIOS_MULTI_VOLUME] Creating pre-postagem for volume:', {
+      packageNumber: volume.packageNumber,
+      weight: volume.weight,
+    });
+
+    try {
+      // Criar input para pré-postagem individual
+      const prePostagemInput: CreatePrePostagemInput = {
+        codigoServico,
+        pesoGramas: Math.round(volume.weight * 1000), // kg -> gramas
+        alturaCm: Math.round(volume.height),
+        larguraCm: Math.round(volume.width),
+        comprimentoCm: Math.round(volume.length),
+        tipoObjeto: 2, // Caixa/Pacote
+        destinatario,
+        remetente,
+        valorDeclarado: volume.declaredValue ?? valorPorVolume,
+        itensDeclaracaoConteudo: itensDeclaracaoPorVolume,
+        chavesNFe: input.chavesNFe,
+      };
+
+      // Criar pré-postagem
+      const result = await criarPrePostagemIndividual(prePostagemInput);
+
+      if (!result.success || !result.idObjeto) {
+        const errorMsg = result.erros?.map((e) => e.mensagem).join('; ') || 'Falha ao criar pré-postagem';
+        errors.push({
+          packageNumber: volume.packageNumber,
+          error: errorMsg,
+        });
+        continue;
+      }
+
+      // O código de rastreio já vem na criação da pré-postagem (codigoObjeto)
+      // Gerar rótulo é opcional (para PDF), mas o tracking code já está disponível
+      const trackingCode = result.codigoRastreio || '';
+
+      if (!trackingCode) {
+        errors.push({
+          packageNumber: volume.packageNumber,
+          error: 'Código de rastreio não gerado',
+        });
+        continue;
+      }
+
+      // Nota: O rótulo (PDF) será gerado on-demand na página /etiquetas
+      // Salvamos apenas o idObjeto (carrierPrePostageId) para uso posterior
+
+      // Adicionar dados para atualizar o Package
+      const quotePrice = volume.quotePrice ?? 0;
+      packageUpdates.push({
+        packageNumber: volume.packageNumber,
+        carrierTrackingCode: trackingCode,
+        carrierPrePostageId: result.idObjeto,
+        carrierQuotePrice: quotePrice,
+      });
+
+      totalPrice += quotePrice;
+
+      console.log('[CORREIOS_MULTI_VOLUME] Volume pre-postagem created:', {
+        packageNumber: volume.packageNumber,
+        trackingCode,
+        idPrePostagem: result.idObjeto,
+      });
+    } catch (error) {
+      console.error('[CORREIOS_MULTI_VOLUME] Failed to create pre-postagem for volume:', {
+        packageNumber: volume.packageNumber,
+        error: error instanceof Error ? error.message : error,
+      });
+
+      errors.push({
+        packageNumber: volume.packageNumber,
+        error: error instanceof Error ? error.message : 'Erro desconhecido',
+      });
+    }
+  }
+
+  // Se nenhum volume foi criado com sucesso, retornar erro
+  if (packageUpdates.length === 0) {
+    return {
+      success: false,
+      packageUpdates: [],
+      errors,
+    };
+  }
+
+  // Montar metadados resumidos para o Shipment
+  const shipmentMetadata: CorreiosShipmentMetadata = {
+    carrier: 'correios',
+    serviceCode: codigoServico,
+    serviceName,
+    isMultiVolume: volumes.length > 1,
+    totalVolumes: volumes.length,
+    totalPrice,
+  };
+
+  // Código de rastreio principal (primeiro volume)
+  const primaryTrackingCode = packageUpdates[0]?.carrierTrackingCode;
+
+  console.log('[CORREIOS_MULTI_VOLUME] Pre-postagem completed:', {
+    success: true,
+    totalVolumes: volumes.length,
+    successfulVolumes: packageUpdates.length,
+    errors: errors.length,
+    trackingCodes: packageUpdates.map((p) => p.carrierTrackingCode),
+    primaryTrackingCode,
+  });
+
+  return {
+    success: true,
+    packageUpdates,
+    shipmentMetadata,
+    primaryTrackingCode,
+    errors: errors.length > 0 ? errors : undefined,
+  };
 }

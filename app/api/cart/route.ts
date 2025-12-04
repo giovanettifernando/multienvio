@@ -15,7 +15,8 @@ export async function GET() {
       return NextResponse.json({ message: 'Não autorizado' }, { status: 401 });
     }
 
-    // Buscar carrinho OPEN do usuário
+    // Buscar ou criar carrinho OPEN do usuário
+    // REGRA: Cada usuário pode ter apenas 1 carrinho OPEN (enforced by unique index)
     let cart = await prisma.cart.findFirst({
       where: {
         userId: session.userId,
@@ -31,17 +32,42 @@ export async function GET() {
     });
 
     // Se não existir, criar um novo carrinho vazio
+    // Usa try-catch para lidar com race condition (unique constraint violation)
     if (!cart) {
-      cart = await prisma.cart.create({
-        data: {
-          userId: session.userId,
-          status: 'OPEN',
-          totals: { total: 0, moeda: 'BRL' },
-        },
-        include: {
-          items: true,
-        },
-      });
+      try {
+        cart = await prisma.cart.create({
+          data: {
+            userId: session.userId,
+            status: 'OPEN',
+            totals: { total: 0, moeda: 'BRL' },
+          },
+          include: {
+            items: true,
+          },
+        });
+      } catch (error: unknown) {
+        // Se falhar por unique constraint, outro request criou o carrinho - buscar novamente
+        if (error && typeof error === 'object' && 'code' in error && error.code === 'P2002') {
+          cart = await prisma.cart.findFirst({
+            where: {
+              userId: session.userId,
+              status: 'OPEN',
+            },
+            include: {
+              items: {
+                orderBy: {
+                  createdAt: 'asc',
+                },
+              },
+            },
+          });
+          if (!cart) {
+            throw new Error('Falha ao criar/buscar carrinho');
+          }
+        } else {
+          throw error;
+        }
+      }
     }
 
     return NextResponse.json({

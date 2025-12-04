@@ -40,6 +40,8 @@ import { useCheckoutStore } from "@/stores/checkout";
 import { CheckoutModal } from "@/components/payments/CheckoutModal";
 import { usePickupFee } from "@/hooks/usePickupFee";
 import { generateUUID } from "@/lib/utils/uuid";
+import { useAddressStore } from "@/lib/state/addresses";
+import { useAddresses } from "@/hooks/useAccount";
 
 const dispatchTelemetry = (event: string, detail?: Record<string, unknown>) => {
   if (typeof window === "undefined") return;
@@ -63,6 +65,14 @@ export default function FinalizarClient() {
   const pickupPointId = useCheckoutStore((s) => s.pickupPointId);
   const cartAdd = useCartAdd();
   const recipientSave = useRecipientSave();
+
+  // Buscar endereço de origem selecionado (dados completos do banco)
+  const selectedOriginId = useAddressStore((s) => s.selectedOriginId);
+  const addressesQuery = useAddresses();
+  const selectedOriginAddress = useMemo(() => {
+    if (!selectedOriginId || !addressesQuery.data) return null;
+    return addressesQuery.data.find((a) => a.id === selectedOriginId) ?? null;
+  }, [selectedOriginId, addressesQuery.data]);
 
   // Verificar e limpar cotação expirada ao montar o componente
   useEffect(() => {
@@ -627,27 +637,30 @@ export default function FinalizarClient() {
       }
 
       // Construir payload no novo formato esperado pelo backend
+      // Usa dados completos do endereço selecionado (do banco)
       const payload = {
         originAddress: {
-          cep: summary.origemCep,
-          logradouro: 'N/A', // QuoteSummary não tem logradouro de origem
-          numero: 'S/N',
-          bairro: 'N/A',
-          cidade: summary.origemCidade || '',
-          uf: summary.origemUf || '',
+          cep: selectedOriginAddress?.cep || summary.origemCep,
+          logradouro: selectedOriginAddress?.logradouro || '',
+          numero: selectedOriginAddress?.numero || '',
+          complemento: selectedOriginAddress?.complemento || '',
+          bairro: selectedOriginAddress?.bairro || '',
+          cidade: selectedOriginAddress?.cidade || summary.origemCidade || '',
+          uf: selectedOriginAddress?.uf || summary.origemUf || '',
+          nome: selectedOriginAddress?.label || '', // label = apelido do endereço
         },
         destination: {
           cep: summary.destinoCep,
-          logradouro: recipientData?.logradouro || 'N/A',
-          numero: recipientData?.numero || 'S/N',
-          bairro: recipientData?.bairro || 'N/A',
+          logradouro: recipientData?.logradouro || '',
+          numero: recipientData?.numero || '',
+          bairro: recipientData?.bairro || '',
           cidade: summary.destinoCidade || '',
           uf: summary.destinoUf || '',
-          nome: recipientData?.nome,
-          telefone: recipientData?.telefone,
-          email: recipientData?.email,
-          documento: recipientData?.documento,
-          complemento: recipientData?.complemento,
+          nome: recipientData?.nome || '',
+          telefone: recipientData?.telefone || '',
+          email: recipientData?.email || '',
+          documento: recipientData?.documento || '',
+          complemento: recipientData?.complemento || '',
         },
         volumes: summary.volumes,
         preferences: {
@@ -883,16 +896,45 @@ export default function FinalizarClient() {
         },
         document: {
           type: values.document.type,
-          // Novo formato unificado: documento por volume (cada volume pode ter NFE ou DECLARACAO)
-          volumeDocuments: values.document.volumeDocuments,
           // Novo formato: NF por pacote
           packages: values.document.type === "NFE" ? values.document.packages : undefined,
           // Campos legados para retrocompatibilidade
           nfeKeys: values.document.type === "NFE" ? values.document.nfeKeys : undefined,
           nfeItems: values.document.type === "NFE" ? values.document.nfeItems : undefined,
           declarationItems: values.document.type === "DECLARACAO" ? values.document.declarationItems : undefined,
-          // Novo formato: declaração por volume
-          volumeDeclarations: values.document.type === "DECLARACAO" ? values.document.volumeDeclarations : undefined,
+          // Converter volumeDocuments (formato do UI) para volumeDeclarations (formato da API)
+          // Prioriza volumeDocuments se tiver dados, senão usa volumeDeclarations
+          volumeDeclarations: values.document.type === "DECLARACAO"
+            ? (() => {
+                // Tentar extrair de volumeDocuments primeiro (formato novo do UI)
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const volumeDocs = values.document.volumeDocuments as any[] | undefined;
+                const fromVolumeDocuments = (volumeDocs || [])
+                  .filter((vol) =>
+                    vol.declarationItems && vol.declarationItems.length > 0 &&
+                    vol.declarationItems.some((item: { descricao?: string }) =>
+                      item.descricao && item.descricao.trim().length > 0
+                    )
+                  )
+                  .map((vol) => ({
+                    volumeIndex: vol.volumeIndex as number,
+                    items: (vol.declarationItems || []).map((item: { id?: string; descricao?: string; valorUnitario?: number; quantidade?: number }) => ({
+                      id: item.id || "",
+                      descricao: item.descricao || "",
+                      valorUnitario: item.valorUnitario || 0,
+                      quantidade: item.quantidade || 1,
+                    })),
+                  }));
+
+                // Se volumeDocuments tem dados válidos, usar
+                if (fromVolumeDocuments.length > 0) {
+                  return fromVolumeDocuments;
+                }
+
+                // Fallback: usar volumeDeclarations diretamente (formato legado)
+                return values.document.volumeDeclarations;
+              })()
+            : undefined,
         },
         volumes: summary.volumes.map((v) => ({
           peso: v.pesoKg,
@@ -912,6 +954,17 @@ export default function FinalizarClient() {
         originCep: summary.origemCep || "",
         originCidade: summary.origemCidade,
         originUf: summary.origemUf,
+        // Dados completos do endereço de origem para integração com transportadora
+        originAddress: {
+          cep: selectedOriginAddress?.cep || summary.origemCep || "",
+          logradouro: selectedOriginAddress?.logradouro || "",
+          numero: selectedOriginAddress?.numero || "",
+          complemento: selectedOriginAddress?.complemento || "",
+          bairro: selectedOriginAddress?.bairro || "",
+          cidade: selectedOriginAddress?.cidade || summary.origemCidade || "",
+          uf: selectedOriginAddress?.uf || summary.origemUf || "",
+          nome: selectedOriginAddress?.label || "",
+        },
         destinationCep: summary.destinoCep || "",
         estimatedDays: selectedService.prazoDias,
         freightCost: selectedService.preco,

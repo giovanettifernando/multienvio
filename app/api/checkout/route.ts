@@ -7,6 +7,7 @@ import { getUserSessionFromRequest } from '@/lib/auth/user-session';
 import { createShipmentWithVolumes } from '@/lib/shipments/create-with-volumes';
 import { createInitialTrackingEvent } from '@/lib/tracking/create-event';
 import { ShipmentStatus } from '@/lib/shipments/shipment-status';
+import { integrateWithCarrier } from '@/lib/shipments/carrier-integration';
 
 // Schema de validação do checkout
 const checkoutSchema = z.object({
@@ -82,6 +83,17 @@ const checkoutSchema = z.object({
   originCep: z.string(),
   originCidade: z.string().optional(),
   originUf: z.string().optional(),
+  // Dados completos do endereço de origem para integração com transportadora
+  originAddress: z.object({
+    cep: z.string(),
+    logradouro: z.string().optional(),
+    numero: z.string().optional(),
+    complemento: z.string().optional(),
+    bairro: z.string().optional(),
+    cidade: z.string().optional(),
+    uf: z.string().optional(),
+    nome: z.string().optional(), // label/apelido do endereço
+  }).optional(),
   destinationCep: z.string(),
   estimatedDays: z.number(),
   freightCost: z.number(),
@@ -402,6 +414,7 @@ export async function POST(request: Request) {
       });
 
       // Criar etiqueta automaticamente vinculada ao shipment
+      // IMPORTANTE: Criar ANTES da integração para que a integração possa atualizar
       const label = await tx.label.create({
         data: {
           shipmentId: shipment.id,
@@ -410,11 +423,117 @@ export async function POST(request: Request) {
           status: 'pending', // pending até o pagamento ser confirmado
           priceCents: Math.round(data.freightCost * 100), // Converter para centavos
           currency: 'BRL',
-          trackingCode: platformTrackingCode, // Temporariamente usar código da plataforma
+          trackingCode: platformTrackingCode, // Será atualizado pela integração se sucesso
           recipientName: data.recipient.nome, // Nome do destinatário denormalizado
           isPrinted: false,
         },
       });
+
+      // 🚚 INTEGRAÇÃO COM TRANSPORTADORA: Criar pré-postagem e obter códigos de rastreio
+      // Esta integração é best-effort - se falhar, o checkout continua com código interno
+      try {
+        // Buscar dados do usuário para CPF/CNPJ, telefone e email
+        const user = await tx.user.findUnique({
+          where: { id: session.userId },
+          select: {
+            name: true,
+            email: true,
+            phone: true,
+            cpf: true,
+            cnpj: true,
+          },
+        });
+
+        // Extrair dados do remetente do originAddress (se disponível)
+        const originData = data.originAddress || {
+          cep: data.originCep,
+          cidade: data.originCidade,
+          uf: data.originUf,
+        };
+
+        // Determinar documento do remetente
+        // Prioridade: Se CNPJ preenchido → CNPJ, senão → CPF
+        const senderDocumento =
+          (user?.cnpj && user.cnpj.trim() !== '' ? user.cnpj : null) ||
+          user?.cpf ||
+          '';
+
+        // Dados do remetente
+        const senderData = {
+          nome: originData.nome || user?.name || 'Remetente',
+          documento: senderDocumento.replace(/\D/g, ''), // Remove formatação
+          telefone: user?.phone || undefined,
+          email: user?.email || undefined,
+          cep: (originData.cep || data.originCep).replace(/\D/g, ''),
+          logradouro: originData.logradouro || undefined,
+          numero: originData.numero || undefined,
+          complemento: originData.complemento || undefined,
+          bairro: originData.bairro || undefined,
+          cidade: originData.cidade || data.originCidade || undefined,
+          uf: originData.uf || data.originUf || undefined,
+        };
+
+        console.log('[CHECKOUT] Sender data:', {
+          shipmentId: shipment.id,
+          hasUserData: !!user,
+          documento: senderData.documento ? `${senderData.documento.substring(0, 3)}***` : 'MISSING',
+          nome: senderData.nome,
+          cep: senderData.cep,
+          logradouro: senderData.logradouro,
+        });
+
+        // Dados do destinatário
+        const recipientData = {
+          nome: data.recipient.nome,
+          documento: data.recipient.documento || undefined,
+          telefone: data.recipient.telefone || undefined,
+          email: data.recipient.email || undefined,
+          cep: data.recipient.cep.replace(/\D/g, ''),
+          logradouro: data.recipient.logradouro || '',
+          numero: data.recipient.numero || undefined,
+          complemento: data.recipient.complemento || undefined,
+          bairro: data.recipient.bairro || undefined,
+          cidade: data.recipient.cidade,
+          uf: data.recipient.uf,
+        };
+
+        // Chamar integração com transportadora
+        const integrationResult = await integrateWithCarrier(tx, {
+          shipmentId: shipment.id,
+          carrier: data.carrier,
+          serviceName: data.service,
+          serviceCode: undefined, // Não temos o código de serviço no checkout direto
+          packages,
+          sender: senderData,
+          recipient: recipientData,
+          declaredValue,
+          contentDescription: 'Mercadorias diversas',
+        });
+
+        if (integrationResult.success) {
+          console.log('[CHECKOUT] Carrier integration successful:', {
+            shipmentId: shipment.id,
+            carrier: data.carrier,
+            primaryTrackingCode: integrationResult.primaryTrackingCode,
+            packagesUpdated: integrationResult.packageUpdates?.length || 0,
+          });
+        } else {
+          // Log de falha mas não interrompe o checkout
+          console.warn('[CHECKOUT] Carrier integration failed (non-blocking):', {
+            shipmentId: shipment.id,
+            carrier: data.carrier,
+            error: integrationResult.errorMessage,
+            errors: integrationResult.errors,
+          });
+        }
+      } catch (integrationError) {
+        // Erro na integração não deve impedir o checkout
+        console.error('[CHECKOUT] Carrier integration error (non-blocking):', {
+          shipmentId: shipment.id,
+          carrier: data.carrier,
+          error: integrationError instanceof Error ? integrationError.message : integrationError,
+        });
+      }
 
       // Se solicitarColeta estiver ativado, criar PickupRequest
       let pickupRequest = null;

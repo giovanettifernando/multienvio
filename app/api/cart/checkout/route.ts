@@ -7,6 +7,7 @@ import { createShipmentWithVolumes } from '@/lib/shipments/create-with-volumes';
 import { createInitialTrackingEvent } from '@/lib/tracking/create-event';
 import { ShipmentStatus } from '@/lib/shipments/shipment-status';
 import { calculateCommissionsInCents } from '@/lib/quotes/commission';
+import { integrateWithCarrier } from '@/lib/shipments/carrier-integration';
 import crypto from 'crypto';
 import type { Prisma } from '@prisma/client';
 
@@ -93,7 +94,7 @@ export async function POST(request: Request) {
         // Isso garante que apenas uma transação pode verificar/debitar por vez
         const wallets = await tx.$queryRaw<Array<{ id: string; availableCents: number }>>`
           SELECT id, "availableCents"
-          FROM "Wallet"
+          FROM "wallets"
           WHERE "userId" = ${session.userId}
           FOR UPDATE
         `;
@@ -122,6 +123,40 @@ export async function POST(request: Request) {
         existingCheckout?.shipmentIds &&
         existingCheckout.shipmentIds.length > 0
       ) {
+        // ✅ FIX: Mesmo em caso de idempotência, garantir que itens sejam removidos
+        // (pode ter falhado a remoção anterior)
+        const processedItemIds = itemsToCheckout.map((item) => item.id);
+        await tx.cartItem.deleteMany({
+          where: {
+            id: { in: processedItemIds },
+            cartId: cart.id,
+          },
+        });
+
+        // Recalcular totais
+        const remainingItems = await tx.cartItem.findMany({
+          where: { cartId: cart.id },
+        });
+
+        const newTotal = remainingItems.reduce((sum, item) => {
+          const itemTotals = item.totals as { total?: number };
+          return sum + (itemTotals?.total || 0);
+        }, 0);
+
+        await tx.cart.update({
+          where: { id: cart.id },
+          data: {
+            status: 'OPEN',
+            totals: { total: newTotal, moeda: 'BRL' },
+          },
+        });
+
+        console.log('[CART_CHECKOUT] Idempotência detectada, itens removidos:', {
+          cartId: cart.id,
+          processedCount: processedItemIds.length,
+          remainingCount: remainingItems.length,
+        });
+
         // Idempotência: retornar shipments já criados
         return {
           idempotent: true,
@@ -181,7 +216,7 @@ export async function POST(request: Request) {
         );
 
         // Criar shipment COM VOLUMES usando serviço centralizado
-        const { shipment } = await createShipmentWithVolumes(tx, {
+        const { shipment, packages } = await createShipmentWithVolumes(tx, {
           shipment: {
             platformTrackingCode,
             carrierTrackingCode: null,
@@ -227,7 +262,7 @@ export async function POST(request: Request) {
         });
 
         // Criar etiqueta automaticamente vinculada ao shipment
-        // (mesma lógica do /api/checkout)
+        // IMPORTANTE: Criar ANTES da integração para que a integração possa atualizar
         await tx.label.create({
           data: {
             shipmentId: shipment.id,
@@ -236,11 +271,125 @@ export async function POST(request: Request) {
             status: 'pending', // pending até o pagamento ser confirmado
             priceCents: Math.round(selectedQuote.price * 100), // Converter para centavos
             currency: 'BRL',
-            trackingCode: platformTrackingCode, // Usar código da plataforma
-            recipientName: destination.nome || destination.apelido || 'Destinatário', // Nome do destinatário denormalizado
+            trackingCode: platformTrackingCode, // Será atualizado pela integração se sucesso
+            recipientName: destination.nome || destination.apelido || 'Destinatário',
             isPrinted: false,
           },
         });
+
+        // 🚚 INTEGRAÇÃO COM TRANSPORTADORA: Criar pré-postagem e obter códigos de rastreio
+        // Esta integração é best-effort - se falhar, o checkout continua com código interno
+        try {
+          // Buscar dados do usuário para CPF/CNPJ, telefone e email
+          const user = await tx.user.findUnique({
+            where: { id: session.userId },
+            select: {
+              name: true,
+              email: true,
+              phone: true,
+              cpf: true,
+              cnpj: true,
+            },
+          });
+
+          // Extrair dados do remetente do originAddress do item
+          // IMPORTANTE: originAddress já vem com dados completos do endereço
+          // selecionado em /cotações (não precisamos buscar novamente do banco)
+          const originData = item.originAddress as {
+            cep: string;
+            logradouro?: string;
+            numero?: string;
+            complemento?: string;
+            bairro?: string;
+            cidade?: string;
+            uf?: string;
+            nome?: string; // label/apelido do endereço
+          };
+
+          // Determinar documento do remetente
+          // Prioridade: Se CNPJ preenchido → CNPJ, senão → CPF
+          const senderDocumento =
+            (user?.cnpj && user.cnpj.trim() !== '' ? user.cnpj : null) ||
+            user?.cpf ||
+            '';
+
+          // Dados do remetente - usa dados do originAddress (já completos)
+          // + dados pessoais do User (CPF/CNPJ, telefone, email)
+          const senderData = {
+            nome: originData.nome || user?.name || 'Remetente',
+            documento: senderDocumento.replace(/\D/g, ''), // Remove formatação
+            telefone: user?.phone || undefined,
+            email: user?.email || undefined,
+            cep: originData.cep.replace(/\D/g, ''),
+            logradouro: originData.logradouro || undefined,
+            numero: originData.numero || undefined,
+            complemento: originData.complemento || undefined,
+            bairro: originData.bairro || undefined,
+            cidade: originData.cidade || undefined,
+            uf: originData.uf || undefined,
+          };
+
+          console.log('[CART_CHECKOUT] Sender data:', {
+            shipmentId: shipment.id,
+            hasUserData: !!user,
+            documento: senderData.documento ? `${senderData.documento.substring(0, 3)}***` : 'MISSING',
+            nome: senderData.nome,
+            cep: senderData.cep,
+            logradouro: senderData.logradouro,
+          });
+
+          // Dados do destinatário
+          const recipientData = {
+            nome: destination.nome || destination.apelido || 'Destinatário',
+            documento: destination.documento,
+            telefone: destination.telefone,
+            email: destination.email,
+            cep: destination.cep,
+            logradouro: destination.logradouro,
+            numero: destination.numero,
+            complemento: destination.complemento,
+            bairro: destination.bairro,
+            cidade: destination.cidade,
+            uf: destination.uf,
+          };
+
+          // Chamar integração com transportadora
+          const integrationResult = await integrateWithCarrier(tx, {
+            shipmentId: shipment.id,
+            carrier: selectedQuote.carrier,
+            serviceName: selectedQuote.serviceName || '',
+            serviceCode: selectedQuote.serviceCode,
+            packages,
+            sender: senderData,
+            recipient: recipientData,
+            declaredValue,
+            contentDescription: 'Mercadorias diversas',
+          });
+
+          if (integrationResult.success) {
+            console.log('[CART_CHECKOUT] Carrier integration successful:', {
+              shipmentId: shipment.id,
+              carrier: selectedQuote.carrier,
+              primaryTrackingCode: integrationResult.primaryTrackingCode,
+              packagesUpdated: integrationResult.packageUpdates?.length || 0,
+            });
+          } else {
+            // Log de falha mas não interrompe o checkout
+            console.warn('[CART_CHECKOUT] Carrier integration failed (non-blocking):', {
+              shipmentId: shipment.id,
+              carrier: selectedQuote.carrier,
+              error: integrationResult.errorMessage,
+              errors: integrationResult.errors,
+            });
+          }
+        } catch (integrationError) {
+          // Erro na integração não deve impedir o checkout
+          console.error('[CART_CHECKOUT] Carrier integration error (non-blocking):', {
+            shipmentId: shipment.id,
+            carrier: selectedQuote.carrier,
+            error: integrationError instanceof Error ? integrationError.message : integrationError,
+          });
+        }
 
         // Se coleta foi solicitada, criar PickupRequest
         if (hasPickupRequest) {
@@ -296,6 +445,51 @@ export async function POST(request: Request) {
             totalAmount,
           },
         },
+      });
+
+      // ✅ CRITICAL FIX: Remover itens processados DENTRO da transação
+      // Isso garante atomicidade - se o checkout foi bem-sucedido, os itens são removidos
+      const processedItemIds = itemsToCheckout.map((item) => item.id);
+      await tx.cartItem.deleteMany({
+        where: {
+          id: { in: processedItemIds },
+          cartId: cart.id,
+        },
+      });
+
+      // Atualizar totais do carrinho (zerar se todos os itens foram processados)
+      const remainingItems = await tx.cartItem.findMany({
+        where: { cartId: cart.id },
+      });
+
+      if (remainingItems.length === 0) {
+        // Todos os itens foram processados - resetar carrinho
+        await tx.cart.update({
+          where: { id: cart.id },
+          data: {
+            status: 'OPEN',
+            totals: { total: 0, moeda: 'BRL' },
+          },
+        });
+      } else {
+        // Ainda há itens - recalcular totais
+        const newTotal = remainingItems.reduce((sum, item) => {
+          const itemTotals = item.totals as { total?: number };
+          return sum + (itemTotals?.total || 0);
+        }, 0);
+        await tx.cart.update({
+          where: { id: cart.id },
+          data: {
+            status: 'OPEN',
+            totals: { total: newTotal, moeda: 'BRL' },
+          },
+        });
+      }
+
+      console.log('[CART_CHECKOUT] Items removidos após checkout:', {
+        cartId: cart.id,
+        processedCount: processedItemIds.length,
+        remainingCount: remainingItems.length,
       });
 
       return {

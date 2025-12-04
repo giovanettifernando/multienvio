@@ -68,6 +68,7 @@ export {
   calcularPrazoCorreios,
   cotarCorreios,
   cotarCorreiosDefault,
+  cotarMultiVolumeCorreios,
   getCorreiosServicos,
 } from './precoPrazo';
 
@@ -76,6 +77,7 @@ export {
   criarPrePostagem,
   criarPrePostagemIndividual,
   criarLotePrePostagem,
+  criarPrePostagemMultiVolume,
   gerarRotulo,
   baixarRotuloPdf,
   buscarPrePostagemPorRastreio,
@@ -89,6 +91,9 @@ export {
   type FullPrePostagemResult,
   type EtiquetaFormato,
   type BuscaPrePostagemResult,
+  type VolumePrePostagemInput,
+  type MultiVolumePrePostagemInput,
+  type MultiVolumePrePostagemResult,
 } from './prepostagem';
 
 // Rastreamento

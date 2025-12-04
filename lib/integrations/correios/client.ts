@@ -488,8 +488,8 @@ export async function testCorreiosAuth(): Promise<CorreiosAuthTestResult> {
  * 2. Legado: busca JWT token usando Basic Auth
  */
 export async function getCorreiosToken(): Promise<string> {
-  // Obter config (pode vir do cache ou env)
-  const config = getCorreiosConfig();
+  // Obter config (sempre tentar buscar do banco primeiro)
+  const config = await getCorreiosConfigAsync();
 
   // Validar configuração
   const validation = validateCorreiosConfig(config);
@@ -540,7 +540,8 @@ export async function correiosFetch<T = unknown>(
   path: string,
   options: CorreiosFetchOptions = {}
 ): Promise<T> {
-  const config = getCorreiosConfig();
+  // Sempre tentar buscar config do banco primeiro
+  const config = await getCorreiosConfigAsync();
   const url = `${config.apiBase}${path}`;
   const timeout = options.timeout || 30000; // 30 segundos default
 

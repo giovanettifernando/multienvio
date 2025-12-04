@@ -69,7 +69,7 @@ export async function POST(request: Request) {
         // 2) Buscar carteira COM LOCK (SELECT FOR UPDATE para prevenir race condition)
         const wallets = await tx.$queryRaw<Array<{ id: string; userId: string; availableCents: number; pendingCents: number }>>`
           SELECT id, "userId", "availableCents", "pendingCents"
-          FROM "Wallet"
+          FROM "wallets"
           WHERE "userId" = ${session.userId}
           FOR UPDATE
         `;

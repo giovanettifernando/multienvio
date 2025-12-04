@@ -45,8 +45,9 @@ export const CORREIOS_ENDPOINTS = {
   // Etiqueta por ID (para baixarEtiqueta - pode não funcionar no v1, usar gerarRotulo)
   prePostagemEtiqueta: '/prepostagem/v1/prepostagens',                 // GET /{id} - endpoint para consulta/download
 
-  // Rastro
-  rastro: '/rastro/v1/objetos',
+  // Rastro (SRO - Sistema de Rastreamento de Objetos)
+  // Conforme manual CWS: GET /srorastro/v1/objetos/{codigoObjeto}?resultado=T
+  rastro: '/srorastro/v1/objetos',
 
   // CEP
   cep: '/cep/v2/enderecos',

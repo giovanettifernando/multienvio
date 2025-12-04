@@ -494,3 +494,66 @@ export class CorreiosValidationError extends CorreiosApiError {
     this.name = 'CorreiosValidationError';
   }
 }
+
+// ============================================================================
+// Multi-Volume (Package e Shipment)
+// ============================================================================
+
+/**
+ * Dados de um volume para atualização do Package no banco
+ * Usado após criar pré-postagem
+ */
+export interface CorreiosPackageUpdate {
+  packageNumber: number;        // Número do volume (1, 2, 3...)
+  carrierTrackingCode: string;  // Código de rastreio (ex: AB123456789BR)
+  carrierPrePostageId: string;  // ID da pré-postagem (ex: PRNnhoiSb6SSKvvVJA13MiOA)
+  carrierQuotePrice?: number;   // Preço do frete deste volume
+}
+
+/**
+ * Metadados resumidos do Correios armazenados em Shipment.carrierMetadata
+ * Dados detalhados ficam em cada Package
+ */
+export interface CorreiosShipmentMetadata {
+  carrier: 'correios';
+  serviceCode: string;          // Código do serviço (ex: 03298)
+  serviceName: string;          // Nome do serviço (ex: PAC)
+  isMultiVolume: boolean;       // Se tem mais de 1 volume
+  totalVolumes: number;         // Total de volumes
+  totalPrice: number;           // Preço total do frete (soma de todos volumes)
+}
+
+/**
+ * Input para cotação por volume
+ */
+export interface CorreiosVolumeQuoteInput {
+  packageNumber: number;
+  weight: number;               // kg
+  width: number;                // cm
+  height: number;               // cm
+  length: number;               // cm
+}
+
+/**
+ * Resultado de cotação por volume
+ */
+export interface CorreiosVolumeQuoteResult {
+  packageNumber: number;
+  serviceCode: string;
+  serviceName: string;
+  price: number;
+  deliveryDays: number;
+  error?: string;
+}
+
+/**
+ * Resultado consolidado de cotação multi-volume
+ */
+export interface CorreiosMultiVolumeQuoteResult {
+  serviceCode: string;
+  serviceName: string;
+  totalPrice: number;           // Soma dos preços de todos os volumes
+  deliveryDays: number;         // Prazo (igual para todos os volumes)
+  volumeResults: CorreiosVolumeQuoteResult[];
+  hasErrors: boolean;
+}

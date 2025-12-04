@@ -43,20 +43,37 @@ export function reaisToCents(reais: number): number {
 
 /**
  * Obtém ou cria a carteira do usuário
+ * REGRA: Cada usuário pode ter apenas 1 carteira (enforced by unique constraint on userId)
  */
 export async function getOrCreateWallet(userId: string) {
   let wallet = await prisma.wallet.findUnique({
     where: { userId },
   });
 
+  // Se não existir, criar nova carteira
+  // Usa try-catch para lidar com race condition (unique constraint violation)
   if (!wallet) {
-    wallet = await prisma.wallet.create({
-      data: {
-        userId,
-        availableCents: 0,
-        pendingCents: 0,
-      },
-    });
+    try {
+      wallet = await prisma.wallet.create({
+        data: {
+          userId,
+          availableCents: 0,
+          pendingCents: 0,
+        },
+      });
+    } catch (error: unknown) {
+      // Se falhar por unique constraint, outro request criou a carteira - buscar novamente
+      if (error && typeof error === 'object' && 'code' in error && error.code === 'P2002') {
+        wallet = await prisma.wallet.findUnique({
+          where: { userId },
+        });
+        if (!wallet) {
+          throw new Error('Falha ao criar/buscar carteira');
+        }
+      } else {
+        throw error;
+      }
+    }
   }
 
   return wallet;
@@ -150,7 +167,7 @@ export async function debit(
     // 🔒 CRITICAL: Adquirir lock FOR UPDATE antes de verificar saldo
     const lockedWallets = await tx.$queryRaw<Array<{ id: string; availableCents: number }>>`
       SELECT id, "availableCents"
-      FROM "Wallet"
+      FROM "wallets"
       WHERE "userId" = ${userId}
       FOR UPDATE
     `;

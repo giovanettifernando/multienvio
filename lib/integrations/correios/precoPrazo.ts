@@ -531,3 +531,159 @@ export async function cotarCorreiosDefault(
   const servicos = getCorreiosServicos();
   return cotarCorreios(servicos, input);
 }
+
+// ============================================================================
+// Cotação Multi-Volume
+// ============================================================================
+
+import type {
+  CorreiosVolumeQuoteInput,
+  CorreiosVolumeQuoteResult,
+  CorreiosMultiVolumeQuoteResult,
+} from './types';
+
+/**
+ * Cotação multi-volume para Correios
+ *
+ * Para embarques com múltiplos volumes, cada volume deve ser cotado
+ * individualmente pois os Correios cobram por pacote.
+ *
+ * @param cepOrigem CEP de origem
+ * @param cepDestino CEP de destino
+ * @param volumes Array de volumes com dimensões e peso individuais
+ * @param valorDeclarado Valor declarado total (rateado entre volumes)
+ * @returns Cotação consolidada por serviço com soma dos preços
+ */
+export async function cotarMultiVolumeCorreios(
+  cepOrigem: string,
+  cepDestino: string,
+  volumes: CorreiosVolumeQuoteInput[],
+  valorDeclarado?: number
+): Promise<CorreiosMultiVolumeQuoteResult[]> {
+  if (volumes.length === 0) {
+    console.warn('[CORREIOS_MULTI_VOLUME] No volumes provided');
+    return [];
+  }
+
+  console.log('[CORREIOS_MULTI_VOLUME] Starting quote:', {
+    cepOrigem,
+    cepDestino,
+    totalVolumes: volumes.length,
+    volumes: volumes.map((v) => ({
+      packageNumber: v.packageNumber,
+      weight: v.weight,
+      dimensions: `${v.width}x${v.height}x${v.length}`,
+    })),
+  });
+
+  const servicos = getCorreiosServicos();
+  if (servicos.length === 0) {
+    console.warn('[CORREIOS_MULTI_VOLUME] No services configured');
+    return [];
+  }
+
+  // Valor declarado rateado por volume (proporcional ao peso ou igualmente)
+  const valorPorVolume = valorDeclarado
+    ? valorDeclarado / volumes.length
+    : undefined;
+
+  // Cotar cada volume individualmente
+  const volumeQuotes: Map<number, CorreiosCotacaoCompleta[]> = new Map();
+
+  for (const volume of volumes) {
+    const input: CorreiosPrecoPrazoInput = {
+      cepOrigem,
+      cepDestino,
+      pesoGramas: Math.round(volume.weight * 1000), // kg -> gramas
+      comprimentoCm: Math.round(volume.length),
+      larguraCm: Math.round(volume.width),
+      alturaCm: Math.round(volume.height),
+      valorDeclarado: valorPorVolume,
+    };
+
+    const quotes = await cotarCorreios(servicos, input);
+    volumeQuotes.set(volume.packageNumber, quotes);
+
+    console.log('[CORREIOS_MULTI_VOLUME] Volume quoted:', {
+      packageNumber: volume.packageNumber,
+      quotesCount: quotes.length,
+      prices: quotes.map((q) => ({ service: q.nomeServico, price: q.precoTotal })),
+    });
+  }
+
+  // Consolidar resultados por serviço
+  const consolidatedResults: CorreiosMultiVolumeQuoteResult[] = [];
+
+  for (const servico of servicos) {
+    const volumeResults: CorreiosVolumeQuoteResult[] = [];
+    let totalPrice = 0;
+    let hasErrors = false;
+    let deliveryDays = 0;
+
+    for (const volume of volumes) {
+      const quotes = volumeQuotes.get(volume.packageNumber) || [];
+      const quote = quotes.find(
+        (q) => q.codigoServicoCorreios === servico.codigoServico
+      );
+
+      if (quote) {
+        const volumeResult: CorreiosVolumeQuoteResult = {
+          packageNumber: volume.packageNumber,
+          serviceCode: servico.codigoServico,
+          serviceName: servico.nomeExibicao,
+          price: quote.precoTotal,
+          deliveryDays: quote.prazoDias,
+        };
+
+        if (quote.erros && quote.erros.length > 0) {
+          volumeResult.error = quote.erros.map((e) => e.mensagem).join('; ');
+          hasErrors = true;
+        }
+
+        volumeResults.push(volumeResult);
+        totalPrice += quote.precoTotal;
+
+        // Prazo é o mesmo para todos os volumes (usar o maior se houver diferença)
+        if (quote.prazoDias > deliveryDays) {
+          deliveryDays = quote.prazoDias;
+        }
+      } else {
+        // Volume sem cotação
+        volumeResults.push({
+          packageNumber: volume.packageNumber,
+          serviceCode: servico.codigoServico,
+          serviceName: servico.nomeExibicao,
+          price: 0,
+          deliveryDays: 0,
+          error: 'Cotação não disponível para este volume',
+        });
+        hasErrors = true;
+      }
+    }
+
+    // Só incluir se tiver preço válido para todos os volumes (ou parcialmente)
+    if (totalPrice > 0 || volumeResults.some((v) => v.price > 0)) {
+      consolidatedResults.push({
+        serviceCode: servico.codigoServico,
+        serviceName: servico.nomeExibicao,
+        totalPrice,
+        deliveryDays,
+        volumeResults,
+        hasErrors,
+      });
+    }
+  }
+
+  console.log('[CORREIOS_MULTI_VOLUME] Quote completed:', {
+    servicesQuoted: consolidatedResults.length,
+    results: consolidatedResults.map((r) => ({
+      service: r.serviceName,
+      totalPrice: r.totalPrice,
+      deliveryDays: r.deliveryDays,
+      volumes: r.volumeResults.length,
+      hasErrors: r.hasErrors,
+    })),
+  });
+
+  return consolidatedResults;
+}
