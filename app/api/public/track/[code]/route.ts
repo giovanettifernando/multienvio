@@ -131,6 +131,8 @@ export async function GET(
         unitValue?: number;
         subtotal?: number;
       }>;
+      // Dados completos da NF-e para espelho (opcional)
+      nfeData?: unknown;
     };
 
     const volumes: PublicVolume[] = [];
@@ -192,6 +194,8 @@ export async function GET(
       chave?: string;
       xmlId?: string | null;
       items?: DocumentItem[];
+      // Dados completos da NF-e para espelho
+      nfeData?: unknown;
     };
 
     // Tipo para volume no formato de cotação (legado)
@@ -276,6 +280,8 @@ export async function GET(
                 unitValue: item.valorUnitario || item.unitValue || item.valor,
                 subtotal: item.subtotal || item.total || item.valorTotal,
               })),
+              // Dados completos da NF-e para espelho
+              nfeData: docPkg.nfeData || undefined,
             });
           });
         }

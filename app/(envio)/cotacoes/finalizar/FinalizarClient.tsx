@@ -32,6 +32,7 @@ import { useCartAdd } from "@/hooks/useCart";
 import { useRecipientSave } from "@/hooks/useQuotes";
 import {
   createFinalizeFormSchema,
+  validateVolumeDocumentsOnSubmit,
   type FinalizeFormValues,
 } from "@/types/quoteFinalize";
 import type { DocumentType } from "@/types/quote";
@@ -546,6 +547,15 @@ export default function FinalizarClient() {
     // Busca valores mínimos necessários para adicionar ao carrinho
     const values = formMethods.getValues();
 
+    // Validar volumeDocuments se estiver usando o novo formato
+    const volumeDocsValidation = validateVolumeDocumentsOnSubmit(values);
+    if (!volumeDocsValidation.isValid) {
+      console.log('[CART_ADD] ❌ Validação de volumeDocuments falhou:', volumeDocsValidation.errors);
+      const firstError = volumeDocsValidation.errors[0];
+      message.error(firstError?.message || 'Preencha os dados do documento fiscal para cada volume.');
+      return;
+    }
+
     // Calcular total incluindo taxa de coleta se aplicável
     const pickupFeeAmount = pickupFeeData && pickupFeeData.success ? pickupFeeData.feeAmount : 0;
     const totalAmount = selectedService.preco + pickupFeeAmount;
@@ -701,17 +711,21 @@ export default function FinalizarClient() {
                   .map((vol) => ({
                     chave: vol.nfeKey as string,
                     xmlId: vol.nfeXmlId || null,
-                    items: (vol.nfeItems || []).map((item: { id?: string; sku?: string | null; descricao?: string; ncm?: string | null; cfop?: string | null; quantidade?: number; pesoLiquido?: number | null; valorUnitario?: number; valorTotal?: number }) => ({
+                    items: (vol.nfeItems || []).map((item: { id?: string; sku?: string | null; descricao?: string; ncm?: string | null; cfop?: string | null; unidade?: string | null; quantidade?: number; pesoLiquido?: number | null; valorUnitario?: number; valorTotal?: number; impostos?: unknown }) => ({
                       id: item.id || "",
                       sku: item.sku || null,
                       descricao: item.descricao || "",
                       ncm: item.ncm || null,
                       cfop: item.cfop || null,
+                      unidade: item.unidade || null,
                       quantidade: item.quantidade || 1,
                       pesoLiquido: item.pesoLiquido || null,
                       valorUnitario: item.valorUnitario || 0,
                       valorTotal: item.valorTotal || 0,
+                      impostos: item.impostos || null,
                     })),
+                    // Dados completos da NF-e para espelho
+                    nfeData: vol.nfeData || null,
                   }));
 
                 // Se há dados em volumeDocuments, usar
@@ -798,6 +812,16 @@ export default function FinalizarClient() {
     console.log('[HANDLE_PAY_NOW] 🔒 Iniciando checkout (lock ativado)', { selection, results: !!results, summary: !!summary, selectedService: !!selectedService });
 
     try {
+      // Validar volumeDocuments se estiver usando o novo formato
+      const volumeDocsValidation = validateVolumeDocumentsOnSubmit(values);
+      if (!volumeDocsValidation.isValid) {
+        console.log('[HANDLE_PAY_NOW] ❌ Validação de volumeDocuments falhou:', volumeDocsValidation.errors);
+        const firstError = volumeDocsValidation.errors[0];
+        message.error(firstError?.message || 'Preencha os dados do documento fiscal para cada volume.');
+        setIsProcessingCheckout(false);
+        return;
+      }
+
       console.log('[DEBUG_CHECKPOINT_1] Antes do if de validação');
 
       if (!selection || !results || !summary || !selectedService) {
@@ -975,17 +999,21 @@ export default function FinalizarClient() {
                   .map((vol) => ({
                     chave: vol.nfeKey as string,
                     xmlId: vol.nfeXmlId || null,
-                    items: (vol.nfeItems || []).map((item: { id?: string; sku?: string | null; descricao?: string; ncm?: string | null; cfop?: string | null; quantidade?: number; pesoLiquido?: number | null; valorUnitario?: number; valorTotal?: number }) => ({
+                    items: (vol.nfeItems || []).map((item: { id?: string; sku?: string | null; descricao?: string; ncm?: string | null; cfop?: string | null; unidade?: string | null; quantidade?: number; pesoLiquido?: number | null; valorUnitario?: number; valorTotal?: number; impostos?: unknown }) => ({
                       id: item.id || "",
                       sku: item.sku || null,
                       descricao: item.descricao || "",
                       ncm: item.ncm || null,
                       cfop: item.cfop || null,
+                      unidade: item.unidade || null,
                       quantidade: item.quantidade || 1,
                       pesoLiquido: item.pesoLiquido || null,
                       valorUnitario: item.valorUnitario || 0,
                       valorTotal: item.valorTotal || 0,
+                      impostos: item.impostos || null,
                     })),
+                    // Dados completos da NF-e para espelho
+                    nfeData: vol.nfeData || null,
                   }));
 
                 // Se há dados em volumeDocuments, usar

@@ -230,7 +230,7 @@ export function VolumeNFeTab({ volumeCount }: VolumeNFeTabProps) {
         return false;
       }
 
-      // Parsear o XML para obter itens
+      // Parsear o XML para obter itens e dados completos
       const response = await fetch("/api/nfe/parse", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -248,6 +248,8 @@ export function VolumeNFeTab({ volumeCount }: VolumeNFeTabProps) {
         type: "NFE",
         nfeKey: chave,
         nfeItems: result.success ? result.data?.items : undefined,
+        // Armazenar dados completos da NF-e para espelho
+        nfeData: result.success ? result.data : undefined,
       };
       setValue("document.volumeDocuments", docs, { shouldDirty: true });
       return true;
@@ -265,6 +267,7 @@ export function VolumeNFeTab({ volumeCount }: VolumeNFeTabProps) {
         nfeKey: undefined,
         nfeXmlId: undefined,
         nfeItems: undefined,
+        nfeData: undefined,
       };
       setValue("document.volumeDocuments", docs, { shouldDirty: true });
     }
@@ -337,6 +340,8 @@ export function VolumeNFeTab({ volumeCount }: VolumeNFeTabProps) {
             type: "NFE",
             nfeKey: chave,
             nfeItems: result.success ? result.data?.items : undefined,
+            // Armazenar dados completos da NF-e para espelho
+            nfeData: result.success ? result.data : undefined,
           };
 
           successCount++;

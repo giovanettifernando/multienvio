@@ -13,9 +13,10 @@ import {
   Spin,
   Tag,
   Typography,
+  Upload,
   theme,
 } from "antd";
-import { PlusOutlined, SearchOutlined, EditOutlined, DeleteOutlined, StarOutlined, StarFilled } from "@ant-design/icons";
+import { PlusOutlined, SearchOutlined, EditOutlined, DeleteOutlined, StarOutlined, StarFilled, UploadOutlined, DownloadOutlined } from "@ant-design/icons";
 import {
   useAccountRecipients,
   useRecipientCreate,
@@ -103,6 +104,7 @@ export default function RecipientsList() {
   const [modalMode, setModalMode] = useState<"create" | "edit">("create");
   const [editing, setEditing] = useState<Recipient | null>(null);
   const [showModal, setShowModal] = useState(false);
+  const [importing, setImporting] = useState(false);
 
   const handleOpenCreate = () => {
     setModalMode("create");
@@ -192,6 +194,54 @@ export default function RecipientsList() {
 
   const loadingList = recipientsQuery.isLoading;
 
+  const handleDownloadTemplate = () => {
+    const csvContent =
+      "nome,documento,telefone,email,cep,logradouro,numero,complemento,bairro,cidade,uf,observacoes\n" +
+      "João Silva,12345678901,11999998888,joao@email.com,01310100,Av Paulista,1000,Sala 101,Bela Vista,São Paulo,SP,Cliente VIP\n";
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "modelo_destinatarios.csv";
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportCSV = async (file: File) => {
+    try {
+      setImporting(true);
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await fetch("/api/account/recipients/import", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Erro ao importar CSV");
+      }
+
+      const result = await response.json();
+      message.success(result.message);
+
+      if (result.errors && result.errors.length > 0) {
+        message.warning(`${result.errors.length} linha(s) com erro foram ignoradas`);
+      }
+
+      // Recarregar lista
+      recipientsQuery.refetch();
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : "Erro ao importar CSV");
+      console.error(error);
+    } finally {
+      setImporting(false);
+    }
+
+    return false; // Impede upload automático
+  };
+
   return (
     <Card
       title="Destinatários"
@@ -201,7 +251,24 @@ export default function RecipientsList() {
         </Button>
       }
     >
-      <Space orientation="vertical" size={16} style={{ width: "100%" }}>
+      <Space direction="vertical" size={16} style={{ width: "100%" }}>
+        {/* Botões de importação/exportação */}
+        <Space>
+          <Button icon={<DownloadOutlined />} onClick={handleDownloadTemplate}>
+            Baixar Modelo
+          </Button>
+          <Upload
+            accept=".csv"
+            showUploadList={false}
+            beforeUpload={handleImportCSV}
+          >
+            <Button icon={<UploadOutlined />} loading={importing}>
+              Importar Destinatários
+            </Button>
+          </Upload>
+        </Space>
+
+        {/* Campo de busca */}
         <Input
           placeholder="Buscar por nome, documento, cidade..."
           prefix={<SearchOutlined />}
@@ -267,7 +334,7 @@ export default function RecipientsList() {
                       ) : null}
                     </div>
                   </div>
-                  <Space orientation="vertical" size={0} style={{ alignItems: "flex-end" }}>
+                  <Space direction="vertical" size={0} style={{ alignItems: "flex-end" }}>
                     <Button type="link" size="small" icon={<EditOutlined />} onClick={() => handleOpenEdit(item)}>
                       Editar
                     </Button>

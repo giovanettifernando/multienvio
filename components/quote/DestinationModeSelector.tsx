@@ -41,8 +41,8 @@ export function DestinationModeSelector({
         onChange={(e) => onChange(e.target.value as "manual" | "recipient")}
         size="small"
       >
-        <Radio value="manual">{manualLabel}</Radio>
         <Radio value="recipient">{recipientLabel}</Radio>
+        <Radio value="manual">{manualLabel}</Radio>
       </Radio.Group>
     </div>
   );

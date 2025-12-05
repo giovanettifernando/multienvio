@@ -42,7 +42,6 @@ model User {
   passwordHistory        Json?
   tokenVersion           Int                  @default(0)
   defaultPostingUnitId   String?
-  mpCustomerId           String?              @unique
   addresses              Address[]
   cards                  Card[]
   carts                  Cart[]
@@ -103,7 +102,6 @@ model Card {
   billingAddressId String?
   vaultToken       String    @unique
   panCipher        String?
-  mpCardId         String?   @unique
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
   billingAddress   Address?  @relation("BillingAddress", fields: [billingAddressId], references: [id])
@@ -209,7 +207,6 @@ model Shipment {
   document                Json?
   paymentMethod           String?
   publicTrackingId        String?         @unique @default(cuid())
-  publicTrackingAt        DateTime?       @default(now())
   postedAt                DateTime?
   receivedAt              DateTime?       // Data/hora de recepção no hub
   receivedBy              String?         // ID do usuário que registrou a recepção
@@ -680,7 +677,6 @@ model Carrier {
   apiCalls     CarrierApiCall[]
   credentials  CarrierCredential[]
   endpoints    CarrierEndpoint[]
-  healthChecks CarrierHealthCheck[]
   pricingRules CarrierPricingRule[]
   services     CarrierService[]
   webhooks     CarrierWebhook[]
@@ -722,7 +718,6 @@ model CarrierEndpoint {
   responseMapping Json?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
-  lastTestedAt    DateTime?
   carrier         Carrier   @relation(fields: [carrierId], references: [id], onDelete: Cascade)
 
   @@unique([carrierId, operation])
@@ -803,21 +798,6 @@ model CarrierWebhook {
   @@map("carrier_webhooks")
 }
 
-model CarrierHealthCheck {
-  id           String       @id @default(cuid())
-  carrierId    String
-  status       HealthStatus
-  responseTime Int?
-  errorMessage String?
-  successRate  Decimal?     @db.Decimal(5, 2)
-  avgLatency   Int?
-  checkedAt    DateTime     @default(now())
-  carrier      Carrier      @relation(fields: [carrierId], references: [id], onDelete: Cascade)
-
-  @@index([carrierId, checkedAt])
-  @@map("carrier_health_checks")
-}
-
 model CarrierApiCall {
   id           String    @id @default(cuid())
   carrierId    String
@@ -825,7 +805,6 @@ model CarrierApiCall {
   method       String
   endpoint     String
   requestBody  Json?
-  responseBody Json?
   statusCode   Int?
   startedAt    DateTime
   completedAt  DateTime?
@@ -854,7 +833,6 @@ model PaymentGateway {
   updatedAt      DateTime               @updatedAt
   credentials    PaymentCredential[]
   endpoints      PaymentEndpoint[]
-  healthChecks   PaymentHealthCheck[]
   transactions   PaymentTransaction[]
   webhooks       PaymentWebhook[]
 
@@ -900,7 +878,6 @@ model PaymentEndpoint {
   responseMapping Json?
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
-  lastTestedAt    DateTime?
   gateway         PaymentGateway @relation(fields: [gatewayId], references: [id], onDelete: Cascade)
 
   @@unique([gatewayId, operation])
@@ -929,9 +906,7 @@ model PaymentTransaction {
   createdAt     DateTime            @default(now())
   updatedAt     DateTime            @updatedAt
   authorizedAt  DateTime?
-  capturedAt    DateTime?
   paidAt        DateTime?
-  refundedAt    DateTime?
   ledgerEntries LedgerEntry[]
   chargebacks   PaymentChargeback[]
   refunds       PaymentRefund[]
@@ -969,7 +944,6 @@ model PaymentChargeback {
   amountCents   Int
   status        String
   receivedAt    DateTime
-  resolvedAt    DateTime?
   transaction   PaymentTransaction @relation(fields: [transactionId], references: [id])
 
   @@index([transactionId])
@@ -997,21 +971,6 @@ model PaymentWebhook {
   @@index([externalId])
   @@index([createdAt])
   @@map("payment_webhooks")
-}
-
-model PaymentHealthCheck {
-  id           String         @id @default(cuid())
-  gatewayId    String
-  status       HealthStatus
-  responseTime Int?
-  errorMessage String?
-  successRate  Decimal?       @db.Decimal(5, 2)
-  avgLatency   Int?
-  checkedAt    DateTime       @default(now())
-  gateway      PaymentGateway @relation(fields: [gatewayId], references: [id], onDelete: Cascade)
-
-  @@index([gatewayId, checkedAt])
-  @@map("payment_health_checks")
 }
 
 model LedgerEntry {
@@ -1090,11 +1049,6 @@ model Collector {
   vehicleBrand             String
   vehicleModel             String?
   vehicleYear              String?
-  // Relacionamentos opcionais com tabela FIPE (para uso futuro)
-  fipeBrandId              String?          @map("fipe_brand_id")
-  fipeModelId              String?          @map("fipe_model_id")
-  fipeBrand                FipeVehicleBrand? @relation(fields: [fipeBrandId], references: [id])
-  fipeModel                FipeVehicleModel? @relation(fields: [fipeModelId], references: [id])
   commissionKind           CommissionKind
   commissionAmount         Float?
   commissionAmountPerKm    Float?
@@ -1447,7 +1401,6 @@ model FipeVehicleBrand {
   updatedAt       DateTime        @updatedAt @map("updated_at")
 
   models          FipeVehicleModel[]
-  collectors      Collector[]
 
   @@unique([vehicleType, fipeCode, referenceCode], name: "fipe_brand_unique")
   @@index([vehicleType, isActive])
@@ -1469,7 +1422,6 @@ model FipeVehicleModel {
   updatedAt       DateTime        @updatedAt @map("updated_at")
 
   brand           FipeVehicleBrand @relation(fields: [brandId], references: [id], onDelete: Cascade)
-  collectors      Collector[]
 
   @@unique([brandId, fipeCode, referenceCode], name: "fipe_model_unique")
   @@index([brandId, isActive])

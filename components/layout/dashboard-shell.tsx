@@ -1,9 +1,14 @@
 'use client';
 
-import { useState, useEffect, useSyncExternalStore } from 'react';
+import { useState, useEffect, useMemo, useSyncExternalStore } from 'react';
 import { Layout, theme, Button, Flex } from 'antd';
 import { MenuOutlined } from '@ant-design/icons';
+import { usePathname, useRouter } from 'next/navigation';
 import { Sidebar } from './Sidebar';
+import { MobileDrawer } from './MobileDrawer';
+import { UserPanel } from './UserPanel';
+import { sidebarItems } from './sidebar-items';
+import type { MenuProps } from 'antd';
 
 const { Header, Content } = Layout;
 
@@ -26,10 +31,30 @@ function getInitialCollapsed(): boolean {
   return saved === '1';
 }
 
+function keyFromPath(pathname: string): string {
+  if (pathname === '/' || pathname === '/dashboard') return 'overview';
+
+  // Match exact path
+  const exactMatch = sidebarItems.find((i) => i.href === pathname);
+  if (exactMatch) return exactMatch.key;
+
+  // Match by prefix (for subroutes like /cotacoes/finalizar)
+  const prefixMatch = sidebarItems.find((i) => pathname.startsWith(i.href + '/'));
+  if (prefixMatch) return prefixMatch.key;
+
+  // Fallback
+  return 'overview';
+}
+
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const { token } = theme.useToken();
   const [collapsed, setCollapsed] = useState(getInitialCollapsed);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const isMobile = useIsMobile();
+  const pathname = usePathname();
+  const router = useRouter();
+
+  const selectedKey = useMemo(() => keyFromPath(pathname || '/'), [pathname]);
 
   // Persistir collapse state
   useEffect(() => {
@@ -38,9 +63,57 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     } catch {}
   }, [collapsed]);
 
+  // Fechar menu mobile ao navegar
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [pathname]);
+
+  // Build menu items for mobile drawer
+  const mobileMenuItems: MenuProps['items'] = useMemo(() => {
+    return sidebarItems.map((item) => {
+      const IconComponent = item.icon;
+      return {
+        key: item.key,
+        icon: <IconComponent />,
+        label: item.label,
+        onClick: () => {
+          router.push(item.href);
+          setMobileMenuOpen(false);
+        },
+      };
+    });
+  }, [router]);
+
+  // Logo for mobile drawer
+  const mobileLogo = (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src="/assets/logo-envio-legal-branca.svg"
+      alt="Envio Legal"
+      style={{ width: 140, height: 'auto', maxHeight: 36 }}
+    />
+  );
+
   return (
     <Layout style={{ minHeight: '100dvh' }}>
-      <Sidebar collapsed={collapsed} onCollapse={setCollapsed} />
+      {/* Desktop: mostrar sidebar fixa */}
+      {!isMobile && (
+        <Sidebar collapsed={collapsed} onCollapse={setCollapsed} />
+      )}
+
+      {/* Mobile: drawer menu */}
+      {isMobile && (
+        <MobileDrawer
+          open={mobileMenuOpen}
+          onClose={() => setMobileMenuOpen(false)}
+          items={mobileMenuItems}
+          selectedKeys={[selectedKey]}
+          logo={mobileLogo}
+          header={<UserPanel collapsed={false} />}
+          theme="dark"
+        />
+      )}
+
       <Layout
         style={{
           marginLeft: isMobile ? 0 : collapsed ? 80 : 280,
@@ -56,15 +129,27 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
               padding: '0 16px',
               height: 64,
               lineHeight: '64px',
+              position: 'sticky',
+              top: 0,
+              zIndex: 100,
             }}
           >
-            <Flex align="center" style={{ height: '100%' }}>
+            <Flex align="center" justify="space-between" style={{ height: '100%' }}>
               <Button
                 type="text"
-                icon={<MenuOutlined />}
-                onClick={() => setCollapsed(!collapsed)}
-                aria-label="Toggle menu"
+                icon={<MenuOutlined style={{ fontSize: 20 }} />}
+                onClick={() => setMobileMenuOpen(true)}
+                aria-label="Abrir menu"
+                style={{ width: 44, height: 44 }}
               />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/assets/logo-envio-legal.svg"
+                alt="Envio Legal"
+                style={{ height: 28 }}
+              />
+              {/* Placeholder para equilibrar o layout */}
+              <div style={{ width: 44 }} />
             </Flex>
           </Header>
         )}
@@ -80,7 +165,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           <div
             style={{
               flex: 1,
-              padding: isMobile ? '0 16px 24px' : '0 24px 24px',
+              padding: isMobile ? '16px' : '0 24px 24px',
             }}
           >
             {children}

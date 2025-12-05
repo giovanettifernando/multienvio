@@ -80,14 +80,14 @@ export function SupportQuickView() {
       title={cardTitle}
       variant="outlined"
       extra={
-        <Flex gap={8}>
+        <Flex gap={4} wrap="wrap" justify="flex-end">
           <Button
             type="primary"
             size="small"
             icon={<PlusOutlined />}
             onClick={() => router.push('/suporte/novo')}
           >
-            Abrir ticket
+            Novo
           </Button>
           {tickets && tickets.length > 0 && (
             <Button
@@ -95,12 +95,14 @@ export function SupportQuickView() {
               size="small"
               icon={<RightOutlined />}
               onClick={() => router.push('/suporte')}
+              style={{ paddingInline: 4 }}
             >
-              Ver todos
+              Todos
             </Button>
           )}
         </Flex>
       }
+      styles={{ header: { flexWrap: 'wrap', gap: 8 } }}
     >
       {!tickets || tickets.length === 0 ? (
         <Empty

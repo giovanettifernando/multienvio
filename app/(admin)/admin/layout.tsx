@@ -1,13 +1,28 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
-import { Layout, Menu, Typography, Flex, Spin } from "antd";
+import { Layout, Menu, Typography, Flex, Spin, Button, Drawer } from "antd";
+import { MenuOutlined, CloseOutlined } from "@ant-design/icons";
 import { usePathname, useRouter } from "next/navigation";
 import { ADMIN_NAV } from "@/lib/admin/nav";
 import { checkAdminAuth } from "@/lib/admin/auth";
 import { useAdminSession } from "@/stores/useAdminSession";
 import { spacing } from "@/lib/ui/theme";
+
+const { Header, Content } = Layout;
+
+// Hook para detectar viewport mobile de forma reativa
+function useIsMobile(): boolean {
+  return useSyncExternalStore(
+    (callback) => {
+      window.addEventListener('resize', callback);
+      return () => window.removeEventListener('resize', callback);
+    },
+    () => (typeof window !== 'undefined' ? window.innerWidth < 768 : false),
+    () => false
+  );
+}
 
 export default function AdminLayout({
   children,
@@ -20,6 +35,8 @@ export default function AdminLayout({
   const setAdmin = useAdminSession((state) => state.setAdmin);
   const clearAdmin = useAdminSession((state) => state.clearAdmin);
   const hasVerified = useRef(false);
+  const isMobile = useIsMobile();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // isChecking starts false for login page (computed from pathname)
   const [isChecking, setIsChecking] = useState(() => pathname !== "/admin/login");
@@ -142,6 +159,7 @@ export default function AdminLayout({
             children: item.children.map((child) => ({
               key: child.key,
               label: <Link href={child.href!}>{child.label}</Link>,
+              onClick: () => setMobileMenuOpen(false),
             })),
           };
         }
@@ -150,6 +168,7 @@ export default function AdminLayout({
         return {
           key: item.key,
           label: <Link href={item.href!}>{item.label}</Link>,
+          onClick: () => setMobileMenuOpen(false),
         };
       }),
     [authorizedNav],
@@ -213,6 +232,11 @@ export default function AdminLayout({
     return openKeys;
   }, [authorizedNav, pathname]);
 
+  // Fechar menu mobile ao navegar
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [pathname]);
+
   if (isLoginPage) {
     return children;
   }
@@ -231,57 +255,149 @@ export default function AdminLayout({
     );
   }
 
-  return (
-    <Layout style={{ minHeight: "100vh", background: "var(--color-background)" }}>
-      <Layout.Sider
-        width={240}
-        breakpoint="lg"
-        collapsedWidth={64}
+  // Sidebar content component (reutilizado no desktop e drawer mobile)
+  const sidebarContent = (
+    <>
+      <Flex
+        align="center"
+        justify="center"
         style={{
-          background: "#FFFFFF",
-          borderRight: "1px solid var(--color-border)",
-          position: "fixed",
-          left: 0,
-          top: 0,
-          bottom: 0,
-          height: "100vh",
-          zIndex: 1000,
-          overflow: "auto",
+          height: 56,
+          padding: `0 ${spacing.lg}px`,
+          borderBottom: "1px solid var(--color-border)",
         }}
       >
-        <Flex
-          align="center"
-          justify="center"
+        <Typography.Text
+          strong
           style={{
-            height: 56,
-            padding: `0 ${spacing.lg}px`,
-            borderBottom: "1px solid var(--color-border)",
+            color: "var(--color-primary)",
+            fontSize: 15,
           }}
         >
-          <Typography.Text
-            strong
+          Envio Legal · Admin
+        </Typography.Text>
+      </Flex>
+      <Menu
+        mode="inline"
+        selectedKeys={selectedKey ? [selectedKey] : []}
+        defaultOpenKeys={defaultOpenKeys}
+        items={menuItems}
+        style={{ borderRight: 0, flex: 1 }}
+      />
+    </>
+  );
+
+  return (
+    <Layout style={{ minHeight: "100vh", background: "var(--color-background)" }}>
+      {/* Desktop: Sidebar fixa */}
+      {!isMobile && (
+        <Layout.Sider
+          width={240}
+          style={{
+            background: "#FFFFFF",
+            borderRight: "1px solid var(--color-border)",
+            position: "fixed",
+            left: 0,
+            top: 0,
+            bottom: 0,
+            height: "100vh",
+            zIndex: 1000,
+            overflow: "auto",
+          }}
+        >
+          {sidebarContent}
+        </Layout.Sider>
+      )}
+
+      {/* Mobile: Drawer menu */}
+      {isMobile && (
+        <Drawer
+          open={mobileMenuOpen}
+          onClose={() => setMobileMenuOpen(false)}
+          placement="left"
+          closeIcon={null}
+          styles={{
+            header: { display: 'none' },
+            body: { padding: 0, display: 'flex', flexDirection: 'column' },
+            wrapper: { width: 280 },
+          }}
+        >
+          <Flex
+            align="center"
+            justify="space-between"
             style={{
-              color: "var(--color-primary)",
-              fontSize: 15,
+              height: 56,
+              padding: `0 16px`,
+              borderBottom: "1px solid var(--color-border)",
             }}
           >
-            Envio Legal · Admin
-          </Typography.Text>
-        </Flex>
-        <Menu
-          mode="inline"
-          selectedKeys={selectedKey ? [selectedKey] : []}
-          defaultOpenKeys={defaultOpenKeys}
-          items={menuItems}
-          style={{ borderRight: 0 }}
-        />
-      </Layout.Sider>
-      <Layout style={{ marginLeft: 240, transition: "margin-left 0.2s" }}>
-        <Layout.Content
+            <Typography.Text
+              strong
+              style={{
+                color: "var(--color-primary)",
+                fontSize: 15,
+              }}
+            >
+              Envio Legal · Admin
+            </Typography.Text>
+            <Button
+              type="text"
+              icon={<CloseOutlined />}
+              onClick={() => setMobileMenuOpen(false)}
+              aria-label="Fechar menu"
+            />
+          </Flex>
+          <Menu
+            mode="inline"
+            selectedKeys={selectedKey ? [selectedKey] : []}
+            defaultOpenKeys={defaultOpenKeys}
+            items={menuItems}
+            style={{ borderRight: 0, flex: 1 }}
+          />
+        </Drawer>
+      )}
+
+      <Layout style={{ marginLeft: isMobile ? 0 : 240, transition: "margin-left 0.2s" }}>
+        {/* Mobile Header */}
+        {isMobile && (
+          <Header
+            style={{
+              background: "#FFFFFF",
+              borderBottom: "1px solid var(--color-border)",
+              padding: "0 16px",
+              height: 56,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              position: "sticky",
+              top: 0,
+              zIndex: 100,
+            }}
+          >
+            <Button
+              type="text"
+              icon={<MenuOutlined style={{ fontSize: 20 }} />}
+              onClick={() => setMobileMenuOpen(true)}
+              aria-label="Abrir menu"
+              style={{ width: 44, height: 44 }}
+            />
+            <Typography.Text
+              strong
+              style={{
+                color: "var(--color-primary)",
+                fontSize: 15,
+              }}
+            >
+              Admin
+            </Typography.Text>
+            <div style={{ width: 44 }} />
+          </Header>
+        )}
+        <Content
           style={{
             display: "flex",
             flexDirection: "column",
-            height: "100vh",
+            minHeight: isMobile ? "calc(100vh - 56px)" : "100vh",
             overflow: "hidden",
           }}
         >
@@ -289,35 +405,13 @@ export default function AdminLayout({
             style={{
               flex: 1,
               overflowY: "auto",
-              padding: spacing.xl,
+              padding: isMobile ? spacing.md : spacing.xl,
             }}
           >
             {children}
           </div>
-        </Layout.Content>
+        </Content>
       </Layout>
-      <style jsx global>{`
-        /* Responsive sidebar adjustments for admin */
-        @media (max-width: 767px) {
-          .ant-layout {
-            margin-left: 0 !important;
-          }
-          .ant-layout-sider {
-            position: relative !important;
-          }
-        }
-
-        @media (min-width: 768px) {
-          .ant-layout-sider {
-            position: fixed !important;
-            left: 0 !important;
-            top: 0 !important;
-            bottom: 0 !important;
-            height: 100vh !important;
-            z-index: 1000 !important;
-          }
-        }
-      `}</style>
     </Layout>
   );
 }

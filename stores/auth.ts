@@ -19,7 +19,9 @@ export type AuthUser = {
 type AuthState = {
   user: User | null;
   hasCompany: boolean;
+  _hasHydrated: boolean;
   setUser: (user: User | null) => void;
+  setHasHydrated: (state: boolean) => void;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string; user?: User }>;
   register: (data: {
     name: string;
@@ -50,7 +52,9 @@ export const useAuthStore = create<AuthState>()(
     (set, get) => ({
       user: null,
       hasCompany: false,
+      _hasHydrated: false,
       setUser: (user) => set({ user }),
+      setHasHydrated: (state) => set({ _hasHydrated: state }),
 
       // Login with real API
       login: async (email: string, password: string) => {
@@ -173,12 +177,18 @@ export const useAuthStore = create<AuthState>()(
     {
       name: "envio-legal-auth",
       version: 3, // Bump version for migration
+      onRehydrateStorage: () => (state) => {
+        state?.setHasHydrated(true);
+      },
     }
   )
 );
 
 // Seletor seguro para usar em componentes
 export const useSessionUser = () => useAuthStore(s => s.user);
+
+// Hook para verificar se o store foi hidratado do localStorage
+export const useAuthHydrated = () => useAuthStore(s => s._hasHydrated);
 
 /**
  * Mock login para desenvolvimento

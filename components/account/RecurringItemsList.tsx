@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { App, Button, Table, Input, InputNumber, Popconfirm, Upload, Space, Flex } from "antd";
-import { DeleteOutlined, PlusOutlined, UploadOutlined, EditOutlined, SaveOutlined, CloseOutlined } from "@ant-design/icons";
+import { DeleteOutlined, PlusOutlined, UploadOutlined, DownloadOutlined, EditOutlined, SaveOutlined, CloseOutlined } from "@ant-design/icons";
 
 interface RecurringItem {
   id: string;
@@ -167,6 +167,17 @@ export default function RecurringItemsList() {
     return false; // Impede upload automático
   };
 
+  const handleDownloadTemplate = () => {
+    const csvContent = "descricao,valorUnitario\nExemplo de item,99.90\n";
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "modelo_itens_recorrentes.csv";
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   const columns = [
     {
       title: "Descrição",
@@ -267,9 +278,12 @@ export default function RecurringItemsList() {
   ];
 
   return (
-    <Space orientation="vertical" size="large" style={{ width: "100%" }}>
-      {/* Barra superior com importação e formulário de adicionar */}
-      <Flex justify="space-between" align="center" gap="middle">
+    <Space direction="vertical" size="middle" style={{ width: "100%" }}>
+      {/* Botões de importação/exportação */}
+      <Space>
+        <Button icon={<DownloadOutlined />} onClick={handleDownloadTemplate}>
+          Baixar Modelo
+        </Button>
         <Upload
           accept=".csv"
           showUploadList={false}
@@ -279,37 +293,38 @@ export default function RecurringItemsList() {
             Importar Itens
           </Button>
         </Upload>
+      </Space>
 
-        <Space.Compact style={{ flex: 1, maxWidth: 800 }}>
-          <Input
-            placeholder="Descrição do item"
-            value={newItem.descricao}
-            onChange={(e) => setNewItem({ ...newItem, descricao: e.target.value })}
-            style={{ flex: 1 }}
-            onPressEnter={handleAdd}
-          />
-          <InputNumber
-            placeholder="Valor unitário (R$)"
-            value={newItem.valorUnitario}
-            onChange={(value) => setNewItem({ ...newItem, valorUnitario: value })}
-            style={{ width: 200 }}
-            min={0}
-            precision={2}
-            decimalSeparator=","
-            formatter={(value) => `R$ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ".")}
-            parser={(value) => parseFloat(value?.replace(/R\$\s?|(,*)/g, "") || "0")}
-            onPressEnter={handleAdd}
-          />
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={handleAdd}
-            loading={loading}
-          >
-            Adicionar
-          </Button>
-        </Space.Compact>
-      </Flex>
+      {/* Formulário de cadastro */}
+      <Space.Compact style={{ width: "100%" }}>
+        <Input
+          placeholder="Descrição do item"
+          value={newItem.descricao}
+          onChange={(e) => setNewItem({ ...newItem, descricao: e.target.value })}
+          style={{ flex: 1 }}
+          onPressEnter={handleAdd}
+        />
+        <InputNumber
+          placeholder="Valor unitário (R$)"
+          value={newItem.valorUnitario}
+          onChange={(value) => setNewItem({ ...newItem, valorUnitario: value })}
+          style={{ width: 200 }}
+          min={0}
+          precision={2}
+          decimalSeparator=","
+          formatter={(value) => `R$ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ".")}
+          parser={(value) => parseFloat(value?.replace(/R\$\s?|(,*)/g, "") || "0")}
+          onPressEnter={handleAdd}
+        />
+        <Button
+          type="primary"
+          icon={<PlusOutlined />}
+          onClick={handleAdd}
+          loading={loading}
+        >
+          Adicionar
+        </Button>
+      </Space.Compact>
 
       {/* Grid de itens */}
       <Table

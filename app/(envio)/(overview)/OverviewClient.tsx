@@ -12,6 +12,7 @@ import { WalletCard } from "@/components/dashboard/WalletCard";
 import { SupportQuickView } from "@/components/dashboard/SupportQuickView";
 import { PickupSchedule } from "@/components/dashboard/PickupSchedule";
 import { PendingPickupPointShipments } from "@/components/dashboard/PendingPickupPointShipments";
+import { apiFetch } from "@/lib/utils/api-fetch";
 
 interface ShipmentItem {
   id: string;
@@ -27,11 +28,7 @@ interface ShipmentsResponse {
 }
 
 async function fetchShipments(): Promise<ShipmentItem[]> {
-  const response = await fetch("/api/shipments?limit=100");
-  if (!response.ok) {
-    throw new Error("Não foi possível carregar os envios.");
-  }
-  const data = (await response.json()) as ShipmentsResponse;
+  const data = await apiFetch<ShipmentsResponse>("/api/shipments?limit=100");
   return data.items ?? [];
 }
 

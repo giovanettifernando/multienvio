@@ -48,7 +48,7 @@ export function WalletRecent() {
   const cardTitle = (
     <Flex align="center" gap={8}>
       <SwapOutlined />
-      <Text strong>Transações Recentes</Text>
+      <Text strong>Transações</Text>
     </Flex>
   );
 
@@ -72,14 +72,16 @@ export function WalletRecent() {
     <Card
       title={cardTitle}
       variant="outlined"
+      styles={{ header: { flexWrap: 'wrap', gap: 8 } }}
       extra={
         <Button
           type="link"
           size="small"
           icon={<RightOutlined />}
           onClick={() => router.push('/carteira/historico')}
+          style={{ paddingInline: 4 }}
         >
-          Ver todas
+          Todas
         </Button>
       }
     >

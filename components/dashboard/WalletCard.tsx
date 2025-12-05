@@ -49,28 +49,28 @@ export function WalletCard() {
           <Skeleton active paragraph={{ rows: 1 }} />
         ) : wallet ? (
           <Flex vertical gap={12}>
-            <Flex justify="space-between" align="center" gap={16}>
+            <Flex justify="space-between" align="center" gap={12} wrap="wrap">
               <Statistic
-                title={<Text type="secondary" style={{ fontSize: 12 }}>Saldo disponível</Text>}
+                title={<Text type="secondary" style={{ fontSize: 11 }}>Saldo disponível</Text>}
                 value={balance}
                 precision={2}
                 prefix="R$"
                 styles={{ content: {
-                  fontSize: 24,
+                  fontSize: 22,
                   fontWeight: 600,
                   color: isLowBalance ? '#ff4d4f' : '#003873',
                 } }}
               />
-              <Flex vertical align="end" gap={4}>
+              <Flex vertical align="end" gap={2} style={{ minWidth: 0 }}>
                 <Flex align="center" gap={4}>
-                  <ArrowDownOutlined style={{ fontSize: 12, color: '#ff4d4f' }} />
-                  <Text type="secondary" style={{ fontSize: 12 }}>Últimos 30 dias</Text>
+                  <ArrowDownOutlined style={{ fontSize: 11, color: '#ff4d4f' }} />
+                  <Text type="secondary" style={{ fontSize: 11 }}>30 dias</Text>
                 </Flex>
-                <Text strong style={{ fontSize: 14 }}>
+                <Text strong style={{ fontSize: 13 }}>
                   R$ {last30DaysSpend.toFixed(2)}
                 </Text>
                 {isLowBalance && (
-                  <Text type="danger" style={{ fontSize: 11 }}>
+                  <Text type="danger" style={{ fontSize: 10 }}>
                     Saldo baixo
                   </Text>
                 )}

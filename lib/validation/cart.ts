@@ -68,6 +68,114 @@ export const pickupFeeSnapshotSchema = z.object({
   distanceKm: z.number(),
 }).nullable();
 
+// Schema para endereço NF-e (para espelho)
+const nfeEnderecoSchema = z.object({
+  logradouro: z.string().nullable().optional(),
+  numero: z.string().nullable().optional(),
+  complemento: z.string().nullable().optional(),
+  bairro: z.string().nullable().optional(),
+  cidade: z.string().nullable().optional(),
+  uf: z.string().nullable().optional(),
+  cep: z.string().nullable().optional(),
+  pais: z.string().nullable().optional(),
+  telefone: z.string().nullable().optional(),
+}).nullable().optional();
+
+// Schema para impostos de item NF-e
+const nfeImpostosItemSchema = z.object({
+  icms: z.object({
+    cst: z.string().nullable().optional(),
+    baseCalculo: z.number().nullable().optional(),
+    aliquota: z.number().nullable().optional(),
+    valor: z.number().nullable().optional(),
+  }).nullable().optional(),
+  ipi: z.object({
+    cst: z.string().nullable().optional(),
+    baseCalculo: z.number().nullable().optional(),
+    aliquota: z.number().nullable().optional(),
+    valor: z.number().nullable().optional(),
+  }).nullable().optional(),
+  pis: z.object({
+    cst: z.string().nullable().optional(),
+    baseCalculo: z.number().nullable().optional(),
+    aliquota: z.number().nullable().optional(),
+    valor: z.number().nullable().optional(),
+  }).nullable().optional(),
+  cofins: z.object({
+    cst: z.string().nullable().optional(),
+    baseCalculo: z.number().nullable().optional(),
+    aliquota: z.number().nullable().optional(),
+    valor: z.number().nullable().optional(),
+  }).nullable().optional(),
+}).nullable().optional();
+
+// Schema para dados completos da NF-e (para espelho)
+const nfeDataSchema = z.object({
+  chave: z.string(),
+  numero: z.string(),
+  serie: z.string(),
+  valorTotal: z.number(),
+  items: z.array(z.object({
+    id: z.string(),
+    sku: z.string().nullable().optional(),
+    descricao: z.string(),
+    ncm: z.string().nullable().optional(),
+    cfop: z.string().nullable().optional(),
+    unidade: z.string().nullable().optional(),
+    quantidade: z.number(),
+    pesoLiquido: z.number().nullable().optional(),
+    valorUnitario: z.number(),
+    valorTotal: z.number(),
+    impostos: nfeImpostosItemSchema,
+  })),
+  identificacao: z.object({
+    modelo: z.string().nullable().optional(),
+    serie: z.string().nullable().optional(),
+    numero: z.string().nullable().optional(),
+    dataEmissao: z.string().nullable().optional(),
+    naturezaOp: z.string().nullable().optional(),
+    tipoOperacao: z.string().nullable().optional(),
+    ambiente: z.string().nullable().optional(),
+  }).nullable().optional(),
+  emitente: z.object({
+    cnpjCpf: z.string().nullable().optional(),
+    ie: z.string().nullable().optional(),
+    razaoSocial: z.string().nullable().optional(),
+    nomeFantasia: z.string().nullable().optional(),
+    endereco: nfeEnderecoSchema,
+  }).nullable().optional(),
+  destinatario: z.object({
+    cnpjCpf: z.string().nullable().optional(),
+    ie: z.string().nullable().optional(),
+    nome: z.string().nullable().optional(),
+    endereco: nfeEnderecoSchema,
+  }).nullable().optional(),
+  totais: z.object({
+    baseCalculoIcms: z.number().nullable().optional(),
+    valorIcms: z.number().nullable().optional(),
+    valorProdutos: z.number().nullable().optional(),
+    valorFrete: z.number().nullable().optional(),
+    valorSeguro: z.number().nullable().optional(),
+    valorDesconto: z.number().nullable().optional(),
+    valorOutros: z.number().nullable().optional(),
+    valorIpi: z.number().nullable().optional(),
+    valorPis: z.number().nullable().optional(),
+    valorCofins: z.number().nullable().optional(),
+    valorTotal: z.number().nullable().optional(),
+  }).nullable().optional(),
+  pagamentos: z.array(z.object({
+    forma: z.string().nullable().optional(),
+    formaDescricao: z.string().nullable().optional(),
+    valor: z.number().nullable().optional(),
+  })).nullable().optional(),
+  protocolo: z.object({
+    numero: z.string().nullable().optional(),
+    dataAutorizacao: z.string().nullable().optional(),
+    status: z.string().nullable().optional(),
+    motivo: z.string().nullable().optional(),
+  }).nullable().optional(),
+}).nullable().optional();
+
 // Schema para documento fiscal (NFE ou Declaração)
 // Baseado no mesmo formato do /api/checkout
 export const documentSnapshotSchema = z.object({
@@ -82,11 +190,15 @@ export const documentSnapshotSchema = z.object({
       descricao: z.string(),
       ncm: z.string().optional().nullable(),
       cfop: z.string().optional().nullable(),
+      unidade: z.string().optional().nullable(),
       quantidade: z.number(),
       pesoLiquido: z.number().optional().nullable(),
       valorUnitario: z.number(),
       valorTotal: z.number(),
+      impostos: nfeImpostosItemSchema,
     })),
+    // Dados completos da NF-e para espelho
+    nfeData: nfeDataSchema,
   })).optional(),
   // Formato legado NFE: nfeKeys + nfeItems separados
   nfeKeys: z.array(z.object({ chave: z.string() })).optional(),

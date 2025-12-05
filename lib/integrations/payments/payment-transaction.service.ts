@@ -101,9 +101,6 @@ export async function updatePaymentTransaction(
       ...(netCents !== undefined && netCents !== null ? { netCents } : {}),
       ...(data.pixQrCode !== undefined ? { pixQrCode: data.pixQrCode } : {}),
       ...(data.status === 'PAID' ? { paidAt: new Date() } : {}),
-      ...(data.status === 'CAPTURED' ? { capturedAt: new Date() } : {}),
-      ...(data.status === 'REFUNDED' ? { refundedAt: new Date() } : {}),
-      ...(data.status === 'CANCELED' ? { canceledAt: new Date() } : {}),
     },
   });
 

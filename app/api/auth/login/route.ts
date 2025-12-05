@@ -90,10 +90,22 @@ export async function POST(request: Request) {
       updatedAt: dbUser.updatedAt.toISOString(),
     };
 
-    return NextResponse.json({
+    // Criar resposta com cookie de atividade resetado
+    const response = NextResponse.json({
       user,
       message: 'Login realizado com sucesso',
     });
+
+    // Reset last_activity cookie para evitar timeout de inatividade logo após login
+    response.cookies.set('last_activity', Date.now().toString(), {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 60 * 60 * 24, // 24 hours
+    });
+
+    return response;
   } catch (error) {
     if (error instanceof ZodError) {
       return NextResponse.json(

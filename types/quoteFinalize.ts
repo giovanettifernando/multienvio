@@ -12,6 +12,120 @@ const declarationItemSchema = z.object({
 
 export type DeclarationFormItem = z.infer<typeof declarationItemSchema>;
 
+// Schema para endereço NF-e
+const nfeEnderecoSchema = z.object({
+  logradouro: z.string().nullable().optional(),
+  numero: z.string().nullable().optional(),
+  complemento: z.string().nullable().optional(),
+  bairro: z.string().nullable().optional(),
+  cidade: z.string().nullable().optional(),
+  uf: z.string().nullable().optional(),
+  cep: z.string().nullable().optional(),
+  pais: z.string().nullable().optional(),
+  telefone: z.string().nullable().optional(),
+}).nullable().optional();
+
+// Schema para impostos de item NF-e
+const nfeImpostosItemSchema = z.object({
+  icms: z.object({
+    cst: z.string().nullable().optional(),
+    baseCalculo: z.number().nullable().optional(),
+    aliquota: z.number().nullable().optional(),
+    valor: z.number().nullable().optional(),
+  }).nullable().optional(),
+  ipi: z.object({
+    cst: z.string().nullable().optional(),
+    baseCalculo: z.number().nullable().optional(),
+    aliquota: z.number().nullable().optional(),
+    valor: z.number().nullable().optional(),
+  }).nullable().optional(),
+  pis: z.object({
+    cst: z.string().nullable().optional(),
+    baseCalculo: z.number().nullable().optional(),
+    aliquota: z.number().nullable().optional(),
+    valor: z.number().nullable().optional(),
+  }).nullable().optional(),
+  cofins: z.object({
+    cst: z.string().nullable().optional(),
+    baseCalculo: z.number().nullable().optional(),
+    aliquota: z.number().nullable().optional(),
+    valor: z.number().nullable().optional(),
+  }).nullable().optional(),
+}).nullable().optional();
+
+// Schema para item NF-e expandido
+const nfeItemExpandedSchema = z.object({
+  id: z.string(),
+  sku: z.string().nullable().optional(),
+  descricao: z.string(),
+  ncm: z.string().nullable().optional(),
+  cfop: z.string().nullable().optional(),
+  unidade: z.string().nullable().optional(),
+  quantidade: z.number(),
+  pesoLiquido: z.number().nullable().optional(),
+  valorUnitario: z.number(),
+  valorTotal: z.number(),
+  impostos: nfeImpostosItemSchema,
+});
+
+// Schema para dados completos da NF-e (para espelho)
+const nfeDataSchema = z.object({
+  chave: z.string(),
+  numero: z.string(),
+  serie: z.string(),
+  valorTotal: z.number(),
+  items: z.array(nfeItemExpandedSchema),
+  // Dados adicionais para espelho NF-e (todos opcionais)
+  identificacao: z.object({
+    modelo: z.string().nullable().optional(),
+    serie: z.string().nullable().optional(),
+    numero: z.string().nullable().optional(),
+    dataEmissao: z.string().nullable().optional(),
+    naturezaOp: z.string().nullable().optional(),
+    tipoOperacao: z.string().nullable().optional(),
+    ambiente: z.string().nullable().optional(),
+  }).nullable().optional(),
+  emitente: z.object({
+    cnpjCpf: z.string().nullable().optional(),
+    ie: z.string().nullable().optional(),
+    razaoSocial: z.string().nullable().optional(),
+    nomeFantasia: z.string().nullable().optional(),
+    endereco: nfeEnderecoSchema,
+  }).nullable().optional(),
+  destinatario: z.object({
+    cnpjCpf: z.string().nullable().optional(),
+    ie: z.string().nullable().optional(),
+    nome: z.string().nullable().optional(),
+    endereco: nfeEnderecoSchema,
+  }).nullable().optional(),
+  totais: z.object({
+    baseCalculoIcms: z.number().nullable().optional(),
+    valorIcms: z.number().nullable().optional(),
+    valorProdutos: z.number().nullable().optional(),
+    valorFrete: z.number().nullable().optional(),
+    valorSeguro: z.number().nullable().optional(),
+    valorDesconto: z.number().nullable().optional(),
+    valorOutros: z.number().nullable().optional(),
+    valorIpi: z.number().nullable().optional(),
+    valorPis: z.number().nullable().optional(),
+    valorCofins: z.number().nullable().optional(),
+    valorTotal: z.number().nullable().optional(),
+  }).nullable().optional(),
+  pagamentos: z.array(z.object({
+    forma: z.string().nullable().optional(),
+    formaDescricao: z.string().nullable().optional(),
+    valor: z.number().nullable().optional(),
+  })).nullable().optional(),
+  protocolo: z.object({
+    numero: z.string().nullable().optional(),
+    dataAutorizacao: z.string().nullable().optional(),
+    status: z.string().nullable().optional(),
+    motivo: z.string().nullable().optional(),
+  }).nullable().optional(),
+}).nullable().optional();
+
+export type NFeDataForm = z.infer<typeof nfeDataSchema>;
+
 // Schema para documento de um volume específico (NF-e ou Declaração)
 const volumeDocumentSchema = z.object({
   volumeIndex: z.number(),
@@ -30,6 +144,8 @@ const volumeDocumentSchema = z.object({
     valorUnitario: z.number(),
     valorTotal: z.number(),
   })).optional(),
+  // Dados completos da NF-e para espelho (opcional)
+  nfeData: nfeDataSchema.optional(),
   // Campos para Declaração
   declarationItems: z.array(declarationItemSchema).optional(),
 });
@@ -60,8 +176,10 @@ const invoiceItemSchema = z.object({
 export type InvoiceFormItem = z.infer<typeof invoiceItemSchema>;
 
 // Schema para NF-e de um pacote específico
+// Nota: A validação do formato (44 dígitos) é feita no superRefine/validateVolumeDocumentsOnSubmit
+// Aqui apenas garantimos que é uma string opcional para permitir inicialização com string vazia
 const packageInvoiceSchema = z.object({
-  chave: z.string().regex(/^\d{44}$/, "A chave deve ter 44 dígitos."),
+  chave: z.string(), // Validação de formato delegada ao superRefine
   xmlId: z.string().nullable().optional(),
   items: z.array(invoiceItemSchema),
 });
@@ -69,8 +187,9 @@ const packageInvoiceSchema = z.object({
 export type PackageInvoiceForm = z.infer<typeof packageInvoiceSchema>;
 
 // Schema legado para retrocompatibilidade
+// Nota: A validação do formato (44 dígitos) é feita no superRefine
 const nfeKeySchema = z.object({
-  chave: z.string().regex(/^\d{44}$/, "A chave deve ter 44 dígitos."),
+  chave: z.string(), // Validação de formato delegada ao superRefine
 });
 
 export type NFeKey = z.infer<typeof nfeKeySchema>;
@@ -140,9 +259,18 @@ export const finalizeFormSchema = z
     }),
   })
   .superRefine((values, ctx) => {
+    // Novo formato: volumeDocuments (cada volume pode ter NF-e ou Declaração)
+    // Se volumeDocuments está sendo usado, a validação é feita separadamente via validateVolumeDocumentsOnSubmit
+    const hasVolumeDocuments = values.document.volumeDocuments && values.document.volumeDocuments.length > 0;
+
     if (values.document.type === "NFE") {
+      // Se usando volumeDocuments, pular validação inline (será validado no submit)
+      if (hasVolumeDocuments) {
+        // Validação delegada para validateVolumeDocumentsOnSubmit
+        return;
+      }
       // Validação para NF por pacote (novo formato preferencial)
-      if (values.document.packages && values.document.packages.length > 0) {
+      else if (values.document.packages && values.document.packages.length > 0) {
         values.document.packages.forEach((pkg, idx) => {
           if (!pkg.chave || !/^\d{44}$/.test(pkg.chave)) {
             ctx.addIssue({
@@ -193,6 +321,11 @@ export const finalizeFormSchema = z
         }
       }
     } else if (values.document.type === "DECLARACAO") {
+      // Se usando volumeDocuments, pular validação inline (será validado no submit)
+      if (hasVolumeDocuments) {
+        // Validação delegada para validateVolumeDocumentsOnSubmit
+        return;
+      }
       // Validação de declaração de conteúdo removida do modo inline
       // A validação será feita apenas no submit através da função validateDeclarationOnSubmit
     }

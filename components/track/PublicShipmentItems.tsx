@@ -1,7 +1,10 @@
 "use client";
 
-import { Card, Collapse, Table, Typography, Tag } from "antd";
-import { InboxOutlined } from "@ant-design/icons";
+import { Card, Collapse, Table, Typography, Tag, Dropdown } from "antd";
+import type { MenuProps } from "antd";
+import { InboxOutlined, FileTextOutlined, DownloadOutlined, EyeOutlined, PrinterOutlined } from "@ant-design/icons";
+import { ELButton } from "@/components/ui/ELButton";
+import { openDocumentPDF, downloadDocumentPDF, type ShipmentInfo, type NFeData } from "@/lib/pdf/document-pdf";
 
 const { Text } = Typography;
 
@@ -22,6 +25,8 @@ export type PublicVolume = {
   length?: number;
   weight?: number;
   items: PublicVolumeItem[];
+  // Dados completos da NF-e para espelho (emitente, destinatário, totais, pagamentos, protocolo)
+  nfeData?: NFeData | null;
 };
 
 // Componente para exibir detalhes de dimensões do volume
@@ -66,9 +71,71 @@ function VolumeDimensions({ volume }: { volume: PublicVolume }) {
 
 interface PublicShipmentItemsProps {
   volumes: PublicVolume[];
+  shipmentInfo?: ShipmentInfo;
 }
 
-export function PublicShipmentItems({ volumes }: PublicShipmentItemsProps) {
+// Botão de visualizar espelho do documento
+function DocumentPDFButton({ volume, shipmentInfo }: { volume: PublicVolume; shipmentInfo?: ShipmentInfo }) {
+  if (!shipmentInfo) return null;
+
+  // Só mostrar botão se houver itens
+  const hasItems = volume.items && volume.items.length > 0;
+  if (!hasItems) return null;
+
+  const volumeData = {
+    index: volume.index,
+    documentType: volume.documentType,
+    nfKey: volume.nfKey,
+    height: volume.height,
+    width: volume.width,
+    length: volume.length,
+    weight: volume.weight,
+    items: volume.items,
+    // Dados completos da NF-e para espelho
+    nfeData: volume.nfeData,
+  };
+
+  const docLabel = volume.documentType === 'NF' ? 'Espelho NF-e' : 'Declaração';
+
+  const menuItems: MenuProps['items'] = [
+    {
+      key: 'view',
+      icon: <EyeOutlined />,
+      label: 'Visualizar',
+      onClick: () => openDocumentPDF(volumeData, shipmentInfo),
+    },
+    {
+      key: 'download',
+      icon: <DownloadOutlined />,
+      label: 'Baixar PDF',
+      onClick: () => downloadDocumentPDF(volumeData, shipmentInfo),
+    },
+    {
+      key: 'print',
+      icon: <PrinterOutlined />,
+      label: 'Imprimir',
+      onClick: () => {
+        // Abre em nova aba onde o usuário pode imprimir
+        openDocumentPDF(volumeData, shipmentInfo);
+      },
+    },
+  ];
+
+  return (
+    <Dropdown menu={{ items: menuItems }} trigger={['click']}>
+      <ELButton
+        size="small"
+        variant="ghost"
+        icon={<FileTextOutlined />}
+        style={{ marginLeft: 'auto' }}
+      >
+        {docLabel}
+      </ELButton>
+    </Dropdown>
+  );
+}
+
+export function PublicShipmentItems({ volumes, shipmentInfo }: PublicShipmentItemsProps) {
   if (!volumes || volumes.length === 0) {
     return null;
   }
@@ -80,7 +147,12 @@ export function PublicShipmentItems({ volumes }: PublicShipmentItemsProps) {
 
     return (
       <Card
-        title="Detalhes do volume"
+        title={
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+            <span>Detalhes do volume</span>
+            <DocumentPDFButton volume={volume} shipmentInfo={shipmentInfo} />
+          </div>
+        }
         styles={{ body: { padding: "16px" } }}
       >
         {/* Dimensões do volume */}
@@ -162,7 +234,7 @@ export function PublicShipmentItems({ volumes }: PublicShipmentItemsProps) {
   const collapseItems = volumes.map((volume) => ({
     key: volume.index.toString(),
     label: (
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', width: '100%' }}>
         <InboxOutlined />
         <Text strong>Volume {volume.index}</Text>
         {volume.documentType === 'NF' && (
@@ -176,6 +248,7 @@ export function PublicShipmentItems({ volumes }: PublicShipmentItemsProps) {
             ({volume.height}x{volume.width}x{volume.length} cm)
           </Text>
         )}
+        <DocumentPDFButton volume={volume} shipmentInfo={shipmentInfo} />
       </div>
     ),
     children: (

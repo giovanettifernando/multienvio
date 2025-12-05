@@ -301,7 +301,7 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
   // Estados para destinatário
   const { destination, setDestination, setPickupAtOrigin } = useQuoteDraft();
   const [destinationMode, setDestinationMode] = useState<"manual" | "recipient">(
-    destination?.mode ?? "manual"
+    destination?.mode ?? "recipient"
   );
   const [recipientModalOpen, setRecipientModalOpen] = useState(false);
   const [selectedRecipientId, setSelectedRecipientId] = useState<string | null>(
@@ -311,7 +311,7 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
   // Sincronizar estados locais quando destination do store for limpo
   useEffect(() => {
     if (!destination) {
-      setDestinationMode("manual");
+      setDestinationMode("recipient");
       setSelectedRecipientId(null);
     }
   }, [destination]);

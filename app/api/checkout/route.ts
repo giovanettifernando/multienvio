@@ -44,6 +44,8 @@ const checkoutSchema = z.object({
         valorUnitario: z.number(),
         valorTotal: z.number(),
       })),
+      // Dados completos da NF-e para geração do espelho fiscal
+      nfeData: z.unknown().optional(),
     })).optional(),
     // Formato legado NFE: nfeKeys + nfeItems separados
     nfeKeys: z.array(z.object({ chave: z.string() })).optional(),
@@ -217,6 +219,8 @@ export async function POST(request: Request) {
         chave: string;
         xmlId?: string | null;
         items: Array<unknown>;
+        // Dados completos da NF-e para espelho
+        nfeData?: unknown;
       }>;
       nfeKeys?: string[];
       nfeItems?: Array<unknown>;
@@ -432,11 +436,13 @@ export async function POST(request: Request) {
       // 🚚 INTEGRAÇÃO COM TRANSPORTADORA: Criar pré-postagem e obter códigos de rastreio
       // Esta integração é best-effort - se falhar, o checkout continua com código interno
       try {
-        // Buscar dados do usuário para CPF/CNPJ, telefone e email
+        // Buscar dados do usuário para nome, CPF/CNPJ, telefone e email
+        // IMPORTANTE: O nome do remetente deve ser o nome do USUÁRIO, não do endereço!
         const user = await tx.user.findUnique({
           where: { id: session.userId },
           select: {
             name: true,
+            razaoSocial: true, // Para empresas (PJ)
             email: true,
             phone: true,
             cpf: true,
@@ -445,6 +451,8 @@ export async function POST(request: Request) {
         });
 
         // Extrair dados do remetente do originAddress (se disponível)
+        // IMPORTANTE: originAddress.nome é apenas o apelido/label do endereço (ex: "Casa", "Trabalho")
+        // NÃO usar para nome do remetente!
         const originData = data.originAddress || {
           cep: data.originCep,
           cidade: data.originCidade,
@@ -458,9 +466,11 @@ export async function POST(request: Request) {
           user?.cpf ||
           '';
 
-        // Dados do remetente
+        // Dados do remetente - usa dados pessoais do User + endereço do originAddress
+        // IMPORTANTE: O nome do remetente deve ser o nome do USUÁRIO cadastrado em /minha-conta
+        // NÃO usar originData.nome pois esse é apenas o apelido/label do endereço (ex: "Casa", "Trabalho")
         const senderData = {
-          nome: originData.nome || user?.name || 'Remetente',
+          nome: user?.razaoSocial || user?.name || 'Remetente',
           documento: senderDocumento.replace(/\D/g, ''), // Remove formatação
           telefone: user?.phone || undefined,
           email: user?.email || undefined,

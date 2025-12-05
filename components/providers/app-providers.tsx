@@ -13,45 +13,34 @@ import {
 let isRedirecting = false;
 
 // Função para tratar erros 401 globalmente
-async function handleAuthError(error: unknown) {
+function handleAuthError(error: unknown) {
   // Verifica se é erro 401 (sessão expirada)
-  if (
+  const isAuthError =
     error instanceof Error &&
     (error.message.includes("401") ||
       error.message.toLowerCase().includes("unauthorized") ||
       error.message.toLowerCase().includes("não autorizado") ||
-      error.message.toLowerCase().includes("sessão expirada"))
-  ) {
-    // Evita redirect loop se já estiver em página de login ou auth
-    const pathname = typeof window !== "undefined" ? window.location.pathname : "";
-    const isAuthPage = pathname.includes("/login") || pathname.includes("/auth");
+      error.message.toLowerCase().includes("sessão expirada") ||
+      (error as Error & { status?: number }).status === 401);
 
-    if (typeof window !== "undefined" && !isAuthPage && !isRedirecting) {
-      // Verifica se a sessão realmente expirou fazendo uma chamada ao /api/auth/me
-      try {
-        const response = await fetch("/api/auth/me", { credentials: "include" });
-        if (response.ok) {
-          // Sessão ainda válida, não redireciona (pode ser um erro temporário de outra API)
-          return;
-        }
-      } catch {
-        // Erro de rede, não redireciona
-        return;
-      }
+  if (!isAuthError) return;
 
-      // Sessão realmente expirou, redireciona
-      isRedirecting = true;
+  // Evita redirect loop se já estiver em página de login ou auth
+  const pathname = typeof window !== "undefined" ? window.location.pathname : "";
+  const isAuthPage = pathname.includes("/login") || pathname.includes("/auth");
 
-      // Limpa dados de autenticação do localStorage
-      try {
-        localStorage.removeItem("auth-storage");
-      } catch {
-        // Ignora erro de localStorage
-      }
+  if (typeof window !== "undefined" && !isAuthPage && !isRedirecting) {
+    isRedirecting = true;
 
-      // Redireciona para login (usando /auth/login que é a rota real)
-      window.location.href = "/auth/login";
+    // Limpa dados de autenticação do localStorage
+    try {
+      localStorage.removeItem("envio-legal-auth");
+    } catch {
+      // Ignora erro de localStorage
     }
+
+    // Redireciona para login
+    window.location.href = "/auth/login";
   }
 }
 

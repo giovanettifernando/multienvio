@@ -191,7 +191,17 @@ export default function PublicTrackingClient() {
         </Card>
 
         {/* BLOCO 4: Itens do Envio */}
-        <PublicShipmentItems volumes={data.volumes} />
+        <PublicShipmentItems
+          volumes={data.volumes}
+          shipmentInfo={{
+            trackingCode: data.trackingCode,
+            carrier: data.carrier,
+            service: data.service,
+            origin: data.origin,
+            destination: data.destination,
+            createdAt: data.createdAt,
+          }}
+        />
       </ELFlex>
     </div>
   );
