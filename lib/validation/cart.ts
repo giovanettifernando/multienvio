@@ -41,7 +41,7 @@ export const selectedQuoteSnapshotSchema = z.object({
   serviceName: z.string(),
   price: z.number(),
   deadlineDays: z.number(),
-  source: z.enum(['real', 'mock']).optional(),
+  source: z.string().optional(), // 'real', 'mock', ou outros valores
 });
 
 export const totalsSnapshotSchema = z.object({
@@ -68,6 +68,53 @@ export const pickupFeeSnapshotSchema = z.object({
   distanceKm: z.number(),
 }).nullable();
 
+// Schema para documento fiscal (NFE ou Declaração)
+// Baseado no mesmo formato do /api/checkout
+export const documentSnapshotSchema = z.object({
+  type: z.enum(['NFE', 'DECLARACAO']),
+  // Novo formato NFE: packages (NF por pacote com items)
+  packages: z.array(z.object({
+    chave: z.string(),
+    xmlId: z.string().nullable().optional(),
+    items: z.array(z.object({
+      id: z.string(),
+      sku: z.string().optional().nullable(),
+      descricao: z.string(),
+      ncm: z.string().optional().nullable(),
+      cfop: z.string().optional().nullable(),
+      quantidade: z.number(),
+      pesoLiquido: z.number().optional().nullable(),
+      valorUnitario: z.number(),
+      valorTotal: z.number(),
+    })),
+  })).optional(),
+  // Formato legado NFE: nfeKeys + nfeItems separados
+  nfeKeys: z.array(z.object({ chave: z.string() })).optional(),
+  nfeItems: z.array(z.object({
+    descricao: z.string(),
+    valorUnitario: z.number(),
+    valorTotal: z.number().optional(),
+    quantidade: z.number(),
+  })).optional(),
+  // Formato legado DECLARACAO: declarationItems (lista única)
+  declarationItems: z.array(z.object({
+    id: z.string().optional(),
+    descricao: z.string(),
+    valorUnitario: z.number(),
+    quantidade: z.number(),
+  })).optional(),
+  // Novo formato DECLARACAO: volumeDeclarations (por volume)
+  volumeDeclarations: z.array(z.object({
+    volumeIndex: z.number(),
+    items: z.array(z.object({
+      id: z.string(),
+      descricao: z.string(),
+      valorUnitario: z.number(),
+      quantidade: z.number(),
+    })),
+  })).optional(),
+});
+
 // Schema para adicionar item ao carrinho
 export const addCartItemSchema = z.object({
   originAddress: addressSnapshotSchema,
@@ -79,6 +126,7 @@ export const addCartItemSchema = z.object({
   pickupFee: pickupFeeSnapshotSchema.optional(),
   selectedQuote: selectedQuoteSnapshotSchema,
   totals: totalsSnapshotSchema,
+  document: documentSnapshotSchema.optional(), // Documento fiscal (NFE/Declaração)
 });
 
 export type AddCartItemInput = z.infer<typeof addCartItemSchema>;
@@ -94,6 +142,7 @@ export const updateCartItemSchema = z.object({
   pickupFee: pickupFeeSnapshotSchema.optional(),
   selectedQuote: selectedQuoteSnapshotSchema.optional(),
   totals: totalsSnapshotSchema.optional(),
+  document: documentSnapshotSchema.optional(), // Documento fiscal (NFE/Declaração)
 });
 
 export type UpdateCartItemInput = z.infer<typeof updateCartItemSchema>;

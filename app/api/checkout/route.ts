@@ -606,7 +606,7 @@ export async function POST(request: Request) {
       trackingCode: result.shipment.platformTrackingCode, // Retornar código da plataforma
       publicTrackingId: result.shipment.publicTrackingId,
       trackingUrl: `/rastreio/${result.shipment.publicTrackingId}`,
-      source: 'mock',
+      source: 'created',
       message: 'Envio criado. Aguardando confirmação de pagamento.',
     });
   } catch (error) {

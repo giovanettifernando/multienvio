@@ -94,6 +94,7 @@ export async function POST(request: Request) {
         pickupFee: (data.pickupFee || null) as Prisma.InputJsonValue,
         selectedQuote: data.selectedQuote as Prisma.InputJsonValue,
         totals: data.totals as Prisma.InputJsonValue,
+        document: (data.document || null) as Prisma.InputJsonValue, // Documento fiscal (NFE/Declaração)
       },
     });
 
@@ -136,6 +137,7 @@ export async function POST(request: Request) {
         pickupFee: item.pickupFee,
         selectedQuote: item.selectedQuote,
         totals: item.totals,
+        document: item.document, // Documento fiscal (NFE/Declaração)
         createdAt: item.createdAt.toISOString(),
         updatedAt: item.updatedAt.toISOString(),
       },

@@ -215,6 +215,22 @@ export async function POST(request: Request) {
           pickupFeeCents
         );
 
+        // Construir documento do shipment
+        // Priorizar dados de documento fiscal (NFE/Declaração) se disponível
+        // Caso contrário, manter formato legado para retrocompatibilidade
+        const itemDocument = item.document as { type?: string; [key: string]: unknown } | null;
+        const shipmentDocument = itemDocument?.type
+          ? itemDocument // Novo formato: documento fiscal com type, volumeDeclarations, packages, etc.
+          : {
+              // Formato legado: apenas metadados da cotação
+              originAddress: item.originAddress,
+              destination: item.destination,
+              volumes: item.volumes,
+              preferences: item.preferences,
+              selectedQuote: item.selectedQuote,
+              totals: item.totals,
+            };
+
         // Criar shipment COM VOLUMES usando serviço centralizado
         const { shipment, packages } = await createShipmentWithVolumes(tx, {
           shipment: {
@@ -239,14 +255,7 @@ export async function POST(request: Request) {
             estimatedDays: selectedQuote.deadlineDays,
             freightCost: selectedQuote.price,
             pickupPointId,
-            document: {
-              originAddress: item.originAddress,
-              destination: item.destination,
-              volumes: item.volumes,
-              preferences: item.preferences,
-              selectedQuote: item.selectedQuote,
-              totals: item.totals,
-            } as Prisma.InputJsonValue,
+            document: shipmentDocument as Prisma.InputJsonValue,
             status: initialStatus,
             paymentMethod: null,
             // Registrar comissões para reconciliação

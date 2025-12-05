@@ -67,6 +67,7 @@ export async function PATCH(
     if (data.pickupPoint !== undefined) updateData.pickupPoint = (data.pickupPoint || null) as Prisma.InputJsonValue;
     if (data.selectedQuote) updateData.selectedQuote = data.selectedQuote as Prisma.InputJsonValue;
     if (data.totals) updateData.totals = data.totals as Prisma.InputJsonValue;
+    if (data.document !== undefined) updateData.document = (data.document || null) as Prisma.InputJsonValue;
 
     const updatedItem = await prisma.cartItem.update({
       where: { id: itemId },
@@ -111,6 +112,7 @@ export async function PATCH(
         pickupPoint: updatedItem.pickupPoint,
         selectedQuote: updatedItem.selectedQuote,
         totals: updatedItem.totals,
+        document: updatedItem.document,
         createdAt: updatedItem.createdAt.toISOString(),
         updatedAt: updatedItem.updatedAt.toISOString(),
       },

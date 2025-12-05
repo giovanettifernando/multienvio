@@ -680,13 +680,52 @@ export default function FinalizarClient() {
           serviceName: selectedService.modalidade,
           price: selectedService.preco,
           deadlineDays: selectedService.prazoDias,
-          source: 'mock' as const,
+          source: 'quote' as const,
         },
         totals: {
           total: totalAmount,
           subtotal: selectedService.preco,
           pickupFee: pickupFeeAmount,
           moeda: 'BRL',
+        },
+        // Documento fiscal (NFE/Declaração) - igual ao checkout direto
+        document: {
+          type: values.document.type,
+          // Novo formato: NF por pacote
+          packages: values.document.type === "NFE" ? values.document.packages : undefined,
+          // Campos legados para retrocompatibilidade
+          nfeKeys: values.document.type === "NFE" ? values.document.nfeKeys : undefined,
+          nfeItems: values.document.type === "NFE" ? values.document.nfeItems : undefined,
+          declarationItems: values.document.type === "DECLARACAO" ? values.document.declarationItems : undefined,
+          // Converter volumeDocuments (formato do UI) para volumeDeclarations (formato da API)
+          volumeDeclarations: values.document.type === "DECLARACAO"
+            ? (() => {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const volumeDocs = values.document.volumeDocuments as any[] | undefined;
+                const fromVolumeDocuments = (volumeDocs || [])
+                  .filter((vol) =>
+                    vol.declarationItems && vol.declarationItems.length > 0 &&
+                    vol.declarationItems.some((item: { descricao?: string }) =>
+                      item.descricao && item.descricao.trim().length > 0
+                    )
+                  )
+                  .map((vol) => ({
+                    volumeIndex: vol.volumeIndex as number,
+                    items: (vol.declarationItems || []).map((item: { id?: string; descricao?: string; valorUnitario?: number; quantidade?: number }) => ({
+                      id: item.id || "",
+                      descricao: item.descricao || "",
+                      valorUnitario: item.valorUnitario || 0,
+                      quantidade: item.quantidade || 1,
+                    })),
+                  }));
+
+                if (fromVolumeDocuments.length > 0) {
+                  return fromVolumeDocuments;
+                }
+
+                return values.document.volumeDeclarations;
+              })()
+            : undefined,
         },
       };
 
