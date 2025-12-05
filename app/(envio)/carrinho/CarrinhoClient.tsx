@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useCallback, useRef } from "react";
-import { Col, Row, Skeleton, message } from "antd";
+import { Col, Row, Skeleton, App } from "antd";
 import { EmptyCart } from "@/components/cart/EmptyCart";
 import { CartTable } from "@/components/cart/CartTable";
 import { CartSummary } from "@/components/cart/CartSummary";
@@ -16,6 +16,7 @@ import { PageShell } from "@/components/shared/PageShell";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 export default function CarrinhoClient() {
+  const { message } = App.useApp();
   const cartQuery = useCart();
   const queryClient = useQueryClient();
 

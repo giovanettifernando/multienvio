@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Card, InputNumber, message } from "antd";
+import { Card, InputNumber, App } from "antd";
 import { PageShell } from "@/components/shared/PageShell";
 import type { Invoice } from "@/types/billing";
 import { ELButton } from "@/components/ui/ELButton";
@@ -21,6 +21,7 @@ async function fetchInvoices(): Promise<Invoice[]> {
 }
 
 export default function FaturasClient() {
+  const { message } = App.useApp();
   const queryClient = useQueryClient();
   const [modalOpen, setModalOpen] = useState(false);
   const [amount, setAmount] = useState<number>(100);

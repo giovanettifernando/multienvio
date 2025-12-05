@@ -242,7 +242,7 @@ export function QuickCalculator() {
         footer={null}
         width={500}
       >
-        <Space direction="vertical" size={12} style={{ width: '100%' }}>
+        <Space orientation="vertical" size={12} style={{ width: '100%' }}>
           {(quoteMutation.data || []).length === 0 ? (
             <ELAlert
               variant="warning"
@@ -253,13 +253,13 @@ export function QuickCalculator() {
             (quoteMutation.data || []).map((result, index) => (
               <Card key={index} size="small" variant="outlined">
                 <Flex justify="space-between" align="center">
-                  <Space direction="vertical" size={0}>
+                  <Space orientation="vertical" size={0}>
                     <Text strong>{result.carrier}</Text>
                     <Text type="secondary" style={{ fontSize: '12px' }}>
                       {result.service} • {result.deliveryDays} {result.deliveryDays === 1 ? 'dia' : 'dias'}
                     </Text>
                   </Space>
-                  <Space direction="vertical" size={4} align="end">
+                  <Space orientation="vertical" size={4} align="end">
                     <ELTag color="blue" style={{ margin: 0 }}>
                       R$ {result.price.toFixed(2)}
                     </ELTag>

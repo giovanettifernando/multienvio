@@ -691,8 +691,38 @@ export default function FinalizarClient() {
         // Documento fiscal (NFE/Declaração) - igual ao checkout direto
         document: {
           type: values.document.type,
-          // Novo formato: NF por pacote
-          packages: values.document.type === "NFE" ? values.document.packages : undefined,
+          // Novo formato NFE: packages (converter de volumeDocuments se disponível)
+          packages: values.document.type === "NFE"
+            ? (() => {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const volumeDocs = values.document.volumeDocuments as any[] | undefined;
+                const fromVolumeDocuments = (volumeDocs || [])
+                  .filter((vol) => vol?.type === "NFE" && vol?.nfeKey && vol.nfeKey.length === 44)
+                  .map((vol) => ({
+                    chave: vol.nfeKey as string,
+                    xmlId: vol.nfeXmlId || null,
+                    items: (vol.nfeItems || []).map((item: { id?: string; sku?: string | null; descricao?: string; ncm?: string | null; cfop?: string | null; quantidade?: number; pesoLiquido?: number | null; valorUnitario?: number; valorTotal?: number }) => ({
+                      id: item.id || "",
+                      sku: item.sku || null,
+                      descricao: item.descricao || "",
+                      ncm: item.ncm || null,
+                      cfop: item.cfop || null,
+                      quantidade: item.quantidade || 1,
+                      pesoLiquido: item.pesoLiquido || null,
+                      valorUnitario: item.valorUnitario || 0,
+                      valorTotal: item.valorTotal || 0,
+                    })),
+                  }));
+
+                // Se há dados em volumeDocuments, usar
+                if (fromVolumeDocuments.length > 0) {
+                  return fromVolumeDocuments;
+                }
+
+                // Fallback: usar packages diretamente
+                return values.document.packages;
+              })()
+            : undefined,
           // Campos legados para retrocompatibilidade
           nfeKeys: values.document.type === "NFE" ? values.document.nfeKeys : undefined,
           nfeItems: values.document.type === "NFE" ? values.document.nfeItems : undefined,
@@ -935,8 +965,38 @@ export default function FinalizarClient() {
         },
         document: {
           type: values.document.type,
-          // Novo formato: NF por pacote
-          packages: values.document.type === "NFE" ? values.document.packages : undefined,
+          // Novo formato NFE: packages (converter de volumeDocuments se disponível)
+          packages: values.document.type === "NFE"
+            ? (() => {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const volumeDocs = values.document.volumeDocuments as any[] | undefined;
+                const fromVolumeDocuments = (volumeDocs || [])
+                  .filter((vol) => vol?.type === "NFE" && vol?.nfeKey && vol.nfeKey.length === 44)
+                  .map((vol) => ({
+                    chave: vol.nfeKey as string,
+                    xmlId: vol.nfeXmlId || null,
+                    items: (vol.nfeItems || []).map((item: { id?: string; sku?: string | null; descricao?: string; ncm?: string | null; cfop?: string | null; quantidade?: number; pesoLiquido?: number | null; valorUnitario?: number; valorTotal?: number }) => ({
+                      id: item.id || "",
+                      sku: item.sku || null,
+                      descricao: item.descricao || "",
+                      ncm: item.ncm || null,
+                      cfop: item.cfop || null,
+                      quantidade: item.quantidade || 1,
+                      pesoLiquido: item.pesoLiquido || null,
+                      valorUnitario: item.valorUnitario || 0,
+                      valorTotal: item.valorTotal || 0,
+                    })),
+                  }));
+
+                // Se há dados em volumeDocuments, usar
+                if (fromVolumeDocuments.length > 0) {
+                  return fromVolumeDocuments;
+                }
+
+                // Fallback: usar packages diretamente
+                return values.document.packages;
+              })()
+            : undefined,
           // Campos legados para retrocompatibilidade
           nfeKeys: values.document.type === "NFE" ? values.document.nfeKeys : undefined,
           nfeItems: values.document.type === "NFE" ? values.document.nfeItems : undefined,

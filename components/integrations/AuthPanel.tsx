@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Form, Input, Select, Button, Space, Card, Empty, Flex, message as antMessage, Spin } from 'antd';
+import { Form, Input, Select, Button, Space, Card, Empty, Flex, Spin, App } from 'antd';
 import { EyeOutlined, EyeInvisibleOutlined, CopyOutlined, ReloadOutlined, SaveOutlined, ApiOutlined } from '@ant-design/icons';
 import { useForm, Controller, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -10,6 +10,7 @@ import { useCarriers, useAuth, useSaveAuth, useRotateSecret, useTestConnection }
 import type { AuthFieldType } from '@/lib/integrations/types';
 
 export default function AuthPanel() {
+  const { message: antMessage } = App.useApp();
   const [selectedCarrierId, setSelectedCarrierId] = useState<string | null>(null);
   const [visibleFields, setVisibleFields] = useState<Record<string, boolean>>({});
 

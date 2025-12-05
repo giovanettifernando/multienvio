@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Button, Input, Space, Upload, Typography, message, Checkbox } from "antd";
+import { Button, Input, Space, Upload, Typography, App, Checkbox } from "antd";
 import type { RcFile, UploadFile } from "antd/es/upload/interface";
 import { CannedReplySelect } from "@/components/support/CannedReplySelect";
 import { usePostTicketMessage } from "@/hooks/useSupport";
@@ -14,6 +14,7 @@ type Props = {
 };
 
 export function TicketCommentBox({ ticketId, onSubmitted, mode = 'admin' }: Props) {
+  const { message } = App.useApp();
   const MAX_FILES = 5;
   const MAX_FILE_SIZE = 10 * 1024 * 1024;
   const [messageText, setMessageText] = useState("");

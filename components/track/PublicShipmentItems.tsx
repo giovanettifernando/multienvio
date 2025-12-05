@@ -99,7 +99,7 @@ export function PublicShipmentItems({ volumes }: PublicShipmentItemsProps) {
             dataSource={volume.items}
             pagination={false}
             size="small"
-            rowKey={(_, index) => `item-${index}`}
+            rowKey={(record) => `${record.description}-${record.quantity}-${record.unitValue ?? 0}`}
             scroll={{ x: 'max-content' }}
             columns={[
               {
@@ -196,7 +196,7 @@ export function PublicShipmentItems({ volumes }: PublicShipmentItemsProps) {
             dataSource={volume.items}
             pagination={false}
             size="small"
-            rowKey={(_, index) => `vol-${volume.index}-item-${index}`}
+            rowKey={(record) => `vol-${volume.index}-${record.description}-${record.quantity}-${record.unitValue ?? 0}`}
             scroll={{ x: 'max-content' }}
             columns={[
               {

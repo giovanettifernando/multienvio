@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { Card, Form, Input, InputNumber, Switch, Button, Space, message, Spin, Alert, Modal } from 'antd';
+import { Card, Form, Input, InputNumber, Switch, Button, Space, App, Spin, Alert, Modal } from 'antd';
 import { SaveOutlined, SendOutlined, ThunderboltOutlined } from '@ant-design/icons';
 
 interface EmailConfigFormData {
@@ -15,6 +15,7 @@ interface EmailConfigFormData {
 }
 
 export default function EmailConfigForm() {
+  const { message } = App.useApp();
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);

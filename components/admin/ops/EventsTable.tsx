@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Table, Tag, Button, Flex, Select, Space, message } from 'antd';
+import { Table, Tag, Button, Flex, Select, Space, App } from 'antd';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ReloadOutlined, CheckOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
@@ -23,6 +23,7 @@ const sourceColors: Record<OpsEvent['source'], string> = {
 };
 
 export default function EventsTable() {
+  const { message } = App.useApp();
   const queryClient = useQueryClient();
 
   // Filters

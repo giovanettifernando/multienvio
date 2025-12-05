@@ -1,15 +1,15 @@
 'use client';
 
 import { useState } from 'react';
-import { Table, Button, Space, Tag, Switch, Modal, Empty, Flex, Select, Tooltip } from 'antd';
+import { Table, Button, Space, Tag, Switch, Modal, Empty, Flex, Select, Tooltip, App } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, CopyOutlined } from '@ant-design/icons';
-import { message as antMessage } from 'antd';
 import dayjs from 'dayjs';
 import type { CarrierApi } from '@/lib/integrations/types';
 import { useApis, useUpdateApi, useDeleteApi, useCarriers } from '@/lib/integrations/hooks';
 import { useIntegrationsStore } from '@/store/integrations.store';
 
 export default function ApiTable() {
+  const { message: antMessage } = App.useApp();
   const [selectedCarrierId, setSelectedCarrierId] = useState<string | undefined>();
   const { data: carriers } = useCarriers();
   const { data: apis, isLoading } = useApis(selectedCarrierId);

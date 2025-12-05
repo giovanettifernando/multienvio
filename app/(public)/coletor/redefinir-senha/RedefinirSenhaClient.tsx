@@ -2,12 +2,13 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { Card, Form, Input, Button, Typography, message, Space, Alert } from 'antd';
+import { Card, Form, Input, Button, Typography, Space, Alert, App } from 'antd';
 import { LockOutlined, CheckCircleOutlined } from '@ant-design/icons';
 
 const { Title, Text } = Typography;
 
 function ResetPasswordContent() {
+  const { message } = App.useApp();
   const searchParams = useSearchParams();
   const router = useRouter();
   const [form] = Form.useForm();

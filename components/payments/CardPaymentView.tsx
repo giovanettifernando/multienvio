@@ -53,7 +53,7 @@ export function CardPaymentView({
           paymentDescription={`Pagamento de ${itemCount} envio(s) - Envio Legal`}
         />
       ) : (
-        <Space direction="vertical" size="large" style={{ width: '100%' }}>
+        <Space orientation="vertical" size="large" style={{ width: '100%' }}>
           <div style={{ marginBottom: 16 }}>
             <Text strong>Valor a pagar: </Text>
             <Text style={{ fontSize: 20, color: '#52c41a' }}>
@@ -72,7 +72,7 @@ export function CardPaymentView({
             paymentType="checkout_payment"
           />
 
-          <Space direction="vertical" size="small" style={{ width: '100%' }}>
+          <Space orientation="vertical" size="small" style={{ width: '100%' }}>
             {hasSavedCards && (
               <ELButton variant="link" onClick={() => onUseSavedCard(true)} block>
                 Voltar para cartões salvos

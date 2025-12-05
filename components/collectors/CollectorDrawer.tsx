@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Drawer, Tabs, Button, Space, Spin, message, Modal } from 'antd';
+import { Drawer, Tabs, Button, Space, Spin, Modal, App } from 'antd';
 import { MailOutlined } from '@ant-design/icons';
 import type { UploadFile } from 'antd/es/upload/interface';
 import { useForm, FormProvider } from 'react-hook-form';
@@ -90,6 +90,7 @@ export default function CollectorDrawer({
   loading = false,
   editCollector = null,
 }: CollectorDrawerProps) {
+  const { message } = App.useApp();
   const upload = useUpload();
   const [cnhFiles, setCnhFiles] = useState<UploadFile[]>([]);
   const [crlvFiles, setCrlvFiles] = useState<UploadFile[]>([]);

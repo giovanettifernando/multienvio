@@ -164,7 +164,7 @@ export function VolumeDeclarationTab({ volumeCount }: VolumeDeclarationTabProps)
     const items = vol?.declarationItems ?? [];
 
     return (
-      <Space direction="vertical" style={{ width: "100%" }} size={12}>
+      <Space orientation="vertical" style={{ width: "100%" }} size={12}>
         {items.map((item) => (
           <Row key={item.id} gutter={8} align="middle">
             <Col flex="auto">
@@ -234,7 +234,7 @@ export function VolumeDeclarationTab({ volumeCount }: VolumeDeclarationTabProps)
     }
 
     return (
-      <Space direction="vertical" style={{ width: "100%" }} size={16}>
+      <Space orientation="vertical" style={{ width: "100%" }} size={16}>
         {filled && (
           <Space>
             <Tag color="blue">Total: {currency.format(total)}</Tag>
@@ -277,7 +277,7 @@ export function VolumeDeclarationTab({ volumeCount }: VolumeDeclarationTabProps)
           showIcon
         />
       ) : (
-        <Space direction="vertical" style={{ width: "100%" }} size={12}>
+        <Space orientation="vertical" style={{ width: "100%" }} size={12}>
           {filled && (
             <Button size="small" danger onClick={() => clearDeclaration(index)}>
               Limpar declaração
@@ -291,7 +291,7 @@ export function VolumeDeclarationTab({ volumeCount }: VolumeDeclarationTabProps)
   });
 
   return (
-    <Space direction="vertical" size={16} style={{ width: "100%" }}>
+    <Space orientation="vertical" size={16} style={{ width: "100%" }}>
       <Typography.Text type="secondary">
         {filledCount} de {volumeCount} volume(s) com Declaração
       </Typography.Text>

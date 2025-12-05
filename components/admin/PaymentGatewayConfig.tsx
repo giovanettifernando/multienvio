@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { Card, Form, Input, Select, Button, Space, message, Spin, Alert } from 'antd';
+import { Card, Form, Input, Select, Button, Space, App, Spin, Alert } from 'antd';
 import { SaveOutlined, ReloadOutlined } from '@ant-design/icons';
 
 interface GatewayConfig {
@@ -13,6 +13,7 @@ interface GatewayConfig {
 }
 
 export default function PaymentGatewayConfig() {
+  const { message } = App.useApp();
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);

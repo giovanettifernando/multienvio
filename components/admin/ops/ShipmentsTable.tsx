@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Table, Tag, Button, Flex, Input, Select, DatePicker, message } from 'antd';
+import { Table, Tag, Button, Flex, Input, Select, DatePicker, App } from 'antd';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { SearchOutlined, EyeOutlined, DownloadOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
@@ -37,6 +37,7 @@ const getStatusDisplay = (status: string): { label: string; color: string } => {
 };
 
 export default function ShipmentsTable({ dateStart, dateEnd }: ShipmentsTableProps) {
+  const { message } = App.useApp();
   const queryClient = useQueryClient();
 
   // Filters

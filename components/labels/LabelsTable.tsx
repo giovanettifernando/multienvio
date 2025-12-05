@@ -84,7 +84,7 @@ function ShipmentSummary({ record }: { record: LabelItem }) {
   const destState = record.recipient.state ? ` (${record.recipient.state})` : '';
 
   return (
-    <Space direction="vertical" size={0}>
+    <Space orientation="vertical" size={0}>
       <Text>
         <Text strong>{originLabel}</Text>
         {originState} → {destName}, {destCep}, {destCity}
