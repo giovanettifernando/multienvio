@@ -1,51 +1,25 @@
 "use client";
+
 import { Input, Form, Spin } from "antd";
 import { useController, useFormContext } from "react-hook-form";
 import { useRef, useState } from "react";
+import {
+  fetchCepV2,
+  normalizeCep,
+  type CepError,
+} from "@/lib/services/brasilapi";
 
-type CepV2Response = {
-  cep: string;
-  state: string;
-  city: string;
-  neighborhood?: string | null;
-  street?: string | null;
-};
-
-function normalizeCep(v: string) {
-  return (v || "").replace(/\D/g, "").slice(0, 8);
-}
 function maskCep(v: string) {
   const d = (v || "").replace(/\D/g, "").slice(0, 8);
   return d.replace(/(\d{5})(\d{0,3})/, (_, a, b) => (b ? `${a}-${b}` : a));
-}
-async function fetchCepV2(rawCep: string): Promise<CepV2Response> {
-  const cep = normalizeCep(rawCep);
-  if (cep.length !== 8) throw new Error("CEP inválido");
-  const ctl = new AbortController();
-  const t = setTimeout(() => ctl.abort(), 8000);
-  try {
-    const r = await fetch(`https://brasilapi.com.br/api/cep/v2/${cep}`, {
-      headers: { Accept: "application/json" },
-      cache: "no-store",
-      signal: ctl.signal,
-    });
-    if (!r.ok) {
-      if (r.status === 404) throw new Error("CEP não encontrado");
-      if (r.status === 429) throw new Error("Muitas consultas — tente novamente");
-      throw new Error("Falha ao consultar CEP");
-    }
-    const data = (await r.json()) as CepV2Response;
-    if (!data?.state || !data?.city) throw new Error("Resposta incompleta");
-    return data;
-  } finally {
-    clearTimeout(t);
-  }
 }
 
 type Props = {
   /** Nome do campo de CEP no RHF (ex.: "endereco.cep") */
   name: string;
   label?: string;
+  /** Marca o campo como obrigatório (exibe asterisco) */
+  required?: boolean;
   /** Mapeamento dos campos derivados no formulário atual */
   targets?: {
     city: string;          // ex.: "endereco.cidade"
@@ -55,7 +29,7 @@ type Props = {
   };
 };
 
-export function CepInput({ name, label = "CEP", targets }: Props) {
+export function CepInput({ name, label = "CEP", required, targets }: Props) {
   const { control, setValue } = useFormContext();
   const { field, fieldState } = useController({ control, name });
   const [loading, setLoading] = useState(false);
@@ -92,30 +66,50 @@ export function CepInput({ name, label = "CEP", targets }: Props) {
 
       lastResolvedCep.current = cepDigits;
     } catch (e: unknown) {
-      const error = e as { message?: string };
+      const error = e as CepError;
       setLookupError(error?.message || "Erro ao consultar CEP");
     } finally {
       setLoading(false);
     }
   };
 
+  const inputElement = (
+    <Input
+      {...field}
+      value={field.value ?? ""}
+      onChange={handleChange}
+      onBlur={handleBlur}
+      placeholder="00000-000"
+      maxLength={9}
+      inputMode="numeric"
+      autoComplete="postal-code"
+      suffix={<Spin size="small" style={{ visibility: loading ? "visible" : "hidden" }} />}
+      status={fieldState.error || lookupError ? "error" : undefined}
+    />
+  );
+
+  // Se label vazio, retorna apenas o input com erro inline
+  if (!label) {
+    return (
+      <div>
+        {inputElement}
+        {(fieldState.error?.message || lookupError) && (
+          <div style={{ color: "#ff4d4f", fontSize: 12 }}>
+            {fieldState.error?.message || lookupError}
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <Form.Item
       label={label}
+      required={required}
       validateStatus={fieldState.error || lookupError ? "error" : undefined}
       help={fieldState.error?.message || lookupError || undefined}
     >
-      <Input
-        {...field}
-        value={field.value ?? ""}
-        onChange={handleChange}
-        onBlur={handleBlur}
-        placeholder="00000-000"
-        maxLength={9}
-        inputMode="numeric"
-        autoComplete="postal-code"
-        suffix={loading ? <Spin size="small" /> : null}
-      />
+      {inputElement}
     </Form.Item>
   );
 }

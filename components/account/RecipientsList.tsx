@@ -251,7 +251,7 @@ export default function RecipientsList() {
         </Button>
       }
     >
-      <Space direction="vertical" size={16} style={{ width: "100%" }}>
+      <Space orientation="vertical" size={16} style={{ width: "100%" }}>
         {/* Botões de importação/exportação */}
         <Space>
           <Button icon={<DownloadOutlined />} onClick={handleDownloadTemplate}>
@@ -334,7 +334,7 @@ export default function RecipientsList() {
                       ) : null}
                     </div>
                   </div>
-                  <Space direction="vertical" size={0} style={{ alignItems: "flex-end" }}>
+                  <Space orientation="vertical" size={0} style={{ alignItems: "flex-end" }}>
                     <Button type="link" size="small" icon={<EditOutlined />} onClick={() => handleOpenEdit(item)}>
                       Editar
                     </Button>

@@ -10,7 +10,6 @@ import type { Address } from "@/types/account";
 interface AddressSelectProps {
   value?: string | null; // address ID
   onChange?: (addressId: string | null, address?: Address | undefined) => void;
-  onAddAddress?: () => void; // Deprecated: modal abre automaticamente agora
   placeholder?: string;
   disabled?: boolean;
 }
@@ -79,7 +78,6 @@ export function AddressSelect({
         bairro: values.bairro,
         cidade: values.cidade,
         uf: values.uf,
-        isDefault: values.isDefault,
       });
 
       message.success("Endereço salvo com sucesso");

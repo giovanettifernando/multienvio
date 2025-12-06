@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { App, Form, Input, Modal, Switch } from "antd";
+import { App, Input, Modal } from "antd";
 import { Controller, FormProvider, useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -19,7 +19,6 @@ const addressSchema = z.object({
   bairro: z.string().min(2, "Informe o bairro"),
   cidade: z.string().min(2, "Informe a cidade"),
   uf: z.string().min(2).max(2, "UF inválida"),
-  isDefault: z.boolean(),
 });
 
 export type AddressFormValues = z.infer<typeof addressSchema>;
@@ -30,6 +29,26 @@ type AddressModalProps = {
   initialValues?: Partial<Address> | null;
   onSubmit: (values: AddressFormValues) => void;
   onCancel: () => void;
+};
+
+// Estilos para layout horizontal
+const rowStyle: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  marginBottom: 16,
+  gap: 8,
+};
+
+const labelStyle: React.CSSProperties = {
+  minWidth: 130,
+  textAlign: "right",
+  lineHeight: "32px",
+  flexShrink: 0,
+  whiteSpace: "nowrap",
+};
+
+const inputWrapperStyle: React.CSSProperties = {
+  flex: 1,
 };
 
 export function AddressModal({
@@ -52,7 +71,6 @@ export function AddressModal({
       bairro: "",
       cidade: "",
       uf: "",
-      isDefault: false,
     },
   });
 
@@ -67,7 +85,6 @@ export function AddressModal({
         bairro: initialValues?.bairro ?? "",
         cidade: initialValues?.cidade ?? "",
         uf: initialValues?.uf ?? "",
-        isDefault: Boolean(initialValues?.isDefault),
       });
     }
   }, [open, initialValues, form]);
@@ -88,130 +105,141 @@ export function AddressModal({
       okText={initialValues ? "Salvar" : "Adicionar"}
       confirmLoading={loading}
       title={initialValues ? "Editar endereço" : "Adicionar endereço"}
+      width={640}
     >
       <FormProvider {...form}>
-        <form>
-          <Controller
-          name="label"
-          control={form.control}
-          render={({ field, fieldState }) => (
-            <Form.Item
-              label="Apelido"
-              required
-              validateStatus={fieldState.error ? "error" : ""}
-              help={fieldState.error?.message}
-            >
-              <Input {...field} placeholder="Matriz, Filial, Casa..." />
-            </Form.Item>
-          )}
-        />
-        <CepInput
-          name="cep"
-          label="CEP"
-          targets={{
-            city: "cidade",
-            state: "uf",
-            street: "logradouro",
-            neighborhood: "bairro",
-          }}
-        />
-        <Controller
-          name="numero"
-          control={form.control}
-          render={({ field, fieldState }) => (
-            <Form.Item
-              label="Número"
-              required
-              validateStatus={fieldState.error ? "error" : ""}
-              help={fieldState.error?.message}
-            >
-              <Input {...field} placeholder="Número" inputMode="numeric" />
-            </Form.Item>
-          )}
-        />
-        <Controller
-          name="complemento"
-          control={form.control}
-          render={({ field }) => (
-            <Form.Item label="Complemento">
-              <Input {...field} placeholder="Apto, sala, etc. (opcional)" />
-            </Form.Item>
-          )}
-        />
-        <Controller
-          name="logradouro"
-          control={form.control}
-          render={({ field, fieldState }) => (
-            <Form.Item
-              label="Logradouro"
-              required
-              validateStatus={fieldState.error ? "error" : ""}
-              help={fieldState.error?.message}
-              tooltip="Preenchido automaticamente pelo CEP"
-            >
-              <Input {...field} placeholder="Rua, Avenida" disabled />
-            </Form.Item>
-          )}
-        />
-        <Controller
-          name="bairro"
-          control={form.control}
-          render={({ field, fieldState }) => (
-            <Form.Item
-              label="Bairro"
-              required
-              validateStatus={fieldState.error ? "error" : ""}
-              help={fieldState.error?.message}
-              tooltip="Preenchido automaticamente pelo CEP"
-            >
-              <Input {...field} placeholder="Bairro" disabled />
-            </Form.Item>
-          )}
-        />
-        <Controller
-          name="cidade"
-          control={form.control}
-          render={({ field, fieldState }) => (
-            <Form.Item
-              label="Cidade"
-              required
-              validateStatus={fieldState.error ? "error" : ""}
-              help={fieldState.error?.message}
-              tooltip="Preenchido automaticamente pelo CEP"
-            >
-              <Input {...field} placeholder="Cidade" disabled />
-            </Form.Item>
-          )}
-        />
-        <Controller
-          name="uf"
-          control={form.control}
-          render={({ field, fieldState }) => (
-            <Form.Item
-              label="UF"
-              required
-              validateStatus={fieldState.error ? "error" : ""}
-              help={fieldState.error?.message}
-              tooltip="Preenchido automaticamente pelo CEP"
-            >
-              <Input {...field} placeholder="SP" maxLength={2} style={{ width: 72 }} disabled />
-            </Form.Item>
-          )}
-        />
-        <Controller
-          name="isDefault"
-          control={form.control}
-          render={({ field }) => (
-            <Form.Item valuePropName="checked">
-              <Switch
-                checked={field.value}
-                onChange={(checked) => field.onChange(checked)}
+        <div style={{ paddingTop: 16 }}>
+          {/* Apelido */}
+          <div style={rowStyle}>
+            <div style={labelStyle}>
+              <span style={{ color: "#ff4d4f" }}>*</span> Apelido:
+            </div>
+            <div style={inputWrapperStyle}>
+              <Controller
+                name="label"
+                control={form.control}
+                render={({ field, fieldState }) => (
+                  <div>
+                    <Input {...field} placeholder="Matriz, Filial, Casa..." status={fieldState.error ? "error" : undefined} />
+                    {fieldState.error && <div style={{ color: "#ff4d4f", fontSize: 12 }}>{fieldState.error.message}</div>}
+                  </div>
+                )}
               />
-              <span style={{ marginLeft: 8 }}>Marcar como padrão</span>
-            </Form.Item>
-          )}
-        />
-        </form>
+            </div>
+          </div>
+
+          {/* CEP */}
+          <div style={rowStyle}>
+            <div style={labelStyle}>
+              <span style={{ color: "#ff4d4f" }}>*</span> CEP:
+            </div>
+            <div style={inputWrapperStyle}>
+              <CepInput
+                name="cep"
+                label=""
+                required
+                targets={{
+                  city: "cidade",
+                  state: "uf",
+                  street: "logradouro",
+                  neighborhood: "bairro",
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Logradouro */}
+          <div style={rowStyle}>
+            <div style={labelStyle}>
+              <span style={{ color: "#ff4d4f" }}>*</span> Logradouro:
+            </div>
+            <div style={inputWrapperStyle}>
+              <Controller
+                name="logradouro"
+                control={form.control}
+                render={({ field, fieldState }) => (
+                  <div>
+                    <Input {...field} placeholder="Rua, Avenida, etc." disabled status={fieldState.error ? "error" : undefined} />
+                    {fieldState.error && <div style={{ color: "#ff4d4f", fontSize: 12 }}>{fieldState.error.message}</div>}
+                  </div>
+                )}
+              />
+            </div>
+          </div>
+
+          {/* Número e Complemento */}
+          <div style={rowStyle}>
+            <div style={labelStyle}>
+              <span style={{ color: "#ff4d4f" }}>*</span> Número:
+            </div>
+            <div style={{ width: 80 }}>
+              <Controller
+                name="numero"
+                control={form.control}
+                render={({ field, fieldState }) => (
+                  <Input {...field} placeholder="123" inputMode="numeric" status={fieldState.error ? "error" : undefined} />
+                )}
+              />
+            </div>
+            <div style={{ whiteSpace: "nowrap" }}>Complemento:</div>
+            <div style={{ flex: 1 }}>
+              <Controller
+                name="complemento"
+                control={form.control}
+                render={({ field }) => (
+                  <Input {...field} placeholder="Apto, sala, etc. (opcional)" />
+                )}
+              />
+            </div>
+          </div>
+
+          {/* Bairro */}
+          <div style={rowStyle}>
+            <div style={labelStyle}>
+              <span style={{ color: "#ff4d4f" }}>*</span> Bairro:
+            </div>
+            <div style={inputWrapperStyle}>
+              <Controller
+                name="bairro"
+                control={form.control}
+                render={({ field, fieldState }) => (
+                  <div>
+                    <Input {...field} placeholder="Bairro" disabled status={fieldState.error ? "error" : undefined} />
+                    {fieldState.error && <div style={{ color: "#ff4d4f", fontSize: 12 }}>{fieldState.error.message}</div>}
+                  </div>
+                )}
+              />
+            </div>
+          </div>
+
+          {/* Cidade e UF */}
+          <div style={rowStyle}>
+            <div style={labelStyle}>
+              <span style={{ color: "#ff4d4f" }}>*</span> Cidade:
+            </div>
+            <div style={{ flex: 1 }}>
+              <Controller
+                name="cidade"
+                control={form.control}
+                render={({ field, fieldState }) => (
+                  <Input {...field} placeholder="Cidade" disabled status={fieldState.error ? "error" : undefined} />
+                )}
+              />
+            </div>
+            <div style={{ whiteSpace: "nowrap" }}>
+              <span style={{ color: "#ff4d4f" }}>*</span> UF:
+            </div>
+            <div style={{ width: 60 }}>
+              <Controller
+                name="uf"
+                control={form.control}
+                render={({ field, fieldState }) => (
+                  <Input {...field} placeholder="SP" maxLength={2} disabled status={fieldState.error ? "error" : undefined} />
+                )}
+              />
+            </div>
+          </div>
+        </div>
       </FormProvider>
     </Modal>
   );

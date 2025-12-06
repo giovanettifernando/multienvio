@@ -1,6 +1,9 @@
 /**
- * BrasilAPI CEP v2 integration
- * Consulta CEP diretamente no browser via fetch
+ * Cliente de Consulta de CEP
+ *
+ * Usa a API route interna /api/cep/[cep] que:
+ * 1. Tenta API oficial dos Correios primeiro
+ * 2. Fallback para Brasil API se Correios falhar
  */
 
 export type CepResponse = {
@@ -9,14 +12,7 @@ export type CepResponse = {
   city: string;
   neighborhood?: string;
   street?: string;
-  service?: string;
-  location?: {
-    type: string;
-    coordinates: {
-      longitude: string;
-      latitude: string;
-    };
-  };
+  source?: string;
 };
 
 export type CepError = {
@@ -49,15 +45,18 @@ export function formatCep(cep: string): string {
 }
 
 /**
- * Busca informações de um CEP via BrasilAPI v2
+ * Busca informações de um CEP via API route interna
+ *
+ * A API route usa Correios como fonte primária e Brasil API como fallback.
+ *
  * @param cep - CEP com ou sem formatação
- * @param timeoutMs - Timeout em milissegundos (padrão: 5000ms)
+ * @param timeoutMs - Timeout em milissegundos (padrão: 10000ms)
  * @returns Promise com dados do CEP
  * @throws CepError com tipo e mensagem do erro
  */
 export async function fetchCepV2(
   cep: string,
-  timeoutMs: number = 5000
+  timeoutMs: number = 10000
 ): Promise<CepResponse> {
   const normalized = normalizeCep(cep);
 
@@ -72,17 +71,21 @@ export async function fetchCepV2(
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
-    const response = await fetch(
-      `https://brasilapi.com.br/api/cep/v2/${normalized}`,
-      {
-        signal: controller.signal,
-        headers: {
-          'Accept': 'application/json',
-        },
-      }
-    );
+    const response = await fetch(`/api/cep/${normalized}`, {
+      signal: controller.signal,
+      headers: {
+        'Accept': 'application/json',
+      },
+    });
 
     clearTimeout(timeoutId);
+
+    if (response.status === 400) {
+      throw {
+        type: 'invalid',
+        message: 'CEP inválido',
+      } as CepError;
+    }
 
     if (response.status === 404) {
       throw {
@@ -98,6 +101,13 @@ export async function fetchCepV2(
       } as CepError;
     }
 
+    if (response.status === 503) {
+      throw {
+        type: 'network',
+        message: 'Serviço de CEP temporariamente indisponível',
+      } as CepError;
+    }
+
     if (!response.ok) {
       throw {
         type: 'network',
@@ -106,7 +116,16 @@ export async function fetchCepV2(
     }
 
     const data = await response.json();
-    return data as CepResponse;
+
+    // Normaliza resposta para o formato esperado
+    return {
+      cep: data.cep,
+      state: data.uf,
+      city: data.cidade,
+      neighborhood: data.bairro || undefined,
+      street: data.logradouro || undefined,
+      source: data.source,
+    };
   } catch (error) {
     clearTimeout(timeoutId);
 

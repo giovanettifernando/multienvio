@@ -41,11 +41,9 @@ import type {
 import { useQuoteCalculate } from "@/hooks/useQuotes";
 import { fetchCepV2, normalizeCep, formatCep } from "@/lib/services/brasilapi";
 import { AddressSelect } from "@/components/addresses/AddressSelect";
-import { AddressModal, type AddressFormValues } from "@/components/account/AddressModal";
 import { RecipientSelect } from "@/components/recipients/RecipientSelect";
-import { RecipientModal, type RecipientFormValues } from "@/components/recipients/RecipientModal";
 import type { Recipient } from "@/types/account";
-import { useAddresses, useAccountRecipients, useAddressCreate, useRecipientCreate } from "@/hooks/useAccount";
+import { useAddresses, useAccountRecipients } from "@/hooks/useAccount";
 import { useQuoteDraft } from "@/lib/state/quoteDraft";
 import { RouteCards } from "@/components/shipping/RouteCards";
 import { OriginCard } from "@/components/shipping/OriginCard";
@@ -117,10 +115,6 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
     selectedOriginId,
     selectOrigin,
   } = useAddressStore();
-
-  // Hooks de criação via API (substituem stores locais)
-  const createAddress = useAddressCreate();
-  const createRecipient = useRecipientCreate();
 
   const companyAddress = getCompanyDefaultAddress();
 
@@ -295,15 +289,11 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
   const [clientCepError, setClientCepError] = useState<string | null>(null);
 
 
-  // Estado para modal de adicionar endereço
-  const [addressModalOpen, setAddressModalOpen] = useState(false);
-
   // Estados para destinatário
   const { destination, setDestination, setPickupAtOrigin } = useQuoteDraft();
   const [destinationMode, setDestinationMode] = useState<"manual" | "recipient">(
     destination?.mode ?? "recipient"
   );
-  const [recipientModalOpen, setRecipientModalOpen] = useState(false);
   const [selectedRecipientId, setSelectedRecipientId] = useState<string | null>(
     destination?.recipientId ?? null
   );
@@ -717,121 +707,6 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
     }
   }, [selectOrigin, addresses, isReverse, mapStoreAddressToCompany, setValue]);
 
-  const handleAddressModalOpen = () => {
-    setAddressModalOpen(true);
-  };
-
-  const handleAddressModalSubmit = async (values: AddressFormValues) => {
-    try {
-      const payload = {
-        apelido: values.label,
-        cep: values.cep,
-        logradouro: values.logradouro,
-        numero: values.numero,
-        complemento: values.complemento,
-        bairro: values.bairro,
-        cidade: values.cidade,
-        uf: values.uf,
-        isDefault: values.isDefault,
-      };
-
-      // Salvar via API
-      const response = await createAddress.mutateAsync(payload);
-      const createdAddress = response.data;
-
-      // Selecionar o endereço criado
-      selectOrigin(createdAddress.id);
-
-      setAddressModalOpen(false);
-      message.success("Endereço adicionado com sucesso!");
-    } catch (error) {
-      console.error('[ADDRESS_CREATE_ERROR]', error);
-      message.error("Erro ao adicionar endereço.");
-    }
-  };
-
-  const handleRecipientModalSubmit = async (values: RecipientFormValues) => {
-    try {
-      const payload = {
-        name: values.name,
-        document: values.doc,
-        phone: values.phone,
-        email: values.email,
-        cep: values.cep,
-        logradouro: values.logradouro,
-        numero: values.numero,
-        complemento: values.complemento,
-        bairro: values.bairro,
-        cidade: values.cidade,
-        uf: values.uf,
-        notes: values.notes,
-      };
-
-      // Salvar via API
-      const createdRecipient = await createRecipient.mutateAsync(payload);
-
-      setSelectedRecipientId(createdRecipient.id);
-      setValue(
-        (isReverse ? "modoOrigem" : "modoDestino") as
-          | "modoOrigem"
-          | "modoDestino",
-        "recorrente",
-        { shouldDirty: true },
-      );
-
-      // Salvar na store de draft
-      setDestination({
-        mode: "recipient",
-        recipientId: createdRecipient.id,
-        recipientName: createdRecipient.name,
-        cep: createdRecipient.cep,
-        city: createdRecipient.cidade,
-        state: createdRecipient.uf,
-        street: createdRecipient.logradouro ?? null,
-        neighborhood: createdRecipient.bairro ?? null,
-      });
-
-      // Preencher o CEP no formulário
-      const formattedCep = formatCep(normalizeCep(createdRecipient.cep));
-      const recipientAddress: CompanyAddress = {
-        cep: formattedCep,
-        cidade: createdRecipient.cidade,
-        uf: createdRecipient.uf,
-        nome: createdRecipient.name,
-        logradouro: createdRecipient.logradouro ?? undefined,
-        bairro: createdRecipient.bairro ?? undefined,
-        numero: createdRecipient.numero ?? undefined,
-        complemento: createdRecipient.complemento ?? undefined,
-      };
-
-      if (isReverse) {
-        setValue("origem", recipientAddress, { shouldDirty: true });
-        setValue("origemCep", formattedCep, { shouldValidate: true });
-        setOrigemInfo({
-          cidade: createdRecipient.cidade,
-          uf: createdRecipient.uf,
-          label: createdRecipient.name,
-          isDefault: false,
-        });
-        setCepStatus((status) => ({ ...status, origem: true }));
-      } else {
-        setValue("destino", recipientAddress, { shouldDirty: true });
-        setValue("destinoCep", formattedCep, { shouldValidate: true });
-        setDestinoInfo({
-          cidade: createdRecipient.cidade,
-          uf: createdRecipient.uf,
-        });
-        setCepStatus((status) => ({ ...status, destino: true }));
-      }
-
-      setRecipientModalOpen(false);
-      message.success("Destinatário adicionado com sucesso!");
-    } catch (error) {
-      console.error('[RECIPIENT_CREATE_ERROR]', error);
-      message.error("Erro ao adicionar destinatário.");
-    }
-  };
-
   const handleRecipientSelect = (recipientId: string | null, recipient?: Recipient | undefined) => {
     setSelectedRecipientId(recipientId);
 
@@ -1243,7 +1118,6 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
           <AddressSelect
             value={selectedOriginId}
             onChange={handleAddressChange}
-            onAddAddress={handleAddressModalOpen}
             placeholder={origemPlaceholder}
           />
         </Form.Item>
@@ -1357,7 +1231,6 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
           <RecipientSelect
             value={selectedRecipientId}
             onChange={handleRecipientSelect}
-            onAddRecipient={() => setRecipientModalOpen(true)}
             placeholder={destinatarioPlaceholder}
           />
         </Form.Item>
@@ -1443,18 +1316,6 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
           </Row>
         </Space>
       </Form>
-
-      <AddressModal
-        open={addressModalOpen}
-        onCancel={() => setAddressModalOpen(false)}
-        onSubmit={handleAddressModalSubmit}
-      />
-
-      <RecipientModal
-        open={recipientModalOpen}
-        onCancel={() => setRecipientModalOpen(false)}
-        onSubmit={handleRecipientModalSubmit}
-      />
     </FormProvider>
   );
 }

@@ -278,7 +278,7 @@ export default function RecurringItemsList() {
   ];
 
   return (
-    <Space direction="vertical" size="middle" style={{ width: "100%" }}>
+    <Space orientation="vertical" size="middle" style={{ width: "100%" }}>
       {/* Botões de importação/exportação */}
       <Space>
         <Button icon={<DownloadOutlined />} onClick={handleDownloadTemplate}>

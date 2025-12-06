@@ -52,7 +52,6 @@ export default function AddressesList() {
         bairro: values.bairro,
         cidade: values.cidade,
         uf: values.uf,
-        isDefault: values.isDefault || false,
       };
 
       if (modalMode === "create") {
@@ -238,7 +237,6 @@ export default function AddressesList() {
                 bairro: editing.bairro,
                 cidade: editing.cidade,
                 uf: editing.uf,
-                isDefault: editing.isDefault || false,
               }
             : undefined
         }

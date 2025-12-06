@@ -10,7 +10,6 @@ import type { Recipient } from "@/types/account";
 interface RecipientSelectProps {
   value?: string | null; // recipient ID
   onChange?: (recipientId: string | null, recipient?: Recipient | undefined) => void;
-  onAddRecipient?: () => void; // Deprecated: modal abre automaticamente agora
   placeholder?: string;
   disabled?: boolean;
 }
