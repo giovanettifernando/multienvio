@@ -1,6 +1,6 @@
 "use client";
 
-import { App, Form, Input, InputNumber, Modal } from 'antd';
+import { App, Form, Input, InputNumber, Modal, Space } from 'antd';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { packagingCreateSchema, type PackagingCreateInput } from '@/lib/validation/packaging';
@@ -12,6 +12,27 @@ interface ModalNovaEmbalagemProps {
   onClose: () => void;
   onSuccess?: (id: string) => void;
 }
+
+const unitStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  padding: '0 8px',
+  background: '#fafafa',
+  border: '1px solid #d9d9d9',
+  borderLeft: 0,
+  borderRadius: '0 6px 6px 0',
+  height: 24,
+  fontSize: 12,
+  color: 'rgba(0, 0, 0, 0.65)',
+};
+
+// Parser que aceita tanto vírgula quanto ponto como separador decimal
+const parseDecimal = (value: string | undefined) => {
+  if (!value) return undefined;
+  const normalized = value.replace(',', '.');
+  const parsed = parseFloat(normalized);
+  return isNaN(parsed) ? undefined : parsed;
+};
 
 export function ModalNovaEmbalagem({ open, onClose, onSuccess }: ModalNovaEmbalagemProps) {
   const { message } = App.useApp();
@@ -73,16 +94,19 @@ export function ModalNovaEmbalagem({ open, onClose, onSuccess }: ModalNovaEmbala
             name="lengthCm"
             control={control}
             render={({ field }) => (
-              <InputNumber
-                {...field}
-                size="small"
-                style={{ width: '100%' }}
-                placeholder="Ex: 30"
-                min={0.01}
-                step={0.01}
-                precision={2}
-                addonAfter="cm"
-              />
+              <Space.Compact style={{ width: '100%' }}>
+                <InputNumber
+                  {...field}
+                  size="small"
+                  style={{ width: '100%', borderRadius: '6px 0 0 6px' }}
+                  placeholder="Ex: 30"
+                  min={0.01}
+                  step={0.01}
+                  precision={2}
+                  parser={parseDecimal}
+                />
+                <span style={unitStyle}>cm</span>
+              </Space.Compact>
             )}
           />
         </Form.Item>
@@ -97,16 +121,19 @@ export function ModalNovaEmbalagem({ open, onClose, onSuccess }: ModalNovaEmbala
             name="widthCm"
             control={control}
             render={({ field }) => (
-              <InputNumber
-                {...field}
-                size="small"
-                style={{ width: '100%' }}
-                placeholder="Ex: 20"
-                min={0.01}
-                step={0.01}
-                precision={2}
-                addonAfter="cm"
-              />
+              <Space.Compact style={{ width: '100%' }}>
+                <InputNumber
+                  {...field}
+                  size="small"
+                  style={{ width: '100%', borderRadius: '6px 0 0 6px' }}
+                  placeholder="Ex: 20"
+                  min={0.01}
+                  step={0.01}
+                  precision={2}
+                  parser={parseDecimal}
+                />
+                <span style={unitStyle}>cm</span>
+              </Space.Compact>
             )}
           />
         </Form.Item>
@@ -121,16 +148,19 @@ export function ModalNovaEmbalagem({ open, onClose, onSuccess }: ModalNovaEmbala
             name="heightCm"
             control={control}
             render={({ field }) => (
-              <InputNumber
-                {...field}
-                size="small"
-                style={{ width: '100%' }}
-                placeholder="Ex: 10"
-                min={0.01}
-                step={0.01}
-                precision={2}
-                addonAfter="cm"
-              />
+              <Space.Compact style={{ width: '100%' }}>
+                <InputNumber
+                  {...field}
+                  size="small"
+                  style={{ width: '100%', borderRadius: '6px 0 0 6px' }}
+                  placeholder="Ex: 10"
+                  min={0.01}
+                  step={0.01}
+                  precision={2}
+                  parser={parseDecimal}
+                />
+                <span style={unitStyle}>cm</span>
+              </Space.Compact>
             )}
           />
         </Form.Item>

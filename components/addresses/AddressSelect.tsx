@@ -43,7 +43,7 @@ export function AddressSelect({
     {
       value: "__add_new__",
       label: (
-        <Space>
+        <Space style={{ color: "#1677ff", fontWeight: 500 }}>
           <PlusOutlined />
           Adicionar novo endereço...
         </Space>
@@ -134,6 +134,7 @@ export function AddressSelect({
       <Select
         showSearch
         allowClear
+        size="small"
         value={value ?? undefined}
         onChange={handleChange}
         options={allOptions}
@@ -147,7 +148,7 @@ export function AddressSelect({
           }
           return false;
         }}
-        style={{ width: "100%" }}
+        style={{ width: "100%", fontSize: 13 }}
         aria-label="Selecionar endereço de remetente"
       />
 

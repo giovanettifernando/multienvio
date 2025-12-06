@@ -1,7 +1,7 @@
 "use client";
 
-import { DeleteOutlined, PlusOutlined } from "@ant-design/icons";
-import { Button, Card, Col, Form, InputNumber, Row, Space, Typography } from "antd";
+import { DeleteOutlined, DownloadOutlined, PlusOutlined, UploadOutlined } from "@ant-design/icons";
+import { App, Button, Card, Col, Form, InputNumber, Row, Space, Typography, Upload } from "antd";
 import {
   Controller,
   type Control,
@@ -17,12 +17,20 @@ import styles from "@/app/(envio)/cotacoes/cotacoes.module.css";
 
 export const DEFAULT_CUBAGE_FACTOR = 6000;
 
+type VolumeImportRow = {
+  comprimentoCm: number;
+  larguraCm: number;
+  alturaCm: number;
+  pesoKg: number;
+};
+
 type VolumesGridProps = {
   control: Control<QuoteFormValues>;
   fields: FieldArrayWithId<QuoteFormValues, "volumes", "id">[];
   values: QuoteFormValues["volumes"];
   onAdd: () => void;
   onRemove: (index: number) => void;
+  onImport: (volumes: VolumeImportRow[]) => void;
   maxCount: number;
   /** @deprecated No longer used - totals are computed internally */
   totals?: { pesoRealKg: number; pesoCubadoKg: number };
@@ -31,6 +39,14 @@ type VolumesGridProps = {
 
 const formatNumber = (value: number) =>
   Number.isFinite(value) ? value.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0,00";
+
+// Parser que aceita tanto vírgula quanto ponto como separador decimal
+const parseDecimal = (value: string | undefined) => {
+  if (!value) return undefined;
+  const normalized = value.replace(',', '.');
+  const parsed = parseFloat(normalized);
+  return isNaN(parsed) ? undefined : parsed;
+};
 
 const computeCubage = (
   volume: QuoteFormValues["volumes"][number],
@@ -200,6 +216,7 @@ function VolumeItem({
                           step={1}
                           precision={0}
                           placeholder="0"
+                          parser={parseDecimal}
                           status={showError ? "error" : undefined}
                           onChange={(value) =>
                             controllerField.onChange(value ?? undefined)
@@ -239,6 +256,7 @@ function VolumeItem({
                           step={1}
                           precision={0}
                           placeholder="0"
+                          parser={parseDecimal}
                           status={showError ? "error" : undefined}
                           onChange={(value) =>
                             controllerField.onChange(value ?? undefined)
@@ -278,6 +296,7 @@ function VolumeItem({
                           step={1}
                           precision={0}
                           placeholder="0"
+                          parser={parseDecimal}
                           status={showError ? "error" : undefined}
                           onChange={(value) =>
                             controllerField.onChange(value ?? undefined)
@@ -318,6 +337,7 @@ function VolumeItem({
                           step={0.1}
                           precision={2}
                           placeholder="0,00"
+                          parser={parseDecimal}
                           status={showError ? "error" : undefined}
                           onChange={(value) =>
                             controllerField.onChange(value ?? undefined)
@@ -360,13 +380,129 @@ export function VolumesGrid({
   values,
   onAdd,
   onRemove,
+  onImport,
   maxCount,
   disableRemove,
 }: VolumesGridProps) {
+  const { message } = App.useApp();
   const addDisabled = fields.length >= maxCount;
+
+  const handleDownloadTemplate = () => {
+    const csvContent =
+      "comprimento,largura,altura,peso\n" +
+      "30,20,15,1.5\n" +
+      "40,30,20,2.0\n";
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "modelo_volumes.csv";
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportCSV = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const text = e.target?.result as string;
+        const lines = text.split("\n").filter((line) => line.trim());
+
+        if (lines.length < 2) {
+          message.error("O arquivo CSV deve conter pelo menos uma linha de dados além do cabeçalho.");
+          return;
+        }
+
+        const volumes: VolumeImportRow[] = [];
+        const errors: string[] = [];
+
+        // Pular cabeçalho (primeira linha)
+        for (let i = 1; i < lines.length; i++) {
+          const line = lines[i].trim();
+          if (!line) continue;
+
+          // Suportar vírgula ou ponto-e-vírgula como delimitador
+          const delimiter = line.includes(";") ? ";" : ",";
+          const parts = line.split(delimiter).map((p) => p.trim());
+
+          if (parts.length < 4) {
+            errors.push(`Linha ${i + 1}: formato inválido (esperado: comprimento,largura,altura,peso)`);
+            continue;
+          }
+
+          // Converter valores (suportar vírgula decimal)
+          const parseNum = (val: string) => {
+            const normalized = val.replace(",", ".");
+            return parseFloat(normalized);
+          };
+
+          const comprimentoCm = parseNum(parts[0]);
+          const larguraCm = parseNum(parts[1]);
+          const alturaCm = parseNum(parts[2]);
+          const pesoKg = parseNum(parts[3]);
+
+          if (isNaN(comprimentoCm) || isNaN(larguraCm) || isNaN(alturaCm) || isNaN(pesoKg)) {
+            errors.push(`Linha ${i + 1}: valores numéricos inválidos`);
+            continue;
+          }
+
+          if (comprimentoCm <= 0 || larguraCm <= 0 || alturaCm <= 0 || pesoKg <= 0) {
+            errors.push(`Linha ${i + 1}: valores devem ser maiores que zero`);
+            continue;
+          }
+
+          volumes.push({ comprimentoCm, larguraCm, alturaCm, pesoKg });
+        }
+
+        if (volumes.length === 0) {
+          message.error("Nenhum volume válido encontrado no arquivo.");
+          return;
+        }
+
+        // Verificar limite
+        if (volumes.length > maxCount) {
+          message.warning(`Importados apenas os primeiros ${maxCount} volumes (limite máximo).`);
+          volumes.splice(maxCount);
+        }
+
+        onImport(volumes);
+        message.success(`${volumes.length} volume(s) importado(s) com sucesso!`);
+
+        if (errors.length > 0) {
+          message.warning(`${errors.length} linha(s) com erro foram ignoradas.`);
+        }
+      } catch (error) {
+        message.error("Erro ao processar o arquivo CSV.");
+        console.error(error);
+      }
+    };
+
+    reader.readAsText(file);
+    return false; // Impedir upload automático
+  };
 
   return (
     <Space orientation="vertical" size={16} style={{ width: "100%" }}>
+      {/* Botões de importação */}
+      <Space size={8}>
+        <Button
+          size="small"
+          icon={<DownloadOutlined />}
+          onClick={handleDownloadTemplate}
+        >
+          Baixar modelo
+        </Button>
+        <Upload
+          accept=".csv"
+          showUploadList={false}
+          beforeUpload={handleImportCSV}
+        >
+          <Button size="small" icon={<UploadOutlined />}>
+            Importar volumes
+          </Button>
+        </Upload>
+      </Space>
+
       {fields.map((field, index) => {
         const volumeValue = values?.[index];
         const canRemove = !disableRemove && fields.length > 1;

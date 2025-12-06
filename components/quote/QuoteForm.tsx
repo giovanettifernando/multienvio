@@ -477,6 +477,20 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
     [fields.length, message, remove],
   );
 
+  const handleImportVolumes = useCallback(
+    (importedVolumes: { comprimentoCm: number; larguraCm: number; alturaCm: number; pesoKg: number }[]) => {
+      const newVolumes = importedVolumes.map((v) => ({
+        id: generateUUID(),
+        comprimentoCm: v.comprimentoCm,
+        larguraCm: v.larguraCm,
+        alturaCm: v.alturaCm,
+        pesoKg: v.pesoKg,
+      }));
+      replace(newVolumes);
+    },
+    [replace],
+  );
+
   const applyReverseUI = useCallback((next: boolean) => {
     setIsReverse(next);
   }, []);
@@ -1292,6 +1306,7 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
                       values={volumesValues}
                       onAdd={handleAddVolume}
                       onRemove={handleRemoveVolume}
+                      onImport={handleImportVolumes}
                       maxCount={MAX_VOLUMES}
                       totals={totals}
                       disableRemove={calculateQuotes.isPending}

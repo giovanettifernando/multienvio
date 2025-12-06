@@ -47,7 +47,7 @@ export function RecipientSelect({
     {
       value: "__add_new__",
       label: (
-        <Space>
+        <Space style={{ color: "#1677ff", fontWeight: 500 }}>
           <PlusOutlined />
           Adicionar novo destinatário...
         </Space>
@@ -142,6 +142,7 @@ export function RecipientSelect({
       <Select
         showSearch
         allowClear
+        size="small"
         value={value ?? undefined}
         onChange={handleChange}
         options={allOptions}
@@ -155,7 +156,7 @@ export function RecipientSelect({
           }
           return false;
         }}
-        style={{ width: "100%" }}
+        style={{ width: "100%", fontSize: 13 }}
         aria-label="Selecionar destinatário"
       />
 
