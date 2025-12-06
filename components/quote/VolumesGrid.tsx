@@ -41,11 +41,11 @@ const formatNumber = (value: number) =>
   Number.isFinite(value) ? value.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0,00";
 
 // Parser que aceita tanto vírgula quanto ponto como separador decimal
-const parseDecimal = (value: string | undefined) => {
-  if (!value) return undefined;
+const parseDecimal = (value: string | undefined): number => {
+  if (!value) return 0;
   const normalized = value.replace(',', '.');
   const parsed = parseFloat(normalized);
-  return isNaN(parsed) ? undefined : parsed;
+  return isNaN(parsed) ? 0 : parsed;
 };
 
 const computeCubage = (

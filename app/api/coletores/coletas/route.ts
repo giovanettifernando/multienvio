@@ -73,12 +73,7 @@ export async function GET(request: NextRequest) {
             email: true,
             phone: true,
             addresses: {
-              where: {
-                OR: [
-                  { isDefault: true },
-                  { role: 'sender' },
-                ],
-              },
+              where: { isDefault: true },
               take: 1,
             },
           },

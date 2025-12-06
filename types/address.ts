@@ -3,13 +3,8 @@
  * Types for address management in the quote system
  */
 
-export type AddressRole = 'sender' | 'recipient';
-
 export interface Address {
   id: string;
-  role: AddressRole | null;
-  name: string | null;
-  cpfCnpj: string | null;
   label: string | null;
   cep: string;
   logradouro: string;
@@ -18,7 +13,6 @@ export interface Address {
   bairro: string;
   cidade: string;
   uf: string;
-  referencia: string | null;
   isDefault: boolean;
   userId: string;
   createdAt: string;
@@ -26,9 +20,6 @@ export interface Address {
 }
 
 export interface AddressCreatePayload {
-  role: AddressRole;
-  name: string;
-  cpfCnpj?: string | null;
   label?: string | null;
   cep: string;
   logradouro: string;
@@ -37,7 +28,6 @@ export interface AddressCreatePayload {
   bairro: string;
   cidade: string;
   uf: string;
-  referencia?: string | null;
   isDefault?: boolean;
 }
 

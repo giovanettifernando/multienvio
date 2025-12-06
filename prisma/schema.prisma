@@ -77,14 +77,10 @@ model Address {
   updatedAt    DateTime @updatedAt
   isDefault    Boolean  @default(false)
   label        String?
-  cpfCnpj      String?
-  name         String?
-  referencia   String?
-  role         String?  @default("recipient")
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   billingCards Card[]   @relation("BillingAddress")
 
-  @@index([userId, role]) // Cobre queries por userId sozinho
+  @@index([userId])
   @@index([cep])
   @@map("addresses")
 }
@@ -804,7 +800,6 @@ model CarrierApiCall {
   operation    String
   method       String
   endpoint     String
-  requestBody  Json?
   statusCode   Int?
   startedAt    DateTime
   completedAt  DateTime?
@@ -886,15 +881,15 @@ model PaymentEndpoint {
 }
 
 model PaymentTransaction {
-  id            String              @id @default(cuid())
+  id            String            @id @default(cuid())
   gatewayId     String
   externalId    String?
-  referenceId   String              @unique
+  referenceId   String            @unique
   userId        String?
   method        PaymentMethod
-  status        TransactionStatus   @default(PENDING)
+  status        TransactionStatus @default(PENDING)
   amountCents   Int
-  feeCents      Int                 @default(0)
+  feeCents      Int               @default(0)
   netCents      Int
   cardBrand     String?
   cardLast4     String?
@@ -903,15 +898,12 @@ model PaymentTransaction {
   boletoUrl     String?
   boletoBarcode String?
   metadata      Json?
-  createdAt     DateTime            @default(now())
-  updatedAt     DateTime            @updatedAt
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
   authorizedAt  DateTime?
   paidAt        DateTime?
-  ledgerEntries LedgerEntry[]
-  chargebacks   PaymentChargeback[]
-  refunds       PaymentRefund[]
-  gateway       PaymentGateway      @relation(fields: [gatewayId], references: [id])
-  user          User?               @relation(fields: [userId], references: [id])
+  gateway       PaymentGateway    @relation(fields: [gatewayId], references: [id])
+  user          User?             @relation(fields: [userId], references: [id])
 
   @@index([gatewayId, status, createdAt])
   @@index([userId, status])
@@ -921,34 +913,6 @@ model PaymentTransaction {
   @@map("payment_transactions")
 }
 
-model PaymentRefund {
-  id            String             @id @default(cuid())
-  transactionId String
-  externalId    String?
-  amountCents   Int
-  reason        String?
-  status        String
-  createdAt     DateTime           @default(now())
-  completedAt   DateTime?
-  transaction   PaymentTransaction @relation(fields: [transactionId], references: [id])
-
-  @@index([transactionId])
-  @@map("payment_refunds")
-}
-
-model PaymentChargeback {
-  id            String             @id @default(cuid())
-  transactionId String
-  externalId    String?
-  reason        String
-  amountCents   Int
-  status        String
-  receivedAt    DateTime
-  transaction   PaymentTransaction @relation(fields: [transactionId], references: [id])
-
-  @@index([transactionId])
-  @@map("payment_chargebacks")
-}
 
 model PaymentWebhook {
   id           String         @id @default(cuid())
@@ -974,19 +938,16 @@ model PaymentWebhook {
 }
 
 model LedgerEntry {
-  id            String              @id @default(cuid())
-  transactionId String?
-  type          LedgerEntryType
-  amountCents   Int
-  accountType   String
-  accountId     String?
-  description   String
-  metadata      Json?
-  createdAt     DateTime            @default(now())
-  transaction   PaymentTransaction? @relation(fields: [transactionId], references: [id])
+  id          String          @id @default(cuid())
+  type        LedgerEntryType
+  amountCents Int
+  accountType String
+  accountId   String?
+  description String
+  metadata    Json?
+  createdAt   DateTime        @default(now())
 
   @@index([accountType, accountId, createdAt])
-  @@index([transactionId])
   @@index([type, createdAt])
   @@map("ledger_entries")
 }

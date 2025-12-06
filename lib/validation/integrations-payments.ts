@@ -118,29 +118,8 @@ export const updatePaymentTransactionSchema = z.object({
 export type CreatePaymentTransactionInput = z.infer<typeof createPaymentTransactionSchema>;
 export type UpdatePaymentTransactionInput = z.infer<typeof updatePaymentTransactionSchema>;
 
-// Refund schemas
-export const createPaymentRefundSchema = z.object({
-  transactionId: z.string().cuid(),
-  amountCents: z.coerce.number().int().min(1, 'Valor do reembolso é obrigatório'),
-  reason: z.string().nullable().optional(),
-});
-
-export type CreatePaymentRefundInput = z.infer<typeof createPaymentRefundSchema>;
-
-// Chargeback schemas
-export const createPaymentChargebackSchema = z.object({
-  transactionId: z.string().cuid(),
-  externalId: z.string().nullable().optional(),
-  reason: z.string().min(1, 'Motivo é obrigatório'),
-  amountCents: z.coerce.number().int().min(1),
-  status: z.enum(['received', 'accepted', 'contested', 'won', 'lost']).default('received'),
-});
-
-export type CreatePaymentChargebackInput = z.infer<typeof createPaymentChargebackSchema>;
-
 // Ledger Entry schemas
 export const createLedgerEntrySchema = z.object({
-  transactionId: z.string().cuid().nullable().optional(),
   type: ledgerEntryTypeSchema,
   amountCents: z.coerce.number().int(), // Pode ser negativo
   accountType: z.enum(['platform', 'user_wallet', 'partner_payout']),
@@ -194,24 +173,10 @@ export const validatePaymentRules = {
   },
 
   /**
-   * Validates if transaction can be refunded
-   */
-  canRefund(status: TransactionStatus): boolean {
-    return status === 'PAID' || status === 'CAPTURED';
-  },
-
-  /**
    * Validates if transaction can be canceled
    */
   canCancel(status: TransactionStatus): boolean {
     return status === 'PENDING' || status === 'AUTHORIZED';
-  },
-
-  /**
-   * Validates refund amount against transaction amount
-   */
-  validateRefundAmount(refundAmount: number, transactionAmount: number, alreadyRefunded: number): boolean {
-    return refundAmount > 0 && (refundAmount + alreadyRefunded) <= transactionAmount;
   },
 
   /**

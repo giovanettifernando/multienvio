@@ -36,12 +36,7 @@ export async function GET(request: Request, { params }: RouteParams) {
                 cpf: true,
                 cnpj: true,
                 addresses: {
-                  where: {
-                    OR: [
-                      { role: 'sender' },
-                      { isDefault: true },
-                    ],
-                  },
+                  where: { isDefault: true },
                   take: 1,
                   orderBy: { createdAt: 'desc' },
                 },
