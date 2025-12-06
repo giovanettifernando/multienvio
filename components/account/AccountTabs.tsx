@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useSyncExternalStore } from "react";
-import { Tabs, Space } from "antd";
+import { Tabs, Space, Grid, Tooltip } from "antd";
 import {
   EnvironmentOutlined,
   CreditCardOutlined,
@@ -14,6 +14,8 @@ import CardsList from "./CardsList";
 import RecipientsList from "./RecipientsList";
 import RecurringItemsList from "./RecurringItemsList";
 import SecurityForm from "./SecurityForm";
+
+const { useBreakpoint } = Grid;
 
 type TabKey = "addresses" | "cards" | "recipients" | "recurring-items" | "security";
 
@@ -38,6 +40,8 @@ function getInitialTab(hash: string): TabKey {
 
 export default function AccountTabs() {
   const hash = useHash();
+  const screens = useBreakpoint();
+  const isMobile = !screens.md;
   // Derivar activeKey do hash
   const activeKey = getInitialTab(hash);
 
@@ -55,37 +59,61 @@ export default function AccountTabs() {
     }
   };
 
+  // Labels curtos para mobile, completos para desktop
+  const tabItems = [
+    {
+      key: "addresses",
+      label: isMobile ? (
+        <Tooltip title="Endereços"><EnvironmentOutlined /></Tooltip>
+      ) : (
+        <Space><EnvironmentOutlined />Endereços</Space>
+      ),
+      children: <AddressesList />,
+    },
+    {
+      key: "cards",
+      label: isMobile ? (
+        <Tooltip title="Cartões"><CreditCardOutlined /></Tooltip>
+      ) : (
+        <Space><CreditCardOutlined />Cartões</Space>
+      ),
+      children: <CardsList />,
+    },
+    {
+      key: "recipients",
+      label: isMobile ? (
+        <Tooltip title="Destinatários"><TeamOutlined /></Tooltip>
+      ) : (
+        <Space><TeamOutlined />Destinatários</Space>
+      ),
+      children: <RecipientsList />,
+    },
+    {
+      key: "recurring-items",
+      label: isMobile ? (
+        <Tooltip title="Itens recorrentes"><InboxOutlined /></Tooltip>
+      ) : (
+        <Space><InboxOutlined />Itens recorrentes</Space>
+      ),
+      children: <RecurringItemsList />,
+    },
+    {
+      key: "security",
+      label: isMobile ? (
+        <Tooltip title="Segurança"><LockOutlined /></Tooltip>
+      ) : (
+        <Space><LockOutlined />Segurança</Space>
+      ),
+      children: <SecurityForm />,
+    },
+  ];
+
   return (
     <Tabs
       activeKey={activeKey}
       onChange={handleChange}
-      items={[
-        {
-          key: "addresses",
-          label: <Space><EnvironmentOutlined />Meus endereços</Space>,
-          children: <AddressesList />,
-        },
-        {
-          key: "cards",
-          label: <Space><CreditCardOutlined />Cartões</Space>,
-          children: <CardsList />,
-        },
-        {
-          key: "recipients",
-          label: <Space><TeamOutlined />Destinatários recorrentes</Space>,
-          children: <RecipientsList />,
-        },
-        {
-          key: "recurring-items",
-          label: <Space><InboxOutlined />Itens recorrentes</Space>,
-          children: <RecurringItemsList />,
-        },
-        {
-          key: "security",
-          label: <Space><LockOutlined />Segurança</Space>,
-          children: <SecurityForm />,
-        },
-      ]}
+      items={tabItems}
+      size={isMobile ? "small" : "middle"}
     />
   );
 }

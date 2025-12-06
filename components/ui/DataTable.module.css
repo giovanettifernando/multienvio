@@ -68,10 +68,9 @@
 
 .cardRow {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: var(--el-spacing-sm, 8px);
-  padding: var(--el-spacing-xs, 4px) 0;
+  flex-direction: column;
+  gap: var(--el-spacing-xs, 4px);
+  padding: var(--el-spacing-sm, 8px) 0;
 }
 
 .cardRow:not(:last-child) {
@@ -82,15 +81,13 @@
   font-size: var(--el-font-size-xs, 12px);
   color: var(--color-text-secondary, #4A6076);
   font-weight: 500;
-  min-width: 100px;
-  flex-shrink: 0;
 }
 
 .cardValue {
   font-size: var(--el-font-size-sm, 13px);
   color: var(--color-text, #182235);
-  text-align: right;
-  flex: 1;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .cardActions {
@@ -100,6 +97,42 @@
   margin-top: var(--el-spacing-md, 12px);
   padding-top: var(--el-spacing-md, 12px);
   border-top: 1px solid var(--color-border-secondary, #E5EBF4);
+}
+
+/* Card expandível */
+.cardExpandHeader {
+  display: flex;
+  align-items: center;
+  padding: var(--el-spacing-sm, 8px) 0;
+  margin-bottom: var(--el-spacing-sm, 8px);
+  cursor: pointer;
+  border-bottom: 1px solid var(--color-border-secondary, #E5EBF4);
+  user-select: none;
+}
+
+.cardExpandHeader:hover {
+  opacity: 0.8;
+}
+
+.cardExpandText {
+  font-size: var(--el-font-size-sm, 13px);
+  color: #1890ff;
+  font-weight: 500;
+}
+
+.cardExpanded {
+  margin-top: var(--el-spacing-md, 12px);
+  padding-top: var(--el-spacing-md, 12px);
+  border-top: 1px solid var(--color-border-secondary, #E5EBF4);
+}
+
+/* Ajustar tabela aninhada no card expandido */
+.cardExpanded :global(.ant-table) {
+  font-size: var(--el-font-size-xs, 12px);
+}
+
+.cardExpanded :global(.ant-table-tbody > tr > td) {
+  padding: var(--el-spacing-xs, 4px) var(--el-spacing-sm, 8px);
 }
 
 /* Loading state */
@@ -148,8 +181,8 @@
   }
 }
 
-/* Breakpoint para card mode */
-@media (max-width: 480px) {
+/* Breakpoint para card mode - usa 768px para cobrir tablets e mobile */
+@media (max-width: 768px) {
   .mobileCards .tableContainer {
     display: none;
   }
@@ -159,7 +192,7 @@
   }
 }
 
-@media (min-width: 481px) {
+@media (min-width: 769px) {
   .cardList {
     display: none;
   }

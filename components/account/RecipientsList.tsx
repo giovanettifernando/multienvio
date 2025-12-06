@@ -6,6 +6,7 @@ import {
   Button,
   Card,
   Empty,
+  Grid,
   Input,
   Pagination,
   Popconfirm,
@@ -17,6 +18,8 @@ import {
   theme,
 } from "antd";
 import { PlusOutlined, SearchOutlined, EditOutlined, DeleteOutlined, StarOutlined, StarFilled, UploadOutlined, DownloadOutlined } from "@ant-design/icons";
+
+const { useBreakpoint } = Grid;
 import {
   useAccountRecipients,
   useRecipientCreate,
@@ -61,6 +64,8 @@ function formatPhoneForForm(value: string | null | undefined) {
 export default function RecipientsList() {
   const { message } = App.useApp();
   const { token } = theme.useToken();
+  const screens = useBreakpoint();
+  const isMobile = !screens.md;
   const setAll = useRecipientsStore((s) => s.setAll);
 
   const [search, setSearch] = useState("");
@@ -246,31 +251,31 @@ export default function RecipientsList() {
     <Card
       title="Destinatários"
       extra={
-        <Button type="primary" icon={<PlusOutlined />} onClick={handleOpenCreate}>
-          Adicionar destinatário
+        <Button type="primary" icon={<PlusOutlined />} onClick={handleOpenCreate} size={isMobile ? "small" : "middle"}>
+          {isMobile ? "Adicionar" : "Adicionar destinatário"}
         </Button>
       }
     >
       <Space orientation="vertical" size={16} style={{ width: "100%" }}>
         {/* Botões de importação/exportação */}
-        <Space>
-          <Button icon={<DownloadOutlined />} onClick={handleDownloadTemplate}>
-            Baixar Modelo
+        <Space wrap size={isMobile ? "small" : "middle"}>
+          <Button icon={<DownloadOutlined />} onClick={handleDownloadTemplate} size={isMobile ? "small" : "middle"}>
+            {isMobile ? "Modelo" : "Baixar Modelo"}
           </Button>
           <Upload
             accept=".csv"
             showUploadList={false}
             beforeUpload={handleImportCSV}
           >
-            <Button icon={<UploadOutlined />} loading={importing}>
-              Importar Destinatários
+            <Button icon={<UploadOutlined />} loading={importing} size={isMobile ? "small" : "middle"}>
+              {isMobile ? "Importar" : "Importar Destinatários"}
             </Button>
           </Upload>
         </Space>
 
         {/* Campo de busca */}
         <Input
-          placeholder="Buscar por nome, documento, cidade..."
+          placeholder={isMobile ? "Buscar..." : "Buscar por nome, documento, cidade..."}
           prefix={<SearchOutlined />}
           value={search}
           onChange={(event) => handleSearchChange(event.target.value)}
@@ -291,14 +296,16 @@ export default function RecipientsList() {
                   key={item.id}
                   style={{
                     display: "flex",
-                    alignItems: "flex-start",
+                    flexDirection: isMobile ? "column" : "row",
+                    alignItems: isMobile ? "stretch" : "flex-start",
                     justifyContent: "space-between",
+                    gap: isMobile ? 12 : 0,
                     padding: `${token.paddingSM}px 0`,
                     borderBottom: `1px solid ${token.colorBorderSecondary}`,
                   }}
                 >
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <Space style={{ marginBottom: token.marginXS }}>
+                    <Space style={{ marginBottom: token.marginXS }} wrap>
                       <Typography.Text strong>{item.name}</Typography.Text>
                       {item.document ? (
                         <Typography.Text type="secondary">· {item.document}</Typography.Text>
@@ -329,30 +336,31 @@ export default function RecipientsList() {
                       {item.notes ? (
                         <>
                           <br />
-                          <Typography.Text type="secondary">Observações: {item.notes}</Typography.Text>
+                          <Typography.Text type="secondary">Obs: {item.notes}</Typography.Text>
                         </>
                       ) : null}
                     </div>
                   </div>
-                  <Space orientation="vertical" size={0} style={{ alignItems: "flex-end" }}>
+                  <Space size={isMobile ? "small" : 0} style={{ alignItems: isMobile ? "flex-start" : "flex-end", flexDirection: isMobile ? "row" : "column", flexWrap: "wrap" }}>
                     <Button type="link" size="small" icon={<EditOutlined />} onClick={() => handleOpenEdit(item)}>
-                      Editar
+                      {isMobile ? "" : "Editar"}
                     </Button>
-                    <Button
-                      type="text"
-                      size="small"
-                      icon={item.isDefault ? <StarFilled style={{ color: "#faad14" }} /> : <StarOutlined />}
-                      disabled={item.isDefault}
-                      loading={
-                        makeDefaultMutation.isPending &&
-                        makeDefaultMutation.variables === item.id
-                      }
-                      onClick={() => handleSetDefault(item)}
-                    >
-                      {item.isDefault ? "Padrão" : "Definir como padrão"}
-                    </Button>
+                    {!item.isDefault && (
+                      <Button
+                        type="text"
+                        size="small"
+                        icon={<StarOutlined />}
+                        loading={
+                          makeDefaultMutation.isPending &&
+                          makeDefaultMutation.variables === item.id
+                        }
+                        onClick={() => handleSetDefault(item)}
+                      >
+                        {isMobile ? "" : "Tornar padrão"}
+                      </Button>
+                    )}
                     <Popconfirm
-                      title={`Remover destinatário "${item.name}"?`}
+                      title={`Remover "${item.name}"?`}
                       description="Esta ação não pode ser desfeita."
                       okText="Remover"
                       cancelText="Cancelar"
@@ -368,7 +376,7 @@ export default function RecipientsList() {
                           deleteMutation.variables === item.id
                         }
                       >
-                        Remover
+                        {isMobile ? "" : "Remover"}
                       </Button>
                     </Popconfirm>
                   </Space>
@@ -383,6 +391,7 @@ export default function RecipientsList() {
                   total={total}
                   onChange={(nextPage) => setPage(nextPage)}
                   showSizeChanger={false}
+                  size={isMobile ? "small" : "default"}
                 />
               </div>
             )}

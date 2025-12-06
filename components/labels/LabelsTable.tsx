@@ -7,9 +7,12 @@ import Tag from 'antd/es/tag';
 import Typography from 'antd/es/typography';
 import Popconfirm from 'antd/es/popconfirm';
 import App from 'antd/es/app';
+import Grid from 'antd/es/grid';
 import type { ColumnsType } from 'antd/es/table';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { EyeOutlined, StopOutlined, DownOutlined, RightOutlined } from '@ant-design/icons';
+
+const { useBreakpoint } = Grid;
 import { ELInput } from '@/components/ui/ELInput';
 import { ELSelect } from '@/components/ui/ELSelect';
 import { ELButton } from '@/components/ui/ELButton';
@@ -129,6 +132,8 @@ function PackageSummary({ pkg }: { pkg: PackageItem }) {
 export function LabelsTable({ onOpenLabel, onOpenPackage }: LabelsTableProps) {
   const { message } = App.useApp();
   const queryClient = useQueryClient();
+  const screens = useBreakpoint();
+  const isMobile = !screens.md;
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [q, setQ] = useState('');
@@ -221,6 +226,85 @@ export function LabelsTable({ onOpenLabel, onOpenPackage }: LabelsTableProps) {
 
   // Renderizar linhas expandidas (packages/volumes)
   const expandedRowRender = (record: LabelItem) => {
+    // Mobile: renderizar como cards
+    if (isMobile) {
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {record.packages.map((pkg) => (
+            <div
+              key={pkg.id}
+              style={{
+                background: '#fafafa',
+                borderRadius: 8,
+                padding: 12,
+                border: '1px solid #e5ebf4',
+              }}
+            >
+              {/* Header: Volume + Status */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <Text strong style={{ fontSize: 14 }}>Vol. {pkg.packageNumber}</Text>
+                <PackageStatusBadge status={pkg.labelStatus} />
+              </div>
+
+              {/* Detalhes do volume */}
+              <div style={{ marginBottom: 12 }}>
+                <Text type="secondary" style={{ fontSize: 12 }}>
+                  {pkg.weight.toFixed(2)}kg • {pkg.length}x{pkg.width}x{pkg.height}cm
+                </Text>
+                {pkg.contentType === 'nfe' && pkg.contentSummary && (
+                  <div>
+                    <Text type="secondary" style={{ fontSize: 12 }}>
+                      NF-e: {pkg.contentSummary}
+                    </Text>
+                  </div>
+                )}
+                {pkg.contentType === 'declaration' && (
+                  <div>
+                    <Text type="secondary" style={{ fontSize: 12 }}>
+                      Declaração{pkg.contentSummary ? `: ${pkg.contentSummary}` : ''}
+                    </Text>
+                  </div>
+                )}
+              </div>
+
+              {/* Ações */}
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <ELButton
+                  variant="link"
+                  size="small"
+                  icon={<EyeOutlined />}
+                  onClick={() => onOpenPackage(pkg, record)}
+                  disabled={pkg.labelStatus !== 'generated'}
+                >
+                  Visualizar
+                </ELButton>
+                <Popconfirm
+                  title="Cancelar pré-postagem"
+                  description="Tem certeza que deseja cancelar esta etiqueta?"
+                  onConfirm={() => handleCancelPackage(pkg, record.id)}
+                  okText="Sim, cancelar"
+                  cancelText="Não"
+                  okButtonProps={{ danger: true }}
+                >
+                  <ELButton
+                    variant="link"
+                    size="small"
+                    danger
+                    icon={<StopOutlined />}
+                    loading={cancelingPackage === pkg.id}
+                    disabled={pkg.labelStatus !== 'generated'}
+                  >
+                    Cancelar
+                  </ELButton>
+                </Popconfirm>
+              </div>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    // Desktop: tabela padrão
     const packageColumns: ColumnsType<PackageItem> = [
       {
         title: 'Volume',

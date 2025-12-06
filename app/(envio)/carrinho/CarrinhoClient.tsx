@@ -120,13 +120,13 @@ export default function CarrinhoClient() {
     <>
       <PageShell title="Carrinho" gap="md">
         <Row gutter={[24, 24]}>
-        <Col xs={24} lg={16}>
+        <Col xs={{ span: 24, order: 2 }} lg={{ span: 16, order: 1 }}>
           <CartTable
             items={cart.items}
             onRemove={handleRemove}
           />
         </Col>
-        <Col xs={24} lg={8}>
+        <Col xs={{ span: 24, order: 1 }} lg={{ span: 8, order: 2 }}>
           <CartSummary
             cart={cart}
             isClearing={clearMutation.isPending}

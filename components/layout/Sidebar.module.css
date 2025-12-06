@@ -21,11 +21,11 @@
 }
 
 .logo {
-  height: 64px;
+  height: 96px;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: var(--el-spacing-lg) var(--el-spacing-xl);
+  padding: var(--el-spacing-xl);
   border-bottom: 1px solid var(--sidebar-border);
 }
 
@@ -37,9 +37,9 @@
 }
 
 .logoImage {
-  width: 160px;
+  width: 220px;
   height: auto;
-  max-height: 40px;
+  max-height: 68px;
   object-fit: contain;
 }
 

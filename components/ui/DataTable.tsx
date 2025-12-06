@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import Table from 'antd/es/table';
 import type { TableProps } from 'antd/es/table';
 import type { ColumnsType } from 'antd/es/table';
 import Empty from 'antd/es/empty';
 import Pagination from 'antd/es/pagination';
+import { DownOutlined, RightOutlined } from '@ant-design/icons';
 import { cn } from '@/lib/utils/cn';
 import { ELSkeleton } from './ELSkeleton';
 import { ELEmpty } from './ELEmpty';
@@ -78,9 +79,10 @@ export interface DataTableProps<T extends object> {
  * Características:
  * - Usa tokens CSS para espaçamento e cores
  * - Modo compacto opcional
- * - Card mode automático em telas pequenas (< 480px)
+ * - Card mode automático em telas pequenas (< 768px)
  * - Scroll horizontal em telas médias
  * - Loading e empty states padronizados
+ * - Suporte a conteúdo expansível em card mode
  */
 export function DataTable<T extends object>({
   data,
@@ -97,6 +99,8 @@ export function DataTable<T extends object>({
   className,
   locale,
 }: DataTableProps<T>) {
+  // Estado para cards expandidos no mobile
+  const [expandedCardKeys, setExpandedCardKeys] = useState<string[]>([]);
   // Converter colunas para formato Ant Design
   const antColumns: ColumnsType<T> = useMemo(
     () =>
@@ -202,31 +206,72 @@ export function DataTable<T extends object>({
       {/* Card list para mobile */}
       {enableMobileCards && (
         <div className={styles.cardList}>
-          {data.map((record, recordIndex) => (
-            <div key={getRowKey(record)} className={styles.card}>
-              {cardColumns.map((col) => {
-                const value = getValue(record, col.dataIndex);
-                const rendered = col.render
-                  ? col.render(value, record, recordIndex)
-                  : value;
+          {data.map((record, recordIndex) => {
+            const recordKey = getRowKey(record);
+            const isExpandable = expandable?.rowExpandable?.(record) ?? false;
+            const isExpanded = expandedCardKeys.includes(recordKey);
 
-                return (
-                  <div key={col.key} className={styles.cardRow}>
-                    <span className={styles.cardLabel}>
-                      {col.cardLabel ?? col.title}
+            const toggleExpand = () => {
+              if (isExpanded) {
+                setExpandedCardKeys(expandedCardKeys.filter((k) => k !== recordKey));
+              } else {
+                setExpandedCardKeys([...expandedCardKeys, recordKey]);
+              }
+            };
+
+            return (
+              <div key={recordKey} className={styles.card}>
+                {/* Header com botão expandir se aplicável */}
+                {isExpandable && (
+                  <div
+                    className={styles.cardExpandHeader}
+                    onClick={toggleExpand}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => e.key === 'Enter' && toggleExpand()}
+                  >
+                    {isExpanded ? (
+                      <DownOutlined style={{ color: '#1890ff', marginRight: 8 }} />
+                    ) : (
+                      <RightOutlined style={{ color: '#1890ff', marginRight: 8 }} />
+                    )}
+                    <span className={styles.cardExpandText}>
+                      {isExpanded ? 'Ocultar detalhes' : 'Ver detalhes'}
                     </span>
-                    <span className={styles.cardValue}>{rendered as React.ReactNode}</span>
                   </div>
-                );
-              })}
+                )}
 
-              {actionsColumn && (
-                <div className={styles.cardActions}>
-                  {actionsColumn.render?.(null, record, recordIndex)}
-                </div>
-              )}
-            </div>
-          ))}
+                {cardColumns.map((col) => {
+                  const value = getValue(record, col.dataIndex);
+                  const rendered = col.render
+                    ? col.render(value, record, recordIndex)
+                    : value;
+
+                  return (
+                    <div key={col.key} className={styles.cardRow}>
+                      <span className={styles.cardLabel}>
+                        {col.cardLabel ?? col.title}
+                      </span>
+                      <span className={styles.cardValue}>{rendered as React.ReactNode}</span>
+                    </div>
+                  );
+                })}
+
+                {actionsColumn && (
+                  <div className={styles.cardActions}>
+                    {actionsColumn.render?.(null, record, recordIndex)}
+                  </div>
+                )}
+
+                {/* Conteúdo expandido */}
+                {isExpandable && isExpanded && expandable?.expandedRowRender && (
+                  <div className={styles.cardExpanded}>
+                    {expandable.expandedRowRender(record, recordIndex, 0, isExpanded)}
+                  </div>
+                )}
+              </div>
+            );
+          })}
 
           {/* Paginação para card mode */}
           {pagination !== false && pagination?.onChange && (

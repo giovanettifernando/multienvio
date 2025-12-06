@@ -1,7 +1,10 @@
 import { useMemo } from "react";
-import { Button, Space, Table, Tag, Typography } from "antd";
+import { Button, Card, Space, Table, Tag, Typography, Grid } from "antd";
+import { DeleteOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import type { CartItem } from "@/types/cart";
+
+const { useBreakpoint } = Grid;
 
 type CartTableProps = {
   items: CartItem[];
@@ -14,6 +17,9 @@ const currencyFormatter = new Intl.NumberFormat("pt-BR", {
 });
 
 export function CartTable({ items, onRemove }: CartTableProps) {
+  const screens = useBreakpoint();
+  const isMobile = !screens.md;
+
   const columns = useMemo<ColumnsType<CartItem>>(
     () => [
       {
@@ -89,6 +95,72 @@ export function CartTable({ items, onRemove }: CartTableProps) {
     [onRemove],
   );
 
+  // Mobile: Card layout
+  if (isMobile) {
+    return (
+      <Space orientation="vertical" size={12} style={{ width: "100%" }}>
+        {items.map((item) => (
+          <Card
+            key={item.id}
+            size="small"
+            styles={{ body: { padding: 12 } }}
+          >
+            {/* Header: Transportadora + Preço */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
+              <div>
+                <Typography.Text strong style={{ fontSize: 14 }}>
+                  {item.transportadora}
+                </Typography.Text>
+                <br />
+                <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                  {item.modalidade}
+                </Typography.Text>
+              </div>
+              <Typography.Text strong style={{ fontSize: 16, color: "var(--color-primary)" }}>
+                {currencyFormatter.format(item.preco)}
+              </Typography.Text>
+            </div>
+
+            {/* Rotas */}
+            <div style={{ marginBottom: 8, fontSize: 12 }}>
+              <div>
+                <Typography.Text type="secondary">Origem: </Typography.Text>
+                <Typography.Text>
+                  {item.origem?.cep ?? "—"} {item.origem?.cidadeUF ? `(${item.origem.cidadeUF})` : ""}
+                </Typography.Text>
+              </div>
+              <div>
+                <Typography.Text type="secondary">Destino: </Typography.Text>
+                <Typography.Text>
+                  {item.destino?.cep ?? "—"} {item.destino?.cidadeUF ? `(${item.destino.cidadeUF})` : ""}
+                </Typography.Text>
+              </div>
+            </div>
+
+            {/* Tags + Volumes + Ação */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <Space size={4} wrap>
+                <Tag style={{ margin: 0 }}>{item.volumes.length} vol</Tag>
+                <Tag style={{ margin: 0 }}>{item.pesoTotalKg.toFixed(1)} kg</Tag>
+                {item.coleta ? <Tag color="blue" style={{ margin: 0 }}>Coleta</Tag> : null}
+                {item.devolucao ? <Tag color="orange" style={{ margin: 0 }}>Devolução</Tag> : null}
+              </Space>
+              <Button
+                danger
+                size="small"
+                icon={<DeleteOutlined />}
+                onClick={() => onRemove(item)}
+              >
+                Remover
+              </Button>
+            </div>
+          </Card>
+        ))}
+      </Space>
+    );
+  }
+
+  // Desktop: Table layout
   return (
     <Table<CartItem>
       rowKey="id"

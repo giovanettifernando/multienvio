@@ -12,8 +12,11 @@ import {
   Typography,
   Spin,
   theme,
+  Grid,
 } from "antd";
 import { PlusOutlined, EditOutlined, DeleteOutlined, StarOutlined, StarFilled } from "@ant-design/icons";
+
+const { useBreakpoint } = Grid;
 import { useAddresses, useAddressCreate } from "@/hooks/useAccount";
 import { AddressModal, type AddressFormValues } from "./AddressModal";
 import type { Address } from "@/types/account";
@@ -21,6 +24,8 @@ import type { Address } from "@/types/account";
 export default function AddressesList() {
   const { message } = App.useApp();
   const { token } = theme.useToken();
+  const screens = useBreakpoint();
+  const isMobile = !screens.md;
 
   const { data: addresses = [], isLoading, refetch } = useAddresses();
   const createMutation = useAddressCreate();
@@ -151,8 +156,8 @@ export default function AddressesList() {
       <Card
         title="Endereços"
         extra={
-          <Button type="primary" icon={<PlusOutlined />} onClick={handleOpenCreate}>
-            Adicionar endereço
+          <Button type="primary" icon={<PlusOutlined />} onClick={handleOpenCreate} size={isMobile ? "small" : "middle"}>
+            {isMobile ? "Adicionar" : "Adicionar endereço"}
           </Button>
         }
       >
@@ -165,14 +170,16 @@ export default function AddressesList() {
                 key={address.id}
                 style={{
                   display: "flex",
-                  alignItems: "flex-start",
+                  flexDirection: isMobile ? "column" : "row",
+                  alignItems: isMobile ? "stretch" : "flex-start",
                   justifyContent: "space-between",
+                  gap: isMobile ? 12 : 0,
                   padding: `${token.paddingSM}px 0`,
                   borderBottom: `1px solid ${token.colorBorderSecondary}`,
                 }}
               >
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <Space style={{ marginBottom: token.marginXS }}>
+                  <Space style={{ marginBottom: token.marginXS }} wrap>
                     {address.label && <Tag color="blue">{address.label}</Tag>}
                     {address.isDefault && <Tag color="gold">Padrão</Tag>}
                   </Space>
@@ -189,23 +196,24 @@ export default function AddressesList() {
                     <Typography.Text type="secondary">CEP: {address.cep}</Typography.Text>
                   </div>
                 </div>
-                <Space orientation="vertical" size={0} style={{ alignItems: "flex-end" }}>
-                  <Button
-                    type="text"
-                    size="small"
-                    icon={address.isDefault ? <StarFilled style={{ color: "#faad14" }} /> : <StarOutlined />}
-                    onClick={() => !address.isDefault && handleMakeDefault(address.id)}
-                    disabled={address.isDefault}
-                  >
-                    {address.isDefault ? "Padrão" : "Tornar padrão"}
-                  </Button>
+                <Space size={isMobile ? "small" : 0} style={{ alignItems: isMobile ? "flex-start" : "flex-end", flexDirection: isMobile ? "row" : "column", flexWrap: "wrap" }}>
+                  {!address.isDefault && (
+                    <Button
+                      type="text"
+                      size="small"
+                      icon={<StarOutlined />}
+                      onClick={() => handleMakeDefault(address.id)}
+                    >
+                      {isMobile ? "" : "Tornar padrão"}
+                    </Button>
+                  )}
                   <Button
                     type="link"
                     size="small"
                     icon={<EditOutlined />}
                     onClick={() => handleOpenEdit(address)}
                   >
-                    Editar
+                    {isMobile ? "" : "Editar"}
                   </Button>
                   <Popconfirm
                     title="Tem certeza que deseja remover este endereço?"
@@ -214,7 +222,7 @@ export default function AddressesList() {
                     cancelText="Cancelar"
                   >
                     <Button type="link" size="small" danger icon={<DeleteOutlined />}>
-                      Remover
+                      {isMobile ? "" : "Remover"}
                     </Button>
                   </Popconfirm>
                 </Space>
