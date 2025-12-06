@@ -136,6 +136,12 @@ export const ADMIN_NAV: AdminNavItem[] = [
         href: "/admin/config/comissoes",
         permissions: ["CONFIGURACOES"],
       },
+      {
+        key: "correios-agencies",
+        label: "Agências dos Correios",
+        href: "/admin/config/correios-agencies",
+        permissions: ["CONFIGURACOES"],
+      },
     ],
   },
 ];

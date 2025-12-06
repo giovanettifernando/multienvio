@@ -1305,6 +1305,73 @@ model CepLocation {
   @@map("cep_locations")
 }
 
+// ============================================
+// AGÊNCIAS DOS CORREIOS (cache sincronizado)
+// ============================================
+
+enum CorreiosAgencyType {
+  AC   // Agência de Correios
+  ACF  // Agência de Correios Franqueada
+  AGF  // Agência de Correios Franqueada (alternativo)
+  CDD  // Centro de Distribuição Domiciliária
+  CTE  // Centro de Tratamento de Encomendas
+  CTCE // Centro de Tratamento de Cartas e Encomendas
+  CEE  // Centro de Entrega de Encomendas
+  CTCI // Centro de Triagem de Correios Internacional
+  OUTROS
+
+  @@map("correios_agency_type")
+}
+
+enum CorreiosAgencyStatus {
+  ATIVA      // Status 2
+  INATIVA    // Status 5
+  OUTRO
+
+  @@map("correios_agency_status")
+}
+
+/// Agências e unidades dos Correios (sincronizadas via API)
+model CorreiosAgency {
+  id                    String               @id // Código da unidade dos Correios
+  nome                  String
+  status                CorreiosAgencyStatus @default(ATIVA)
+  statusCodigo          Int                  @default(2) @map("status_codigo")
+  statusDescricao       String?              @map("status_descricao")
+  tipoUnidadeCodigo     String               @map("tipo_unidade_codigo") // "09", "12", etc.
+  tipoUnidadeDescricao  String?              @map("tipo_unidade_descricao")
+  tipoUnidadeSigla      CorreiosAgencyType   @default(OUTROS) @map("tipo_unidade_sigla")
+
+  // Endereço
+  cep                   String               @db.VarChar(8)
+  uf                    String               @db.VarChar(2)
+  municipio             String
+  bairro                String?
+  logradouro            String?
+  numero                String?
+  complemento           String?
+
+  // Coordenadas geográficas
+  latitude              Float?
+  longitude             Float?
+
+  // Horário de funcionamento
+  horarioFuncionamento  String?              @map("horario_funcionamento")
+  iniExpediente         String?              @map("ini_expediente")
+  fimExpediente         String?              @map("fim_expediente")
+
+  // Metadados
+  createdAt             DateTime             @default(now()) @map("created_at")
+  updatedAt             DateTime             @updatedAt @map("updated_at")
+  syncedAt              DateTime?            @map("synced_at") // Última sincronização
+
+  @@index([uf, municipio])
+  @@index([cep])
+  @@index([status])
+  @@index([tipoUnidadeSigla, status])
+  @@map("correios_agencies")
+}
+
 model RecurringItem {
   id             String   @id @default(uuid())
   userId         String   @map("user_id")

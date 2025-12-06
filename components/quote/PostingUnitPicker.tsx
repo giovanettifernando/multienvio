@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { EnvironmentOutlined, SearchOutlined } from "@ant-design/icons";
+import { EnvironmentOutlined, SearchOutlined, ShopOutlined } from "@ant-design/icons";
 import {
   Alert,
   App,
@@ -10,7 +10,9 @@ import {
   Input,
   Radio,
   Space,
+  Spin,
   Switch,
+  Tag,
   Typography,
   theme,
 } from "antd";
@@ -28,6 +30,7 @@ import { MapModal } from "./MapModal";
 import { usePickupPoints } from "@/hooks/usePickupPoints";
 import { useGeocode } from "@/hooks/useGeocode";
 import { PickupPointStatus } from "@/types/contracts";
+import { useCorreiosAgencies, type CorreiosAgency } from "@/hooks/useCorreiosAgencies";
 
 interface PickupPointWithDistance extends PickupPoint {
   distance?: number;
@@ -40,10 +43,32 @@ export function PostingUnitPicker() {
     useShallow((s) => ({ pickupAtOrigin: s.pickupAtOrigin, hydrated: s._hasHydrated }))
   );
   const results = useQuoteStore((state) => state.results);
+  const selection = useQuoteStore((state) => state.selection);
   const [searchQuery, setSearchQuery] = useState("");
+  const [agencySearchQuery, setAgencySearchQuery] = useState("");
   const [mapModalOpen, setMapModalOpen] = useState(false);
+  const [agencyMapModalOpen, setAgencyMapModalOpen] = useState(false);
   const [isLoadingPreferences, setIsLoadingPreferences] = useState(true);
   const [hasFetchedPreferences, setHasFetchedPreferences] = useState(false);
+
+  // Verificar se a transportadora selecionada é Correios
+  const isCorreiosCarrier = useMemo(() => {
+    const carrier = selection?.result?.carrier;
+    return carrier ? carrier.toLowerCase().includes('correios') : false;
+  }, [selection?.result?.carrier]);
+
+  // Buscar agências dos Correios quando carrier é Correios
+  const originUf = results?.resumo?.origemUf;
+  const originMunicipio = results?.resumo?.origemCidade;
+  const {
+    data: correiosAgenciesData,
+    isLoading: isLoadingAgencies,
+  } = useCorreiosAgencies({
+    uf: originUf,
+    municipio: originMunicipio,
+    enabled: isCorreiosCarrier && !!originUf,
+    limit: 15,
+  });
 
   const {
     watch,
@@ -232,6 +257,57 @@ export function PostingUnitPicker() {
   const unidadesDisponiveis = unidades.length;
   const totalPontosAtivos = points.filter((p) => p.status === PickupPointStatus.ACTIVE).length;
 
+  // Filtrar agências dos Correios por busca
+  const filteredAgencies = useMemo(() => {
+    if (!correiosAgenciesData?.agencies) return [];
+    if (!agencySearchQuery.trim()) return correiosAgenciesData.agencies;
+
+    const query = agencySearchQuery.toLowerCase();
+    return correiosAgenciesData.agencies.filter((agency) => {
+      const searchableText = [
+        agency.nome,
+        agency.bairro,
+        agency.municipio,
+        agency.logradouro,
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+      return searchableText.includes(query);
+    });
+  }, [correiosAgenciesData?.agencies, agencySearchQuery]);
+
+  // Converter agências para formato do mapa
+  const agenciesAsMapPoints = useMemo(() => {
+    if (!filteredAgencies.length) return [];
+    return filteredAgencies.map((agency) => ({
+      id: `correios:${agency.id}`,
+      status: PickupPointStatus.ACTIVE,
+      razaoSocial: agency.nome,
+      nomeFantasia: agency.nome,
+      cnpj: '',
+      ie: null,
+      email: null,
+      telefone: null,
+      cep: agency.cep,
+      logradouro: agency.logradouro,
+      numero: agency.numero,
+      complemento: agency.complemento,
+      bairro: agency.bairro,
+      cidade: agency.municipio,
+      uf: agency.uf,
+      geo: agency.latitude && agency.longitude ? { lat: agency.latitude, lng: agency.longitude } : null,
+      paymentMethod: { kind: 'pix' as const, pixType: 'random' as const, pixKey: '' },
+      payoutDay: null,
+      minPayoutAmount: null,
+      commissionPerItem: null,
+      capacityPerDay: null,
+      monthlyReceived: 0,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }));
+  }, [filteredAgencies]);
+
   const handleSelect = (pointId: string) => {
     const point = unidades.find((item) => item.id === pointId);
     if (point) {
@@ -261,6 +337,37 @@ export function PostingUnitPicker() {
       const element = document.getElementById(`pickup-point-${pointId}`);
       element?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }, 100);
+  };
+
+  // Handler para selecionar agência dos Correios
+  const handleSelectCorreiosAgency = (value: string) => {
+    // O value vem no formato "correios:{id}"
+    const agencyId = value.replace('correios:', '');
+    const agency = correiosAgenciesData?.agencies.find((a) => a.id === agencyId);
+
+    if (agency) {
+      setValue(
+        "postingUnit.selected",
+        {
+          id: `correios:${agency.id}`,
+          nome: agency.nome,
+          endereco: agency.enderecoCompleto,
+          cidade: agency.municipio,
+          uf: agency.uf,
+          cep: agency.cep,
+        },
+        { shouldDirty: true }
+      );
+      // Para agência dos Correios, não salvar no checkout store (é opcional/informativo)
+      // O usuário leva o pacote diretamente na agência
+      setCheckoutPickupPoint(null);
+    }
+  };
+
+  // Handler para selecionar agência no mapa
+  const handleAgencyMapSelect = (pointId: string) => {
+    handleSelectCorreiosAgency(pointId);
+    setAgencyMapModalOpen(false);
   };
 
   // Persistir unidade padrão quando toggle muda
@@ -425,7 +532,119 @@ export function PostingUnitPicker() {
         </Space>
       </Card>
 
-      {/* Modal de mapa */}
+      {/* Card separado para Agências dos Correios (quando carrier é Correios) */}
+      {isCorreiosCarrier && (
+        <Card
+          title={
+            <Space>
+              <ShopOutlined />
+              <span>Agências dos Correios</span>
+            </Space>
+          }
+          style={{ marginTop: 16 }}
+        >
+          <Space direction="vertical" size={16} style={{ width: "100%" }}>
+            {/* Barra de pesquisa */}
+            <Input
+              id="search-correios-agencies"
+              name="search-correios-agencies"
+              placeholder="Busque por nome, bairro ou endereço"
+              prefix={<SearchOutlined />}
+              value={agencySearchQuery}
+              onChange={(e) => setAgencySearchQuery(e.target.value)}
+              allowClear
+              aria-label="Buscar agências dos Correios"
+              autoComplete="off"
+            />
+
+            {isLoadingAgencies ? (
+              <div style={{ textAlign: 'center', padding: '16px 0' }}>
+                <Spin size="small" />
+                <Typography.Text type="secondary" style={{ marginLeft: 8 }}>
+                  Buscando agências próximas...
+                </Typography.Text>
+              </div>
+            ) : correiosAgenciesData?.agencies && correiosAgenciesData.agencies.length > 0 ? (
+              <>
+                {/* Contador de resultados */}
+                <Typography.Text type="secondary">
+                  {filteredAgencies.length === 0
+                    ? 'Nenhuma agência encontrada para a busca'
+                    : filteredAgencies.length === 1
+                    ? '1 agência disponível'
+                    : `${filteredAgencies.length} agências disponíveis`}
+                </Typography.Text>
+
+                {filteredAgencies.length > 0 ? (
+                  <Radio.Group
+                    style={{ width: "100%" }}
+                    value={selectedUnit?.id}
+                    onChange={(event) => handleSelectCorreiosAgency(event.target.value)}
+                  >
+                    <div style={{ display: "flex", flexDirection: "column", maxHeight: 300, overflowY: 'auto' }}>
+                      {filteredAgencies.map((agency) => (
+                        <div
+                          key={agency.id}
+                          style={{
+                            padding: `${token.paddingSM}px 0`,
+                            borderBottom: `1px solid ${token.colorBorderSecondary}`,
+                          }}
+                        >
+                          <Radio value={`correios:${agency.id}`} style={{ width: "100%" }}>
+                            <Space direction="vertical" size={4} style={{ width: "100%" }}>
+                              <Typography.Text strong>
+                                {agency.nome}
+                                <Tag color="gold" style={{ marginLeft: 8 }}>
+                                  {agency.tipoUnidadeSigla}
+                                </Tag>
+                              </Typography.Text>
+                              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                                <EnvironmentOutlined style={{ marginRight: 4 }} />
+                                {agency.enderecoCompleto}
+                              </Typography.Text>
+                              {agency.iniExpediente && agency.fimExpediente && (
+                                <Typography.Text type="secondary" style={{ fontSize: 11 }}>
+                                  Horário: {agency.iniExpediente} - {agency.fimExpediente}
+                                </Typography.Text>
+                              )}
+                            </Space>
+                          </Radio>
+                        </div>
+                      ))}
+                    </div>
+                  </Radio.Group>
+                ) : (
+                  <Alert
+                    type="info"
+                    showIcon
+                    message="Nenhuma agência encontrada para a busca"
+                    description="Tente ajustar os termos de pesquisa."
+                  />
+                )}
+
+                {/* Botão ver mapa */}
+                <Button
+                  icon={<EnvironmentOutlined />}
+                  disabled={filteredAgencies.length === 0}
+                  onClick={() => setAgencyMapModalOpen(true)}
+                  aria-label="Ver mapa de agências"
+                >
+                  Ver mapa de agências
+                </Button>
+              </>
+            ) : (
+              <Alert
+                type="info"
+                showIcon
+                message={`Nenhuma agência encontrada em ${originMunicipio}/${originUf}`}
+                description="Você pode postar em qualquer agência dos Correios."
+              />
+            )}
+          </Space>
+        </Card>
+      )}
+
+      {/* Modal de mapa - Unidades de postagem */}
       <MapModal
         open={mapModalOpen}
         onClose={() => setMapModalOpen(false)}
@@ -438,6 +657,21 @@ export function PostingUnitPicker() {
         }}
         selectedPointId={selectedUnit?.id}
         onSelect={handleMapSelect}
+      />
+
+      {/* Modal de mapa - Agências dos Correios */}
+      <MapModal
+        open={agencyMapModalOpen}
+        onClose={() => setAgencyMapModalOpen(false)}
+        points={agenciesAsMapPoints}
+        originCoords={originCoords}
+        originInfo={{
+          cep: results?.resumo.origemCep,
+          cidade: results?.resumo.origemCidade,
+          uf: results?.resumo.origemUf,
+        }}
+        selectedPointId={selectedUnit?.id}
+        onSelect={handleAgencyMapSelect}
       />
     </>
   );
