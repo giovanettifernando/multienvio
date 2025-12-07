@@ -67,7 +67,7 @@ export function PostingUnitPicker() {
     uf: originUf,
     municipio: originMunicipio,
     enabled: isCorreiosCarrier && !!originUf,
-    limit: 15,
+    limit: 50,
   });
 
   const {
@@ -543,7 +543,7 @@ export function PostingUnitPicker() {
           }
           style={{ marginTop: 16 }}
         >
-          <Space direction="vertical" size={16} style={{ width: "100%" }}>
+          <Space orientation="vertical" size={16} style={{ width: "100%" }}>
             {/* Barra de pesquisa */}
             <Input
               id="search-correios-agencies"
@@ -591,7 +591,7 @@ export function PostingUnitPicker() {
                           }}
                         >
                           <Radio value={`correios:${agency.id}`} style={{ width: "100%" }}>
-                            <Space direction="vertical" size={4} style={{ width: "100%" }}>
+                            <Space orientation="vertical" size={4} style={{ width: "100%" }}>
                               <Typography.Text strong>
                                 {agency.nome}
                                 <Tag color="gold" style={{ marginLeft: 8 }}>

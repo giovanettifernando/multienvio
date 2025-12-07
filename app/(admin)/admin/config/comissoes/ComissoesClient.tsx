@@ -262,7 +262,7 @@ export default function ComissoesClient() {
         {config?.configured && (
           <Alert
             type={config.isActive ? 'success' : 'warning'}
-            message={config.isActive ? 'Comissões Ativas' : 'Comissões Desativadas'}
+            title={config.isActive ? 'Comissões Ativas' : 'Comissões Desativadas'}
             description={
               <Space orientation="vertical" size="small">
                 <Space>
@@ -285,7 +285,7 @@ export default function ComissoesClient() {
         {/* Info */}
         <Alert
           type="info"
-          message="Como funcionam as comissões"
+          title="Como funcionam as comissões"
           description={
             <ul style={{ margin: '8px 0 0 0', paddingLeft: 20 }}>
               <li>
@@ -342,7 +342,7 @@ export default function ComissoesClient() {
                     max={100}
                     precision={2}
                     step={0.5}
-                    addonAfter="%"
+                    suffix="%"
                     size="large"
                     style={{ width: '100%' }}
                     placeholder="Ex: 10"
@@ -370,7 +370,7 @@ export default function ComissoesClient() {
                     max={100}
                     precision={2}
                     step={0.5}
-                    addonAfter="%"
+                    suffix="%"
                     size="large"
                     style={{ width: '100%' }}
                     placeholder="Ex: 5"

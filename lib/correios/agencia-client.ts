@@ -63,8 +63,8 @@ export interface ListarAgenciasParams {
   municipio?: string;
   status?: number; // 2 = Ativa, 5 = Inativa
   tipoUnidade?: string; // "09", "12", etc
-  pagina?: number;
-  quantidade?: number;
+  page?: number;   // Número da página (0-indexed)
+  size?: number;   // Quantidade por página (máx 50)
 }
 
 // ============================================================================
@@ -127,11 +127,12 @@ export async function listarAgencias(
   if (params.tipoUnidade) {
     queryParams.append('tipoUnidade', params.tipoUnidade);
   }
-  if (params.pagina !== undefined) {
-    queryParams.append('pagina', params.pagina.toString());
+  // Parâmetros de paginação: page (número da página) e size (itens por página)
+  if (params.page !== undefined) {
+    queryParams.append('page', params.page.toString());
   }
-  if (params.quantidade !== undefined) {
-    queryParams.append('quantidade', params.quantidade.toString());
+  if (params.size !== undefined) {
+    queryParams.append('size', params.size.toString());
   }
 
   const queryString = queryParams.toString();
@@ -161,52 +162,69 @@ export async function listarAgencias(
  * @returns Lista completa de agências
  */
 export async function listarTodasAgencias(
-  params: Omit<ListarAgenciasParams, 'pagina' | 'quantidade'> = {},
-  maxPages = 100
+  params: Omit<ListarAgenciasParams, 'page' | 'size'> = {},
+  maxPages = 200
 ): Promise<CorreiosAgenciaAPI[]> {
   const allItems: CorreiosAgenciaAPI[] = [];
-  let pagina = 0;
-  const quantidade = 100; // Máximo por página
+  let page = 0;
+  // A API dos Correios retorna no máximo 50 itens por página
+  const size = 50;
 
   console.log('[AGENCIA_CLIENT] Iniciando busca completa de agências:', params);
 
-  while (pagina < maxPages) {
-    const response = await listarAgencias({
-      ...params,
-      pagina,
-      quantidade,
-    });
+  let consecutiveErrors = 0;
+  const maxConsecutiveErrors = 3;
 
-    // Se não há itens, parar
-    if (!response.itens || response.itens.length === 0) {
-      break;
+  while (page < maxPages) {
+    try {
+      const response = await listarAgencias({
+        ...params,
+        page,
+        size,
+      });
+
+      // Reset error counter on success
+      consecutiveErrors = 0;
+
+      // Se não há itens, parar
+      if (!response.itens || response.itens.length === 0) {
+        break;
+      }
+
+      allItems.push(...response.itens);
+
+      console.log('[AGENCIA_CLIENT] Progresso:', {
+        page,
+        itensNaPagina: response.itens.length,
+        totalAcumulado: allItems.length,
+        totalRegistros: response.totalRegistros ?? 'N/A',
+      });
+
+      // Continuar se a página veio cheia (pode haver mais)
+      // A API dos Correios retorna exatamente 50 por página quando há mais
+      if (response.itens.length < size) {
+        // Página incompleta = última página
+        break;
+      }
+
+      page++;
+    } catch (error) {
+      consecutiveErrors++;
+      console.error(`[AGENCIA_CLIENT] Erro na página ${page}:`, error instanceof Error ? error.message : error);
+
+      if (consecutiveErrors >= maxConsecutiveErrors) {
+        console.warn(`[AGENCIA_CLIENT] ${maxConsecutiveErrors} erros consecutivos, parando. Total coletado: ${allItems.length}`);
+        break;
+      }
+
+      // Tentar próxima página mesmo com erro
+      page++;
     }
-
-    allItems.push(...response.itens);
-
-    console.log('[AGENCIA_CLIENT] Progresso:', {
-      pagina,
-      itensNaPagina: response.itens.length,
-      totalAcumulado: allItems.length,
-      totalRegistros: response.totalRegistros ?? 'N/A',
-    });
-
-    // Verificar se chegou ao fim
-    // Se não tem totalRegistros, verificar se a página veio incompleta
-    const hasMore = response.totalRegistros
-      ? allItems.length < response.totalRegistros
-      : response.itens.length >= quantidade;
-
-    if (!hasMore) {
-      break;
-    }
-
-    pagina++;
   }
 
   console.log('[AGENCIA_CLIENT] Busca completa finalizada:', {
     totalAgencias: allItems.length,
-    paginasBuscadas: pagina + 1,
+    paginasBuscadas: page + 1,
   });
 
   return allItems;
@@ -242,7 +260,7 @@ export async function testarConexaoAgencias(): Promise<{
   try {
     // Buscar apenas 1 agência para testar
     const response = await listarAgencias({
-      quantidade: 1,
+      size: 1,
       status: 2,
     });
 

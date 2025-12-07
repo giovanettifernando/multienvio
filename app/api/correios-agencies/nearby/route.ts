@@ -42,17 +42,14 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Buscar agências ativas
+    // Buscar agências ativas (todas as agências ativas aceitam postagem)
     const where: {
       uf: string;
       status: 'ATIVA';
       municipio?: { contains: string; mode: 'insensitive' };
-      tipoUnidadeSigla?: { in: Array<'AC' | 'ACF' | 'AGF'> };
     } = {
       uf: uf.toUpperCase(),
       status: 'ATIVA',
-      // Apenas agências que aceitam postagem (AC, ACF, AGF)
-      tipoUnidadeSigla: { in: ['AC', 'ACF', 'AGF'] },
     };
 
     if (municipio) {
