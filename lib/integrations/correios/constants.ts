@@ -190,13 +190,38 @@ export const CORREIOS_LIMITS = {
   ALTURA_MIN: 2,
 
   // Valor declarado
-  VALOR_DECLARADO_MAX: 10000, // R$ 10.000,00
+  VALOR_DECLARADO_MAX: 38057.59, // R$ 38.057,59 (máximo retornado pela API)
+  VALOR_DECLARADO_MIN: 25.63,    // R$ 25,63 (mínimo retornado pela API)
 
   // Lotes
   MAX_OBJETOS_POR_LOTE_PRECO: 5,
   MAX_OBJETOS_POR_LOTE_PRAZO: 5,
   MAX_OBJETOS_POR_LOTE_PREPOSTAGEM: 100,
 } as const;
+
+// ============================================================================
+// Serviços que aceitam Valor Declarado (Seguro)
+// ============================================================================
+
+/**
+ * Lista de códigos de serviço que aceitam o serviço adicional 019 (Valor Declarado)
+ * IMPORTANTE: PAC (03298) NÃO aceita valor declarado
+ * Referência: Erro ERP-054 da API dos Correios
+ */
+export const SERVICOS_ACEITAM_VALOR_DECLARADO = [
+  '03220',  // SEDEX
+  '03158',  // SEDEX 10
+  '03140',  // SEDEX 12
+  '03204',  // SEDEX Hoje
+  '03212',  // SEDEX Grandes Formatos
+] as const;
+
+/**
+ * Verifica se um serviço aceita valor declarado (seguro)
+ */
+export function servicoAceitaValorDeclarado(codigoServico: string): boolean {
+  return SERVICOS_ACEITAM_VALOR_DECLARADO.includes(codigoServico as typeof SERVICOS_ACEITAM_VALOR_DECLARADO[number]);
+}
 
 // ============================================================================
 // Mensagens de Erro Conhecidas

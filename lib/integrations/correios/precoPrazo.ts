@@ -31,6 +31,7 @@ import {
   SERVICO_ADICIONAL,
   CORREIOS_LIMITS,
   DEFAULT_CORREIOS_SERVICES,
+  servicoAceitaValorDeclarado,
 } from './constants';
 
 // ============================================================================
@@ -131,48 +132,78 @@ export async function calcularPrecoCorreios(
     input.alturaCm
   );
 
-  // Montar serviços adicionais
-  const servicosAdicionais: Array<{
+  // Montar serviços adicionais BASE (sem valor declarado)
+  const servicosAdicionaisBase: Array<{
     coServAdicional: string;
     vlDeclarado?: number;
   }> = [];
 
   if (input.servicosAdicionais) {
     for (const codigo of input.servicosAdicionais) {
-      servicosAdicionais.push({ coServAdicional: codigo });
-    }
-  }
-
-  // Adicionar valor declarado se informado
-  if (input.valorDeclarado && input.valorDeclarado > 0) {
-    const hasVD = servicosAdicionais.some(
-      (s) => s.coServAdicional === SERVICO_ADICIONAL.VALOR_DECLARADO
-    );
-
-    if (!hasVD) {
-      servicosAdicionais.push({
-        coServAdicional: SERVICO_ADICIONAL.VALOR_DECLARADO,
-        vlDeclarado: input.valorDeclarado,
-      });
-    } else {
-      // Atualizar valor declarado se já existe
-      const vdService = servicosAdicionais.find(
-        (s) => s.coServAdicional === SERVICO_ADICIONAL.VALOR_DECLARADO
-      );
-      if (vdService) {
-        vdService.vlDeclarado = input.valorDeclarado;
+      // Não adicionar VD aqui - será tratado separadamente
+      if (codigo !== SERVICO_ADICIONAL.VALOR_DECLARADO) {
+        servicosAdicionaisBase.push({ coServAdicional: codigo });
       }
     }
   }
 
-  // Dividir em lotes de até 5 (limite da API)
+  // Verificar se há valor declarado válido
+  const temValorDeclarado = input.valorDeclarado && input.valorDeclarado > 0;
+
+  // Validar valor mínimo/máximo para valor declarado
+  if (temValorDeclarado) {
+    if (input.valorDeclarado! < CORREIOS_LIMITS.VALOR_DECLARADO_MIN) {
+      console.warn('[CORREIOS_PRECO] Valor declarado abaixo do mínimo:', {
+        informado: input.valorDeclarado,
+        minimo: CORREIOS_LIMITS.VALOR_DECLARADO_MIN,
+      });
+    }
+    if (input.valorDeclarado! > CORREIOS_LIMITS.VALOR_DECLARADO_MAX) {
+      console.warn('[CORREIOS_PRECO] Valor declarado acima do máximo:', {
+        informado: input.valorDeclarado,
+        maximo: CORREIOS_LIMITS.VALOR_DECLARADO_MAX,
+      });
+    }
+  }
+
+  // Separar serviços por compatibilidade com valor declarado
+  const servicosComVD: string[] = [];
+  const servicosSemVD: string[] = [];
+
+  for (const codigo of servicos) {
+    if (temValorDeclarado && servicoAceitaValorDeclarado(codigo)) {
+      servicosComVD.push(codigo);
+    } else {
+      servicosSemVD.push(codigo);
+    }
+  }
+
+  console.log('[CORREIOS_PRECO] Serviços separados:', {
+    comValorDeclarado: servicosComVD,
+    semValorDeclarado: servicosSemVD,
+    valorDeclarado: input.valorDeclarado,
+  });
+
   const results: CorreiosPrecoOutput[] = [];
 
-  for (let i = 0; i < servicos.length; i += CORREIOS_LIMITS.MAX_OBJETOS_POR_LOTE_PRECO) {
-    const batch = servicos.slice(i, i + CORREIOS_LIMITS.MAX_OBJETOS_POR_LOTE_PRECO);
+  // Função auxiliar para fazer requisição de preço
+  const fetchPrecoBatch = async (
+    batch: string[],
+    incluirVD: boolean,
+    batchIndex: number
+  ): Promise<void> => {
+    // Montar serviços adicionais para este batch
+    const servicosAdicionais = [...servicosAdicionaisBase];
+
+    if (incluirVD && temValorDeclarado && input.valorDeclarado! >= CORREIOS_LIMITS.VALOR_DECLARADO_MIN) {
+      servicosAdicionais.push({
+        coServAdicional: SERVICO_ADICIONAL.VALOR_DECLARADO,
+        vlDeclarado: input.valorDeclarado,
+      });
+    }
 
     const request: CorreiosPrecoRequest = {
-      idLote: `preco_${Date.now()}_${i}`,
+      idLote: `preco_${Date.now()}_${batchIndex}`,
       parametrosProduto: batch.map((codigo, idx) => ({
         coProduto: codigo,
         nuRequisicao: `req_${idx}`,
@@ -184,15 +215,21 @@ export async function calcularPrecoCorreios(
         largura: Math.round(input.larguraCm),
         altura: Math.round(input.alturaCm),
         servicosAdicionais: servicosAdicionais.length > 0 ? servicosAdicionais : undefined,
-        vlDeclarado: input.valorDeclarado,
+        // Só enviar vlDeclarado se o batch inclui VD E o valor é válido
+        vlDeclarado: incluirVD && input.valorDeclarado! >= CORREIOS_LIMITS.VALOR_DECLARADO_MIN
+          ? input.valorDeclarado
+          : undefined,
       })),
     };
 
     console.log('[CORREIOS_PRECO] Requesting prices:', {
       servicos: batch,
+      incluirVD,
       cepOrigem,
       cepDestino,
       pesoGramas: input.pesoGramas,
+      valorDeclarado: incluirVD ? input.valorDeclarado : 'N/A (serviço não aceita)',
+      servicosAdicionais: servicosAdicionais.length > 0 ? servicosAdicionais : 'none',
     });
 
     try {
@@ -205,6 +242,7 @@ export async function calcularPrecoCorreios(
       );
 
       console.log('[CORREIOS_PRECO] Raw response type:', Array.isArray(rawResponse) ? 'Array' : 'Object');
+      console.log('[CORREIOS_PRECO] Raw response:', JSON.stringify(rawResponse, null, 2).slice(0, 2000));
 
       // A API pode retornar array direto ou objeto com parametrosProduto
       let responseItems: Array<Record<string, unknown>>;
@@ -249,6 +287,7 @@ export async function calcularPrecoCorreios(
     } catch (error) {
       console.error('[CORREIOS_PRECO] Batch failed:', {
         batch,
+        incluirVD,
         error: error instanceof Error ? error.message : error,
       });
 
@@ -265,6 +304,19 @@ export async function calcularPrecoCorreios(
         });
       }
     }
+  };
+
+  // Processar serviços SEM valor declarado (ex: PAC)
+  let batchIndex = 0;
+  for (let i = 0; i < servicosSemVD.length; i += CORREIOS_LIMITS.MAX_OBJETOS_POR_LOTE_PRECO) {
+    const batch = servicosSemVD.slice(i, i + CORREIOS_LIMITS.MAX_OBJETOS_POR_LOTE_PRECO);
+    await fetchPrecoBatch(batch, false, batchIndex++);
+  }
+
+  // Processar serviços COM valor declarado (ex: SEDEX)
+  for (let i = 0; i < servicosComVD.length; i += CORREIOS_LIMITS.MAX_OBJETOS_POR_LOTE_PRECO) {
+    const batch = servicosComVD.slice(i, i + CORREIOS_LIMITS.MAX_OBJETOS_POR_LOTE_PRECO);
+    await fetchPrecoBatch(batch, true, batchIndex++);
   }
 
   return results;
