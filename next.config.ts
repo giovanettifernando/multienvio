@@ -1,9 +1,15 @@
 import type { NextConfig } from "next";
-import bundleAnalyzer from "@next/bundle-analyzer";
 
-const withBundleAnalyzer = bundleAnalyzer({
-  enabled: process.env.ANALYZE === "true",
-});
+// Bundle analyzer é opcional - só carrega se ANALYZE=true e o pacote estiver instalado
+let withBundleAnalyzer = (config: NextConfig) => config;
+if (process.env.ANALYZE === "true") {
+  try {
+    const bundleAnalyzer = require("@next/bundle-analyzer");
+    withBundleAnalyzer = bundleAnalyzer({ enabled: true });
+  } catch {
+    console.warn("@next/bundle-analyzer not installed, skipping...");
+  }
+}
 
 const nextConfig: NextConfig = {
   // Standalone output disabled temporarily due to _data/postgres permission issues
@@ -29,6 +35,16 @@ const nextConfig: NextConfig = {
 
   // Note: modularizeImports removed - conflicts with Turbopack in Next.js 16
   // optimizePackageImports handles this automatically
+
+  async rewrites() {
+    return [
+      // Servir uploads via API route (Next.js não serve arquivos estáticos após build)
+      {
+        source: '/uploads/:path*',
+        destination: '/api/uploads/:path*',
+      },
+    ];
+  },
 
   async redirects() {
     return [
