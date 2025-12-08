@@ -2,20 +2,20 @@
  * GET /api/wallet/statement/download
  *
  * Gera e retorna PDF binário do extrato da carteira
+ * Usa pdf-lib (JavaScript puro, sem dependência de navegador/Chromium)
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth/session';
 import { prisma } from '@/lib/db';
 import { calculatePeriodSummary, getLastNDaysRange } from '@/lib/wallet/period-summary';
 import {
   getTransactionDirection,
   getTransactionTypeLabel,
-  formatTransactionAmount,
 } from '@/lib/wallet/transaction-direction';
 import { formatNumberBR, formatWalletDescription } from '@/lib/format';
-import puppeteer from 'puppeteer';
-import type { Prisma } from '@prisma/client';
+import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
+import type { Prisma, WalletTxType } from '@prisma/client';
 
 export const maxDuration = 60; // 60 segundos para gerar o PDF
 
@@ -105,282 +105,20 @@ export async function GET(request: Request) {
     // Calcular resumo do período
     const summary = calculatePeriodSummary(transactions, periodStart, periodEnd);
 
-    // Gerar linhas da tabela
-    const transactionRows = transactions
-      .map((tx) => {
-        const direction = getTransactionDirection(tx.type, tx.amountCents);
-        const typeLabel = getTransactionTypeLabel(tx.type);
-        const formattedAmount = formatTransactionAmount(tx.amountCents, direction);
-        const date = new Date(tx.confirmedAt || tx.createdAt).toLocaleString('pt-BR', {
-          day: '2-digit',
-          month: '2-digit',
-          year: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit',
-        });
-
-        const color = direction === 'credit' ? '#52c41a' : '#ff4d4f';
-
-        return `
-          <tr>
-            <td>${date}</td>
-            <td>${typeLabel}</td>
-            <td style="color: ${color}; font-weight: 600; text-align: right;">${formattedAmount}</td>
-            <td>${formatWalletDescription(tx.title) || typeLabel}</td>
-          </tr>
-        `;
-      })
-      .join('');
-
-    const generatedAt = new Date();
-    const periodLabel = `${periodStart.toLocaleDateString('pt-BR')} - ${periodEnd.toLocaleDateString('pt-BR')}`;
-
-    // Gerar HTML
-    const html = `
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Extrato da Carteira - ${periodLabel}</title>
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-      color: #262626;
-      background: #fff;
-      padding: 40px;
-    }
-
-    .header {
-      text-align: center;
-      margin-bottom: 40px;
-      border-bottom: 2px solid #1890ff;
-      padding-bottom: 20px;
-    }
-
-    .header h1 {
-      font-size: 32px;
-      color: #1890ff;
-      margin-bottom: 8px;
-    }
-
-    .header p {
-      font-size: 14px;
-      color: #8c8c8c;
-    }
-
-    .info {
-      margin-bottom: 30px;
-      padding: 20px;
-      background: #f5f5f5;
-      border-radius: 4px;
-    }
-
-    .info-row {
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 8px;
-      font-size: 14px;
-    }
-
-    .info-row:last-child {
-      margin-bottom: 0;
-    }
-
-    .info-label {
-      font-weight: 600;
-      color: #595959;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-bottom: 30px;
-    }
-
-    thead {
-      background: #fafafa;
-    }
-
-    th {
-      padding: 12px;
-      text-align: left;
-      font-weight: 600;
-      color: #595959;
-      border-bottom: 2px solid #d9d9d9;
-      font-size: 14px;
-    }
-
-    td {
-      padding: 12px;
-      border-bottom: 1px solid #f0f0f0;
-      font-size: 14px;
-    }
-
-    tr:hover {
-      background: #fafafa;
-    }
-
-    .summary {
-      padding: 20px;
-      background: #f5f5f5;
-      border-radius: 4px;
-      margin-bottom: 30px;
-    }
-
-    .summary h3 {
-      font-size: 18px;
-      margin-bottom: 16px;
-      color: #262626;
-    }
-
-    .summary-row {
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 12px;
-      font-size: 14px;
-    }
-
-    .summary-row.total {
-      font-weight: 600;
-      font-size: 16px;
-      padding-top: 12px;
-      border-top: 2px solid #d9d9d9;
-      margin-top: 12px;
-    }
-
-    .credit {
-      color: #52c41a;
-      font-weight: 600;
-    }
-
-    .debit {
-      color: #ff4d4f;
-      font-weight: 600;
-    }
-
-    .footer {
-      text-align: center;
-      color: #8c8c8c;
-      font-size: 12px;
-      margin-top: 40px;
-      padding-top: 20px;
-      border-top: 1px solid #d9d9d9;
-    }
-
-    .footer p {
-      margin-bottom: 4px;
-    }
-  </style>
-</head>
-<body>
-  <div class="header">
-    <h1>Envio Legal</h1>
-    <p>Extrato da Carteira</p>
-  </div>
-
-  <div class="info">
-    <div class="info-row">
-      <span class="info-label">Usuário:</span>
-      <span>${user.name || user.email}</span>
-    </div>
-    <div class="info-row">
-      <span class="info-label">Email:</span>
-      <span>${user.email}</span>
-    </div>
-    <div class="info-row">
-      <span class="info-label">Período:</span>
-      <span>${periodLabel}</span>
-    </div>
-    <div class="info-row">
-      <span class="info-label">Gerado em:</span>
-      <span>${generatedAt.toLocaleString('pt-BR', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      })}</span>
-    </div>
-  </div>
-
-  <table>
-    <thead>
-      <tr>
-        <th>Data</th>
-        <th>Tipo</th>
-        <th style="text-align: right;">Valor</th>
-        <th>Descrição</th>
-      </tr>
-    </thead>
-    <tbody>
-      ${transactionRows || '<tr><td colspan="4" style="text-align: center; padding: 20px; color: #8c8c8c;">Nenhuma transação encontrada no período</td></tr>'}
-    </tbody>
-  </table>
-
-  <div class="summary">
-    <h3>Resumo do Período</h3>
-    <div class="summary-row">
-      <span>Total de créditos:</span>
-      <span class="credit">+ R$ ${formatNumberBR(summary.totalCredits)}</span>
-    </div>
-    <div class="summary-row">
-      <span>Total de débitos:</span>
-      <span class="debit">- R$ ${formatNumberBR(summary.totalDebits)}</span>
-    </div>
-    <div class="summary-row total">
-      <span>Saldo do período:</span>
-      <span style="color: ${summary.netAmount >= 0 ? '#52c41a' : '#ff4d4f'};">
-        ${summary.netAmount >= 0 ? '+' : ''} R$ ${formatNumberBR(Math.abs(summary.netAmount))}
-      </span>
-    </div>
-    <div class="summary-row" style="border-top: 1px solid #d9d9d9; margin-top: 8px; padding-top: 8px;">
-      <span>Total de transações:</span>
-      <span>${summary.transactionCount}</span>
-    </div>
-  </div>
-
-  <div class="footer">
-    <p>Este documento foi gerado automaticamente pelo sistema Envio Legal.</p>
-    <p>Para dúvidas ou mais informações, entre em contato com nosso suporte.</p>
-  </div>
-</body>
-</html>
-    `.trim();
-
-    // Gerar PDF usando Puppeteer
-    const browser = await puppeteer.launch({
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    // Gerar PDF usando pdf-lib
+    const pdfBuffer = await generateStatementPdf({
+      user,
+      periodStart,
+      periodEnd,
+      transactions,
+      summary,
     });
-
-    const page = await browser.newPage();
-    await page.setContent(html, { waitUntil: 'networkidle0' });
-
-    const pdfBuffer = await page.pdf({
-      format: 'A4',
-      printBackground: true,
-      margin: {
-        top: '20px',
-        right: '20px',
-        bottom: '20px',
-        left: '20px',
-      },
-    });
-
-    await browser.close();
 
     // Nome do arquivo
     const fileName = `extrato-carteira-${periodStart.toISOString().split('T')[0]}-${periodEnd.toISOString().split('T')[0]}.pdf`;
 
     // Retornar PDF binário
-    return new NextResponse(Buffer.from(pdfBuffer), {
+    return new NextResponse(new Uint8Array(pdfBuffer), {
       headers: {
         'Content-Type': 'application/pdf',
         'Content-Disposition': `attachment; filename="${fileName}"`,
@@ -388,10 +126,421 @@ export async function GET(request: Request) {
       },
     });
   } catch (error) {
-    console.error('Erro ao gerar PDF:', error);
+    console.error('[WALLET_STATEMENT_PDF] Erro ao gerar PDF:', error);
+    console.error('[WALLET_STATEMENT_PDF] Stack:', error instanceof Error ? error.stack : 'N/A');
+
     return NextResponse.json(
-      { message: 'Erro ao gerar PDF', error: String(error) },
+      {
+        message: 'Erro ao gerar PDF',
+        error: error instanceof Error ? error.message : String(error),
+      },
       { status: 500 }
     );
   }
+}
+
+/**
+ * Gera o PDF do extrato usando pdf-lib (JavaScript puro)
+ */
+async function generateStatementPdf(params: {
+  user: { name: string | null; email: string };
+  periodStart: Date;
+  periodEnd: Date;
+  transactions: Array<{
+    type: WalletTxType;
+    amountCents: number;
+    title: string | null;
+    confirmedAt: Date | null;
+    createdAt: Date;
+  }>;
+  summary: {
+    totalCredits: number;
+    totalDebits: number;
+    netAmount: number;
+    transactionCount: number;
+  };
+}): Promise<Buffer> {
+  const { user, periodStart, periodEnd, transactions, summary } = params;
+
+  // Criar documento PDF
+  const pdfDoc = await PDFDocument.create();
+  const helvetica = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  const helveticaBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+
+  // Cores
+  const black = rgb(0, 0, 0);
+  const gray = rgb(0.4, 0.4, 0.4);
+  const lightGray = rgb(0.6, 0.6, 0.6);
+  const green = rgb(0.32, 0.77, 0.1); // #52c41a
+  const red = rgb(1, 0.3, 0.31); // #ff4d4f
+  const blue = rgb(0.09, 0.56, 1); // #1890ff
+
+  // Configurações da página
+  const pageWidth = 595; // A4
+  const pageHeight = 842;
+  const margin = 50;
+  const contentWidth = pageWidth - 2 * margin;
+
+  // Criar primeira página
+  let page = pdfDoc.addPage([pageWidth, pageHeight]);
+  let yPosition = pageHeight - margin;
+
+  // Função auxiliar para adicionar nova página se necessário
+  const checkNewPage = (requiredSpace: number) => {
+    if (yPosition - requiredSpace < margin) {
+      page = pdfDoc.addPage([pageWidth, pageHeight]);
+      yPosition = pageHeight - margin;
+      return true;
+    }
+    return false;
+  };
+
+  // === HEADER ===
+  // Título
+  page.drawText('ENVIO LEGAL', {
+    x: margin,
+    y: yPosition,
+    size: 24,
+    font: helveticaBold,
+    color: blue,
+  });
+  yPosition -= 20;
+
+  page.drawText('Extrato da Carteira', {
+    x: margin,
+    y: yPosition,
+    size: 14,
+    font: helvetica,
+    color: gray,
+  });
+  yPosition -= 30;
+
+  // Linha separadora
+  page.drawLine({
+    start: { x: margin, y: yPosition },
+    end: { x: pageWidth - margin, y: yPosition },
+    thickness: 2,
+    color: blue,
+  });
+  yPosition -= 25;
+
+  // === INFORMAÇÕES DO USUÁRIO ===
+  const infoLineHeight = 18;
+
+  page.drawText('Usuário:', {
+    x: margin,
+    y: yPosition,
+    size: 10,
+    font: helveticaBold,
+    color: gray,
+  });
+  page.drawText(user.name || user.email, {
+    x: margin + 100,
+    y: yPosition,
+    size: 10,
+    font: helvetica,
+    color: black,
+  });
+  yPosition -= infoLineHeight;
+
+  page.drawText('Email:', {
+    x: margin,
+    y: yPosition,
+    size: 10,
+    font: helveticaBold,
+    color: gray,
+  });
+  page.drawText(user.email, {
+    x: margin + 100,
+    y: yPosition,
+    size: 10,
+    font: helvetica,
+    color: black,
+  });
+  yPosition -= infoLineHeight;
+
+  const periodLabel = `${periodStart.toLocaleDateString('pt-BR')} - ${periodEnd.toLocaleDateString('pt-BR')}`;
+  page.drawText('Período:', {
+    x: margin,
+    y: yPosition,
+    size: 10,
+    font: helveticaBold,
+    color: gray,
+  });
+  page.drawText(periodLabel, {
+    x: margin + 100,
+    y: yPosition,
+    size: 10,
+    font: helvetica,
+    color: black,
+  });
+  yPosition -= infoLineHeight;
+
+  const generatedAt = new Date().toLocaleString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+  page.drawText('Gerado em:', {
+    x: margin,
+    y: yPosition,
+    size: 10,
+    font: helveticaBold,
+    color: gray,
+  });
+  page.drawText(generatedAt, {
+    x: margin + 100,
+    y: yPosition,
+    size: 10,
+    font: helvetica,
+    color: black,
+  });
+  yPosition -= 30;
+
+  // === TABELA DE TRANSAÇÕES ===
+  // Cabeçalho da tabela
+  const colWidths = {
+    date: 100,
+    type: 100,
+    value: 100,
+    description: contentWidth - 300,
+  };
+
+  page.drawRectangle({
+    x: margin,
+    y: yPosition - 15,
+    width: contentWidth,
+    height: 20,
+    color: rgb(0.95, 0.95, 0.95),
+  });
+
+  page.drawText('Data', {
+    x: margin + 5,
+    y: yPosition - 10,
+    size: 10,
+    font: helveticaBold,
+    color: gray,
+  });
+  page.drawText('Tipo', {
+    x: margin + colWidths.date + 5,
+    y: yPosition - 10,
+    size: 10,
+    font: helveticaBold,
+    color: gray,
+  });
+  page.drawText('Valor', {
+    x: margin + colWidths.date + colWidths.type + 5,
+    y: yPosition - 10,
+    size: 10,
+    font: helveticaBold,
+    color: gray,
+  });
+  page.drawText('Descrição', {
+    x: margin + colWidths.date + colWidths.type + colWidths.value + 5,
+    y: yPosition - 10,
+    size: 10,
+    font: helveticaBold,
+    color: gray,
+  });
+  yPosition -= 25;
+
+  // Linhas da tabela
+  if (transactions.length === 0) {
+    checkNewPage(30);
+    page.drawText('Nenhuma transação encontrada no período', {
+      x: margin + contentWidth / 2 - 100,
+      y: yPosition - 10,
+      size: 10,
+      font: helvetica,
+      color: lightGray,
+    });
+    yPosition -= 30;
+  } else {
+    for (const tx of transactions) {
+      checkNewPage(25);
+
+      const direction = getTransactionDirection(tx.type, tx.amountCents);
+      const typeLabel = getTransactionTypeLabel(tx.type);
+      const valueColor = direction === 'credit' ? green : red;
+      const sign = direction === 'credit' ? '+' : '-';
+      const formattedValue = `${sign} R$ ${formatNumberBR(Math.abs(tx.amountCents) / 100)}`;
+
+      const date = new Date(tx.confirmedAt || tx.createdAt).toLocaleString('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+
+      const description = formatWalletDescription(tx.title) || typeLabel;
+      // Truncar descrição se muito longa
+      const maxDescLength = 35;
+      const truncatedDesc = description.length > maxDescLength
+        ? description.substring(0, maxDescLength) + '...'
+        : description;
+
+      page.drawText(date, {
+        x: margin + 5,
+        y: yPosition - 10,
+        size: 9,
+        font: helvetica,
+        color: black,
+      });
+      page.drawText(typeLabel, {
+        x: margin + colWidths.date + 5,
+        y: yPosition - 10,
+        size: 9,
+        font: helvetica,
+        color: black,
+      });
+      page.drawText(formattedValue, {
+        x: margin + colWidths.date + colWidths.type + 5,
+        y: yPosition - 10,
+        size: 9,
+        font: helveticaBold,
+        color: valueColor,
+      });
+      page.drawText(truncatedDesc, {
+        x: margin + colWidths.date + colWidths.type + colWidths.value + 5,
+        y: yPosition - 10,
+        size: 9,
+        font: helvetica,
+        color: black,
+      });
+
+      // Linha separadora
+      yPosition -= 20;
+      page.drawLine({
+        start: { x: margin, y: yPosition },
+        end: { x: pageWidth - margin, y: yPosition },
+        thickness: 0.5,
+        color: rgb(0.9, 0.9, 0.9),
+      });
+      yPosition -= 5;
+    }
+  }
+
+  // === RESUMO ===
+  checkNewPage(120);
+  yPosition -= 20;
+
+  // Box do resumo
+  page.drawRectangle({
+    x: margin,
+    y: yPosition - 85,
+    width: contentWidth,
+    height: 100,
+    color: rgb(0.97, 0.97, 0.97),
+    borderColor: rgb(0.9, 0.9, 0.9),
+    borderWidth: 1,
+  });
+
+  page.drawText('Resumo do Período', {
+    x: margin + 15,
+    y: yPosition - 5,
+    size: 14,
+    font: helveticaBold,
+    color: black,
+  });
+  yPosition -= 25;
+
+  page.drawText('Total de créditos:', {
+    x: margin + 15,
+    y: yPosition - 5,
+    size: 10,
+    font: helvetica,
+    color: gray,
+  });
+  page.drawText(`+ R$ ${formatNumberBR(summary.totalCredits)}`, {
+    x: margin + contentWidth - 120,
+    y: yPosition - 5,
+    size: 10,
+    font: helveticaBold,
+    color: green,
+  });
+  yPosition -= 18;
+
+  page.drawText('Total de débitos:', {
+    x: margin + 15,
+    y: yPosition - 5,
+    size: 10,
+    font: helvetica,
+    color: gray,
+  });
+  page.drawText(`- R$ ${formatNumberBR(summary.totalDebits)}`, {
+    x: margin + contentWidth - 120,
+    y: yPosition - 5,
+    size: 10,
+    font: helveticaBold,
+    color: red,
+  });
+  yPosition -= 22;
+
+  // Linha separadora
+  page.drawLine({
+    start: { x: margin + 15, y: yPosition },
+    end: { x: pageWidth - margin - 15, y: yPosition },
+    thickness: 1,
+    color: rgb(0.8, 0.8, 0.8),
+  });
+  yPosition -= 15;
+
+  const saldoColor = summary.netAmount >= 0 ? green : red;
+  const saldoSign = summary.netAmount >= 0 ? '+' : '';
+  page.drawText('Saldo do período:', {
+    x: margin + 15,
+    y: yPosition - 5,
+    size: 11,
+    font: helveticaBold,
+    color: black,
+  });
+  page.drawText(`${saldoSign} R$ ${formatNumberBR(Math.abs(summary.netAmount))}`, {
+    x: margin + contentWidth - 120,
+    y: yPosition - 5,
+    size: 11,
+    font: helveticaBold,
+    color: saldoColor,
+  });
+  yPosition -= 20;
+
+  page.drawText(`Total de transações: ${summary.transactionCount}`, {
+    x: margin + 15,
+    y: yPosition - 5,
+    size: 9,
+    font: helvetica,
+    color: lightGray,
+  });
+
+  // === FOOTER ===
+  checkNewPage(60);
+  yPosition = margin + 30;
+
+  page.drawLine({
+    start: { x: margin, y: yPosition + 20 },
+    end: { x: pageWidth - margin, y: yPosition + 20 },
+    thickness: 0.5,
+    color: rgb(0.8, 0.8, 0.8),
+  });
+
+  page.drawText('Este documento foi gerado automaticamente pelo sistema Envio Legal.', {
+    x: margin,
+    y: yPosition,
+    size: 8,
+    font: helvetica,
+    color: lightGray,
+  });
+  page.drawText('Para dúvidas ou mais informações, entre em contato com nosso suporte.', {
+    x: margin,
+    y: yPosition - 12,
+    size: 8,
+    font: helvetica,
+    color: lightGray,
+  });
+
+  // Salvar e retornar
+  const pdfBytes = await pdfDoc.save();
+  return Buffer.from(pdfBytes);
 }
