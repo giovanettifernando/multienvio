@@ -16,6 +16,7 @@ export interface MercadoPagoConfig {
   accessToken: string;
   applicationId?: string;
   webhookSecret?: string;
+  notificationUrl?: string; // URL para receber webhooks (notification_url)
   sandboxMode: boolean;
 }
 
@@ -57,6 +58,13 @@ export interface CreatePaymentInput {
   cardData?: {
     cardholderName: string;
   };
+
+  // Device fingerprint para antifraude
+  deviceSessionId?: string;
+
+  // Tempo de expiração em minutos (para PIX)
+  // Se não fornecido, usa o padrão do MP (~24h)
+  expirationMinutes?: number;
 }
 
 /**
@@ -183,4 +191,57 @@ export interface MercadoPagoApiError {
     code: string;
     description: string;
   }>;
+}
+
+/**
+ * Mapeamento de status_detail para mensagens amigáveis ao usuário
+ *
+ * @see https://www.mercadopago.com.br/developers/pt/docs/checkout-api/response-handling/handle-responses
+ */
+export const STATUS_DETAIL_MESSAGES: Record<string, string> = {
+  // Aprovado
+  accredited: 'Pagamento aprovado com sucesso',
+
+  // Pendentes
+  pending_contingency: 'Pagamento em análise, aguarde confirmação',
+  pending_review_manual: 'Pagamento em análise manual',
+  pending_waiting_payment: 'Aguardando pagamento',
+  pending_waiting_transfer: 'Aguardando transferência PIX',
+
+  // Rejeitados - Cartão
+  cc_rejected_bad_filled_card_number: 'Número do cartão inválido',
+  cc_rejected_bad_filled_date: 'Data de validade inválida',
+  cc_rejected_bad_filled_other: 'Dados do cartão incorretos',
+  cc_rejected_bad_filled_security_code: 'Código de segurança inválido',
+  cc_rejected_blacklist: 'Cartão não autorizado',
+  cc_rejected_call_for_authorize: 'Ligue para sua operadora e autorize o pagamento',
+  cc_rejected_card_disabled: 'Cartão desabilitado. Ative pelo app do seu banco',
+  cc_rejected_card_error: 'Erro no cartão. Tente outro cartão',
+  cc_rejected_duplicated_payment: 'Pagamento duplicado. Verifique seus extratos',
+  cc_rejected_high_risk: 'Pagamento recusado por suspeita de fraude',
+  cc_rejected_insufficient_amount: 'Saldo insuficiente no cartão',
+  cc_rejected_invalid_installments: 'Número de parcelas não permitido',
+  cc_rejected_max_attempts: 'Limite de tentativas atingido. Tente outro cartão',
+  cc_rejected_other_reason: 'Cartão não autorizado. Tente outro cartão',
+
+  // Rejeitados - Outros
+  rejected_by_bank: 'Pagamento recusado pelo banco',
+  rejected_by_regulations: 'Pagamento não permitido por regulamentação',
+  rejected_insufficient_data: 'Dados insuficientes para processar',
+  rejected_high_risk: 'Pagamento recusado por análise de risco',
+
+  // Cancelados
+  expired: 'Pagamento expirado',
+  by_collector: 'Pagamento cancelado pelo vendedor',
+  by_payer: 'Pagamento cancelado pelo comprador',
+};
+
+/**
+ * Obtém mensagem amigável para o usuário baseado no status_detail
+ *
+ * @param statusDetail Código do status_detail do Mercado Pago
+ * @returns Mensagem amigável ao usuário
+ */
+export function getStatusDetailMessage(statusDetail: string): string {
+  return STATUS_DETAIL_MESSAGES[statusDetail] || 'Pagamento não autorizado. Tente novamente';
 }

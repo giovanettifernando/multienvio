@@ -131,8 +131,8 @@ export function CardPaymentForm({
 
       if (!response.ok) {
         const errorData = await response.json();
-        // Tratar como "Cartão não autorizado"
-        throw new Error("Cartão não autorizado");
+        // Usar mensagem do backend (status_detail mapeado)
+        throw new Error(errorData.message || "Cartão não autorizado");
       }
 
       const result = await response.json();
@@ -153,8 +153,8 @@ export function CardPaymentForm({
       }
 
       console.error("[CARD_PAYMENT_SUBMIT]", err);
-      // Sempre mostrar "Cartão não autorizado" para erros de pagamento
-      onError(new Error("Cartão não autorizado"));
+      // Usar mensagem do erro (pode ser específica do status_detail)
+      onError(err instanceof Error ? err : new Error("Cartão não autorizado"));
     }
   };
 

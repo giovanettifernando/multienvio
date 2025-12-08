@@ -2,6 +2,14 @@
 import type { Transporter } from 'nodemailer';
 import { getEmailConfig } from './config';
 
+/**
+ * Obtém a URL base para links em emails
+ * Prioriza EMAIL_PUBLIC_URL (URL pública) sobre NEXT_PUBLIC_APP_URL (pode ser localhost)
+ */
+function getEmailBaseUrl(): string {
+  return process.env.EMAIL_PUBLIC_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+}
+
 // Dynamic import to avoid ESM/CommonJS issues
 function getNodemailer(): typeof import('nodemailer') {
   return require('nodemailer');
@@ -87,7 +95,7 @@ export async function sendVerificationEmail(
   name: string,
   token: string
 ): Promise<boolean> {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+  const baseUrl = getEmailBaseUrl();
   const verificationUrl = `${baseUrl}/auth/verify-email?token=${token}`;
 
   const html = `
@@ -179,7 +187,7 @@ export async function sendPasswordChangedEmail(
     userAgent?: string;
   }
 ): Promise<boolean> {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+  const baseUrl = getEmailBaseUrl();
   const securityUrl = `${baseUrl}/minha-conta#security`;
 
   const formattedDate = metadata.changedAt.toLocaleString('pt-BR', {

@@ -56,8 +56,8 @@ export async function POST(request: Request) {
 
     console.log('[FORGOT_PASSWORD] Reset token created for user:', user.id);
 
-    // Build reset URL
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    // Build reset URL - usar EMAIL_PUBLIC_URL para garantir URL pública em servidores
+    const baseUrl = process.env.EMAIL_PUBLIC_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
     const resetUrl = `${baseUrl}/auth/reset-password?token=${token}`;
 
     // Send password reset email

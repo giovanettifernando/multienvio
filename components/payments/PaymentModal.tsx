@@ -22,6 +22,7 @@ import {
 } from "@ant-design/icons";
 import { CardPaymentForm } from "@/components/wallet/CardPaymentForm";
 import { SavedCardPaymentForm } from "@/components/wallet/SavedCardPaymentForm";
+import { MercadoPagoSecurity, getDeviceSessionId } from "@/components/payments/MercadoPagoSecurity";
 import { useCards } from "@/hooks/useAccount";
 import { ELModal } from "@/components/ui/ELModal";
 import { ELButton } from "@/components/ui/ELButton";
@@ -320,6 +321,7 @@ export function PaymentModal({
 
       } else if (selectedMethod === "pix") {
         // Criar pagamento PIX via Mercado Pago
+        const deviceSessionId = getDeviceSessionId();
         const pixRes = await fetch("/api/payments/mercadopago/create", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -330,6 +332,7 @@ export function PaymentModal({
               email: user?.email || "usuario@example.com",
             },
             description: description || `Pagamento - R$ ${amount.toFixed(2)}`,
+            deviceSessionId, // Device fingerprint para antifraude
             metadata: {
               type: mode === "topup" ? "wallet_topup" : "checkout_payment",
               ...metadata,
@@ -634,6 +637,9 @@ export function PaymentModal({
 
   // Renderizar seleção de método de pagamento
   return (
+    <>
+    {/* Script de segurança do Mercado Pago para Device Fingerprint */}
+    <MercadoPagoSecurity />
     <ELModal
       title={getModalTitle()}
       open={open}
@@ -787,6 +793,7 @@ export function PaymentModal({
         )}
       </Space>
     </ELModal>
+    </>
   );
 }
 

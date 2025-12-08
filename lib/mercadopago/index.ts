@@ -23,7 +23,7 @@ export type {
   MercadoPagoApiError,
 } from './types';
 
-export { MP_STATUS_MAP, MP_METHOD_MAP } from './types';
+export { MP_STATUS_MAP, MP_METHOD_MAP, STATUS_DETAIL_MESSAGES, getStatusDetailMessage } from './types';
 
 // Client
 export {
@@ -32,6 +32,7 @@ export {
   mapMercadoPagoStatus,
   mapMercadoPagoMethod,
   processPaymentData,
+  refundPayment,
 } from './client';
 
 // Payments

@@ -8,7 +8,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAdminUser } from '@/lib/auth/admin-helpers';
 import { AdminPermission } from '@prisma/client';
 import { prisma } from '@/lib/db';
-import { encrypt } from '@/lib/integrations/shared/encryption.service';
+import { encrypt, decrypt } from '@/lib/integrations/shared/encryption.service';
 
 
 /**
@@ -39,14 +39,32 @@ export async function GET(req: NextRequest) {
 
     const credential = gateway.credentials[0];
 
-    return NextResponse.json({
-      config: {
-        environment: gateway.environment,
-        publicKey: credential.publicKey || '',
-        applicationId: credential.applicationId || '',
-        // NÃO retornar accessToken/webhookSecret por segurança
-      },
-    });
+    // Verificar se foi solicitado reveal de campo sensível
+    const { searchParams } = new URL(req.url);
+    const revealField = searchParams.get('reveal');
+
+    const config: Record<string, string> = {
+      environment: gateway.environment,
+      publicKey: credential.publicKey || '',
+      applicationId: credential.applicationId || '',
+    };
+
+    // Revelar campo sensível se solicitado
+    if (revealField === 'accessToken' && credential.accessToken) {
+      try {
+        config.accessToken = decrypt(credential.accessToken);
+      } catch {
+        config.accessToken = '';
+      }
+    } else if (revealField === 'webhookSecret' && credential.secretKey) {
+      try {
+        config.webhookSecret = decrypt(credential.secretKey);
+      } catch {
+        config.webhookSecret = '';
+      }
+    }
+
+    return NextResponse.json({ config });
   } catch (error) {
     console.error('[ADMIN_GATEWAY_CONFIG_GET]', error);
     return NextResponse.json(

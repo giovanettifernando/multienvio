@@ -10,6 +10,28 @@ import { decrypt } from '@/lib/integrations/shared/encryption.service';
 import type { MercadoPagoConfig } from './types';
 
 const MERCADO_PAGO_SLUG = 'mercadopago';
+const WEBHOOK_PATH = '/api/webhooks/mercadopago';
+
+/**
+ * Obtém a URL do webhook para notificações do Mercado Pago
+ * Retorna undefined se a URL não for pública (localhost não é aceito pelo MP)
+ */
+function getWebhookUrl(): string | undefined {
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL;
+  if (!baseUrl) {
+    console.warn('[MERCADO_PAGO_CONFIG] NEXT_PUBLIC_APP_URL não definida - notification_url não será enviada');
+    return undefined;
+  }
+
+  // Mercado Pago não aceita URLs localhost - só enviar notification_url se for URL pública
+  const isLocalhost = baseUrl.includes('localhost') || baseUrl.includes('127.0.0.1');
+  if (isLocalhost) {
+    console.info('[MERCADO_PAGO_CONFIG] URL local detectada - notification_url não será enviada (MP não aceita localhost)');
+    return undefined;
+  }
+
+  return `${baseUrl}${WEBHOOK_PATH}`;
+}
 
 /**
  * Cache in-memory da configuração (válido por 5 minutos)
@@ -75,6 +97,7 @@ export async function getMercadoPagoConfig(): Promise<MercadoPagoConfig | null> 
         accessToken,
         applicationId: credential.applicationId || undefined,
         webhookSecret: credential.secretKey ? decrypt(credential.secretKey) : undefined,
+        notificationUrl: getWebhookUrl(),
         sandboxMode: gateway.environment === 'SANDBOX',
       };
 
@@ -114,6 +137,7 @@ function getFallbackConfig(): MercadoPagoConfig | null {
     publicKey,
     accessToken,
     webhookSecret: process.env.MP_WEBHOOK_SECRET,
+    notificationUrl: getWebhookUrl(),
     sandboxMode: process.env.MP_SANDBOX_MODE === 'true',
   };
 

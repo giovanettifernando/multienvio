@@ -6,7 +6,7 @@
  * - Documentação: https://www.mercadopago.com.ar/developers/en/docs/checkout-api/overview
  */
 
-import { MercadoPagoConfig, Payment, CardToken } from 'mercadopago';
+import { MercadoPagoConfig, Payment, CardToken, PaymentRefund } from 'mercadopago';
 import { getMercadoPagoConfig } from './config';
 import type {
   CreatePaymentInput,
@@ -25,17 +25,11 @@ async function getClient() {
     throw new Error('Mercado Pago não configurado');
   }
 
-  if (!config.accessToken || config.accessToken.trim().length === 0) {
-    throw new Error('Access Token não configurado ou vazio');
-  }
-
-  const sdkOptions = {
-    timeout: 30000,
-  };
-
   const client = new MercadoPagoConfig({
     accessToken: config.accessToken,
-    options: sdkOptions,
+    options: {
+      timeout: 30000,
+    },
   });
 
   return { client, config };
@@ -64,95 +58,95 @@ async function getClient() {
 export async function createPayment(
   input: CreatePaymentInput
 ): Promise<MercadoPagoPaymentResponse> {
-  const { config } = await getClient();
+  const { client, config } = await getClient();
+  const payment = new Payment(client);
 
-  // Email do pagador
-  // Em sandbox com MP_TEST_USER_EMAIL configurado, usa esse email
-  // Isso permite testar com usuários de teste do MP
-  const payerEmail = config.sandboxMode && process.env.MP_TEST_USER_EMAIL
-    ? process.env.MP_TEST_USER_EMAIL
-    : input.payer.email;
+  // Montar payload para o Mercado Pago (formato original que funcionava)
+  // Em Sandbox, usar email de teste para evitar erro "Payer email forbidden"
+  const payerEmail = config.sandboxMode ? 'test@test.com' : input.payer.email;
 
-  // Nome do pagador baseado nos dados do cartão
-  // Em sandbox, usar "APRO" simula aprovação automática
-  let payerFirstName: string | undefined;
-  let payerLastName: string | undefined;
-
-  if (input.cardData?.cardholderName) {
-    const nameParts = input.cardData.cardholderName.trim().split(/\s+/);
-    payerFirstName = nameParts[0];
-    payerLastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : undefined;
-  } else if (config.sandboxMode) {
-    payerFirstName = 'APRO';
-  } else if (input.payer.firstName) {
-    payerFirstName = input.payer.firstName;
-    payerLastName = input.payer.lastName;
-  }
-
-  // Montar payload MÍNIMO obrigatório para Checkout Transparente
   const paymentData: Record<string, unknown> = {
-    // OBRIGATÓRIOS
     transaction_amount: input.transactionAmount,
+    description: input.description || 'Pagamento Envio Legal',
     payment_method_id: input.paymentMethodId,
     payer: {
       email: payerEmail,
+      first_name: input.payer.firstName,
+      last_name: input.payer.lastName,
     },
   };
 
-  // Token e parcelas (obrigatórios para cartão)
+  // Adicionar notification_url para receber webhooks
+  if (config.notificationUrl) {
+    paymentData.notification_url = config.notificationUrl;
+  }
+
+  // Adicionar token se for pagamento com cartão
   if (input.token) {
     paymentData.token = input.token;
     paymentData.installments = input.installments || 1;
   }
 
-  // OPCIONAIS - Adicionar apenas se fornecidos (melhora rastreabilidade)
-  if (input.description) {
-    paymentData.description = input.description;
-  }
-
-  // Nome do pagador (opcional, mas recomendado)
-  const payer = paymentData.payer as Record<string, unknown>;
-  if (payerFirstName) {
-    payer.first_name = payerFirstName;
-  }
-  if (payerLastName) {
-    payer.last_name = payerLastName;
-  }
-
-  // Identificação do pagador (opcional, melhora aprovação)
-  if (input.payer.identification?.number) {
+  // Adicionar identificação se fornecida
+  if (input.payer.identification) {
+    const payer = paymentData.payer as Record<string, unknown>;
     payer.identification = {
-      type: input.payer.identification.type || 'CPF',
+      type: input.payer.identification.type,
       number: input.payer.identification.number,
     };
   }
 
-  // Referência externa para conciliação (opcional)
+  // Adicionar dados do cartão se fornecidos
+  if (input.cardData) {
+    const existingAdditionalInfo = (paymentData.additional_info as Record<string, unknown>) || {};
+    const existingPayer = (existingAdditionalInfo.payer as Record<string, unknown>) || {};
+
+    paymentData.additional_info = {
+      ...existingAdditionalInfo,
+      payer: {
+        ...existingPayer,
+        first_name: input.payer.firstName,
+        last_name: input.payer.lastName,
+      },
+    };
+  }
+
+  // Adicionar external_reference se houver metadata
   if (input.metadata) {
     paymentData.external_reference = JSON.stringify(input.metadata);
   }
 
+  // Adicionar device fingerprint para antifraude
+  if (input.deviceSessionId) {
+    const additionalInfo = (paymentData.additional_info as Record<string, unknown>) || {};
+    paymentData.additional_info = {
+      ...additionalInfo,
+      // @ts-ignore - Campo para device fingerprint do MP
+      ip_address: input.deviceSessionId,
+    };
+  }
+
+  // Adicionar date_of_expiration para PIX
+  // Default: 30 minutos se não especificado para PIX
+  if (input.paymentMethodId === 'pix') {
+    const expirationMinutes = input.expirationMinutes || 30;
+    const expirationDate = new Date();
+    expirationDate.setMinutes(expirationDate.getMinutes() + expirationMinutes);
+    // Formato ISO 8601: 2024-01-15T10:30:00.000-03:00
+    paymentData.date_of_expiration = expirationDate.toISOString();
+  }
+
   try {
-    const { client } = await getClient();
-    const payment = new Payment(client);
-
-    // Idempotency key para evitar pagamentos duplicados
-    const idempotencyKey = input.metadata?.transactionId
-      ? `tx-${input.metadata.transactionId}`
-      : `pay-${Date.now()}-${Math.random().toString(36).substring(7)}`;
-
-    const result = await payment.create({
-      body: paymentData as Parameters<typeof payment.create>[0]['body'],
-      requestOptions: {
-        idempotencyKey,
-      },
-    });
-
-    return result as unknown as MercadoPagoPaymentResponse;
+    const response = await payment.create({ body: paymentData });
+    return response as unknown as MercadoPagoPaymentResponse;
   } catch (error: unknown) {
-    const errorObj = error as { message?: string };
+    console.error('[MERCADO_PAGO] Erro ao criar pagamento:', error);
+
+    // Extrair detalhes do erro do MP
+    const mpError = (error as { cause?: unknown[] }).cause?.[0] || error;
+    const errorObj = mpError as { description?: string; message?: string };
     throw new Error(
-      `Erro ao criar pagamento: ${errorObj.message || 'Erro desconhecido'}`
+      `Erro ao criar pagamento: ${errorObj.description || errorObj.message || 'Erro desconhecido'}`
     );
   }
 }
@@ -327,5 +321,39 @@ export async function createCardToken(cardData: {
   } catch (error: unknown) {
     const errorObj = error as { message?: string };
     throw new Error(`Erro ao criar token: ${errorObj.message || 'Erro desconhecido'}`);
+  }
+}
+
+/**
+ * Reembolsa um pagamento (total ou parcial)
+ *
+ * @param paymentId ID do pagamento no Mercado Pago
+ * @param amount Valor a reembolsar (opcional, se não informado, reembolso total)
+ * @returns Dados do reembolso
+ *
+ * @see https://www.mercadopago.com.br/developers/pt/docs/checkout-api/additional-content/cancel-and-refund
+ */
+export async function refundPayment(
+  paymentId: string,
+  amount?: number
+): Promise<{ id: number; status: string; amount: number }> {
+  const { client } = await getClient();
+  const refund = new PaymentRefund(client);
+
+  try {
+    const refundData = await refund.create({
+      payment_id: paymentId,
+      body: amount ? { amount } : {},
+    });
+
+    return {
+      id: refundData.id ?? 0,
+      status: refundData.status ?? 'unknown',
+      amount: refundData.amount ?? 0,
+    };
+  } catch (error: unknown) {
+    console.error('[MERCADO_PAGO] Erro ao reembolsar pagamento:', error);
+    const errorObj = error as { message?: string };
+    throw new Error(`Erro ao reembolsar: ${errorObj.message || 'Erro desconhecido'}`);
   }
 }

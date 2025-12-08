@@ -9,7 +9,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getSession } from '@/lib/auth/session';
-import { createPaymentWithTracking } from '@/lib/mercadopago';
+import { createPaymentWithTracking, getStatusDetailMessage } from '@/lib/mercadopago';
 import type { CreatePaymentInput } from '@/lib/mercadopago';
 
 /**
@@ -53,6 +53,12 @@ const createPaymentSchema = z.object({
       shipmentId: z.string().optional(),
     })
     .optional(),
+
+  // Device fingerprint para antifraude
+  deviceSessionId: z.string().optional(),
+
+  // Tempo de expiração em minutos (para PIX)
+  expirationMinutes: z.number().int().min(5).max(1440).optional(), // 5 min a 24h
 });
 
 /**
@@ -99,6 +105,19 @@ export async function POST(request: Request) {
     // Criar pagamento
     const result = await createPaymentWithTracking(paymentInput);
 
+    // Se pagamento foi rejeitado, retornar erro com mensagem amigável
+    if (result.paymentData.status === 'rejected') {
+      const userMessage = getStatusDetailMessage(result.paymentData.status_detail);
+      return NextResponse.json(
+        {
+          success: false,
+          message: userMessage,
+          statusDetail: result.paymentData.status_detail,
+        },
+        { status: 400 }
+      );
+    }
+
     // Retornar resposta
     return NextResponse.json(
       {
@@ -114,13 +133,11 @@ export async function POST(request: Request) {
           id: result.paymentData.id,
           status: result.paymentData.status,
           statusDetail: result.paymentData.status_detail,
+          statusMessage: getStatusDetailMessage(result.paymentData.status_detail),
           // PIX data
           pixQrCode: result.paymentData.point_of_interaction?.transaction_data?.qr_code,
           pixQrCodeBase64:
             result.paymentData.point_of_interaction?.transaction_data?.qr_code_base64,
-          // Boleto data
-          boletoUrl: result.paymentData.point_of_interaction?.transaction_data?.ticket_url,
-          boletoBarcode: result.paymentData.barcode?.content,
         },
       },
       { status: 201 }

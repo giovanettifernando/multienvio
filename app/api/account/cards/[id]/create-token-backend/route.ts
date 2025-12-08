@@ -132,9 +132,8 @@ export const POST = withApiHandler(async (context) => {
   }
   const pan = decryptPan(cipher, key);
 
-  // Criar token usando SDK backend
-  console.log('[CREATE_TOKEN_BACKEND] Chamando createCardToken com holderName:', card.holderName);
-  const token = await createCardToken({
+  // Debug: mostrar dados do cartão (mascarado)
+  const cardData = {
     cardNumber: pan,
     cardholderName: card.holderName,
     expirationMonth: String(card.expMonth).padStart(2, "0"),
@@ -142,7 +141,20 @@ export const POST = withApiHandler(async (context) => {
     securityCode: cvv,
     identificationType: "CPF",
     identificationNumber: cpf.replace(/\D/g, ""),
+  };
+
+  console.log('[CREATE_TOKEN_BACKEND] Card data:', {
+    cardNumber: pan.substring(0, 6) + '****' + pan.substring(pan.length - 4),
+    cardNumberLength: pan.length,
+    cardholderName: card.holderName,
+    expirationMonth: cardData.expirationMonth,
+    expirationYear: cardData.expirationYear,
+    securityCodeLength: cvv.length,
+    identificationNumber: cardData.identificationNumber,
   });
+
+  // Criar token usando SDK backend
+  const token = await createCardToken(cardData);
   console.log('[CREATE_TOKEN_BACKEND] Token criado:', token.id);
 
   // Retornar token criado

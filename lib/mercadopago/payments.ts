@@ -108,8 +108,20 @@ export async function createPaymentWithTracking(
     });
 
     // 7. Se já foi pago, aplicar efeitos de domínio
+    console.log('[MERCADO_PAGO] Status do pagamento:', {
+      mpStatus: mpPayment.status,
+      mpStatusDetail: mpPayment.status_detail,
+      mappedStatus: processedData.status,
+      transactionId: updatedTransaction.id,
+    });
+
     if (processedData.status === 'PAID') {
       await applyPaymentEffects(updatedTransaction);
+    } else {
+      console.log('[MERCADO_PAGO] Pagamento não aprovado imediatamente - aguardando webhook:', {
+        status: processedData.status,
+        transactionId: updatedTransaction.id,
+      });
     }
 
     return {
