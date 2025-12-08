@@ -24,7 +24,7 @@ import {
   type PrePostagemResult,
   type FullPrePostagemResult,
   CorreiosApiError,
-} from '../correios';
+} from './index';
 
 // ============================================================================
 // Constantes

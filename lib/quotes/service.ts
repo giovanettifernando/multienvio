@@ -17,7 +17,7 @@ import type { Quote, QuoteStatus } from '@prisma/client';
 import {
   quoteFromCorreios,
   isCorreiosAvailableAsync,
-} from '@/lib/integrations/carriers/correiosAdapter';
+} from '@/lib/integrations/correios';
 import { applyShippingCommission } from './commission';
 
 /**

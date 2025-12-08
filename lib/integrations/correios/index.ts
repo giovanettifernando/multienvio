@@ -123,3 +123,23 @@ export {
   type CepResult,
   type CorreiosCepResponse,
 } from './cep';
+
+// Adapter (conversão de tipos Envio Legal <-> Correios)
+export {
+  CORREIOS_CARRIER_ID,
+  CORREIOS_CARRIER_NAME,
+  quoteRequestToCorreiosInput,
+  correiosCotacaoToQuoteResult,
+  shipmentInputToPrePostagem,
+  isCorreiosAvailable,
+  isCorreiosAvailableAsync,
+  quoteFromCorreios,
+  extractCorreiosServiceCode,
+  isCorreiosService,
+  getCorreiosServiceName,
+  createCorreiosShipment,
+  createCorreiosShipmentFromCheckout,
+  type CorreiosQuoteInput,
+  type CorreiosShipmentInput,
+  type CorreiosShipmentResult,
+} from './adapter';

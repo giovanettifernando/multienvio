@@ -5,6 +5,7 @@ import { getSession } from '@/lib/auth/session';
 import { ShipmentStatus, FINAL_STATUSES } from "@/lib/shipments/shipment-status";
 import { canBeCancelled, getNextCancellationStatus } from "@/lib/shipments/status-migration";
 import { refund as walletRefund, reaisToCents } from "@/lib/wallet/wallet.service";
+import { cancelarPrePostagem } from "@/lib/integrations/correios";
 
 /**
  * POST /api/shipments/[id]/cancel
@@ -28,6 +29,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       include: {
         label: true,
         pickupRequest: true,
+        packages: true,
       },
     });
 
@@ -71,7 +73,77 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     let refundIssued = false;
     let refundAmount = 0;
 
-    // Cancelar shipment, label e pickup em uma transação
+    // Salvar dados da etiqueta ANTES de deletar (para cálculo de reembolso)
+    const labelPriceCents = shipment.label?.priceCents || 0;
+    const labelTrackingCode = shipment.label?.trackingCode || null;
+
+    // ==========================================
+    // CANCELAR PRÉ-POSTAGENS NOS CORREIOS
+    // ==========================================
+    // Antes de atualizar o banco, tentar cancelar as pré-postagens de cada package nos Correios
+    // Erros não bloqueiam o cancelamento do shipment (apenas logados)
+    const correiosCancelResults: Array<{
+      packageId: string;
+      packageNumber: number;
+      prePostageId: string;
+      success: boolean;
+      message?: string;
+    }> = [];
+
+    if (shipment.packages && shipment.packages.length > 0) {
+      console.log('[SHIPMENT_CANCEL] Canceling pre-postagens for packages:', {
+        shipmentId: id,
+        packagesCount: shipment.packages.length,
+      });
+
+      for (const pkg of shipment.packages) {
+        if (pkg.carrierPrePostageId) {
+          try {
+            const result = await cancelarPrePostagem(pkg.carrierPrePostageId);
+            correiosCancelResults.push({
+              packageId: pkg.id,
+              packageNumber: pkg.packageNumber,
+              prePostageId: pkg.carrierPrePostageId,
+              success: result.success,
+              message: result.success ? result.message : result.erro,
+            });
+
+            console.log('[SHIPMENT_CANCEL] Pre-postagem cancel result:', {
+              packageId: pkg.id,
+              packageNumber: pkg.packageNumber,
+              prePostageId: pkg.carrierPrePostageId,
+              success: result.success,
+              message: result.success ? result.message : result.erro,
+            });
+          } catch (error) {
+            // Erro inesperado - logar mas não bloquear
+            const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+            correiosCancelResults.push({
+              packageId: pkg.id,
+              packageNumber: pkg.packageNumber,
+              prePostageId: pkg.carrierPrePostageId,
+              success: false,
+              message: errorMessage,
+            });
+
+            console.error('[SHIPMENT_CANCEL] Unexpected error canceling pre-postagem:', {
+              packageId: pkg.id,
+              prePostageId: pkg.carrierPrePostageId,
+              error: errorMessage,
+            });
+          }
+        }
+      }
+
+      console.log('[SHIPMENT_CANCEL] Pre-postagem cancellation summary:', {
+        shipmentId: id,
+        total: correiosCancelResults.length,
+        successful: correiosCancelResults.filter(r => r.success).length,
+        failed: correiosCancelResults.filter(r => !r.success).length,
+      });
+    }
+
+    // Cancelar shipment, label, packages e pickup em uma transação
     await prisma.$transaction(async (tx) => {
       // Atualizar status do shipment
       await tx.shipment.update({
@@ -79,11 +151,33 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         data: { status: nextCancellationStatus },
       });
 
-      // Se houver label associada, marcar como cancelada
+      // Se houver label associada, DELETAR do banco
+      // (dados já salvos em labelPriceCents e labelTrackingCode para reembolso)
       if (shipment.label) {
-        await tx.label.update({
+        await tx.label.delete({
           where: { id: shipment.label.id },
-          data: { status: 'canceled' },
+        });
+      }
+
+      // Limpar dados de pré-postagem dos packages (independente do resultado do Correios)
+      if (shipment.packages && shipment.packages.length > 0) {
+        for (const pkg of shipment.packages) {
+          if (pkg.carrierPrePostageId || pkg.carrierTrackingCode) {
+            await tx.package.update({
+              where: { id: pkg.id },
+              data: {
+                carrierPrePostageId: null,
+                carrierTrackingCode: null,
+                carrierQuotePrice: null,
+              },
+            });
+          }
+        }
+
+        // Limpar o código de rastreio do shipment também
+        await tx.shipment.update({
+          where: { id },
+          data: { carrierTrackingCode: null },
         });
       }
 
@@ -115,7 +209,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         const doc = shipment.document as Record<string, unknown> | null;
         const paymentInfo = doc?.payment as { amount?: number } | undefined;
         // Se payment info não tiver amount, usar o preço da etiqueta em centavos convertido para reais
-        const labelPriceReais = shipment.label?.priceCents ? shipment.label.priceCents / 100 : 0;
+        const labelPriceReais = labelPriceCents ? labelPriceCents / 100 : 0;
         const amountToRefund = paymentInfo?.amount || labelPriceReais || shipment.freightCost || 0;
 
         if (amountToRefund > 0) {
@@ -124,7 +218,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
           await walletRefund(
             session.userId,
             reaisToCents(amountToRefund),
-            `Reembolso - Cancelamento envio ${shipment.label?.trackingCode || shipment.id}`,
+            `Reembolso - Cancelamento envio ${labelTrackingCode || shipment.id}`,
             refundReferenceId
           );
 

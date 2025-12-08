@@ -1,13 +1,17 @@
 import { z } from 'zod';
-import {
-  integrationEnvironmentSchema,
-  integrationStatusSchema,
-  authTypeSchema,
-} from './integrations-carriers';
 
 /**
  * Validation schemas for payment gateway integrations
  */
+
+// Shared integration schemas (previously in integrations-carriers.ts)
+export const integrationEnvironmentSchema = z.enum(['SANDBOX', 'PRODUCTION']);
+export const integrationStatusSchema = z.enum(['ACTIVE', 'INACTIVE', 'ERROR', 'TESTING']);
+export const authTypeSchema = z.enum(['API_KEY', 'OAUTH2', 'BASIC', 'BEARER', 'SIGNED_HEADER', 'CUSTOM']);
+
+export type IntegrationEnvironment = z.infer<typeof integrationEnvironmentSchema>;
+export type IntegrationStatus = z.infer<typeof integrationStatusSchema>;
+export type AuthType = z.infer<typeof authTypeSchema>;
 
 // Enums
 export const paymentMethodSchema = z.enum(['CREDIT_CARD', 'DEBIT_CARD', 'PIX', 'BOLETO', 'WALLET']);

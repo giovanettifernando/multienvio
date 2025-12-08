@@ -21,8 +21,8 @@ import {
   extractCorreiosServiceCode,
   getCorreiosServiceName,
   CORREIOS_CARRIER_NAME,
-} from '@/lib/integrations/carriers/correiosAdapter';
-import { isCorreiosConfigured } from '@/lib/integrations/correios';
+  isCorreiosConfigured,
+} from '@/lib/integrations/correios';
 
 // ============================================================================
 // Tipos

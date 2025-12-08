@@ -65,15 +65,9 @@ export const ADMIN_NAV: AdminNavItem[] = [
         permissions: ["FINANCEIRO"],
       },
       {
-        key: "transportadoras",
-        label: "Transportadoras",
-        href: "/admin/integracoes",
-        permissions: ["INTEGRACOES"],
-      },
-      {
         key: "correios",
         label: "Correios",
-        href: "/admin/integracoes/correios",
+        href: "/admin/correios",
         permissions: ["INTEGRACOES"],
       },
     ],
