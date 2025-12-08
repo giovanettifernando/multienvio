@@ -15,6 +15,8 @@ import {
 } from '@/lib/wallet/transaction-direction';
 import { formatNumberBR, formatWalletDescription } from '@/lib/format';
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
+import { readFile } from 'fs/promises';
+import { join } from 'path';
 import type { Prisma, WalletTxType } from '@prisma/client';
 
 export const maxDuration = 60; // 60 segundos para gerar o PDF
@@ -196,24 +198,47 @@ async function generateStatementPdf(params: {
   };
 
   // === HEADER ===
-  // Título
-  page.drawText('ENVIO LEGAL', {
-    x: margin,
-    y: yPosition,
-    size: 24,
-    font: helveticaBold,
-    color: blue,
-  });
-  yPosition -= 20;
+  // Logo Envio Legal
+  let logoImage: Awaited<ReturnType<typeof pdfDoc.embedPng>> | null = null;
+  try {
+    const logoPath = join(process.cwd(), 'public', 'images', 'envio-legal-logo.png');
+    const logoBuffer = await readFile(logoPath);
+    logoImage = await pdfDoc.embedPng(logoBuffer);
+  } catch (e) {
+    console.warn('[WALLET_STATEMENT_PDF] Failed to load logo:', e);
+  }
 
+  // Logo maior com proporção 2000x800 = 2.5:1
+  const logoHeight = 50;
+  const logoWidth = logoHeight * 2.5; // 125pt
+
+  if (logoImage) {
+    page.drawImage(logoImage, {
+      x: margin,
+      y: yPosition - logoHeight + 15,
+      width: logoWidth,
+      height: logoHeight,
+    });
+  } else {
+    // Fallback para texto se logo não carregar
+    page.drawText('ENVIO LEGAL', {
+      x: margin,
+      y: yPosition - 10,
+      size: 28,
+      font: helveticaBold,
+      color: blue,
+    });
+  }
+
+  // Texto "Extrato da Carteira" ao lado do logo
   page.drawText('Extrato da Carteira', {
-    x: margin,
-    y: yPosition,
-    size: 14,
-    font: helvetica,
+    x: margin + logoWidth + 20,
+    y: yPosition - logoHeight / 2 - 5,
+    size: 20,
+    font: helveticaBold,
     color: gray,
   });
-  yPosition -= 30;
+  yPosition -= logoHeight + 10;
 
   // Linha separadora
   page.drawLine({
@@ -424,15 +449,15 @@ async function generateStatementPdf(params: {
   }
 
   // === RESUMO ===
-  checkNewPage(120);
+  checkNewPage(140);
   yPosition -= 20;
 
-  // Box do resumo
+  // Box do resumo (altura 120 para caber todo conteúdo)
   page.drawRectangle({
     x: margin,
-    y: yPosition - 85,
+    y: yPosition - 105,
     width: contentWidth,
-    height: 100,
+    height: 120,
     color: rgb(0.97, 0.97, 0.97),
     borderColor: rgb(0.9, 0.9, 0.9),
     borderWidth: 1,
@@ -447,6 +472,9 @@ async function generateStatementPdf(params: {
   });
   yPosition -= 25;
 
+  const creditText = `+ R$ ${formatNumberBR(summary.totalCredits)}`;
+  const creditTextWidth = helveticaBold.widthOfTextAtSize(creditText, 10);
+
   page.drawText('Total de créditos:', {
     x: margin + 15,
     y: yPosition - 5,
@@ -454,14 +482,17 @@ async function generateStatementPdf(params: {
     font: helvetica,
     color: gray,
   });
-  page.drawText(`+ R$ ${formatNumberBR(summary.totalCredits)}`, {
-    x: margin + contentWidth - 120,
+  page.drawText(creditText, {
+    x: margin + contentWidth - 15 - creditTextWidth,
     y: yPosition - 5,
     size: 10,
     font: helveticaBold,
     color: green,
   });
   yPosition -= 18;
+
+  const debitText = `- R$ ${formatNumberBR(summary.totalDebits)}`;
+  const debitTextWidth = helveticaBold.widthOfTextAtSize(debitText, 10);
 
   page.drawText('Total de débitos:', {
     x: margin + 15,
@@ -470,8 +501,8 @@ async function generateStatementPdf(params: {
     font: helvetica,
     color: gray,
   });
-  page.drawText(`- R$ ${formatNumberBR(summary.totalDebits)}`, {
-    x: margin + contentWidth - 120,
+  page.drawText(debitText, {
+    x: margin + contentWidth - 15 - debitTextWidth,
     y: yPosition - 5,
     size: 10,
     font: helveticaBold,
@@ -489,7 +520,10 @@ async function generateStatementPdf(params: {
   yPosition -= 15;
 
   const saldoColor = summary.netAmount >= 0 ? green : red;
-  const saldoSign = summary.netAmount >= 0 ? '+' : '';
+  const saldoSign = summary.netAmount >= 0 ? '+' : '-';
+  const saldoText = `${saldoSign} R$ ${formatNumberBR(Math.abs(summary.netAmount))}`;
+  const saldoTextWidth = helveticaBold.widthOfTextAtSize(saldoText, 11);
+
   page.drawText('Saldo do período:', {
     x: margin + 15,
     y: yPosition - 5,
@@ -497,8 +531,8 @@ async function generateStatementPdf(params: {
     font: helveticaBold,
     color: black,
   });
-  page.drawText(`${saldoSign} R$ ${formatNumberBR(Math.abs(summary.netAmount))}`, {
-    x: margin + contentWidth - 120,
+  page.drawText(saldoText, {
+    x: margin + contentWidth - 15 - saldoTextWidth,
     y: yPosition - 5,
     size: 11,
     font: helveticaBold,
