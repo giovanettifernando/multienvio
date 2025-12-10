@@ -2,13 +2,17 @@ import { withApiHandler } from "@/lib/api/handler";
 import { ApiError } from "@/lib/api/errors";
 import prisma from "@/lib/db";
 import { getUserFromRequest } from "@/lib/auth/session";
+import { UserPreferencesSchema } from "@/lib/validation/account";
 
+interface UserPreferencesResponse {
+  defaultPostingUnitId: string | null;
+}
 
 /**
  * GET /api/user/preferences
  * Retorna as preferências do usuário
  */
-export const GET = withApiHandler(async (context) => {
+export const GET = withApiHandler<UserPreferencesResponse>(async (context) => {
   const session = await getUserFromRequest(context.req);
   if (!session?.userId) {
     throw new ApiError({ code: "unauthorized", message: "Não autorizado", status: 401 });
@@ -36,23 +40,25 @@ export const GET = withApiHandler(async (context) => {
  * PATCH /api/user/preferences
  * Atualiza as preferências do usuário
  */
-export const PATCH = withApiHandler(async (context) => {
+export const PATCH = withApiHandler<UserPreferencesResponse>(async (context) => {
   const session = await getUserFromRequest(context.req);
   if (!session?.userId) {
     throw new ApiError({ code: "unauthorized", message: "Não autorizado", status: 401 });
   }
 
   const body = await context.req.json();
-  const { defaultPostingUnitId } = body;
 
-  // Validar que defaultPostingUnitId é string ou null
-  if (defaultPostingUnitId !== null && typeof defaultPostingUnitId !== "string") {
+  // Validação com Zod
+  const validation = UserPreferencesSchema.safeParse(body);
+  if (!validation.success) {
     throw new ApiError({
-      code: "bad_request",
-      message: "defaultPostingUnitId deve ser uma string ou null",
+      code: "validation_error",
+      message: validation.error.issues[0]?.message || "Dados inválidos",
       status: 400,
     });
   }
+
+  const { defaultPostingUnitId } = validation.data;
 
   const updatedUser = await prisma.user.update({
     where: { id: session.userId },

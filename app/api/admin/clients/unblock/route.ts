@@ -1,31 +1,58 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { withApiHandler } from '@/lib/api/handler';
+import { ApiError } from '@/lib/api/errors';
 import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
 import { logClientStatusChange } from '@/lib/audit-admin';
-import { rateLimitByUser, RATE_LIMITS } from '@/lib/rate-limit';
+import { rateLimitByUser, RATE_LIMITS } from '@/lib/rate-limit-redis';
+import { z } from 'zod';
 
-export async function POST(request: NextRequest) {
-  const session = await getAdminSessionFromRequest(request);
-  if (!session) {
-    return NextResponse.json({ message: 'Não autenticado' }, { status: 401 });
-  }
-
-  // Rate limiting
-  const rateLimitError = rateLimitByUser(session.staffId, 'client_unblock', RATE_LIMITS.USER_MANAGEMENT);
-  if (rateLimitError) return rateLimitError;
-
-  try {
-    const body = await request.json();
-    const { clientId, reason } = body;
-
-    // Mock: apenas retorna sucesso
-    // Em produção, aqui desbloquearia o cliente no banco
-
-    // Audit log
-    await logClientStatusChange(session.staffId, clientId, 'unblock', reason);
-
-    return NextResponse.json({ ok: true });
-  } catch (error) {
-    console.error('[ADMIN_CLIENTS_UNBLOCK]', error);
-    return NextResponse.json({ message: 'Erro ao desbloquear cliente' }, { status: 500 });
-  }
+interface AdminClientUnblockResponse {
+  ok: boolean;
 }
+
+const AdminClientUnblockSchema = z.object({
+  clientId: z.string().min(1, 'ID do cliente é obrigatório'),
+  reason: z.string().optional(),
+});
+
+export const POST = withApiHandler<AdminClientUnblockResponse>(async ({ req }) => {
+  const session = await getAdminSessionFromRequest(req);
+  if (!session) {
+    throw new ApiError({
+      code: 'UNAUTHORIZED',
+      message: 'Não autenticado',
+      status: 401,
+    });
+  }
+
+  // Rate limiting (Redis distribuido)
+  const rateLimitError = await rateLimitByUser(session.staffId, 'client_unblock', RATE_LIMITS.USER_MANAGEMENT);
+  if (rateLimitError) {
+    throw new ApiError({
+      code: 'RATE_LIMITED',
+      message: 'Muitas requisições. Tente novamente em alguns minutos.',
+      status: 429,
+    });
+  }
+
+  const body = await req.json();
+
+  const parsed = AdminClientUnblockSchema.safeParse(body);
+  if (!parsed.success) {
+    throw new ApiError({
+      code: 'VALIDATION_ERROR',
+      message: 'Dados inválidos',
+      status: 400,
+      details: parsed.error.flatten(),
+    });
+  }
+
+  const { clientId, reason } = parsed.data;
+
+  // Mock: apenas retorna sucesso
+  // Em produção, aqui desbloquearia o cliente no banco
+
+  // Audit log
+  await logClientStatusChange(session.staffId, clientId, 'unblock', reason);
+
+  return { data: { ok: true } };
+});

@@ -1,22 +1,21 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Profile, Address, Card, PasswordChange, Recipient, RecipientList } from "@/types/account";
+import { apiFetch } from "@/lib/api/client";
 
 export function useProfile() {
   return useQuery<Profile>({
     queryKey: ["account", "profile"],
     queryFn: async () => {
-      const response = await fetch("/api/account/profile", {
-        credentials: 'include', // Send cookies for authentication
-      });
-      if (!response.ok) {
+      try {
+        return await apiFetch<Profile>("/api/account/profile");
+      } catch (error) {
         // Handle 401 Unauthorized - redirect to login
-        if (response.status === 401) {
+        if (error instanceof Error && error.message.includes('401')) {
           window.location.href = '/auth/login';
           throw new Error("Sessão expirada");
         }
-        throw new Error("Falha ao carregar perfil");
+        throw error;
       }
-      return (await response.json()) as Profile;
     },
   });
 }
@@ -39,7 +38,9 @@ export function useProfileSave() {
         }
         throw new Error("Falha ao salvar perfil");
       }
-      return (await response.json()) as Profile;
+      const json = await response.json();
+      // Handle standardized API response format { data: T, error, meta }
+      return (json.data ?? json) as Profile;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["account", "profile"] });
@@ -51,17 +52,7 @@ export function useAddresses() {
   return useQuery<Address[]>({
     queryKey: ["account", "addresses"],
     queryFn: async () => {
-      const response = await fetch("/api/account/addresses", {
-        credentials: 'include',
-      });
-      if (!response.ok) {
-        if (response.status === 401) {
-          window.location.href = '/auth/login';
-          throw new Error("Sessão expirada");
-        }
-        throw new Error("Falha ao carregar endereços");
-      }
-      const data = await response.json();
+      const data = await apiFetch<{ addresses: Address[] }>("/api/account/addresses");
       return data.addresses || [];
     },
   });
@@ -80,7 +71,9 @@ export function useAddressCreate() {
       if (!response.ok) {
         throw new Error("Falha ao adicionar endereço");
       }
-      return response.json();
+      const json = await response.json();
+      // Handle standardized API response format { data: T, error, meta }
+      return json.data ?? json;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["account", "addresses"] });
@@ -100,7 +93,9 @@ export function useAddressUpdate(id: string) {
       if (!response.ok) {
         throw new Error("Falha ao atualizar endereço");
       }
-      return response.json();
+      const json = await response.json();
+      // Handle standardized API response format { data: T, error, meta }
+      return json.data ?? json;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["account", "addresses"] });
@@ -118,7 +113,9 @@ export function useAddressDelete(id: string) {
       if (!response.ok) {
         throw new Error("Falha ao remover endereço");
       }
-      return response.json();
+      const json = await response.json();
+      // Handle standardized API response format { data: T, error, meta }
+      return json.data ?? json;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["account", "addresses"] });
@@ -143,6 +140,13 @@ function normalizeCardsPayload(payload: unknown): RawCard[] {
   }
 
   if (payload && typeof payload === "object") {
+    // Handle { items: [...] } format from paginated API
+    const asObj = payload as Record<string, unknown>;
+    if (Array.isArray(asObj.items)) {
+      return asObj.items as RawCard[];
+    }
+
+    // Handle legacy { data: [...] } or { data: { items: [...] } }
     const data = (payload as CardsApiResponse).data;
     if (Array.isArray(data)) {
       return data as RawCard[];
@@ -208,7 +212,13 @@ export function useCards() {
         throw new Error("Falha ao carregar cartões");
       }
       const json = await response.json();
-      return normalizeCardsPayload(json).map(mapCardShape);
+      console.log('[useCards] Raw response:', json);
+      // Handle both standardized { data: ... } and legacy formats
+      const payload = json.data !== undefined ? json.data : json;
+      console.log('[useCards] Extracted payload:', payload);
+      const cards = normalizeCardsPayload(payload).map(mapCardShape);
+      console.log('[useCards] Normalized cards:', cards);
+      return cards;
     },
   });
 }
@@ -461,15 +471,17 @@ export function usePasswordChange() {
         headers: { "Content-Type": "application/json" },
       });
 
-      const data = await response.json();
+      const json = await response.json();
 
       if (!response.ok) {
-        // Extrair mensagem de erro específica do backend
-        const errorMessage = data.message || data.errors?.[0]?.message || "Falha ao alterar senha";
+        // Handle standardized API response format { data: T, error, meta }
+        const errorData = json.error ?? json;
+        const errorMessage = errorData.message || errorData.errors?.[0]?.message || "Falha ao alterar senha";
         throw new Error(errorMessage);
       }
 
-      return data;
+      // Handle standardized API response format { data: T, error, meta }
+      return json.data ?? json;
     },
   });
 }

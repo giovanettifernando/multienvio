@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import { withApiHandler } from '@/lib/api/handler';
+import { ApiError } from '@/lib/api/errors';
 import { prisma } from "@/lib/db";
 import type { TrackingEventType } from "@/types/tracking";
 
@@ -36,98 +37,83 @@ const carrierCodeMap: Record<string, TrackingEventType> = {
  * Recebe eventos de rastreamento de transportadoras
  * Este endpoint deve ser protegido por autenticação de webhook em produção
  */
-export async function POST(request: Request) {
+export const POST = withApiHandler(async (context) => {
+  let payload: Record<string, unknown>;
   try {
-    let payload: Record<string, unknown>;
-    try {
-      payload = await request.json();
-    } catch {
-      return NextResponse.json(
-        { message: "JSON inválido no corpo da requisição" },
-        { status: 400 }
-      );
-    }
+    payload = await context.req.json();
+  } catch {
+    throw ApiError.badRequest("JSON inválido no corpo da requisição");
+  }
 
-    const shipmentId = payload?.shipmentId as string;
-    const carrierCode = payload?.code as string;
-    const description = payload?.description as string;
-    const city = payload?.city as string | undefined;
-    const uf = payload?.uf as string | undefined;
-    const occurredAt = payload?.occurredAt as string | undefined;
+  const shipmentId = payload?.shipmentId as string;
+  const carrierCode = payload?.code as string;
+  const description = payload?.description as string;
+  const city = payload?.city as string | undefined;
+  const uf = payload?.uf as string | undefined;
+  const occurredAt = payload?.occurredAt as string | undefined;
 
-    if (!shipmentId || !carrierCode || !description) {
-      return NextResponse.json(
-        { message: "shipmentId, code e description são obrigatórios" },
-        { status: 400 }
-      );
-    }
+  if (!shipmentId || !carrierCode || !description) {
+    throw ApiError.badRequest("shipmentId, code e description são obrigatórios");
+  }
 
-    // Verificar se o shipment existe
-    const shipment = await prisma.shipment.findUnique({
+  // Verificar se o shipment existe
+  const shipment = await prisma.shipment.findUnique({
+    where: { id: shipmentId },
+    select: { id: true },
+  });
+
+  if (!shipment) {
+    throw ApiError.notFound("Shipment não encontrado");
+  }
+
+  // Mapear código da transportadora para tipo interno
+  const eventType = carrierCodeMap[carrierCode] ?? carrierCodeMap[carrierCode.toUpperCase()] ?? "IN_TRANSIT";
+
+  // Criar evento de rastreamento
+  const trackingEvent = await prisma.trackingEvent.create({
+    data: {
+      shipmentId,
+      type: eventType,
+      description,
+      city: city || null,
+      uf: uf || null,
+      occurredAt: occurredAt ? new Date(occurredAt) : new Date(),
+    },
+  });
+
+  // Atualizar status do shipment se necessário
+  if (eventType === "DELIVERED") {
+    await prisma.shipment.update({
       where: { id: shipmentId },
-      select: { id: true },
-    });
-
-    if (!shipment) {
-      return NextResponse.json(
-        { message: "Shipment não encontrado" },
-        { status: 404 }
-      );
-    }
-
-    // Mapear código da transportadora para tipo interno
-    const eventType = carrierCodeMap[carrierCode] ?? carrierCodeMap[carrierCode.toUpperCase()] ?? "IN_TRANSIT";
-
-    // Criar evento de rastreamento
-    const trackingEvent = await prisma.trackingEvent.create({
       data: {
-        shipmentId,
-        type: eventType,
-        description,
-        city: city || null,
-        uf: uf || null,
-        occurredAt: occurredAt ? new Date(occurredAt) : new Date(),
+        status: "DELIVERED",
+        deliveredAt: occurredAt ? new Date(occurredAt) : new Date(),
       },
     });
-
-    // Atualizar status do shipment se necessário
-    if (eventType === "DELIVERED") {
-      await prisma.shipment.update({
-        where: { id: shipmentId },
-        data: {
-          status: "DELIVERED",
-          deliveredAt: occurredAt ? new Date(occurredAt) : new Date(),
-        },
-      });
-    } else if (eventType === "ISSUE" || eventType === "DELAYED") {
+  } else if (eventType === "ISSUE" || eventType === "DELAYED") {
+    await prisma.shipment.update({
+      where: { id: shipmentId },
+      data: { status: eventType },
+    });
+  } else if (eventType === "IN_TRANSIT" || eventType === "OUT_FOR_DELIVERY") {
+    // Atualizar status apenas se não estiver em estado final
+    const currentShipment = await prisma.shipment.findUnique({
+      where: { id: shipmentId },
+      select: { status: true },
+    });
+    if (currentShipment && !["DELIVERED", "CANCELED", "RETURNED"].includes(currentShipment.status)) {
       await prisma.shipment.update({
         where: { id: shipmentId },
         data: { status: eventType },
       });
-    } else if (eventType === "IN_TRANSIT" || eventType === "OUT_FOR_DELIVERY") {
-      // Atualizar status apenas se não estiver em estado final
-      const currentShipment = await prisma.shipment.findUnique({
-        where: { id: shipmentId },
-        select: { status: true },
-      });
-      if (currentShipment && !["DELIVERED", "CANCELED", "RETURNED"].includes(currentShipment.status)) {
-        await prisma.shipment.update({
-          where: { id: shipmentId },
-          data: { status: eventType },
-        });
-      }
     }
+  }
 
-    return NextResponse.json({
+  return {
+    data: {
       success: true,
       eventId: trackingEvent.id,
       eventType,
-    });
-  } catch (error) {
-    console.error("[WEBHOOK_TRACKING]", error);
-    return NextResponse.json(
-      { message: "Erro ao processar webhook" },
-      { status: 500 }
-    );
-  }
-}
+    },
+  };
+});

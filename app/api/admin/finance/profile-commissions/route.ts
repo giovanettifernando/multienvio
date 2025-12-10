@@ -12,9 +12,9 @@
  *   - all: Ambos
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { withApiHandler } from '@/lib/api/handler';
+import { ApiError } from '@/lib/api/errors';
 import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
-import { requirePermission } from '@/lib/auth/permissions';
 import { AdminPermission } from '@prisma/client';
 import { prisma } from '@/lib/db';
 
@@ -74,57 +74,60 @@ const COMPLETED_RECEPTION_STATUSES = ['RECEIVED', 'PROCESSED', 'ISSUE_REPORTED']
 // Status de Reception que indicam recepção pendente
 const PENDING_RECEPTION_STATUSES = ['PENDING'];
 
-export async function GET(request: NextRequest) {
-  const session = await getAdminSessionFromRequest(request);
+export const GET = withApiHandler<ProfileCommissionsResponse>(async ({ req }) => {
+  const session = await getAdminSessionFromRequest(req);
   if (!session) {
-    return NextResponse.json({ message: 'Não autenticado' }, { status: 401 });
+    throw new ApiError({
+      code: 'UNAUTHORIZED',
+      message: 'Não autenticado',
+      status: 401,
+    });
   }
 
-  const permissionError = requirePermission(session, AdminPermission.FINANCEIRO);
-  if (permissionError) return permissionError;
-
-  try {
-    const searchParams = request.nextUrl.searchParams;
-    const dateStart = searchParams.get('dateStart');
-    const dateEnd = searchParams.get('dateEnd');
-    const profileType = searchParams.get('profileType') as ProfileType | null;
-    const statusFilter = (searchParams.get('status') || 'all') as CommissionStatusFilter;
-
-    // Validar parâmetros
-    if (!dateStart || !dateEnd) {
-      return NextResponse.json(
-        { message: 'Período obrigatório (dateStart e dateEnd)' },
-        { status: 400 }
-      );
-    }
-
-    if (!profileType || !['collector', 'pickup_point'].includes(profileType)) {
-      return NextResponse.json(
-        { message: 'Tipo de perfil obrigatório (profileType: collector | pickup_point)' },
-        { status: 400 }
-      );
-    }
-
-    const startDate = new Date(dateStart);
-    const endDate = new Date(dateEnd);
-
-    let response: ProfileCommissionsResponse;
-
-    if (profileType === 'collector') {
-      response = await getCollectorCommissions(startDate, endDate, statusFilter);
-    } else {
-      response = await getPickupPointCommissions(startDate, endDate, statusFilter);
-    }
-
-    return NextResponse.json(response);
-  } catch (error) {
-    console.error('[PROFILE_COMMISSIONS] Error:', error);
-    return NextResponse.json(
-      { message: 'Erro ao calcular comissões' },
-      { status: 500 }
-    );
+  if (!session.permissions.includes(AdminPermission.FINANCEIRO)) {
+    throw new ApiError({
+      code: 'FORBIDDEN',
+      message: 'Sem permissão para acessar este recurso',
+      status: 403,
+    });
   }
-}
+
+  const searchParams = req.nextUrl.searchParams;
+  const dateStart = searchParams.get('dateStart');
+  const dateEnd = searchParams.get('dateEnd');
+  const profileType = searchParams.get('profileType') as ProfileType | null;
+  const statusFilter = (searchParams.get('status') || 'all') as CommissionStatusFilter;
+
+  // Validar parâmetros
+  if (!dateStart || !dateEnd) {
+    throw new ApiError({
+      code: 'VALIDATION_ERROR',
+      message: 'Período obrigatório (dateStart e dateEnd)',
+      status: 400,
+    });
+  }
+
+  if (!profileType || !['collector', 'pickup_point'].includes(profileType)) {
+    throw new ApiError({
+      code: 'VALIDATION_ERROR',
+      message: 'Tipo de perfil obrigatório (profileType: collector | pickup_point)',
+      status: 400,
+    });
+  }
+
+  const startDate = new Date(dateStart);
+  const endDate = new Date(dateEnd);
+
+  let response: ProfileCommissionsResponse;
+
+  if (profileType === 'collector') {
+    response = await getCollectorCommissions(startDate, endDate, statusFilter);
+  } else {
+    response = await getPickupPointCommissions(startDate, endDate, statusFilter);
+  }
+
+  return { data: response };
+});
 
 async function getCollectorCommissions(
   startDate: Date,

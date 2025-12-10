@@ -27,7 +27,9 @@ async function fetchPickup(id: string): Promise<PickupRequestDetail> {
   if (!response.ok) {
     throw new Error("Coleta não encontrada");
   }
-  return response.json();
+  const json = await response.json();
+  // Handle standardized API response format { data: T, error, meta }
+  return (json.data ?? json) as PickupRequestDetail;
 }
 
 const STATUS_OPTIONS = [

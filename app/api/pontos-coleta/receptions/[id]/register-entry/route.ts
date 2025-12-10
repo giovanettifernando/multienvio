@@ -3,94 +3,107 @@
  * POST /api/pontos-coleta/receptions/[id]/register-entry
  */
 
-
-import { NextRequest, NextResponse } from 'next/server';
+import { withApiHandler } from '@/lib/api/handler';
+import { ApiError } from '@/lib/api/errors';
 import { prisma } from '@/lib/db';
 import { z } from 'zod';
+import { getCollectorSessionFromRequest } from '@/lib/auth/collector-session';
 
 const RegisterEntrySchema = z.object({
   trackingCode: z.string().min(1, 'Código de rastreio é obrigatório'),
 });
 
+type RegisterEntryResponse = {
+  message: string;
+  shipment: {
+    id: string;
+    trackingCode: string | null;
+    receivedAt: string | null;
+    status: string;
+  };
+};
+
 /**
  * POST /api/pontos-coleta/receptions/[id]/register-entry
  * Registra entrada do envio no hub
  */
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const { id } = await params;
-    const body = await request.json();
-    const validatedData = RegisterEntrySchema.parse(body);
-
-    // Buscar o envio
-    const shipment = await prisma.shipment.findUnique({
-      where: { id },
+export const POST = withApiHandler<RegisterEntryResponse, { id: string }>(async ({ req, params, logger }) => {
+  // Verificar autenticação do ponto de coleta
+  const session = await getCollectorSessionFromRequest(req);
+  if (!session) {
+    throw new ApiError({
+      code: 'UNAUTHORIZED',
+      message: 'Não autenticado',
+      status: 401,
     });
+  }
 
-    if (!shipment) {
-      return NextResponse.json({ message: 'Envio não encontrado' }, { status: 404 });
-    }
+  const body = await req.json();
+  const validatedData = RegisterEntrySchema.parse(body);
 
-    // Validar se já foi recebido
-    if (shipment.receivedAt) {
-      return NextResponse.json(
-        { message: 'Este envio já foi registrado como recebido' },
-        { status: 400 }
-      );
-    }
+  // Buscar o envio
+  const shipment = await prisma.shipment.findUnique({
+    where: { id: params.id },
+  });
 
-    // Validar código de rastreio
-    if (shipment.platformTrackingCode !== validatedData.trackingCode) {
-      return NextResponse.json(
-        { message: 'Código de rastreio não corresponde ao envio selecionado' },
-        { status: 400 }
-      );
-    }
+  if (!shipment) {
+    throw new ApiError({ code: 'NOT_FOUND', message: 'Envio não encontrado', status: 404 });
+  }
 
-    // Registrar recebimento
-    const updatedShipment = await prisma.shipment.update({
-      where: { id },
-      data: {
-        receivedAt: new Date(),
-        receivedBy: 'collector-user', // TODO: Pegar ID do usuário autenticado
-        status: 'recebido', // Atualizar status para "recebido"
-      },
+  // Validar se já foi recebido
+  if (shipment.receivedAt) {
+    throw new ApiError({
+      code: 'BAD_REQUEST',
+      message: 'Este envio já foi registrado como recebido',
+      status: 400,
     });
+  }
 
-    // Criar evento de rastreamento
-    await prisma.trackingEvent.create({
-      data: {
-        shipmentId: id,
-        type: 'recebido',
-        description: 'Envio recebido no hub de distribuição',
-        city: 'Hub de Distribuição',
-        occurredAt: new Date(),
-      },
+  // Validar código de rastreio
+  if (shipment.platformTrackingCode !== validatedData.trackingCode) {
+    throw new ApiError({
+      code: 'VALIDATION_ERROR',
+      message: 'Código de rastreio não corresponde ao envio selecionado',
+      status: 400,
     });
+  }
 
-    return NextResponse.json({
+  // Registrar recebimento
+  const updatedShipment = await prisma.shipment.update({
+    where: { id: params.id },
+    data: {
+      receivedAt: new Date(),
+      receivedBy: session.pointId,
+      status: 'recebido', // Atualizar status para "recebido"
+    },
+  });
+
+  // Criar evento de rastreamento
+  await prisma.trackingEvent.create({
+    data: {
+      shipmentId: params.id,
+      type: 'recebido',
+      description: 'Envio recebido no hub de distribuição',
+      city: 'Hub de Distribuição',
+      occurredAt: new Date(),
+    },
+  });
+
+  logger.info('shipment_entry_registered', {
+    shipmentId: params.id,
+    pointId: session.pointId,
+    trackingCode: validatedData.trackingCode,
+  });
+
+  return {
+    data: {
       message: 'Entrada registrada com sucesso',
       shipment: {
         id: updatedShipment.id,
         trackingCode: updatedShipment.platformTrackingCode,
-        receivedAt: updatedShipment.receivedAt,
+        receivedAt: updatedShipment.receivedAt?.toISOString() ?? null,
         status: updatedShipment.status,
       },
-    });
-  } catch (error) {
-    console.error('[REGISTER_ENTRY_POST]', error);
-
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { message: 'Dados inválidos', details: error.message },
-        { status: 400 }
-      );
-    }
-
-    const message = error instanceof Error ? error.message : 'Erro ao registrar entrada';
-    return NextResponse.json({ message }, { status: 500 });
-  }
-}
+    },
+  };
+});

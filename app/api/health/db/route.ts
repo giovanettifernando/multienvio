@@ -1,8 +1,11 @@
 import { withApiHandler } from "@/lib/api/handler";
 import { pingDatabase, schedulePrismaReconnect } from "@/lib/db";
 
+type HealthDbResponse =
+  | { status: "ok" }
+  | { status: "unavailable" };
 
-export const GET = withApiHandler(async ({ logger }) => {
+export const GET = withApiHandler<HealthDbResponse>(async ({ logger }) => {
   try {
     await pingDatabase();
     return {

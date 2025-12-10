@@ -1,20 +1,42 @@
-import { NextResponse } from 'next/server';
 import { z } from 'zod';
+import { withApiHandler } from '@/lib/api/handler';
+import { ApiError } from '@/lib/api/errors';
 import { prisma } from '@/lib/db';
 import { generateToken, hashToken } from '@/lib/auth/tokens';
 import { sendVerificationEmail } from '@/lib/email/mailer';
-
 
 const ResendSchema = z.object({
   email: z.string().email('Email inválido'),
 });
 
-export async function POST(request: Request) {
+type ResendVerificationResponse =
+  | {
+      success: true;
+      message: string;
+      code: null;
+      emailSent: null;
+    }
+  | {
+      success: true;
+      message: string;
+      code: 'ALREADY_VERIFIED';
+      emailSent: null;
+    }
+  | {
+      success: true;
+      message: string;
+      code: null;
+      emailSent: boolean;
+    };
+
+export const POST = withApiHandler<ResendVerificationResponse>(async (context) => {
+  const { req, logger } = context;
+
   try {
-    const body = await request.json();
+    const body = await req.json();
     const { email } = ResendSchema.parse(body);
 
-    console.log('[RESEND_VERIFICATION] Resending verification email to:', email);
+    logger.info('resend_verification_request');
 
     // Find user by email
     const user = await prisma.user.findUnique({
@@ -23,20 +45,27 @@ export async function POST(request: Request) {
 
     if (!user) {
       // Don't reveal if email exists for security
-      return NextResponse.json({
-        success: true,
-        message: 'Se o email estiver cadastrado, você receberá um novo link de verificação.',
-      });
+      return {
+        data: {
+          success: true,
+          message: 'Se o email estiver cadastrado, você receberá um novo link de verificação.',
+          code: null,
+          emailSent: null,
+        },
+      };
     }
 
     // Check if already verified
     if (user.emailVerified) {
-      console.log('[RESEND_VERIFICATION] Email already verified:', email);
-      return NextResponse.json({
-        success: true,
-        message: 'Este email já foi verificado. Você pode fazer login.',
-        code: 'ALREADY_VERIFIED',
-      });
+      logger.info('resend_verification_already_verified');
+      return {
+        data: {
+          success: true,
+          message: 'Este email já foi verificado. Você pode fazer login.',
+          code: 'ALREADY_VERIFIED',
+          emailSent: null,
+        },
+      };
     }
 
     // Generate new verification token
@@ -51,7 +80,7 @@ export async function POST(request: Request) {
       },
     });
 
-    console.log('[RESEND_VERIFICATION] New token generated for user:', user.id);
+    logger.info('resend_verification_token_generated', { userId: user.id });
 
     // Send verification email
     let emailSent = false;
@@ -59,40 +88,39 @@ export async function POST(request: Request) {
       emailSent = await sendVerificationEmail(user.email, user.name, verificationToken);
 
       if (emailSent) {
-        console.log('[RESEND_VERIFICATION] Verification email sent to:', user.email);
+        logger.info('resend_verification_email_sent', { userId: user.id });
       } else {
-        console.error('[RESEND_VERIFICATION] Failed to send email to:', user.email);
+        logger.error('resend_verification_email_failed', { userId: user.id });
       }
     } catch (error) {
-      console.error('[RESEND_VERIFICATION] Error sending email:', error);
+      logger.error('resend_verification_email_error', { userId: user.id, err: error });
     }
 
-    return NextResponse.json({
-      success: true,
-      message: emailSent
-        ? 'Email de verificação reenviado com sucesso! Verifique sua caixa de entrada.'
-        : 'Não foi possível enviar o email. Tente novamente em alguns minutos.',
-      emailSent,
-    });
+    return {
+      data: {
+        success: true,
+        message: emailSent
+          ? 'Email de verificação reenviado com sucesso! Verifique sua caixa de entrada.'
+          : 'Não foi possível enviar o email. Tente novamente em alguns minutos.',
+        code: null,
+        emailSent,
+      },
+    };
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: 'Email inválido',
-          errors: error.issues,
-        },
-        { status: 400 }
-      );
+      throw new ApiError({
+        code: 'VALIDATION_ERROR',
+        message: 'Email inválido',
+        status: 400,
+        details: { errors: error.issues },
+      });
     }
 
-    console.error('[RESEND_VERIFICATION] Unexpected error:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        message: 'Erro ao processar solicitação',
-      },
-      { status: 500 }
-    );
+    logger.error('resend_verification_error', { err: error });
+    throw new ApiError({
+      code: 'INTERNAL_ERROR',
+      message: 'Erro ao processar solicitação',
+      status: 500,
+    });
   }
-}
+});

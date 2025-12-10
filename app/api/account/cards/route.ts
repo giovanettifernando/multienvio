@@ -2,6 +2,7 @@ import { withApiHandler } from "@/lib/api/handler";
 import {
   createUserCard,
   listUserCards,
+  type AccountCardDto,
 } from "@/lib/services/account-cards.service";
 import {
   validateCardCreateInput,
@@ -14,8 +15,29 @@ import {
 } from "./helpers";
 import { ApiError } from "@/lib/api/errors";
 
+type CardDtoResponse = {
+  id: string;
+  brand: string;
+  holderName: string;
+  last4: string;
+  expMonth: number;
+  expYear: number;
+  isDefault: boolean;
+  billingAddressId: string | null;
+  createdAt: string;
+};
 
-export const GET = withApiHandler(async ({ req, logger }) => {
+type GetCardsResponse = {
+  items: CardDtoResponse[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+};
+
+type CreateCardResponse = CardDtoResponse;
+
+export const GET = withApiHandler<GetCardsResponse>(async ({ req, logger }) => {
   const userId = await requireUserId(req);
 
   const search = req.nextUrl.searchParams;
@@ -29,16 +51,22 @@ export const GET = withApiHandler(async ({ req, logger }) => {
   );
 
   return {
-    data: result,
+    data: {
+      ...result,
+      items: result.items.map(card => ({
+        ...card,
+        createdAt: card.createdAt.toISOString(),
+      })),
+    },
     meta: { tags: ["account", "cards"] },
   };
 });
 
-export const POST = withApiHandler(async (context) => {
+export const POST = withApiHandler<CreateCardResponse>(async (context) => {
   const { req, logger } = context;
   const userId = await requireUserId(req);
 
-  enforceCardWriteLimit(context);
+  await enforceCardWriteLimit(context);
 
   let payload: unknown;
   try {
@@ -61,7 +89,10 @@ export const POST = withApiHandler(async (context) => {
   const card = await createUserCard(userId, normalized, { logger });
 
   return {
-    data: card,
+    data: {
+      ...card,
+      createdAt: card.createdAt.toISOString(),
+    },
     status: 201,
     meta: { tags: ["account", "cards"] },
   };

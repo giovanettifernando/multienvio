@@ -1,12 +1,13 @@
 import { withApiHandler } from "@/lib/api/handler";
-import { makeRecipientDefault } from "@/lib/services/account-recipients.service";
+import { makeRecipientDefault, type AccountRecipientDto } from "@/lib/services/account-recipients.service";
 import { enforceRecipientWriteLimit, requireUserId, handleRecipientDataStoreError } from "../../helpers";
 
+type MakeDefaultRecipientResponse = AccountRecipientDto;
 
-export const POST = withApiHandler(async (context) => {
+export const POST = withApiHandler<MakeDefaultRecipientResponse>(async (context) => {
   const { req, params, logger } = context;
   const userId = await requireUserId(req);
-  enforceRecipientWriteLimit(context);
+  await enforceRecipientWriteLimit(context);
 
   const { id } = await params;
   try {

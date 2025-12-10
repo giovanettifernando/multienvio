@@ -1,31 +1,48 @@
-
-import { NextResponse } from 'next/server';
-import { ZodError } from 'zod';
-import { getSession } from '@/lib/auth/session';
+import { withApiHandler } from '@/lib/api/handler';
+import { ApiError } from '@/lib/api/errors';
+import { getUserFromRequest } from '@/lib/auth/session';
 import { packagingUpdateSchema } from '@/lib/validation/packaging';
 import * as packagingService from '@/lib/services/packaging';
+import { logger } from '@/lib/logger';
 
-interface RouteParams {
-  params: Promise<{ id: string }>;
+interface PackagingTemplate {
+  id: string;
+  name: string;
+  lengthCm: number;
+  widthCm: number;
+  heightCm: number;
+  createdAt: string;
+  updatedAt: string;
 }
+
+type PackagingUpdateResponse = PackagingTemplate;
 
 /**
  * PUT /api/packaging/[id]
  * Atualiza uma embalagem existente do usuário
  */
-export async function PUT(request: Request, { params }: RouteParams) {
+export const PUT = withApiHandler<PackagingUpdateResponse, { id: string }>(async (context) => {
+  const session = await getUserFromRequest(context.req);
+  if (!session?.userId) {
+    throw new ApiError({ code: 'unauthorized', message: 'Não autorizado', status: 401 });
+  }
+
+  const id = context.params.id;
+  const body = await context.req.json();
+
+  const validation = packagingUpdateSchema.safeParse(body);
+  if (!validation.success) {
+    logger.debug({ event: 'packaging_validation_error', errors: validation.error.flatten() }, 'Packaging validation failed');
+    throw new ApiError({
+      code: 'validation_error',
+      message: validation.error.issues[0]?.message || 'Dados inválidos',
+      status: 400,
+      details: validation.error.flatten(),
+    });
+  }
+
   try {
-    const session = await getSession();
-
-    if (!session?.userId) {
-      return NextResponse.json({ message: 'Não autorizado' }, { status: 401 });
-    }
-
-    const { id } = await params;
-    const body = await request.json();
-    const data = packagingUpdateSchema.parse(body);
-
-    const template = await packagingService.update(session.userId, id, data);
+    const template = await packagingService.update(session.userId, id, validation.data);
 
     // Converter Decimal para number no response
     const result = {
@@ -38,58 +55,36 @@ export async function PUT(request: Request, { params }: RouteParams) {
       updatedAt: template.updatedAt.toISOString(),
     };
 
-    return NextResponse.json(result);
+    return { data: result };
   } catch (error) {
-    if (error instanceof ZodError) {
-      return NextResponse.json(
-        {
-          message: 'Dados inválidos',
-          errors: error.issues.map((issue) => ({
-            field: issue.path.join('.'),
-            message: issue.message,
-          })),
-        },
-        { status: 400 }
-      );
-    }
-
     if (error instanceof Error && error.message === 'Embalagem não encontrada') {
-      return NextResponse.json({ message: error.message }, { status: 404 });
+      throw new ApiError({ code: 'not_found', message: error.message, status: 404 });
     }
-
-    console.error('[PACKAGING_UPDATE]', error);
-    return NextResponse.json(
-      { message: 'Erro ao atualizar embalagem' },
-      { status: 500 }
-    );
+    throw error;
   }
-}
+});
+
+type PackagingDeleteResponse = null;
 
 /**
  * DELETE /api/packaging/[id]
  * Remove uma embalagem do usuário
  */
-export async function DELETE(request: Request, { params }: RouteParams) {
+export const DELETE = withApiHandler<PackagingDeleteResponse, { id: string }>(async (context) => {
+  const session = await getUserFromRequest(context.req);
+  if (!session?.userId) {
+    throw new ApiError({ code: 'unauthorized', message: 'Não autorizado', status: 401 });
+  }
+
+  const id = context.params.id;
+
   try {
-    const session = await getSession();
-
-    if (!session?.userId) {
-      return NextResponse.json({ message: 'Não autorizado' }, { status: 401 });
-    }
-
-    const { id } = await params;
     await packagingService.remove(session.userId, id);
-
-    return new NextResponse(null, { status: 204 });
+    return { data: null, status: 204 };
   } catch (error) {
     if (error instanceof Error && error.message === 'Embalagem não encontrada') {
-      return NextResponse.json({ message: error.message }, { status: 404 });
+      throw new ApiError({ code: 'not_found', message: error.message, status: 404 });
     }
-
-    console.error('[PACKAGING_DELETE]', error);
-    return NextResponse.json(
-      { message: 'Erro ao remover embalagem' },
-      { status: 500 }
-    );
+    throw error;
   }
-}
+});

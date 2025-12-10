@@ -10,9 +10,37 @@
  * - limit: Limite de resultados (padrão: 10, máximo: 50)
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { withApiHandler } from '@/lib/api/handler';
+import { ApiError } from '@/lib/api/errors';
+import { getUserFromRequest } from '@/lib/auth/session';
 import { prisma } from '@/lib/db';
-import { getSession } from '@/lib/auth/session';
+
+interface CorreiosAgency {
+  id: string;
+  nome: string;
+  tipoUnidadeSigla: string | null;
+  tipoUnidadeDescricao: string | null;
+  cep: string;
+  uf: string;
+  municipio: string;
+  bairro: string | null;
+  logradouro: string | null;
+  numero: string | null;
+  complemento: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  horarioFuncionamento: string | null;
+  iniExpediente: string | null;
+  fimExpediente: string | null;
+  enderecoCompleto: string;
+}
+
+interface CorreiosAgenciesResponse {
+  agencies: CorreiosAgency[];
+  total: number;
+  uf: string;
+  municipio: string | null;
+}
 
 /**
  * Remove acentos de uma string para comparação
@@ -21,88 +49,73 @@ function removeAccents(str: string): string {
   return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 }
 
-export async function GET(request: NextRequest) {
-  try {
-    // Verificar autenticação do usuário
-    const session = await getSession();
-    if (!session?.userId) {
-      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-    }
+export const GET = withApiHandler<CorreiosAgenciesResponse>(async (context) => {
+  const session = await getUserFromRequest(context.req);
+  if (!session?.userId) {
+    throw new ApiError({ code: 'unauthorized', message: 'Não autorizado', status: 401 });
+  }
 
-    // Parâmetros de query
-    const { searchParams } = new URL(request.url);
-    const uf = searchParams.get('uf');
-    const municipio = searchParams.get('municipio') || undefined;
-    const limit = Math.min(parseInt(searchParams.get('limit') || '10', 10), 50);
+  const { searchParams } = new URL(context.req.url);
+  const uf = searchParams.get('uf');
+  const municipio = searchParams.get('municipio') || undefined;
+  const limit = Math.min(parseInt(searchParams.get('limit') || '10', 10), 50);
 
-    if (!uf) {
-      return NextResponse.json(
-        { error: 'Parâmetro uf é obrigatório' },
-        { status: 400 }
-      );
-    }
+  if (!uf) {
+    throw new ApiError({ code: 'validation_error', message: 'Parâmetro uf é obrigatório', status: 400 });
+  }
 
-    // Buscar agências ativas (todas as agências ativas aceitam postagem)
-    const where: {
-      uf: string;
-      status: 'ATIVA';
-      municipio?: { contains: string; mode: 'insensitive' };
-    } = {
-      uf: uf.toUpperCase(),
-      status: 'ATIVA',
-    };
+  const where: {
+    uf: string;
+    status: 'ATIVA';
+    municipio?: { contains: string; mode: 'insensitive' };
+  } = {
+    uf: uf.toUpperCase(),
+    status: 'ATIVA',
+  };
 
-    if (municipio) {
-      // Normalizar município removendo acentos para comparação
-      // Ex: "João Pessoa" -> "JOAO PESSOA"
-      const normalizedMunicipio = removeAccents(municipio).toUpperCase();
-      where.municipio = { contains: normalizedMunicipio, mode: 'insensitive' };
-    }
+  if (municipio) {
+    const normalizedMunicipio = removeAccents(municipio).toUpperCase();
+    where.municipio = { contains: normalizedMunicipio, mode: 'insensitive' };
+  }
 
-    const agencies = await prisma.correiosAgency.findMany({
-      where,
-      select: {
-        id: true,
-        nome: true,
-        tipoUnidadeSigla: true,
-        tipoUnidadeDescricao: true,
-        cep: true,
-        uf: true,
-        municipio: true,
-        bairro: true,
-        logradouro: true,
-        numero: true,
-        complemento: true,
-        latitude: true,
-        longitude: true,
-        horarioFuncionamento: true,
-        iniExpediente: true,
-        fimExpediente: true,
-      },
-      orderBy: [{ municipio: 'asc' }, { nome: 'asc' }],
-      take: limit,
-    });
+  const agencies = await prisma.correiosAgency.findMany({
+    where,
+    select: {
+      id: true,
+      nome: true,
+      tipoUnidadeSigla: true,
+      tipoUnidadeDescricao: true,
+      cep: true,
+      uf: true,
+      municipio: true,
+      bairro: true,
+      logradouro: true,
+      numero: true,
+      complemento: true,
+      latitude: true,
+      longitude: true,
+      horarioFuncionamento: true,
+      iniExpediente: true,
+      fimExpediente: true,
+    },
+    orderBy: [{ municipio: 'asc' }, { nome: 'asc' }],
+    take: limit,
+  });
 
-    // Formatar endereço completo
-    const formattedAgencies = agencies.map((agency) => ({
-      ...agency,
-      enderecoCompleto: formatEndereco(agency),
-    }));
+  const formattedAgencies = agencies.map((agency) => ({
+    ...agency,
+    enderecoCompleto: formatEndereco(agency),
+  }));
 
-    return NextResponse.json({
+  return {
+    data: {
       agencies: formattedAgencies,
       total: formattedAgencies.length,
       uf,
       municipio: municipio || null,
-    });
-  } catch (error) {
-    console.error('[CORREIOS_AGENCIES_NEARBY] Erro:', error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Erro interno' },
-      { status: 500 }
-    );
-  }
-}
+    },
+  };
+});
 
 /**
  * Formata endereço completo da agência

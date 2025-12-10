@@ -1,127 +1,146 @@
-import { NextRequest, NextResponse } from 'next/server';
-
-import { getUserSessionFromRequest } from '@/lib/auth/user-session';
+import { withApiHandler } from '@/lib/api/handler';
+import { ApiError } from '@/lib/api/errors';
+import { getUserFromRequest } from '@/lib/auth/session';
 import { createQuote, listQuotes } from '@/lib/quotes/service';
 import {
   quoteRequestSchema,
   listQuotesQuerySchema,
   type QuoteRequest,
 } from '@/lib/validation/quote-backend';
+import { logger } from '@/lib/logger';
+import type { QuoteResultItem, QuoteSummary, PartnerPoint } from '@/types/quote';
+
+type PostCotacoesResponse = {
+  quoteId: string;
+  createdAt: string;
+  expiresAt: string;
+  results: QuoteResultItem[];
+  pontosParceiros?: PartnerPoint[];
+};
 
 /**
  * POST /api/cotacoes
  * Creates a new quote with shipping options
  */
-export async function POST(request: Request) {
-  const requestId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-  console.log(`[API][${requestId}] POST /api/cotacoes - Início`);
+export const POST = withApiHandler<PostCotacoesResponse>(async (context) => {
+  const session = await getUserFromRequest(context.req);
+  if (!session?.userId) {
+    throw new ApiError({ code: 'unauthorized', message: 'Não autenticado', status: 401 });
+  }
 
-  try {
-    // Authenticate user
-    console.log(`[API][${requestId}] Verificando autenticação...`);
-    const session = await getUserSessionFromRequest(request);
-    if (!session) {
-      console.warn(`[API][${requestId}] Não autenticado`);
-      return NextResponse.json({ message: 'Não autenticado' }, { status: 401 });
-    }
-    console.log(`[API][${requestId}] Usuário autenticado:`, { userId: session.userId });
+  // Parse and validate request body
+  const body = (await context.req.json()) as unknown;
 
-    // Parse and validate request body
-    console.log(`[API][${requestId}] Parseando body...`);
-    const body = (await request.json()) as unknown;
-    console.log(`[API][${requestId}] Body recebido:`, JSON.stringify(body, null, 2));
+  const parsed = quoteRequestSchema.safeParse(body);
 
-    const parsed = quoteRequestSchema.safeParse(body);
-
-    if (!parsed.success) {
-      console.error(`[API][${requestId}] Validação falhou:`, parsed.error.flatten());
-      return NextResponse.json(
-        {
-          message: 'Dados inválidos',
-          errors: parsed.error.flatten(),
-        },
-        { status: 400 }
-      );
-    }
-
-    const data: QuoteRequest = parsed.data;
-    console.log(`[API][${requestId}] Dados validados com sucesso`);
-
-    // Create quote with shipping options
-    console.log(`[API][${requestId}] Chamando createQuote...`);
-    const result = await createQuote(session.userId, data);
-    console.log(`[API][${requestId}] createQuote retornou:`, {
-      quoteId: result.quoteId,
-      resultsCount: result.results.length,
-      hasPontos: !!result.pontosParceiros,
+  if (!parsed.success) {
+    logger.debug({ event: 'quote_validation_error', errors: parsed.error.flatten() }, 'Quote validation failed');
+    throw new ApiError({
+      code: 'validation_error',
+      message: parsed.error.issues[0]?.message || 'Dados inválidos',
+      status: 400,
+      details: parsed.error.flatten(),
     });
+  }
 
-    // Return response matching frontend contract
-    const response = {
+  const data: QuoteRequest = parsed.data;
+
+  // Create quote with shipping options
+  const result = await createQuote(session.userId, data);
+
+  logger.info({
+    event: 'quote_created',
+    quoteId: result.quoteId,
+    userId: session.userId,
+    resultsCount: result.results.length,
+  }, 'Quote created successfully');
+
+  // Return response matching frontend contract
+  return {
+    data: {
       quoteId: result.quoteId,
       createdAt: result.createdAt,
       expiresAt: result.expiresAt,
       results: result.results,
       pontosParceiros: result.pontosParceiros,
-    };
-    console.log(`[API][${requestId}] Enviando resposta (status 201):`, {
-      quoteId: response.quoteId,
-      expiresAt: response.expiresAt,
-      resultsCount: response.results.length,
-      firstResult: response.results[0],
-    });
+    },
+    status: 201,
+  };
+});
 
-    return NextResponse.json(response, { status: 201 });
-  } catch (error) {
-    console.error(`[API][${requestId}] ERRO:`, error);
-    console.error(`[API][${requestId}] Stack:`, error instanceof Error ? error.stack : 'N/A');
-    const message = error instanceof Error ? error.message : 'Erro ao criar cotação';
-    return NextResponse.json({ message }, { status: 500 });
-  }
-}
+type GetCotacoesResponse = {
+  quotes: Array<{
+    id: string;
+    status: string;
+    originCep: string;
+    destCep: string;
+    createdAt: string;
+    expiresAt: string;
+    selectedAt: string | null;
+    totalOptions: number;
+    selectedOption?: {
+      carrierName: string;
+      serviceName: string;
+      totalCents: number;
+    };
+  }>;
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    pages: number;
+  };
+};
 
 /**
  * GET /api/cotacoes
  * Lists user's quotes with pagination and filtering
  */
-export async function GET(request: Request) {
-  try {
-    // Authenticate user
-    const session = await getUserSessionFromRequest(request);
-    if (!session) {
-      return NextResponse.json({ message: 'Não autenticado' }, { status: 401 });
-    }
-
-    // Parse query parameters
-    const url = new URL(request.url);
-    const params = Object.fromEntries(url.searchParams.entries());
-    const parsed = listQuotesQuerySchema.safeParse(params);
-
-    if (!parsed.success) {
-      return NextResponse.json(
-        {
-          message: 'Parâmetros inválidos',
-          errors: parsed.error.flatten(),
-        },
-        { status: 400 }
-      );
-    }
-
-    const query = parsed.data;
-
-    // Get quotes
-    const result = await listQuotes(session.userId, {
-      page: query.page,
-      limit: query.limit,
-      status: query.status,
-      sort: query.sort,
-      order: query.order,
-    });
-
-    return NextResponse.json(result);
-  } catch (error) {
-    console.error('[COTACOES_GET]', error);
-    const message = error instanceof Error ? error.message : 'Erro ao listar cotações';
-    return NextResponse.json({ message }, { status: 500 });
+export const GET = withApiHandler<GetCotacoesResponse>(async (context) => {
+  const session = await getUserFromRequest(context.req);
+  if (!session?.userId) {
+    throw new ApiError({ code: 'unauthorized', message: 'Não autenticado', status: 401 });
   }
-}
+
+  // Parse query parameters
+  const url = new URL(context.req.url);
+  const params = Object.fromEntries(url.searchParams.entries());
+  const parsed = listQuotesQuerySchema.safeParse(params);
+
+  if (!parsed.success) {
+    throw new ApiError({
+      code: 'validation_error',
+      message: parsed.error.issues[0]?.message || 'Parâmetros inválidos',
+      status: 400,
+      details: parsed.error.flatten(),
+    });
+  }
+
+  const query = parsed.data;
+
+  // Get quotes
+  const result = await listQuotes(session.userId, {
+    page: query.page,
+    limit: query.limit,
+    status: query.status,
+    sort: query.sort,
+    order: query.order,
+  });
+
+  return {
+    data: {
+      quotes: result.quotes.map((q) => ({
+        id: q.id,
+        status: q.status,
+        originCep: q.originCep,
+        destCep: q.destCep,
+        createdAt: q.createdAt.toISOString(),
+        expiresAt: q.expiresAt.toISOString(),
+        selectedAt: q.selectedAt ? q.selectedAt.toISOString() : null,
+        totalOptions: q.totalOptions,
+        selectedOption: q.selectedOption,
+      })),
+      pagination: result.pagination,
+    },
+  };
+});

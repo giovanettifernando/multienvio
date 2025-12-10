@@ -1,28 +1,47 @@
-
 import { NextRequest, NextResponse } from 'next/server';
 import { ZodError } from 'zod';
 import bcrypt from 'bcrypt';
+import { withApiHandlerResponse } from '@/lib/api/handler';
 import { AdminLoginSchema } from '@/lib/validation/admin-auth';
 import { prisma } from '@/lib/db';
 import { adminSign, createAdminCookieHeader } from '@/lib/auth/admin-session';
 import { logAdminLogin } from '@/lib/audit-admin';
-import { AdminPermission } from '@prisma/client';
-import { rateLimitByIP, RATE_LIMITS } from '@/lib/rate-limit';
+import { AdminPermission, StaffStatus } from '@prisma/client';
+import { rateLimitByIP, RATE_LIMITS } from '@/lib/rate-limit-redis';
 
-export async function POST(request: NextRequest) {
-  // Rate limiting por IP para prevenir brute force
-  const rateLimitError = rateLimitByIP(request, 'admin_login', RATE_LIMITS.LOGIN);
+type AdminLoginResponse = {
+  staff: {
+    id: string;
+    name: string;
+    email: string;
+    status: StaffStatus;
+    role: string | undefined;
+    isSuperAdmin: boolean;
+    permissions: AdminPermission[];
+    lastLoginAt: string | null;
+    lastAccessAt: string;
+    createdAt: string;
+    updatedAt: string;
+  };
+  message: string;
+};
+
+export const POST = withApiHandlerResponse<Record<string, never>>(async (context) => {
+  const { req, logger } = context;
+
+  // Rate limiting por IP para prevenir brute force (Redis distribuido com fallback local)
+  const rateLimitError = await rateLimitByIP(req as NextRequest, 'admin_login', RATE_LIMITS.LOGIN);
   if (rateLimitError) return rateLimitError;
 
   try {
     // Parse and validate request body
-    const payload = await request.json();
+    const payload = await req.json();
     const data = AdminLoginSchema.parse(payload);
 
     // Normalize email
     const email = data.email.trim().toLowerCase();
 
-    console.log('[ADMIN_LOGIN] Attempting login for:', email);
+    logger.info('admin_login_attempt', { email });
 
     // Find staff user by email with role
     const staffUser = await prisma.staffUser.findUnique({
@@ -32,30 +51,28 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    console.log('[ADMIN_LOGIN] Query result - Staff user found:', !!staffUser);
-    console.log('[ADMIN_LOGIN] Staff email:', staffUser?.email);
-    console.log('[ADMIN_LOGIN] Staff ID:', staffUser?.id);
-    console.log('[ADMIN_LOGIN] Password hash exists:', !!staffUser?.passwordHash);
-    console.log('[ADMIN_LOGIN] Status:', staffUser?.status);
-    console.log('[ADMIN_LOGIN] IsSuperAdmin:', staffUser?.isSuperAdmin);
-    console.log('[ADMIN_LOGIN] Permissions:', staffUser?.permissions);
+    logger.debug('admin_login_query', {
+      found: !!staffUser,
+      hasPasswordHash: !!staffUser?.passwordHash,
+      status: staffUser?.status,
+    });
 
     // Generic error message to not reveal if email exists
     if (!staffUser || !staffUser.passwordHash) {
-      console.log('[ADMIN_LOGIN_ERROR] Staff user not found or no password hash');
+      logger.warn('admin_login_user_not_found');
       return NextResponse.json(
         { message: 'Email ou senha inválidos' },
         { status: 401 }
       );
     }
 
-    console.log('[ADMIN_LOGIN] Staff user found:', staffUser.id);
+    logger.debug('admin_login_user_found', { staffId: staffUser.id });
 
     // Verify password
     const passwordValid = await bcrypt.compare(data.password, staffUser.passwordHash);
 
     if (!passwordValid) {
-      console.log('[ADMIN_LOGIN_ERROR] Invalid password');
+      logger.warn('admin_login_invalid_password', { staffId: staffUser.id });
       return NextResponse.json(
         { message: 'Email ou senha inválidos' },
         { status: 401 }
@@ -64,7 +81,7 @@ export async function POST(request: NextRequest) {
 
     // Check if staff is active
     if (staffUser.status !== 'ACTIVE') {
-      console.log('[ADMIN_LOGIN_ERROR] Staff user is not active:', staffUser.status);
+      logger.warn('admin_login_inactive', { staffId: staffUser.id, status: staffUser.status });
       return NextResponse.json(
         { message: 'Conta inativa ou bloqueada' },
         { status: 403 }
@@ -95,7 +112,7 @@ export async function POST(request: NextRequest) {
     try {
       await logAdminLogin(staffUser.id, staffUser.email);
     } catch (auditError) {
-      console.error('[ADMIN_LOGIN] Failed to log audit:', auditError);
+      logger.error('admin_login_audit_failed', { staffId: staffUser.id, err: auditError });
       // Don't fail the login if audit logging fails
     }
 
@@ -116,7 +133,7 @@ export async function POST(request: NextRequest) {
       updatedAt: staffUser.updatedAt.toISOString(),
     };
 
-    console.log('[ADMIN_LOGIN] Login successful for:', email);
+    logger.info('admin_login_success', { staffId: staffUser.id });
 
     // Create response with Set-Cookie header
     const response = NextResponse.json({
@@ -130,7 +147,7 @@ export async function POST(request: NextRequest) {
     return response;
   } catch (error) {
     if (error instanceof ZodError) {
-      console.log('[ADMIN_LOGIN_ERROR] Validation error:', error.issues);
+      logger.debug('admin_login_validation_error', { issues: error.issues });
       return NextResponse.json(
         {
           message: 'Dados inválidos',
@@ -143,10 +160,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.error('[ADMIN_LOGIN_ERROR] Unexpected error:', error);
+    logger.error('admin_login_error', { err: error });
     return NextResponse.json(
       { message: 'Erro ao realizar login' },
       { status: 500 }
     );
   }
-}
+});

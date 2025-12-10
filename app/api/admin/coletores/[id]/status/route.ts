@@ -3,79 +3,75 @@
  * PATCH /api/admin/coletores/[id]/status - Atualiza status (active/blocked)
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { withApiHandler } from '@/lib/api/handler';
+import { ApiError } from '@/lib/api/errors';
 import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
-import { requirePermission } from '@/lib/auth/permissions';
 import { AdminPermission } from '@prisma/client';
 import { updateCollectorStatus } from '@/lib/collectors/service';
+import type { Collector } from '@/lib/collectors/types';
 import { z } from 'zod';
-
-type RouteContext = {
-  params: Promise<{
-    id: string;
-  }>;
-};
 
 const statusSchema = z.object({
   status: z.enum(['active', 'blocked']),
 });
 
+interface PatchCollectorStatusResponse {
+  collector: Collector;
+  message: string;
+}
+
 /**
  * PATCH /api/admin/coletores/[id]/status
  * Atualiza o status de um coletor
  */
-export async function PATCH(request: NextRequest, context: RouteContext) {
-  const session = await getAdminSessionFromRequest(request);
+export const PATCH = withApiHandler<PatchCollectorStatusResponse, { id: string }>(async (context) => {
+  const { req, params, logger } = context;
+
+  const session = await getAdminSessionFromRequest(req);
   if (!session) {
-    return NextResponse.json({ message: 'Não autenticado' }, { status: 401 });
+    throw new ApiError({ code: 'unauthorized', message: 'Não autenticado', status: 401 });
   }
 
-  const permissionError = requirePermission(session, AdminPermission.COLETORES);
-  if (permissionError) return permissionError;
+  if (!session.permissions.includes(AdminPermission.COLETORES)) {
+    throw new ApiError({ code: 'forbidden', message: 'Permissão negada', status: 403 });
+  }
+
+  const { id } = params;
+  const body = await req.json();
+
+  // Validate status
+  const validation = statusSchema.safeParse(body);
+  if (!validation.success) {
+    throw new ApiError({
+      code: 'validation_error',
+      message: 'Status inválido',
+      status: 400,
+      details: { errors: validation.error.flatten() },
+    });
+  }
+
+  const { status } = validation.data;
 
   try {
-    const { id } = await context.params;
-    const body = await request.json();
-
-    // Validate status
-    const { status } = statusSchema.parse(body);
-
     const collector = await updateCollectorStatus(id, status);
 
-    return NextResponse.json(
-      {
+    logger.info('admin_collector_status_updated', {
+      staffId: session.staffId,
+      collectorId: id,
+      newStatus: status,
+    });
+
+    return {
+      data: {
         collector,
         message: `Coletor ${status === 'active' ? 'ativado' : 'bloqueado'} com sucesso`,
       },
-      { status: 200 }
-    );
+    };
   } catch (error) {
-    console.error(`[PATCH /api/admin/coletores/status] Error:`, error);
-
-    // Zod validation error
-    if (error && typeof error === 'object' && 'issues' in error) {
-      return NextResponse.json(
-        {
-          message: 'Status inválido',
-          errors: error,
-        },
-        { status: 400 }
-      );
-    }
-
     // Prisma not found error
     if (error instanceof Error && error.message.includes('Record to update not found')) {
-      return NextResponse.json(
-        { message: 'Coletor não encontrado' },
-        { status: 404 }
-      );
+      throw new ApiError({ code: 'not_found', message: 'Coletor não encontrado', status: 404 });
     }
-
-    return NextResponse.json(
-      {
-        message: error instanceof Error ? error.message : 'Erro ao atualizar status',
-      },
-      { status: 500 }
-    );
+    throw error;
   }
-}
+});

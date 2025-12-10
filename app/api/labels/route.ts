@@ -1,6 +1,7 @@
-import { NextResponse } from "next/server";
+import { withApiHandler } from '@/lib/api/handler';
+import { ApiError } from '@/lib/api/errors';
+import { getUserFromRequest } from '@/lib/auth/session';
 import { prisma } from "@/lib/db";
-import { getUserSessionFromRequest } from "@/lib/auth/user-session";
 import type { LabelItem, LabelsResponse, PrintStatus, PackageItem, PackageLabelStatus } from "@/lib/types/label";
 import type { Prisma } from "@prisma/client";
 
@@ -9,90 +10,84 @@ import type { Prisma } from "@prisma/client";
  * GET /api/labels
  * Lista etiquetas do usuário com filtros e dados expandidos (packages, origem)
  */
-export async function GET(request: Request) {
-  try {
-    // Autenticar usuário
-    const session = await getUserSessionFromRequest(request);
-    if (!session) {
-      return NextResponse.json({ message: 'Não autenticado' }, { status: 401 });
-    }
+export const GET = withApiHandler<LabelsResponse>(async (context) => {
+  const session = await getUserFromRequest(context.req);
+  if (!session?.userId) {
+    throw new ApiError({ code: 'unauthorized', message: 'Não autenticado', status: 401 });
+  }
 
-    const { searchParams } = new URL(request.url);
-    const page = parseInt(searchParams.get('page') ?? '1', 10);
-    const pageSize = parseInt(searchParams.get('pageSize') ?? '10', 10);
-    const q = searchParams.get('q') ?? '';
-    const printStatus = (searchParams.get('printStatus') ?? 'all') as PrintStatus | 'all';
+  const { searchParams } = new URL(context.req.url);
+  const page = parseInt(searchParams.get('page') ?? '1', 10);
+  const pageSize = parseInt(searchParams.get('pageSize') ?? '10', 10);
+  const q = searchParams.get('q') ?? '';
+  const printStatus = (searchParams.get('printStatus') ?? 'all') as PrintStatus | 'all';
 
-    // Construir filtros
-    const where: Prisma.LabelWhereInput = {
-      shipment: {
-        senderId: session.userId,
-        status: {
-          notIn: ['cancelled', 'failed'], // Excluir envios cancelados/falhos
-        },
+  const where: Prisma.LabelWhereInput = {
+    shipment: {
+      senderId: session.userId,
+      status: {
+        notIn: ['cancelled', 'failed'],
       },
-    };
+    },
+  };
 
-    // Filtro de busca por tracking code, shipment tracking code ou shipment ID
-    if (q && q.trim().length > 0) {
-      where.OR = [
-        { trackingCode: { contains: q, mode: 'insensitive' } },
-        { shipment: { platformTrackingCode: { contains: q, mode: 'insensitive' } } },
-        { shipment: { carrierTrackingCode: { contains: q, mode: 'insensitive' } } },
-        { shipmentId: q }, // Buscar por shipment ID exato
-      ];
-    }
+  if (q && q.trim().length > 0) {
+    where.OR = [
+      { trackingCode: { contains: q, mode: 'insensitive' } },
+      { shipment: { platformTrackingCode: { contains: q, mode: 'insensitive' } } },
+      { shipment: { carrierTrackingCode: { contains: q, mode: 'insensitive' } } },
+      { shipmentId: q },
+    ];
+  }
 
-    // Filtro de status de impressão
-    if (printStatus === 'printed') {
-      where.isPrinted = true;
-    } else if (printStatus === 'not_printed') {
-      where.isPrinted = false;
-    }
+  if (printStatus === 'printed') {
+    where.isPrinted = true;
+  } else if (printStatus === 'not_printed') {
+    where.isPrinted = false;
+  }
 
-    // Executar count e findMany em paralelo (otimização)
-    const [total, labels] = await prisma.$transaction([
-      prisma.label.count({ where }),
-      prisma.label.findMany({
-        where,
-        include: {
-          shipment: {
-            select: {
-              id: true,
-              platformTrackingCode: true,
-              carrierTrackingCode: true,
-              originCep: true,
-              destinationCep: true,
-              recipientName: true,
-              recipientDocument: true,
-              destinationCity: true,
-              destinationState: true,
-              carrier: true,
-              service: true,
-              freightCost: true,
-              declaredValue: true,
-              document: true, // Contém originAddress com apelido
-              packages: {
-                orderBy: { packageNumber: 'asc' },
-                select: {
-                  id: true,
-                  packageNumber: true,
-                  weight: true,
-                  width: true,
-                  height: true,
-                  length: true,
-                  carrierTrackingCode: true,
-                  carrierPrePostageId: true,
-                },
+  const [total, labels] = await prisma.$transaction([
+    prisma.label.count({ where }),
+    prisma.label.findMany({
+      where,
+      include: {
+        shipment: {
+          select: {
+            id: true,
+            platformTrackingCode: true,
+            carrierTrackingCode: true,
+            originCep: true,
+            destinationCep: true,
+            recipientName: true,
+            recipientDocument: true,
+            destinationCity: true,
+            destinationState: true,
+            carrier: true,
+            service: true,
+            freightCost: true,
+            declaredValue: true,
+            document: true,
+            packages: {
+              orderBy: { packageNumber: 'asc' },
+              select: {
+                id: true,
+                packageNumber: true,
+                weight: true,
+                width: true,
+                height: true,
+                length: true,
+                carrierTrackingCode: true,
+                carrierPrePostageId: true,
               },
             },
           },
         },
-        orderBy: { createdAt: 'desc' },
-        skip: (page - 1) * pageSize,
-        take: pageSize,
-      }),
-    ]);
+      },
+      orderBy: { createdAt: 'desc' },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+    }),
+  ]);
 
     // Mapear para formato do frontend
     const items: LabelItem[] = labels.map((label) => {
@@ -208,78 +203,75 @@ export async function GET(request: Request) {
       };
     });
 
-    const response: LabelsResponse = {
-      items,
-      page,
-      pageSize,
-      total,
-    };
+  const response: LabelsResponse = {
+    items,
+    page,
+    pageSize,
+    total,
+  };
 
-    return NextResponse.json(response, { status: 200 });
-  } catch (error) {
-    console.error('[LABELS_GET]', error);
-    const message = error instanceof Error ? error.message : 'Erro ao listar etiquetas';
-    return NextResponse.json({ message }, { status: 500 });
-  }
+  return { data: response };
+});
+
+interface LabelPrintUpdateResponse {
+  message: string;
+  label: {
+    id: string;
+    isPrinted: boolean;
+    printedAt?: string;
+  };
 }
 
 /**
  * PATCH /api/labels?id=xxx
  * Marca etiqueta como impressa
  */
-export async function PATCH(request: Request) {
-  try {
-    // Autenticar usuário
-    const session = await getUserSessionFromRequest(request);
-    if (!session) {
-      return NextResponse.json({ message: 'Não autenticado' }, { status: 401 });
-    }
+export const PATCH = withApiHandler<LabelPrintUpdateResponse>(async (context) => {
+  const session = await getUserFromRequest(context.req);
+  if (!session?.userId) {
+    throw new ApiError({ code: 'unauthorized', message: 'Não autenticado', status: 401 });
+  }
 
-    const { searchParams } = new URL(request.url);
-    const labelId = searchParams.get('id');
+  const { searchParams } = new URL(context.req.url);
+  const labelId = searchParams.get('id');
 
-    if (!labelId) {
-      return NextResponse.json({ message: 'ID da etiqueta é obrigatório' }, { status: 400 });
-    }
+  if (!labelId) {
+    throw new ApiError({ code: 'validation_error', message: 'ID da etiqueta é obrigatório', status: 400 });
+  }
 
-    // Verificar se a etiqueta pertence ao usuário
-    const label = await prisma.label.findUnique({
-      where: { id: labelId },
-      include: {
-        shipment: {
-          select: { senderId: true },
-        },
+  const label = await prisma.label.findUnique({
+    where: { id: labelId },
+    include: {
+      shipment: {
+        select: { senderId: true },
       },
-    });
+    },
+  });
 
-    if (!label) {
-      return NextResponse.json({ message: 'Etiqueta não encontrada' }, { status: 404 });
-    }
+  if (!label) {
+    throw new ApiError({ code: 'not_found', message: 'Etiqueta não encontrada', status: 404 });
+  }
 
-    if (label.shipment.senderId !== session.userId) {
-      return NextResponse.json({ message: 'Acesso negado' }, { status: 403 });
-    }
+  if (label.shipment.senderId !== session.userId) {
+    throw new ApiError({ code: 'forbidden', message: 'Acesso negado', status: 403 });
+  }
 
-    // Marcar como impressa
-    const updated = await prisma.label.update({
-      where: { id: labelId },
-      data: {
-        isPrinted: true,
-        printedAt: new Date(),
-      },
-    });
+  const updated = await prisma.label.update({
+    where: { id: labelId },
+    data: {
+      isPrinted: true,
+      printedAt: new Date(),
+    },
+  });
 
-    return NextResponse.json({
+  return {
+    data: {
       message: 'Etiqueta marcada como impressa',
       label: {
         id: updated.id,
         isPrinted: updated.isPrinted,
         printedAt: updated.printedAt?.toISOString(),
       },
-    });
-  } catch (error) {
-    console.error('[LABELS_PATCH]', error);
-    const message = error instanceof Error ? error.message : 'Erro ao atualizar etiqueta';
-    return NextResponse.json({ message }, { status: 500 });
-  }
-}
+    },
+  };
+});

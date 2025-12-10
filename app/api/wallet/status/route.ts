@@ -7,9 +7,9 @@
  * - Valor da pendência (se houver)
  */
 
-
-import { NextResponse } from 'next/server';
-import { getSession } from '@/lib/auth/session';
+import { withApiHandler } from '@/lib/api/handler';
+import { ApiError } from '@/lib/api/errors';
+import { getUserFromRequest } from '@/lib/auth/session';
 import { getOrCreateWallet, centsToReais } from '@/lib/wallet/wallet.service';
 
 export interface WalletStatusResponse {
@@ -24,39 +24,31 @@ export interface WalletStatusResponse {
   blockReason?: string;
 }
 
-export async function GET() {
-  try {
-    const session = await getSession();
+export const GET = withApiHandler<WalletStatusResponse>(async (context) => {
+  const session = await getUserFromRequest(context.req);
 
-    if (!session?.userId) {
-      return NextResponse.json({ message: 'Não autorizado' }, { status: 401 });
-    }
-
-    const wallet = await getOrCreateWallet(session.userId);
-
-    const hasNegativeBalance = wallet.availableCents < 0;
-    const negativeAmountCents = hasNegativeBalance ? Math.abs(wallet.availableCents) : 0;
-
-    const response: WalletStatusResponse = {
-      availableCents: wallet.availableCents,
-      availableReais: centsToReais(wallet.availableCents),
-      pendingCents: wallet.pendingCents,
-      pendingReais: centsToReais(wallet.pendingCents),
-      hasNegativeBalance,
-      negativeAmountCents,
-      negativeAmountReais: centsToReais(negativeAmountCents),
-      isBlocked: hasNegativeBalance,
-      blockReason: hasNegativeBalance
-        ? `Você possui pendências financeiras de R$ ${centsToReais(negativeAmountCents).toFixed(2)}. Regularize para continuar cotando envios.`
-        : undefined,
-    };
-
-    return NextResponse.json(response);
-  } catch (error) {
-    console.error('[WALLET_STATUS_GET]', error);
-    return NextResponse.json(
-      { message: 'Erro ao verificar status da carteira' },
-      { status: 500 }
-    );
+  if (!session?.userId) {
+    throw new ApiError({ code: 'unauthorized', message: 'Não autorizado', status: 401 });
   }
-}
+
+  const wallet = await getOrCreateWallet(session.userId);
+
+  const hasNegativeBalance = wallet.availableCents < 0;
+  const negativeAmountCents = hasNegativeBalance ? Math.abs(wallet.availableCents) : 0;
+
+  const response: WalletStatusResponse = {
+    availableCents: wallet.availableCents,
+    availableReais: centsToReais(wallet.availableCents),
+    pendingCents: wallet.pendingCents,
+    pendingReais: centsToReais(wallet.pendingCents),
+    hasNegativeBalance,
+    negativeAmountCents,
+    negativeAmountReais: centsToReais(negativeAmountCents),
+    isBlocked: hasNegativeBalance,
+    blockReason: hasNegativeBalance
+      ? `Você possui pendências financeiras de R$ ${centsToReais(negativeAmountCents).toFixed(2)}. Regularize para continuar cotando envios.`
+      : undefined,
+  };
+
+  return { data: response };
+});

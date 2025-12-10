@@ -3,6 +3,8 @@ import { ApiError } from "@/lib/api/errors";
 import {
   createRecipient,
   listRecipients,
+  type RecipientListResult,
+  type AccountRecipientDto,
 } from "@/lib/services/account-recipients.service";
 import {
   validateRecipientCreateInput,
@@ -15,8 +17,11 @@ import {
   handleRecipientDataStoreError,
 } from "./helpers";
 
+type GetRecipientsResponse = RecipientListResult;
 
-export const GET = withApiHandler(async ({ req, logger }) => {
+type CreateRecipientResponse = AccountRecipientDto;
+
+export const GET = withApiHandler<GetRecipientsResponse>(async ({ req, logger }) => {
   const userId = await requireUserId(req);
   const search = req.nextUrl.searchParams;
   const q = search.get("q") ?? undefined;
@@ -42,10 +47,10 @@ export const GET = withApiHandler(async ({ req, logger }) => {
   }
 });
 
-export const POST = withApiHandler(async (context) => {
+export const POST = withApiHandler<CreateRecipientResponse>(async (context) => {
   const { req, logger } = context;
   const userId = await requireUserId(req);
-  enforceRecipientWriteLimit(context);
+  await enforceRecipientWriteLimit(context);
 
   let payload: unknown;
   try {

@@ -3,131 +3,176 @@
  * POST /api/admin/finance/expense-templates - Cria novo template
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
+import { withApiHandler } from '@/lib/api/handler';
+import { ApiError } from '@/lib/api/errors';
 import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
-import { requirePermission } from '@/lib/auth/permissions';
 import { AdminPermission, ExpenseType, ExpenseCategory } from '@prisma/client';
 import { prisma } from '@/lib/db';
 
+interface ExpenseTemplateWithAmountReais {
+  id: string;
+  name: string;
+  type: ExpenseType;
+  category: ExpenseCategory;
+  supplier: string | null;
+  defaultAmount: number | null;
+  defaultAmountReais: number | null;
+  isActive: boolean;
+  usageCount: number;
+  createdBy: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
-export async function GET(request: NextRequest) {
-  const session = await getAdminSessionFromRequest(request);
+interface GetExpenseTemplatesResponse {
+  items: ExpenseTemplateWithAmountReais[];
+}
+
+export const GET = withApiHandler<GetExpenseTemplatesResponse>(async ({ req }) => {
+  const session = await getAdminSessionFromRequest(req);
   if (!session) {
-    return NextResponse.json({ message: 'Não autenticado' }, { status: 401 });
+    throw new ApiError({
+      code: 'UNAUTHORIZED',
+      message: 'Não autenticado',
+      status: 401,
+    });
   }
 
-  const permissionError = requirePermission(session, AdminPermission.FINANCEIRO);
-  if (permissionError) return permissionError;
-
-  try {
-    const searchParams = request.nextUrl.searchParams;
-    const category = searchParams.get('category') as ExpenseCategory | null;
-
-    const templates = await prisma.expenseTemplate.findMany({
-      where: {
-        isActive: true,
-        ...(category ? { category } : {}),
-      },
-      orderBy: [
-        { usageCount: 'desc' },
-        { name: 'asc' },
-      ],
+  if (!session.permissions.includes(AdminPermission.FINANCEIRO)) {
+    throw new ApiError({
+      code: 'FORBIDDEN',
+      message: 'Sem permissão para acessar este recurso',
+      status: 403,
     });
+  }
 
-    return NextResponse.json({
+  const searchParams = req.nextUrl.searchParams;
+  const category = searchParams.get('category') as ExpenseCategory | null;
+
+  const templates = await prisma.expenseTemplate.findMany({
+    where: {
+      isActive: true,
+      ...(category ? { category } : {}),
+    },
+    orderBy: [
+      { usageCount: 'desc' },
+      { name: 'asc' },
+    ],
+  });
+
+  return {
+    data: {
       items: templates.map((t) => ({
         ...t,
         defaultAmountReais: t.defaultAmount ? t.defaultAmount / 100 : null,
       })),
-    });
-  } catch (error) {
-    console.error('[EXPENSE_TEMPLATES_LIST] Error:', error);
-    return NextResponse.json(
-      { message: 'Erro ao listar templates' },
-      { status: 500 }
-    );
-  }
+    },
+  };
+});
+
+const createExpenseTemplateSchema = z.object({
+  name: z.string().min(1),
+  type: z.nativeEnum(ExpenseType),
+  category: z.nativeEnum(ExpenseCategory),
+  supplier: z.string().optional(),
+  defaultAmountCents: z.number().int().positive().optional(),
+});
+
+interface CreateExpenseTemplateResponse {
+  ok: boolean;
+  template: ExpenseTemplateWithAmountReais;
 }
 
-export async function POST(request: NextRequest) {
-  const session = await getAdminSessionFromRequest(request);
+export const POST = withApiHandler<CreateExpenseTemplateResponse>(async ({ req }) => {
+  const session = await getAdminSessionFromRequest(req);
   if (!session) {
-    return NextResponse.json({ message: 'Não autenticado' }, { status: 401 });
+    throw new ApiError({
+      code: 'UNAUTHORIZED',
+      message: 'Não autenticado',
+      status: 401,
+    });
   }
 
-  const permissionError = requirePermission(session, AdminPermission.FINANCEIRO);
-  if (permissionError) return permissionError;
-
-  try {
-    const body = await request.json();
-    const { name, type, category, supplier, defaultAmountCents } = body;
-
-    if (!name || !type || !category) {
-      return NextResponse.json(
-        { message: 'Campos obrigatórios: name, type, category' },
-        { status: 400 }
-      );
-    }
-
-    // Verificar se já existe um template com esse nome na categoria
-    const existing = await prisma.expenseTemplate.findUnique({
-      where: {
-        name_category: {
-          name,
-          category,
-        },
-      },
+  if (!session.permissions.includes(AdminPermission.FINANCEIRO)) {
+    throw new ApiError({
+      code: 'FORBIDDEN',
+      message: 'Sem permissão para acessar este recurso',
+      status: 403,
     });
+  }
 
-    if (existing) {
-      // Reativar se estava inativo
-      if (!existing.isActive) {
-        const updated = await prisma.expenseTemplate.update({
-          where: { id: existing.id },
-          data: {
-            isActive: true,
-            type: type as ExpenseType,
-            supplier: supplier || null,
-            defaultAmount: defaultAmountCents || null,
-          },
-        });
-        return NextResponse.json({
+  const body = await req.json();
+
+  const parsed = createExpenseTemplateSchema.safeParse(body);
+  if (!parsed.success) {
+    throw new ApiError({
+      code: 'VALIDATION_ERROR',
+      message: 'Dados inválidos',
+      status: 400,
+      details: parsed.error.flatten(),
+    });
+  }
+
+  const { name, type, category, supplier, defaultAmountCents } = parsed.data;
+
+  // Verificar se já existe um template com esse nome na categoria
+  const existing = await prisma.expenseTemplate.findUnique({
+    where: {
+      name_category: {
+        name,
+        category,
+      },
+    },
+  });
+
+  if (existing) {
+    // Reativar se estava inativo
+    if (!existing.isActive) {
+      const updated = await prisma.expenseTemplate.update({
+        where: { id: existing.id },
+        data: {
+          isActive: true,
+          type,
+          supplier: supplier || null,
+          defaultAmount: defaultAmountCents || null,
+        },
+      });
+      return {
+        data: {
           ok: true,
           template: {
             ...updated,
             defaultAmountReais: updated.defaultAmount ? updated.defaultAmount / 100 : null,
           },
-        });
-      }
-      return NextResponse.json(
-        { message: 'Já existe um template com esse nome nesta categoria' },
-        { status: 400 }
-      );
+        },
+      };
     }
-
-    const template = await prisma.expenseTemplate.create({
-      data: {
-        name,
-        type: type as ExpenseType,
-        category: category as ExpenseCategory,
-        supplier: supplier || null,
-        defaultAmount: defaultAmountCents || null,
-        createdBy: session.staffId,
-      },
+    throw new ApiError({
+      code: 'VALIDATION_ERROR',
+      message: 'Já existe um template com esse nome nesta categoria',
+      status: 400,
     });
+  }
 
-    return NextResponse.json({
+  const template = await prisma.expenseTemplate.create({
+    data: {
+      name,
+      type,
+      category,
+      supplier: supplier || null,
+      defaultAmount: defaultAmountCents || null,
+      createdBy: session.staffId,
+    },
+  });
+
+  return {
+    data: {
       ok: true,
       template: {
         ...template,
         defaultAmountReais: template.defaultAmount ? template.defaultAmount / 100 : null,
       },
-    });
-  } catch (error) {
-    console.error('[EXPENSE_TEMPLATES_CREATE] Error:', error);
-    return NextResponse.json(
-      { message: 'Erro ao criar template' },
-      { status: 500 }
-    );
-  }
-}
+    },
+  };
+});

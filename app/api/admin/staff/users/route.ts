@@ -1,11 +1,40 @@
-import { NextRequest, NextResponse } from 'next/server';
-
-import { requireAdminUser } from '@/lib/auth/admin-helpers';
+import { withApiHandler } from '@/lib/api/handler';
+import { ApiError } from '@/lib/api/errors';
+import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
 import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { AdminPermission, Prisma, StaffStatus } from '@prisma/client';
 import bcrypt from 'bcrypt';
 import crypto from 'node:crypto';
+import { sendStaffTempPasswordEmail } from '@/lib/email/mailer';
+
+type StaffUserApi = {
+  id: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  status: 'active' | 'blocked';
+  isSuperAdmin: boolean;
+  permissions: AdminPermission[];
+  roles: string[];
+  lastAccessAt: string | null;
+  lastLoginAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+type StaffUsersListResponse = {
+  items: StaffUserApi[];
+  users: Array<{ id: string; name: string; email: string }>;
+  total: number;
+  page: number;
+  pageSize: number;
+};
+
+type StaffUserCreateResponse = {
+  user: StaffUserApi;
+  passwordGenerated: boolean;
+};
 
 async function resolveRoleId(isSuperAdmin: boolean): Promise<string | null> {
   const preferredName = isSuperAdmin ? 'admin' : 'operator';
@@ -72,7 +101,7 @@ function toApiUser(user: {
     name: user.name,
     email: user.email,
     phone: user.phone,
-    status: user.status === 'BLOCKED' ? 'blocked' : 'active',
+    status: (user.status === 'BLOCKED' ? 'blocked' : 'active') as 'active' | 'blocked',
     isSuperAdmin: user.isSuperAdmin,
     permissions: effectivePermissions,
     roles: user.isSuperAdmin
@@ -85,181 +114,181 @@ function toApiUser(user: {
   };
 }
 
+export const GET = withApiHandler<StaffUsersListResponse>(async (context) => {
+  const { req } = context;
 
+  const session = await getAdminSessionFromRequest(req);
+  if (!session) {
+    throw new ApiError({ code: 'unauthorized', message: 'Não autenticado', status: 401 });
+  }
 
-export async function GET(request: Request) {
-  try {
-    const authResult = await requireAdminUser(request, AdminPermission.USUARIOS);
-    if (authResult instanceof NextResponse) return authResult;
+  if (!session.permissions.includes(AdminPermission.USUARIOS)) {
+    throw new ApiError({ code: 'forbidden', message: 'Permissão negada', status: 403 });
+  }
 
-    const { searchParams } = new URL(request.url);
-    const filters = filtersSchema.parse(Object.fromEntries(searchParams));
+  const { searchParams } = new URL(req.url);
+  const filters = filtersSchema.parse(Object.fromEntries(searchParams));
 
-    const page = filters.page ?? 1;
-    const pageSize = filters.pageSize ?? 10;
+  const page = filters.page ?? 1;
+  const pageSize = filters.pageSize ?? 10;
 
-    const whereClauses: Prisma.StaffUserWhereInput[] = [];
+  const whereClauses: Prisma.StaffUserWhereInput[] = [];
 
-    if (filters.q) {
-      whereClauses.push({
-        OR: [
-          { name: { contains: filters.q, mode: 'insensitive' } },
-          { email: { contains: filters.q, mode: 'insensitive' } },
-        ],
-      });
-    }
+  if (filters.q) {
+    whereClauses.push({
+      OR: [
+        { name: { contains: filters.q, mode: 'insensitive' } },
+        { email: { contains: filters.q, mode: 'insensitive' } },
+      ],
+    });
+  }
 
-    if (filters.status && filters.status !== 'all') {
-      whereClauses.push({ status: filters.status === 'blocked' ? 'BLOCKED' : 'ACTIVE' });
-    }
+  if (filters.status && filters.status !== 'all') {
+    whereClauses.push({ status: filters.status === 'blocked' ? 'BLOCKED' : 'ACTIVE' });
+  }
 
-    const permissionFilter = parsePermission(filters.permission);
-    if (permissionFilter) {
-      whereClauses.push({
-        OR: [
-          { isSuperAdmin: true },
-          { permissions: { has: permissionFilter } },
-        ],
-      });
-    }
+  const permissionFilter = parsePermission(filters.permission);
+  if (permissionFilter) {
+    whereClauses.push({
+      OR: [
+        { isSuperAdmin: true },
+        { permissions: { has: permissionFilter } },
+      ],
+    });
+  }
 
-    const where = whereClauses.length ? { AND: whereClauses } : {};
+  const where = whereClauses.length ? { AND: whereClauses } : {};
 
-    let orderBy: Record<string, 'asc' | 'desc'> = { updatedAt: 'desc' };
-    switch (filters.sort) {
-      case 'name_asc':
-        orderBy = { name: 'asc' };
-        break;
-      case 'name_desc':
-        orderBy = { name: 'desc' };
-        break;
-      case 'updated_asc':
-        orderBy = { updatedAt: 'asc' };
-        break;
-      case 'updated_desc':
-      default:
-        orderBy = { updatedAt: 'desc' };
-        break;
-    }
+  let orderBy: Record<string, 'asc' | 'desc'> = { updatedAt: 'desc' };
+  switch (filters.sort) {
+    case 'name_asc':
+      orderBy = { name: 'asc' };
+      break;
+    case 'name_desc':
+      orderBy = { name: 'desc' };
+      break;
+    case 'updated_asc':
+      orderBy = { updatedAt: 'asc' };
+      break;
+    case 'updated_desc':
+    default:
+      orderBy = { updatedAt: 'desc' };
+      break;
+  }
 
-    const [records, total] = await prisma.$transaction([
-      prisma.staffUser.findMany({
-        where,
-        orderBy,
-        skip: (page - 1) * pageSize,
-        take: pageSize,
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          phone: true,
-          status: true,
-          isSuperAdmin: true,
-          permissions: true,
-          lastAccessAt: true,
-          lastLoginAt: true,
-          createdAt: true,
-          updatedAt: true,
-        },
-      }),
-      prisma.staffUser.count({ where }),
-    ]);
+  const [records, total] = await prisma.$transaction([
+    prisma.staffUser.findMany({
+      where,
+      orderBy,
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phone: true,
+        status: true,
+        isSuperAdmin: true,
+        permissions: true,
+        lastAccessAt: true,
+        lastLoginAt: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    }),
+    prisma.staffUser.count({ where }),
+  ]);
 
-    const items = records.map(toApiUser);
-    const users = items.map(({ id, name, email }) => ({ id, name, email }));
+  const items = records.map(toApiUser);
+  const users = items.map(({ id, name, email }) => ({ id, name, email }));
 
-    return NextResponse.json({
+  return {
+    data: {
       items,
       users,
       total,
       page,
       pageSize,
-    });
-  } catch (error) {
-    if (error instanceof NextResponse) {
-      return error;
-    }
-    console.error('[ADMIN_STAFF_USERS_GET]', error);
-    return NextResponse.json({ message: 'Erro ao carregar usuários' }, { status: 500 });
+    },
+  };
+});
+
+export const POST = withApiHandler<StaffUserCreateResponse>(async (context) => {
+  const { req, logger } = context;
+
+  const session = await getAdminSessionFromRequest(req);
+  if (!session) {
+    throw new ApiError({ code: 'unauthorized', message: 'Não autenticado', status: 401 });
   }
-}
 
-export async function POST(request: Request) {
-  try {
-    const authResult = await requireAdminUser(request, AdminPermission.USUARIOS);
-    if (authResult instanceof NextResponse) return authResult;
+  if (!session.permissions.includes(AdminPermission.USUARIOS)) {
+    throw new ApiError({ code: 'forbidden', message: 'Permissão negada', status: 403 });
+  }
 
-    const payload = createSchema.parse(await request.json());
+  const body = await req.json();
+  const payload = createSchema.parse(body);
 
-    const existing = await prisma.staffUser.findUnique({ where: { email: payload.email } });
-    if (existing) {
-      return NextResponse.json({ message: 'E-mail já cadastrado' }, { status: 409 });
-    }
+  const existing = await prisma.staffUser.findUnique({ where: { email: payload.email } });
+  if (existing) {
+    throw new ApiError({ code: 'conflict', message: 'E-mail já cadastrado', status: 409 });
+  }
 
-    const isSuperAdmin = Boolean(payload.isSuperAdmin);
-    const permissions = Array.from(new Set(payload.permissions ?? []));
+  const isSuperAdmin = Boolean(payload.isSuperAdmin);
+  const permissions = Array.from(new Set(payload.permissions ?? []));
 
-    if (!isSuperAdmin && permissions.length === 0) {
-      return NextResponse.json(
-        { message: 'Selecione ao menos uma permissão' },
-        { status: 400 },
-      );
-    }
+  if (!isSuperAdmin && permissions.length === 0) {
+    throw new ApiError({ code: 'validation_error', message: 'Selecione ao menos uma permissão', status: 400 });
+  }
 
-    const tempPassword = crypto.randomUUID();
-    const passwordHash = await bcrypt.hash(tempPassword, 10);
+  const tempPassword = crypto.randomUUID();
+  const passwordHash = await bcrypt.hash(tempPassword, 10);
 
-    const roleId = await resolveRoleId(isSuperAdmin);
-    if (!roleId) {
-      return NextResponse.json(
-        { message: 'Nenhum papel padrão configurado para staff' },
-        { status: 500 },
-      );
-    }
+  const roleId = await resolveRoleId(isSuperAdmin);
+  if (!roleId) {
+    throw new ApiError({ code: 'server_error', message: 'Nenhum papel padrão configurado para staff', status: 500 });
+  }
 
-    const created = await prisma.staffUser.create({
-      data: {
-        name: payload.name,
-        email: payload.email,
-        phone: payload.phone ?? null,
-        status: payload.status,
-        roleId,
-        isSuperAdmin,
-        permissions: isSuperAdmin ? [] : permissions,
-        passwordHash,
-      },
+  const created = await prisma.staffUser.create({
+    data: {
+      name: payload.name,
+      email: payload.email,
+      phone: payload.phone ?? null,
+      status: payload.status,
+      roleId,
+      isSuperAdmin,
+      permissions: isSuperAdmin ? [] : permissions,
+      passwordHash,
+    },
+  });
+
+  const user = toApiUser({
+    ...created,
+    permissions: created.permissions,
+    phone: created.phone ?? null,
+    lastAccessAt: created.lastAccessAt ?? null,
+    lastLoginAt: created.lastLoginAt ?? null,
+  });
+
+  // Enviar email com senha temporária (não bloqueia a resposta)
+  sendStaffTempPasswordEmail(payload.email, payload.name, tempPassword)
+    .then((sent) => {
+      if (sent) {
+        logger.info('staff_user_temp_password_email_sent', { email: payload.email, userId: created.id });
+      } else {
+        logger.warn('staff_user_temp_password_email_failed', { email: payload.email, userId: created.id });
+      }
+    })
+    .catch((err) => {
+      logger.error('staff_user_temp_password_email_error', { email: payload.email, error: String(err) });
     });
 
-    const user = toApiUser({
-      ...created,
-      permissions: created.permissions,
-      phone: created.phone ?? null,
-      lastAccessAt: created.lastAccessAt ?? null,
-      lastLoginAt: created.lastLoginAt ?? null,
-    });
+  logger.info('staff_user_created', { userId: created.id, email: payload.email, isSuperAdmin });
 
-    // SECURITY: Não retornar senha temporária no response
-    // A senha deve ser enviada via email seguro ou outro canal
-    // TODO: Implementar envio de email com senha temporária
-    console.log('[STAFF_USER_CREATED] Senha temporária gerada para:', payload.email);
-    // Em produção: enviar email com tempPassword
-
-    return NextResponse.json({
+  return {
+    data: {
       user,
-      // tempPassword removido por segurança - deve ser enviado via email
       passwordGenerated: true,
-    }, { status: 201 });
-  } catch (error) {
-    if (error instanceof NextResponse) {
-      return error;
-    }
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { message: 'Dados inválidos', errors: error.flatten() },
-        { status: 400 },
-      );
-    }
-    console.error('[ADMIN_STAFF_USERS_POST]', error);
-    return NextResponse.json({ message: 'Erro ao criar usuário' }, { status: 500 });
-  }
-}
+    },
+    status: 201,
+  };
+});

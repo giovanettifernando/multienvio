@@ -4,46 +4,69 @@
  * Testa a conexão SMTP com os parâmetros fornecidos
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { requireAdminUser } from '@/lib/auth/admin-helpers';
+import { withApiHandler } from '@/lib/api/handler';
+import { ApiError } from '@/lib/api/errors';
+import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
 import { AdminPermission } from '@prisma/client';
 import nodemailer from 'nodemailer';
+import { z } from 'zod';
 
+type EmailTestConnectionResponse = {
+  success: boolean;
+  message: string;
+};
+
+const EmailTestConnectionSchema = z.object({
+  host: z.string().min(1, 'Host é obrigatório'),
+  port: z.number().int().positive('Porta deve ser um número positivo'),
+  secure: z.boolean(),
+  user: z.string().min(1, 'Usuário é obrigatório'),
+  password: z.string().optional(),
+});
 
 /**
  * POST - Testar conexão SMTP
  */
-export async function POST(req: NextRequest) {
-  try {
-    const authResult = await requireAdminUser(req, AdminPermission.CONFIGURACOES);
-    if (authResult instanceof NextResponse) {
-      return authResult;
-    }
+export const POST = withApiHandler<EmailTestConnectionResponse>(async (context) => {
+  const { req } = context;
 
-    const body = await req.json();
-    const { host, port, secure, user, password } = body;
+  const session = await getAdminSessionFromRequest(req);
+  if (!session) {
+    throw new ApiError({ code: 'unauthorized', message: 'Não autenticado', status: 401 });
+  }
 
-    // Validações básicas
-    if (!host || !port || !user) {
-      return NextResponse.json(
-        { error: 'Host, port e user são obrigatórios' },
-        { status: 400 }
-      );
-    }
+  if (!session.permissions.includes(AdminPermission.CONFIGURACOES)) {
+    throw new ApiError({ code: 'forbidden', message: 'Permissão negada', status: 403 });
+  }
 
-    console.log('[EMAIL_TEST_CONNECTION] Testing SMTP connection:', {
-      host,
-      port,
-      secure,
-      user,
-      hasPassword: !!password,
+  const body = await req.json();
+
+  const parsed = EmailTestConnectionSchema.safeParse(body);
+  if (!parsed.success) {
+    throw new ApiError({
+      code: 'VALIDATION_ERROR',
+      message: 'Dados inválidos',
+      status: 400,
+      details: parsed.error.flatten(),
     });
+  }
 
+  const { host, port, secure, user, password } = parsed.data;
+
+  console.log('[EMAIL_TEST_CONNECTION] Testing SMTP connection:', {
+    host,
+    port,
+    secure,
+    user,
+    hasPassword: !!password,
+  });
+
+  try {
     // Criar transporter de teste
     const transporter = nodemailer.createTransport({
       host,
-      port: parseInt(String(port), 10),
-      secure: Boolean(secure),
+      port,
+      secure,
       auth: password ? {
         user,
         pass: password,
@@ -73,10 +96,12 @@ export async function POST(req: NextRequest) {
 
     console.log('[EMAIL_TEST_CONNECTION] Connection and authentication successful');
 
-    return NextResponse.json({
-      success: true,
-      message: password ? 'Conexão e autenticação SMTP testadas com sucesso' : 'Conexão SMTP testada com sucesso',
-    });
+    return {
+      data: {
+        success: true,
+        message: password ? 'Conexão e autenticação SMTP testadas com sucesso' : 'Conexão SMTP testada com sucesso',
+      },
+    };
   } catch (error) {
     console.error('[EMAIL_TEST_CONNECTION]', error);
 
@@ -97,9 +122,10 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    return NextResponse.json(
-      { error: errorMessage },
-      { status: 500 }
-    );
+    throw new ApiError({
+      code: 'smtp_connection_error',
+      message: errorMessage,
+      status: 500,
+    });
   }
-}
+});

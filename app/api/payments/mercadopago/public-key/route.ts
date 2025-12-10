@@ -6,34 +6,28 @@
  */
 
 
-import { NextResponse } from 'next/server';
+import { withApiHandler } from '@/lib/api/handler';
+import { ApiError } from '@/lib/api/errors';
 import { getMercadoPagoPublicKey } from '@/lib/mercadopago/config';
 
-export async function GET() {
-  try {
-    const publicKey = await getMercadoPagoPublicKey();
+type PublicKeyResponse = {
+  publicKey: string;
+};
 
-    if (!publicKey) {
-      return NextResponse.json(
-        {
-          error: 'Mercado Pago não configurado',
-          message: 'Configure as credenciais do Mercado Pago no painel admin ou nas variáveis de ambiente',
-        },
-        { status: 503 }
-      );
-    }
+export const GET = withApiHandler<PublicKeyResponse>(async () => {
+  const publicKey = await getMercadoPagoPublicKey();
 
-    return NextResponse.json({
-      publicKey,
+  if (!publicKey) {
+    throw new ApiError({
+      code: 'SERVICE_UNAVAILABLE',
+      message: 'Configure as credenciais do Mercado Pago no painel admin ou nas variáveis de ambiente',
+      status: 503,
     });
-  } catch (error) {
-    console.error('[MP_PUBLIC_KEY]', error);
-    return NextResponse.json(
-      {
-        error: 'Erro ao buscar chave pública',
-        message: 'Erro interno ao buscar credenciais do Mercado Pago',
-      },
-      { status: 500 }
-    );
   }
-}
+
+  return {
+    data: {
+      publicKey,
+    },
+  };
+});

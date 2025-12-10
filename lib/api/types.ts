@@ -44,7 +44,8 @@ export type ApiHandlerResult<T> = {
   meta?: Partial<Omit<ApiResponseMeta, "requestId" | "method" | "path" | "timestamp" | "durationMs">>;
 };
 
-export type RequestContext<P = Record<string, string>> = {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- P must accept catch-all routes with string[] values
+export type RequestContext<P = Record<string, any>> = {
   req: NextRequest;
   params: P;
   logger: RequestLogger;

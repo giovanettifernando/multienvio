@@ -8,9 +8,10 @@
  * - reason (opcional): Motivo do reembolso.
  */
 
-import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { getSession } from '@/lib/auth/session';
+import { withApiHandler } from '@/lib/api/handler';
+import { ApiError } from '@/lib/api/errors';
+import { getUserFromRequest } from '@/lib/auth/session';
 import { prisma } from '@/lib/db';
 import { refundPayment, getPaymentById, mapMercadoPagoStatus } from '@/lib/mercadopago';
 
@@ -19,134 +20,140 @@ const refundSchema = z.object({
   reason: z.string().max(500).optional(),
 });
 
-interface RouteParams {
-  params: Promise<{ id: string }>;
-}
+type RefundPaymentResponse = {
+  success: boolean;
+  refund: {
+    id: number;
+    amount: number;
+    status: string;
+  };
+  transaction: {
+    id: string;
+    status: string;
+    refundedCents: number;
+  };
+};
 
-export async function POST(request: NextRequest, { params }: RouteParams) {
-  try {
-    // Autenticação
-    const session = await getSession();
-    if (!session) {
-      return NextResponse.json({ message: 'Não autenticado' }, { status: 401 });
-    }
+export const POST = withApiHandler<RefundPaymentResponse, { id: string }>(async (context) => {
+  const { logger } = context;
+  const session = await getUserFromRequest(context.req);
+  if (!session?.userId) {
+    throw new ApiError({ code: 'unauthorized', message: 'Não autenticado', status: 401 });
+  }
 
-    const { id } = await params;
+  const { id } = await context.params;
 
-    // Buscar transação no banco
-    const transaction = await prisma.paymentTransaction.findUnique({
-      where: { id },
-      include: { gateway: true },
+  const transaction = await prisma.paymentTransaction.findUnique({
+    where: { id },
+    include: { gateway: true },
+  });
+
+  if (!transaction) {
+    throw new ApiError({ code: 'not_found', message: 'Transação não encontrada', status: 404 });
+  }
+
+  if (transaction.gateway?.slug !== 'mercadopago') {
+    throw new ApiError({
+      code: 'validation_error',
+      message: 'Reembolso disponível apenas para pagamentos Mercado Pago',
+      status: 400,
     });
+  }
 
-    if (!transaction) {
-      return NextResponse.json({ message: 'Transação não encontrada' }, { status: 404 });
+  if (!['PAID', 'AUTHORIZED'].includes(transaction.status)) {
+    throw new ApiError({
+      code: 'validation_error',
+      message: `Não é possível reembolsar pagamento com status: ${transaction.status}`,
+      status: 400,
+    });
+  }
+
+  const isAdmin = session.role === 'ADMIN' || session.role === 'SUPER_ADMIN';
+  const isOwner = transaction.userId === session.userId;
+
+  if (!isAdmin && !isOwner) {
+    throw new ApiError({ code: 'forbidden', message: 'Sem permissão para reembolsar', status: 403 });
+  }
+
+  let body: unknown = {};
+  try {
+    body = await context.req.json();
+  } catch {
+    // Empty body is valid
+  }
+
+  const parsed = refundSchema.safeParse(body);
+  if (!parsed.success) {
+    throw new ApiError({
+      code: 'validation_error',
+      message: 'Dados inválidos',
+      status: 400,
+      details: parsed.error.flatten(),
+    });
+  }
+
+  const { amount, reason } = parsed.data;
+
+  const metadata = transaction.metadata as { refundedCents?: number } | null;
+  const alreadyRefundedCents = metadata?.refundedCents || 0;
+
+  if (amount) {
+    const maxRefundCents = transaction.amountCents - alreadyRefundedCents;
+    const refundCents = Math.round(amount * 100);
+
+    if (refundCents > maxRefundCents) {
+      throw new ApiError({
+        code: 'validation_error',
+        message: `Valor máximo para reembolso: R$ ${(maxRefundCents / 100).toFixed(2)}`,
+        status: 400,
+      });
     }
+  }
 
-    // Verificar se é do Mercado Pago
-    if (transaction.gateway?.slug !== 'mercadopago') {
-      return NextResponse.json(
-        { message: 'Reembolso disponível apenas para pagamentos Mercado Pago' },
-        { status: 400 }
-      );
-    }
+  const externalId = transaction.externalId;
+  if (!externalId) {
+    throw new ApiError({
+      code: 'validation_error',
+      message: 'ID do pagamento no Mercado Pago não encontrado',
+      status: 400,
+    });
+  }
 
-    // Verificar se o pagamento pode ser reembolsado
-    if (!['PAID', 'AUTHORIZED'].includes(transaction.status)) {
-      return NextResponse.json(
-        { message: `Não é possível reembolsar pagamento com status: ${transaction.status}` },
-        { status: 400 }
-      );
-    }
+  const refundResult = await refundPayment(externalId, amount);
 
-    // Verificar permissão (apenas admin ou dono do pagamento)
-    const isAdmin = session.role === 'ADMIN' || session.role === 'SUPER_ADMIN';
-    const isOwner = transaction.userId === session.userId;
+  const updatedPayment = await getPaymentById(externalId);
+  const newStatus = mapMercadoPagoStatus(updatedPayment.status);
 
-    if (!isAdmin && !isOwner) {
-      return NextResponse.json({ message: 'Sem permissão para reembolsar' }, { status: 403 });
-    }
+  const refundedCents = Math.round(refundResult.amount * 100);
+  const totalRefundedCents = alreadyRefundedCents + refundedCents;
 
-    // Validar body
-    const body = await request.json().catch(() => ({}));
-    const parsed = refundSchema.safeParse(body);
-
-    if (!parsed.success) {
-      return NextResponse.json(
-        { message: 'Dados inválidos', errors: parsed.error.flatten() },
-        { status: 400 }
-      );
-    }
-
-    const { amount, reason } = parsed.data;
-
-    // Calcular valor já reembolsado (armazenado em metadata)
-    const metadata = transaction.metadata as { refundedCents?: number } | null;
-    const alreadyRefundedCents = metadata?.refundedCents || 0;
-
-    // Verificar valor do reembolso
-    if (amount) {
-      const maxRefundCents = transaction.amountCents - alreadyRefundedCents;
-      const refundCents = Math.round(amount * 100);
-
-      if (refundCents > maxRefundCents) {
-        return NextResponse.json(
-          {
-            message: `Valor máximo para reembolso: R$ ${(maxRefundCents / 100).toFixed(2)}`,
-          },
-          { status: 400 }
-        );
-      }
-    }
-
-    // Executar reembolso no Mercado Pago
-    const externalId = transaction.externalId;
-    if (!externalId) {
-      return NextResponse.json(
-        { message: 'ID do pagamento no Mercado Pago não encontrado' },
-        { status: 400 }
-      );
-    }
-
-    const refundResult = await refundPayment(externalId, amount);
-
-    // Buscar status atualizado do pagamento
-    const updatedPayment = await getPaymentById(externalId);
-    const newStatus = mapMercadoPagoStatus(updatedPayment.status);
-
-    // Calcular valor reembolsado em centavos
-    const refundedCents = Math.round(refundResult.amount * 100);
-
-    // Calcular novo total reembolsado
-    const totalRefundedCents = alreadyRefundedCents + refundedCents;
-
-    // Atualizar transação no banco
-    await prisma.paymentTransaction.update({
-      where: { id },
-      data: {
-        status: newStatus,
-        metadata: {
-          ...(transaction.metadata as object || {}),
-          refundedCents: totalRefundedCents,
-          lastRefund: {
-            id: refundResult.id,
-            amount: refundResult.amount,
-            reason,
-            at: new Date().toISOString(),
-            by: session.userId,
-          },
+  await prisma.paymentTransaction.update({
+    where: { id },
+    data: {
+      status: newStatus,
+      metadata: {
+        ...(transaction.metadata as object || {}),
+        refundedCents: totalRefundedCents,
+        lastRefund: {
+          id: refundResult.id,
+          amount: refundResult.amount,
+          reason,
+          at: new Date().toISOString(),
+          by: session.userId,
         },
       },
-    });
+    },
+  });
 
-    console.log('[REFUND] Reembolso processado:', {
-      transactionId: id,
-      refundId: refundResult.id,
-      amount: refundResult.amount,
-      status: refundResult.status,
-    });
+  logger.info('refund_processed', {
+    transactionId: id,
+    refundId: refundResult.id,
+    amount: refundResult.amount,
+    status: refundResult.status,
+  });
 
-    return NextResponse.json({
+  return {
+    data: {
       success: true,
       refund: {
         id: refundResult.id,
@@ -158,10 +165,6 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         status: newStatus,
         refundedCents: totalRefundedCents,
       },
-    });
-  } catch (error) {
-    console.error('[REFUND_ERROR]', error);
-    const message = error instanceof Error ? error.message : 'Erro ao processar reembolso';
-    return NextResponse.json({ success: false, message }, { status: 500 });
-  }
-}
+    },
+  };
+});

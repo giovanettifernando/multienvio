@@ -2,7 +2,12 @@ import { withApiHandler } from "@/lib/api/handler";
 import { ApiError } from "@/lib/api/errors";
 import prisma from "@/lib/db";
 import { getUserFromRequest } from "@/lib/auth/session";
+import { z } from 'zod';
 
+const RecurringItemUpdateSchema = z.object({
+  descricao: z.string().min(1).optional(),
+  valorUnitario: z.number().positive().optional(),
+});
 
 export const DELETE = withApiHandler(async (context) => {
   const session = await getUserFromRequest(context.req);
@@ -39,7 +44,18 @@ export const PATCH = withApiHandler(async (context) => {
   const userId = session.userId;
   const { id } = await context.params;
   const body = await context.req.json();
-  const { descricao, valorUnitario } = body;
+
+  const parsed = RecurringItemUpdateSchema.safeParse(body);
+  if (!parsed.success) {
+    throw new ApiError({
+      code: 'VALIDATION_ERROR',
+      message: 'Dados inválidos',
+      status: 400,
+      details: parsed.error.flatten(),
+    });
+  }
+
+  const { descricao, valorUnitario } = parsed.data;
 
   const item = await prisma.recurringItem.findUnique({
     where: { id },

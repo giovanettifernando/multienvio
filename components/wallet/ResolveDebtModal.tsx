@@ -69,11 +69,14 @@ export default function ResolveDebtModal({ open, onClose }: ResolveDebtModalProp
         }),
       });
 
-      const data = await response.json();
+      const json = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || 'Erro ao processar');
+        throw new Error(json.error?.message || json.message || 'Erro ao processar');
       }
+
+      // Handle standardized API response format { data: T, error, meta }
+      const data = json.data ?? json;
 
       if (data.action === 'create_pix_payment') {
         // TODO: Integrar com fluxo de PIX

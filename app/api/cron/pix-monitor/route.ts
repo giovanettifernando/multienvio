@@ -18,13 +18,15 @@
  * - Ex: curl -X POST -H "X-Cron-Secret: $SECRET" https://seusite.com/api/cron/pix-monitor
  */
 
-import { NextResponse } from 'next/server';
+import { withApiHandler } from '@/lib/api/handler';
+import { ApiError } from '@/lib/api/errors';
 import crypto from 'crypto';
 import {
   monitorPendingPixPayments,
   cleanupOldPendingPix,
   type PixMonitorResult,
 } from '@/lib/mercadopago/pix-monitor';
+import { logger } from '@/lib/logger';
 
 export const maxDuration = 60; // 60 segundos de timeout
 
@@ -50,104 +52,115 @@ function secureCompare(a: string, b: string): boolean {
 /**
  * Valida se a requisição é autorizada
  */
-function isAuthorized(request: Request): boolean {
+function isAuthorized(headers: Headers): boolean {
   // 1. Verificar secret do cron com comparação constant-time
   const cronSecret = process.env.CRON_SECRET;
-  const requestSecret = request.headers.get('x-cron-secret');
+  const requestSecret = headers.get('x-cron-secret');
 
   if (cronSecret && requestSecret && secureCompare(requestSecret, cronSecret)) {
     return true;
   }
 
   // 2. Verificar se é Vercel Cron (header especial)
-  const vercelCron = request.headers.get('x-vercel-cron');
+  const vercelCron = headers.get('x-vercel-cron');
   if (vercelCron === '1') {
     return true;
   }
 
   // 3. Em desenvolvimento, permitir sem autenticação
   if (process.env.NODE_ENV === 'development') {
-    console.warn('[PIX_MONITOR_CRON] Permitindo acesso em desenvolvimento sem autenticação');
+    logger.warn({ event: 'pix_monitor_dev_access' }, 'Allowing dev access without auth');
     return true;
   }
 
   return false;
 }
 
-interface CronResponse {
+interface PixMonitorResponse {
   success: boolean;
   message: string;
   timestamp: string;
-  result?: PixMonitorResult;
-  cleanup?: number;
-  error?: string;
-  duration?: number;
+  result: PixMonitorResult;
+  cleanup: number;
+  duration: number;
 }
 
-async function handleCronJob(request: Request): Promise<NextResponse<CronResponse>> {
+// GET para facilitar testes manuais
+export const GET = withApiHandler<PixMonitorResponse>(async (context) => {
   const startTime = Date.now();
 
   // Verificar autorização
-  if (!isAuthorized(request)) {
-    return NextResponse.json(
-      {
-        success: false,
-        message: 'Não autorizado',
-        timestamp: new Date().toISOString(),
-      },
-      { status: 401 }
-    );
+  if (!isAuthorized(context.req.headers)) {
+    throw ApiError.unauthorized('Não autorizado');
   }
 
-  console.log('[PIX_MONITOR_CRON] Iniciando execução...');
+  logger.info({ event: 'pix_monitor_start' }, 'Starting PIX monitor');
 
-  try {
-    // 1. Monitorar PIX pendentes
-    const result = await monitorPendingPixPayments();
+  // 1. Monitorar PIX pendentes
+  const result = await monitorPendingPixPayments();
 
-    // 2. Limpar PIX muito antigos (uma vez por execução)
-    const cleanedUp = await cleanupOldPendingPix();
+  // 2. Limpar PIX muito antigos (uma vez por execução)
+  const cleanedUp = await cleanupOldPendingPix();
 
-    const duration = Date.now() - startTime;
+  const duration = Date.now() - startTime;
 
-    console.log('[PIX_MONITOR_CRON] Execução concluída:', {
-      duration: `${duration}ms`,
-      processed: result.processed,
-      approved: result.approved,
-      expired: result.expired,
-      cleanedUp,
-    });
+  logger.info({
+    event: 'pix_monitor_complete',
+    durationMs: duration,
+    processed: result.processed,
+    approved: result.approved,
+    expired: result.expired,
+    cleanedUp,
+  }, 'PIX monitor completed');
 
-    return NextResponse.json({
+  return {
+    data: {
       success: true,
       message: `Processados ${result.processed} pagamentos PIX`,
       timestamp: new Date().toISOString(),
       result,
       cleanup: cleanedUp,
       duration,
-    });
-  } catch (error) {
-    console.error('[PIX_MONITOR_CRON] Erro na execução:', error);
-
-    return NextResponse.json(
-      {
-        success: false,
-        message: 'Erro ao executar monitoramento',
-        timestamp: new Date().toISOString(),
-        error: error instanceof Error ? error.message : 'Erro desconhecido',
-        duration: Date.now() - startTime,
-      },
-      { status: 500 }
-    );
-  }
-}
-
-// GET para facilitar testes manuais
-export async function GET(request: Request) {
-  return handleCronJob(request);
-}
+    },
+  };
+});
 
 // POST para cron jobs
-export async function POST(request: Request) {
-  return handleCronJob(request);
-}
+export const POST = withApiHandler<PixMonitorResponse>(async (context) => {
+  const startTime = Date.now();
+
+  // Verificar autorização
+  if (!isAuthorized(context.req.headers)) {
+    throw ApiError.unauthorized('Não autorizado');
+  }
+
+  logger.info({ event: 'pix_monitor_start' }, 'Starting PIX monitor');
+
+  // 1. Monitorar PIX pendentes
+  const result = await monitorPendingPixPayments();
+
+  // 2. Limpar PIX muito antigos (uma vez por execução)
+  const cleanedUp = await cleanupOldPendingPix();
+
+  const duration = Date.now() - startTime;
+
+  logger.info({
+    event: 'pix_monitor_complete',
+    durationMs: duration,
+    processed: result.processed,
+    approved: result.approved,
+    expired: result.expired,
+    cleanedUp,
+  }, 'PIX monitor completed');
+
+  return {
+    data: {
+      success: true,
+      message: `Processados ${result.processed} pagamentos PIX`,
+      timestamp: new Date().toISOString(),
+      result,
+      cleanup: cleanedUp,
+      duration,
+    },
+  };
+});

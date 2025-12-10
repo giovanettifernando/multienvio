@@ -40,7 +40,9 @@ export function CheckoutCartModal({
     queryFn: async () => {
       const res = await fetch('/api/wallet');
       if (!res.ok) throw new Error('Erro ao buscar saldo');
-      return res.json();
+      const json = await res.json();
+      // Handle standardized API response format { data: T, error, meta }
+      return (json.data ?? json) as WalletData;
     },
     enabled: open,
   });
@@ -54,7 +56,11 @@ export function CheckoutCartModal({
     queryFn: async () => {
       const res = await fetch('/api/auth/me');
       if (!res.ok) throw new Error('Erro ao buscar dados do usuário');
-      return res.json();
+      const json = await res.json();
+      // Handle standardized API response format { data: T, error, meta }
+      // API returns { data: { user: {...} } } so we need to extract user
+      const data = json.data ?? json;
+      return (data.user ?? data) as { email: string };
     },
     enabled: open,
   });

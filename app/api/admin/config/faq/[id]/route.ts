@@ -6,16 +6,12 @@
  * Rotas de administração de FAQ individual (Admin)
  */
 
-
-import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { requireAdminUser } from '@/lib/auth/admin-helpers';
 import { AdminPermission } from '@prisma/client';
-
-interface RouteParams {
-  params: Promise<{ id: string }>;
-}
+import { withApiHandler } from '@/lib/api/handler';
+import { ApiError } from '@/lib/api/errors';
 
 /**
  * Schema de validação para atualizar FAQ (campos opcionais)
@@ -32,70 +28,89 @@ const updateFaqSchema = z.object({
 /**
  * GET - Busca FAQ específica por ID
  */
-export async function GET(request: NextRequest, { params }: RouteParams) {
-  try {
-    const authResult = await requireAdminUser(request, AdminPermission.CONFIGURACOES);
-    if (authResult instanceof NextResponse) return authResult;
-
-    const { id } = await params;
-
-    const faq = await prisma.fAQItem.findUnique({
-      where: { id },
+export const GET = withApiHandler<unknown, { id: string }>(async ({ req, params }) => {
+  const authResult = await requireAdminUser(req, AdminPermission.CONFIGURACOES);
+  if (authResult instanceof Response) {
+    throw new ApiError({
+      code: 'UNAUTHORIZED',
+      message: 'Não autorizado',
+      status: 401,
     });
+  }
 
-    if (!faq) {
-      return NextResponse.json({ error: 'FAQ não encontrada' }, { status: 404 });
-    }
+  const { id } = params;
 
-    return NextResponse.json({
+  const faq = await prisma.fAQItem.findUnique({
+    where: { id },
+  });
+
+  if (!faq) {
+    throw new ApiError({
+      code: 'NOT_FOUND',
+      message: 'FAQ não encontrada',
+      status: 404,
+    });
+  }
+
+  return {
+    data: {
       item: {
         ...faq,
         createdAt: faq.createdAt.toISOString(),
         updatedAt: faq.updatedAt.toISOString(),
       },
-    });
-  } catch (error) {
-    console.error('[ADMIN_FAQ_GET_BY_ID]', error);
-    return NextResponse.json({ error: 'Erro ao buscar FAQ' }, { status: 500 });
-  }
-}
+    },
+  };
+});
 
 /**
  * PATCH - Atualiza FAQ existente
  */
-export async function PATCH(request: NextRequest, { params }: RouteParams) {
-  try {
-    const authResult = await requireAdminUser(request, AdminPermission.CONFIGURACOES);
-    if (authResult instanceof NextResponse) return authResult;
-
-    const { id } = await params;
-
-    // Verificar se FAQ existe
-    const existing = await prisma.fAQItem.findUnique({
-      where: { id },
+export const PATCH = withApiHandler<unknown, { id: string }>(async ({ req, params }) => {
+  const authResult = await requireAdminUser(req, AdminPermission.CONFIGURACOES);
+  if (authResult instanceof Response) {
+    throw new ApiError({
+      code: 'UNAUTHORIZED',
+      message: 'Não autorizado',
+      status: 401,
     });
+  }
 
-    if (!existing) {
-      return NextResponse.json({ error: 'FAQ não encontrada' }, { status: 404 });
-    }
+  const { id } = params;
 
-    const body = await request.json();
-    const parsed = updateFaqSchema.safeParse(body);
+  // Verificar se FAQ existe
+  const existing = await prisma.fAQItem.findUnique({
+    where: { id },
+  });
 
-    if (!parsed.success) {
-      return NextResponse.json(
-        { error: 'Dados inválidos', details: parsed.error.flatten() },
-        { status: 400 }
-      );
-    }
-
-    // Atualizar FAQ
-    const faq = await prisma.fAQItem.update({
-      where: { id },
-      data: parsed.data,
+  if (!existing) {
+    throw new ApiError({
+      code: 'NOT_FOUND',
+      message: 'FAQ não encontrada',
+      status: 404,
     });
+  }
 
-    return NextResponse.json({
+  const body = await req.json();
+  const parsed = updateFaqSchema.safeParse(body);
+
+  if (!parsed.success) {
+    throw new ApiError({
+      code: 'VALIDATION_ERROR',
+      message: 'Dados inválidos',
+      status: 400,
+      details: parsed.error.flatten(),
+    });
+  }
+
+  // Atualizar FAQ
+  const faq = await prisma.fAQItem.update({
+    where: { id },
+    data: parsed.data,
+  });
+
+  return {
+    data: {
       success: true,
       message: 'FAQ atualizada com sucesso',
       item: {
@@ -103,43 +118,47 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         createdAt: faq.createdAt.toISOString(),
         updatedAt: faq.updatedAt.toISOString(),
       },
-    });
-  } catch (error) {
-    console.error('[ADMIN_FAQ_PATCH]', error);
-    return NextResponse.json({ error: 'Erro ao atualizar FAQ' }, { status: 500 });
-  }
-}
+    },
+  };
+});
 
 /**
  * DELETE - Remove FAQ (soft delete ou hard delete)
  */
-export async function DELETE(request: NextRequest, { params }: RouteParams) {
-  try {
-    const authResult = await requireAdminUser(request, AdminPermission.CONFIGURACOES);
-    if (authResult instanceof NextResponse) return authResult;
-
-    const { id } = await params;
-
-    // Verificar se FAQ existe
-    const existing = await prisma.fAQItem.findUnique({
-      where: { id },
+export const DELETE = withApiHandler<unknown, { id: string }>(async ({ req, params }) => {
+  const authResult = await requireAdminUser(req, AdminPermission.CONFIGURACOES);
+  if (authResult instanceof Response) {
+    throw new ApiError({
+      code: 'UNAUTHORIZED',
+      message: 'Não autorizado',
+      status: 401,
     });
+  }
 
-    if (!existing) {
-      return NextResponse.json({ error: 'FAQ não encontrada' }, { status: 404 });
-    }
+  const { id } = params;
 
-    // Hard delete - remover do banco
-    await prisma.fAQItem.delete({
-      where: { id },
+  // Verificar se FAQ existe
+  const existing = await prisma.fAQItem.findUnique({
+    where: { id },
+  });
+
+  if (!existing) {
+    throw new ApiError({
+      code: 'NOT_FOUND',
+      message: 'FAQ não encontrada',
+      status: 404,
     });
+  }
 
-    return NextResponse.json({
+  // Hard delete - remover do banco
+  await prisma.fAQItem.delete({
+    where: { id },
+  });
+
+  return {
+    data: {
       success: true,
       message: 'FAQ removida com sucesso',
-    });
-  } catch (error) {
-    console.error('[ADMIN_FAQ_DELETE]', error);
-    return NextResponse.json({ error: 'Erro ao remover FAQ' }, { status: 500 });
-  }
-}
+    },
+  };
+});

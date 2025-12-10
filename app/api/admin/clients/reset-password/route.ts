@@ -4,97 +4,119 @@
  * Envia email de redefinição de senha para usuário(s)
  */
 
-import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
+import { NextResponse } from 'next/server';
+import { withApiHandler } from '@/lib/api/handler';
+import { ApiError } from '@/lib/api/errors';
 import { prisma } from '@/lib/db';
 import { requireAdminUser } from '@/lib/auth/admin-helpers';
 import { AdminPermission } from '@prisma/client';
 import { sendPasswordResetEmail } from '@/lib/email/mailer';
+import { z } from 'zod';
 
+interface EmailResult {
+  email: string;
+  success: boolean;
+}
 
-export async function POST(request: NextRequest) {
-  try {
-    const authResult = await requireAdminUser(request, AdminPermission.CONTAS);
-    if (authResult instanceof NextResponse) return authResult;
+interface AdminClientResetPasswordResponse {
+  ok: boolean;
+  message: string;
+  results: EmailResult[];
+}
 
-    const body = await request.json();
-    const { ids } = body as { ids: string[] };
+const AdminClientResetPasswordSchema = z.object({
+  ids: z.array(z.string().min(1, 'ID não pode ser vazio')).min(1, 'Pelo menos um ID é obrigatório'),
+});
 
-    if (!ids || !Array.isArray(ids) || ids.length === 0) {
-      return NextResponse.json(
-        { message: 'IDs de usuários são obrigatórios' },
-        { status: 400 }
-      );
-    }
-
-    // Buscar usuários
-    const users = await prisma.user.findMany({
-      where: { id: { in: ids } },
-      select: { id: true, name: true, email: true },
+export const POST = withApiHandler<AdminClientResetPasswordResponse>(async ({ req }) => {
+  const authResult = await requireAdminUser(req, AdminPermission.CONTAS);
+  if (authResult instanceof NextResponse) {
+    throw new ApiError({
+      code: 'UNAUTHORIZED',
+      message: 'Não autorizado',
+      status: 401,
     });
+  }
 
-    if (users.length === 0) {
-      return NextResponse.json(
-        { message: 'Nenhum usuário encontrado' },
-        { status: 404 }
-      );
-    }
+  const body = await req.json();
 
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-    const results: { email: string; success: boolean }[] = [];
+  const parsed = AdminClientResetPasswordSchema.safeParse(body);
+  if (!parsed.success) {
+    throw new ApiError({
+      code: 'VALIDATION_ERROR',
+      message: 'Dados inválidos',
+      status: 400,
+      details: parsed.error.flatten(),
+    });
+  }
 
-    for (const user of users) {
-      try {
-        // Gerar token de reset
-        const token = crypto.randomBytes(32).toString('hex');
-        const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
-        const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hora
+  const { ids } = parsed.data;
 
-        // Salvar token no banco
-        await prisma.passwordResetToken.create({
-          data: {
-            userId: user.id,
-            tokenHash,
-            expiresAt,
-          },
-        });
+  // Buscar usuários
+  const users = await prisma.user.findMany({
+    where: { id: { in: ids } },
+    select: { id: true, name: true, email: true },
+  });
 
-        // Construir URL de reset
-        const resetUrl = `${baseUrl}/auth/reset-password?token=${token}`;
+  if (users.length === 0) {
+    throw new ApiError({
+      code: 'NOT_FOUND',
+      message: 'Nenhum usuário encontrado',
+      status: 404,
+    });
+  }
 
-        // Enviar email
-        const emailSent = await sendPasswordResetEmail(
-          user.email,
-          user.name,
-          resetUrl
-        );
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+  const results: EmailResult[] = [];
 
-        results.push({ email: user.email, success: emailSent });
+  for (const user of users) {
+    try {
+      // Gerar token de reset
+      const token = crypto.randomBytes(32).toString('hex');
+      const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+      const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hora
 
-        console.log('[ADMIN_RESET_PASSWORD]', {
-          adminId: authResult.user.id,
+      // Salvar token no banco
+      await prisma.passwordResetToken.create({
+        data: {
           userId: user.id,
-          userEmail: user.email,
-          emailSent,
-        });
-      } catch (err) {
-        console.error('[ADMIN_RESET_PASSWORD] Error for user:', user.id, err);
-        results.push({ email: user.email, success: false });
-      }
+          tokenHash,
+          expiresAt,
+        },
+      });
+
+      // Construir URL de reset
+      const resetUrl = `${baseUrl}/auth/reset-password?token=${token}`;
+
+      // Enviar email
+      const emailSent = await sendPasswordResetEmail(
+        user.email,
+        user.name,
+        resetUrl
+      );
+
+      results.push({ email: user.email, success: emailSent });
+
+      console.log('[ADMIN_RESET_PASSWORD]', {
+        adminId: authResult.user.id,
+        userId: user.id,
+        userEmail: user.email,
+        emailSent,
+      });
+    } catch (err) {
+      console.error('[ADMIN_RESET_PASSWORD] Error for user:', user.id, err);
+      results.push({ email: user.email, success: false });
     }
+  }
 
-    const successCount = results.filter((r) => r.success).length;
+  const successCount = results.filter((r) => r.success).length;
 
-    return NextResponse.json({
+  return {
+    data: {
       ok: true,
       message: `Email de redefinição enviado para ${successCount} de ${users.length} usuário(s)`,
       results,
-    });
-  } catch (error) {
-    console.error('[ADMIN_RESET_PASSWORD_ERROR]', error);
-    return NextResponse.json(
-      { message: 'Erro ao enviar email de redefinição' },
-      { status: 500 }
-    );
-  }
-}
+    },
+  };
+});

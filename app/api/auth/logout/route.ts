@@ -1,9 +1,11 @@
 import { NextResponse } from 'next/server';
+import { withApiHandlerResponse } from '@/lib/api/handler';
 import { destroySession, getSession } from '@/lib/auth/session';
 import { prisma } from '@/lib/db';
 
+export const POST = withApiHandlerResponse(async (context) => {
+  const { logger } = context;
 
-export async function POST() {
   try {
     // Obter sessão atual para invalidar tokens
     const session = await getSession();
@@ -14,6 +16,9 @@ export async function POST() {
         where: { id: session.userId },
         data: { tokenVersion: { increment: 1 } },
       });
+      logger.info('logout_success', { userId: session.userId });
+    } else {
+      logger.info('logout_no_session');
     }
 
     // Remover cookie de autenticação
@@ -23,10 +28,10 @@ export async function POST() {
       message: 'Logout realizado com sucesso',
     });
   } catch (error) {
-    console.error('Error during logout:', error);
+    logger.error('logout_error', { err: error });
     return NextResponse.json(
       { message: 'Erro ao realizar logout' },
       { status: 500 }
     );
   }
-}
+});

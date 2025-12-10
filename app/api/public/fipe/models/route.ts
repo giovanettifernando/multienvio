@@ -7,62 +7,68 @@
  *   - search: filtro por nome (opcional)
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { withApiHandler } from '@/lib/api/handler';
+import { ApiError } from '@/lib/api/errors';
 import { prisma } from '@/lib/db';
 
+interface FipeModel {
+  id: string;
+  fipeCode: string;
+  name: string;
+}
 
-export async function GET(request: NextRequest) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const brandId = searchParams.get('brandId');
-    const search = searchParams.get('search') || '';
+interface FipeModelsResponse {
+  brand: string;
+  models: FipeModel[];
+}
 
-    if (!brandId) {
-      return NextResponse.json(
-        { message: 'brandId é obrigatório' },
-        { status: 400 }
-      );
-    }
+export const GET = withApiHandler<FipeModelsResponse>(async ({ req }) => {
+  const { searchParams } = new URL(req.url);
+  const brandId = searchParams.get('brandId');
+  const search = searchParams.get('search') || '';
 
-    // Verificar se marca existe
-    const brand = await prisma.fipeVehicleBrand.findUnique({
-      where: { id: brandId },
-      select: { id: true, name: true },
+  if (!brandId) {
+    throw new ApiError({
+      code: 'MISSING_BRAND_ID',
+      message: 'brandId é obrigatório',
+      status: 400,
     });
+  }
 
-    if (!brand) {
-      return NextResponse.json(
-        { message: 'Marca não encontrada' },
-        { status: 404 }
-      );
-    }
+  // Verificar se marca existe
+  const brand = await prisma.fipeVehicleBrand.findUnique({
+    where: { id: brandId },
+    select: { id: true, name: true },
+  });
 
-    const models = await prisma.fipeVehicleModel.findMany({
-      where: {
-        brandId,
-        isActive: true,
-        ...(search && {
-          name: { contains: search, mode: 'insensitive' },
-        }),
-      },
-      orderBy: { name: 'asc' },
-      select: {
-        id: true,
-        fipeCode: true,
-        name: true,
-      },
+  if (!brand) {
+    throw new ApiError({
+      code: 'BRAND_NOT_FOUND',
+      message: 'Marca não encontrada',
+      status: 404,
     });
+  }
 
-    return NextResponse.json({
+  const models = await prisma.fipeVehicleModel.findMany({
+    where: {
+      brandId,
+      isActive: true,
+      ...(search && {
+        name: { contains: search, mode: 'insensitive' },
+      }),
+    },
+    orderBy: { name: 'asc' },
+    select: {
+      id: true,
+      fipeCode: true,
+      name: true,
+    },
+  });
+
+  return {
+    data: {
       brand: brand.name,
       models,
-    });
-
-  } catch (error) {
-    console.error('[Public FIPE Models] Erro:', error);
-    return NextResponse.json(
-      { message: 'Erro ao buscar modelos' },
-      { status: 500 }
-    );
-  }
-}
+    },
+  };
+});

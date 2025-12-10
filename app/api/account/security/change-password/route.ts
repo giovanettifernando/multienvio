@@ -13,25 +13,25 @@
  * - Invalidação de sessões anteriores
  */
 
-import { NextResponse } from "next/server";
-import { getUserFromRequest, removeAuthCookie, AUTH_COOKIE_NAME } from "@/lib/auth/session";
-import { ApiError } from "@/lib/api/errors";
-import { enforceRateLimit } from "@/lib/api/rate-limit";
-import { changePasswordSchema } from "@/lib/validation/password-policy";
-import { accountSecurityService } from "@/lib/services/account-security.service";
-import { sendPasswordChangedEmail } from "@/lib/email/mailer";
-import prisma from "@/lib/db";
-
+import { NextResponse } from 'next/server';
+import { withApiHandlerResponse } from '@/lib/api/handler';
+import { getUserFromRequest, removeAuthCookie, AUTH_COOKIE_NAME } from '@/lib/auth/session';
+import { ApiError } from '@/lib/api/errors';
+import { enforceRateLimit } from '@/lib/rate-limit-redis';
+import { changePasswordSchema } from '@/lib/validation/password-policy';
+import { accountSecurityService } from '@/lib/services/account-security.service';
+import { sendPasswordChangedEmail } from '@/lib/email/mailer';
+import prisma from '@/lib/db';
 
 /**
  * Extrai IP do request (considerando proxies)
  */
 function getClientIp(request: Request): string | undefined {
-  const forwarded = request.headers.get("x-forwarded-for");
-  const realIp = request.headers.get("x-real-ip");
+  const forwarded = request.headers.get('x-forwarded-for');
+  const realIp = request.headers.get('x-real-ip');
 
   if (forwarded) {
-    return forwarded.split(",")[0].trim();
+    return forwarded.split(',')[0].trim();
   }
 
   if (realIp) {
@@ -44,17 +44,19 @@ function getClientIp(request: Request): string | undefined {
 /**
  * POST /api/account/security/change-password
  */
-export async function POST(request: Request) {
+export const POST = withApiHandlerResponse(async (context) => {
+  const { req, logger } = context;
+
   try {
     // 1. Autenticação
-    const currentUser = await getUserFromRequest(request);
+    const currentUser = await getUserFromRequest(req);
 
     if (!currentUser) {
       return NextResponse.json(
         {
           ok: false,
-          code: "unauthorized",
-          message: "Não autenticado",
+          code: 'unauthorized',
+          message: 'Não autenticado',
         },
         { status: 401 }
       );
@@ -63,30 +65,30 @@ export async function POST(request: Request) {
     const userId = currentUser.userId;
 
     // 2. Rate limiting (por IP e por usuário)
-    const clientIp = getClientIp(request) || "unknown";
-    const userAgent = request.headers.get("user-agent") || undefined;
+    const clientIp = getClientIp(req) || 'unknown';
+    const userAgent = req.headers.get('user-agent') || undefined;
 
     try {
-      // Limite por IP: 5 requisições a cada 15 minutos
-      enforceRateLimit({
+      // Limite por IP: 5 requisições a cada 15 minutos (Redis distribuido)
+      await enforceRateLimit({
         key: `change-password:ip:${clientIp}`,
         limit: 5,
         windowMs: 15 * 60 * 1000, // 15 minutos
       });
 
       // Limite por usuário: 3 requisições a cada 15 minutos
-      enforceRateLimit({
+      await enforceRateLimit({
         key: `change-password:user:${userId}`,
         limit: 3,
         windowMs: 15 * 60 * 1000,
       });
     } catch (error) {
-      if (error instanceof ApiError && error.code === "rate_limit_exceeded") {
+      if (error instanceof ApiError && error.code === 'rate_limit_exceeded') {
         return NextResponse.json(
           {
             ok: false,
-            code: "too_many_attempts",
-            message: "Muitas tentativas. Tente novamente em alguns minutos.",
+            code: 'too_many_attempts',
+            message: 'Muitas tentativas. Tente novamente em alguns minutos.',
           },
           { status: 429 }
         );
@@ -97,13 +99,13 @@ export async function POST(request: Request) {
     // 3. Parse e validação do body
     let body: unknown;
     try {
-      body = await request.json();
+      body = await req.json();
     } catch {
       return NextResponse.json(
         {
           ok: false,
-          code: "invalid_payload",
-          message: "Payload inválido",
+          code: 'invalid_payload',
+          message: 'Payload inválido',
         },
         { status: 400 }
       );
@@ -118,10 +120,10 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           ok: false,
-          code: "invalid_payload",
+          code: 'invalid_payload',
           message: firstError.message,
           errors: zodErrors.map((err) => ({
-            field: err.path.join("."),
+            field: err.path.join('.'),
             message: err.message,
           })),
         },
@@ -137,6 +139,8 @@ export async function POST(request: Request) {
         ip: clientIp,
         userAgent,
       });
+
+      logger.info('change_password_success', { userId });
 
       // 6. Buscar dados do usuário para o e-mail
       const user = await prisma.user.findUnique({
@@ -154,7 +158,7 @@ export async function POST(request: Request) {
           ip: clientIp,
           userAgent,
         }).catch((error) => {
-          console.error("[change-password] Erro ao enviar e-mail:", error);
+          logger.error('change_password_email_error', { userId, err: error });
           // Não lançar erro - o e-mail é uma notificação secundária
         });
       }
@@ -173,11 +177,11 @@ export async function POST(request: Request) {
       );
 
       // Garantir que o cookie foi removido no response
-      response.cookies.set(AUTH_COOKIE_NAME, "", {
+      response.cookies.set(AUTH_COOKIE_NAME, '', {
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
-        path: "/",
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path: '/',
         maxAge: 0, // Expira imediatamente
       });
 
@@ -185,6 +189,8 @@ export async function POST(request: Request) {
     } catch (error) {
       // Erros específicos do serviço
       if (error instanceof ApiError) {
+        logger.warn('change_password_failed', { userId, code: error.code });
+
         const statusMap: Record<string, number> = {
           unauthorized: 401,
           current_password_incorrect: 400,
@@ -210,15 +216,15 @@ export async function POST(request: Request) {
       throw error;
     }
   } catch (error) {
-    console.error("[POST /api/account/security/change-password] Error:", error);
+    logger.error('change_password_error', { err: error });
 
     // Erro de banco de dados indisponível
-    if (error instanceof Error && error.message.includes("connect")) {
+    if (error instanceof Error && error.message.includes('connect')) {
       return NextResponse.json(
         {
           ok: false,
-          code: "service_unavailable",
-          message: "Serviço temporariamente indisponível. Tente novamente em instantes.",
+          code: 'service_unavailable',
+          message: 'Serviço temporariamente indisponível. Tente novamente em instantes.',
         },
         { status: 503 }
       );
@@ -228,10 +234,10 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         ok: false,
-        code: "internal_error",
-        message: "Erro interno do servidor",
+        code: 'internal_error',
+        message: 'Erro interno do servidor',
       },
       { status: 500 }
     );
   }
-}
+});

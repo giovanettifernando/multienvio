@@ -1,4 +1,6 @@
-import { NextResponse } from 'next/server';
+import { withApiHandler } from '@/lib/api/handler';
+import { ApiError } from '@/lib/api/errors';
+import { z } from 'zod';
 import type {
   InvoiceData,
   InvoiceItem,
@@ -305,164 +307,155 @@ function extractImpostosItem(detXml: string): NFeImpostosItem | null {
   return Object.keys(result).length > 0 ? result : null;
 }
 
+// Tipo para resposta POST /api/nfe/parse
+type ParseNfeResponse = {
+  success: boolean;
+  data: InvoiceData;
+};
+
+const NFeParseSchema = z.object({
+  xml: z.string().min(1),
+});
+
 /**
  * POST /api/nfe/parse
  * Faz o parse de um XML da NF-e e retorna os itens estruturados
  */
-export async function POST(request: Request) {
-  try {
-    const body = await request.json();
-    const { xml } = body;
+export const POST = withApiHandler<ParseNfeResponse>(async (context) => {
+  const body = await context.req.json();
 
-    if (!xml || typeof xml !== 'string') {
-      return NextResponse.json<ParseXmlResponse>(
-        {
-          success: false,
-          error: 'XML não fornecido ou inválido',
-        },
-        { status: 400 }
-      );
-    }
-
-    // SECURITY: Validar tamanho do XML para prevenir DoS
-    if (xml.length > MAX_XML_SIZE) {
-      return NextResponse.json<ParseXmlResponse>(
-        {
-          success: false,
-          error: `XML muito grande. Tamanho máximo permitido: ${MAX_XML_SIZE / 1024 / 1024}MB`,
-        },
-        { status: 400 }
-      );
-    }
-
-    // SECURITY: Detectar possíveis ataques de XML entity expansion
-    if (xml.includes('<!ENTITY') || xml.includes('<!DOCTYPE')) {
-      console.warn('[NFE_PARSE] Potencial ataque de XML entity expansion detectado');
-      return NextResponse.json<ParseXmlResponse>(
-        {
-          success: false,
-          error: 'XML inválido: DOCTYPE e ENTITY não são permitidos',
-        },
-        { status: 400 }
-      );
-    }
-
-    // Extrair chave da NF-e do atributo Id
-    const idMatch = xml.match(/<infNFe[^>]+Id="NFe(\d{44})"/i) || xml.match(/<infNFe[^>]+id="NFe(\d{44})"/i);
-    const chave = idMatch ? idMatch[1] : null;
-
-    if (!chave || chave.length !== 44) {
-      // Tentar extrair da tag chNFe como fallback
-      const chNFeMatch = xml.match(/<chNFe>(\d{44})<\/chNFe>/i);
-      const chaveAlt = chNFeMatch ? chNFeMatch[1] : null;
-
-      if (!chaveAlt || chaveAlt.length !== 44) {
-        return NextResponse.json<ParseXmlResponse>(
-          {
-            success: false,
-            error: 'Não foi possível extrair a chave da NF-e',
-          },
-          { status: 400 }
-        );
-      }
-    }
-
-    const finalChave = chave || '';
-
-    // Extrair número e série
-    const numero = extractTag(xml, 'nNF') || '';
-    const serie = extractTag(xml, 'serie') || '';
-
-    // Extrair valor total
-    const valorTotalStr = extractTag(xml, 'vNF');
-    const valorTotal = valorTotalStr ? parseFloat(valorTotalStr) : 0;
-
-    // Extrair blocos <det>
-    const detBlocks = extractBlocks(xml, 'det');
-    const items: InvoiceItem[] = [];
-
-    detBlocks.forEach((detXml, index) => {
-      const cProd = extractTag(detXml, 'cProd') || '';
-      const xProd = extractTag(detXml, 'xProd') || '';
-      const ncm = extractTag(detXml, 'NCM');
-      const cfop = extractTag(detXml, 'CFOP');
-      const uCom = extractTag(detXml, 'uCom');
-      const qComStr = extractTag(detXml, 'qCom');
-      const vUnComStr = extractTag(detXml, 'vUnCom');
-      const vProdStr = extractTag(detXml, 'vProd');
-      const pesoLStr = extractTag(detXml, 'pesoL');
-
-      const qCom = qComStr ? parseFloat(qComStr) : 0;
-      const vUnCom = vUnComStr ? parseFloat(vUnComStr) : 0;
-      const vProd = vProdStr ? parseFloat(vProdStr) : 0;
-      const pesoLiquido = pesoLStr ? parseFloat(pesoLStr) : null;
-
-      // Extrair impostos do item (opcional, não blocante)
-      const impostos = extractImpostosItem(detXml);
-
-      items.push({
-        id: `${finalChave}-${index + 1}`,
-        sku: cProd || null,
-        descricao: xProd,
-        ncm: ncm,
-        cfop: cfop,
-        unidade: uCom,
-        quantidade: qCom,
-        pesoLiquido: pesoLiquido,
-        valorUnitario: vUnCom,
-        valorTotal: vProd,
-        impostos: impostos,
-      });
+  const parsed = NFeParseSchema.safeParse(body);
+  if (!parsed.success) {
+    throw new ApiError({
+      code: 'VALIDATION_ERROR',
+      message: 'Dados inválidos',
+      status: 400,
+      details: parsed.error.flatten(),
     });
-
-    if (items.length === 0) {
-      return NextResponse.json<ParseXmlResponse>(
-        {
-          success: false,
-          error: 'Nenhum item encontrado no XML da NF-e',
-        },
-        { status: 400 }
-      );
-    }
-
-    // Extrair dados adicionais para espelho NF-e (todos opcionais, não blocantes)
-    const identificacao = extractIdentificacao(xml);
-    const emitente = extractEmitente(xml);
-    const destinatario = extractDestinatario(xml);
-    const totais = extractTotais(xml);
-    const pagamentos = extractPagamentos(xml);
-    const protocolo = extractProtocolo(xml);
-
-    const invoiceData: InvoiceData = {
-      chave: finalChave,
-      numero,
-      serie,
-      valorTotal,
-      items,
-      // Dados adicionais para espelho NF-e
-      identificacao,
-      emitente,
-      destinatario,
-      totais,
-      pagamentos,
-      protocolo,
-    };
-
-    return NextResponse.json<ParseXmlResponse>(
-      {
-        success: true,
-        data: invoiceData,
-      },
-      { status: 200 }
-    );
-  } catch (error) {
-    console.error('[NFE_PARSE]', error);
-    return NextResponse.json<ParseXmlResponse>(
-      {
-        success: false,
-        error: 'Erro ao processar XML da NF-e',
-      },
-      { status: 500 }
-    );
   }
-}
+
+  const { xml } = parsed.data;
+
+  // SECURITY: Validar tamanho do XML para prevenir DoS
+  if (xml.length > MAX_XML_SIZE) {
+    throw new ApiError({
+      code: 'VALIDATION_ERROR',
+      message: `XML muito grande. Tamanho máximo permitido: ${MAX_XML_SIZE / 1024 / 1024}MB`,
+      status: 400
+    });
+  }
+
+  // SECURITY: Detectar possíveis ataques de XML entity expansion
+  if (xml.includes('<!ENTITY') || xml.includes('<!DOCTYPE')) {
+    context.logger.warn('nfe.parse.security_warning', { message: 'Potencial ataque de XML entity expansion detectado' });
+    throw new ApiError({
+      code: 'VALIDATION_ERROR',
+      message: 'XML inválido: DOCTYPE e ENTITY não são permitidos',
+      status: 400
+    });
+  }
+
+  // Extrair chave da NF-e do atributo Id
+  const idMatch = xml.match(/<infNFe[^>]+Id="NFe(\d{44})"/i) || xml.match(/<infNFe[^>]+id="NFe(\d{44})"/i);
+  const chave = idMatch ? idMatch[1] : null;
+
+  if (!chave || chave.length !== 44) {
+    // Tentar extrair da tag chNFe como fallback
+    const chNFeMatch = xml.match(/<chNFe>(\d{44})<\/chNFe>/i);
+    const chaveAlt = chNFeMatch ? chNFeMatch[1] : null;
+
+    if (!chaveAlt || chaveAlt.length !== 44) {
+      throw new ApiError({
+        code: 'VALIDATION_ERROR',
+        message: 'Não foi possível extrair a chave da NF-e',
+        status: 400
+      });
+    }
+  }
+
+  const finalChave = chave || '';
+
+  // Extrair número e série
+  const numero = extractTag(xml, 'nNF') || '';
+  const serie = extractTag(xml, 'serie') || '';
+
+  // Extrair valor total
+  const valorTotalStr = extractTag(xml, 'vNF');
+  const valorTotal = valorTotalStr ? parseFloat(valorTotalStr) : 0;
+
+  // Extrair blocos <det>
+  const detBlocks = extractBlocks(xml, 'det');
+  const items: InvoiceItem[] = [];
+
+  detBlocks.forEach((detXml, index) => {
+    const cProd = extractTag(detXml, 'cProd') || '';
+    const xProd = extractTag(detXml, 'xProd') || '';
+    const ncm = extractTag(detXml, 'NCM');
+    const cfop = extractTag(detXml, 'CFOP');
+    const uCom = extractTag(detXml, 'uCom');
+    const qComStr = extractTag(detXml, 'qCom');
+    const vUnComStr = extractTag(detXml, 'vUnCom');
+    const vProdStr = extractTag(detXml, 'vProd');
+    const pesoLStr = extractTag(detXml, 'pesoL');
+
+    const qCom = qComStr ? parseFloat(qComStr) : 0;
+    const vUnCom = vUnComStr ? parseFloat(vUnComStr) : 0;
+    const vProd = vProdStr ? parseFloat(vProdStr) : 0;
+    const pesoLiquido = pesoLStr ? parseFloat(pesoLStr) : null;
+
+    // Extrair impostos do item (opcional, não blocante)
+    const impostos = extractImpostosItem(detXml);
+
+    items.push({
+      id: `${finalChave}-${index + 1}`,
+      sku: cProd || null,
+      descricao: xProd,
+      ncm: ncm,
+      cfop: cfop,
+      unidade: uCom,
+      quantidade: qCom,
+      pesoLiquido: pesoLiquido,
+      valorUnitario: vUnCom,
+      valorTotal: vProd,
+      impostos: impostos,
+    });
+  });
+
+  if (items.length === 0) {
+    throw new ApiError({
+      code: 'VALIDATION_ERROR',
+      message: 'Nenhum item encontrado no XML da NF-e',
+      status: 400
+    });
+  }
+
+  // Extrair dados adicionais para espelho NF-e (todos opcionais, não blocantes)
+  const identificacao = extractIdentificacao(xml);
+  const emitente = extractEmitente(xml);
+  const destinatario = extractDestinatario(xml);
+  const totais = extractTotais(xml);
+  const pagamentos = extractPagamentos(xml);
+  const protocolo = extractProtocolo(xml);
+
+  const invoiceData: InvoiceData = {
+    chave: finalChave,
+    numero,
+    serie,
+    valorTotal,
+    items,
+    // Dados adicionais para espelho NF-e
+    identificacao,
+    emitente,
+    destinatario,
+    totais,
+    pagamentos,
+    protocolo,
+  };
+
+  return {
+    data: {
+      success: true,
+      data: invoiceData,
+    }
+  };
+});

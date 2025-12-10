@@ -4,35 +4,74 @@
  * Gerencia configuração de email SMTP
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { requireAdminUser } from '@/lib/auth/admin-helpers';
-import { AdminPermission } from '@prisma/client';
+import { withApiHandler } from '@/lib/api/handler';
+import { ApiError } from '@/lib/api/errors';
+import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
+import { AdminPermission, EmailConfigStatus } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import { encrypt } from '@/lib/integrations/shared/encryption.service';
+import { z } from 'zod';
 
+type EmailConfigData = {
+  id: string;
+  host: string;
+  port: number;
+  secure: boolean;
+  user: string;
+  fromAddress: string;
+  fromName: string;
+  status: EmailConfigStatus;
+  createdAt: Date;
+  updatedAt: Date;
+} | null;
+
+type EmailConfigGetResponse = {
+  config: EmailConfigData;
+};
+
+type EmailConfigPostResponse = {
+  success: boolean;
+  message: string;
+};
+
+const EmailConfigSchema = z.object({
+  host: z.string().min(1, 'Host é obrigatório'),
+  port: z.number().int().positive('Porta deve ser um número positivo'),
+  secure: z.boolean(),
+  user: z.string().email('Email de usuário inválido'),
+  password: z.string().optional(),
+  fromAddress: z.string().email('Email de remetente inválido'),
+  fromName: z.string().min(1, 'Nome do remetente é obrigatório'),
+});
 
 /**
  * GET - Buscar configuração de email ativa
  */
-export async function GET(req: NextRequest) {
-  try {
-    const authResult = await requireAdminUser(req, AdminPermission.CONFIGURACOES);
-    if (authResult instanceof NextResponse) {
-      return authResult;
-    }
+export const GET = withApiHandler<EmailConfigGetResponse>(async (context) => {
+  const { req } = context;
 
-    // Buscar configuração ativa
-    const config = await prisma.emailConfig.findFirst({
-      where: { status: 'ACTIVE' },
-      orderBy: { createdAt: 'desc' },
-    });
+  const session = await getAdminSessionFromRequest(req);
+  if (!session) {
+    throw new ApiError({ code: 'unauthorized', message: 'Não autenticado', status: 401 });
+  }
 
-    if (!config) {
-      return NextResponse.json({ config: null });
-    }
+  if (!session.permissions.includes(AdminPermission.CONFIGURACOES)) {
+    throw new ApiError({ code: 'forbidden', message: 'Permissão negada', status: 403 });
+  }
 
-    // Retornar config sem a senha (segurança)
-    return NextResponse.json({
+  // Buscar configuração ativa
+  const config = await prisma.emailConfig.findFirst({
+    where: { status: 'ACTIVE' },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  if (!config) {
+    return { data: { config: null } };
+  }
+
+  // Retornar config sem a senha (segurança)
+  return {
+    data: {
       config: {
         id: config.id,
         host: config.host,
@@ -46,113 +85,102 @@ export async function GET(req: NextRequest) {
         updatedAt: config.updatedAt,
         // NÃO retornar password
       },
-    });
-  } catch (error) {
-    console.error('[ADMIN_EMAIL_CONFIG_GET]', error);
-    return NextResponse.json(
-      { error: 'Erro ao buscar configuração de email' },
-      { status: 500 }
-    );
-  }
-}
+    },
+  };
+});
 
 /**
  * POST - Criar ou atualizar configuração de email
  */
-export async function POST(req: NextRequest) {
-  try {
-    const authResult = await requireAdminUser(req, AdminPermission.CONFIGURACOES);
-    if (authResult instanceof NextResponse) {
-      return authResult;
-    }
+export const POST = withApiHandler<EmailConfigPostResponse>(async (context) => {
+  const { req } = context;
 
-    const body = await req.json();
-    const { host, port, secure, user, password, fromAddress, fromName } = body;
+  const session = await getAdminSessionFromRequest(req);
+  if (!session) {
+    throw new ApiError({ code: 'unauthorized', message: 'Não autenticado', status: 401 });
+  }
 
-    // Validações básicas
-    if (!host || !port || !user || !fromAddress || !fromName) {
-      return NextResponse.json(
-        { error: 'Host, port, user, fromAddress e fromName são obrigatórios' },
-        { status: 400 }
-      );
-    }
+  if (!session.permissions.includes(AdminPermission.CONFIGURACOES)) {
+    throw new ApiError({ code: 'forbidden', message: 'Permissão negada', status: 403 });
+  }
 
-    // Validar formato de email
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(user) || !emailRegex.test(fromAddress)) {
-      return NextResponse.json(
-        { error: 'Email inválido (user ou fromAddress)' },
-        { status: 400 }
-      );
-    }
+  const body = await req.json();
 
-    // Buscar configuração ativa existente
-    const existingConfig = await prisma.emailConfig.findFirst({
-      where: { status: 'ACTIVE' },
+  const parsed = EmailConfigSchema.safeParse(body);
+  if (!parsed.success) {
+    throw new ApiError({
+      code: 'VALIDATION_ERROR',
+      message: 'Dados inválidos',
+      status: 400,
+      details: parsed.error.flatten(),
     });
+  }
 
-    if (existingConfig) {
-      // Atualizar configuração existente
-      const updateData: {
-        host: string;
-        port: number;
-        secure: boolean;
-        user: string;
-        password?: string;
-        fromAddress: string;
-        fromName: string;
-        status: 'ACTIVE' | 'INACTIVE';
-      } = {
+  const { host, port, secure, user, password, fromAddress, fromName } = parsed.data;
+
+  // Buscar configuração ativa existente
+  const existingConfig = await prisma.emailConfig.findFirst({
+    where: { status: 'ACTIVE' },
+  });
+
+  if (existingConfig) {
+    // Atualizar configuração existente
+    const updateData: {
+      host: string;
+      port: number;
+      secure: boolean;
+      user: string;
+      password?: string;
+      fromAddress: string;
+      fromName: string;
+      status: 'ACTIVE' | 'INACTIVE';
+    } = {
+      host,
+      port,
+      secure,
+      user,
+      fromAddress,
+      fromName,
+      status: 'ACTIVE',
+    };
+
+    // Criptografar senha apenas se fornecida
+    if (password) {
+      updateData.password = encrypt(password);
+    }
+
+    await prisma.emailConfig.update({
+      where: { id: existingConfig.id },
+      data: updateData,
+    });
+  } else {
+    // Criar nova configuração (senha é obrigatória)
+    if (!password) {
+      throw new ApiError({
+        code: 'validation_error',
+        message: 'Password é obrigatório ao criar nova configuração',
+        status: 400,
+      });
+    }
+
+    await prisma.emailConfig.create({
+      data: {
         host,
-        port: parseInt(String(port), 10),
-        secure: Boolean(secure),
+        port,
+        secure,
         user,
+        password: encrypt(password),
         fromAddress,
         fromName,
         status: 'ACTIVE',
-      };
+      },
+    });
+  }
 
-      // Criptografar senha apenas se fornecida
-      if (password) {
-        updateData.password = encrypt(password);
-      }
-
-      await prisma.emailConfig.update({
-        where: { id: existingConfig.id },
-        data: updateData,
-      });
-    } else {
-      // Criar nova configuração (senha é obrigatória)
-      if (!password) {
-        return NextResponse.json(
-          { error: 'Password é obrigatório ao criar nova configuração' },
-          { status: 400 }
-        );
-      }
-
-      await prisma.emailConfig.create({
-        data: {
-          host,
-          port: parseInt(String(port), 10),
-          secure: Boolean(secure),
-          user,
-          password: encrypt(password),
-          fromAddress,
-          fromName,
-          status: 'ACTIVE',
-        },
-      });
-    }
-
-    return NextResponse.json({
+  return {
+    data: {
       success: true,
       message: 'Configuração de email salva com sucesso',
-    });
-  } catch (error) {
-    console.error('[ADMIN_EMAIL_CONFIG_POST]', error);
-    return NextResponse.json(
-      { error: 'Erro ao salvar configuração de email' },
-      { status: 500 }
-    );
-  }
-}
+    },
+  };
+});

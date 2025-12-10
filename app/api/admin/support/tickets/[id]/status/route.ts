@@ -1,7 +1,7 @@
-import { NextResponse } from 'next/server';
+import { withApiHandler } from '@/lib/api/handler';
+import { ApiError } from '@/lib/api/errors';
 import { z } from 'zod';
 import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
-import { requirePermission } from '@/lib/auth/permissions';
 import { AdminPermission } from '@prisma/client';
 import { updateTicketStatus } from '@/lib/support/service';
 import { StatusSchema } from '@/lib/validation/support';
@@ -11,45 +11,53 @@ const UpdateStatusSchema = z.object({
 });
 
 
-export async function PATCH(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
-  const session = await getAdminSessionFromRequest(request);
+export const PATCH = withApiHandler<unknown, { id: string }>(async ({ req, params }) => {
+  const session = await getAdminSessionFromRequest(req);
   if (!session) {
-    return NextResponse.json({ message: 'Não autenticado' }, { status: 401 });
+    throw new ApiError({
+      code: 'UNAUTHORIZED',
+      message: 'Não autenticado',
+      status: 401,
+    });
   }
 
-  const permissionError = requirePermission(session, AdminPermission.SUPORTE);
-  if (permissionError) return permissionError;
+  if (!session.permissions.includes(AdminPermission.SUPORTE) && !session.isSuperAdmin) {
+    throw new ApiError({
+      code: 'FORBIDDEN',
+      message: 'Sem permissão para acessar este recurso',
+      status: 403,
+    });
+  }
 
-  const { id: ticketId } = await params;
+  const ticketId = params.id;
   if (!ticketId) {
-    return NextResponse.json({ message: 'Ticket inválido' }, { status: 400 });
+    throw new ApiError({
+      code: 'BAD_REQUEST',
+      message: 'Ticket inválido',
+      status: 400,
+    });
   }
 
-  try {
-    const payload = (await request.json()) as unknown;
-    const parsed = UpdateStatusSchema.safeParse(payload);
+  const payload = (await req.json()) as unknown;
+  const parsed = UpdateStatusSchema.safeParse(payload);
 
-    if (!parsed.success) {
-      return NextResponse.json(
-        {
-          message: 'Dados inválidos',
-          errors: parsed.error.flatten(),
-        },
-        { status: 400 },
-      );
-    }
-
-    const ticket = await updateTicketStatus(ticketId, parsed.data.status);
-    if (!ticket) {
-      return NextResponse.json({ message: 'Ticket não encontrado' }, { status: 404 });
-    }
-
-    return NextResponse.json(ticket);
-  } catch (error) {
-    console.error('[ADMIN_SUPPORT_TICKET_STATUS]', error);
-    return NextResponse.json({ message: 'Erro ao atualizar status' }, { status: 500 });
+  if (!parsed.success) {
+    throw new ApiError({
+      code: 'VALIDATION_ERROR',
+      message: 'Dados inválidos',
+      status: 400,
+      details: parsed.error.flatten(),
+    });
   }
-}
+
+  const ticket = await updateTicketStatus(ticketId, parsed.data.status);
+  if (!ticket) {
+    throw new ApiError({
+      code: 'NOT_FOUND',
+      message: 'Ticket não encontrado',
+      status: 404,
+    });
+  }
+
+  return { data: ticket };
+});

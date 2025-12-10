@@ -4,8 +4,6 @@
  * Testa as funcionalidades da integração Correios
  */
 
-
-import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAdminUser } from '@/lib/auth/admin-helpers';
 import { AdminPermission } from '@prisma/client';
@@ -19,6 +17,8 @@ import {
   getCorreiosConfigInfo,
   testCorreiosAuth,
 } from '@/lib/integrations/correios';
+import { withApiHandler } from '@/lib/api/handler';
+import { ApiError } from '@/lib/api/errors';
 
 /**
  * Schema para testes
@@ -93,75 +93,74 @@ type TestInput = z.infer<typeof testSchema>;
 /**
  * POST - Executa teste da integração
  */
-export async function POST(request: Request) {
-  try {
-    const authResult = await requireAdminUser(request, AdminPermission.INTEGRACOES);
-    if (authResult instanceof NextResponse) return authResult;
-
-    // Validar payload
-    const body = await request.json();
-    const parsed = testSchema.safeParse(body);
-
-    if (!parsed.success) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: 'Dados inválidos',
-          errors: parsed.error.flatten(),
-        },
-        { status: 400 }
-      );
-    }
-
-    const data: TestInput = parsed.data;
-
-    // Carregar configuração do banco (prioridade) ou env vars
-    const config = await getCorreiosConfigAsync();
-    const validation = validateCorreiosConfig(config);
-
-    // Verificar se integração está configurada
-    if (!validation.valid) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: 'Integração dos Correios não está configurada',
-          hint: 'Configure as credenciais antes de executar testes',
-          errors: validation.errors,
-        },
-        { status: 400 }
-      );
-    }
-
-    const startTime = Date.now();
-
-    switch (data.type) {
-      case 'auth':
-        return await testAuth(startTime);
-
-      case 'quote':
-        return await testQuote(data, startTime);
-
-      case 'deadline':
-        return await testDeadline(data, startTime);
-
-      case 'tracking':
-        return await testTracking(data, startTime);
-
-      case 'prepostagem':
-        return await testPrePostagem(data, startTime);
-
-      default:
-        return NextResponse.json(
-          { success: false, message: 'Tipo de teste não suportado' },
-          { status: 400 }
-        );
-    }
-  } catch (error) {
-    console.error('[ADMIN_CORREIOS_TEST]', error);
-    const message = error instanceof Error ? error.message : 'Erro ao executar teste';
-    return NextResponse.json({ success: false, message }, { status: 500 });
+export const POST = withApiHandler<unknown>(async ({ req }) => {
+  const authResult = await requireAdminUser(req, AdminPermission.INTEGRACOES);
+  if (authResult instanceof Response) {
+    throw new ApiError({
+      code: 'UNAUTHORIZED',
+      message: 'Não autorizado',
+      status: 401,
+    });
   }
-}
+
+  // Validar payload
+  const body = await req.json();
+  const parsed = testSchema.safeParse(body);
+
+  if (!parsed.success) {
+    throw new ApiError({
+      code: 'VALIDATION_ERROR',
+      message: 'Dados inválidos',
+      status: 400,
+      details: parsed.error.flatten(),
+    });
+  }
+
+  const data: TestInput = parsed.data;
+
+  // Carregar configuração do banco (prioridade) ou env vars
+  const config = await getCorreiosConfigAsync();
+  const validation = validateCorreiosConfig(config);
+
+  // Verificar se integração está configurada
+  if (!validation.valid) {
+    throw new ApiError({
+      code: 'NOT_CONFIGURED',
+      message: 'Integração dos Correios não está configurada',
+      status: 400,
+      details: {
+        hint: 'Configure as credenciais antes de executar testes',
+        errors: validation.errors,
+      },
+    });
+  }
+
+  const startTime = Date.now();
+
+  switch (data.type) {
+    case 'auth':
+      return await testAuth(startTime);
+
+    case 'quote':
+      return await testQuote(data, startTime);
+
+    case 'deadline':
+      return await testDeadline(data, startTime);
+
+    case 'tracking':
+      return await testTracking(data, startTime);
+
+    case 'prepostagem':
+      return await testPrePostagem(data, startTime);
+
+    default:
+      throw new ApiError({
+        code: 'INVALID_TEST_TYPE',
+        message: 'Tipo de teste não suportado',
+        status: 400,
+      });
+  }
+});
 
 /**
  * Teste de autenticação
@@ -174,39 +173,43 @@ async function testAuth(_startTime: number) {
   const authModeLabel = configInfo.authMode === 'apiKey' ? 'API Key (Novo)' : 'Usuário/Senha (Legado)';
 
   if (authResult.success) {
-    return NextResponse.json({
-      success: true,
-      type: 'auth',
-      message: `Autenticação realizada com sucesso (${authModeLabel})`,
-      result: {
-        tokenObtido: !!authResult.token,
-        tokenPreview: authResult.token,
-        modoAutenticacao: authModeLabel,
-        ambiente: configInfo.environment,
-        baseUrl: configInfo.apiBase,
-        cartaoPostagem: configInfo.cartaoPostagem,
-        httpStatus: authResult.httpStatus,
+    return {
+      data: {
+        success: true,
+        type: 'auth',
+        message: `Autenticação realizada com sucesso (${authModeLabel})`,
+        result: {
+          tokenObtido: !!authResult.token,
+          tokenPreview: authResult.token,
+          modoAutenticacao: authModeLabel,
+          ambiente: configInfo.environment,
+          baseUrl: configInfo.apiBase,
+          cartaoPostagem: configInfo.cartaoPostagem,
+          httpStatus: authResult.httpStatus,
+        },
+        // Resposta bruta da API dos Correios
+        correiosApiResponse: authResult.rawResponse,
+        latencyMs: authResult.latencyMs,
       },
-      // Resposta bruta da API dos Correios
-      correiosApiResponse: authResult.rawResponse,
-      latencyMs: authResult.latencyMs,
-    });
+    };
   } else {
-    return NextResponse.json({
-      success: false,
-      type: 'auth',
-      message: authResult.error || 'Falha na autenticação',
-      result: {
-        modoAutenticacao: authModeLabel,
-        ambiente: configInfo.environment,
-        baseUrl: configInfo.apiBase,
-        cartaoPostagem: configInfo.cartaoPostagem,
-        httpStatus: authResult.httpStatus,
+    return {
+      data: {
+        success: false,
+        type: 'auth',
+        message: authResult.error || 'Falha na autenticação',
+        result: {
+          modoAutenticacao: authModeLabel,
+          ambiente: configInfo.environment,
+          baseUrl: configInfo.apiBase,
+          cartaoPostagem: configInfo.cartaoPostagem,
+          httpStatus: authResult.httpStatus,
+        },
+        // Resposta bruta da API dos Correios (mesmo em erro)
+        correiosApiResponse: authResult.rawResponse,
+        latencyMs: authResult.latencyMs,
       },
-      // Resposta bruta da API dos Correios (mesmo em erro)
-      correiosApiResponse: authResult.rawResponse,
-      latencyMs: authResult.latencyMs,
-    });
+    };
   }
 }
 
@@ -243,46 +246,50 @@ async function testQuote(
       prazoRaw: c.brutoPrazo,
     }));
 
-    return NextResponse.json({
-      success: true,
-      type: 'quote',
-      message: `Cotação realizada com sucesso. ${servicosEncontrados.length} serviço(s) disponível(is).`,
-      result: {
-        input: {
-          cepOrigem: data.cepOrigem,
-          cepDestino: data.cepDestino,
-          pesoGramas: data.pesoGramas,
-          dimensoes: `${data.comprimentoCm}x${data.larguraCm}x${data.alturaCm} cm`,
+    return {
+      data: {
+        success: true,
+        type: 'quote',
+        message: `Cotação realizada com sucesso. ${servicosEncontrados.length} serviço(s) disponível(is).`,
+        result: {
+          input: {
+            cepOrigem: data.cepOrigem,
+            cepDestino: data.cepDestino,
+            pesoGramas: data.pesoGramas,
+            dimensoes: `${data.comprimentoCm}x${data.larguraCm}x${data.alturaCm} cm`,
+          },
+          servicos: cotacoes.map((c) => ({
+            codigo: c.codigoServicoCorreios,
+            nome: c.nomeServico,
+            preco: c.precoTotal,
+            prazo: c.prazoDias,
+            entregaDomiciliar: c.entregaDomiciliar,
+            entregaSabado: c.entregaSabado,
+            erros: c.erros,
+          })),
+          totalServicos: cotacoes.length,
+          servicosDisponiveis: servicosEncontrados.length,
         },
-        servicos: cotacoes.map((c) => ({
-          codigo: c.codigoServicoCorreios,
-          nome: c.nomeServico,
-          preco: c.precoTotal,
-          prazo: c.prazoDias,
-          entregaDomiciliar: c.entregaDomiciliar,
-          entregaSabado: c.entregaSabado,
-          erros: c.erros,
-        })),
-        totalServicos: cotacoes.length,
-        servicosDisponiveis: servicosEncontrados.length,
+        // Resposta bruta da API dos Correios (preço e prazo)
+        correiosApiResponse: correiosRawResponses,
+        latencyMs: latency,
       },
-      // Resposta bruta da API dos Correios (preço e prazo)
-      correiosApiResponse: correiosRawResponses,
-      latencyMs: latency,
-    });
+    };
   } catch (error) {
     const latency = Date.now() - startTime;
     const configInfo = getCorreiosConfigInfo();
-    return NextResponse.json({
-      success: false,
-      type: 'quote',
-      message: error instanceof Error ? error.message : 'Falha na cotação',
-      result: {
-        ambiente: configInfo.environment,
-        baseUrl: configInfo.apiBase,
+    return {
+      data: {
+        success: false,
+        type: 'quote',
+        message: error instanceof Error ? error.message : 'Falha na cotação',
+        result: {
+          ambiente: configInfo.environment,
+          baseUrl: configInfo.apiBase,
+        },
+        latencyMs: latency,
       },
-      latencyMs: latency,
-    });
+    };
   }
 }
 
@@ -306,39 +313,43 @@ async function testDeadline(
 
     const prazo = prazos[0];
 
-    return NextResponse.json({
-      success: true,
-      type: 'deadline',
-      message: prazo
-        ? `Prazo calculado: ${prazo.prazoDias} dia(s) úteis`
-        : 'Nenhum prazo retornado',
-      result: {
-        input: {
-          cepOrigem: data.cepOrigem,
-          cepDestino: data.cepDestino,
-          codigoServico: data.codigoServico,
+    return {
+      data: {
+        success: true,
+        type: 'deadline',
+        message: prazo
+          ? `Prazo calculado: ${prazo.prazoDias} dia(s) úteis`
+          : 'Nenhum prazo retornado',
+        result: {
+          input: {
+            cepOrigem: data.cepOrigem,
+            cepDestino: data.cepDestino,
+            codigoServico: data.codigoServico,
+          },
+          prazo: prazo
+            ? {
+                codigo: prazo.codigoServicoCorreios,
+                prazoDias: prazo.prazoDias,
+                dataMaxima: prazo.dataMaxima,
+                entregaDomiciliar: prazo.entregaDomiciliar,
+                entregaSabado: prazo.entregaSabado,
+                erros: prazo.erros,
+              }
+            : null,
         },
-        prazo: prazo
-          ? {
-              codigo: prazo.codigoServicoCorreios,
-              prazoDias: prazo.prazoDias,
-              dataMaxima: prazo.dataMaxima,
-              entregaDomiciliar: prazo.entregaDomiciliar,
-              entregaSabado: prazo.entregaSabado,
-              erros: prazo.erros,
-            }
-          : null,
+        latencyMs: latency,
       },
-      latencyMs: latency,
-    });
+    };
   } catch (error) {
     const latency = Date.now() - startTime;
-    return NextResponse.json({
-      success: false,
-      type: 'deadline',
-      message: error instanceof Error ? error.message : 'Falha no cálculo de prazo',
-      latencyMs: latency,
-    });
+    return {
+      data: {
+        success: false,
+        type: 'deadline',
+        message: error instanceof Error ? error.message : 'Falha no cálculo de prazo',
+        latencyMs: latency,
+      },
+    };
   }
 }
 
@@ -355,36 +366,40 @@ async function testTracking(
 
     const hasEvents = resultado.eventos && resultado.eventos.length > 0;
 
-    return NextResponse.json({
-      success: hasEvents,
-      type: 'tracking',
-      message: hasEvents
-        ? `Rastreamento encontrado: ${resultado.eventos.length} evento(s)`
-        : resultado.mensagem || 'Objeto não encontrado',
-      result: {
-        codigo: data.codigoRastreio,
-        encontrado: hasEvents,
-        entregue: resultado.entregue,
-        ultimoStatus: resultado.ultimoStatus,
-        eventos: resultado.eventos.slice(0, 5).map((e) => ({
-          dataHora: e.dataHora,
-          descricao: e.descricao,
-          local: e.local,
-          cidade: e.cidade,
-          uf: e.uf,
-        })),
-        totalEventos: resultado.eventos.length,
+    return {
+      data: {
+        success: hasEvents,
+        type: 'tracking',
+        message: hasEvents
+          ? `Rastreamento encontrado: ${resultado.eventos.length} evento(s)`
+          : resultado.mensagem || 'Objeto não encontrado',
+        result: {
+          codigo: data.codigoRastreio,
+          encontrado: hasEvents,
+          entregue: resultado.entregue,
+          ultimoStatus: resultado.ultimoStatus,
+          eventos: resultado.eventos.slice(0, 5).map((e) => ({
+            dataHora: e.dataHora,
+            descricao: e.descricao,
+            local: e.local,
+            cidade: e.cidade,
+            uf: e.uf,
+          })),
+          totalEventos: resultado.eventos.length,
+        },
+        latencyMs: latency,
       },
-      latencyMs: latency,
-    });
+    };
   } catch (error) {
     const latency = Date.now() - startTime;
-    return NextResponse.json({
-      success: false,
-      type: 'tracking',
-      message: error instanceof Error ? error.message : 'Falha no rastreamento',
-      latencyMs: latency,
-    });
+    return {
+      data: {
+        success: false,
+        type: 'tracking',
+        message: error instanceof Error ? error.message : 'Falha no rastreamento',
+        latencyMs: latency,
+      },
+    };
   }
 }
 
@@ -446,36 +461,40 @@ async function testPrePostagem(
     const latency = Date.now() - startTime;
 
     if (resultado.success) {
-      return NextResponse.json({
-        success: true,
-        type: 'prepostagem',
-        message: `Pré-postagem criada com sucesso! Código de rastreio: ${resultado.codigoRastreio || 'Aguardando processamento'}`,
-        result: {
-          ambiente: configInfo.environment,
-          apiBase: configInfo.apiBase,
-          idLote: resultado.idLote,
-          codigoRastreio: resultado.codigoRastreio,
-          idObjeto: resultado.idObjeto,
-          status: resultado.status,
-          dadosEnviados: input,
-          respostaCompleta: resultado.bruto,
+      return {
+        data: {
+          success: true,
+          type: 'prepostagem',
+          message: `Pré-postagem criada com sucesso! Código de rastreio: ${resultado.codigoRastreio || 'Aguardando processamento'}`,
+          result: {
+            ambiente: configInfo.environment,
+            apiBase: configInfo.apiBase,
+            idLote: resultado.idLote,
+            codigoRastreio: resultado.codigoRastreio,
+            idObjeto: resultado.idObjeto,
+            status: resultado.status,
+            dadosEnviados: input,
+            respostaCompleta: resultado.bruto,
+          },
+          latencyMs: latency,
         },
-        latencyMs: latency,
-      });
+      };
     } else {
-      return NextResponse.json({
-        success: false,
-        type: 'prepostagem',
-        message: resultado.erros?.[0]?.mensagem || 'Erro ao criar pré-postagem',
-        result: {
-          ambiente: configInfo.environment,
-          apiBase: configInfo.apiBase,
-          erros: resultado.erros,
-          dadosEnviados: input,
-          respostaCompleta: resultado.bruto,
+      return {
+        data: {
+          success: false,
+          type: 'prepostagem',
+          message: resultado.erros?.[0]?.mensagem || 'Erro ao criar pré-postagem',
+          result: {
+            ambiente: configInfo.environment,
+            apiBase: configInfo.apiBase,
+            erros: resultado.erros,
+            dadosEnviados: input,
+            respostaCompleta: resultado.bruto,
+          },
+          latencyMs: latency,
         },
-        latencyMs: latency,
-      });
+      };
     }
   } catch (error) {
     const latency = Date.now() - startTime;
@@ -483,16 +502,18 @@ async function testPrePostagem(
 
     console.error('[CORREIOS_TEST] Erro na pré-postagem:', error);
 
-    return NextResponse.json({
-      success: false,
-      type: 'prepostagem',
-      message: error instanceof Error ? error.message : 'Falha na pré-postagem',
-      result: {
-        ambiente: configInfo.environment,
-        apiBase: configInfo.apiBase,
-        erro: error instanceof Error ? error.message : 'Erro desconhecido',
+    return {
+      data: {
+        success: false,
+        type: 'prepostagem',
+        message: error instanceof Error ? error.message : 'Falha na pré-postagem',
+        result: {
+          ambiente: configInfo.environment,
+          apiBase: configInfo.apiBase,
+          erro: error instanceof Error ? error.message : 'Erro desconhecido',
+        },
+        latencyMs: latency,
       },
-      latencyMs: latency,
-    });
+    };
   }
 }

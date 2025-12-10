@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Shipment, ShipmentStatus } from "@/types/shipments";
 import { afterShipmentCreated } from "@/lib/shipments/after-create";
+import { apiFetch } from "@/lib/api/client";
 
 type ShipmentFilters = {
   q?: string;
@@ -48,13 +49,7 @@ export function useShipments(filters?: ShipmentFilters) {
 
   return useQuery<ShipmentsResponse>({
     queryKey,
-    queryFn: async () => {
-      const response = await fetch(`/api/shipments${queryString}`);
-      if (!response.ok) {
-        throw new Error("Falha ao carregar envios");
-      }
-      return response.json();
-    },
+    queryFn: () => apiFetch<ShipmentsResponse>(`/api/shipments${queryString}`),
   });
 }
 
@@ -77,7 +72,7 @@ export function useShipments(filters?: ShipmentFilters) {
 export function useShipmentCreate() {
   const queryClient = useQueryClient();
   return useMutation({
-     
+
     mutationFn: async (_payload: Partial<Shipment>) => {
       console.error(
         '❌ ERRO: useShipmentCreate está obsoleto! POST /api/shipments foi removido.\n' +
@@ -103,11 +98,11 @@ export function useCartClear() {
   return useMutation({
     mutationFn: async () => {
       const response = await fetch("/api/cart", { method: "DELETE" });
-      const data = await response.json();
+      const json = await response.json();
       if (!response.ok) {
-        throw new Error(data?.mensagem || "Falha ao limpar carrinho");
+        throw new Error(json?.error?.message || json?.mensagem || "Falha ao limpar carrinho");
       }
-      return data;
+      return json?.data ?? json;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["cart"] });
@@ -120,11 +115,11 @@ export function useShipmentCancel() {
   return useMutation({
     mutationFn: async (id: string) => {
       const response = await fetch(`/api/shipments/${id}/cancel`, { method: "POST" });
-      const data = await response.json();
+      const json = await response.json();
       if (!response.ok) {
-        throw new Error(data?.mensagem || "Falha ao cancelar envio");
+        throw new Error(json?.error?.message || json?.mensagem || "Falha ao cancelar envio");
       }
-      return data;
+      return json?.data ?? json;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["shipments"] });
@@ -144,11 +139,7 @@ export function useOpenShipments() {
     queryKey: ["shipments", "open"],
     queryFn: async () => {
       // Solicitar até 100 registros para cobrir a maioria dos casos
-      const response = await fetch("/api/shipments?limit=100");
-      if (!response.ok) {
-        throw new Error("Falha ao carregar envios");
-      }
-      const data: ShipmentsResponse = await response.json();
+      const data = await apiFetch<ShipmentsResponse>("/api/shipments?limit=100");
 
       // Filtrar apenas envios não concluídos/entregues/cancelados
       const openItems = data.items?.filter(

@@ -1,83 +1,87 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
+import { withApiHandlerResponse } from '@/lib/api/handler';
+import { ApiError } from '@/lib/api/errors';
 import { prisma } from '@/lib/db';
 import { getUserSessionFromRequest } from '@/lib/auth/user-session';
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import { readFile } from 'fs/promises';
 import { join } from 'path';
 
-interface RouteParams {
-  params: Promise<{ id: string }>;
-}
-
 /**
  * GET /api/coletas/[id]/manifest
  * Gera PDF do manifesto de coleta com dados do pickup request
  */
-export async function GET(request: NextRequest, { params }: RouteParams) {
-  try {
-    const session = await getUserSessionFromRequest(request);
-    if (!session) {
-      return NextResponse.json({ message: 'Não autenticado' }, { status: 401 });
-    }
-
-    const { id } = await params;
-
-    // Buscar pickup request com dados completos
-    const pickupRequest = await prisma.pickupRequest.findUnique({
-      where: { id },
-      include: {
-        shipment: {
-          select: {
-            id: true,
-            platformTrackingCode: true,
-            carrierTrackingCode: true,
-            carrier: true,
-            service: true,
-            originCep: true,
-            destinationCep: true,
-            recipientName: true,
-            weight: true,
-          },
-        },
-        user: {
-          select: {
-            name: true,
-            email: true,
-            razaoSocial: true,
-            cnpj: true,
-            hasCompany: true,
-          },
-        },
-      },
+export const GET = withApiHandlerResponse<{ id: string }>(async (context) => {
+  const session = await getUserSessionFromRequest(context.req);
+  if (!session) {
+    throw new ApiError({
+      code: 'UNAUTHORIZED',
+      message: 'Não autenticado',
+      status: 401
     });
-
-    if (!pickupRequest) {
-      return NextResponse.json({ message: 'Coleta não encontrada' }, { status: 404 });
-    }
-
-    if (pickupRequest.userId !== session.userId) {
-      return NextResponse.json({ message: 'Acesso negado' }, { status: 403 });
-    }
-
-    // Gerar PDF do manifesto
-    const pdfBuffer = await generateManifestPdf(pickupRequest);
-
-    const filename = `manifesto_coleta_${pickupRequest.id.slice(-8)}.pdf`;
-
-    return new NextResponse(new Uint8Array(pdfBuffer), {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/pdf',
-        'Content-Disposition': `inline; filename="${filename}"`,
-        'Content-Length': String(pdfBuffer.length),
-      },
-    });
-  } catch (error) {
-    console.error('[COLETA_MANIFEST_GET]', error);
-    const message = error instanceof Error ? error.message : 'Erro ao gerar manifesto';
-    return NextResponse.json({ message }, { status: 500 });
   }
-}
+
+  const { id } = context.params;
+
+  // Buscar pickup request com dados completos
+  const pickupRequest = await prisma.pickupRequest.findUnique({
+    where: { id },
+    include: {
+      shipment: {
+        select: {
+          id: true,
+          platformTrackingCode: true,
+          carrierTrackingCode: true,
+          carrier: true,
+          service: true,
+          originCep: true,
+          destinationCep: true,
+          recipientName: true,
+          weight: true,
+        },
+      },
+      user: {
+        select: {
+          name: true,
+          email: true,
+          razaoSocial: true,
+          cnpj: true,
+          hasCompany: true,
+        },
+      },
+    },
+  });
+
+  if (!pickupRequest) {
+    throw new ApiError({
+      code: 'NOT_FOUND',
+      message: 'Coleta não encontrada',
+      status: 404
+    });
+  }
+
+  if (pickupRequest.userId !== session.userId) {
+    throw new ApiError({
+      code: 'FORBIDDEN',
+      message: 'Acesso negado',
+      status: 403
+    });
+  }
+
+  // Gerar PDF do manifesto
+  const pdfBuffer = await generateManifestPdf(pickupRequest);
+
+  const filename = `manifesto_coleta_${pickupRequest.id.slice(-8)}.pdf`;
+
+  return new NextResponse(new Uint8Array(pdfBuffer), {
+    status: 200,
+    headers: {
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `inline; filename="${filename}"`,
+      'Content-Length': String(pdfBuffer.length),
+    },
+  });
+});
 
 type PickupRequestWithRelations = {
   id: string;

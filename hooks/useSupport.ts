@@ -137,7 +137,12 @@ async function fetchJson<T>(input: RequestInfo | URL, init?: RequestInit): Promi
     throw new Error(typeof message === "string" ? message : "Erro inesperado");
   }
 
-  return response.json() as Promise<T>;
+  const json = await response.json();
+  // Handle standardized API response format { data: T, error, meta }
+  if (json && typeof json === "object" && "data" in json && json.data !== undefined) {
+    return json.data as T;
+  }
+  return json as T;
 }
 
 export function useTickets({

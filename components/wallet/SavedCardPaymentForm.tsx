@@ -179,7 +179,9 @@ export function SavedCardPaymentForm({
       if (!userResponse.ok) {
         throw new Error("Cartão não autorizado");
       }
-      const userData = await userResponse.json();
+      const userJson = await userResponse.json();
+      // Handle standardized API response format { data: T, error, meta }
+      const userData = userJson.data ?? userJson;
       const userCpf = userData.cpf?.replace(/\D/g, "") || "00000000000";
 
       // Criar token usando endpoint backend (SDK backend que sabemos que funciona)
@@ -244,8 +246,8 @@ export function SavedCardPaymentForm({
           installments: 1,
           payer: {
             email: userData.email,
-            firstName: userData.fullName.split(" ")[0],
-            lastName: userData.fullName.split(" ").slice(1).join(" ") || userData.fullName,
+            firstName: userData.fullName?.split(" ")[0] || userData.name?.split(" ")[0] || "Usuario",
+            lastName: userData.fullName?.split(" ").slice(1).join(" ") || userData.name?.split(" ").slice(1).join(" ") || "",
             identification: {
               type: "CPF",
               number: userData.cpf?.replace(/\D/g, "") || "00000000000",

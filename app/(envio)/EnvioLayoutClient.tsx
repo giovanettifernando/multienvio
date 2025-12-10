@@ -7,8 +7,6 @@ import { Spin } from 'antd';
 
 export default function EnvioLayoutClient({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const user = useAuthStore((s) => s.user);
-  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const fetchCurrentUser = useAuthStore((s) => s.fetchCurrentUser);
   const storeHydrated = useAuthHydrated();
   const [sessionChecked, setSessionChecked] = useState(false);
@@ -22,27 +20,23 @@ export default function EnvioLayoutClient({ children }: { children: React.ReactN
     const validateSession = async () => {
       hasValidated.current = true;
 
-      // If we have user in localStorage, validate with server
-      if (user) {
-        const serverUser = await fetchCurrentUser();
-        if (!serverUser) {
-          // Session expired on server, redirect to login
-          router.replace('/auth/login');
-          return;
-        }
-      } else if (!isAuthenticated()) {
-        // No user in store after hydration, redirect to login
+      // Always validate with server - cookies are the source of truth
+      // (zustand localStorage may not be updated yet after login due to async persist)
+      const serverUser = await fetchCurrentUser();
+      if (serverUser) {
+        setSessionChecked(true);
+      } else {
+        // Server says not authenticated - redirect to login
         router.replace('/auth/login');
-        return;
       }
-      setSessionChecked(true);
     };
 
     validateSession();
-  }, [storeHydrated, user, isAuthenticated, fetchCurrentUser, router]);
+  }, [storeHydrated, fetchCurrentUser, router]);
 
   // Show loading while hydrating zustand or validating session
-  if (!storeHydrated || !sessionChecked || !user || !isAuthenticated()) {
+  // After sessionChecked is true, user is guaranteed to be set by fetchCurrentUser
+  if (!storeHydrated || !sessionChecked) {
     return (
       <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center' }}>
         <Spin size="large" />

@@ -1,5 +1,5 @@
-
-import { NextResponse } from 'next/server';
+import { withApiHandler } from '@/lib/api/handler';
+import { ApiError } from '@/lib/api/errors';
 import { getSession } from '@/lib/auth/session';
 import { prisma } from '@/lib/db';
 import { checkoutCartSchema } from '@/lib/validation/cart';
@@ -8,175 +8,192 @@ import { createInitialTrackingEvent } from '@/lib/tracking/create-event';
 import { ShipmentStatus } from '@/lib/shipments/shipment-status';
 import { calculateCommissionsInCents } from '@/lib/quotes/commission';
 import { integrateWithCarrier } from '@/lib/shipments/carrier-integration';
+import { logger } from '@/lib/logger';
 import crypto from 'crypto';
 import type { Prisma } from '@prisma/client';
+
+// Tipo para resposta POST /api/cart/checkout
+type CheckoutCartResponse = {
+  message: string;
+  idempotent: boolean;
+  cartId: string;
+  shipmentIds: string[];
+  totalAmount: number;
+};
 
 /**
  * POST /api/cart/checkout
  * Cria shipments a partir dos itens do carrinho
  * Idempotente por cartId + hash dos itens
  */
-export async function POST(request: Request) {
-  try {
-    const session = await getSession();
+export const POST = withApiHandler<CheckoutCartResponse>(async ({ req }) => {
+  const session = await getSession();
 
-    if (!session?.userId) {
-      return NextResponse.json({ message: 'Não autorizado' }, { status: 401 });
-    }
+  if (!session?.userId) {
+    throw new ApiError({ code: 'UNAUTHORIZED', message: 'Não autorizado', status: 401 });
+  }
 
-    const body = await request.json();
+  const body = await req.json();
 
-    // Validar dados
-    const validation = checkoutCartSchema.safeParse(body);
-    if (!validation.success) {
-      return NextResponse.json(
-        {
-          message: 'Dados inválidos',
-          errors: validation.error.flatten(),
-        },
-        { status: 400 }
-      );
-    }
+  // Validar dados
+  const validation = checkoutCartSchema.safeParse(body);
+  if (!validation.success) {
+    throw new ApiError({
+      code: 'VALIDATION_ERROR',
+      message: 'Dados inválidos',
+      status: 400,
+      details: validation.error.flatten(),
+    });
+  }
 
-    const data = validation.data;
+  const data = validation.data;
 
-    // Transação para garantir atomicidade
-    const result = await prisma.$transaction(async (tx) => {
-      // Buscar carrinho OPEN com lock para evitar concorrência
-      const cart = await tx.cart.findFirst({
-        where: {
-          userId: session.userId,
-          status: 'OPEN',
-        },
-        include: {
-          items: {
-            orderBy: {
-              createdAt: 'asc',
-            },
+  // Transação para garantir atomicidade
+  const result = await prisma.$transaction(async (tx) => {
+    // Buscar carrinho OPEN com lock para evitar concorrência
+    const cart = await tx.cart.findFirst({
+      where: {
+        userId: session.userId,
+        status: 'OPEN',
+      },
+      include: {
+        items: {
+          orderBy: {
+            createdAt: 'asc',
           },
+        },
+      },
+    });
+
+    if (!cart) {
+      throw new ApiError({ code: 'CART_NOT_FOUND', message: 'Carrinho não encontrado', status: 404 });
+    }
+
+    if (cart.items.length === 0) {
+      throw new ApiError({ code: 'CART_EMPTY', message: 'Carrinho vazio', status: 400 });
+    }
+
+    // Filtrar itens se itemIds fornecido
+    const itemsToCheckout = data.itemIds?.length
+      ? cart.items.filter((item) => data.itemIds?.includes(item.id))
+      : cart.items;
+
+    if (itemsToCheckout.length === 0) {
+      throw new ApiError({ code: 'NO_ITEMS_SELECTED', message: 'Nenhum item selecionado para checkout', status: 400 });
+    }
+
+    // 🛡️ VALIDAÇÃO CRÍTICA: Verificar saldo da carteira ANTES de criar shipments
+    // (apenas se método de pagamento for carteira)
+    if (data.paymentMethod === 'wallet') {
+      // Calcular total do carrinho
+      let totalAmountPreview = 0;
+      for (const item of itemsToCheckout) {
+        const itemTotals = item.totals as { total?: number };
+        const itemTotal = itemTotals?.total;
+
+        if (!itemTotal || itemTotal <= 0) {
+          throw new ApiError({
+            code: 'INVALID_ITEM_TOTAL',
+            message: `Item ${item.id} possui total inválido: ${itemTotal}`,
+            status: 400,
+          });
+        }
+
+        totalAmountPreview += itemTotal;
+      }
+
+      // 🔒 CRITICAL FIX: Usar FOR UPDATE para evitar race condition
+      // Isso garante que apenas uma transação pode verificar/debitar por vez
+      const wallets = await tx.$queryRaw<Array<{ id: string; availableCents: number }>>`
+        SELECT id, "availableCents"
+        FROM "wallets"
+        WHERE "userId" = ${session.userId}
+        FOR UPDATE
+      `;
+
+      const wallet = wallets[0];
+      const availableCents = wallet?.availableCents ?? 0;
+
+      if (availableCents < totalAmountPreview * 100) {
+        throw new ApiError({
+          code: 'INSUFFICIENT_WALLET_BALANCE',
+          message: 'Saldo insuficiente na carteira para processar o checkout',
+          status: 402, // 402 Payment Required
+        });
+      }
+    }
+
+    // Gerar fingerprint para idempotência
+    const itemsHash = crypto
+      .createHash('sha256')
+      .update(JSON.stringify(itemsToCheckout.map((i) => i.id)))
+      .digest('hex')
+      .substring(0, 16);
+
+    const checkoutFingerprint = `${cart.id}-${itemsHash}`;
+
+    // Verificar se já existe checkout com esse fingerprint
+    const existingCheckout = cart.meta as { lastCheckoutFingerprint?: string; shipmentIds?: string[]; totalAmount?: number } | null;
+    if (
+      existingCheckout?.lastCheckoutFingerprint === checkoutFingerprint &&
+      existingCheckout?.shipmentIds &&
+      existingCheckout.shipmentIds.length > 0
+    ) {
+      // ✅ FIX: Mesmo em caso de idempotência, garantir que itens sejam removidos
+      // (pode ter falhado a remoção anterior)
+      const processedItemIds = itemsToCheckout.map((item) => item.id);
+      await tx.cartItem.deleteMany({
+        where: {
+          id: { in: processedItemIds },
+          cartId: cart.id,
         },
       });
 
-      if (!cart) {
-        throw new Error('CART_NOT_FOUND');
-      }
+      // Recalcular totais
+      const remainingItems = await tx.cartItem.findMany({
+        where: { cartId: cart.id },
+      });
 
-      if (cart.items.length === 0) {
-        throw new Error('CART_EMPTY');
-      }
+      const newTotal = remainingItems.reduce((sum, item) => {
+        const itemTotals = item.totals as { total?: number };
+        return sum + (itemTotals?.total || 0);
+      }, 0);
 
-      // Filtrar itens se itemIds fornecido
-      const itemsToCheckout = data.itemIds?.length
-        ? cart.items.filter((item) => data.itemIds?.includes(item.id))
-        : cart.items;
-
-      if (itemsToCheckout.length === 0) {
-        throw new Error('NO_ITEMS_SELECTED');
-      }
-
-      // 🛡️ VALIDAÇÃO CRÍTICA: Verificar saldo da carteira ANTES de criar shipments
-      // (apenas se método de pagamento for carteira)
-      if (data.paymentMethod === 'wallet') {
-        // Calcular total do carrinho
-        let totalAmountPreview = 0;
-        for (const item of itemsToCheckout) {
-          const itemTotals = item.totals as { total?: number };
-          const itemTotal = itemTotals?.total;
-
-          if (!itemTotal || itemTotal <= 0) {
-            throw new Error(`INVALID_ITEM_TOTAL: Item ${item.id} has invalid total: ${itemTotal}`);
-          }
-
-          totalAmountPreview += itemTotal;
-        }
-
-        // 🔒 CRITICAL FIX: Usar FOR UPDATE para evitar race condition
-        // Isso garante que apenas uma transação pode verificar/debitar por vez
-        const wallets = await tx.$queryRaw<Array<{ id: string; availableCents: number }>>`
-          SELECT id, "availableCents"
-          FROM "wallets"
-          WHERE "userId" = ${session.userId}
-          FOR UPDATE
-        `;
-
-        const wallet = wallets[0];
-        const availableCents = wallet?.availableCents ?? 0;
-
-        if (availableCents < totalAmountPreview * 100) {
-          throw new Error('INSUFFICIENT_WALLET_BALANCE');
-        }
-      }
-
-      // Gerar fingerprint para idempotência
-      const itemsHash = crypto
-        .createHash('sha256')
-        .update(JSON.stringify(itemsToCheckout.map((i) => i.id)))
-        .digest('hex')
-        .substring(0, 16);
-
-      const checkoutFingerprint = `${cart.id}-${itemsHash}`;
-
-      // Verificar se já existe checkout com esse fingerprint
-      const existingCheckout = cart.meta as { lastCheckoutFingerprint?: string; shipmentIds?: string[]; totalAmount?: number } | null;
-      if (
-        existingCheckout?.lastCheckoutFingerprint === checkoutFingerprint &&
-        existingCheckout?.shipmentIds &&
-        existingCheckout.shipmentIds.length > 0
-      ) {
-        // ✅ FIX: Mesmo em caso de idempotência, garantir que itens sejam removidos
-        // (pode ter falhado a remoção anterior)
-        const processedItemIds = itemsToCheckout.map((item) => item.id);
-        await tx.cartItem.deleteMany({
-          where: {
-            id: { in: processedItemIds },
-            cartId: cart.id,
-          },
-        });
-
-        // Recalcular totais
-        const remainingItems = await tx.cartItem.findMany({
-          where: { cartId: cart.id },
-        });
-
-        const newTotal = remainingItems.reduce((sum, item) => {
-          const itemTotals = item.totals as { total?: number };
-          return sum + (itemTotals?.total || 0);
-        }, 0);
-
-        await tx.cart.update({
-          where: { id: cart.id },
-          data: {
-            status: 'OPEN',
-            totals: { total: newTotal, moeda: 'BRL' },
-          },
-        });
-
-        console.log('[CART_CHECKOUT] Idempotência detectada, itens removidos:', {
-          cartId: cart.id,
-          processedCount: processedItemIds.length,
-          remainingCount: remainingItems.length,
-        });
-
-        // Idempotência: retornar shipments já criados
-        return {
-          idempotent: true,
-          cartId: cart.id,
-          shipmentIds: existingCheckout.shipmentIds,
-          totalAmount: existingCheckout.totalAmount,
-        };
-      }
-
-      // Travar carrinho
       await tx.cart.update({
         where: { id: cart.id },
-        data: { status: 'LOCKED' },
+        data: {
+          status: 'OPEN',
+          totals: { total: newTotal, moeda: 'BRL' },
+        },
       });
 
-      // Criar shipments a partir dos itens
-      const shipmentIds: string[] = [];
-      let totalAmount = 0;
+      logger.info({
+        event: 'checkout_idempotent',
+        cartId: cart.id,
+        processedCount: processedItemIds.length,
+        remainingCount: remainingItems.length,
+      }, 'Idempotent checkout detected, items removed');
 
-      for (const item of itemsToCheckout) {
+      // Idempotência: retornar shipments já criados
+      return {
+        idempotent: true,
+        cartId: cart.id,
+        shipmentIds: existingCheckout.shipmentIds,
+        totalAmount: existingCheckout.totalAmount ?? 0,
+      };
+    }
+
+    // Travar carrinho
+    await tx.cart.update({
+      where: { id: cart.id },
+      data: { status: 'LOCKED' },
+    });
+
+    // Criar shipments a partir dos itens
+    const shipmentIds: string[] = [];
+    let totalAmount = 0;
+
+    for (const item of itemsToCheckout) {
         const originAddress = item.originAddress as { cep: string; [key: string]: unknown };
         const destination = item.destination as { nome?: string; apelido?: string; telefone?: string; email?: string; documento?: string; cep: string; logradouro: string; numero: string; complemento?: string; bairro: string; cidade: string; uf: string; [key: string]: unknown };
         const volumes = item.volumes as Array<{ pesoKg?: number; [key: string]: unknown }>;
@@ -341,14 +358,14 @@ export async function POST(request: Request) {
             uf: originData.uf || undefined,
           };
 
-          console.log('[CART_CHECKOUT] Sender data:', {
+          logger.debug({
+            event: 'checkout_sender_data',
             shipmentId: shipment.id,
             hasUserData: !!user,
             documento: senderData.documento ? `${senderData.documento.substring(0, 3)}***` : 'MISSING',
             nome: senderData.nome,
             cep: senderData.cep,
-            logradouro: senderData.logradouro,
-          });
+          }, 'Prepared sender data for carrier integration');
 
           // Dados do destinatário
           const recipientData = {
@@ -379,28 +396,31 @@ export async function POST(request: Request) {
           });
 
           if (integrationResult.success) {
-            console.log('[CART_CHECKOUT] Carrier integration successful:', {
+            logger.info({
+              event: 'checkout_carrier_success',
               shipmentId: shipment.id,
               carrier: selectedQuote.carrier,
               primaryTrackingCode: integrationResult.primaryTrackingCode,
               packagesUpdated: integrationResult.packageUpdates?.length || 0,
-            });
+            }, 'Carrier integration successful');
           } else {
             // Log de falha mas não interrompe o checkout
-            console.warn('[CART_CHECKOUT] Carrier integration failed (non-blocking):', {
+            logger.warn({
+              event: 'checkout_carrier_failed',
               shipmentId: shipment.id,
               carrier: selectedQuote.carrier,
               error: integrationResult.errorMessage,
               errors: integrationResult.errors,
-            });
+            }, 'Carrier integration failed (non-blocking)');
           }
         } catch (integrationError) {
           // Erro na integração não deve impedir o checkout
-          console.error('[CART_CHECKOUT] Carrier integration error (non-blocking):', {
+          logger.error({
+            event: 'checkout_carrier_error',
             shipmentId: shipment.id,
             carrier: selectedQuote.carrier,
-            error: integrationError instanceof Error ? integrationError.message : integrationError,
-          });
+            err: integrationError,
+          }, 'Carrier integration error (non-blocking)');
         }
 
         // Se coleta foi solicitada, criar PickupRequest
@@ -440,7 +460,11 @@ export async function POST(request: Request) {
         const itemTotal = itemTotals?.total;
 
         if (!itemTotal || itemTotal <= 0) {
-          throw new Error(`INVALID_ITEM_TOTAL: Item ${item.id} has invalid total: ${itemTotal}`);
+          throw new ApiError({
+            code: 'INVALID_ITEM_TOTAL',
+            message: `Item ${item.id} possui total inválido: ${itemTotal}`,
+            status: 400,
+          });
         }
 
         totalAmount += itemTotal;
@@ -498,11 +522,12 @@ export async function POST(request: Request) {
         });
       }
 
-      console.log('[CART_CHECKOUT] Items removidos após checkout:', {
+      logger.info({
+        event: 'checkout_items_removed',
         cartId: cart.id,
         processedCount: processedItemIds.length,
         remainingCount: remainingItems.length,
-      });
+      }, 'Items removed after checkout');
 
       return {
         idempotent: false,
@@ -512,7 +537,8 @@ export async function POST(request: Request) {
       };
     });
 
-    return NextResponse.json({
+  return {
+    data: {
       message: result.idempotent
         ? 'Checkout já processado anteriormente'
         : 'Shipments criados com sucesso',
@@ -520,56 +546,6 @@ export async function POST(request: Request) {
       cartId: result.cartId,
       shipmentIds: result.shipmentIds,
       totalAmount: result.totalAmount,
-    });
-  } catch (error) {
-    console.error('[CART_CHECKOUT]', error);
-
-    // 🛡️ CRITICAL FIX: Liberar carrinho do estado LOCKED em caso de falha
-    // Isso evita que carrinhos fiquem travados permanentemente
-    try {
-      const session = await getSession();
-      if (session?.userId) {
-        await prisma.cart.updateMany({
-          where: {
-            userId: session.userId,
-            status: 'LOCKED',
-          },
-          data: {
-            status: 'OPEN',
-          },
-        });
-      }
-    } catch (unlockError) {
-      console.error('[CART_CHECKOUT] Erro ao destravar carrinho:', unlockError);
-    }
-
-    if (error instanceof Error) {
-      if (error.message === 'CART_NOT_FOUND') {
-        return NextResponse.json({ message: 'Carrinho não encontrado' }, { status: 404 });
-      }
-
-      if (error.message === 'CART_EMPTY') {
-        return NextResponse.json({ message: 'Carrinho vazio' }, { status: 400 });
-      }
-
-      if (error.message === 'NO_ITEMS_SELECTED') {
-        return NextResponse.json(
-          { message: 'Nenhum item selecionado para checkout' },
-          { status: 400 }
-        );
-      }
-
-      if (error.message === 'INSUFFICIENT_WALLET_BALANCE') {
-        return NextResponse.json(
-          { message: 'Saldo insuficiente na carteira para processar o checkout' },
-          { status: 402 } // 402 Payment Required
-        );
-      }
-    }
-
-    return NextResponse.json(
-      { message: 'Erro ao processar checkout' },
-      { status: 500 }
-    );
-  }
-}
+    },
+  };
+});

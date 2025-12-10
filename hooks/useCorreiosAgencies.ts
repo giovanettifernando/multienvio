@@ -55,7 +55,9 @@ async function fetchCorreiosAgencies(
   if (!response.ok) {
     throw new Error('Erro ao buscar agências dos Correios');
   }
-  return response.json();
+  const json = await response.json();
+  // Handle standardized API response format { data: T, error, meta }
+  return (json.data ?? json) as CorreiosAgenciesResponse;
 }
 
 /**

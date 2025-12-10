@@ -1,20 +1,31 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { withApiHandler } from '@/lib/api/handler';
+import { ApiError } from '@/lib/api/errors';
 import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
-import { requirePermission } from '@/lib/auth/permissions';
 import { AdminPermission, Prisma } from '@prisma/client';
+import { canAccess } from '@/lib/auth/permissions';
 import type { Paged, OpsShipment } from '@/lib/admin/ops/types';
 import prisma from '@/lib/db';
 
-export async function GET(request: NextRequest) {
-  const session = await getAdminSessionFromRequest(request);
+export const GET = withApiHandler<Paged<OpsShipment>>(async (context) => {
+  const session = await getAdminSessionFromRequest(context.req);
   if (!session) {
-    return NextResponse.json({ message: 'Não autenticado' }, { status: 401 });
+    throw new ApiError({ code: 'unauthorized', message: 'Não autenticado', status: 401 });
   }
 
-  const permissionError = requirePermission(session, AdminPermission.OPERACOES);
-  if (permissionError) return permissionError;
+  const staffUser = await prisma.staffUser.findUnique({
+    where: { id: session.staffId },
+    select: { id: true, status: true, isSuperAdmin: true, permissions: true },
+  });
 
-  const searchParams = request.nextUrl.searchParams;
+  if (!staffUser || staffUser.status !== 'ACTIVE') {
+    throw new ApiError({ code: 'forbidden', message: 'Acesso negado', status: 403 });
+  }
+
+  if (!canAccess(staffUser, AdminPermission.OPERACOES)) {
+    throw new ApiError({ code: 'forbidden', message: 'Sem permissão para operações', status: 403 });
+  }
+
+  const searchParams = context.req.nextUrl.searchParams;
   const page = parseInt(searchParams.get('page') || '1');
   const pageSize = parseInt(searchParams.get('pageSize') || '20');
   const q = searchParams.get('q') || '';
@@ -159,5 +170,5 @@ export async function GET(request: NextRequest) {
     total,
   };
 
-  return NextResponse.json(response);
-}
+  return { data: response };
+});

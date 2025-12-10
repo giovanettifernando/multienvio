@@ -7,12 +7,12 @@
  * 2. JSON mode: Client already uploaded files and sends metadata with URLs
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { withApiHandler } from '@/lib/api/handler';
+import { ApiError } from '@/lib/api/errors';
 import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { getCollectorId } from '@/lib/auth/autonomous-collector-session';
 import { persistCollectorDocument } from '@/lib/storage/collector-documents';
-
 
 // Validation schema for document metadata
 const documentMetadataSchema = z.object({
@@ -32,198 +32,191 @@ const documentsPayloadSchema = z.object({
 
 type DocumentMetadata = z.infer<typeof documentMetadataSchema>;
 
+type DocumentosSavedResponse = {
+  message: string;
+  documents: Array<{
+    id: string;
+    collectorId: string;
+    type: string;
+    filename: string;
+    url: string | null;
+    storageKey: string | null;
+    mimeType: string | null;
+    size: number | null;
+    issuedAt: Date | null;
+    expiresAt: Date | null;
+    createdAt: Date;
+    updatedAt: Date;
+  }>;
+};
+
 /**
  * POST /api/coletores/documentos
  * Handles both multipart and JSON modes
  */
-export async function POST(request: NextRequest) {
+export const POST = withApiHandler<DocumentosSavedResponse>(async (context) => {
+  const { req, logger } = context;
+
+  // 1. Get collectorId from session (NEVER from client)
+  let collectorId: string;
   try {
-    // 1. Get collectorId from session (NEVER from client)
-    let collectorId: string;
-    try {
-      collectorId = await getCollectorId();
-    } catch {
-      console.warn('[documentos] UNAUTHORIZED: No valid session');
-      return NextResponse.json(
-        {
-          code: 'UNAUTHORIZED',
-          message: 'Sessão expirada. Faça login novamente.',
-        },
-        { status: 401 }
-      );
-    }
-
-    console.info('[documentos] REQUEST: CollectorId', collectorId);
-
-    const contentType = request.headers.get('content-type') || '';
-
-    // MODE 1: Multipart upload
-    if (contentType.includes('multipart/form-data')) {
-      return await handleMultipartUpload(request, collectorId);
-    }
-
-    // MODE 2: JSON with pre-uploaded files
-    if (contentType.includes('application/json')) {
-      return await handleJsonUpload(request, collectorId);
-    }
-
-    return NextResponse.json(
-      {
-        code: 'INVALID_CONTENT_TYPE',
-        message: 'Content-Type deve ser multipart/form-data ou application/json',
-      },
-      { status: 400 }
-    );
-  } catch (error) {
-    console.error('[documentos] SERVER_ERROR:', error);
-    return NextResponse.json(
-      {
-        code: 'SERVER_ERROR',
-        message: 'Erro ao processar documentos. Tente novamente mais tarde.',
-      },
-      { status: 500 }
-    );
+    collectorId = await getCollectorId();
+  } catch {
+    logger.warn('collector_documents_unauthorized');
+    throw new ApiError({
+      code: 'UNAUTHORIZED',
+      message: 'Sessão expirada. Faça login novamente.',
+      status: 401,
+    });
   }
-}
+
+  logger.debug('collector_documents_request', { collectorId });
+
+  const contentType = req.headers.get('content-type') || '';
+
+  // MODE 1: Multipart upload
+  if (contentType.includes('multipart/form-data')) {
+    return await handleMultipartUpload(req, collectorId, logger);
+  }
+
+  // MODE 2: JSON with pre-uploaded files
+  if (contentType.includes('application/json')) {
+    return await handleJsonUpload(req, collectorId, logger);
+  }
+
+  throw new ApiError({
+    code: 'INVALID_CONTENT_TYPE',
+    message: 'Content-Type deve ser multipart/form-data ou application/json',
+    status: 400,
+  });
+});
 
 /**
  * Handle multipart form data upload
  */
-async function handleMultipartUpload(request: NextRequest, collectorId: string) {
-  try {
-    const formData = await request.formData();
-    const documentsToUpload: Array<{ file: File; type: string; metadata?: Partial<DocumentMetadata> }> = [];
+async function handleMultipartUpload(
+  request: Request,
+  collectorId: string,
+  logger: { info: (event: string, data?: Record<string, unknown>) => void; debug: (event: string, data?: Record<string, unknown>) => void; error: (event: string, data?: Record<string, unknown>) => void }
+) {
+  const formData = await request.formData();
+  const documentsToUpload: Array<{ file: File; type: string; metadata?: Partial<DocumentMetadata> }> = [];
 
-    // Extract files and metadata from FormData
-    for (const [key, value] of formData.entries()) {
-      if (value instanceof File) {
-        // Extract type from key (e.g., "cnh_file", "crlv_file")
-        const typeMatch = key.match(/^(cnh|crlv|pf_address_proof)_file$/);
-        if (typeMatch) {
-          const type = typeMatch[1];
+  // Extract files and metadata from FormData
+  for (const [key, value] of formData.entries()) {
+    if (value instanceof File) {
+      // Extract type from key (e.g., "cnh_file", "crlv_file")
+      const typeMatch = key.match(/^(cnh|crlv|pf_address_proof)_file$/);
+      if (typeMatch) {
+        const type = typeMatch[1];
 
-          // Get optional metadata from separate fields
-          const issuedAt = formData.get(`${type}_issuedAt`);
-          const expiresAt = formData.get(`${type}_expiresAt`);
+        // Get optional metadata from separate fields
+        const issuedAt = formData.get(`${type}_issuedAt`);
+        const expiresAt = formData.get(`${type}_expiresAt`);
 
-          documentsToUpload.push({
-            file: value,
-            type,
-            metadata: {
-              issuedAt: issuedAt ? new Date(issuedAt as string).toISOString() : undefined,
-              expiresAt: expiresAt ? new Date(expiresAt as string).toISOString() : undefined,
-            },
-          });
-        }
-      }
-    }
-
-    if (documentsToUpload.length === 0) {
-      return NextResponse.json(
-        {
-          code: 'NO_FILES',
-          message: 'Nenhum arquivo foi enviado',
-        },
-        { status: 400 }
-      );
-    }
-
-    console.info('[documentos] MULTIPART: Uploading', documentsToUpload.length, 'files for collector', collectorId);
-
-    // Upload files to storage
-    const uploadedDocs = [];
-    for (const { file, type, metadata } of documentsToUpload) {
-      try {
-        const persisted = await persistCollectorDocument(collectorId, file, type);
-        uploadedDocs.push({
+        documentsToUpload.push({
+          file: value,
           type,
-          ...persisted,
-          ...metadata,
-        });
-      } catch (uploadError) {
-        console.error('[documentos] UPLOAD_ERROR:', type, uploadError);
-        return NextResponse.json(
-          {
-            code: 'UPLOAD_ERROR',
-            message: uploadError instanceof Error ? uploadError.message : 'Erro ao fazer upload do arquivo',
+          metadata: {
+            issuedAt: issuedAt ? new Date(issuedAt as string).toISOString() : undefined,
+            expiresAt: expiresAt ? new Date(expiresAt as string).toISOString() : undefined,
           },
-          { status: 400 }
-        );
+        });
       }
     }
-
-    // Persist to database with upsert
-    const savedDocuments = await upsertDocuments(collectorId, uploadedDocs);
-
-    console.info('[documentos] SUCCESS: Saved', savedDocuments.length, 'documents for collector', collectorId);
-
-    return NextResponse.json(
-      {
-        message: 'Documentos salvos com sucesso',
-        documents: savedDocuments,
-      },
-      { status: 200 }
-    );
-  } catch (error) {
-    console.error('[documentos] MULTIPART_ERROR:', error);
-    throw error;
   }
+
+  if (documentsToUpload.length === 0) {
+    throw new ApiError({
+      code: 'NO_FILES',
+      message: 'Nenhum arquivo foi enviado',
+      status: 400,
+    });
+  }
+
+  logger.info('collector_documents_multipart', { collectorId, fileCount: documentsToUpload.length });
+
+  // Upload files to storage
+  const uploadedDocs = [];
+  for (const { file, type, metadata } of documentsToUpload) {
+    try {
+      const persisted = await persistCollectorDocument(collectorId, file, type);
+      uploadedDocs.push({
+        type,
+        ...persisted,
+        ...metadata,
+      });
+    } catch (uploadError) {
+      logger.error('collector_documents_upload_error', { type, err: uploadError });
+      throw new ApiError({
+        code: 'UPLOAD_ERROR',
+        message: uploadError instanceof Error ? uploadError.message : 'Erro ao fazer upload do arquivo',
+        status: 400,
+      });
+    }
+  }
+
+  // Persist to database with upsert
+  const savedDocuments = await upsertDocuments(collectorId, uploadedDocs, logger);
+
+  logger.info('collector_documents_saved', { collectorId, count: savedDocuments.length });
+
+  return {
+    data: {
+      message: 'Documentos salvos com sucesso',
+      documents: savedDocuments,
+    },
+  };
 }
 
 /**
  * Handle JSON payload (files already uploaded)
  */
-async function handleJsonUpload(request: NextRequest, collectorId: string) {
-  try {
-    const body = await request.json();
+async function handleJsonUpload(
+  request: Request,
+  collectorId: string,
+  logger: { info: (event: string, data?: Record<string, unknown>) => void; debug: (event: string, data?: Record<string, unknown>) => void; error: (event: string, data?: Record<string, unknown>) => void }
+) {
+  const body = await request.json();
 
-    // Validate payload
-    const validation = documentsPayloadSchema.safeParse(body);
-    if (!validation.success) {
-      console.warn('[documentos] VALIDATION_ERROR:', validation.error);
-      return NextResponse.json(
-        {
-          code: 'VALIDATION_ERROR',
-          message: 'Dados inválidos',
-          errors: validation.error.issues,
-        },
-        { status: 400 }
-      );
-    }
-
-    const { documents } = validation.data;
-
-    console.info('[documentos] JSON: Processing', documents.length, 'documents for collector', collectorId);
-
-    // Ensure each document has either url or storageKey
-    for (const doc of documents) {
-      if (!doc.url && !doc.storageKey) {
-        return NextResponse.json(
-          {
-            code: 'MISSING_URL',
-            message: `Documento ${doc.type} precisa ter url ou storageKey`,
-          },
-          { status: 400 }
-        );
-      }
-    }
-
-    // Persist to database with upsert
-    const savedDocuments = await upsertDocuments(collectorId, documents);
-
-    console.info('[documentos] SUCCESS: Saved', savedDocuments.length, 'documents for collector', collectorId);
-
-    return NextResponse.json(
-      {
-        message: 'Documentos salvos com sucesso',
-        documents: savedDocuments,
-      },
-      { status: 200 }
-    );
-  } catch (error) {
-    console.error('[documentos] JSON_ERROR:', error);
-    throw error;
+  // Validate payload
+  const validation = documentsPayloadSchema.safeParse(body);
+  if (!validation.success) {
+    logger.debug('collector_documents_validation_error', { errors: validation.error.flatten() });
+    throw new ApiError({
+      code: 'VALIDATION_ERROR',
+      message: 'Dados inválidos',
+      status: 400,
+      details: { errors: validation.error.issues },
+    });
   }
+
+  const { documents } = validation.data;
+
+  logger.info('collector_documents_json', { collectorId, count: documents.length });
+
+  // Ensure each document has either url or storageKey
+  for (const doc of documents) {
+    if (!doc.url && !doc.storageKey) {
+      throw new ApiError({
+        code: 'MISSING_URL',
+        message: `Documento ${doc.type} precisa ter url ou storageKey`,
+        status: 400,
+      });
+    }
+  }
+
+  // Persist to database with upsert
+  const savedDocuments = await upsertDocuments(collectorId, documents, logger);
+
+  logger.info('collector_documents_json_saved', { collectorId, count: savedDocuments.length });
+
+  return {
+    data: {
+      message: 'Documentos salvos com sucesso',
+      documents: savedDocuments,
+    },
+  };
 }
 
 /**
@@ -244,7 +237,8 @@ async function upsertDocuments(
     expiresAt?: string;
     originalName?: string;
     publicUrl?: string;
-  }>
+  }>,
+  logger: { debug: (event: string, data?: Record<string, unknown>) => void; error: (event: string, data?: Record<string, unknown>) => void }
 ) {
   const savedDocuments = [];
 
@@ -278,9 +272,9 @@ async function upsertDocuments(
       });
 
       savedDocuments.push(savedDoc);
-      console.info('[documentos] UPSERT: Document', doc.type, 'saved with ID', savedDoc.id);
+      logger.debug('collector_document_upserted', { type: doc.type, documentId: savedDoc.id });
     } catch (dbError) {
-      console.error('[documentos] DB_ERROR:', doc.type, dbError);
+      logger.error('collector_document_db_error', { type: doc.type, err: dbError });
       throw new Error(`Erro ao salvar documento ${doc.type}`);
     }
   }

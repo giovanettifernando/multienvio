@@ -52,10 +52,12 @@ export function CollectorSupportForm({ onSuccess }: CollectorSupportFormProps) {
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         console.error('Error response:', errorData);
-        throw new Error(errorData.message || 'Erro ao criar chamado');
+        throw new Error(errorData.error?.message || errorData.message || 'Erro ao criar chamado');
       }
 
-      return response.json();
+      const json = await response.json();
+      // Handle standardized API response format { data: T, error, meta }
+      return json.data ?? json;
     },
   });
 

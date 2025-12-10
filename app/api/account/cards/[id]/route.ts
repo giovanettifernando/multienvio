@@ -8,16 +8,34 @@ import {
 import {
   deleteUserCard,
   updateUserCard,
+  type AccountCardDto,
 } from "@/lib/services/account-cards.service";
 import { validateCardUpdateInput } from "@/lib/validation/card";
 
+type CardDtoResponse = {
+  id: string;
+  brand: string;
+  holderName: string;
+  last4: string;
+  expMonth: number;
+  expYear: number;
+  isDefault: boolean;
+  billingAddressId: string | null;
+  createdAt: string;
+};
 
-export const PUT = withApiHandler(async (context) => {
+type UpdateCardResponse = CardDtoResponse;
+
+type DeleteCardResponse = {
+  deleted: boolean;
+};
+
+export const PUT = withApiHandler<UpdateCardResponse>(async (context) => {
   const { req, params, logger } = context;
   const { id } = await params;
   const userId = await requireUserId(req);
 
-  enforceCardWriteLimit(context);
+  await enforceCardWriteLimit(context);
 
   let payload: unknown;
   try {
@@ -41,17 +59,20 @@ export const PUT = withApiHandler(async (context) => {
   const card = await updateUserCard(userId, id, normalized, { logger });
 
   return {
-    data: card,
+    data: {
+      ...card,
+      createdAt: card.createdAt.toISOString(),
+    },
     meta: { tags: ["account", "cards"] },
   };
 });
 
-export const DELETE = withApiHandler(async (context) => {
+export const DELETE = withApiHandler<DeleteCardResponse>(async (context) => {
   const { req, params, logger } = context;
   const { id } = await params;
   const userId = await requireUserId(req);
 
-  enforceCardWriteLimit(context);
+  await enforceCardWriteLimit(context);
   await deleteUserCard(userId, id, { logger });
 
   return {

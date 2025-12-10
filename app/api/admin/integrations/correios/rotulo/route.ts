@@ -3,12 +3,17 @@
  *
  * Baixa o rótulo (etiqueta) PDF de uma pré-postagem
  * Aceita tanto o ID da pré-postagem quanto o código de rastreio
+ *
+ * NOTE: This route returns binary PDF data, so it uses withApiHandlerResponse
+ * which allows returning NextResponse directly instead of JSON format.
  */
 
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAdminUser } from '@/lib/auth/admin-helpers';
 import { AdminPermission } from '@prisma/client';
+import { withApiHandlerResponse } from '@/lib/api/handler';
+import { ApiError } from '@/lib/api/errors';
 import {
   baixarRotuloPdf,
   buscarPrePostagemPorRastreio,
@@ -35,112 +40,106 @@ function isTrackingCode(codigo: string): boolean {
  * POST - Baixa o rótulo PDF de uma pré-postagem
  * Aceita código de rastreio ou ID da pré-postagem
  */
-export async function POST(request: Request) {
-  try {
-    const authResult = await requireAdminUser(request, AdminPermission.INTEGRACOES);
-    if (authResult instanceof NextResponse) return authResult;
+export const POST = withApiHandlerResponse(async ({ req, logger }) => {
+  const authResult = await requireAdminUser(req, AdminPermission.INTEGRACOES);
+  if (authResult instanceof NextResponse) {
+    throw new ApiError({
+      code: 'UNAUTHORIZED',
+      message: 'Não autorizado',
+      status: 401,
+    });
+  }
 
-    // Validar payload
-    const body = await request.json();
-    const parsed = rotuloSchema.safeParse(body);
+  // Validar payload
+  const body = await req.json();
+  const parsed = rotuloSchema.safeParse(body);
 
-    if (!parsed.success) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: 'Dados inválidos',
-          errors: parsed.error.flatten(),
+  if (!parsed.success) {
+    throw new ApiError({
+      code: 'VALIDATION_ERROR',
+      message: 'Dados inválidos',
+      status: 400,
+      details: parsed.error.flatten(),
+    });
+  }
+
+  let { codigo } = parsed.data;
+  codigo = codigo.trim().toUpperCase();
+
+  // Verificar se integração está configurada
+  const config = await getCorreiosConfigAsync();
+  const validation = validateCorreiosConfig(config);
+
+  if (!validation.valid) {
+    throw new ApiError({
+      code: 'NOT_CONFIGURED',
+      message: 'Integração dos Correios não está configurada',
+      status: 400,
+    });
+  }
+
+  let idPrePostagem = codigo;
+
+  // Se for código de rastreio, buscar o ID da pré-postagem
+  if (isTrackingCode(codigo)) {
+    logger.info('correios_rotulo_search_by_tracking', { codigo });
+
+    const searchResult = await buscarPrePostagemPorRastreio(codigo);
+
+    if (!searchResult.success || !searchResult.idPrePostagem) {
+      throw new ApiError({
+        code: 'NOT_FOUND',
+        message: searchResult.erro || `Pré-postagem não encontrada para o código ${codigo}`,
+        status: 404,
+        details: {
+          type: 'search_failed',
+          codigoRastreio: codigo,
+          searchResult,
         },
-        { status: 400 }
-      );
-    }
-
-    let { codigo } = parsed.data;
-    codigo = codigo.trim().toUpperCase();
-
-    // Verificar se integração está configurada
-    const config = await getCorreiosConfigAsync();
-    const validation = validateCorreiosConfig(config);
-
-    if (!validation.valid) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: 'Integração dos Correios não está configurada',
-        },
-        { status: 400 }
-      );
-    }
-
-    let idPrePostagem = codigo;
-
-    // Se for código de rastreio, buscar o ID da pré-postagem
-    if (isTrackingCode(codigo)) {
-      console.log('[ADMIN_CORREIOS_ROTULO] Searching pre-postagem by tracking code:', { codigo });
-
-      const searchResult = await buscarPrePostagemPorRastreio(codigo);
-
-      if (!searchResult.success || !searchResult.idPrePostagem) {
-        return NextResponse.json(
-          {
-            success: false,
-            message: searchResult.erro || `Pré-postagem não encontrada para o código ${codigo}`,
-            type: 'search_failed',
-            details: {
-              codigoRastreio: codigo,
-              searchResult,
-            },
-          },
-          { status: 404 }
-        );
-      }
-
-      idPrePostagem = searchResult.idPrePostagem;
-      console.log('[ADMIN_CORREIOS_ROTULO] Found pre-postagem ID:', {
-        codigoRastreio: codigo,
-        idPrePostagem
       });
     }
 
-    console.log('[ADMIN_CORREIOS_ROTULO] Downloading label:', { idPrePostagem });
+    idPrePostagem = searchResult.idPrePostagem;
+    logger.info('correios_rotulo_found_prepostagem', {
+      codigoRastreio: codigo,
+      idPrePostagem,
+    });
+  }
 
-    // Baixar o PDF
-    const result = await baixarRotuloPdf(idPrePostagem);
+  logger.info('correios_rotulo_downloading', { idPrePostagem });
 
-    if (!result.success || !result.content) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: result.erro || 'Falha ao baixar rótulo',
-          type: 'download_failed',
-          details: {
-            idPrePostagem,
-            result,
-          },
-        },
-        { status: 500 }
-      );
-    }
+  // Baixar o PDF
+  const result = await baixarRotuloPdf(idPrePostagem);
 
-    // Retornar o PDF como download
-    // Converter Buffer para Uint8Array para compatibilidade com NextResponse
-    const pdfData = new Uint8Array(result.content);
-
-    return new NextResponse(pdfData, {
-      status: 200,
-      headers: {
-        'Content-Type': result.contentType || 'application/pdf',
-        'Content-Disposition': `attachment; filename="${result.fileName || 'rotulo.pdf'}"`,
-        'Content-Length': String(result.content.length),
+  if (!result.success || !result.content) {
+    throw new ApiError({
+      code: 'DOWNLOAD_FAILED',
+      message: result.erro || 'Falha ao baixar rótulo',
+      status: 500,
+      details: {
+        type: 'download_failed',
+        idPrePostagem,
+        result,
       },
     });
-  } catch (error) {
-    console.error('[ADMIN_CORREIOS_ROTULO]', error);
-    const message = error instanceof Error ? error.message : 'Erro ao baixar rótulo';
-    return NextResponse.json({
-      success: false,
-      message,
-      type: 'exception',
-    }, { status: 500 });
   }
-}
+
+  logger.info('correios_rotulo_downloaded', {
+    idPrePostagem,
+    fileName: result.fileName,
+    contentLength: result.content.length,
+  });
+
+  // Retornar o PDF como download
+  // Converter Buffer para Uint8Array para compatibilidade com NextResponse
+  const pdfData = new Uint8Array(result.content);
+
+  return new NextResponse(pdfData, {
+    status: 200,
+    headers: {
+      'Content-Type': result.contentType || 'application/pdf',
+      'Content-Disposition': `attachment; filename="${result.fileName || 'rotulo.pdf'}"`,
+      'Content-Length': String(result.content.length),
+    },
+  });
+});

@@ -1,41 +1,41 @@
-import { NextRequest, NextResponse } from 'next/server';
-
+import { withApiHandler } from '@/lib/api/handler';
+import { ApiError } from '@/lib/api/errors';
 import { geocodeCEP } from '@/lib/services/geocoding';
+
+type GeocodeResponse = {
+  cep: string;
+  coordinates: {
+    lat: number;
+    lng: number;
+  };
+};
 
 /**
  * GET /api/geocode?cep=58035100
  * Geocodifica um CEP e retorna lat/lng
  */
-export async function GET(request: Request) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const cep = searchParams.get('cep');
+export const GET = withApiHandler<GeocodeResponse>(async (context) => {
+  const { searchParams } = new URL(context.req.url);
+  const cep = searchParams.get('cep');
 
-    if (!cep) {
-      return NextResponse.json(
-        { message: 'CEP é obrigatório' },
-        { status: 400 }
-      );
-    }
+  if (!cep) {
+    throw new ApiError({ code: 'validation_error', message: 'CEP é obrigatório', status: 400 });
+  }
 
-    const result = await geocodeCEP(cep);
+  const result = await geocodeCEP(cep);
 
-    if (!result.success) {
-      return NextResponse.json(
-        { message: result.error || 'Erro ao geocodificar CEP' },
-        { status: 400 }
-      );
-    }
+  if (!result.success || !result.coordinates) {
+    throw new ApiError({
+      code: 'geocode_error',
+      message: result.error || 'Erro ao geocodificar CEP',
+      status: 400,
+    });
+  }
 
-    return NextResponse.json({
+  return {
+    data: {
       cep,
       coordinates: result.coordinates,
-    });
-  } catch (error) {
-    console.error('[GEOCODE_GET]', error);
-    return NextResponse.json(
-      { message: 'Erro ao geocodificar CEP' },
-      { status: 500 }
-    );
-  }
-}
+    },
+  };
+});

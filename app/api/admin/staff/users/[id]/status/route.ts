@@ -1,15 +1,32 @@
-
-import { NextResponse } from 'next/server';
-import { requireAdminUser } from '@/lib/auth/admin-helpers';
+import { withApiHandler } from '@/lib/api/handler';
+import { ApiError } from '@/lib/api/errors';
+import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
 import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { AdminPermission, StaffStatus } from '@prisma/client';
 
+type StaffUserApi = {
+  id: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  status: 'active' | 'blocked';
+  isSuperAdmin: boolean;
+  permissions: AdminPermission[];
+  roles: string[];
+  lastAccessAt: string | null;
+  lastLoginAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+type StaffUserStatusResponse = {
+  user: StaffUserApi;
+};
+
 const schema = z.object({
   status: z.nativeEnum(StaffStatus),
 });
-
-
 
 function toApiUser(user: {
   id: string;
@@ -33,7 +50,7 @@ function toApiUser(user: {
     name: user.name,
     email: user.email,
     phone: user.phone,
-    status: user.status === 'BLOCKED' ? 'blocked' : 'active',
+    status: (user.status === 'BLOCKED' ? 'blocked' : 'active') as 'active' | 'blocked',
     isSuperAdmin: user.isSuperAdmin,
     permissions: effectivePermissions,
     roles: user.isSuperAdmin
@@ -46,47 +63,39 @@ function toApiUser(user: {
   };
 }
 
-export async function PATCH(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const authResult = await requireAdminUser(request, AdminPermission.USUARIOS);
-    if (authResult instanceof NextResponse) return authResult;
+export const PATCH = withApiHandler<StaffUserStatusResponse, { id: string }>(async (context) => {
+  const { req, params } = context;
 
-    const { id } = await params;
-    const payload = schema.parse(await request.json());
-
-    const user = await prisma.staffUser.update({
-      where: { id },
-      data: { status: payload.status },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        phone: true,
-        status: true,
-        isSuperAdmin: true,
-        permissions: true,
-        lastAccessAt: true,
-        lastLoginAt: true,
-        createdAt: true,
-        updatedAt: true,
-      },
-    });
-
-    return NextResponse.json({ user: toApiUser(user) });
-  } catch (error) {
-    if (error instanceof NextResponse) {
-      return error;
-    }
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { message: 'Dados inválidos', errors: error.flatten() },
-        { status: 400 },
-      );
-    }
-    console.error('[ADMIN_STAFF_USERS_STATUS]', error);
-    return NextResponse.json({ message: 'Erro ao atualizar status' }, { status: 500 });
+  const session = await getAdminSessionFromRequest(req);
+  if (!session) {
+    throw new ApiError({ code: 'unauthorized', message: 'Não autenticado', status: 401 });
   }
-}
+
+  if (!session.permissions.includes(AdminPermission.USUARIOS)) {
+    throw new ApiError({ code: 'forbidden', message: 'Permissão negada', status: 403 });
+  }
+
+  const { id } = await params;
+  const body = await req.json();
+  const payload = schema.parse(body);
+
+  const user = await prisma.staffUser.update({
+    where: { id },
+    data: { status: payload.status },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      phone: true,
+      status: true,
+      isSuperAdmin: true,
+      permissions: true,
+      lastAccessAt: true,
+      lastLoginAt: true,
+      createdAt: true,
+      updatedAt: true,
+    },
+  });
+
+  return { data: { user: toApiUser(user) } };
+});

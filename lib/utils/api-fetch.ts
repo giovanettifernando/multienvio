@@ -1,6 +1,9 @@
 /**
  * Wrapper para fetch que inclui o status HTTP na mensagem de erro.
  * Isso permite que o tratamento global de erros 401 funcione corretamente.
+ *
+ * Também extrai automaticamente o campo `data` de respostas padronizadas
+ * no formato { data: T, error: null, meta: {...} }
  */
 export async function apiFetch<T>(
   url: string,
@@ -16,7 +19,7 @@ export async function apiFetch<T>(
     let errorMessage: string;
     try {
       const data = await response.json();
-      errorMessage = data.message || data.error || `Request failed`;
+      errorMessage = data.error?.message || data.message || data.error || `Request failed`;
     } catch {
       errorMessage = `Request failed`;
     }
@@ -28,5 +31,12 @@ export async function apiFetch<T>(
     throw error;
   }
 
-  return response.json();
+  const json = await response.json();
+
+  // Handle standardized API response format { data: T, error, meta }
+  if (json && typeof json === 'object' && 'data' in json && json.data !== undefined) {
+    return json.data as T;
+  }
+
+  return json as T;
 }

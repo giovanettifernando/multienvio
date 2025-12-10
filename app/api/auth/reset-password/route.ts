@@ -1,17 +1,24 @@
-import { NextResponse } from 'next/server';
 import { ZodError } from 'zod';
 import bcrypt from 'bcrypt';
+import { withApiHandler } from '@/lib/api/handler';
+import { ApiError } from '@/lib/api/errors';
 import { ResetPasswordSchema } from '@/lib/validation/auth';
 import prisma from '@/lib/db';
 import crypto from 'crypto';
 
+interface ResetPasswordResponse {
+  message: string;
+  success: boolean;
+}
 
-export async function POST(request: Request) {
+export const POST = withApiHandler<ResetPasswordResponse>(async (context) => {
+  const { req, logger } = context;
+
   try {
-    const payload = await request.json();
+    const payload = await req.json();
     const data = ResetPasswordSchema.parse(payload);
 
-    console.log('[RESET_PASSWORD] Attempting to reset password');
+    logger.info('reset_password_attempt');
 
     // Hash the token to compare with database
     const tokenHash = crypto.createHash('sha256').update(data.token).digest('hex');
@@ -33,40 +40,42 @@ export async function POST(request: Request) {
     });
 
     if (!resetToken) {
-      console.log('[RESET_PASSWORD] Invalid token');
-      return NextResponse.json(
-        { message: 'Token de redefinição inválido ou expirado' },
-        { status: 400 }
-      );
+      logger.warn('reset_password_invalid_token');
+      throw new ApiError({
+        code: 'INVALID_TOKEN',
+        message: 'Token de redefinição inválido ou expirado',
+        status: 400,
+      });
     }
 
     // Check if token has already been used
     if (resetToken.usedAt) {
-      console.log('[RESET_PASSWORD] Token already used');
-      return NextResponse.json(
-        { message: 'Este link já foi utilizado. Solicite um novo link.' },
-        { status: 400 }
-      );
+      logger.warn('reset_password_token_used');
+      throw new ApiError({
+        code: 'TOKEN_USED',
+        message: 'Este link já foi utilizado. Solicite um novo link.',
+        status: 400,
+      });
     }
 
     // Check if token has expired
     if (new Date() > resetToken.expiresAt) {
-      console.log('[RESET_PASSWORD] Token expired');
-      return NextResponse.json(
-        { message: 'Token de redefinição expirado. Solicite um novo link.' },
-        { status: 400 }
-      );
+      logger.warn('reset_password_token_expired');
+      throw new ApiError({
+        code: 'TOKEN_EXPIRED',
+        message: 'Token de redefinição expirado. Solicite um novo link.',
+        status: 400,
+      });
     }
 
     // Hash new password with bcrypt (12 salt rounds for consistency with password change)
     const passwordHash = await bcrypt.hash(data.password, 12);
-    // 🛡️ SECURITY FIX: Não logar hashes de senha
-    console.log('[RESET_PASSWORD] Password hash generated');
+    logger.debug('reset_password_hash_generated');
 
     const now = new Date();
 
     // Update user's password, increment tokenVersion, and mark token as used
-    const result = await prisma.$transaction([
+    await prisma.$transaction([
       // Update user password and invalidate all sessions
       prisma.user.update({
         where: { id: resetToken.userId },
@@ -86,32 +95,39 @@ export async function POST(request: Request) {
       }),
     ]);
 
-    // 🛡️ SECURITY FIX: Remover logs de dados sensíveis
-    console.log('[RESET_PASSWORD] Password reset completed successfully');
+    logger.info('reset_password_success', { userId: resetToken.userId });
 
-    return NextResponse.json({
-      message: 'Senha redefinida com sucesso! Você já pode fazer login com sua nova senha.',
-      success: true,
-    });
+    return {
+      data: {
+        message: 'Senha redefinida com sucesso! Você já pode fazer login com sua nova senha.',
+        success: true,
+      },
+    };
   } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+
     if (error instanceof ZodError) {
-      console.log('[RESET_PASSWORD] Validation error:', error.issues);
-      return NextResponse.json(
-        {
-          message: 'Dados inválidos',
+      logger.debug('reset_password_validation_error', { issues: error.issues });
+      throw new ApiError({
+        code: 'VALIDATION_ERROR',
+        message: 'Dados inválidos',
+        status: 422,
+        details: {
           errors: error.issues.map((issue) => ({
             field: issue.path.join('.'),
             message: issue.message,
           })),
         },
-        { status: 422 }
-      );
+      });
     }
 
-    console.error('[RESET_PASSWORD] Unexpected error:', error);
-    return NextResponse.json(
-      { message: 'Erro ao redefinir senha' },
-      { status: 500 }
-    );
+    logger.error('reset_password_error', { err: error });
+    throw new ApiError({
+      code: 'INTERNAL_ERROR',
+      message: 'Erro ao redefinir senha',
+      status: 500,
+    });
   }
-}
+});

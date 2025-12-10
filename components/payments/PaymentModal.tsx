@@ -140,7 +140,9 @@ export function PaymentModal({
     queryFn: async () => {
       const res = await fetch("/api/wallet");
       if (!res.ok) throw new Error("Erro ao buscar saldo");
-      return res.json();
+      const json = await res.json();
+      // Handle standardized API response format { data: T, error, meta }
+      return (json.data ?? json) as WalletData;
     },
     enabled: open && allowWallet,
   });
@@ -151,7 +153,9 @@ export function PaymentModal({
     queryFn: async () => {
       const res = await fetch("/api/auth/me");
       if (!res.ok) throw new Error("Erro ao buscar dados do usuário");
-      return res.json();
+      const json = await res.json();
+      // Handle standardized API response format { data: T, error, meta }
+      return (json.data ?? json) as { email: string };
     },
     enabled: open,
   });
@@ -204,7 +208,9 @@ export function PaymentModal({
         return;
       }
 
-      const refreshData = await refreshRes.json();
+      const refreshJson = await refreshRes.json();
+      // Handle standardized API response format { data: T, error, meta }
+      const refreshData = refreshJson.data ?? refreshJson;
       console.log("[PIX_POLL] Status atualizado:", refreshData.payment?.status);
 
       if (refreshData.payment?.status === "PAID") {
@@ -341,11 +347,15 @@ export function PaymentModal({
         });
 
         if (!pixRes.ok) {
-          const error = await pixRes.json();
-          throw new Error(error.message || "Erro ao gerar PIX");
+          const errorJson = await pixRes.json();
+          // Handle standardized API response format { data: T, error, meta }
+          const error = errorJson.error ?? errorJson;
+          throw new Error(error.message || error.error || "Erro ao gerar PIX");
         }
 
-        const pixResult: MercadoPagoPaymentResult = await pixRes.json();
+        const pixJson = await pixRes.json();
+        // Handle standardized API response format { data: T, error, meta }
+        const pixResult = (pixJson.data ?? pixJson) as MercadoPagoPaymentResult;
         setPixData(pixResult);
         setPixStatus("pending");
         setPixExpireSeconds(30 * 60);
@@ -399,12 +409,15 @@ export function PaymentModal({
     messageApi.success("Pagamento processado com sucesso!");
     console.log("[CARD_SUCCESS] Payment ID:", paymentId);
 
-    if (mode === "topup") {
-      queryClient.invalidateQueries({ queryKey: ["wallet"] });
-    }
-
     onSuccess?.({ paymentId, method: "card" });
     handleClose();
+
+    // Refetch wallet data after modal closes to ensure UI updates
+    if (mode === "topup") {
+      setTimeout(() => {
+        queryClient.refetchQueries({ queryKey: ["wallet"] });
+      }, 300);
+    }
   };
 
   const handleCardError = (error: Error) => {

@@ -4,6 +4,12 @@ import { requireUserId } from "../../helpers";
 import { prisma } from "@/lib/db";
 import { parsePanCipher, decryptPan, loadVaultKey } from "@/lib/crypto/card-vault";
 
+type TokenizeCardResponse = {
+  pan: string;
+  holderName: string;
+  expMonth: number;
+  expYear: number;
+};
 
 /**
  * POST /api/account/cards/[id]/tokenize
@@ -17,7 +23,7 @@ import { parsePanCipher, decryptPan, loadVaultKey } from "@/lib/crypto/card-vaul
  * - Access is logged for audit
  * - PAN is only decrypted in-memory, never stored or logged
  */
-export const POST = withApiHandler(async (context) => {
+export const POST = withApiHandler<TokenizeCardResponse>(async (context) => {
   const { req, params, logger } = context;
   const { id: cardId } = await params;
   const userId = await requireUserId(req);

@@ -93,8 +93,8 @@ export function ELAlert({
       {showIcon && <span className={styles.icon}>{alertIcon}</span>}
 
       <div className={styles.content}>
-        {effectiveTitle && <p className={styles.title}>{effectiveTitle}</p>}
-        {description && <p className={styles.description}>{description}</p>}
+        {effectiveTitle && <div className={styles.title}>{effectiveTitle}</div>}
+        {description && <div className={styles.description}>{description}</div>}
         {actions && <div className={styles.actions}>{actions}</div>}
       </div>
 

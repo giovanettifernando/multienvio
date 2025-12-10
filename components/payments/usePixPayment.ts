@@ -33,7 +33,9 @@ export function usePixPayment({ onPaymentConfirmed }: UsePixPaymentOptions) {
         return;
       }
 
-      const refreshData = await refreshRes.json();
+      const refreshJson = await refreshRes.json();
+      // Handle standardized API response format { data: T, error, meta }
+      const refreshData = refreshJson.data ?? refreshJson;
       console.log('[PIX_POLL] Status atualizado:', refreshData.payment?.status);
 
       if (refreshData.payment?.status === 'PAID') {
@@ -80,10 +82,12 @@ export function usePixPayment({ onPaymentConfirmed }: UsePixPaymentOptions) {
 
     if (!pixRes.ok) {
       const error = await pixRes.json();
-      throw new Error(error.message || 'Erro ao gerar PIX');
+      throw new Error(error.error?.message || error.message || 'Erro ao gerar PIX');
     }
 
-    const pixResult: MercadoPagoPaymentResult = await pixRes.json();
+    const json = await pixRes.json();
+    // Handle standardized API response format { data: T, error, meta }
+    const pixResult = (json.data ?? json) as MercadoPagoPaymentResult;
     setPixData(pixResult);
     message.success('QR Code PIX gerado com sucesso!');
     return pixResult;

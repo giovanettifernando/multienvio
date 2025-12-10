@@ -1,21 +1,26 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { withApiHandler } from '@/lib/api/handler';
+import { ApiError } from '@/lib/api/errors';
 import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
-import { requirePermission } from '@/lib/auth/permissions';
 import { AdminPermission } from '@prisma/client';
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const session = await getAdminSessionFromRequest(request);
+interface ReprocessResponse {
+  ok: boolean;
+}
+
+export const POST = withApiHandler<ReprocessResponse, { id: string }>(async (context) => {
+  const { req, params } = context;
+
+  const session = await getAdminSessionFromRequest(req);
   if (!session) {
-    return NextResponse.json({ message: 'Não autenticado' }, { status: 401 });
+    throw new ApiError({ code: 'unauthorized', message: 'Não autenticado', status: 401 });
   }
 
-  const permissionError = requirePermission(session, AdminPermission.OPERACOES);
-  if (permissionError) return permissionError;
+  if (!session.permissions.includes(AdminPermission.OPERACOES)) {
+    throw new ApiError({ code: 'forbidden', message: 'Permissão negada', status: 403 });
+  }
 
   const { id } = await params;
   console.log('[Mock] Reprocessing shipment:', id);
-  return NextResponse.json({ ok: true });
-}
+
+  return { data: { ok: true } };
+});

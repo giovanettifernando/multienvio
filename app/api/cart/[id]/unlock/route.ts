@@ -1,8 +1,20 @@
-
-import { NextResponse } from 'next/server';
-import { getSession } from '@/lib/auth/session';
-import { prisma } from '@/lib/db';
 import { Prisma } from '@prisma/client';
+import { withApiHandler } from '@/lib/api/handler';
+import { ApiError } from '@/lib/api/errors';
+import { getUserFromRequest } from '@/lib/auth/session';
+import { prisma } from '@/lib/db';
+
+// Tipo para resposta POST /api/cart/[id]/unlock
+type UnlockCartResponse = {
+  message: string;
+  cartId: string;
+  cleaned: boolean;
+};
+
+// Tipo para parâmetros da rota
+type UnlockCartParams = {
+  id: string;
+};
 
 /**
  * POST /api/cart/[id]/unlock
@@ -18,66 +30,54 @@ import { Prisma } from '@prisma/client';
  * Chamado automaticamente no rollback de pagamento (CheckoutCartModal)
  * quando o débito falha após criar shipments.
  */
-export async function POST(
-  request: Request,
-  props: { params: Promise<{ id: string }> }
-) {
-  try {
-    const session = await getSession();
+export const POST = withApiHandler<UnlockCartResponse, UnlockCartParams>(async (context) => {
+  const session = await getUserFromRequest(context.req);
 
-    if (!session?.userId) {
-      return NextResponse.json({ message: 'Não autorizado' }, { status: 401 });
-    }
+  if (!session?.userId) {
+    throw new ApiError({ code: 'unauthorized', message: 'Não autorizado', status: 401 });
+  }
 
-    const params = await props.params;
-    const { id: cartId } = params;
+  const { id: cartId } = await context.params;
 
-    // Buscar carrinho
-    const cart = await prisma.cart.findUnique({
+  const cart = await prisma.cart.findUnique({
+    where: { id: cartId },
+  });
+
+  if (!cart) {
+    throw new ApiError({ code: 'not_found', message: 'Carrinho não encontrado', status: 404 });
+  }
+
+  if (cart.userId !== session.userId) {
+    throw new ApiError({ code: 'forbidden', message: 'Não autorizado', status: 403 });
+  }
+
+  // 🧹 LIMPAR CARRINHO: Desbloquear e limpar todos os dados para evitar estado inconsistente
+  // Usar transação atômica para garantir que todos os dados sejam limpos corretamente
+  await prisma.$transaction(async (tx) => {
+    // 1. Deletar todos os itens do carrinho
+    await tx.cartItem.deleteMany({
+      where: { cartId },
+    });
+
+    // 2. Resetar carrinho: status OPEN, totais zerados, meta limpo
+    await tx.cart.update({
       where: { id: cartId },
-    });
-
-    if (!cart) {
-      return NextResponse.json({ message: 'Carrinho não encontrado' }, { status: 404 });
-    }
-
-    // Verificar se o carrinho pertence ao usuário
-    if (cart.userId !== session.userId) {
-      return NextResponse.json({ message: 'Não autorizado' }, { status: 403 });
-    }
-
-    // 🧹 LIMPAR CARRINHO: Desbloquear e limpar todos os dados para evitar estado inconsistente
-    // Usar transação atômica para garantir que todos os dados sejam limpos corretamente
-    await prisma.$transaction(async (tx) => {
-      // 1. Deletar todos os itens do carrinho
-      await tx.cartItem.deleteMany({
-        where: { cartId },
-      });
-
-      // 2. Resetar carrinho: status OPEN, totais zerados, meta limpo
-      await tx.cart.update({
-        where: { id: cartId },
-        data: {
-          status: 'OPEN',
-          totals: Prisma.JsonNull, // Limpar totais (JSON field)
-          meta: {
-            unlockedAt: new Date().toISOString(),
-            reason: 'Payment rollback - cart cleaned',
-          },
+      data: {
+        status: 'OPEN',
+        totals: Prisma.JsonNull, // Limpar totais (JSON field)
+        meta: {
+          unlockedAt: new Date().toISOString(),
+          reason: 'Payment rollback - cart cleaned',
         },
-      });
+      },
     });
+  });
 
-    return NextResponse.json({
+  return {
+    data: {
       message: 'Carrinho desbloqueado e limpo com sucesso',
       cartId,
       cleaned: true,
-    });
-  } catch (error) {
-    console.error('[CART_UNLOCK]', error);
-    return NextResponse.json(
-      { message: 'Erro ao desbloquear carrinho' },
-      { status: 500 }
-    );
-  }
-}
+    },
+  };
+});

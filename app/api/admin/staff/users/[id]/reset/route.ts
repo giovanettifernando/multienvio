@@ -1,60 +1,65 @@
-
-import { NextResponse } from 'next/server';
-import { requireAdminUser } from '@/lib/auth/admin-helpers';
+import { withApiHandler } from '@/lib/api/handler';
+import { ApiError } from '@/lib/api/errors';
+import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 import { prisma } from '@/lib/db';
 import { AdminPermission } from '@prisma/client';
 import { logPasswordReset } from '@/lib/audit-admin';
-import { rateLimitByUser, RATE_LIMITS } from '@/lib/rate-limit';
+import { rateLimitByUser, RATE_LIMITS } from '@/lib/rate-limit-redis';
 
-export async function POST(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const authResult = await requireAdminUser(request, AdminPermission.USUARIOS);
-    if (authResult instanceof NextResponse) return authResult;
-    const { session } = authResult;
+type PasswordResetResponse = {
+  message: string;
+  tempPassword: string;
+};
 
-    // Rate limiting
-    const rateLimitError = rateLimitByUser(session.staffId, 'password_reset', RATE_LIMITS.PASSWORD_RESET);
-    if (rateLimitError) return rateLimitError;
+export const POST = withApiHandler<PasswordResetResponse, { id: string }>(async (context) => {
+  const { req, params } = context;
 
-    const { id } = await params;
+  const session = await getAdminSessionFromRequest(req);
+  if (!session) {
+    throw new ApiError({ code: 'unauthorized', message: 'Não autenticado', status: 401 });
+  }
 
-    const target = await prisma.staffUser.findUnique({
-      where: { id },
-      select: { id: true, email: true },
-    });
+  if (!session.permissions.includes(AdminPermission.USUARIOS)) {
+    throw new ApiError({ code: 'forbidden', message: 'Permissão negada', status: 403 });
+  }
 
-    if (!target) {
-      return NextResponse.json({ message: 'Usuário não encontrado' }, { status: 404 });
-    }
+  // Rate limiting (Redis distribuido)
+  const rateLimitError = await rateLimitByUser(session.staffId, 'password_reset', RATE_LIMITS.PASSWORD_RESET);
+  if (rateLimitError) {
+    throw new ApiError({ code: 'rate_limited', message: 'Muitas tentativas. Tente novamente mais tarde.', status: 429 });
+  }
 
-    const tempPassword = crypto.randomUUID();
-    const passwordHash = await bcrypt.hash(tempPassword, 10);
+  const { id } = await params;
 
-    await prisma.staffUser.update({
-      where: { id },
-      data: {
-        passwordHash,
-        tokenVersion: { increment: 1 }, // Invalidate all existing sessions
-      },
-    });
+  const target = await prisma.staffUser.findUnique({
+    where: { id },
+    select: { id: true, email: true },
+  });
 
-    // Audit log
-    await logPasswordReset(session.staffId, id, 'StaffUser');
+  if (!target) {
+    throw new ApiError({ code: 'not_found', message: 'Usuário não encontrado', status: 404 });
+  }
 
-    return NextResponse.json({
+  const tempPassword = crypto.randomUUID();
+  const passwordHash = await bcrypt.hash(tempPassword, 10);
+
+  await prisma.staffUser.update({
+    where: { id },
+    data: {
+      passwordHash,
+      tokenVersion: { increment: 1 }, // Invalidate all existing sessions
+    },
+  });
+
+  // Audit log
+  await logPasswordReset(session.staffId, id, 'StaffUser');
+
+  return {
+    data: {
       message: 'Instruções de redefinição de senha enviadas.',
       tempPassword,
-    });
-  } catch (error) {
-    if (error instanceof NextResponse) {
-      return error;
-    }
-    console.error('[ADMIN_STAFF_USERS_RESET]', error);
-    return NextResponse.json({ message: 'Erro ao resetar senha' }, { status: 500 });
-  }
-}
+    },
+  };
+});

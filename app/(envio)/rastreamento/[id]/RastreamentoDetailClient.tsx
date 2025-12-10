@@ -24,7 +24,9 @@ async function fetchShipment(id: string): Promise<Shipment> {
   if (!response.ok) {
     throw new Error("Envio não encontrado");
   }
-  const payload = await response.json();
+  const json = await response.json();
+  // Handle standardized API response format { data: T, error, meta }
+  const payload = json.data ?? json;
   return payload.shipment as Shipment;
 }
 
@@ -33,7 +35,9 @@ async function fetchTracking(shipmentId: string): Promise<Tracking> {
   if (!response.ok) {
     throw new Error("Rastreamento não encontrado");
   }
-  return response.json();
+  const json = await response.json();
+  // Handle standardized API response format { data: T, error, meta }
+  return (json.data ?? json) as Tracking;
 }
 
 export default function RastreamentoDetailClient() {

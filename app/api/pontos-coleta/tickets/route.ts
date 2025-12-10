@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
-
+import { withApiHandler } from '@/lib/api/handler';
+import { ApiError } from '@/lib/api/errors';
 import { getCollectorSessionFromRequest } from '@/lib/auth/collector-session';
 import { createTicketForCollector, listTicketsForCollector } from '@/lib/support/collector-service';
 import {
@@ -7,7 +7,14 @@ import {
   type NewTicketInput,
   type Priority,
   type Status,
+  type SupportTicket,
 } from '@/lib/validation/support';
+
+type TicketsListResponse = {
+  tickets: SupportTicket[];
+};
+
+type TicketCreateResponse = SupportTicket;
 
 function parseArrayParam(params: URLSearchParams, key: string): string[] {
   const values = params.getAll(key);
@@ -22,59 +29,48 @@ function parseArrayParam(params: URLSearchParams, key: string): string[] {
     .filter(Boolean);
 }
 
-export async function GET(request: Request) {
-  try {
-    const session = await getCollectorSessionFromRequest(request);
-    if (!session) {
-      return NextResponse.json({ message: 'Não autenticado' }, { status: 401 });
-    }
+export const GET = withApiHandler<TicketsListResponse>(async (context) => {
+  const session = await getCollectorSessionFromRequest(context.req);
+  if (!session) {
+    throw new ApiError({ code: 'unauthorized', message: 'Não autenticado', status: 401 });
+  }
 
-    const url = new URL(request.url);
-    const params = url.searchParams;
+  const url = new URL(context.req.url);
+  const params = url.searchParams;
 
-    const statusValues = parseArrayParam(params, 'status') as Status[];
-    const priorityValues = parseArrayParam(params, 'priority') as Priority[];
-    const query = params.get('q') ?? undefined;
+  const statusValues = parseArrayParam(params, 'status') as Status[];
+  const priorityValues = parseArrayParam(params, 'priority') as Priority[];
+  const query = params.get('q') ?? undefined;
 
-    const tickets = await listTicketsForCollector(session.pointId, {
-      status: statusValues.length ? statusValues : undefined,
-      priority: priorityValues.length ? priorityValues : undefined,
-      query,
+  const tickets = await listTicketsForCollector(session.pointId, {
+    status: statusValues.length ? statusValues : undefined,
+    priority: priorityValues.length ? priorityValues : undefined,
+    query,
+  });
+
+  return { data: { tickets } };
+});
+
+export const POST = withApiHandler<TicketCreateResponse>(async (context) => {
+  const session = await getCollectorSessionFromRequest(context.req);
+  if (!session) {
+    throw new ApiError({ code: 'unauthorized', message: 'Não autenticado', status: 401 });
+  }
+
+  const payload = (await context.req.json()) as unknown;
+  const parsed = NewTicketInputSchema.safeParse(payload);
+
+  if (!parsed.success) {
+    throw new ApiError({
+      code: 'validation_error',
+      message: 'Dados inválidos',
+      status: 400,
+      details: parsed.error.flatten(),
     });
-
-    return NextResponse.json({ tickets });
-  } catch (error) {
-    console.error('[COLLECTOR_TICKETS_GET]', error);
-    return NextResponse.json({ message: 'Erro ao carregar tickets' }, { status: 500 });
   }
-}
 
-export async function POST(request: Request) {
-  try {
-    const session = await getCollectorSessionFromRequest(request);
-    if (!session) {
-      return NextResponse.json({ message: 'Não autenticado' }, { status: 401 });
-    }
+  const data: NewTicketInput = parsed.data;
+  const ticket = await createTicketForCollector(session.pointId, data);
 
-    const payload = (await request.json()) as unknown;
-    const parsed = NewTicketInputSchema.safeParse(payload);
-
-    if (!parsed.success) {
-      return NextResponse.json(
-        {
-          message: 'Dados inválidos',
-          errors: parsed.error.flatten(),
-        },
-        { status: 400 },
-      );
-    }
-
-    const data: NewTicketInput = parsed.data;
-    const ticket = await createTicketForCollector(session.pointId, data);
-
-    return NextResponse.json(ticket, { status: 201 });
-  } catch (error) {
-    console.error('[COLLECTOR_TICKETS_POST]', error);
-    return NextResponse.json({ message: 'Erro ao criar ticket' }, { status: 500 });
-  }
-}
+  return { data: ticket, status: 201 };
+});

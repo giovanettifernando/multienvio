@@ -5,21 +5,25 @@
  * Requer permissão INTEGRACOES ou superAdmin
  */
 
-import { NextRequest, NextResponse } from 'next/server';
 import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
 import { canAccess } from '@/lib/auth/permissions';
 import { AdminPermission } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import { syncFipeBrandsAndModels, getFipeStats, type SyncOptions } from '@/lib/integrations/fipe';
-
+import { withApiHandler } from '@/lib/api/handler';
+import { ApiError } from '@/lib/api/errors';
 
 // Timeout maior para sync (5 minutos)
 export const maxDuration = 300;
 
-export async function POST(request: NextRequest) {
-  const session = await getAdminSessionFromRequest(request);
+export const POST = withApiHandler(async ({ req }) => {
+  const session = await getAdminSessionFromRequest(req);
   if (!session) {
-    return NextResponse.json({ message: 'Não autenticado' }, { status: 401 });
+    throw new ApiError({
+      code: 'UNAUTHORIZED',
+      message: 'Não autenticado',
+      status: 401,
+    });
   }
 
   const staff = await prisma.staffUser.findUnique({
@@ -28,39 +32,47 @@ export async function POST(request: NextRequest) {
   });
 
   if (!staff || staff.status !== 'ACTIVE') {
-    return NextResponse.json({ message: 'Acesso negado' }, { status: 403 });
+    throw new ApiError({
+      code: 'FORBIDDEN',
+      message: 'Acesso negado',
+      status: 403,
+    });
   }
 
   // Requer permissão INTEGRACOES ou superAdmin
   if (!canAccess(staff, AdminPermission.INTEGRACOES)) {
-    return NextResponse.json({ message: 'Acesso negado - requer permissão INTEGRACOES' }, { status: 403 });
+    throw new ApiError({
+      code: 'FORBIDDEN',
+      message: 'Acesso negado - requer permissão INTEGRACOES',
+      status: 403,
+    });
   }
 
+  // Parse body para opções
+  let options: SyncOptions = { vehicleTypes: ['cars'] };
+
   try {
-    // Parse body para opções
-    let options: SyncOptions = { vehicleTypes: ['cars'] };
-
-    try {
-      const body = await request.json();
-      if (body.vehicleTypes && Array.isArray(body.vehicleTypes)) {
-        options.vehicleTypes = body.vehicleTypes.filter(
-          (t: string) => ['cars', 'motorcycles', 'trucks'].includes(t)
-        );
-      }
-      if (typeof body.deactivateOld === 'boolean') {
-        options.deactivateOld = body.deactivateOld;
-      }
-    } catch {
-      // Corpo vazio ou inválido, usa defaults
+    const body = await req.json();
+    if (body.vehicleTypes && Array.isArray(body.vehicleTypes)) {
+      options.vehicleTypes = body.vehicleTypes.filter(
+        (t: string) => ['cars', 'motorcycles', 'trucks'].includes(t)
+      );
     }
+    if (typeof body.deactivateOld === 'boolean') {
+      options.deactivateOld = body.deactivateOld;
+    }
+  } catch {
+    // Corpo vazio ou inválido, usa defaults
+  }
 
-    // Executar sync
-    const result = await syncFipeBrandsAndModels(options);
+  // Executar sync
+  const result = await syncFipeBrandsAndModels(options);
 
-    // Buscar estatísticas atualizadas
-    const stats = await getFipeStats();
+  // Buscar estatísticas atualizadas
+  const stats = await getFipeStats();
 
-    return NextResponse.json({
+  return {
+    data: {
       success: result.errors.length === 0,
       result: {
         referenceCode: result.referenceCode,
@@ -73,26 +85,23 @@ export async function POST(request: NextRequest) {
       },
       stats,
       errors: result.errors.length > 0 ? result.errors.slice(0, 20) : undefined,
-    });
-
-  } catch (error) {
-    console.error('[FIPE Sync API] Erro:', error);
-    return NextResponse.json(
-      { message: 'Erro ao sincronizar FIPE', error: error instanceof Error ? error.message : 'Erro desconhecido' },
-      { status: 500 }
-    );
-  }
-}
+    },
+  };
+});
 
 /**
  * GET /api/admin/fipe/sync
  *
  * Retorna estatísticas da base FIPE local
  */
-export async function GET(request: NextRequest) {
-  const session = await getAdminSessionFromRequest(request);
+export const GET = withApiHandler(async ({ req }) => {
+  const session = await getAdminSessionFromRequest(req);
   if (!session) {
-    return NextResponse.json({ message: 'Não autenticado' }, { status: 401 });
+    throw new ApiError({
+      code: 'UNAUTHORIZED',
+      message: 'Não autenticado',
+      status: 401,
+    });
   }
 
   const staff = await prisma.staffUser.findUnique({
@@ -101,30 +110,38 @@ export async function GET(request: NextRequest) {
   });
 
   if (!staff || staff.status !== 'ACTIVE') {
-    return NextResponse.json({ message: 'Acesso negado' }, { status: 403 });
+    throw new ApiError({
+      code: 'FORBIDDEN',
+      message: 'Acesso negado',
+      status: 403,
+    });
   }
 
   if (!canAccess(staff, AdminPermission.INTEGRACOES)) {
-    return NextResponse.json({ message: 'Acesso negado - requer permissão INTEGRACOES' }, { status: 403 });
+    throw new ApiError({
+      code: 'FORBIDDEN',
+      message: 'Acesso negado - requer permissão INTEGRACOES',
+      status: 403,
+    });
   }
 
-  try {
-    const stats = await getFipeStats();
+  const stats = await getFipeStats();
 
-    // Buscar contagem por tipo de veículo
-    const brandsByType = await prisma.fipeVehicleBrand.groupBy({
-      by: ['vehicleType'],
-      where: { isActive: true },
-      _count: { id: true },
-    });
+  // Buscar contagem por tipo de veículo
+  const brandsByType = await prisma.fipeVehicleBrand.groupBy({
+    by: ['vehicleType'],
+    where: { isActive: true },
+    _count: { id: true },
+  });
 
-    const modelsByType = await prisma.fipeVehicleModel.groupBy({
-      by: ['vehicleType'],
-      where: { isActive: true },
-      _count: { id: true },
-    });
+  const modelsByType = await prisma.fipeVehicleModel.groupBy({
+    by: ['vehicleType'],
+    where: { isActive: true },
+    _count: { id: true },
+  });
 
-    return NextResponse.json({
+  return {
+    data: {
       stats,
       byVehicleType: {
         brands: brandsByType.reduce((acc, item) => {
@@ -136,13 +153,6 @@ export async function GET(request: NextRequest) {
           return acc;
         }, {} as Record<string, number>),
       },
-    });
-
-  } catch (error) {
-    console.error('[FIPE Stats API] Erro:', error);
-    return NextResponse.json(
-      { message: 'Erro ao buscar estatísticas', error: error instanceof Error ? error.message : 'Erro desconhecido' },
-      { status: 500 }
-    );
-  }
-}
+    },
+  };
+});

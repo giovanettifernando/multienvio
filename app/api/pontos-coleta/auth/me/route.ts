@@ -1,51 +1,86 @@
-
-import { NextResponse } from 'next/server';
+import { withApiHandler } from '@/lib/api/handler';
+import { ApiError } from '@/lib/api/errors';
 import { getCollectorSessionFromRequest } from '@/lib/auth/collector-session';
 import { prisma } from '@/lib/db';
 
-export async function GET(request: Request) {
-  try {
-    const session = await getCollectorSessionFromRequest(request);
+type CollectorMeResponse = {
+  collector: {
+    pointId: string;
+    cnpj: string;
+    nomeFantasia: string;
+    razaoSocial: string | null;
+    email: string | null;
+    telefone: string | null;
+    address: {
+      cep: string | null;
+      logradouro: string | null;
+      numero: string | null;
+      complemento: string | null;
+      bairro: string | null;
+      cidade: string | null;
+      uf: string | null;
+    };
+    commissionPerItem: number | null;
+    monthlyReceived: number;
+  };
+};
 
-    if (!session) {
-      return NextResponse.json({ message: 'Não autenticado' }, { status: 401 });
-    }
+export const GET = withApiHandler<CollectorMeResponse>(async (context) => {
+  const { req, logger } = context;
 
-    // Buscar dados atualizados do ponto de coleta
-    const point = await prisma.pickupPoint.findUnique({
-      where: { id: session.pointId },
-      select: {
-        id: true,
-        status: true,
-        cnpj: true,
-        nomeFantasia: true,
-        razaoSocial: true,
-        email: true,
-        telefone: true,
-        cep: true,
-        logradouro: true,
-        numero: true,
-        complemento: true,
-        bairro: true,
-        cidade: true,
-        uf: true,
-        commissionPerItem: true,
-        monthlyReceived: true,
-      },
+  const session = await getCollectorSessionFromRequest(req);
+
+  if (!session) {
+    throw new ApiError({
+      code: 'unauthorized',
+      message: 'Não autenticado',
+      status: 401,
     });
+  }
 
-    if (!point) {
-      return NextResponse.json({ message: 'Ponto não encontrado' }, { status: 404 });
-    }
+  // Buscar dados atualizados do ponto de coleta
+  const point = await prisma.pickupPoint.findUnique({
+    where: { id: session.pointId },
+    select: {
+      id: true,
+      status: true,
+      cnpj: true,
+      nomeFantasia: true,
+      razaoSocial: true,
+      email: true,
+      telefone: true,
+      cep: true,
+      logradouro: true,
+      numero: true,
+      complemento: true,
+      bairro: true,
+      cidade: true,
+      uf: true,
+      commissionPerItem: true,
+      monthlyReceived: true,
+    },
+  });
 
-    if (point.status !== 'ACTIVE') {
-      return NextResponse.json(
-        { message: 'Ponto de coleta inativo ou bloqueado' },
-        { status: 403 }
-      );
-    }
+  if (!point) {
+    throw new ApiError({
+      code: 'not_found',
+      message: 'Ponto não encontrado',
+      status: 404,
+    });
+  }
 
-    return NextResponse.json({
+  if (point.status !== 'ACTIVE') {
+    throw new ApiError({
+      code: 'forbidden',
+      message: 'Ponto de coleta inativo ou bloqueado',
+      status: 403,
+    });
+  }
+
+  logger.info('collector_me_success', { pointId: point.id });
+
+  return {
+    data: {
       collector: {
         pointId: point.id,
         cnpj: point.cnpj,
@@ -67,9 +102,6 @@ export async function GET(request: Request) {
           : null,
         monthlyReceived: point.monthlyReceived,
       },
-    });
-  } catch (error) {
-    console.error('[COLLECTOR_ME]', error);
-    return NextResponse.json({ message: 'Erro ao buscar sessão' }, { status: 500 });
-  }
-}
+    },
+  };
+});

@@ -5,91 +5,76 @@
  * Usado para polling manual ou refresh de status
  */
 
-import { NextResponse } from 'next/server';
+import { withApiHandler } from '@/lib/api/handler';
+import { ApiError } from '@/lib/api/errors';
+import { getUserFromRequest } from '@/lib/auth/session';
 import { prisma } from '@/lib/db';
-import { getUserSessionFromRequest } from '@/lib/auth/user-session';
 import { updatePaymentFromMercadoPago } from '@/lib/mercadopago';
 
+type RefreshPaymentResponse = {
+  payment: {
+    id: string;
+    status: string;
+    paidAt: string | null;
+    updated: boolean;
+  };
+};
 
-interface RouteParams {
-  params: Promise<{ id: string }>;
-}
+export const POST = withApiHandler<RefreshPaymentResponse, { id: string }>(async (context) => {
+  const { logger } = context;
+  const session = await getUserFromRequest(context.req);
+  if (!session?.userId) {
+    throw new ApiError({ code: 'unauthorized', message: 'Não autorizado', status: 401 });
+  }
 
-export async function POST(request: Request, { params }: RouteParams) {
-  try {
-    // Verificar autenticação
-    const session = await getUserSessionFromRequest(request);
-    if (!session) {
-      return NextResponse.json(
-        { error: 'Não autorizado' },
-        { status: 401 }
-      );
-    }
+  const { id } = await context.params;
 
-    const { id } = await params;
+  const payment = await prisma.paymentTransaction.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      status: true,
+      externalId: true,
+      userId: true,
+    },
+  });
 
-    // Buscar pagamento
-    const payment = await prisma.paymentTransaction.findUnique({
-      where: { id },
-      select: {
-        id: true,
-        status: true,
-        externalId: true,
-        userId: true,
-      },
-    });
+  if (!payment) {
+    throw new ApiError({ code: 'not_found', message: 'Pagamento não encontrado', status: 404 });
+  }
 
-    if (!payment) {
-      return NextResponse.json(
-        { error: 'Pagamento não encontrado' },
-        { status: 404 }
-      );
-    }
+  if (payment.userId && payment.userId !== session.userId) {
+    throw new ApiError({ code: 'forbidden', message: 'Não autorizado', status: 403 });
+  }
 
-    // Verificar se o usuário é o dono do pagamento
-    if (payment.userId && payment.userId !== session.userId) {
-      return NextResponse.json(
-        { error: 'Não autorizado' },
-        { status: 403 }
-      );
-    }
+  if (!payment.externalId) {
+    throw new ApiError({ code: 'validation_error', message: 'Pagamento sem ID externo', status: 400 });
+  }
 
-    // Se não tem externalId, não pode consultar o MP
-    if (!payment.externalId) {
-      return NextResponse.json(
-        { error: 'Pagamento sem ID externo' },
-        { status: 400 }
-      );
-    }
-
-    // Se já está em estado final, não precisa atualizar
-    if (['PAID', 'CANCELED', 'REFUNDED', 'FAILED', 'CHARGEBACK'].includes(payment.status)) {
-      return NextResponse.json({
+  if (['PAID', 'CANCELED', 'REFUNDED', 'FAILED', 'CHARGEBACK'].includes(payment.status)) {
+    return {
+      data: {
         payment: {
           id: payment.id,
           status: payment.status,
+          paidAt: null,
           updated: false,
         },
-      });
-    }
+      },
+    };
+  }
 
-    // Atualizar do Mercado Pago
-    console.log('[PAYMENT_REFRESH] Atualizando do MP:', payment.externalId);
-    const updatedPayment = await updatePaymentFromMercadoPago(payment.externalId);
+  logger.info('payment_refresh', { externalId: payment.externalId });
+  const updatedPayment = await updatePaymentFromMercadoPago(payment.externalId);
 
-    return NextResponse.json({
+  return {
+    data: {
       payment: {
         id: updatedPayment.id,
         status: updatedPayment.status,
-        paidAt: updatedPayment.paidAt,
+        paidAt: updatedPayment.paidAt?.toISOString() ?? null,
         updated: true,
       },
-    });
-  } catch (error) {
-    console.error('[PAYMENT_REFRESH_ERROR]', error);
-    return NextResponse.json(
-      { error: 'Erro ao atualizar pagamento' },
-      { status: 500 }
-    );
-  }
-}
+    },
+  };
+});

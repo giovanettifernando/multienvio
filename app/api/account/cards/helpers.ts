@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { ApiError } from "@/lib/api/errors";
-import { enforceRateLimit } from "@/lib/api/rate-limit";
+import { enforceRateLimit } from "@/lib/rate-limit-redis";
 import { getUserFromRequest } from "@/lib/auth/session";
 import type { RequestContext } from "@/lib/api/types";
 import { CardValidationError } from "@/lib/validation/card";
@@ -31,9 +31,9 @@ export async function requireUserId(req: NextRequest) {
   return session.userId;
 }
 
-export function enforceCardWriteLimit(context: RequestContext) {
+export async function enforceCardWriteLimit(context: RequestContext) {
   const key = `account:cards:write:${getClientIp(context.req)}`;
-  enforceRateLimit({
+  await enforceRateLimit({
     key,
     limit: WRITE_LIMIT,
     windowMs: WRITE_WINDOW_MS,

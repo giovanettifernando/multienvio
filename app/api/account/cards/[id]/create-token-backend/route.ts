@@ -14,52 +14,41 @@ import { requireUserId } from "../../helpers";
 import { prisma } from "@/lib/db";
 import { decryptPan, loadVaultKey, parsePanCipher } from "@/lib/crypto/card-vault";
 import { createCardToken } from "@/lib/mercadopago/client";
+import { z } from "zod";
 
+const CreateTokenBackendSchema = z.object({
+  cvv: z.string()
+    .min(3, 'CVV deve ter no mínimo 3 dígitos')
+    .max(4, 'CVV deve ter no máximo 4 dígitos')
+    .regex(/^\d+$/, 'CVV deve conter apenas números'),
+  cpf: z.string()
+    .min(11, 'CPF deve ter no mínimo 11 caracteres')
+    .max(14, 'CPF inválido'),
+});
 
-export const POST = withApiHandler(async (context) => {
+type CreateTokenBackendResponse = {
+  id: string;
+  first_six_digits: string;
+  last_four_digits: string;
+};
+
+export const POST = withApiHandler<CreateTokenBackendResponse>(async (context) => {
   const { req, params, logger } = context;
   const { id: cardId } = await params;
   const userId = await requireUserId(req);
 
-  // Extrair CVV e CPF do body
+  // Validar entrada
   const body = await req.json();
-  const cvv = body.cvv as string | undefined;
-  const cpf = body.cpf as string | undefined;
-
-  // Validação robusta de CVV
-  if (!cvv) {
+  const parsed = CreateTokenBackendSchema.safeParse(body);
+  if (!parsed.success) {
     throw new ApiError({
-      code: "bad_request",
-      message: "CVV é obrigatório.",
+      code: 'VALIDATION_ERROR',
+      message: 'Dados inválidos',
       status: 400,
+      details: parsed.error.flatten(),
     });
   }
-
-  // CVV deve conter apenas dígitos
-  if (!/^\d+$/.test(cvv)) {
-    throw new ApiError({
-      code: "bad_request",
-      message: "CVV deve conter apenas números.",
-      status: 400,
-    });
-  }
-
-  // CVV deve ter 3 ou 4 dígitos (AMEX usa 4, outros usam 3)
-  if (cvv.length < 3 || cvv.length > 4) {
-    throw new ApiError({
-      code: "bad_request",
-      message: "CVV deve ter 3 ou 4 dígitos.",
-      status: 400,
-    });
-  }
-
-  if (!cpf || cpf.length < 11) {
-    throw new ApiError({
-      code: "bad_request",
-      message: "CPF é obrigatório.",
-      status: 400,
-    });
-  }
+  const { cvv, cpf } = parsed.data;
 
   // Buscar cartão
   const card = await prisma.card.findUnique({

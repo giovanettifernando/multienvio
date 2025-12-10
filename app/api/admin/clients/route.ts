@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { withApiHandler } from '@/lib/api/handler';
+import { ApiError } from '@/lib/api/errors';
 import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
-import { requirePermission } from '@/lib/auth/permissions';
 import { AdminPermission } from '@prisma/client';
 import type { AdminClient, ClientsResponse } from '@/lib/admin/types';
 
@@ -333,17 +333,20 @@ const mockClients: AdminClient[] = [
   },
 ];
 
-export async function GET(request: NextRequest) {
-  const session = await getAdminSessionFromRequest(request);
+export const GET = withApiHandler<ClientsResponse>(async (context) => {
+  const { req, logger } = context;
+
+  const session = await getAdminSessionFromRequest(req);
   if (!session) {
-    return NextResponse.json({ message: 'Não autenticado' }, { status: 401 });
+    throw new ApiError({ code: 'unauthorized', message: 'Não autenticado', status: 401 });
   }
 
   // Check permission
-  const permissionError = requirePermission(session, AdminPermission.CONTAS);
-  if (permissionError) return permissionError;
+  if (!session.permissions.includes(AdminPermission.CONTAS)) {
+    throw new ApiError({ code: 'forbidden', message: 'Permissão negada', status: 403 });
+  }
 
-  const searchParams = request.nextUrl.searchParams;
+  const searchParams = new URL(req.url).searchParams;
   const page = parseInt(searchParams.get('page') || '1');
   const pageSize = parseInt(searchParams.get('pageSize') || '10');
   const q = searchParams.get('q') || '';
@@ -384,5 +387,7 @@ export async function GET(request: NextRequest) {
     total,
   };
 
-  return NextResponse.json(response);
-}
+  logger.info('admin_clients_list', { staffId: session.staffId, total: filtered.length });
+
+  return { data: response };
+});

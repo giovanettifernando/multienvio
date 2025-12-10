@@ -4,16 +4,13 @@
  * Atualiza ou remove item recorrente de um usuário (Admin)
  */
 
-
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { z } from 'zod';
+import { withApiHandler } from '@/lib/api/handler';
+import { ApiError } from '@/lib/api/errors';
 import { prisma } from '@/lib/db';
 import { requireAdminUser } from '@/lib/auth/admin-helpers';
 import { AdminPermission } from '@prisma/client';
-
-interface RouteContext {
-  params: Promise<{ id: string; itemId: string }>;
-}
 
 const itemSchema = z.object({
   descricao: z.string().min(1).optional(),
@@ -21,84 +18,96 @@ const itemSchema = z.object({
 });
 
 // PUT - Atualizar item recorrente
-export async function PUT(request: NextRequest, context: RouteContext) {
-  try {
-    const authResult = await requireAdminUser(request, AdminPermission.CONTAS);
-    if (authResult instanceof NextResponse) return authResult;
-
-    const { id: userId, itemId } = await context.params;
-    const body = await request.json();
-
-    const validation = itemSchema.safeParse(body);
-    if (!validation.success) {
-      return NextResponse.json(
-        { message: 'Dados inválidos', errors: validation.error.flatten() },
-        { status: 400 }
-      );
-    }
-
-    // Verificar se item existe e pertence ao usuário
-    const existing = await prisma.recurringItem.findFirst({
-      where: { id: itemId, userId },
+export const PUT = withApiHandler<unknown, { id: string; itemId: string }>(async ({ req, params }) => {
+  const authResult = await requireAdminUser(req, AdminPermission.CONTAS);
+  if (authResult instanceof NextResponse) {
+    throw new ApiError({
+      code: 'UNAUTHORIZED',
+      message: 'Não autorizado',
+      status: 401,
     });
-
-    if (!existing) {
-      return NextResponse.json({ message: 'Item não encontrado' }, { status: 404 });
-    }
-
-    const { descricao, valorUnitario } = validation.data;
-
-    const item = await prisma.recurringItem.update({
-      where: { id: itemId },
-      data: {
-        ...(descricao !== undefined && { descricao }),
-        ...(valorUnitario !== undefined && { valorUnitario }),
-      },
-    });
-
-    console.log('[ADMIN_UPDATE_RECURRING_ITEM]', {
-      adminId: authResult.user.id,
-      userId,
-      itemId,
-    });
-
-    return NextResponse.json({ message: 'Item atualizado com sucesso', item });
-  } catch (error) {
-    console.error('[ADMIN_UPDATE_RECURRING_ITEM_ERROR]', error);
-    return NextResponse.json({ message: 'Erro ao atualizar item' }, { status: 500 });
   }
-}
+
+  const { id: userId, itemId } = params;
+  const body = await req.json();
+
+  const validation = itemSchema.safeParse(body);
+  if (!validation.success) {
+    throw new ApiError({
+      code: 'BAD_REQUEST',
+      message: 'Dados inválidos',
+      status: 400,
+      details: validation.error.flatten(),
+    });
+  }
+
+  // Verificar se item existe e pertence ao usuário
+  const existing = await prisma.recurringItem.findFirst({
+    where: { id: itemId, userId },
+  });
+
+  if (!existing) {
+    throw new ApiError({
+      code: 'NOT_FOUND',
+      message: 'Item não encontrado',
+      status: 404,
+    });
+  }
+
+  const { descricao, valorUnitario } = validation.data;
+
+  const item = await prisma.recurringItem.update({
+    where: { id: itemId },
+    data: {
+      ...(descricao !== undefined && { descricao }),
+      ...(valorUnitario !== undefined && { valorUnitario }),
+    },
+  });
+
+  console.log('[ADMIN_UPDATE_RECURRING_ITEM]', {
+    adminId: authResult.user.id,
+    userId,
+    itemId,
+  });
+
+  return { data: { message: 'Item atualizado com sucesso', item } };
+});
 
 // DELETE - Remover item recorrente
-export async function DELETE(request: NextRequest, context: RouteContext) {
-  try {
-    const authResult = await requireAdminUser(request, AdminPermission.CONTAS);
-    if (authResult instanceof NextResponse) return authResult;
-
-    const { id: userId, itemId } = await context.params;
-
-    // Verificar se item existe e pertence ao usuário
-    const existing = await prisma.recurringItem.findFirst({
-      where: { id: itemId, userId },
+export const DELETE = withApiHandler<unknown, { id: string; itemId: string }>(async ({ req, params }) => {
+  const authResult = await requireAdminUser(req, AdminPermission.CONTAS);
+  if (authResult instanceof NextResponse) {
+    throw new ApiError({
+      code: 'UNAUTHORIZED',
+      message: 'Não autorizado',
+      status: 401,
     });
-
-    if (!existing) {
-      return NextResponse.json({ message: 'Item não encontrado' }, { status: 404 });
-    }
-
-    await prisma.recurringItem.delete({
-      where: { id: itemId },
-    });
-
-    console.log('[ADMIN_DELETE_RECURRING_ITEM]', {
-      adminId: authResult.user.id,
-      userId,
-      itemId,
-    });
-
-    return NextResponse.json({ message: 'Item removido com sucesso' });
-  } catch (error) {
-    console.error('[ADMIN_DELETE_RECURRING_ITEM_ERROR]', error);
-    return NextResponse.json({ message: 'Erro ao remover item' }, { status: 500 });
   }
-}
+
+  const { id: userId, itemId } = params;
+
+  // Verificar se item existe e pertence ao usuário
+  const existing = await prisma.recurringItem.findFirst({
+    where: { id: itemId, userId },
+  });
+
+  if (!existing) {
+    throw new ApiError({
+      code: 'NOT_FOUND',
+      message: 'Item não encontrado',
+      status: 404,
+    });
+  }
+
+  await prisma.recurringItem.delete({
+    where: { id: itemId },
+  });
+
+  console.log('[ADMIN_DELETE_RECURRING_ITEM]', {
+    adminId: authResult.user.id,
+    userId,
+    itemId,
+  });
+
+  return { data: { message: 'Item removido com sucesso' } };
+});

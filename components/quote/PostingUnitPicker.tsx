@@ -339,34 +339,8 @@ export function PostingUnitPicker() {
     }, 100);
   };
 
-  // Handler para selecionar agência dos Correios
-  const handleSelectCorreiosAgency = (value: string) => {
-    // O value vem no formato "correios:{id}"
-    const agencyId = value.replace('correios:', '');
-    const agency = correiosAgenciesData?.agencies.find((a) => a.id === agencyId);
-
-    if (agency) {
-      setValue(
-        "postingUnit.selected",
-        {
-          id: `correios:${agency.id}`,
-          nome: agency.nome,
-          endereco: agency.enderecoCompleto,
-          cidade: agency.municipio,
-          uf: agency.uf,
-          cep: agency.cep,
-        },
-        { shouldDirty: true }
-      );
-      // Para agência dos Correios, não salvar no checkout store (é opcional/informativo)
-      // O usuário leva o pacote diretamente na agência
-      setCheckoutPickupPoint(null);
-    }
-  };
-
-  // Handler para selecionar agência no mapa
-  const handleAgencyMapSelect = (pointId: string) => {
-    handleSelectCorreiosAgency(pointId);
+  // Handler para fechar mapa de agências (apenas visualização)
+  const handleAgencyMapClose = () => {
     setAgencyMapModalOpen(false);
   };
 
@@ -379,7 +353,11 @@ export function PostingUnitPicker() {
 
     const updateDefaultUnit = async () => {
       try {
-        const defaultUnitId = definirComoPadrao && selectedUnit ? selectedUnit.id : null;
+        // Não salvar agências dos Correios como padrão (ID começa com "correios:")
+        const isCorreiosAgency = selectedUnit?.id?.startsWith('correios:');
+        const defaultUnitId = definirComoPadrao && selectedUnit && !isCorreiosAgency
+          ? selectedUnit.id
+          : null;
 
         const response = await fetch("/api/user/preferences", {
           method: "PATCH",
@@ -532,13 +510,14 @@ export function PostingUnitPicker() {
         </Space>
       </Card>
 
-      {/* Card separado para Agências dos Correios (quando carrier é Correios) */}
+      {/* Card separado para Agências dos Correios (quando carrier é Correios) - apenas informativo */}
       {isCorreiosCarrier && (
         <Card
           title={
             <Space>
               <ShopOutlined />
-              <span>Agências dos Correios</span>
+              <span>Agências dos Correios próximas</span>
+              <Tag color="blue">Informativo</Tag>
             </Space>
           }
           style={{ marginTop: 16 }}
@@ -576,43 +555,35 @@ export function PostingUnitPicker() {
                 </Typography.Text>
 
                 {filteredAgencies.length > 0 ? (
-                  <Radio.Group
-                    style={{ width: "100%" }}
-                    value={selectedUnit?.id}
-                    onChange={(event) => handleSelectCorreiosAgency(event.target.value)}
-                  >
-                    <div style={{ display: "flex", flexDirection: "column", maxHeight: 300, overflowY: 'auto' }}>
-                      {filteredAgencies.map((agency) => (
-                        <div
-                          key={agency.id}
-                          style={{
-                            padding: `${token.paddingSM}px 0`,
-                            borderBottom: `1px solid ${token.colorBorderSecondary}`,
-                          }}
-                        >
-                          <Radio value={`correios:${agency.id}`} style={{ width: "100%" }}>
-                            <Space orientation="vertical" size={4} style={{ width: "100%" }}>
-                              <Typography.Text strong>
-                                {agency.nome}
-                                <Tag color="gold" style={{ marginLeft: 8 }}>
-                                  {agency.tipoUnidadeSigla}
-                                </Tag>
-                              </Typography.Text>
-                              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                                <EnvironmentOutlined style={{ marginRight: 4 }} />
-                                {agency.enderecoCompleto}
-                              </Typography.Text>
-                              {agency.iniExpediente && agency.fimExpediente && (
-                                <Typography.Text type="secondary" style={{ fontSize: 11 }}>
-                                  Horário: {agency.iniExpediente} - {agency.fimExpediente}
-                                </Typography.Text>
-                              )}
-                            </Space>
-                          </Radio>
-                        </div>
-                      ))}
-                    </div>
-                  </Radio.Group>
+                  <div style={{ display: "flex", flexDirection: "column", maxHeight: 300, overflowY: 'auto' }}>
+                    {filteredAgencies.map((agency) => (
+                      <div
+                        key={agency.id}
+                        style={{
+                          padding: `${token.paddingSM}px 0`,
+                          borderBottom: `1px solid ${token.colorBorderSecondary}`,
+                        }}
+                      >
+                        <Space orientation="vertical" size={4} style={{ width: "100%" }}>
+                          <Typography.Text strong>
+                            {agency.nome}
+                            <Tag color="gold" style={{ marginLeft: 8 }}>
+                              {agency.tipoUnidadeSigla}
+                            </Tag>
+                          </Typography.Text>
+                          <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                            <EnvironmentOutlined style={{ marginRight: 4 }} />
+                            {agency.enderecoCompleto}
+                          </Typography.Text>
+                          {agency.iniExpediente && agency.fimExpediente && (
+                            <Typography.Text type="secondary" style={{ fontSize: 11 }}>
+                              Horário: {agency.iniExpediente} - {agency.fimExpediente}
+                            </Typography.Text>
+                          )}
+                        </Space>
+                      </div>
+                    ))}
+                  </div>
                 ) : (
                   <Alert
                     type="info"
@@ -659,10 +630,10 @@ export function PostingUnitPicker() {
         onSelect={handleMapSelect}
       />
 
-      {/* Modal de mapa - Agências dos Correios */}
+      {/* Modal de mapa - Agências dos Correios (apenas visualização) */}
       <MapModal
         open={agencyMapModalOpen}
-        onClose={() => setAgencyMapModalOpen(false)}
+        onClose={handleAgencyMapClose}
         points={agenciesAsMapPoints}
         originCoords={originCoords}
         originInfo={{
@@ -670,8 +641,8 @@ export function PostingUnitPicker() {
           cidade: results?.resumo.origemCidade,
           uf: results?.resumo.origemUf,
         }}
-        selectedPointId={selectedUnit?.id}
-        onSelect={handleAgencyMapSelect}
+        selectedPointId={undefined}
+        onSelect={handleAgencyMapClose}
       />
     </>
   );

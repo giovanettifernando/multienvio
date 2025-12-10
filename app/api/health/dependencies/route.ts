@@ -14,6 +14,12 @@ interface DependencyStatus {
   message?: string;
 }
 
+interface HealthDependenciesResponse {
+  status: "healthy" | "degraded" | "unhealthy";
+  timestamp: string;
+  dependencies: DependencyStatus[];
+}
+
 /**
  * Check database connectivity
  */
@@ -114,7 +120,7 @@ function checkEnvironment(): DependencyStatus {
   };
 }
 
-export const GET = withApiHandler(async ({ logger }) => {
+export const GET = withApiHandler<HealthDependenciesResponse>(async ({ logger }) => {
   const timestamp = new Date().toISOString();
 
   // Run all checks in parallel

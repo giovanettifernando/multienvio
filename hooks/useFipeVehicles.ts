@@ -48,7 +48,9 @@ export function useFipeBrands(options: UseFipeBrandsOptions = {}) {
       if (!response.ok) {
         throw new Error('Erro ao buscar marcas');
       }
-      const data = await response.json();
+      const json = await response.json();
+      // Handle standardized API response format { data: T, error, meta }
+      const data = json.data ?? json;
       setBrands(data.brands || []);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro desconhecido');
@@ -90,7 +92,9 @@ export function useFipeModels(options: UseFipeModelsOptions) {
       if (!response.ok) {
         throw new Error('Erro ao buscar modelos');
       }
-      const data = await response.json();
+      const json = await response.json();
+      // Handle standardized API response format { data: T, error, meta }
+      const data = json.data ?? json;
       setModels(data.models || []);
       setBrandName(data.brand || null);
     } catch (err) {

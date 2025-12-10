@@ -1,6 +1,6 @@
-import { NextResponse } from 'next/server';
+import { withApiHandler } from '@/lib/api/handler';
+import { ApiError } from '@/lib/api/errors';
 import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
-import { requirePermission } from '@/lib/auth/permissions';
 import { AdminPermission } from '@prisma/client';
 import { addMessageToTicket, getTicket } from '@/lib/support/service';
 import { persistSupportAttachments } from '@/lib/storage/support-attachments';
@@ -8,73 +8,82 @@ import { persistSupportAttachments } from '@/lib/storage/support-attachments';
 
 const MAX_FILES = 5;
 
-export async function POST(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
-  const session = await getAdminSessionFromRequest(request);
+export const POST = withApiHandler<unknown, { id: string }>(async ({ req, params }) => {
+  const session = await getAdminSessionFromRequest(req);
   if (!session) {
-    return NextResponse.json({ message: 'Não autenticado' }, { status: 401 });
-  }
-
-  const permissionError = requirePermission(session, AdminPermission.SUPORTE);
-  if (permissionError) return permissionError;
-
-  const { id: ticketId } = await params;
-  if (!ticketId) {
-    return NextResponse.json({ message: 'Ticket inválido' }, { status: 400 });
-  }
-
-  try {
-    // Admin vê mensagens internas
-    const ticket = await getTicket(ticketId, true);
-    if (!ticket) {
-      return NextResponse.json({ message: 'Ticket não encontrado' }, { status: 404 });
-    }
-
-    const formData = await request.formData();
-    const textField = formData.get('text');
-    const text = typeof textField === 'string' ? textField.trim() : '';
-    if (!text) {
-      return NextResponse.json({ message: 'Mensagem obrigatória' }, { status: 400 });
-    }
-
-    const internalField = formData.get('internal');
-    const isInternal =
-      typeof internalField === 'string'
-        ? ['true', '1', 'on'].includes(internalField.toLowerCase())
-        : false;
-
-    const files = formData
-      .getAll('files')
-      .filter((item): item is File => item instanceof File && item.size > 0);
-
-    if (files.length > MAX_FILES) {
-      return NextResponse.json(
-        { message: `Envie no máximo ${MAX_FILES} arquivos por mensagem.` },
-        { status: 400 },
-      );
-    }
-
-    const attachments = await persistSupportAttachments(ticketId, files);
-
-    const message = await addMessageToTicket({
-      ticketId,
-      authorId: session.staffId,
-      role: 'admin',
-      text,
-      attachments,
-      isInternal,
+    throw new ApiError({
+      code: 'UNAUTHORIZED',
+      message: 'Não autenticado',
+      status: 401,
     });
-
-    return NextResponse.json(message, { status: 201 });
-  } catch (error) {
-    const message =
-      error instanceof Error ? error.message : 'Erro ao enviar resposta';
-    const status = message.includes('10 MB') ? 400 : 500;
-    if (status === 500) {
-      console.error('[ADMIN_SUPPORT_TICKET_REPLY]', error);
-    }
-    return NextResponse.json({ message }, { status });
   }
-}
+
+  if (!session.permissions.includes(AdminPermission.SUPORTE) && !session.isSuperAdmin) {
+    throw new ApiError({
+      code: 'FORBIDDEN',
+      message: 'Sem permissão para acessar este recurso',
+      status: 403,
+    });
+  }
+
+  const ticketId = params.id;
+  if (!ticketId) {
+    throw new ApiError({
+      code: 'BAD_REQUEST',
+      message: 'Ticket inválido',
+      status: 400,
+    });
+  }
+
+  // Admin vê mensagens internas
+  const ticket = await getTicket(ticketId, true);
+  if (!ticket) {
+    throw new ApiError({
+      code: 'NOT_FOUND',
+      message: 'Ticket não encontrado',
+      status: 404,
+    });
+  }
+
+  const formData = await req.formData();
+  const textField = formData.get('text');
+  const text = typeof textField === 'string' ? textField.trim() : '';
+  if (!text) {
+    throw new ApiError({
+      code: 'BAD_REQUEST',
+      message: 'Mensagem obrigatória',
+      status: 400,
+    });
+  }
+
+  const internalField = formData.get('internal');
+  const isInternal =
+    typeof internalField === 'string'
+      ? ['true', '1', 'on'].includes(internalField.toLowerCase())
+      : false;
+
+  const files = formData
+    .getAll('files')
+    .filter((item): item is File => item instanceof File && item.size > 0);
+
+  if (files.length > MAX_FILES) {
+    throw new ApiError({
+      code: 'BAD_REQUEST',
+      message: `Envie no máximo ${MAX_FILES} arquivos por mensagem.`,
+      status: 400,
+    });
+  }
+
+  const attachments = await persistSupportAttachments(ticketId, files);
+
+  const message = await addMessageToTicket({
+    ticketId,
+    authorId: session.staffId,
+    role: 'admin',
+    text,
+    attachments,
+    isInternal,
+  });
+
+  return { data: message, status: 201 };
+});

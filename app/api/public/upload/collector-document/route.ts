@@ -6,7 +6,8 @@
  * Returns the public URL for the uploaded file
  */
 
-import { NextRequest } from 'next/server';
+import { withApiHandler } from '@/lib/api/handler';
+import { ApiError } from '@/lib/api/errors';
 import { mkdir, writeFile } from 'fs/promises';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
@@ -89,79 +90,82 @@ function sanitizeSegment(value: string): string {
     .toLowerCase();
 }
 
-export async function POST(request: NextRequest) {
-  try {
-    const formData = await request.formData();
-    const file = formData.get('file') as File | null;
-    const documentType = (formData.get('documentType') as string) || 'document';
+interface CollectorDocumentUploadResponse {
+  url: string;
+  name: string;
+  size: number;
+  type: string;
+}
 
-    if (!file) {
-      return Response.json(
-        { message: 'Nenhum arquivo enviado' },
-        { status: 400 }
-      );
-    }
+export const POST = withApiHandler<CollectorDocumentUploadResponse>(async ({ req }) => {
+  const formData = await req.formData();
+  const file = formData.get('file') as File | null;
+  const documentType = (formData.get('documentType') as string) || 'document';
 
-    // Validate file size
-    if (file.size > MAX_FILE_SIZE) {
-      return Response.json(
-        { message: 'Arquivo muito grande. Máximo permitido: 10MB' },
-        { status: 400 }
-      );
-    }
+  if (!file) {
+    throw new ApiError({
+      code: 'NO_FILE',
+      message: 'Nenhum arquivo enviado',
+      status: 400,
+    });
+  }
 
-    // Validate MIME type (first check)
-    if (!ALLOWED_TYPES.includes(file.type)) {
-      return Response.json(
-        { message: `Tipo de arquivo não permitido. Use: ${ALLOWED_TYPES.join(', ')}` },
-        { status: 400 }
-      );
-    }
+  // Validate file size
+  if (file.size > MAX_FILE_SIZE) {
+    throw new ApiError({
+      code: 'FILE_TOO_LARGE',
+      message: 'Arquivo muito grande. Máximo permitido: 10MB',
+      status: 400,
+    });
+  }
 
-    // Read file content - use arrayBuffer for broader compatibility
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
+  // Validate MIME type (first check)
+  if (!ALLOWED_TYPES.includes(file.type)) {
+    throw new ApiError({
+      code: 'INVALID_FILE_TYPE',
+      message: `Tipo de arquivo não permitido. Use: ${ALLOWED_TYPES.join(', ')}`,
+      status: 400,
+    });
+  }
 
-    // SECURITY: Validate magic bytes (don't trust MIME type from client)
-    if (!validateMagicBytes(buffer, file.type)) {
-      console.warn('[Upload API] Magic bytes validation failed for claimed type:', file.type);
-      return Response.json(
-        { message: 'Arquivo inválido ou corrompido. O tipo de arquivo não corresponde ao conteúdo.' },
-        { status: 400 }
-      );
-    }
+  // Read file content - use arrayBuffer for broader compatibility
+  const arrayBuffer = await file.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
 
-    // Ensure upload directory exists
-    await mkdir(UPLOAD_DIR, { recursive: true });
+  // SECURITY: Validate magic bytes (don't trust MIME type from client)
+  if (!validateMagicBytes(buffer, file.type)) {
+    throw new ApiError({
+      code: 'INVALID_FILE_CONTENT',
+      message: 'Arquivo inválido ou corrompido. O tipo de arquivo não corresponde ao conteúdo.',
+      status: 400,
+    });
+  }
 
-    // Generate unique filename
-    const parsedName = path.parse(file.name || 'documento');
-    const safeName = sanitizeSegment(parsedName.name) || 'documento';
-    const safeExt = sanitizeSegment(parsedName.ext.replace('.', '')) || '';
-    const safeDocType = sanitizeSegment(documentType);
+  // Ensure upload directory exists
+  await mkdir(UPLOAD_DIR, { recursive: true });
 
-    const uniqueId = `${Date.now()}-${randomUUID().slice(0, 8)}`;
-    const storedFileName = safeExt
-      ? `${uniqueId}-${safeDocType}-${safeName}.${safeExt}`
-      : `${uniqueId}-${safeDocType}-${safeName}`;
+  // Generate unique filename
+  const parsedName = path.parse(file.name || 'documento');
+  const safeName = sanitizeSegment(parsedName.name) || 'documento';
+  const safeExt = sanitizeSegment(parsedName.ext.replace('.', '')) || '';
+  const safeDocType = sanitizeSegment(documentType);
 
-    const filePath = path.join(UPLOAD_DIR, storedFileName);
-    await writeFile(filePath, buffer);
+  const uniqueId = `${Date.now()}-${randomUUID().slice(0, 8)}`;
+  const storedFileName = safeExt
+    ? `${uniqueId}-${safeDocType}-${safeName}.${safeExt}`
+    : `${uniqueId}-${safeDocType}-${safeName}`;
 
-    const publicUrl = `/uploads/collectors/temp/${storedFileName}`;
+  const filePath = path.join(UPLOAD_DIR, storedFileName);
+  await writeFile(filePath, buffer);
 
-    return Response.json({
+  const publicUrl = `/uploads/collectors/temp/${storedFileName}`;
+
+  return {
+    data: {
       url: publicUrl,
       name: file.name,
       size: buffer.length,
       type: file.type,
-    });
-
-  } catch (error) {
-    console.error('[Upload API] Error:', error);
-    return Response.json(
-      { message: 'Erro ao fazer upload do arquivo' },
-      { status: 500 }
-    );
-  }
-}
+    },
+  };
+});

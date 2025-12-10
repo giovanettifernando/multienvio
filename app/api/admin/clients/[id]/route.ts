@@ -2,70 +2,72 @@
  * API routes for /api/admin/clients/[id]
  */
 
-
-import { NextRequest, NextResponse } from 'next/server';
+import { withApiHandler } from '@/lib/api/handler';
+import { ApiError } from '@/lib/api/errors';
 import { prisma } from '@/lib/db';
 import { requireAdminUser } from '@/lib/auth/admin-helpers';
 import { AdminPermission } from '@prisma/client';
+import { NextResponse } from 'next/server';
 
-interface RouteContext {
-  params: Promise<{ id: string }>;
+interface AdminClientUpdateResponse {
+  ok: boolean;
 }
 
-export async function PUT(request: NextRequest) {
-  try {
-    const authResult = await requireAdminUser(request, AdminPermission.CONTAS);
-    if (authResult instanceof NextResponse) return authResult;
+interface AdminClientDeleteResponse {
+  ok: boolean;
+  message: string;
+}
 
-    // Mock: apenas retorna sucesso
-    return NextResponse.json({ ok: true });
-  } catch (error) {
-    console.error('[ADMIN_UPDATE_CLIENT]', error);
-    return NextResponse.json({ message: 'Erro ao atualizar cliente' }, { status: 500 });
+export const PUT = withApiHandler<AdminClientUpdateResponse, { id: string }>(async (context) => {
+  const { req, logger } = context;
+
+  const authResult = await requireAdminUser(req, AdminPermission.CONTAS);
+  if (authResult instanceof NextResponse) {
+    throw new ApiError({ code: 'unauthorized', message: 'Não autenticado ou sem permissão', status: 401 });
   }
-}
 
-export async function DELETE(request: NextRequest, context: RouteContext) {
-  try {
-    const authResult = await requireAdminUser(request, AdminPermission.CONTAS);
-    if (authResult instanceof NextResponse) return authResult;
+  logger.info('admin_client_update', { adminId: authResult.user.id });
 
-    const { id: userId } = await context.params;
+  // Mock: apenas retorna sucesso
+  return { data: { ok: true } };
+});
 
-    // Verificar se usuário existe
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { id: true, email: true, name: true },
-    });
+export const DELETE = withApiHandler<AdminClientDeleteResponse, { id: string }>(async (context) => {
+  const { req, params, logger } = context;
 
-    if (!user) {
-      return NextResponse.json(
-        { message: 'Usuário não encontrado' },
-        { status: 404 }
-      );
-    }
+  const authResult = await requireAdminUser(req, AdminPermission.CONTAS);
+  if (authResult instanceof NextResponse) {
+    throw new ApiError({ code: 'unauthorized', message: 'Não autenticado ou sem permissão', status: 401 });
+  }
 
-    // Excluir usuário e dados relacionados (cascade configurado no Prisma)
-    await prisma.user.delete({
-      where: { id: userId },
-    });
+  const { id: userId } = params;
 
-    console.log('[ADMIN_DELETE_USER]', {
-      adminId: authResult.user.id,
-      adminEmail: authResult.user.email,
-      deletedUserId: userId,
-      deletedUserEmail: user.email,
-    });
+  // Verificar se usuário existe
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true, email: true, name: true },
+  });
 
-    return NextResponse.json({
+  if (!user) {
+    throw new ApiError({ code: 'not_found', message: 'Usuário não encontrado', status: 404 });
+  }
+
+  // Excluir usuário e dados relacionados (cascade configurado no Prisma)
+  await prisma.user.delete({
+    where: { id: userId },
+  });
+
+  logger.info('admin_delete_user', {
+    adminId: authResult.user.id,
+    adminEmail: authResult.user.email,
+    deletedUserId: userId,
+    deletedUserEmail: user.email,
+  });
+
+  return {
+    data: {
       ok: true,
       message: 'Conta excluída com sucesso',
-    });
-  } catch (error) {
-    console.error('[ADMIN_DELETE_USER_ERROR]', error);
-    return NextResponse.json(
-      { message: 'Erro ao excluir conta' },
-      { status: 500 }
-    );
-  }
-}
+    },
+  };
+});

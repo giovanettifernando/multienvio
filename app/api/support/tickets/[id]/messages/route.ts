@@ -1,49 +1,51 @@
-import { NextResponse } from 'next/server';
-import { getSession } from '@/lib/auth/session';
+import { withApiHandler } from '@/lib/api/handler';
+import { ApiError } from '@/lib/api/errors';
+import { getUserFromRequest } from '@/lib/auth/session';
 import { addMessageToTicket, getTicketForUser } from '@/lib/support/service';
 import { persistSupportAttachments } from '@/lib/storage/support-attachments';
+import { logger } from '@/lib/logger';
+import type { SupportMessage } from '@/lib/validation/support';
 
 
 const MAX_FILES = 5;
 
-export async function POST(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
-  const session = await getSession();
-  if (!session) {
-    return NextResponse.json({ message: 'Não autenticado' }, { status: 401 });
+export const POST = withApiHandler<SupportMessage, { id: string }>(async (context) => {
+  const session = await getUserFromRequest(context.req);
+  if (!session?.userId) {
+    throw new ApiError({ code: 'unauthorized', message: 'Não autenticado', status: 401 });
   }
 
-  const { id: ticketId } = await params;
+  const ticketId = context.params.id;
   if (!ticketId) {
-    return NextResponse.json({ message: 'Ticket inválido' }, { status: 400 });
+    throw new ApiError({ code: 'validation_error', message: 'Ticket inválido', status: 400 });
+  }
+
+  const ticket = await getTicketForUser(session.userId, ticketId);
+  if (!ticket) {
+    throw new ApiError({ code: 'not_found', message: 'Ticket não encontrado', status: 404 });
+  }
+
+  const formData = await context.req.formData();
+  const textField = formData.get('text');
+  const text = typeof textField === 'string' ? textField.trim() : '';
+
+  if (!text) {
+    throw new ApiError({ code: 'validation_error', message: 'Mensagem obrigatória', status: 400 });
+  }
+
+  const files = formData
+    .getAll('files')
+    .filter((item): item is File => item instanceof File && item.size > 0);
+
+  if (files.length > MAX_FILES) {
+    throw new ApiError({
+      code: 'validation_error',
+      message: `Envie no máximo ${MAX_FILES} arquivos por mensagem.`,
+      status: 400,
+    });
   }
 
   try {
-    const ticket = await getTicketForUser(session.userId, ticketId);
-    if (!ticket) {
-      return NextResponse.json({ message: 'Ticket não encontrado' }, { status: 404 });
-    }
-
-    const formData = await request.formData();
-    const textField = formData.get('text');
-    const text = typeof textField === 'string' ? textField.trim() : '';
-    if (!text) {
-      return NextResponse.json({ message: 'Mensagem obrigatória' }, { status: 400 });
-    }
-
-    const files = formData
-      .getAll('files')
-      .filter((item): item is File => item instanceof File && item.size > 0);
-
-    if (files.length > MAX_FILES) {
-      return NextResponse.json(
-        { message: `Envie no máximo ${MAX_FILES} arquivos por mensagem.` },
-        { status: 400 },
-      );
-    }
-
     const attachments = await persistSupportAttachments(ticketId, files);
 
     const message = await addMessageToTicket({
@@ -54,14 +56,14 @@ export async function POST(
       attachments,
     });
 
-    return NextResponse.json(message, { status: 201 });
+    logger.info({ event: 'ticket_message_created', ticketId, userId: session.userId }, 'Ticket message created');
+
+    return { data: message, status: 201 };
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : 'Erro ao enviar mensagem';
-    const status = message.includes('10 MB') ? 400 : 500;
-    if (status === 500) {
-      console.error('[SUPPORT_TICKET_MESSAGE_POST]', error);
+    const errorMessage = error instanceof Error ? error.message : 'Erro ao enviar mensagem';
+    if (errorMessage.includes('10 MB')) {
+      throw new ApiError({ code: 'validation_error', message: errorMessage, status: 400 });
     }
-    return NextResponse.json({ message }, { status });
+    throw error;
   }
-}
+});

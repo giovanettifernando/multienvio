@@ -5,9 +5,10 @@
  * Sincroniza agências do banco com a API dos Correios
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { withApiHandler } from '@/lib/api/handler';
+import { ApiError } from '@/lib/api/errors';
+import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
 import { prisma } from '@/lib/db';
-import { requireAdminUser } from '@/lib/auth/admin-helpers';
 import { AdminPermission } from '@prisma/client';
 import {
   listarTodasAgencias,
@@ -15,6 +16,19 @@ import {
   mapTipoSiglaToEnum,
   type CorreiosAgenciaAPI,
 } from '@/lib/correios/agencia-client';
+import { logger } from '@/lib/logger';
+
+type CorreiosAgencySyncResponse = {
+  success: boolean;
+  message: string;
+  stats: {
+    ufsProcessadas: number;
+    agenciasProcessadas: number;
+    erros: number;
+    duration: number;
+  };
+  errors?: Array<{ uf: string; error: string }>;
+};
 
 // UFs do Brasil para sincronização
 const UFS_BRASIL = [
@@ -23,92 +37,95 @@ const UFS_BRASIL = [
   'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO',
 ];
 
-export async function POST(request: NextRequest) {
-  try {
-    // Verificar autenticação admin
-    const authResult = await requireAdminUser(request, AdminPermission.CONFIGURACOES);
-    if (authResult instanceof NextResponse) return authResult;
-    const { session } = authResult;
+export const POST = withApiHandler<CorreiosAgencySyncResponse>(async (context) => {
+  const { req } = context;
 
-    // Parâmetros opcionais
-    const body = await request.json().catch(() => ({}));
-    const ufsToSync = body.ufs as string[] | undefined;
-    const clearBefore = body.clearBefore as boolean | undefined;
+  const session = await getAdminSessionFromRequest(req);
+  if (!session) {
+    throw new ApiError({ code: 'unauthorized', message: 'Não autenticado', status: 401 });
+  }
 
-    const targetUfs = ufsToSync && ufsToSync.length > 0 ? ufsToSync : UFS_BRASIL;
+  if (!session.permissions.includes(AdminPermission.CONFIGURACOES)) {
+    throw new ApiError({ code: 'forbidden', message: 'Permissão negada', status: 403 });
+  }
 
-    console.log('[SYNC_AGENCIES] Iniciando sincronização:', {
-      ufs: targetUfs,
-      clearBefore,
-      by: session.staffId,
+  // Parâmetros opcionais
+  const body = await req.json().catch(() => ({}));
+  const ufsToSync = body.ufs as string[] | undefined;
+  const clearBefore = body.clearBefore as boolean | undefined;
+
+  const targetUfs = ufsToSync && ufsToSync.length > 0 ? ufsToSync : UFS_BRASIL;
+
+  logger.info({ event: 'correios_sync_start', ufs: targetUfs, clearBefore, staffId: session.staffId }, 'Starting agencies sync');
+
+  const startTime = Date.now();
+  const syncedAt = new Date();
+  let totalCreated = 0;
+  let totalUpdated = 0;
+  let totalErrors = 0;
+  const errors: Array<{ uf: string; error: string }> = [];
+
+  // Opcional: limpar antes de sincronizar
+  if (clearBefore) {
+    const deleted = await prisma.correiosAgency.deleteMany({
+      where: targetUfs.length < UFS_BRASIL.length ? { uf: { in: targetUfs } } : undefined,
     });
+    logger.info({ event: 'correios_sync_cleared', count: deleted.count }, 'Records cleared');
+  }
 
-    const startTime = Date.now();
-    const syncedAt = new Date();
-    let totalCreated = 0;
-    let totalUpdated = 0;
-    let totalErrors = 0;
-    const errors: Array<{ uf: string; error: string }> = [];
+  // Sincronizar por UF
+  for (const uf of targetUfs) {
+    try {
+      logger.debug({ event: 'correios_sync_uf_start', uf }, 'Fetching agencies');
 
-    // Opcional: limpar antes de sincronizar
-    if (clearBefore) {
-      const deleted = await prisma.correiosAgency.deleteMany({
-        where: targetUfs.length < UFS_BRASIL.length ? { uf: { in: targetUfs } } : undefined,
-      });
-      console.log('[SYNC_AGENCIES] Registros removidos:', deleted.count);
-    }
+      const agencias = await listarTodasAgencias({ uf, status: 2 });
 
-    // Sincronizar por UF
-    for (const uf of targetUfs) {
-      try {
-        console.log(`[SYNC_AGENCIES] Buscando agências de ${uf}...`);
+      logger.debug({ event: 'correios_sync_uf_found', uf, count: agencias.length }, 'Agencies found');
 
-        const agencias = await listarTodasAgencias({ uf, status: 2 });
+      // Upsert em lote
+      for (const agencia of agencias) {
+        try {
+          const data = mapAgenciaToDb(agencia, syncedAt);
 
-        console.log(`[SYNC_AGENCIES] ${uf}: ${agencias.length} agências encontradas`);
+          await prisma.correiosAgency.upsert({
+            where: { id: agencia.id },
+            create: data,
+            update: {
+              ...data,
+              createdAt: undefined, // Não atualizar createdAt
+            },
+          });
 
-        // Upsert em lote
-        for (const agencia of agencias) {
-          try {
-            const data = mapAgenciaToDb(agencia, syncedAt);
-
-            await prisma.correiosAgency.upsert({
-              where: { id: agencia.id },
-              create: data,
-              update: {
-                ...data,
-                createdAt: undefined, // Não atualizar createdAt
-              },
-            });
-
-            // Contar como criado ou atualizado (aproximação)
-            totalUpdated++;
-          } catch (err) {
-            console.error(`[SYNC_AGENCIES] Erro ao salvar agência ${agencia.id}:`, err);
-            totalErrors++;
-          }
+          // Contar como criado ou atualizado (aproximação)
+          totalUpdated++;
+        } catch (err) {
+          logger.error({ event: 'correios_sync_agency_error', agencyId: agencia.id, err }, 'Failed to save agency');
+          totalErrors++;
         }
-
-        totalCreated += agencias.length;
-      } catch (err) {
-        const errorMsg = err instanceof Error ? err.message : 'Erro desconhecido';
-        console.error(`[SYNC_AGENCIES] Erro ao sincronizar UF ${uf}:`, err);
-        errors.push({ uf, error: errorMsg });
-        totalErrors++;
       }
+
+      totalCreated += agencias.length;
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Erro desconhecido';
+      logger.error({ event: 'correios_sync_uf_error', uf, err }, 'Failed to sync UF');
+      errors.push({ uf, error: errorMsg });
+      totalErrors++;
     }
+  }
 
-    const duration = Date.now() - startTime;
+  const duration = Date.now() - startTime;
 
-    console.log('[SYNC_AGENCIES] Sincronização concluída:', {
-      duration: `${duration}ms`,
-      totalAgencias: totalCreated,
-      totalUpdated,
-      totalErrors,
-      errors: errors.length,
-    });
+  logger.info({
+    event: 'correios_sync_complete',
+    durationMs: duration,
+    totalAgencias: totalCreated,
+    totalUpdated,
+    totalErrors,
+    errorCount: errors.length,
+  }, 'Sync completed');
 
-    return NextResponse.json({
+  return {
+    data: {
       success: true,
       message: `Sincronização concluída em ${Math.round(duration / 1000)}s`,
       stats: {
@@ -118,15 +135,9 @@ export async function POST(request: NextRequest) {
         duration,
       },
       errors: errors.length > 0 ? errors : undefined,
-    });
-  } catch (error) {
-    console.error('[SYNC_AGENCIES] Erro fatal:', error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Erro interno' },
-      { status: 500 }
-    );
-  }
-}
+    },
+  };
+});
 
 /**
  * Mapeia agência da API para formato do banco

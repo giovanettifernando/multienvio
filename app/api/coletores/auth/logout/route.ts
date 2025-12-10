@@ -3,16 +3,23 @@
  * POST /api/coletores/auth/logout - Faz logout do coletor
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { prisma } from '@/lib/db';
+import { withApiHandlerResponse } from '@/lib/api/handler';
 import { getAutonomousCollectorSession, AUTONOMOUS_COLLECTOR_COOKIE_NAME } from '@/lib/auth/autonomous-collector-session';
+
+type CollectorLogoutResponse = {
+  message: string;
+};
 
 /**
  * POST /api/coletores/auth/logout
  * Remove cookie de autenticação e incrementa tokenVersion
  */
-export async function POST(request: NextRequest) {
+export const POST = withApiHandlerResponse(async (context) => {
+  const { logger } = context;
+
   try {
     // Tentar obter a sessão atual para incrementar tokenVersion
     // Nota: getAutonomousCollectorSession usa cookies() então precisa ser chamado antes de modificar cookies
@@ -24,7 +31,9 @@ export async function POST(request: NextRequest) {
         where: { id: session.coletorId },
         data: { tokenVersion: { increment: 1 } },
       });
-      console.log('[AUTONOMOUS_COLLECTOR_LOGOUT] TokenVersion incremented for collectorId:', session.coletorId);
+      logger.info('autonomous_collector_logout_success', { collectorId: session.coletorId });
+    } else {
+      logger.info('autonomous_collector_logout_no_session');
     }
 
     // Remover cookie
@@ -35,11 +44,10 @@ export async function POST(request: NextRequest) {
       message: 'Logout realizado com sucesso',
     });
   } catch (error) {
-    console.error('[POST /api/coletores/auth/logout] Error:', error);
-    // 🛡️ SECURITY FIX: Não expor mensagens de erro internas
+    logger.error('autonomous_collector_logout_error', { err: error });
     return NextResponse.json(
       { message: 'Erro ao fazer logout' },
       { status: 500 }
     );
   }
-}
+});

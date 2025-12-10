@@ -1,5 +1,5 @@
-
-import { NextResponse } from 'next/server';
+import { withApiHandler } from '@/lib/api/handler';
+import { ApiError } from '@/lib/api/errors';
 import { prisma } from '@/lib/db';
 import { generatePublicTimeline, mapToPublicTrackingStatus, PublicStatusMessages } from '@/lib/shipments/public-tracking-status';
 import { ShipmentStatus } from '@/lib/shipments/shipment-status';
@@ -9,313 +9,282 @@ import { ShipmentStatus } from '@/lib/shipments/shipment-status';
  * Public tracking endpoint - no authentication required
  * Returns sanitized shipment data with tracking events
  */
-export async function GET(
-  request: Request,
-  { params }: { params: Promise<{ code: string }> }
-) {
-  try {
-    const { code } = await params;
+export const GET = withApiHandler<unknown, { code: string }>(async ({ params, logger }) => {
+  const { code } = params;
 
-    if (!code) {
-      return NextResponse.json(
-        { code: 'INVALID_CODE', message: 'Código de rastreamento inválido' },
-        { status: 400 }
-      );
-    }
+  if (!code) {
+    throw new ApiError({
+      code: 'INVALID_CODE',
+      message: 'Código de rastreamento inválido',
+      status: 400,
+    });
+  }
 
-    // Buscar shipment pelo publicTrackingId
-    const shipment = await prisma.shipment.findFirst({
-      where: { publicTrackingId: code },
-      select: {
-        id: true,
-        platformTrackingCode: true,
-        status: true,
-        carrier: true,
-        service: true,
-        originCep: true,
-        destinationCep: true,
-        destinationCity: true,
-        destinationState: true,
-        estimatedDays: true,
-        freightCost: true,
-        declaredValue: true,
-        weight: true,
-        postedAt: true,
-        deliveredAt: true,
-        createdAt: true,
-        updatedAt: true,
-        document: true,
-        // Relacionamento com eventos
-        trackingEvents: {
-          select: {
-            id: true,
-            type: true,
-            description: true,
-            city: true,
-            uf: true,
-            occurredAt: true,
-          },
-          orderBy: {
-            occurredAt: 'desc',
-          },
+  // Buscar shipment pelo publicTrackingId
+  const shipment = await prisma.shipment.findFirst({
+    where: { publicTrackingId: code },
+    select: {
+      id: true,
+      platformTrackingCode: true,
+      status: true,
+      carrier: true,
+      service: true,
+      originCep: true,
+      destinationCep: true,
+      destinationCity: true,
+      destinationState: true,
+      estimatedDays: true,
+      freightCost: true,
+      declaredValue: true,
+      weight: true,
+      postedAt: true,
+      deliveredAt: true,
+      createdAt: true,
+      updatedAt: true,
+      document: true,
+      // Relacionamento com eventos
+      trackingEvents: {
+        select: {
+          id: true,
+          type: true,
+          description: true,
+          city: true,
+          uf: true,
+          occurredAt: true,
         },
-        // Relacionamento com packages/volumes
-        packages: {
-          select: {
-            id: true,
-            packageNumber: true,
-            height: true,
-            width: true,
-            length: true,
-            weight: true,
-          },
-          orderBy: {
-            packageNumber: 'asc',
-          },
+        orderBy: {
+          occurredAt: 'desc',
         },
       },
+      // Relacionamento com packages/volumes
+      packages: {
+        select: {
+          id: true,
+          packageNumber: true,
+          height: true,
+          width: true,
+          length: true,
+          weight: true,
+        },
+        orderBy: {
+          packageNumber: 'asc',
+        },
+      },
+    },
+  });
+
+  if (!shipment) {
+    throw new ApiError({
+      code: 'NOT_FOUND',
+      message: 'Envio não encontrado',
+      status: 404,
+    });
+  }
+
+  // Usar eventos reais quando disponíveis, caso contrário gerar timeline fictícia
+  let events;
+
+  if (shipment.trackingEvents && shipment.trackingEvents.length > 0) {
+    // Usar eventos reais do banco de dados
+    events = shipment.trackingEvents.map((event) => ({
+      status: event.type,
+      title: mapToPublicTrackingStatus(event.type as ShipmentStatus),
+      description: event.description,
+      location: event.city && event.uf ? `${event.city}, ${event.uf}` : null,
+      occurredAt: event.occurredAt.toISOString(),
+    }));
+  } else {
+    // Fallback: gerar timeline pública fictícia
+    const publicTimeline = generatePublicTimeline({
+      createdAt: shipment.createdAt,
+      status: shipment.status,
+      originCity: undefined,
+      originState: undefined,
+      destinationCity: shipment.destinationCity || undefined,
+      destinationState: shipment.destinationState || undefined,
     });
 
-    if (!shipment) {
-      return NextResponse.json(
-        { code: 'NOT_FOUND', message: 'Envio não encontrado' },
-        { status: 404 }
-      );
-    }
+    events = publicTimeline.map((event) => ({
+      status: event.status,
+      title: event.title,
+      description: event.description,
+      location: event.location || null,
+      occurredAt: event.timestamp.toISOString(),
+    }));
+  }
 
-    // Usar eventos reais quando disponíveis, caso contrário gerar timeline fictícia
-    let events;
-
-    if (shipment.trackingEvents && shipment.trackingEvents.length > 0) {
-      // Usar eventos reais do banco de dados
-      events = shipment.trackingEvents.map((event) => ({
-        status: event.type,
-        title: mapToPublicTrackingStatus(event.type as ShipmentStatus),
-        description: event.description,
-        location: event.city && event.uf ? `${event.city}, ${event.uf}` : null,
-        occurredAt: event.occurredAt.toISOString(),
-      }));
-    } else {
-      // Fallback: gerar timeline pública fictícia
-      const publicTimeline = generatePublicTimeline({
-        createdAt: shipment.createdAt,
-        status: shipment.status,
-        originCity: undefined,
-        originState: undefined,
-        destinationCity: shipment.destinationCity || undefined,
-        destinationState: shipment.destinationState || undefined,
-      });
-
-      events = publicTimeline.map((event) => ({
-        status: event.status,
-        title: event.title,
-        description: event.description,
-        location: event.location || null,
-        occurredAt: event.timestamp.toISOString(),
-      }));
-    }
-
-    // Processar volumes e itens
-    type PublicVolume = {
-      index: number;
-      documentType: 'DECLARATION' | 'NF';
-      nfKey?: string;
-      // Dimensões do volume
-      height?: number;
-      width?: number;
-      length?: number;
-      weight?: number;
-      items: Array<{
-        description: string;
-        quantity: number;
-        unitValue?: number;
-        subtotal?: number;
-      }>;
-      // Dados completos da NF-e para espelho (opcional)
-      nfeData?: unknown;
-    };
-
-    const volumes: PublicVolume[] = [];
-
-    // Processar document para obter itens
-    type DocumentItem = {
-      descricao?: string;
-      description?: string;
-      produto?: string;
-      quantidade?: number;
-      quantity?: number;
-      valorUnitario?: number;
+  // Processar volumes e itens
+  type PublicVolume = {
+    index: number;
+    documentType: 'DECLARATION' | 'NF';
+    nfKey?: string;
+    // Dimensões do volume
+    height?: number;
+    width?: number;
+    length?: number;
+    weight?: number;
+    items: Array<{
+      description: string;
+      quantity: number;
       unitValue?: number;
-      valor?: number;
       subtotal?: number;
-      total?: number;
-      valorTotal?: number; // Usado no novo formato de NF-e
-    };
+    }>;
+    // Dados completos da NF-e para espelho (opcional)
+    nfeData?: unknown;
+  };
 
-    type VolumeDeclaration = {
-      volumeIndex?: number;
-      items?: DocumentItem[];
-    };
+  const volumes: PublicVolume[] = [];
 
-    interface ShipmentDocument {
-      type?: string;
-      nfeKeys?: string[];
-      nfKey?: string;
-      items?: DocumentItem[];
-      volumeDeclarations?: VolumeDeclaration[];
-      declarationItems?: DocumentItem[];
+  // Processar document para obter itens
+  type DocumentItem = {
+    descricao?: string;
+    description?: string;
+    produto?: string;
+    quantidade?: number;
+    quantity?: number;
+    valorUnitario?: number;
+    unitValue?: number;
+    valor?: number;
+    subtotal?: number;
+    total?: number;
+    valorTotal?: number; // Usado no novo formato de NF-e
+  };
+
+  type VolumeDeclaration = {
+    volumeIndex?: number;
+    items?: DocumentItem[];
+  };
+
+  interface ShipmentDocument {
+    type?: string;
+    nfeKeys?: string[];
+    nfKey?: string;
+    items?: DocumentItem[];
+    volumeDeclarations?: VolumeDeclaration[];
+    declarationItems?: DocumentItem[];
+  }
+
+  const doc = (shipment.document as unknown) as ShipmentDocument | null;
+  const packageVolumes = shipment.packages || [];
+
+  logger.debug('public_track_volumes', {
+    hasDocument: !!doc,
+    documentType: doc?.type,
+    packagesCount: packageVolumes.length,
+  });
+
+  // Tipo para package no documento NFE (novo formato)
+  type DocumentPackage = {
+    chave?: string;
+    xmlId?: string | null;
+    items?: DocumentItem[];
+    // Dados completos da NF-e para espelho
+    nfeData?: unknown;
+  };
+
+  // Tipo para volume no formato de cotação (legado)
+  type QuoteVolume = {
+    pesoKg?: number;
+    alturaCm?: number;
+    larguraCm?: number;
+    comprimentoCm?: number;
+    items?: DocumentItem[];
+  };
+
+  // Tipo estendido do documento que inclui formato de cotação
+  interface ExtendedDocument extends ShipmentDocument {
+    volumes?: QuoteVolume[];
+    packages?: DocumentPackage[];
+    nfeItems?: DocumentItem[];
+  }
+
+  const extDoc = doc as ExtendedDocument | null;
+
+  if (extDoc) {
+    const documentType = extDoc.type || 'DECLARACAO';
+
+    // Criar mapa de packages por número para buscar dimensões
+    const packageByNumber = new Map(
+      packageVolumes.map(pkg => [pkg.packageNumber, pkg])
+    );
+
+    // CASO ESPECIAL: Formato de cotação (legado) - doc.volumes contém dimensões
+    // Este formato não tem items detalhados, apenas dimensões físicas
+    if (!extDoc.type && extDoc.volumes && Array.isArray(extDoc.volumes)) {
+
+      // Extrair dimensões do doc.volumes ou usar packages físicos
+      extDoc.volumes.forEach((vol: QuoteVolume, idx: number) => {
+        const volumeIndex = idx + 1;
+        const pkgData = packageByNumber.get(volumeIndex);
+
+        // Verificar se o volume tem items (formato híbrido)
+        const volItems = vol.items || [];
+
+        volumes.push({
+          index: volumeIndex,
+          documentType: 'DECLARATION',
+          // Priorizar dimensões do package físico, fallback para doc.volumes
+          height: pkgData?.height ?? vol.alturaCm ?? undefined,
+          width: pkgData?.width ?? vol.larguraCm ?? undefined,
+          length: pkgData?.length ?? vol.comprimentoCm ?? undefined,
+          weight: pkgData?.weight ?? vol.pesoKg ?? undefined,
+          items: volItems.map((item: DocumentItem) => ({
+            description: item.descricao || item.description || item.produto || 'Item',
+            quantity: item.quantidade || item.quantity || 1,
+            unitValue: item.valorUnitario || item.unitValue || item.valor,
+            subtotal: item.subtotal || item.total,
+          })),
+        });
+      });
     }
+    // Formato com type definido (novo formato)
+    else if (documentType === 'NFE') {
+      // NF-e - Novo formato: packages (NF por pacote com items)
+      const docPackages = extDoc.packages;
 
-    const doc = (shipment.document as unknown) as ShipmentDocument | null;
-    const packageVolumes = shipment.packages || [];
-
-    console.log('[PUBLIC_TRACK] Processando volumes:', {
-      hasDocument: !!doc,
-      documentType: doc?.type,
-      // NFE novo formato
-      hasDocPackages: !!(doc as { packages?: unknown[] })?.packages,
-      docPackagesCount: ((doc as { packages?: unknown[] })?.packages || []).length,
-      // NFE legado
-      hasNfeItems: !!(doc as { nfeItems?: unknown[] })?.nfeItems,
-      hasNfeKeys: !!doc?.nfeKeys,
-      // Declaração novo formato
-      hasVolumeDeclarations: !!doc?.volumeDeclarations,
-      // Declaração legado
-      hasDeclarationItems: !!doc?.declarationItems,
-      // Packages físicos
-      packagesCount: packageVolumes.length,
-      // Debug: mostrar estrutura real do documento
-      documentKeys: doc ? Object.keys(doc) : [],
-      documentRaw: doc ? JSON.stringify(doc).substring(0, 500) : null,
-    });
-
-    // Tipo para package no documento NFE (novo formato)
-    type DocumentPackage = {
-      chave?: string;
-      xmlId?: string | null;
-      items?: DocumentItem[];
-      // Dados completos da NF-e para espelho
-      nfeData?: unknown;
-    };
-
-    // Tipo para volume no formato de cotação (legado)
-    type QuoteVolume = {
-      pesoKg?: number;
-      alturaCm?: number;
-      larguraCm?: number;
-      comprimentoCm?: number;
-      items?: DocumentItem[];
-    };
-
-    // Tipo estendido do documento que inclui formato de cotação
-    interface ExtendedDocument extends ShipmentDocument {
-      volumes?: QuoteVolume[];
-      packages?: DocumentPackage[];
-      nfeItems?: DocumentItem[];
-    }
-
-    const extDoc = doc as ExtendedDocument | null;
-
-    if (extDoc) {
-      const documentType = extDoc.type || 'DECLARACAO';
-
-      // Criar mapa de packages por número para buscar dimensões
-      const packageByNumber = new Map(
-        packageVolumes.map(pkg => [pkg.packageNumber, pkg])
-      );
-
-      // CASO ESPECIAL: Formato de cotação (legado) - doc.volumes contém dimensões
-      // Este formato não tem items detalhados, apenas dimensões físicas
-      if (!extDoc.type && extDoc.volumes && Array.isArray(extDoc.volumes)) {
-        console.log('[PUBLIC_TRACK] Detectado formato de cotação (legado)');
-
-        // Extrair dimensões do doc.volumes ou usar packages físicos
-        extDoc.volumes.forEach((vol: QuoteVolume, idx: number) => {
-          const volumeIndex = idx + 1;
+      if (docPackages && Array.isArray(docPackages) && docPackages.length > 0) {
+        // Novo formato: cada package tem sua chave e items
+        docPackages.forEach((docPkg: DocumentPackage, pkgIndex: number) => {
+          const volumeIndex = pkgIndex + 1;
           const pkgData = packageByNumber.get(volumeIndex);
-
-          // Verificar se o volume tem items (formato híbrido)
-          const volItems = vol.items || [];
+          const items = docPkg.items || [];
 
           volumes.push({
             index: volumeIndex,
-            documentType: 'DECLARATION',
-            // Priorizar dimensões do package físico, fallback para doc.volumes
-            height: pkgData?.height ?? vol.alturaCm ?? undefined,
-            width: pkgData?.width ?? vol.larguraCm ?? undefined,
-            length: pkgData?.length ?? vol.comprimentoCm ?? undefined,
-            weight: pkgData?.weight ?? vol.pesoKg ?? undefined,
-            items: volItems.map((item: DocumentItem) => ({
+            documentType: 'NF',
+            nfKey: docPkg.chave,
+            height: pkgData?.height ?? undefined,
+            width: pkgData?.width ?? undefined,
+            length: pkgData?.length ?? undefined,
+            weight: pkgData?.weight ?? undefined,
+            items: items.map((item: DocumentItem) => ({
               description: item.descricao || item.description || item.produto || 'Item',
               quantity: item.quantidade || item.quantity || 1,
               unitValue: item.valorUnitario || item.unitValue || item.valor,
-              subtotal: item.subtotal || item.total,
+              subtotal: item.subtotal || item.total || item.valorTotal,
             })),
+            // Dados completos da NF-e para espelho
+            nfeData: docPkg.nfeData || undefined,
           });
         });
       }
-      // Formato com type definido (novo formato)
-      else if (documentType === 'NFE') {
-        // NF-e - Novo formato: packages (NF por pacote com items)
-        const docPackages = extDoc.packages;
+      // Formato legado: nfeItems (lista única de itens) + nfeKeys (lista de chaves)
+      else {
+        const nfeItems = extDoc.nfeItems || [];
+        const nfeKeys = extDoc.nfeKeys || [];
 
-        if (docPackages && Array.isArray(docPackages) && docPackages.length > 0) {
-          // Novo formato: cada package tem sua chave e items
-          docPackages.forEach((docPkg: DocumentPackage, pkgIndex: number) => {
-            const volumeIndex = pkgIndex + 1;
-            const pkgData = packageByNumber.get(volumeIndex);
-            const items = docPkg.items || [];
-
-            volumes.push({
-              index: volumeIndex,
-              documentType: 'NF',
-              nfKey: docPkg.chave,
-              height: pkgData?.height ?? undefined,
-              width: pkgData?.width ?? undefined,
-              length: pkgData?.length ?? undefined,
-              weight: pkgData?.weight ?? undefined,
-              items: items.map((item: DocumentItem) => ({
-                description: item.descricao || item.description || item.produto || 'Item',
-                quantity: item.quantidade || item.quantity || 1,
-                unitValue: item.valorUnitario || item.unitValue || item.valor,
-                subtotal: item.subtotal || item.total || item.valorTotal,
-              })),
-              // Dados completos da NF-e para espelho
-              nfeData: docPkg.nfeData || undefined,
-            });
-          });
-        }
-        // Formato legado: nfeItems (lista única de itens) + nfeKeys (lista de chaves)
-        else {
-          const nfeItems = extDoc.nfeItems || [];
-          const nfeKeys = extDoc.nfeKeys || [];
-
-          if (nfeItems.length > 0) {
-            if (packageVolumes.length > 0) {
-              // Criar um volume para cada package (todos com os mesmos itens da NF)
-              packageVolumes.forEach((pkg, pkgIndex) => {
-                volumes.push({
-                  index: pkg.packageNumber,
-                  documentType: 'NF',
-                  nfKey: nfeKeys[pkgIndex] || nfeKeys[0], // Usar chave correspondente ou primeira
-                  height: pkg.height ?? undefined,
-                  width: pkg.width ?? undefined,
-                  length: pkg.length ?? undefined,
-                  weight: pkg.weight ?? undefined,
-                  items: nfeItems.map((item: DocumentItem) => ({
-                    description: item.descricao || item.description || item.produto || 'Item',
-                    quantity: item.quantidade || item.quantity || 1,
-                    unitValue: item.valorUnitario || item.unitValue || item.valor,
-                    subtotal: item.subtotal || item.total || item.valorTotal,
-                  })),
-                });
-              });
-            } else {
-              // Sem packages, criar volume único
+        if (nfeItems.length > 0) {
+          if (packageVolumes.length > 0) {
+            // Criar um volume para cada package (todos com os mesmos itens da NF)
+            packageVolumes.forEach((pkg, pkgIndex) => {
               volumes.push({
-                index: 1,
+                index: pkg.packageNumber,
                 documentType: 'NF',
-                nfKey: nfeKeys[0],
+                nfKey: nfeKeys[pkgIndex] || nfeKeys[0], // Usar chave correspondente ou primeira
+                height: pkg.height ?? undefined,
+                width: pkg.width ?? undefined,
+                length: pkg.length ?? undefined,
+                weight: pkg.weight ?? undefined,
                 items: nfeItems.map((item: DocumentItem) => ({
                   description: item.descricao || item.description || item.produto || 'Item',
                   quantity: item.quantidade || item.quantity || 1,
@@ -323,87 +292,100 @@ export async function GET(
                   subtotal: item.subtotal || item.total || item.valorTotal,
                 })),
               });
-            }
-          }
-        }
-      } else {
-        // Declaração de conteúdo
-        // Novo formato: volumeDeclarations
-        if (extDoc.volumeDeclarations && Array.isArray(extDoc.volumeDeclarations)) {
-          extDoc.volumeDeclarations.forEach((volDecl: VolumeDeclaration) => {
-            const items = volDecl.items || [];
-            const volumeIndex = volDecl.volumeIndex || 1;
-            const pkg = packageByNumber.get(volumeIndex);
+            });
+          } else {
+            // Sem packages, criar volume único
             volumes.push({
-              index: volumeIndex,
-              documentType: 'DECLARATION',
-              height: pkg?.height ?? undefined,
-              width: pkg?.width ?? undefined,
-              length: pkg?.length ?? undefined,
-              weight: pkg?.weight ?? undefined,
-              items: items.map((item: DocumentItem) => ({
+              index: 1,
+              documentType: 'NF',
+              nfKey: nfeKeys[0],
+              items: nfeItems.map((item: DocumentItem) => ({
                 description: item.descricao || item.description || item.produto || 'Item',
                 quantity: item.quantidade || item.quantity || 1,
                 unitValue: item.valorUnitario || item.unitValue || item.valor,
-                subtotal: item.subtotal || item.total,
+                subtotal: item.subtotal || item.total || item.valorTotal,
               })),
             });
-          });
+          }
         }
-        // Formato legado: declarationItems
-        else if (extDoc.declarationItems && Array.isArray(extDoc.declarationItems)) {
-          const pkg = packageByNumber.get(1);
+      }
+    } else {
+      // Declaração de conteúdo
+      // Novo formato: volumeDeclarations
+      if (extDoc.volumeDeclarations && Array.isArray(extDoc.volumeDeclarations)) {
+        extDoc.volumeDeclarations.forEach((volDecl: VolumeDeclaration) => {
+          const items = volDecl.items || [];
+          const volumeIndex = volDecl.volumeIndex || 1;
+          const pkg = packageByNumber.get(volumeIndex);
           volumes.push({
-            index: 1,
+            index: volumeIndex,
             documentType: 'DECLARATION',
             height: pkg?.height ?? undefined,
             width: pkg?.width ?? undefined,
             length: pkg?.length ?? undefined,
             weight: pkg?.weight ?? undefined,
-            items: extDoc.declarationItems.map((item: DocumentItem) => ({
+            items: items.map((item: DocumentItem) => ({
               description: item.descricao || item.description || item.produto || 'Item',
               quantity: item.quantidade || item.quantity || 1,
               unitValue: item.valorUnitario || item.unitValue || item.valor,
               subtotal: item.subtotal || item.total,
             })),
           });
-        }
+        });
+      }
+      // Formato legado: declarationItems
+      else if (extDoc.declarationItems && Array.isArray(extDoc.declarationItems)) {
+        const pkg = packageByNumber.get(1);
+        volumes.push({
+          index: 1,
+          documentType: 'DECLARATION',
+          height: pkg?.height ?? undefined,
+          width: pkg?.width ?? undefined,
+          length: pkg?.length ?? undefined,
+          weight: pkg?.weight ?? undefined,
+          items: extDoc.declarationItems.map((item: DocumentItem) => ({
+            description: item.descricao || item.description || item.produto || 'Item',
+            quantity: item.quantidade || item.quantity || 1,
+            unitValue: item.valorUnitario || item.unitValue || item.valor,
+            subtotal: item.subtotal || item.total,
+          })),
+        });
       }
     }
+  }
 
-    // Se não conseguimos processar volumes do document, mas temos packages, criar volumes a partir deles
-    if (volumes.length === 0 && packageVolumes.length > 0) {
-      packageVolumes.forEach((pkg) => {
-        volumes.push({
-          index: pkg.packageNumber,
-          documentType: 'DECLARATION',
-          height: pkg.height ?? undefined,
-          width: pkg.width ?? undefined,
-          length: pkg.length ?? undefined,
-          weight: pkg.weight ?? undefined,
-          items: [], // Sem itens detalhados
-        });
-      });
-    }
-
-    // Fallback final: se ainda não temos volumes mas temos peso no shipment, criar volume único
-    if (volumes.length === 0 && shipment.weight) {
+  // Se não conseguimos processar volumes do document, mas temos packages, criar volumes a partir deles
+  if (volumes.length === 0 && packageVolumes.length > 0) {
+    packageVolumes.forEach((pkg) => {
       volumes.push({
-        index: 1,
+        index: pkg.packageNumber,
         documentType: 'DECLARATION',
-        weight: shipment.weight,
-        items: [],
+        height: pkg.height ?? undefined,
+        width: pkg.width ?? undefined,
+        length: pkg.length ?? undefined,
+        weight: pkg.weight ?? undefined,
+        items: [], // Sem itens detalhados
       });
-    }
+    });
+  }
 
-    console.log('[PUBLIC_TRACK] Volumes processados:', volumes.length);
+  // Fallback final: se ainda não temos volumes mas temos peso no shipment, criar volume único
+  if (volumes.length === 0 && shipment.weight) {
+    volumes.push({
+      index: 1,
+      documentType: 'DECLARATION',
+      weight: shipment.weight,
+      items: [],
+    });
+  }
 
-    // Mapear status interno para status público
-    const publicStatus = mapToPublicTrackingStatus(shipment.status as ShipmentStatus);
-    const publicStatusInfo = PublicStatusMessages[publicStatus];
+  // Mapear status interno para status público
+  const publicStatus = mapToPublicTrackingStatus(shipment.status as ShipmentStatus);
+  const publicStatusInfo = PublicStatusMessages[publicStatus];
 
-    // Sanitizar dados - não retornar informações sensíveis
-    const sanitizedData = {
+  // Sanitizar dados - não retornar informações sensíveis
+  return {
+    data: {
       trackingCode: shipment.platformTrackingCode, // Expor apenas código da plataforma
       status: shipment.status, // Status interno (mantido para compatibilidade)
       publicStatus: publicStatus, // Status público simplificado
@@ -430,14 +412,6 @@ export async function GET(
       events,
       // Volumes e itens
       volumes,
-    };
-
-    return NextResponse.json(sanitizedData);
-  } catch (error) {
-    console.error('[PUBLIC_TRACK_GET]', error);
-    return NextResponse.json(
-      { code: 'INTERNAL_ERROR', message: 'Erro ao buscar rastreamento' },
-      { status: 500 }
-    );
-  }
-}
+    },
+  };
+});

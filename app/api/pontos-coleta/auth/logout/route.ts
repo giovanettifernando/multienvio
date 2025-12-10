@@ -1,16 +1,22 @@
-
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { withApiHandlerResponse } from '@/lib/api/handler';
 import {
   createCollectorCookieRemovalHeader,
   getCollectorTokenFromRequest,
   collectorVerifySimple,
 } from '@/lib/auth/collector-session';
 
-export async function POST(request: Request) {
+type LogoutResponse = {
+  message: string;
+};
+
+export const POST = withApiHandlerResponse(async (context) => {
+  const { req, logger } = context;
+
   try {
     // Tentar obter o ponto de coleta da sessão atual para incrementar tokenVersion
-    const token = getCollectorTokenFromRequest(request);
+    const token = getCollectorTokenFromRequest(req);
     if (token) {
       const payload = await collectorVerifySimple(token);
       if (payload?.pointId) {
@@ -19,11 +25,13 @@ export async function POST(request: Request) {
           where: { id: payload.pointId },
           data: { tokenVersion: { increment: 1 } },
         });
-        console.log('[COLLECTOR_LOGOUT] TokenVersion incremented for pointId:', payload.pointId);
+        logger.info('collector_logout_success', { pointId: payload.pointId });
       }
+    } else {
+      logger.info('collector_logout_no_session');
     }
 
-    const response = NextResponse.json({
+    const response = NextResponse.json<LogoutResponse>({
       message: 'Logout realizado com sucesso',
     });
 
@@ -31,10 +39,10 @@ export async function POST(request: Request) {
 
     return response;
   } catch (error) {
-    console.error('[COLLECTOR_LOGOUT]', error);
-    return NextResponse.json(
+    logger.error('collector_logout_error', { err: error });
+    return NextResponse.json<LogoutResponse>(
       { message: 'Erro ao realizar logout' },
       { status: 500 }
     );
   }
-}
+});

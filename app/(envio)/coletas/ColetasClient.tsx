@@ -59,7 +59,9 @@ export default function ColetasClient() {
       if (!response.ok) {
         throw new Error("Erro ao buscar coletas");
       }
-      return response.json();
+      const json = await response.json();
+      // Handle standardized API response format { data: T, error, meta }
+      return json.data ?? json;
     },
   });
 

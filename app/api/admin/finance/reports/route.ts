@@ -1,18 +1,39 @@
-import { NextRequest, NextResponse } from 'next/server';
+/**
+ * GET /api/admin/finance/reports
+ *
+ * Returns CSV reports for finance data (DRE, taxes, fees)
+ *
+ * NOTE: This route returns CSV data, so it uses withApiHandlerResponse
+ * which allows returning NextResponse directly instead of JSON format.
+ */
+
+import { NextResponse } from 'next/server';
 import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
 import { requirePermission } from '@/lib/auth/permissions';
 import { AdminPermission } from '@prisma/client';
+import { withApiHandlerResponse } from '@/lib/api/handler';
+import { ApiError } from '@/lib/api/errors';
 
-export async function GET(request: NextRequest) {
-  const session = await getAdminSessionFromRequest(request);
+export const GET = withApiHandlerResponse(async ({ req, logger }) => {
+  const session = await getAdminSessionFromRequest(req);
   if (!session) {
-    return NextResponse.json({ message: 'Não autenticado' }, { status: 401 });
+    throw new ApiError({
+      code: 'UNAUTHORIZED',
+      message: 'Não autenticado',
+      status: 401,
+    });
   }
 
   const permissionError = requirePermission(session, AdminPermission.FINANCEIRO);
-  if (permissionError) return permissionError;
+  if (permissionError) {
+    throw new ApiError({
+      code: 'FORBIDDEN',
+      message: 'Permissão negada',
+      status: 403,
+    });
+  }
 
-  const searchParams = request.nextUrl.searchParams;
+  const searchParams = req.nextUrl.searchParams;
   const report = searchParams.get('report') || 'dre';
   const dateStart = searchParams.get('dateStart') || '';
   const dateEnd = searchParams.get('dateEnd') || '';
@@ -52,10 +73,13 @@ export async function GET(request: NextRequest) {
       break;
   }
 
+  const fileName = `relatorio-${report}-${Date.now()}.csv`;
+  logger.info('finance_report_generated', { report, dateStart, dateEnd, fileName });
+
   return new NextResponse(csv, {
     headers: {
       'Content-Type': 'text/csv',
-      'Content-Disposition': `attachment; filename="relatorio-${report}-${Date.now()}.csv"`,
+      'Content-Disposition': `attachment; filename="${fileName}"`,
     },
   });
-}
+});

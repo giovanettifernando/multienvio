@@ -118,10 +118,14 @@ export default function ShipmentDetailClient() {
     queryFn: async () => {
       const res = await fetch(`/api/shipments/${id}`);
       if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.message || 'Erro ao buscar envio');
+        const errorJson = await res.json();
+        // Handle standardized API response format { data: T, error, meta }
+        const errorData = errorJson.error ?? errorJson;
+        throw new Error(errorData.message || errorData.error || 'Erro ao buscar envio');
       }
-      return res.json();
+      const json = await res.json();
+      // Handle standardized API response format { data: T, error, meta }
+      return (json.data ?? json) as ShipmentDetail;
     },
     enabled: !!id,
   });

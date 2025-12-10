@@ -1,25 +1,42 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { withApiHandler } from '@/lib/api/handler';
+import { ApiError } from '@/lib/api/errors';
 import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
-import { requirePermission } from '@/lib/auth/permissions';
 import { AdminPermission } from '@prisma/client';
-import { rateLimitByUser, RATE_LIMITS } from '@/lib/rate-limit';
+import { rateLimitByUser, RATE_LIMITS } from '@/lib/rate-limit-redis';
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const session = await getAdminSessionFromRequest(request);
+interface MarkInvoicePaidResponse {
+  ok: boolean;
+}
+
+export const POST = withApiHandler<MarkInvoicePaidResponse, { id: string }>(async ({ req, params }) => {
+  const session = await getAdminSessionFromRequest(req);
   if (!session) {
-    return NextResponse.json({ message: 'Não autenticado' }, { status: 401 });
+    throw new ApiError({
+      code: 'UNAUTHORIZED',
+      message: 'Não autenticado',
+      status: 401,
+    });
   }
 
-  const permissionError = requirePermission(session, AdminPermission.FINANCEIRO);
-  if (permissionError) return permissionError;
+  if (!session.permissions.includes(AdminPermission.FINANCEIRO)) {
+    throw new ApiError({
+      code: 'FORBIDDEN',
+      message: 'Sem permissão para acessar finanças',
+      status: 403,
+    });
+  }
 
-  const rateLimitError = rateLimitByUser(session.staffId, 'invoice_paid', RATE_LIMITS.FINANCE);
-  if (rateLimitError) return rateLimitError;
+  const rateLimitError = await rateLimitByUser(session.staffId, 'invoice_paid', RATE_LIMITS.FINANCE);
+  if (rateLimitError) {
+    throw new ApiError({
+      code: 'TOO_MANY_REQUESTS',
+      message: 'Muitas requisições. Tente novamente em alguns minutos.',
+      status: 429,
+    });
+  }
 
-  const { id } = await params;
+  const { id } = params;
   console.log('[Mock] Marking invoice as paid:', id);
-  return NextResponse.json({ ok: true });
-}
+
+  return { data: { ok: true } };
+});

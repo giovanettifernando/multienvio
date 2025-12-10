@@ -1,20 +1,20 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { withApiHandler } from '@/lib/api/handler';
+import { ApiError } from '@/lib/api/errors';
 import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
-import { requirePermission } from '@/lib/auth/permissions';
 import { AdminPermission } from '@prisma/client';
 import type { TimelineEvent } from '@/lib/admin/ops/types';
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const session = await getAdminSessionFromRequest(request);
+export const GET = withApiHandler<TimelineEvent[], { id: string }>(async (context) => {
+  const { req, params } = context;
+
+  const session = await getAdminSessionFromRequest(req);
   if (!session) {
-    return NextResponse.json({ message: 'Não autenticado' }, { status: 401 });
+    throw new ApiError({ code: 'unauthorized', message: 'Não autenticado', status: 401 });
   }
 
-  const permissionError = requirePermission(session, AdminPermission.OPERACOES);
-  if (permissionError) return permissionError;
+  if (!session.permissions.includes(AdminPermission.OPERACOES)) {
+    throw new ApiError({ code: 'forbidden', message: 'Permissão negada', status: 403 });
+  }
 
   await params;
 
@@ -45,5 +45,5 @@ export async function GET(
     },
   ];
 
-  return NextResponse.json(mockTimeline);
-}
+  return { data: mockTimeline };
+});

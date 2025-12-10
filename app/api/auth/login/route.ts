@@ -1,23 +1,36 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ZodError } from 'zod';
 import bcrypt from 'bcrypt';
+import { withApiHandlerResponse } from '@/lib/api/handler';
 import { LoginSchema } from '@/lib/validation/auth';
 import { prisma } from '@/lib/db';
-import { createSession } from '@/lib/auth/session';
+import { sign, AUTH_COOKIE_NAME } from '@/lib/auth/session';
 import { UserStatus, AuthRole, type User } from '@/types/contracts';
-import { rateLimitByIP, RATE_LIMITS } from '@/lib/rate-limit';
+import { rateLimitByIP, RATE_LIMITS } from '@/lib/rate-limit-redis';
 
+interface ValidationError {
+  field: string;
+  message: string;
+}
 
-export async function POST(request: Request) {
+// Cookie options
+const SESSION_TTL_DAYS = parseInt(process.env.CLIENT_SESSION_TTL_DAYS || '7', 10);
+const COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * SESSION_TTL_DAYS;
+
+export const POST = withApiHandlerResponse(async (context) => {
+  const { req, logger } = context;
+
   // Rate limiting by IP - 5 attempts per 5 minutes
-  const rateLimitError = rateLimitByIP(request as NextRequest, 'client_login', RATE_LIMITS.LOGIN);
+  const rateLimitError = await rateLimitByIP(req as NextRequest, 'client_login', RATE_LIMITS.LOGIN);
   if (rateLimitError) return rateLimitError;
 
   try {
-    const payload = await request.json();
+    const payload = await req.json();
     const data = LoginSchema.parse(payload);
 
-    // Buscar usuário por email com role (sempre buscar do banco, sem cache)
+    logger.info('login_attempt', { email: data.email });
+
+    // Buscar usuário por email com role
     const dbUser = await prisma.user.findUnique({
       where: { email: data.email },
       include: {
@@ -27,6 +40,7 @@ export async function POST(request: Request) {
 
     // Mensagem genérica para não revelar se email existe
     if (!dbUser || !dbUser.passwordHash) {
+      logger.warn('login_failed', { reason: 'invalid_credentials' });
       return NextResponse.json(
         { message: 'E-mail ou senha inválidos' },
         { status: 401 }
@@ -37,6 +51,7 @@ export async function POST(request: Request) {
     const passwordValid = await bcrypt.compare(data.password, dbUser.passwordHash);
 
     if (!passwordValid) {
+      logger.warn('login_failed', { reason: 'invalid_password', userId: dbUser.id });
       return NextResponse.json(
         { message: 'E-mail ou senha inválidos' },
         { status: 401 }
@@ -45,6 +60,7 @@ export async function POST(request: Request) {
 
     // Verificar se o email foi verificado
     if (!dbUser.emailVerified) {
+      logger.warn('login_failed', { reason: 'email_not_verified', userId: dbUser.id });
       return NextResponse.json(
         {
           message: 'Email não verificado. Verifique sua caixa de entrada para ativar sua conta.',
@@ -56,6 +72,7 @@ export async function POST(request: Request) {
 
     // Verificar status do usuário
     if (dbUser.status !== UserStatus.ACTIVE) {
+      logger.warn('login_failed', { reason: 'inactive_account', userId: dbUser.id, status: dbUser.status });
       return NextResponse.json(
         { message: 'Conta inativa ou bloqueada' },
         { status: 403 }
@@ -68,8 +85,8 @@ export async function POST(request: Request) {
       data: { lastLoginAt: new Date() },
     });
 
-    // Criar sessão (JWT + cookie) com tokenVersion
-    await createSession({
+    // Criar token JWT com tokenVersion
+    const token = await sign({
       userId: dbUser.id,
       email: dbUser.email,
       role: dbUser.role?.name || 'user',
@@ -90,10 +107,22 @@ export async function POST(request: Request) {
       updatedAt: dbUser.updatedAt.toISOString(),
     };
 
-    // Criar resposta com cookie de atividade resetado
+    logger.info('login_success', { userId: dbUser.id });
+
+    // Criar resposta JSON
     const response = NextResponse.json({
       user,
       message: 'Login realizado com sucesso',
+    });
+
+    // Set auth cookie directly on the response
+    // NOTE: cookies() API doesn't work with custom NextResponse - must set on response object
+    response.cookies.set(AUTH_COOKIE_NAME, token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: COOKIE_MAX_AGE_SECONDS,
     });
 
     // Reset last_activity cookie para evitar timeout de inatividade logo após login
@@ -120,10 +149,10 @@ export async function POST(request: Request) {
       );
     }
 
-    console.error('Error during login:', error);
+    logger.error('login_error', { err: error });
     return NextResponse.json(
       { message: 'Não foi possível realizar o login' },
       { status: 500 }
     );
   }
-}
+});

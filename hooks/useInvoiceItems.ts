@@ -32,10 +32,12 @@ export function useInvoiceItems(): UseInvoiceItemsReturn {
         body: JSON.stringify({ xml }),
       });
 
-      const result: ParseXmlResponse = await response.json();
+      const json = await response.json();
+      // Handle standardized API response format { data: T, error, meta }
+      const result: ParseXmlResponse = json.data ?? json;
 
       if (!result.success || !result.data) {
-        throw new Error(result.error || 'Erro ao processar XML');
+        throw new Error(result.error || json.error?.message || 'Erro ao processar XML');
       }
 
       setData(result.data);

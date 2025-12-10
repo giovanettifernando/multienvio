@@ -15,7 +15,7 @@ export function WalletCard() {
   const { data: txData } = useWalletTransactions({ limit: 30 });
 
   const last30DaysSpend = useMemo(() => {
-    if (!txData?.transactions.length) return 0;
+    if (!txData?.transactions?.length) return 0;
     const thirtyDaysAgo = new Date().getTime() - 30 * 24 * 60 * 60 * 1000;
     return txData.transactions
       .filter((entry) => {
@@ -25,7 +25,7 @@ export function WalletCard() {
       .reduce((acc, entry) => acc + Math.abs(entry.amountReais), 0);
   }, [txData]);
 
-  const balance = wallet?.balance.availableReais ?? 0;
+  const balance = wallet?.balance?.availableReais ?? 0;
   const isLowBalance = balance < 50;
 
   return (

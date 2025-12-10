@@ -8,7 +8,9 @@ import { prisma } from '@/lib/db';
 import bcrypt from 'bcrypt';
 import { SignJWT } from 'jose';
 import { cookies } from 'next/headers';
-import { rateLimitByIP } from '@/lib/rate-limit';
+import { rateLimitByIP } from '@/lib/rate-limit-redis';
+import { withApiHandlerResponse } from '@/lib/api/handler';
+import { CollectorLoginSchema } from '@/lib/validation/auth';
 
 // Validar JWT_SECRET em produção
 if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
@@ -21,14 +23,38 @@ if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
 // JWT Secret - Nunca usar fallbacks em produção
 const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET!);
 
+type CollectorLoginErrorResponse =
+  | { code: 'VALIDATION_ERROR'; message: string; errors: Array<{ field: string; message: string }> }
+  | { code: 'INVALID_CREDENTIALS'; message: string }
+  | { code: 'EMAIL_NOT_VERIFIED'; message: string; collectorId: string }
+  | { code: 'ACCOUNT_INACTIVE'; message: string }
+  | { code: 'SERVER_ERROR'; message: string };
+
+type CollectorLoginSuccessResponse = {
+  message: string;
+  coletor: {
+    id: string;
+    status: string;
+    pfNome: string | null;
+    pfEmail: string;
+    pfCelular: string | null;
+    pjRazaoSocial: string | null;
+    pjCnpj: string | null;
+  };
+};
+
+type CollectorLoginResponse = CollectorLoginSuccessResponse | CollectorLoginErrorResponse;
+
 /**
  * POST /api/coletores/auth/login
  * Autentica coletor por e-mail e senha
  */
-export async function POST(request: NextRequest) {
+export const POST = withApiHandlerResponse(async (context) => {
+  const { req, logger } = context;
+
   try {
-    // 🔒 SECURITY: Rate limiting para prevenir ataques de força bruta
-    const rateLimitResult = rateLimitByIP(request, 'collector-login', {
+    // 🔒 SECURITY: Rate limiting para prevenir ataques de força bruta (Redis distribuido)
+    const rateLimitResult = await rateLimitByIP(req as NextRequest, 'collector-login', {
       windowMs: 5 * 60 * 1000, // 5 minutos
       maxRequests: 5, // 5 tentativas
     });
@@ -37,16 +63,23 @@ export async function POST(request: NextRequest) {
       return rateLimitResult;
     }
 
-    const body = await request.json();
-    const { email, password } = body;
+    const body = await req.json();
 
-    if (!email || !password) {
-      console.warn('[login] MISSING_CREDENTIALS: Email or password missing');
+    // Validação com Zod
+    const validation = CollectorLoginSchema.safeParse(body);
+    if (!validation.success) {
+      logger.warn('collector_login_validation_error', { errors: validation.error.flatten() });
       return NextResponse.json(
-        { message: 'E-mail e senha são obrigatórios' },
+        {
+          code: 'VALIDATION_ERROR',
+          message: validation.error.issues[0]?.message || 'Dados inválidos',
+          errors: validation.error.issues.map((e) => ({ field: e.path.join('.'), message: e.message })),
+        },
         { status: 400 }
       );
     }
+
+    const { email, password } = validation.data;
 
     // Find collector by email (case-insensitive)
     const collector = await prisma.collector.findFirst({
@@ -63,7 +96,7 @@ export async function POST(request: NextRequest) {
 
     // Don't leak information about whether email exists
     if (!collector || !collector.credential) {
-      console.warn('[login] INVALID_CREDENTIALS: Collector not found or no credentials for email:', email.substring(0, 3) + '***');
+      logger.warn('collector_login_invalid_credentials');
       return NextResponse.json(
         {
           code: 'INVALID_CREDENTIALS',
@@ -73,13 +106,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.info('[login] COLLECTOR_FOUND: ID', collector.id, 'for email:', email.substring(0, 3) + '***');
+    logger.debug('collector_login_found', { collectorId: collector.id });
 
     // Verify password
     const passwordMatch = await bcrypt.compare(password, collector.credential.passwordHash);
 
     if (!passwordMatch) {
-      console.warn('[login] INVALID_CREDENTIALS: Wrong password for collector ID:', collector.id);
+      logger.warn('collector_login_wrong_password', { collectorId: collector.id });
       return NextResponse.json(
         {
           code: 'INVALID_CREDENTIALS',
@@ -91,7 +124,7 @@ export async function POST(request: NextRequest) {
 
     // Check if email is verified
     if (!collector.pfEmailVerified) {
-      console.warn('[login] EMAIL_NOT_VERIFIED: Collector ID:', collector.id, '- Email not verified');
+      logger.warn('collector_login_email_not_verified', { collectorId: collector.id });
       return NextResponse.json(
         {
           code: 'EMAIL_NOT_VERIFIED',
@@ -104,7 +137,7 @@ export async function POST(request: NextRequest) {
 
     // Check if collector is active (ACTIVE or INACTIVE are allowed, BLOCKED is not)
     if (collector.status === 'BLOCKED') {
-      console.warn('[login] ACCOUNT_BLOCKED: Collector ID:', collector.id, '- Status:', collector.status);
+      logger.warn('collector_login_blocked', { collectorId: collector.id });
       return NextResponse.json(
         {
           code: 'ACCOUNT_INACTIVE',
@@ -115,7 +148,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (collector.status === 'INACTIVE') {
-      console.info('[login] ACCOUNT_INACTIVE: Collector ID:', collector.id, '- Awaiting admin approval');
+      logger.info('collector_login_inactive', { collectorId: collector.id });
       return NextResponse.json(
         {
           code: 'ACCOUNT_INACTIVE',
@@ -125,7 +158,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.info('[login] LOGIN_SUCCESS: Collector ID:', collector.id, '(', collector.pfNome, ') logged in successfully');
+    logger.info('collector_login_success', { collectorId: collector.id });
 
     // Create JWT token with tokenVersion for logout invalidation
     const token = await new SignJWT({
@@ -164,7 +197,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('[login] SERVER_ERROR:', error);
+    logger.error('collector_login_error', { err: error });
     return NextResponse.json(
       {
         code: 'SERVER_ERROR',
@@ -173,4 +206,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

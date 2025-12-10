@@ -1,27 +1,61 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
+import { withApiHandler } from '@/lib/api/handler';
+import { ApiError } from '@/lib/api/errors';
 import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
-import { requirePermission } from '@/lib/auth/permissions';
 import { AdminPermission } from '@prisma/client';
-import { rateLimitByUser, RATE_LIMITS } from '@/lib/rate-limit';
+import { rateLimitByUser, RATE_LIMITS } from '@/lib/rate-limit-redis';
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const session = await getAdminSessionFromRequest(request);
+const updateChargebackSchema = z.object({
+  status: z.enum(['pending', 'won', 'lost', 'cancelled']),
+  notes: z.string().optional(),
+});
+
+interface UpdateChargebackResponse {
+  ok: boolean;
+}
+
+export const POST = withApiHandler<UpdateChargebackResponse, { id: string }>(async ({ req, params }) => {
+  const session = await getAdminSessionFromRequest(req);
   if (!session) {
-    return NextResponse.json({ message: 'Não autenticado' }, { status: 401 });
+    throw new ApiError({
+      code: 'UNAUTHORIZED',
+      message: 'Não autenticado',
+      status: 401,
+    });
   }
 
-  const permissionError = requirePermission(session, AdminPermission.FINANCEIRO);
-  if (permissionError) return permissionError;
+  if (!session.permissions.includes(AdminPermission.FINANCEIRO)) {
+    throw new ApiError({
+      code: 'FORBIDDEN',
+      message: 'Sem permissão para acessar finanças',
+      status: 403,
+    });
+  }
 
-  const rateLimitError = rateLimitByUser(session.staffId, 'chargeback_update', RATE_LIMITS.FINANCE);
-  if (rateLimitError) return rateLimitError;
+  const rateLimitError = await rateLimitByUser(session.staffId, 'chargeback_update', RATE_LIMITS.FINANCE);
+  if (rateLimitError) {
+    throw new ApiError({
+      code: 'TOO_MANY_REQUESTS',
+      message: 'Muitas requisições. Tente novamente em alguns minutos.',
+      status: 429,
+    });
+  }
 
-  const { id } = await params;
-  const body = await request.json();
-  const { status } = body;
-  console.log('[Mock] Updating chargeback:', id, 'to', status);
-  return NextResponse.json({ ok: true });
-}
+  const { id } = params;
+  const body = await req.json();
+
+  const parsed = updateChargebackSchema.safeParse(body);
+  if (!parsed.success) {
+    throw new ApiError({
+      code: 'VALIDATION_ERROR',
+      message: 'Dados inválidos',
+      status: 400,
+      details: parsed.error.flatten(),
+    });
+  }
+
+  const { status, notes } = parsed.data;
+  console.log('[Mock] Updating chargeback:', id, 'to', status, { notes });
+
+  return { data: { ok: true } };
+});

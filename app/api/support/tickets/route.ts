@@ -1,12 +1,20 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getSession } from '@/lib/auth/session';
+import { withApiHandler } from '@/lib/api/handler';
+import { ApiError } from '@/lib/api/errors';
+import { getUserFromRequest } from '@/lib/auth/session';
 import { createTicketForUser, listTicketsForUser } from '@/lib/support/service';
 import {
   NewTicketInputSchema,
   type NewTicketInput,
   type Priority,
   type Status,
+  type SupportTicket,
 } from '@/lib/validation/support';
+import { logger } from '@/lib/logger';
+
+interface ListTicketsResponse {
+  tickets: SupportTicket[];
+  total: number;
+}
 
 
 function parseArrayParam(params: URLSearchParams, key: string): string[] {
@@ -22,13 +30,13 @@ function parseArrayParam(params: URLSearchParams, key: string): string[] {
     .filter(Boolean);
 }
 
-export async function GET(request: Request) {
-  const session = await getSession();
-  if (!session) {
-    return NextResponse.json({ message: 'Não autenticado' }, { status: 401 });
+export const GET = withApiHandler<ListTicketsResponse>(async (context) => {
+  const session = await getUserFromRequest(context.req);
+  if (!session?.userId) {
+    throw new ApiError({ code: 'unauthorized', message: 'Não autenticado', status: 401 });
   }
 
-  const url = new URL(request.url);
+  const url = new URL(context.req.url);
   const params = url.searchParams;
 
   const statusValues = parseArrayParam(params, 'status') as Status[];
@@ -37,51 +45,43 @@ export async function GET(request: Request) {
   const limitParam = params.get('limit');
   const limit = limitParam ? parseInt(limitParam, 10) : undefined;
 
-  try {
-    const allTickets = await listTicketsForUser(session.userId, {
-      status: statusValues.length ? statusValues : undefined,
-      priority: priorityValues.length ? priorityValues : undefined,
-      query,
+  const allTickets = await listTicketsForUser(session.userId, {
+    status: statusValues.length ? statusValues : undefined,
+    priority: priorityValues.length ? priorityValues : undefined,
+    query,
+  });
+
+  const total = allTickets.length;
+
+  // Aplicar limit se fornecido
+  const tickets = limit && limit > 0 ? allTickets.slice(0, limit) : allTickets;
+
+  return { data: { tickets, total } };
+});
+
+export const POST = withApiHandler<SupportTicket>(async (context) => {
+  const session = await getUserFromRequest(context.req);
+  if (!session?.userId) {
+    throw new ApiError({ code: 'unauthorized', message: 'Não autenticado', status: 401 });
+  }
+
+  const payload = (await context.req.json()) as unknown;
+  const parsed = NewTicketInputSchema.safeParse(payload);
+
+  if (!parsed.success) {
+    logger.debug({ event: 'ticket_validation_error', errors: parsed.error.flatten() }, 'Ticket validation failed');
+    throw new ApiError({
+      code: 'validation_error',
+      message: parsed.error.issues[0]?.message || 'Dados inválidos',
+      status: 400,
+      details: parsed.error.flatten(),
     });
-
-    const total = allTickets.length;
-
-    // Aplicar limit se fornecido
-    const tickets = limit && limit > 0 ? allTickets.slice(0, limit) : allTickets;
-
-    return NextResponse.json({ tickets, total });
-  } catch (error) {
-    console.error('[SUPPORT_TICKETS_GET]', error);
-    return NextResponse.json({ message: 'Erro ao carregar tickets' }, { status: 500 });
-  }
-}
-
-export async function POST(request: Request) {
-  const session = await getSession();
-  if (!session) {
-    return NextResponse.json({ message: 'Não autenticado' }, { status: 401 });
   }
 
-  try {
-    const payload = (await request.json()) as unknown;
-    const parsed = NewTicketInputSchema.safeParse(payload);
+  const data: NewTicketInput = parsed.data;
+  const ticket = await createTicketForUser(session.userId, data);
 
-    if (!parsed.success) {
-      return NextResponse.json(
-        {
-          message: 'Dados inválidos',
-          errors: parsed.error.flatten(),
-        },
-        { status: 400 },
-      );
-    }
+  logger.info({ event: 'ticket_created', ticketId: ticket.id, userId: session.userId }, 'Support ticket created');
 
-    const data: NewTicketInput = parsed.data;
-    const ticket = await createTicketForUser(session.userId, data);
-
-    return NextResponse.json(ticket, { status: 201 });
-  } catch (error) {
-    console.error('[SUPPORT_TICKETS_POST]', error);
-    return NextResponse.json({ message: 'Erro ao criar ticket' }, { status: 500 });
-  }
-}
+  return { data: ticket, status: 201 };
+});

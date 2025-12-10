@@ -1,34 +1,34 @@
-
-import { NextRequest, NextResponse } from 'next/server';
+import { withApiHandler } from '@/lib/api/handler';
+import { ApiError } from '@/lib/api/errors';
 import { getAutonomousCollectorSession } from '@/lib/auth/autonomous-collector-session';
 import { getTicketForAutonomousCollector } from '@/lib/support/autonomous-collector-service';
+import { type SupportTicket } from '@/lib/validation/support';
+
+type SuporteTicketResponse = {
+  ticket: SupportTicket;
+};
 
 /**
  * GET /api/coletores/suporte/[id]
  * Obtém detalhes de um ticket específico do coletor autônomo
  */
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const session = await getAutonomousCollectorSession();
-    if (!session) {
-      return NextResponse.json({ message: 'Não autenticado' }, { status: 401 });
-    }
+export const GET = withApiHandler<SuporteTicketResponse, { id: string }>(async (context) => {
+  const { params, logger } = context;
 
-    const { id } = await params;
-
-    const ticket = await getTicketForAutonomousCollector(id, session.coletorId);
-
-    if (!ticket) {
-      return NextResponse.json({ message: 'Ticket não encontrado' }, { status: 404 });
-    }
-
-    return NextResponse.json({ ticket }, { status: 200 });
-  } catch (error) {
-    console.error('[COLETORES_SUPORTE_GET_BY_ID]', error);
-    const message = error instanceof Error ? error.message : 'Erro ao buscar ticket';
-    return NextResponse.json({ message }, { status: 500 });
+  const session = await getAutonomousCollectorSession();
+  if (!session) {
+    throw new ApiError({ code: 'unauthorized', message: 'Não autenticado', status: 401 });
   }
-}
+
+  const { id } = params;
+
+  const ticket = await getTicketForAutonomousCollector(id, session.coletorId);
+
+  if (!ticket) {
+    throw new ApiError({ code: 'not_found', message: 'Ticket não encontrado', status: 404 });
+  }
+
+  logger.info('coletores_suporte_get_ticket', { coletorId: session.coletorId, ticketId: id });
+
+  return { data: { ticket } };
+});

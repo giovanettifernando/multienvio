@@ -33,6 +33,8 @@ import {
   DEFAULT_CORREIOS_SERVICES,
   servicoAceitaValorDeclarado,
 } from './constants';
+import { quoteCache } from '@/lib/cache';
+import { logger } from '@/lib/logger';
 
 // ============================================================================
 // Validação
@@ -471,6 +473,7 @@ export function getCorreiosServicos(): CorreiosServiceConfig[] {
 
 /**
  * Calcula cotação completa (preço + prazo) para todos os serviços habilitados
+ * COM CACHE Redis (TTL 1 hora)
  *
  * @param servicos Array de configurações de serviço (ou usar default)
  * @param input Dados do objeto
@@ -481,18 +484,41 @@ export async function cotarCorreios(
   input: CorreiosPrecoPrazoInput
 ): Promise<CorreiosCotacaoCompleta[]> {
   if (servicos.length === 0) {
-    console.warn('[CORREIOS_COTAR] No services configured');
+    logger.warn({ event: 'correios_quote_no_services' }, 'No services configured');
     return [];
   }
 
   const codigosServico = servicos.map((s) => s.codigoServico);
 
-  console.log('[CORREIOS_COTAR] Starting quote:', {
+  // Gerar cache key baseada nos parâmetros
+  const cacheParams = {
+    originCep: normalizeCep(input.cepOrigem),
+    destinationCep: normalizeCep(input.cepDestino),
+    weight: input.pesoGramas / 1000, // Gramas para KG
+    length: input.comprimentoCm,
+    width: input.larguraCm,
+    height: input.alturaCm,
+    carrier: 'correios',
+  };
+
+  // Verificar cache
+  const cached = await quoteCache.get<CorreiosCotacaoCompleta[]>(cacheParams);
+  if (cached) {
+    logger.debug({
+      event: 'correios_quote_cache_hit',
+      cepOrigem: input.cepOrigem,
+      cepDestino: input.cepDestino,
+    }, 'Quote found in cache');
+    return cached;
+  }
+
+  logger.info({
+    event: 'correios_quote_start',
     servicos: servicos.map((s) => ({ codigo: s.codigoServico, nome: s.nomeExibicao })),
     cepOrigem: input.cepOrigem,
     cepDestino: input.cepDestino,
     pesoGramas: input.pesoGramas,
-  });
+  }, 'Starting Correios quote');
 
   // Chamar APIs de preço e prazo em paralelo
   const [precoResults, prazoResults] = await Promise.all([
@@ -562,14 +588,20 @@ export async function cotarCorreios(
     cotacoes.push(cotacao);
   }
 
-  console.log('[CORREIOS_COTAR] Quote completed:', {
+  logger.info({
+    event: 'correios_quote_complete',
     total: cotacoes.length,
     servicos: cotacoes.map((c) => ({
       nome: c.nomeServico,
       preco: c.precoTotal,
       prazo: c.prazoDias,
     })),
-  });
+  }, 'Correios quote completed');
+
+  // Salvar no cache (fire and forget) - só se tiver resultados válidos
+  if (cotacoes.some((c) => c.precoTotal > 0 && !c.erros?.length)) {
+    quoteCache.set(cacheParams, cotacoes).catch(() => {});
+  }
 
   return cotacoes;
 }

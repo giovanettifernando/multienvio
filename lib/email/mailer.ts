@@ -300,6 +300,117 @@ export async function sendPasswordChangedEmail(
 }
 
 /**
+ * Send temporary password email for new staff users
+ */
+export async function sendStaffTempPasswordEmail(
+  to: string,
+  name: string,
+  tempPassword: string
+): Promise<boolean> {
+  const baseUrl = getEmailBaseUrl();
+  const loginUrl = `${baseUrl}/admin/login`;
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Sua conta foi criada - Envio Legal Admin</title>
+    </head>
+    <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f5f5f5;">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f5f5f5; padding: 20px 0;">
+        <tr>
+          <td align="center">
+            <table width="600" cellpadding="0" cellspacing="0" border="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+              <!-- Header -->
+              <tr>
+                <td style="background-color: #722ed1; padding: 30px; text-align: center;">
+                  <h1 style="margin: 0; color: #ffffff; font-size: 28px;">Envio Legal - Admin</h1>
+                </td>
+              </tr>
+
+              <!-- Content -->
+              <tr>
+                <td style="padding: 40px 30px;">
+                  <h2 style="margin: 0 0 20px 0; color: #333333; font-size: 24px;">Olá, ${name}!</h2>
+                  <p style="margin: 0 0 20px 0; color: #666666; font-size: 16px; line-height: 1.6;">
+                    Sua conta de administrador no <strong>Envio Legal</strong> foi criada com sucesso.
+                  </p>
+                  <p style="margin: 0 0 20px 0; color: #666666; font-size: 16px; line-height: 1.6;">
+                    Use as credenciais abaixo para fazer seu primeiro login:
+                  </p>
+
+                  <!-- Credentials Box -->
+                  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f9f0ff; border-radius: 4px; border-left: 3px solid #722ed1; margin: 20px 0;">
+                    <tr>
+                      <td style="padding: 20px;">
+                        <p style="margin: 0 0 10px 0; color: #333333; font-size: 14px;">
+                          <strong>Email:</strong> ${to}
+                        </p>
+                        <p style="margin: 0; color: #333333; font-size: 14px;">
+                          <strong>Senha temporária:</strong>
+                          <code style="background-color: #fff; padding: 4px 8px; border-radius: 4px; font-family: monospace; font-size: 16px; color: #722ed1; border: 1px solid #d9d9d9;">${tempPassword}</code>
+                        </p>
+                      </td>
+                    </tr>
+                  </table>
+
+                  <!-- Warning Box -->
+                  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #fff7e6; border-radius: 4px; border-left: 3px solid #fa8c16; margin: 20px 0;">
+                    <tr>
+                      <td style="padding: 15px;">
+                        <p style="margin: 0 0 10px 0; color: #fa8c16; font-size: 14px; font-weight: bold;">
+                          ⚠ Importante
+                        </p>
+                        <p style="margin: 0; color: #666666; font-size: 14px; line-height: 1.6;">
+                          Por segurança, recomendamos que você altere sua senha após o primeiro login. Esta senha temporária não deve ser compartilhada.
+                        </p>
+                      </td>
+                    </tr>
+                  </table>
+
+                  <!-- Button -->
+                  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 30px 0;">
+                    <tr>
+                      <td align="center">
+                        <a href="${loginUrl}" style="display: inline-block; background-color: #722ed1; color: #ffffff; text-decoration: none; padding: 14px 40px; border-radius: 4px; font-size: 16px; font-weight: bold;">
+                          Acessar Painel Admin
+                        </a>
+                      </td>
+                    </tr>
+                  </table>
+
+                  <p style="margin: 30px 0 0 0; color: #999999; font-size: 14px; line-height: 1.6;">
+                    Se você não esperava receber este email ou acredita que foi um erro, entre em contato com o administrador do sistema.
+                  </p>
+                </td>
+              </tr>
+
+              <!-- Footer -->
+              <tr>
+                <td style="background-color: #f5f5f5; padding: 20px 30px; text-align: center; border-top: 1px solid #e8e8e8;">
+                  <p style="margin: 0; color: #999999; font-size: 12px;">
+                    © ${new Date().getFullYear()} Envio Legal. Todos os direitos reservados.
+                  </p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </body>
+    </html>
+  `;
+
+  return sendEmail({
+    to,
+    subject: 'Sua conta foi criada - Envio Legal Admin',
+    html,
+  });
+}
+
+/**
  * Send password reset email
  */
 export async function sendPasswordResetEmail(

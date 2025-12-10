@@ -1,4 +1,5 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { apiFetch } from "@/lib/api/client";
 import type {
   QuoteCalculateResponse,
   QuoteRequestPayload,
@@ -36,58 +37,17 @@ export const useQuoteCalculate = () =>
     ): Promise<QuoteCalculateResponse> => {
       const requestId = `FE-${Date.now()}`;
       console.log(`[HOOK][${requestId}] Iniciando cálculo de cotações`);
-      console.log(`[HOOK][${requestId}] Payload:`, JSON.stringify(payload, null, 2));
 
       try {
-        console.log(`[HOOK][${requestId}] Enviando POST /api/cotacoes...`);
-        const res = await fetch("/api/cotacoes", {
+        // apiFetch automatically extracts data from { data: ..., error, meta } response
+        const data = await apiFetch<QuoteCalculateResponse>("/api/cotacoes", {
           method: "POST",
           body: JSON.stringify(payload),
           headers: { "Content-Type": "application/json" },
         });
 
-        console.log(`[HOOK][${requestId}] Resposta recebida:`, {
-          status: res.status,
-          statusText: res.statusText,
-          ok: res.ok,
-        });
-
-        if (!res.ok) {
-          let errorBody;
-          try {
-            errorBody = await res.json();
-          } catch {
-            errorBody = await res.text();
-          }
-          console.error(`[HOOK][${requestId}] Erro HTTP ${res.status}:`, errorBody);
-
-          // Se for erro 400 de validação, criar mensagem amigável
-          if (res.status === 400 && errorBody && typeof errorBody === 'object') {
-            const errors = errorBody as { message?: string; errors?: { fieldErrors?: Record<string, string[]> } };
-            if (errors.errors?.fieldErrors) {
-              const fieldErrors = errors.errors.fieldErrors;
-              const errorMessages: string[] = [];
-
-              Object.entries(fieldErrors).forEach(([, messages]) => {
-                if (Array.isArray(messages)) {
-                  errorMessages.push(...messages);
-                }
-              });
-
-              if (errorMessages.length > 0) {
-                throw new Error(`Validação falhou:\n${errorMessages.join('\n')}`);
-              }
-            }
-          }
-
-          throw new Error(`Erro ao calcular cotações: ${res.status} ${res.statusText}`);
-        }
-
-        const data = await res.json();
         console.log(`[HOOK][${requestId}] Data recebida:`, data);
-        console.log(`[HOOK][${requestId}] Type of data:`, typeof data, Array.isArray(data));
 
-        console.log(`[HOOK][${requestId}] Chamando parseQuoteResponse...`);
         const parsed = parseQuoteResponse(data);
         console.log(`[HOOK][${requestId}] Parse OK:`, {
           hasQuoteId: !!parsed.quoteId,
@@ -98,8 +58,6 @@ export const useQuoteCalculate = () =>
         return parsed;
       } catch (error) {
         console.error(`[HOOK][${requestId}] ERRO CAPTURADO:`, error);
-        console.error(`[HOOK][${requestId}] Error type:`, typeof error);
-        console.error(`[HOOK][${requestId}] Error message:`, error instanceof Error ? error.message : String(error));
         throw error;
       }
     },
@@ -107,29 +65,12 @@ export const useQuoteCalculate = () =>
 
 export const useQuoteSelection = () =>
   useMutation({
-    mutationFn: async (
-      payload: QuoteSelectionPayload,
-    ): Promise<QuoteSelectionResponse> => {
-      const res = await fetch("/api/cotacoes/selecionar", {
+    mutationFn: (payload: QuoteSelectionPayload) =>
+      apiFetch<QuoteSelectionResponse>("/api/cotacoes/selecionar", {
         method: "POST",
         body: JSON.stringify(payload),
         headers: { "Content-Type": "application/json" },
-      });
-      if (!res.ok) {
-        // Try to get detailed error message from API
-        let errorMessage = "Erro ao confirmar seleção";
-        try {
-          const errorData = await res.json();
-          if (errorData?.message) {
-            errorMessage = errorData.message;
-          }
-        } catch {
-          // Ignore JSON parse errors
-        }
-        throw new Error(errorMessage);
-      }
-      return (await res.json()) as QuoteSelectionResponse;
-    },
+      }),
   });
 
 // Helper functions to map between API and frontend formats
@@ -196,15 +137,9 @@ export const useRecipients = (cep?: string) =>
   useQuery<Recipient[]>({
     queryKey: ["account", "recipients", cep],
     queryFn: async () => {
-      const res = await fetch(
+      const apiList = await apiFetch<ApiRecipientList>(
         `/api/account/recipients${cep ? `?cep=${encodeURIComponent(cep)}` : ""}`,
       );
-      if (!res.ok) {
-        throw new Error("Erro ao carregar destinatários.");
-      }
-      const data = await res.json();
-      // API returns paginated result, extract items
-      const apiList = data.data as ApiRecipientList;
       return apiList.items.map(mapApiRecipientToFrontend);
     },
     enabled: Boolean(cep),
@@ -215,18 +150,12 @@ export const useRecipientSave = () =>
   useMutation({
     mutationFn: async (payload: RecipientPayload) => {
       const apiPayload = mapFrontendRecipientToApi(payload);
-      const res = await fetch("/api/account/recipients", {
+      const result = await apiFetch<ApiRecipient>("/api/account/recipients", {
         method: "POST",
         body: JSON.stringify(apiPayload),
         headers: { "Content-Type": "application/json" },
       });
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData?.message || "Erro ao salvar destinatário");
-      }
-      const data = await res.json();
-      // Map response back to frontend format
-      return mapApiRecipientToFrontend(data.data);
+      return mapApiRecipientToFrontend(result);
     },
   });
 

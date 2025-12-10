@@ -1,16 +1,11 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { WalletBalanceResponse } from "@/types/wallet-statement";
+import { apiFetch } from "@/lib/api/client";
 
 export function useWallet() {
   return useQuery<WalletBalanceResponse>({
     queryKey: ["wallet"],
-    queryFn: async () => {
-      const response = await fetch("/api/wallet");
-      if (!response.ok) {
-        throw new Error("Falha ao carregar carteira");
-      }
-      return response.json();
-    },
+    queryFn: () => apiFetch<WalletBalanceResponse>("/api/wallet"),
   });
 }
 

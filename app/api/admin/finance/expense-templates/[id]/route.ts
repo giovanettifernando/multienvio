@@ -3,69 +3,80 @@
  * PATCH /api/admin/finance/expense-templates/[id] - Incrementa uso
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { withApiHandler } from '@/lib/api/handler';
+import { ApiError } from '@/lib/api/errors';
 import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
-import { requirePermission } from '@/lib/auth/permissions';
 import { AdminPermission } from '@prisma/client';
 import { prisma } from '@/lib/db';
 
-
-type RouteContext = { params: Promise<{ id: string }> };
+interface IncrementTemplateUsageResponse {
+  ok: boolean;
+}
 
 // Incrementar contador de uso
-export async function PATCH(request: NextRequest, context: RouteContext) {
-  const session = await getAdminSessionFromRequest(request);
+export const PATCH = withApiHandler<IncrementTemplateUsageResponse, { id: string }>(async ({ req, params }) => {
+  const session = await getAdminSessionFromRequest(req);
   if (!session) {
-    return NextResponse.json({ message: 'Não autenticado' }, { status: 401 });
-  }
-
-  const permissionError = requirePermission(session, AdminPermission.FINANCEIRO);
-  if (permissionError) return permissionError;
-
-  try {
-    const { id } = await context.params;
-
-    await prisma.expenseTemplate.update({
-      where: { id },
-      data: {
-        usageCount: { increment: 1 },
-      },
+    throw new ApiError({
+      code: 'UNAUTHORIZED',
+      message: 'Não autenticado',
+      status: 401,
     });
-
-    return NextResponse.json({ ok: true });
-  } catch (error) {
-    console.error('[EXPENSE_TEMPLATE_USE] Error:', error);
-    return NextResponse.json(
-      { message: 'Erro ao registrar uso do template' },
-      { status: 500 }
-    );
   }
+
+  if (!session.permissions.includes(AdminPermission.FINANCEIRO)) {
+    throw new ApiError({
+      code: 'FORBIDDEN',
+      message: 'Sem permissão para acessar este recurso',
+      status: 403,
+    });
+  }
+
+  const { id } = params;
+
+  await prisma.expenseTemplate.update({
+    where: { id },
+    data: {
+      usageCount: { increment: 1 },
+    },
+  });
+
+  return {
+    data: { ok: true },
+  };
+});
+
+interface DeactivateTemplateResponse {
+  ok: boolean;
 }
 
 // Desativar template (soft delete)
-export async function DELETE(request: NextRequest, context: RouteContext) {
-  const session = await getAdminSessionFromRequest(request);
+export const DELETE = withApiHandler<DeactivateTemplateResponse, { id: string }>(async ({ req, params }) => {
+  const session = await getAdminSessionFromRequest(req);
   if (!session) {
-    return NextResponse.json({ message: 'Não autenticado' }, { status: 401 });
-  }
-
-  const permissionError = requirePermission(session, AdminPermission.FINANCEIRO);
-  if (permissionError) return permissionError;
-
-  try {
-    const { id } = await context.params;
-
-    await prisma.expenseTemplate.update({
-      where: { id },
-      data: { isActive: false },
+    throw new ApiError({
+      code: 'UNAUTHORIZED',
+      message: 'Não autenticado',
+      status: 401,
     });
-
-    return NextResponse.json({ ok: true });
-  } catch (error) {
-    console.error('[EXPENSE_TEMPLATE_DELETE] Error:', error);
-    return NextResponse.json(
-      { message: 'Erro ao desativar template' },
-      { status: 500 }
-    );
   }
-}
+
+  if (!session.permissions.includes(AdminPermission.FINANCEIRO)) {
+    throw new ApiError({
+      code: 'FORBIDDEN',
+      message: 'Sem permissão para acessar este recurso',
+      status: 403,
+    });
+  }
+
+  const { id } = params;
+
+  await prisma.expenseTemplate.update({
+    where: { id },
+    data: { isActive: false },
+  });
+
+  return {
+    data: { ok: true },
+  };
+});

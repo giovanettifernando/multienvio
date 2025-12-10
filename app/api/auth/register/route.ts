@@ -1,21 +1,30 @@
-import { NextResponse } from 'next/server';
+import { withApiHandler } from '@/lib/api/handler';
+import { ApiError } from '@/lib/api/errors';
 import { ZodError } from 'zod';
 import bcrypt from 'bcrypt';
 import { RegisterSchema } from '@/lib/validation/auth';
 import { prisma } from '@/lib/db';
 import { generateToken, hashToken } from '@/lib/auth/tokens';
 import { sendVerificationEmail } from '@/lib/email/mailer';
+import { getCachedRoleByName } from '@/lib/cache';
 
+interface RegisterResponse {
+  userId: string;
+  email: string;
+  message: string;
+  emailVerificationSent: boolean;
+  emailError?: string;
+}
 
-export async function POST(request: Request) {
+export const POST = withApiHandler<RegisterResponse>(async (context) => {
+  const { req, logger } = context;
+
   try {
-    const payload = await request.json();
-    // 🛡️ SECURITY FIX: Não logar dados sensíveis
-    console.log('[REGISTER] Processing registration request');
+    const payload = await req.json();
+    logger.info('register_start');
 
     const data = RegisterSchema.parse(payload);
-    // Log apenas campos não sensíveis para debug
-    console.log('[REGISTER] Validated data - hasPhone:', !!data.phone);
+    logger.debug('register_validated', { hasPhone: !!data.phone });
 
     // Verificar se email já existe
     const existingUser = await prisma.user.findUnique({
@@ -23,15 +32,13 @@ export async function POST(request: Request) {
     });
 
     if (existingUser) {
-      console.log('[REGISTER] Email already exists');
-      return NextResponse.json(
-        {
-          message: 'E-mail já cadastrado',
-          code: 'EMAIL_ALREADY_IN_USE',
-          field: 'email'
-        },
-        { status: 409 }
-      );
+      logger.warn('register_email_exists');
+      throw new ApiError({
+        code: 'EMAIL_ALREADY_IN_USE',
+        message: 'E-mail já cadastrado',
+        status: 409,
+        details: { field: 'email' },
+      });
     }
 
     // Hash da senha
@@ -41,17 +48,16 @@ export async function POST(request: Request) {
     const verificationToken = generateToken();
     const hashedVerificationToken = hashToken(verificationToken);
 
-    // Buscar role "user" padrão
-    const userRole = await prisma.role.findUnique({
-      where: { name: 'user' },
-    });
+    // Buscar role "user" padrão (com cache)
+    const userRole = await getCachedRoleByName('user');
 
     if (!userRole) {
-      console.error('[REGISTER] Role "user" not found in database');
-      return NextResponse.json(
-        { message: 'Erro ao criar usuário' },
-        { status: 500 }
-      );
+      logger.error('register_role_missing');
+      throw new ApiError({
+        code: 'INTERNAL_ERROR',
+        message: 'Erro ao criar usuário',
+        status: 500,
+      });
     }
 
     // Criar usuário com status pending até verificar email
@@ -72,7 +78,7 @@ export async function POST(request: Request) {
       },
     });
 
-    console.log('[REGISTER] User created successfully');
+    logger.info('register_user_created', { userId: user.id });
 
     // Enviar email de verificação (não falhar o cadastro se email falhar)
     let emailVerificationSent = false;
@@ -86,18 +92,18 @@ export async function POST(request: Request) {
       );
 
       if (emailVerificationSent) {
-        console.log('[REGISTER] Verification email sent successfully');
+        logger.info('register_email_sent', { userId: user.id });
       } else {
-        console.warn('[REGISTER] Failed to send verification email');
+        logger.warn('register_email_failed', { userId: user.id });
         emailError = 'EMAIL_SEND_FAILED';
       }
     } catch (error) {
-      console.error('[REGISTER] Error sending verification email');
+      logger.error('register_email_error', { userId: user.id, err: error });
       emailError = 'EMAIL_SEND_FAILED';
     }
 
-    return NextResponse.json(
-      {
+    return {
+      data: {
         userId: user.id,
         email: user.email,
         message: emailVerificationSent
@@ -106,11 +112,15 @@ export async function POST(request: Request) {
         emailVerificationSent,
         ...(emailError && { emailError }),
       },
-      { status: 201 }
-    );
+      status: 201,
+    };
   } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+
     if (error instanceof ZodError) {
-      console.log('[REGISTER] Validation error:', JSON.stringify(error.issues, null, 2));
+      logger.debug('register_validation_error', { issues: error.issues });
 
       // Mapear erros para mensagens mais específicas
       const errors = error.issues.map((issue) => ({
@@ -139,23 +149,19 @@ export async function POST(request: Request) {
         mainMessage = 'Campos obrigatórios faltando';
       }
 
-      return NextResponse.json(
-        {
-          message: mainMessage,
-          code: errorCode,
-          errors,
-        },
-        { status: 422 }
-      );
+      throw new ApiError({
+        code: errorCode,
+        message: mainMessage,
+        status: 422,
+        details: { errors },
+      });
     }
 
-    console.error('[REGISTER] Unexpected error:', error);
-    return NextResponse.json(
-      {
-        message: 'Não foi possível concluir o cadastro',
-        code: 'INTERNAL_ERROR'
-      },
-      { status: 500 }
-    );
+    logger.error('register_error', { err: error });
+    throw new ApiError({
+      code: 'INTERNAL_ERROR',
+      message: 'Não foi possível concluir o cadastro',
+      status: 500,
+    });
   }
-}
+});

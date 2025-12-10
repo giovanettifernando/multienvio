@@ -6,13 +6,14 @@
  * Suporta credenciais separadas para Produção e Homologação
  */
 
-import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { requireAdminUser } from '@/lib/auth/admin-helpers';
 import { AdminPermission, Prisma } from '@prisma/client';
 import { encrypt, decrypt } from '@/lib/integrations/shared/encryption.service';
 import { invalidateCorreiosConfigCache, clearTokenCache } from '@/lib/integrations/correios';
+import { withApiHandler } from '@/lib/api/handler';
+import { ApiError } from '@/lib/api/errors';
 
 const CORREIOS_CARRIER_SLUG = 'correios';
 
@@ -111,228 +112,235 @@ function processCredentials(
  * Query params:
  *   - reveal=true: Retorna valores descriptografados
  */
-export async function GET(request: Request) {
-  try {
-    const authResult = await requireAdminUser(request, AdminPermission.INTEGRACOES);
-    if (authResult instanceof NextResponse) return authResult;
-
-    const url = new URL(request.url);
-    const shouldReveal = url.searchParams.get('reveal') === 'true';
-
-    // Buscar carrier
-    const carrier = await prisma.carrier.findFirst({
-      where: { slug: CORREIOS_CARRIER_SLUG },
+export const GET = withApiHandler(async ({ req }) => {
+  const authResult = await requireAdminUser(req, AdminPermission.INTEGRACOES);
+  if (authResult instanceof Response) {
+    throw new ApiError({
+      code: 'UNAUTHORIZED',
+      message: 'Não autorizado',
+      status: 401,
     });
+  }
 
-    if (!carrier) {
-      return NextResponse.json({
+  const url = new URL(req.url);
+  const shouldReveal = url.searchParams.get('reveal') === 'true';
+
+  // Buscar carrier
+  const carrier = await prisma.carrier.findFirst({
+    where: { slug: CORREIOS_CARRIER_SLUG },
+  });
+
+  if (!carrier) {
+    return {
+      data: {
         configured: false,
-        activeEnvironment: 'sandbox',
+        activeEnvironment: 'sandbox' as const,
         production: { configured: false, username: '', password: '', cartaoPostagem: '', contrato: '', dr: '' },
         sandbox: { configured: false, username: '', password: '', cartaoPostagem: '', contrato: '', dr: '' },
-        servicos: [],
-      });
-    }
+        servicos: [] as unknown[],
+        status: null as string | null,
+        lastUpdated: null as Date | null,
+      },
+    };
+  }
 
-    // Buscar credenciais de cada ambiente
-    const [productionCred, sandboxCred] = await Promise.all([
-      prisma.carrierCredential.findFirst({
-        where: {
-          carrierId: carrier.id,
-          environment: 'PRODUCTION',
-          isActive: true,
-        },
-        orderBy: { createdAt: 'desc' },
-      }),
-      prisma.carrierCredential.findFirst({
-        where: {
-          carrierId: carrier.id,
-          environment: 'SANDBOX',
-          isActive: true,
-        },
-        orderBy: { createdAt: 'desc' },
-      }),
-    ]);
+  // Buscar credenciais de cada ambiente
+  const [productionCred, sandboxCred] = await Promise.all([
+    prisma.carrierCredential.findFirst({
+      where: {
+        carrierId: carrier.id,
+        environment: 'PRODUCTION',
+        isActive: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    }),
+    prisma.carrierCredential.findFirst({
+      where: {
+        carrierId: carrier.id,
+        environment: 'SANDBOX',
+        isActive: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    }),
+  ]);
 
-    const productionData = processCredentials(productionCred, shouldReveal);
-    const sandboxData = processCredentials(sandboxCred, shouldReveal);
+  const productionData = processCredentials(productionCred, shouldReveal);
+  const sandboxData = processCredentials(sandboxCred, shouldReveal);
 
-    // Serviços vêm de qualquer credencial (preferência produção)
-    const customData = (productionCred?.customHeaders || sandboxCred?.customHeaders || {}) as Record<string, unknown>;
+  // Serviços vêm de qualquer credencial (preferência produção)
+  const customData = (productionCred?.customHeaders || sandboxCred?.customHeaders || {}) as Record<string, unknown>;
 
-    return NextResponse.json({
+  return {
+    data: {
       configured: productionData.configured || sandboxData.configured,
       activeEnvironment: carrier.environment === 'SANDBOX' ? 'sandbox' : 'production',
       production: productionData,
       sandbox: sandboxData,
-      servicos: customData.servicos || [],
-      status: carrier.status,
-      lastUpdated: productionCred?.updatedAt || sandboxCred?.updatedAt || carrier.updatedAt,
-    });
-  } catch (error) {
-    console.error('[ADMIN_CORREIOS_GET]', error);
-    const message = error instanceof Error ? error.message : 'Erro ao buscar configuração';
-    return NextResponse.json({ message }, { status: 500 });
-  }
-}
+      servicos: (customData.servicos || []) as unknown[],
+      status: carrier.status as string | null,
+      lastUpdated: (productionCred?.updatedAt || sandboxCred?.updatedAt || carrier.updatedAt) as Date | null,
+    },
+  };
+});
 
 /**
  * POST - Salva/atualiza configuração dos Correios
  * Suporta credenciais separadas para cada ambiente
  */
-export async function POST(request: Request) {
-  try {
-    const authResult = await requireAdminUser(request, AdminPermission.INTEGRACOES);
-    if (authResult instanceof NextResponse) return authResult;
-
-    const body = await request.json();
-    const parsed = correiosConfigSchema.safeParse(body);
-
-    if (!parsed.success) {
-      return NextResponse.json(
-        {
-          message: 'Dados inválidos',
-          errors: parsed.error.flatten(),
-        },
-        { status: 400 }
-      );
-    }
-
-    const data: CorreiosConfigInput = parsed.data;
-
-    // Verificar se pelo menos um ambiente tem credenciais completas
-    const hasProdCreds = data.production?.username && data.production?.password && data.production?.cartaoPostagem;
-    const hasSandboxCreds = data.sandbox?.username && data.sandbox?.password && data.sandbox?.cartaoPostagem;
-
-    if (!hasProdCreds && !hasSandboxCreds) {
-      return NextResponse.json(
-        {
-          message: 'Configure ao menos um ambiente com usuário, senha e cartão de postagem',
-        },
-        { status: 400 }
-      );
-    }
-
-    // Determinar URLs base por ambiente
-    const baseUrls = {
-      sandbox: 'https://apihom.correios.com.br',
-      production: 'https://api.correios.com.br',
-    };
-
-    // Buscar ou criar carrier
-    let carrier = await prisma.carrier.findFirst({
-      where: { slug: CORREIOS_CARRIER_SLUG },
+export const POST = withApiHandler(async ({ req }) => {
+  const authResult = await requireAdminUser(req, AdminPermission.INTEGRACOES);
+  if (authResult instanceof Response) {
+    throw new ApiError({
+      code: 'UNAUTHORIZED',
+      message: 'Não autorizado',
+      status: 401,
     });
+  }
 
-    await prisma.$transaction(async (tx) => {
-      if (!carrier) {
-        carrier = await tx.carrier.create({
-          data: {
-            name: 'Correios',
-            slug: CORREIOS_CARRIER_SLUG,
-            status: 'ACTIVE',
-            environment: data.activeEnvironment === 'sandbox' ? 'SANDBOX' : 'PRODUCTION',
-            baseUrl: baseUrls[data.activeEnvironment],
-            timeout: 30000,
-            maxRetries: 3,
-            logoUrl: 'https://www.correios.com.br/++resource++correios/img/logo-correios-blue.svg',
-            description: 'Integração com APIs dos Correios (CWS)',
-          },
-        });
-      } else {
-        carrier = await tx.carrier.update({
-          where: { id: carrier.id },
-          data: {
-            status: 'ACTIVE',
-            environment: data.activeEnvironment === 'sandbox' ? 'SANDBOX' : 'PRODUCTION',
-            baseUrl: baseUrls[data.activeEnvironment],
-            updatedAt: new Date(),
-          },
-        });
-      }
+  const body = await req.json();
+  const parsed = correiosConfigSchema.safeParse(body);
 
-      // Processar credenciais de PRODUÇÃO
-      if (data.production) {
-        await saveEnvironmentCredentials(
-          tx,
-          carrier.id,
-          'PRODUCTION',
-          data.production,
-          data.servicos
-        );
-      }
+  if (!parsed.success) {
+    throw new ApiError({
+      code: 'VALIDATION_ERROR',
+      message: 'Dados inválidos',
+      status: 400,
+      details: parsed.error.flatten(),
+    });
+  }
 
-      // Processar credenciais de SANDBOX
-      if (data.sandbox) {
-        await saveEnvironmentCredentials(
-          tx,
-          carrier.id,
-          'SANDBOX',
-          data.sandbox,
-          data.servicos
-        );
-      }
+  const data: CorreiosConfigInput = parsed.data;
 
-      // Criar endpoints padrão se não existirem
-      const endpoints = [
-        { operation: 'auth', method: 'POST', path: '/token/v1/autentica/cartaopostagem' },
-        { operation: 'quote', method: 'POST', path: '/preco/v1/nacional' },
-        { operation: 'deadline', method: 'POST', path: '/prazo/v1/nacional' },
-        { operation: 'create_order', method: 'POST', path: '/prepostagem/v2/prepostagens' },
-        { operation: 'label', method: 'GET', path: '/prepostagem/v2/etiquetas/{codigo}' },
-        { operation: 'tracking', method: 'GET', path: '/rastro/v1/objetos/{codigo}' },
-      ];
+  // Verificar se pelo menos um ambiente tem credenciais completas
+  const hasProdCreds = data.production?.username && data.production?.password && data.production?.cartaoPostagem;
+  const hasSandboxCreds = data.sandbox?.username && data.sandbox?.password && data.sandbox?.cartaoPostagem;
 
-      for (const ep of endpoints) {
-        await tx.carrierEndpoint.upsert({
-          where: {
-            carrierId_operation: {
-              carrierId: carrier.id,
-              operation: ep.operation,
-            },
-          },
-          create: {
+  if (!hasProdCreds && !hasSandboxCreds) {
+    throw new ApiError({
+      code: 'VALIDATION_ERROR',
+      message: 'Configure ao menos um ambiente com usuário, senha e cartão de postagem',
+      status: 400,
+    });
+  }
+
+  // Determinar URLs base por ambiente
+  const baseUrls = {
+    sandbox: 'https://apihom.correios.com.br',
+    production: 'https://api.correios.com.br',
+  };
+
+  // Buscar ou criar carrier
+  let carrier = await prisma.carrier.findFirst({
+    where: { slug: CORREIOS_CARRIER_SLUG },
+  });
+
+  await prisma.$transaction(async (tx) => {
+    if (!carrier) {
+      carrier = await tx.carrier.create({
+        data: {
+          name: 'Correios',
+          slug: CORREIOS_CARRIER_SLUG,
+          status: 'ACTIVE',
+          environment: data.activeEnvironment === 'sandbox' ? 'SANDBOX' : 'PRODUCTION',
+          baseUrl: baseUrls[data.activeEnvironment],
+          timeout: 30000,
+          maxRetries: 3,
+          logoUrl: 'https://www.correios.com.br/++resource++correios/img/logo-correios-blue.svg',
+          description: 'Integração com APIs dos Correios (CWS)',
+        },
+      });
+    } else {
+      carrier = await tx.carrier.update({
+        where: { id: carrier.id },
+        data: {
+          status: 'ACTIVE',
+          environment: data.activeEnvironment === 'sandbox' ? 'SANDBOX' : 'PRODUCTION',
+          baseUrl: baseUrls[data.activeEnvironment],
+          updatedAt: new Date(),
+        },
+      });
+    }
+
+    // Processar credenciais de PRODUÇÃO
+    if (data.production) {
+      await saveEnvironmentCredentials(
+        tx,
+        carrier.id,
+        'PRODUCTION',
+        data.production,
+        data.servicos
+      );
+    }
+
+    // Processar credenciais de SANDBOX
+    if (data.sandbox) {
+      await saveEnvironmentCredentials(
+        tx,
+        carrier.id,
+        'SANDBOX',
+        data.sandbox,
+        data.servicos
+      );
+    }
+
+    // Criar endpoints padrão se não existirem
+    const endpoints = [
+      { operation: 'auth', method: 'POST', path: '/token/v1/autentica/cartaopostagem' },
+      { operation: 'quote', method: 'POST', path: '/preco/v1/nacional' },
+      { operation: 'deadline', method: 'POST', path: '/prazo/v1/nacional' },
+      { operation: 'create_order', method: 'POST', path: '/prepostagem/v2/prepostagens' },
+      { operation: 'label', method: 'GET', path: '/prepostagem/v2/etiquetas/{codigo}' },
+      { operation: 'tracking', method: 'GET', path: '/rastro/v1/objetos/{codigo}' },
+    ];
+
+    for (const ep of endpoints) {
+      await tx.carrierEndpoint.upsert({
+        where: {
+          carrierId_operation: {
             carrierId: carrier.id,
             operation: ep.operation,
-            method: ep.method as 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH',
-            path: ep.path,
-            timeout: 30000,
-            retryable: true,
           },
-          update: {
-            path: ep.path,
-            updatedAt: new Date(),
-          },
-        });
-      }
-    });
-
-    // Invalidar caches
-    invalidateCorreiosConfigCache();
-    clearTokenCache();
-
-    if (!carrier) {
-      throw new Error('Erro ao criar/atualizar carrier');
-    }
-
-    return NextResponse.json(
-      {
-        message: 'Configuração salva com sucesso',
-        carrier: {
-          id: carrier.id,
-          slug: carrier.slug,
-          status: carrier.status,
-          activeEnvironment: data.activeEnvironment,
         },
-      },
-      { status: 200 }
-    );
-  } catch (error) {
-    console.error('[ADMIN_CORREIOS_POST]', error);
-    const message = error instanceof Error ? error.message : 'Erro ao salvar configuração';
-    return NextResponse.json({ message }, { status: 500 });
+        create: {
+          carrierId: carrier.id,
+          operation: ep.operation,
+          method: ep.method as 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH',
+          path: ep.path,
+          timeout: 30000,
+          retryable: true,
+        },
+        update: {
+          path: ep.path,
+          updatedAt: new Date(),
+        },
+      });
+    }
+  });
+
+  // Invalidar caches
+  invalidateCorreiosConfigCache();
+  clearTokenCache();
+
+  if (!carrier) {
+    throw new ApiError({
+      code: 'INTERNAL_ERROR',
+      message: 'Erro ao criar/atualizar carrier',
+      status: 500,
+    });
   }
-}
+
+  return {
+    data: {
+      message: 'Configuração salva com sucesso',
+      carrier: {
+        id: carrier.id,
+        slug: carrier.slug,
+        status: carrier.status,
+        activeEnvironment: data.activeEnvironment,
+      },
+    },
+  };
+});
 
 /**
  * Helper para salvar credenciais de um ambiente específico

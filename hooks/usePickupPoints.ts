@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { apiFetch } from '@/lib/api/client';
 
 export interface PickupPoint {
   id: string;
@@ -24,21 +25,14 @@ interface UsePickupPointsParams {
 export function usePickupPoints({ cidade, uf, q, enabled = true }: UsePickupPointsParams = {}) {
   return useQuery({
     queryKey: ['pickupPoints', cidade, uf, q],
-    queryFn: async () => {
+    queryFn: () => {
       const params = new URLSearchParams();
 
       if (cidade) params.set('cidade', cidade);
       if (uf) params.set('uf', uf);
       if (q) params.set('q', q);
 
-      const response = await fetch(`/api/pickup-points?${params.toString()}`);
-
-      if (!response.ok) {
-        throw new Error('Erro ao buscar pontos de coleta');
-      }
-
-      const data: PickupPoint[] = await response.json();
-      return data;
+      return apiFetch<PickupPoint[]>(`/api/pickup-points?${params.toString()}`);
     },
     enabled: enabled,
     staleTime: 5 * 60 * 1000, // 5 minutos

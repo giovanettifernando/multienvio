@@ -1,4 +1,5 @@
 import { Prisma } from "@prisma/client";
+import { ZodError } from "zod";
 import { schedulePrismaReconnect, isDatabaseUnavailableError } from "../db";
 
 export type ApiErrorInput = {
@@ -52,11 +53,35 @@ function isRelationMissing(error: Prisma.PrismaClientKnownRequestError | Error) 
 }
 
 export function toApiError(error: unknown): ApiError {
+  // Already an ApiError - return as is
+  if (error instanceof ApiError) {
+    return error;
+  }
+
+  // Zod validation errors
+  if (error instanceof ZodError) {
+    const firstIssue = error.issues[0];
+    return new ApiError({
+      code: "VALIDATION_ERROR",
+      message: firstIssue?.message || "Dados inválidos",
+      status: 422,
+      details: {
+        errors: error.issues.map((issue) => ({
+          field: issue.path.join("."),
+          message: issue.message,
+          code: issue.code,
+        })),
+      },
+      cause: error,
+    });
+  }
+
+  // Prisma database initialization errors
   if (error instanceof Prisma.PrismaClientInitializationError || isDatabaseUnavailableError(error)) {
     const message = error instanceof Error ? error.message : String(error);
     void schedulePrismaReconnect();
     return new ApiError({
-      code: "service_unavailable",
+      code: "SERVICE_UNAVAILABLE",
       message: "Banco de dados indisponível. Tente novamente em instantes.",
       status: 503,
       details: { message },
@@ -64,9 +89,10 @@ export function toApiError(error: unknown): ApiError {
     });
   }
 
+  // Prisma schema out of date
   if (error instanceof Prisma.PrismaClientKnownRequestError && isRelationMissing(error)) {
     return new ApiError({
-      code: "schema_out_of_date",
+      code: "SCHEMA_OUT_OF_DATE",
       message: "Estrutura de dados indisponível. Execute `npx prisma migrate deploy`.",
       status: 503,
       details: { code: error.code, meta: error.meta },
@@ -76,7 +102,7 @@ export function toApiError(error: unknown): ApiError {
 
   if (error instanceof Prisma.PrismaClientUnknownRequestError && isRelationMissing(error as Error)) {
     return new ApiError({
-      code: "schema_out_of_date",
+      code: "SCHEMA_OUT_OF_DATE",
       message: "Estrutura de dados indisponível. Execute `npx prisma migrate deploy`.",
       status: 503,
       details: { message: error.message },
@@ -84,13 +110,50 @@ export function toApiError(error: unknown): ApiError {
     });
   }
 
-  if (error instanceof ApiError) {
-    return error;
+  // Prisma known request errors
+  if (error instanceof Prisma.PrismaClientKnownRequestError) {
+    switch (error.code) {
+      case "P2002": // Unique constraint violation
+        const target = (error.meta?.target as string[])?.join(", ") || "campo";
+        return new ApiError({
+          code: "DUPLICATE_ENTRY",
+          message: `Já existe um registro com este ${target}.`,
+          status: 409,
+          details: { field: target, prismaCode: error.code },
+          cause: error,
+        });
+      case "P2025": // Record not found
+        return new ApiError({
+          code: "NOT_FOUND",
+          message: "Registro não encontrado.",
+          status: 404,
+          details: { prismaCode: error.code },
+          cause: error,
+        });
+      case "P2003": // Foreign key constraint failed
+        return new ApiError({
+          code: "REFERENCE_ERROR",
+          message: "Registro referenciado não existe ou foi removido.",
+          status: 400,
+          details: { prismaCode: error.code },
+          cause: error,
+        });
+      default:
+        // Other Prisma errors - log but don't expose details
+        return new ApiError({
+          code: "DATABASE_ERROR",
+          message: "Erro ao acessar o banco de dados.",
+          status: 500,
+          details: process.env.NODE_ENV === "development" ? { prismaCode: error.code, meta: error.meta } : undefined,
+          cause: error,
+        });
+    }
   }
 
+  // Generic errors
   if (error instanceof Error) {
     // 🛡️ SECURITY FIX: Não expor stack traces em produção
-    const isDev = process.env.NODE_ENV === 'development';
+    const isDev = process.env.NODE_ENV === "development";
     return new ApiError({
       code: "INTERNAL_ERROR",
       message: "Erro inesperado, tente novamente mais tarde.",

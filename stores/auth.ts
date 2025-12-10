@@ -66,10 +66,12 @@ export const useAuthStore = create<AuthState>()(
             credentials: 'include', // Important for cookies
           });
 
-          const data = await response.json();
+          const json = await response.json();
+          // Handle both standardized { data: { user } } and legacy { user } formats
+          const data = json.data ?? json;
 
           if (!response.ok) {
-            return { success: false, error: data.message || 'Erro ao fazer login' };
+            return { success: false, error: json.error?.message || data.message || 'Erro ao fazer login' };
           }
 
           set({ user: data.user });
@@ -90,10 +92,12 @@ export const useAuthStore = create<AuthState>()(
             credentials: 'include', // Important for cookies
           });
 
-          const result = await response.json();
+          const json = await response.json();
+          // Handle both standardized { data: {...} } and legacy formats
+          const result = json.data ?? json;
 
           if (!response.ok) {
-            return { success: false, error: result.message || 'Erro ao criar conta' };
+            return { success: false, error: json.error?.message || result.message || 'Erro ao criar conta' };
           }
 
           // DON'T auto-login after registration - user must verify email first
@@ -138,9 +142,11 @@ export const useAuthStore = create<AuthState>()(
             return null;
           }
 
-          const data = await response.json();
-          set({ user: data.user });
-          return data.user;
+          const json = await response.json();
+          // API returns standardized format: { data: { user }, error, meta }
+          const user = json.data?.user ?? json.user;
+          set({ user });
+          return user;
         } catch (error) {
           console.error('Fetch current user error:', error);
           set({ user: null });

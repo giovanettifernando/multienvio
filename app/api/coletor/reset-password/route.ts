@@ -4,10 +4,13 @@
  * Processa a redefinição de senha do coletor usando o token JWT
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { withApiHandler } from '@/lib/api/handler';
+import { ApiError } from '@/lib/api/errors';
 import { jwtVerify } from 'jose';
 import { prisma } from '@/lib/db';
 import bcrypt from 'bcrypt';
+import { CollectorResetPasswordSchema } from '@/lib/validation/auth';
+import { logger } from '@/lib/logger';
 
 
 // Validar JWT_SECRET em produção
@@ -27,101 +30,77 @@ interface TokenPayload {
   type: string;
 }
 
+interface CollectorResetPasswordResponse {
+  message: string;
+}
+
 /**
  * POST /api/coletor/reset-password
  * Redefine a senha do coletor
  */
-export async function POST(req: NextRequest) {
-  try {
-    const body = await req.json();
-    const { token, newPassword } = body;
+export const POST = withApiHandler<CollectorResetPasswordResponse>(async (context) => {
+  const body = await context.req.json();
 
-    // Validações básicas
-    if (!token || !newPassword) {
-      return NextResponse.json(
-        { error: 'Token e nova senha são obrigatórios' },
-        { status: 400 }
-      );
-    }
-
-    if (newPassword.length < 8) {
-      return NextResponse.json(
-        { error: 'A senha deve ter no mínimo 8 caracteres' },
-        { status: 400 }
-      );
-    }
-
-    // Verificar e decodificar token JWT
-    let payload: TokenPayload;
-    try {
-      const { payload: jwtPayload } = await jwtVerify(token, JWT_SECRET);
-      payload = jwtPayload as unknown as TokenPayload;
-
-      if (payload.type !== 'password-reset') {
-        return NextResponse.json(
-          { error: 'Token inválido' },
-          { status: 400 }
-        );
-      }
-    } catch (error) {
-      console.error('[RESET_PASSWORD_PROCESS] Token inválido ou expirado:', error);
-      return NextResponse.json(
-        { error: 'Token inválido ou expirado. Solicite um novo link de redefinição.' },
-        { status: 400 }
-      );
-    }
-
-    // Buscar coletor
-    const collector = await prisma.collector.findUnique({
-      where: { id: payload.collectorId },
-      include: { credential: true },
-    });
-
-    if (!collector) {
-      return NextResponse.json(
-        { error: 'Coletor não encontrado' },
-        { status: 404 }
-      );
-    }
-
-    if (collector.pfEmail !== payload.email) {
-      return NextResponse.json(
-        { error: 'Token inválido para este coletor' },
-        { status: 400 }
-      );
-    }
-
-    // Gerar hash da nova senha
-    const passwordHash = await bcrypt.hash(newPassword, 10);
-
-    // Atualizar ou criar credential
-    if (collector.credential) {
-      await prisma.collectorCredential.update({
-        where: { id: collector.credential.id },
-        data: { passwordHash },
-      });
-    } else {
-      await prisma.collectorCredential.create({
-        data: {
-          collectorId: collector.id,
-          passwordHash,
-        },
-      });
-    }
-
-    console.log('[RESET_PASSWORD_PROCESS] Senha redefinida para coletor:', collector.id);
-
-    return NextResponse.json(
-      { message: 'Senha redefinida com sucesso!' },
-      { status: 200 }
-    );
-  } catch (error) {
-    console.error('[RESET_PASSWORD_PROCESS]', error);
-
-    // 🛡️ SECURITY FIX: Não expor mensagens de erro internas
-    return NextResponse.json(
-      { error: 'Erro ao redefinir senha. Tente novamente.' },
-      { status: 500 }
-    );
+  // Validação com Zod
+  const parsed = CollectorResetPasswordSchema.safeParse(body);
+  if (!parsed.success) {
+    logger.debug({ event: 'collector_reset_password_validation_error', errors: parsed.error.flatten() }, 'Validation failed');
+    throw ApiError.validation(parsed.error.issues[0]?.message || 'Dados inválidos', parsed.error.flatten());
   }
-}
+
+  const { token, newPassword } = parsed.data;
+
+  // Verificar e decodificar token JWT
+  let payload: TokenPayload;
+  try {
+    const { payload: jwtPayload } = await jwtVerify(token, JWT_SECRET);
+    payload = jwtPayload as unknown as TokenPayload;
+
+    if (payload.type !== 'password-reset') {
+      throw ApiError.badRequest('Token inválido');
+    }
+  } catch (error) {
+    logger.warn({ event: 'collector_reset_password_invalid_token', err: error }, 'Invalid or expired token');
+    throw ApiError.badRequest('Token inválido ou expirado. Solicite um novo link de redefinição.');
+  }
+
+  // Buscar coletor
+  const collector = await prisma.collector.findUnique({
+    where: { id: payload.collectorId },
+    include: { credential: true },
+  });
+
+  if (!collector) {
+    throw ApiError.notFound('Coletor não encontrado');
+  }
+
+  if (collector.pfEmail !== payload.email) {
+    throw ApiError.badRequest('Token inválido para este coletor');
+  }
+
+  // Gerar hash da nova senha
+  const passwordHash = await bcrypt.hash(newPassword, 10);
+
+  // Atualizar ou criar credential
+  if (collector.credential) {
+    await prisma.collectorCredential.update({
+      where: { id: collector.credential.id },
+      data: { passwordHash },
+    });
+  } else {
+    await prisma.collectorCredential.create({
+      data: {
+        collectorId: collector.id,
+        passwordHash,
+      },
+    });
+  }
+
+  logger.info({ event: 'collector_reset_password_success', collectorId: collector.id }, 'Password reset successful');
+
+  return {
+    data: {
+      message: 'Senha redefinida com sucesso!',
+    },
+  };
+});

@@ -4,9 +4,9 @@
  * Lista todas as transações de carteira de todos os clientes (visão admin)
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { withApiHandler } from '@/lib/api/handler';
+import { ApiError } from '@/lib/api/errors';
 import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
-import { requirePermission } from '@/lib/auth/permissions';
 import { AdminPermission, WalletTxType } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import type { Paged } from '@/lib/admin/finance/types';
@@ -35,164 +35,173 @@ export interface AdminWalletTransaction {
   mercadoPagoId: string | null;
 }
 
-export async function GET(request: NextRequest) {
-  const session = await getAdminSessionFromRequest(request);
+type WalletTransactionsResponse = Paged<AdminWalletTransaction> & {
+  summary: {
+    totalCredits: number;
+    totalDebits: number;
+    netAmount: number;
+    transactionCount: number;
+  };
+};
+
+export const GET = withApiHandler<WalletTransactionsResponse>(async ({ req }) => {
+  const session = await getAdminSessionFromRequest(req);
   if (!session) {
-    return NextResponse.json({ message: 'Não autenticado' }, { status: 401 });
+    throw new ApiError({
+      code: 'UNAUTHORIZED',
+      message: 'Não autenticado',
+      status: 401,
+    });
   }
 
-  const permissionError = requirePermission(session, AdminPermission.FINANCEIRO);
-  if (permissionError) return permissionError;
+  if (!session.permissions.includes(AdminPermission.FINANCEIRO)) {
+    throw new ApiError({
+      code: 'FORBIDDEN',
+      message: 'Sem permissão para acessar finanças',
+      status: 403,
+    });
+  }
 
-  try {
-    const searchParams = request.nextUrl.searchParams;
-    const page = parseInt(searchParams.get('page') || '1', 10);
-    const pageSize = parseInt(searchParams.get('pageSize') || '20', 10);
-    const q = searchParams.get('q') || '';
-    const type = searchParams.get('type') as WalletTxType | null;
-    const dateStart = searchParams.get('dateStart');
-    const dateEnd = searchParams.get('dateEnd');
+  const searchParams = req.nextUrl.searchParams;
+  const page = parseInt(searchParams.get('page') || '1', 10);
+  const pageSize = parseInt(searchParams.get('pageSize') || '20', 10);
+  const q = searchParams.get('q') || '';
+  const type = searchParams.get('type') as WalletTxType | null;
+  const dateStart = searchParams.get('dateStart');
+  const dateEnd = searchParams.get('dateEnd');
 
-    // Build where clause
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const where: any = {
-      status: 'CONFIRMED', // Only show confirmed transactions
-    };
+  // Build where clause
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const where: any = {
+    status: 'CONFIRMED', // Only show confirmed transactions
+  };
 
-    // Date filter
-    if (dateStart || dateEnd) {
-      where.confirmedAt = {};
-      if (dateStart) {
-        where.confirmedAt.gte = new Date(dateStart);
-      }
-      if (dateEnd) {
-        where.confirmedAt.lte = new Date(dateEnd);
-      }
+  // Date filter
+  if (dateStart || dateEnd) {
+    where.confirmedAt = {};
+    if (dateStart) {
+      where.confirmedAt.gte = new Date(dateStart);
     }
-
-    // Type filter
-    if (type) {
-      where.type = type;
+    if (dateEnd) {
+      where.confirmedAt.lte = new Date(dateEnd);
     }
+  }
 
-    // Search filter (search in user name/email or transaction title/referenceId)
-    if (q) {
-      where.OR = [
-        { title: { contains: q, mode: 'insensitive' } },
-        { referenceId: { contains: q, mode: 'insensitive' } },
-        { wallet: { user: { name: { contains: q, mode: 'insensitive' } } } },
-        { wallet: { user: { email: { contains: q, mode: 'insensitive' } } } },
-      ];
-    }
+  // Type filter
+  if (type) {
+    where.type = type;
+  }
 
-    // Count total
-    const total = await prisma.walletTransaction.count({ where });
+  // Search filter (search in user name/email or transaction title/referenceId)
+  if (q) {
+    where.OR = [
+      { title: { contains: q, mode: 'insensitive' } },
+      { referenceId: { contains: q, mode: 'insensitive' } },
+      { wallet: { user: { name: { contains: q, mode: 'insensitive' } } } },
+      { wallet: { user: { email: { contains: q, mode: 'insensitive' } } } },
+    ];
+  }
 
-    // Fetch transactions with user info
-    const transactions = await prisma.walletTransaction.findMany({
-      where,
-      include: {
-        wallet: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-              },
+  // Count total
+  const total = await prisma.walletTransaction.count({ where });
+
+  // Fetch transactions with user info
+  const transactions = await prisma.walletTransaction.findMany({
+    where,
+    include: {
+      wallet: {
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
             },
           },
         },
       },
-      orderBy: { confirmedAt: 'desc' },
-      skip: (page - 1) * pageSize,
-      take: pageSize,
-    });
+    },
+    orderBy: { confirmedAt: 'desc' },
+    skip: (page - 1) * pageSize,
+    take: pageSize,
+  });
 
-    // Map to DTO
-    const items: AdminWalletTransaction[] = transactions.map((tx) => {
-      const direction = getTransactionDirection(tx.type, tx.amountCents);
-      const typeLabel = getTransactionTypeLabel(tx.type);
+  // Map to DTO
+  const items: AdminWalletTransaction[] = transactions.map((tx) => {
+    const direction = getTransactionDirection(tx.type, tx.amountCents);
+    const typeLabel = getTransactionTypeLabel(tx.type);
 
-      // Extract MercadoPago ID from meta field (Prisma returns JsonValue)
-      const meta = tx.meta as Record<string, unknown> | null;
-      const mercadoPagoId = (meta && typeof meta === 'object' && 'externalId' in meta)
-        ? String(meta.externalId)
-        : null;
+    // Extract MercadoPago ID from meta field (Prisma returns JsonValue)
+    const meta = tx.meta as Record<string, unknown> | null;
+    const mercadoPagoId =
+      meta && typeof meta === 'object' && 'externalId' in meta ? String(meta.externalId) : null;
 
-      return {
-        id: tx.id,
-        createdAt: tx.createdAt.toISOString(),
-        confirmedAt: tx.confirmedAt?.toISOString() || null,
-        customerId: tx.wallet.user.id,
-        customerName: tx.wallet.user.name || tx.wallet.user.email,
-        type: tx.type,
-        typeLabel,
-        direction,
-        amountCents: tx.amountCents,
-        amountReais: Math.abs(tx.amountCents) / 100,
-        formattedAmount: formatTransactionAmount(tx.amountCents, direction),
-        title: tx.title,
-        referenceId: tx.referenceId,
-        status: tx.status,
-        mercadoPagoId,
-      };
-    });
-
-    // Calculate period summary
-    const summaryWhere = { ...where };
-    delete summaryWhere.OR; // Remove search filter from summary
-
-    const creditsAgg = await prisma.walletTransaction.aggregate({
-      where: {
-        ...summaryWhere,
-        OR: [
-          { type: 'TOPUP' },
-          { type: 'REFUND' },
-          { type: 'ADJUSTMENT', amountCents: { gte: 0 } },
-        ],
-      },
-      _sum: { amountCents: true },
-      _count: true,
-    });
-
-    const debitsAgg = await prisma.walletTransaction.aggregate({
-      where: {
-        ...summaryWhere,
-        OR: [
-          { type: 'PURCHASE' },
-          { type: 'WITHDRAW' },
-          { type: 'ADJUSTMENT', amountCents: { lt: 0 } },
-        ],
-      },
-      _sum: { amountCents: true },
-      _count: true,
-    });
-
-    const totalCreditsCents = creditsAgg._sum.amountCents || 0;
-    const totalDebitsCents = Math.abs(debitsAgg._sum.amountCents || 0);
-
-    const summary = {
-      totalCredits: totalCreditsCents / 100,
-      totalDebits: totalDebitsCents / 100,
-      netAmount: (totalCreditsCents - totalDebitsCents) / 100,
-      transactionCount: creditsAgg._count + debitsAgg._count,
+    return {
+      id: tx.id,
+      createdAt: tx.createdAt.toISOString(),
+      confirmedAt: tx.confirmedAt?.toISOString() || null,
+      customerId: tx.wallet.user.id,
+      customerName: tx.wallet.user.name || tx.wallet.user.email,
+      type: tx.type,
+      typeLabel,
+      direction,
+      amountCents: tx.amountCents,
+      amountReais: Math.abs(tx.amountCents) / 100,
+      formattedAmount: formatTransactionAmount(tx.amountCents, direction),
+      title: tx.title,
+      referenceId: tx.referenceId,
+      status: tx.status,
+      mercadoPagoId,
     };
+  });
 
-    const response: Paged<AdminWalletTransaction> & { summary: typeof summary } = {
-      items,
-      page,
-      pageSize,
-      total,
-      summary,
-    };
+  // Calculate period summary
+  const summaryWhere = { ...where };
+  delete summaryWhere.OR; // Remove search filter from summary
 
-    return NextResponse.json(response);
-  } catch (error) {
-    console.error('[ADMIN_WALLET_TRANSACTIONS] Error:', error);
-    return NextResponse.json(
-      { message: 'Erro ao buscar transações' },
-      { status: 500 }
-    );
-  }
-}
+  const creditsAgg = await prisma.walletTransaction.aggregate({
+    where: {
+      ...summaryWhere,
+      OR: [
+        { type: 'TOPUP' },
+        { type: 'REFUND' },
+        { type: 'ADJUSTMENT', amountCents: { gte: 0 } },
+      ],
+    },
+    _sum: { amountCents: true },
+    _count: true,
+  });
+
+  const debitsAgg = await prisma.walletTransaction.aggregate({
+    where: {
+      ...summaryWhere,
+      OR: [
+        { type: 'PURCHASE' },
+        { type: 'WITHDRAW' },
+        { type: 'ADJUSTMENT', amountCents: { lt: 0 } },
+      ],
+    },
+    _sum: { amountCents: true },
+    _count: true,
+  });
+
+  const totalCreditsCents = creditsAgg._sum.amountCents || 0;
+  const totalDebitsCents = Math.abs(debitsAgg._sum.amountCents || 0);
+
+  const summary = {
+    totalCredits: totalCreditsCents / 100,
+    totalDebits: totalDebitsCents / 100,
+    netAmount: (totalCreditsCents - totalDebitsCents) / 100,
+    transactionCount: creditsAgg._count + debitsAgg._count,
+  };
+
+  const response: Paged<AdminWalletTransaction> & { summary: typeof summary } = {
+    items,
+    page,
+    pageSize,
+    total,
+    summary,
+  };
+
+  return { data: response };
+});

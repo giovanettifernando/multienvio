@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { withApiHandlerResponse } from '@/lib/api/handler';
 import { prisma } from '@/lib/db';
 import { getUserSessionFromRequest } from '@/lib/auth/user-session';
 import { baixarRotuloPdf } from '@/lib/integrations/correios/prepostagem';
@@ -7,22 +8,20 @@ import bwipjs from 'bwip-js';
 import { readFile } from 'fs/promises';
 import { join } from 'path';
 
-interface RouteParams {
-  params: Promise<{ id: string }>;
-}
-
 /**
  * GET /api/packages/[id]/pdf
  * Gera PDF da etiqueta de um volume específico com header Envio Legal
  */
-export async function GET(request: Request, { params }: RouteParams) {
+export const GET = withApiHandlerResponse<{ id: string }>(async (context) => {
+  const { req, params, logger } = context;
+
   try {
-    const session = await getUserSessionFromRequest(request);
+    const session = await getUserSessionFromRequest(req);
     if (!session) {
       return NextResponse.json({ message: 'Não autenticado' }, { status: 401 });
     }
 
-    const { id: packageId } = await params;
+    const packageId = params.id;
 
     // 1. Buscar package com shipment
     const pkg = await prisma.package.findUnique({
@@ -55,7 +54,7 @@ export async function GET(request: Request, { params }: RouteParams) {
       );
     }
 
-    console.log('[PACKAGE_PDF] Downloading Correios label:', {
+    logger.info('package_pdf_download_start', {
       packageId,
       packageNumber: pkg.packageNumber,
       prePostageId: pkg.carrierPrePostageId,
@@ -75,6 +74,8 @@ export async function GET(request: Request, { params }: RouteParams) {
     const platformTrackingCode = pkg.shipment.platformTrackingCode || '';
     const finalPdf = await createEnvioLegalPdf(platformTrackingCode, pkg.packageNumber, [rotuloResult.content]);
 
+    logger.info('package_pdf_generated', { packageId, packageNumber: pkg.packageNumber });
+
     // 6. Retornar PDF
     return new NextResponse(new Uint8Array(finalPdf), {
       status: 200,
@@ -85,24 +86,26 @@ export async function GET(request: Request, { params }: RouteParams) {
       },
     });
   } catch (error) {
-    console.error('[PACKAGE_PDF_GET]', error);
+    logger.error('package_pdf_error', { err: error });
     const message = error instanceof Error ? error.message : 'Erro ao gerar PDF do volume';
     return NextResponse.json({ message }, { status: 500 });
   }
-}
+});
 
 /**
  * HEAD /api/packages/[id]/pdf
  * Verifica se a etiqueta do volume está disponível
  */
-export async function HEAD(request: Request, { params }: RouteParams) {
+export const HEAD = withApiHandlerResponse<{ id: string }>(async (context) => {
+  const { req, params, logger } = context;
+
   try {
-    const session = await getUserSessionFromRequest(request);
+    const session = await getUserSessionFromRequest(req);
     if (!session) {
       return new NextResponse(null, { status: 401 });
     }
 
-    const { id: packageId } = await params;
+    const packageId = params.id;
 
     const pkg = await prisma.package.findUnique({
       where: { id: packageId },
@@ -127,10 +130,10 @@ export async function HEAD(request: Request, { params }: RouteParams) {
 
     return new NextResponse(null, { status: 200 });
   } catch (error) {
-    console.error('[PACKAGE_PDF_HEAD]', error);
+    logger.error('package_pdf_head_error', { err: error });
     return new NextResponse(null, { status: 500 });
   }
-}
+});
 
 /**
  * Cria o PDF final com header Envio Legal + código de barras + PDF Correios
@@ -151,8 +154,8 @@ async function createEnvioLegalPdf(
     const logoPath = join(process.cwd(), 'public', 'images', 'envio-legal-logo.png');
     const logoBuffer = await readFile(logoPath);
     logoImage = await pdfDoc.embedPng(logoBuffer);
-  } catch (e) {
-    console.warn('[PACKAGE_PDF] Failed to load logo:', e);
+  } catch {
+    // Logo não encontrado, continua sem
   }
 
   // Gerar código de barras (Code128)
@@ -168,8 +171,8 @@ async function createEnvioLegalPdf(
         includetext: false,
       });
       barcodeImage = await pdfDoc.embedPng(barcodePng);
-    } catch (e) {
-      console.warn('[PACKAGE_PDF] Failed to generate barcode:', e);
+    } catch {
+      // Barcode falhou, continua sem
     }
   }
 
@@ -178,8 +181,7 @@ async function createEnvioLegalPdf(
     let correioDoc: PDFDocument;
     try {
       correioDoc = await PDFDocument.load(correioPdfBuffer);
-    } catch (e) {
-      console.error('[PACKAGE_PDF] Failed to load Correios PDF:', e);
+    } catch {
       continue;
     }
 

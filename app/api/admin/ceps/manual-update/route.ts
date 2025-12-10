@@ -2,36 +2,13 @@
  * POST /api/admin/ceps/manual-update
  *
  * Atualiza coordenadas de um CEP manualmente
- *
- * Body:
- * {
- *   "cep": "58035100",
- *   "lat": -7.1198028,
- *   "lng": -34.8623789,
- *   "precision": "address",
- *   "motivo": "Coordenadas corrigidas com Google Maps - geocoding automático retornou state_fallback"
- * }
- *
- * Response:
- * {
- *   "success": true,
- *   "cepLocation": {
- *     "cep": "58035100",
- *     "latitude": -7.1198028,
- *     "longitude": -34.8623789,
- *     "precision": "address",
- *     "manualOverride": true,
- *     "manualOverrideReason": "...",
- *     ...
- *   }
- * }
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { withApiHandler } from '@/lib/api/handler';
+import { ApiError } from '@/lib/api/errors';
 import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
-import { requirePermission } from '@/lib/auth/permissions';
-import { AdminPermission } from '@prisma/client';
-import { rateLimitByUser, RATE_LIMITS } from '@/lib/rate-limit';
+import { AdminPermission, type CepLocation } from '@prisma/client';
+import { rateLimitByUser, RATE_LIMITS } from '@/lib/rate-limit-redis';
 import { updateCepManual } from '@/lib/services/cepLocation';
 import { z } from 'zod';
 
@@ -43,59 +20,57 @@ const manualUpdateSchema = z.object({
   motivo: z.string().optional(),
 });
 
-export async function POST(request: NextRequest) {
-  const session = await getAdminSessionFromRequest(request);
+type ManualUpdateResponse = {
+  success: boolean;
+  cepLocation: CepLocation;
+  message: string;
+};
+
+export const POST = withApiHandler<ManualUpdateResponse>(async (context) => {
+  const { req } = context;
+
+  const session = await getAdminSessionFromRequest(req);
   if (!session) {
-    return NextResponse.json({ message: 'Não autenticado' }, { status: 401 });
+    throw new ApiError({ code: 'unauthorized', message: 'Não autenticado', status: 401 });
   }
 
-  const permissionError = requirePermission(session, AdminPermission.CONFIGURACOES);
-  if (permissionError) return permissionError;
+  if (!session.permissions.includes(AdminPermission.CONFIGURACOES)) {
+    throw new ApiError({ code: 'forbidden', message: 'Permissão negada', status: 403 });
+  }
 
-  const rateLimitError = rateLimitByUser(session.staffId, 'cep_manual_update', RATE_LIMITS.WRITE);
-  if (rateLimitError) return rateLimitError;
+  const rateLimitError = await rateLimitByUser(session.staffId, 'cep_manual_update', RATE_LIMITS.WRITE);
+  if (rateLimitError) {
+    throw new ApiError({ code: 'rate_limited', message: 'Muitas tentativas. Tente novamente mais tarde.', status: 429 });
+  }
 
-  try {
+  const body = await req.json();
+  const parsed = manualUpdateSchema.safeParse(body);
 
-    const body = await request.json();
-    const parsed = manualUpdateSchema.safeParse(body);
+  if (!parsed.success) {
+    throw new ApiError({
+      code: 'validation_error',
+      message: 'Validação falhou',
+      status: 400,
+      details: { errors: parsed.error.issues },
+    });
+  }
 
-    if (!parsed.success) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Validação falhou',
-          details: parsed.error.issues,
-        },
-        { status: 400 }
-      );
-    }
+  const { cep, lat, lng, precision, motivo } = parsed.data;
 
-    const { cep, lat, lng, precision, motivo } = parsed.data;
+  console.log(`[API] Manual update requested for CEP: ${cep}`);
+  console.log(`[API] Coordinates: ${lat}, ${lng}`);
+  console.log(`[API] Precision: ${precision}`);
+  console.log(`[API] Reason: ${motivo || 'Not specified'}`);
 
-    console.log(`[API] Manual update requested for CEP: ${cep}`);
-    console.log(`[API] Coordinates: ${lat}, ${lng}`);
-    console.log(`[API] Precision: ${precision}`);
-    console.log(`[API] Reason: ${motivo || 'Not specified'}`);
+  const cepLocation = await updateCepManual(cep, lat, lng, precision, motivo);
 
-    const cepLocation = await updateCepManual(cep, lat, lng, precision, motivo);
+  console.log(`[API] Manual update successful for CEP ${cep}`);
 
-    console.log(`[API] Manual update successful for CEP ${cep}`);
-
-    return NextResponse.json({
+  return {
+    data: {
       success: true,
       cepLocation,
       message: `CEP ${cep} atualizado manualmente com sucesso. Protegido contra re-geocoding automático.`,
-    });
-  } catch (error) {
-    console.error('[API] Manual update error:', error);
-
-    return NextResponse.json(
-      {
-        success: false,
-        error: error instanceof Error ? error.message : 'Erro desconhecido ao atualizar CEP manualmente',
-      },
-      { status: 500 }
-    );
-  }
-}
+    },
+  };
+});

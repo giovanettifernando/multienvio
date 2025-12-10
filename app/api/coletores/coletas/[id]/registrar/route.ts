@@ -1,134 +1,144 @@
-
-import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
+import { withApiHandler } from '@/lib/api/handler';
+import { ApiError } from '@/lib/api/errors';
 import { prisma } from '@/lib/db';
 import { getAutonomousCollectorSession } from '@/lib/auth/autonomous-collector-session';
 import { ShipmentStatus } from '@/lib/shipments/shipment-status';
 
-interface RegisterCollectionBody {
-  scannedCode: string;
-  collectedBy: string;
-}
+const RegisterCollectionSchema = z.object({
+  scannedCode: z.string().min(1, 'Código de rastreio é obrigatório'),
+  collectedBy: z.string().min(1, 'Nome de quem entregou é obrigatório'),
+});
+
+type RegistrarColetaResponse = {
+  message: string;
+  pickup: {
+    id: string;
+    status: string;
+    collectedAt: string | null;
+    collectedBy: string | null;
+    scannedCode: string | null;
+  };
+};
 
 /**
  * POST /api/coletores/coletas/[id]/registrar
  * Registra a realização de uma coleta pelo coletor
  */
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    // Validar autenticação
-    const session = await getAutonomousCollectorSession();
-    if (!session) {
-      return NextResponse.json({ message: 'Não autenticado' }, { status: 401 });
-    }
+export const POST = withApiHandler<RegistrarColetaResponse, { id: string }>(async (context) => {
+  const { req, params, logger } = context;
 
-    const { id } = await params;
+  // Validar autenticação
+  const session = await getAutonomousCollectorSession();
+  if (!session) {
+    throw new ApiError({ code: 'unauthorized', message: 'Não autenticado', status: 401 });
+  }
 
-    // Validar dados do body
-    const body: RegisterCollectionBody = await request.json();
-    const { scannedCode, collectedBy } = body;
+  const { id } = params;
 
-    if (!scannedCode || !collectedBy) {
-      return NextResponse.json(
-        { message: 'Código de rastreio e nome de quem entregou são obrigatórios' },
-        { status: 400 }
-      );
-    }
+  // Validar dados do body
+  const body = await req.json();
+  const parsed = RegisterCollectionSchema.safeParse(body);
+  if (!parsed.success) {
+    throw new ApiError({
+      code: 'VALIDATION_ERROR',
+      message: 'Dados inválidos',
+      status: 400,
+      details: parsed.error.flatten(),
+    });
+  }
 
-    // Buscar pickup request
-    const pickupRequest = await prisma.pickupRequest.findUnique({
-      where: { id },
-      include: {
-        shipment: {
-          select: {
-            id: true,
-            platformTrackingCode: true,
-          },
+  const { scannedCode, collectedBy } = parsed.data;
+
+  // Buscar pickup request
+  const pickupRequest = await prisma.pickupRequest.findUnique({
+    where: { id },
+    include: {
+      shipment: {
+        select: {
+          id: true,
+          platformTrackingCode: true,
         },
+      },
+    },
+  });
+
+  if (!pickupRequest) {
+    throw new ApiError({ code: 'not_found', message: 'Coleta não encontrada', status: 404 });
+  }
+
+  // Validar que a coleta pertence ao coletor logado
+  if (pickupRequest.collectorId !== session.coletorId) {
+    throw new ApiError({
+      code: 'forbidden',
+      message: 'Esta coleta não está atribuída a você',
+      status: 403,
+    });
+  }
+
+  // Validar que a coleta está pendente ou agendada
+  if (!['PENDING', 'SCHEDULED'].includes(pickupRequest.status)) {
+    throw new ApiError({
+      code: 'invalid_status',
+      message: `Coleta já foi processada (status: ${pickupRequest.status})`,
+      status: 400,
+    });
+  }
+
+  const now = new Date();
+
+  // Atualizar pickup request e shipment status em uma transação
+  const result = await prisma.$transaction(async (tx) => {
+    // 1. Atualizar PickupRequest como COLLECTED (aguardando entrega na transportadora)
+    const updatedPickupRequest = await tx.pickupRequest.update({
+      where: { id },
+      data: {
+        status: 'COLLECTED',
+        collectedAt: now,
+        collectedBy: collectedBy.trim(),
+        scannedCode: scannedCode.trim(),
+        updatedAt: now,
+      },
+      select: {
+        id: true,
+        status: true,
+        collectedAt: true,
+        collectedBy: true,
+        scannedCode: true,
+        shipmentId: true,
       },
     });
 
-    if (!pickupRequest) {
-      return NextResponse.json({ message: 'Coleta não encontrada' }, { status: 404 });
-    }
-
-    // Validar que a coleta pertence ao coletor logado
-    if (pickupRequest.collectorId !== session.coletorId) {
-      return NextResponse.json(
-        { message: 'Esta coleta não está atribuída a você' },
-        { status: 403 }
-      );
-    }
-
-    // Validar que a coleta está pendente ou agendada
-    if (!['PENDING', 'SCHEDULED'].includes(pickupRequest.status)) {
-      return NextResponse.json(
-        { message: `Coleta já foi processada (status: ${pickupRequest.status})` },
-        { status: 400 }
-      );
-    }
-
-    // Validar código de rastreio (opcional - pode ser diferente se o usuário digitou manualmente)
-    // Aqui apenas registramos o que foi informado
-    const now = new Date();
-
-    // Atualizar pickup request e shipment status em uma transação
-    const result = await prisma.$transaction(async (tx) => {
-      // 1. Atualizar PickupRequest como COLLECTED (aguardando entrega na transportadora)
-      const updatedPickupRequest = await tx.pickupRequest.update({
-        where: { id },
-        data: {
-          status: 'COLLECTED',
-          collectedAt: now,
-          collectedBy: collectedBy.trim(),
-          scannedCode: scannedCode.trim(),
-          updatedAt: now,
-        },
-        select: {
-          id: true,
-          status: true,
-          collectedAt: true,
-          collectedBy: true,
-          scannedCode: true,
-          shipmentId: true,
-        },
-      });
-
-      // 2. Atualizar Shipment.status para COLLECTED_FROM_SENDER
-      await tx.shipment.update({
-        where: { id: updatedPickupRequest.shipmentId },
-        data: {
-          status: ShipmentStatus.COLLECTED_FROM_SENDER,
-        },
-      });
-
-      return updatedPickupRequest;
+    // 2. Atualizar Shipment.status para COLLECTED_FROM_SENDER
+    await tx.shipment.update({
+      where: { id: updatedPickupRequest.shipmentId },
+      data: {
+        status: ShipmentStatus.COLLECTED_FROM_SENDER,
+      },
     });
 
-    console.log('[REGISTRAR_COLETA] Coleta registrada:', {
-      pickupId: id,
-      collectorId: session.coletorId,
-      collectedBy,
-      scannedCode,
-      collectedAt: now.toISOString(),
-      shipmentStatus: ShipmentStatus.COLLECTED_FROM_SENDER,
-    });
+    return updatedPickupRequest;
+  });
 
-    return NextResponse.json({
+  logger.info('registrar_coleta_success', {
+    pickupId: id,
+    collectorId: session.coletorId,
+    collectedBy,
+    scannedCode,
+    collectedAt: now.toISOString(),
+    shipmentStatus: ShipmentStatus.COLLECTED_FROM_SENDER,
+  });
+
+  return {
+    data: {
       message: 'Coleta registrada com sucesso',
       pickup: {
         id: result.id,
         status: result.status,
-        collectedAt: result.collectedAt?.toISOString(),
+        collectedAt: result.collectedAt?.toISOString() ?? null,
         collectedBy: result.collectedBy,
         scannedCode: result.scannedCode,
       },
-    }, { status: 200 });
-  } catch (error) {
-    console.error('[REGISTRAR_COLETA_ERROR]', error);
-    const message = error instanceof Error ? error.message : 'Erro ao registrar coleta';
-    return NextResponse.json({ message }, { status: 500 });
-  }
-}
+    },
+  };
+});

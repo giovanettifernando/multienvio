@@ -22,39 +22,37 @@
  * }
  */
 
-import { NextRequest, NextResponse } from 'next/server';
 import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
-import { requirePermission } from '@/lib/auth/permissions';
 import { AdminPermission } from '@prisma/client';
 import { listManualOverrides } from '@/lib/services/cepLocation';
+import { withApiHandler } from '@/lib/api/handler';
+import { ApiError } from '@/lib/api/errors';
 
-export async function GET(request: NextRequest) {
-  const session = await getAdminSessionFromRequest(request);
+export const GET = withApiHandler(async ({ req }) => {
+  const session = await getAdminSessionFromRequest(req);
   if (!session) {
-    return NextResponse.json({ message: 'Não autenticado' }, { status: 401 });
+    throw new ApiError({
+      code: 'UNAUTHORIZED',
+      message: 'Não autenticado',
+      status: 401,
+    });
   }
 
-  const permissionError = requirePermission(session, AdminPermission.CONFIGURACOES);
-  if (permissionError) return permissionError;
+  if (!session.permissions.includes(AdminPermission.CONFIGURACOES) && !session.isSuperAdmin) {
+    throw new ApiError({
+      code: 'FORBIDDEN',
+      message: 'Acesso negado',
+      status: 403,
+    });
+  }
 
-  try{
+  const ceps = await listManualOverrides();
 
-    const ceps = await listManualOverrides();
-
-    return NextResponse.json({
+  return {
+    data: {
       success: true,
       count: ceps.length,
       ceps,
-    });
-  } catch (error) {
-    console.error('[API] List manual overrides error:', error);
-
-    return NextResponse.json(
-      {
-        success: false,
-        error: error instanceof Error ? error.message : 'Erro desconhecido ao listar CEPs',
-      },
-      { status: 500 }
-    );
-  }
-}
+    },
+  };
+});

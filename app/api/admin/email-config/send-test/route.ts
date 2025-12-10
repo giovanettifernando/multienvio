@@ -4,77 +4,92 @@
  * Envia um email de teste usando a configuração SMTP salva
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { requireAdminUser } from '@/lib/auth/admin-helpers';
+import { withApiHandler } from '@/lib/api/handler';
+import { ApiError } from '@/lib/api/errors';
+import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
 import { AdminPermission } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import nodemailer from 'nodemailer';
 import { decrypt } from '@/lib/integrations/shared/encryption.service';
+import { z } from 'zod';
 
+type EmailSendTestResponse = {
+  success: boolean;
+  message: string;
+};
+
+const EmailSendTestSchema = z.object({
+  to: z.string().email('Email de destino inválido'),
+});
 
 /**
  * POST - Enviar email de teste
  */
-export async function POST(req: NextRequest) {
+export const POST = withApiHandler<EmailSendTestResponse>(async (context) => {
+  const { req } = context;
+
+  const session = await getAdminSessionFromRequest(req);
+  if (!session) {
+    throw new ApiError({ code: 'unauthorized', message: 'Não autenticado', status: 401 });
+  }
+
+  if (!session.permissions.includes(AdminPermission.CONFIGURACOES)) {
+    throw new ApiError({ code: 'forbidden', message: 'Permissão negada', status: 403 });
+  }
+
+  const body = await req.json();
+
+  const parsed = EmailSendTestSchema.safeParse(body);
+  if (!parsed.success) {
+    throw new ApiError({
+      code: 'VALIDATION_ERROR',
+      message: 'Dados inválidos',
+      status: 400,
+      details: parsed.error.flatten(),
+    });
+  }
+
+  const { to } = parsed.data;
+
+  // Buscar configuração ativa
+  const config = await prisma.emailConfig.findFirst({
+    where: { status: 'ACTIVE' },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  if (!config) {
+    throw new ApiError({
+      code: 'not_found',
+      message: 'Nenhuma configuração de email encontrada. Configure o SMTP primeiro.',
+      status: 404,
+    });
+  }
+
+  console.log('[EMAIL_SEND_TEST] Sending test email to:', to);
+  console.log('[EMAIL_SEND_TEST] Config found:', {
+    host: config.host,
+    port: config.port,
+    secure: config.secure,
+    user: config.user,
+    hasPassword: !!config.password,
+    passwordFormat: config.password ? `${config.password.substring(0, 10)}...` : 'EMPTY',
+  });
+
+  // Descriptografar senha
+  let password: string;
   try {
-    const authResult = await requireAdminUser(req, AdminPermission.CONFIGURACOES);
-    if (authResult instanceof NextResponse) {
-      return authResult;
-    }
-
-    const body = await req.json();
-    const { to } = body;
-
-    // Validações básicas
-    if (!to) {
-      return NextResponse.json(
-        { error: 'Email de destino é obrigatório' },
-        { status: 400 }
-      );
-    }
-
-    // Validar formato de email
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(to)) {
-      return NextResponse.json(
-        { error: 'Email de destino inválido' },
-        { status: 400 }
-      );
-    }
-
-    // Buscar configuração ativa
-    const config = await prisma.emailConfig.findFirst({
-      where: { status: 'ACTIVE' },
-      orderBy: { createdAt: 'desc' },
+    password = decrypt(config.password);
+    console.log('[EMAIL_SEND_TEST] Password decrypted successfully, length:', password.length);
+  } catch (error) {
+    console.error('[EMAIL_SEND_TEST] Failed to decrypt password:', error);
+    throw new ApiError({
+      code: 'decryption_error',
+      message: 'Falha ao descriptografar senha. Verifique a ENCRYPTION_KEY e reconfigure o SMTP.',
+      status: 500,
     });
+  }
 
-    if (!config) {
-      return NextResponse.json(
-        { error: 'Nenhuma configuração de email encontrada. Configure o SMTP primeiro.' },
-        { status: 404 }
-      );
-    }
-
-    console.log('[EMAIL_SEND_TEST] Sending test email to:', to);
-    console.log('[EMAIL_SEND_TEST] Config found:', {
-      host: config.host,
-      port: config.port,
-      secure: config.secure,
-      user: config.user,
-      hasPassword: !!config.password,
-      passwordFormat: config.password ? `${config.password.substring(0, 10)}...` : 'EMPTY',
-    });
-
-    // Descriptografar senha
-    let password: string;
-    try {
-      password = decrypt(config.password);
-      console.log('[EMAIL_SEND_TEST] Password decrypted successfully, length:', password.length);
-    } catch (error) {
-      console.error('[EMAIL_SEND_TEST] Failed to decrypt password:', error);
-      throw new Error('Falha ao descriptografar senha. Verifique a ENCRYPTION_KEY e reconfigure o SMTP.');
-    }
-
+  try {
     // Criar transporter
     const transporter = nodemailer.createTransport({
       host: config.host,
@@ -200,10 +215,12 @@ Data de envio: ${new Date().toLocaleString('pt-BR')}
 
     console.log('[EMAIL_SEND_TEST] Test email sent successfully');
 
-    return NextResponse.json({
-      success: true,
-      message: `Email de teste enviado para ${to}`,
-    });
+    return {
+      data: {
+        success: true,
+        message: `Email de teste enviado para ${to}`,
+      },
+    };
   } catch (error) {
     console.error('[EMAIL_SEND_TEST]', error);
 
@@ -222,9 +239,10 @@ Data de envio: ${new Date().toLocaleString('pt-BR')}
       }
     }
 
-    return NextResponse.json(
-      { error: errorMessage },
-      { status: 500 }
-    );
+    throw new ApiError({
+      code: 'smtp_send_error',
+      message: errorMessage,
+      status: 500,
+    });
   }
-}
+});

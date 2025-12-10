@@ -10,12 +10,11 @@
  * - status: 'pending' | 'paid' | 'all' (default: 'all')
  */
 
-import { NextRequest, NextResponse } from 'next/server';
 import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
-import { requirePermission } from '@/lib/auth/permissions';
-import { AdminPermission } from '@prisma/client';
+import { AdminPermission, Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db';
-
+import { withApiHandler } from '@/lib/api/handler';
+import { ApiError } from '@/lib/api/errors';
 
 export type PayableType = 'collector_commission' | 'pickup_point_commission' | 'carrier_cost' | 'expense';
 export type PayableStatus = 'pending' | 'paid';
@@ -58,77 +57,79 @@ const COMPLETED_PICKUP_STATUSES = ['COLLECTED', 'COMPLETED'];
 // Status de Reception que indicam recepção realizada (pago)
 const COMPLETED_RECEPTION_STATUSES = ['RECEIVED', 'PROCESSED', 'ISSUE_REPORTED'];
 
-export async function GET(request: NextRequest) {
-  const session = await getAdminSessionFromRequest(request);
+export const GET = withApiHandler<AccountsPayableResponse>(async ({ req }) => {
+  const session = await getAdminSessionFromRequest(req);
   if (!session) {
-    return NextResponse.json({ message: 'Não autenticado' }, { status: 401 });
-  }
-
-  const permissionError = requirePermission(session, AdminPermission.FINANCEIRO);
-  if (permissionError) return permissionError;
-
-  try {
-    const searchParams = request.nextUrl.searchParams;
-    const dateStart = searchParams.get('dateStart');
-    const dateEnd = searchParams.get('dateEnd');
-    const statusFilter = searchParams.get('status') || 'all';
-
-    if (!dateStart || !dateEnd) {
-      return NextResponse.json(
-        { message: 'Período obrigatório (dateStart e dateEnd)' },
-        { status: 400 }
-      );
-    }
-
-    const startDate = new Date(dateStart);
-    const endDate = new Date(dateEnd);
-    // Ajustar para fim do dia
-    endDate.setHours(23, 59, 59, 999);
-
-    // PERFORMANCE: Executar todas as queries em paralelo (independentes)
-    const [collectorCommissions, pickupPointCommissions, carrierCosts, expenses] = await Promise.all([
-      getCollectorCommissions(startDate, endDate, statusFilter),
-      getPickupPointCommissions(startDate, endDate, statusFilter),
-      getCarrierCosts(startDate, endDate, statusFilter),
-      getExpenses(startDate, endDate, statusFilter),
-    ]);
-
-    const items: PayableItem[] = [
-      ...collectorCommissions,
-      ...pickupPointCommissions,
-      ...carrierCosts,
-      ...expenses,
-    ];
-
-    // Ordenar por data de vencimento/criação
-    items.sort((a, b) => {
-      const dateA = a.dueDate || a.createdAt;
-      const dateB = b.dueDate || b.createdAt;
-      return new Date(dateB).getTime() - new Date(dateA).getTime();
+    throw new ApiError({
+      code: 'UNAUTHORIZED',
+      message: 'Não autenticado',
+      status: 401,
     });
-
-    // Calcular resumo
-    const summary = calculateSummary(items);
-
-    const response: AccountsPayableResponse = {
-      period: {
-        dateStart: startDate.toISOString(),
-        dateEnd: endDate.toISOString(),
-      },
-      statusFilter,
-      summary,
-      items,
-    };
-
-    return NextResponse.json(response);
-  } catch (error) {
-    console.error('[ACCOUNTS_PAYABLE] Error:', error);
-    return NextResponse.json(
-      { message: 'Erro ao gerar relatório de contas a pagar' },
-      { status: 500 }
-    );
   }
-}
+
+  if (!session.permissions.includes(AdminPermission.FINANCEIRO) && !session.isSuperAdmin) {
+    throw new ApiError({
+      code: 'FORBIDDEN',
+      message: 'Acesso negado',
+      status: 403,
+    });
+  }
+
+  const searchParams = new URL(req.url).searchParams;
+  const dateStart = searchParams.get('dateStart');
+  const dateEnd = searchParams.get('dateEnd');
+  const statusFilter = searchParams.get('status') || 'all';
+
+  if (!dateStart || !dateEnd) {
+    throw new ApiError({
+      code: 'VALIDATION_ERROR',
+      message: 'Período obrigatório (dateStart e dateEnd)',
+      status: 400,
+    });
+  }
+
+  const startDate = new Date(dateStart);
+  const endDate = new Date(dateEnd);
+  // Ajustar para fim do dia
+  endDate.setHours(23, 59, 59, 999);
+
+  // PERFORMANCE: Executar todas as queries em paralelo (independentes)
+  const [collectorCommissions, pickupPointCommissions, carrierCosts, expenses] = await Promise.all([
+    getCollectorCommissions(startDate, endDate, statusFilter),
+    getPickupPointCommissions(startDate, endDate, statusFilter),
+    getCarrierCosts(startDate, endDate, statusFilter),
+    getExpenses(startDate, endDate, statusFilter),
+  ]);
+
+  const items: PayableItem[] = [
+    ...collectorCommissions,
+    ...pickupPointCommissions,
+    ...carrierCosts,
+    ...expenses,
+  ];
+
+  // Ordenar por data de vencimento/criação
+  items.sort((a, b) => {
+    const dateA = a.dueDate || a.createdAt;
+    const dateB = b.dueDate || b.createdAt;
+    return new Date(dateB).getTime() - new Date(dateA).getTime();
+  });
+
+  // Calcular resumo
+  const summary = calculateSummary(items);
+
+  const response: AccountsPayableResponse = {
+    period: {
+      dateStart: startDate.toISOString(),
+      dateEnd: endDate.toISOString(),
+    },
+    statusFilter,
+    summary,
+    items,
+  };
+
+  return { data: response };
+});
 
 async function getCollectorCommissions(
   startDate: Date,
@@ -311,8 +312,7 @@ async function getExpenses(
   endDate: Date,
   statusFilter: string
 ): Promise<PayableItem[]> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const where: any = {
+  const where: Prisma.ExpenseWhereInput = {
     createdAt: {
       gte: startDate,
       lte: endDate,

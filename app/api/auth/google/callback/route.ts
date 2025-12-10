@@ -5,18 +5,19 @@
  * Creates/links accounts and establishes sessions based on context.
  */
 
-
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { SignJWT } from 'jose';
-import { cookies } from 'next/headers';
 import { prisma } from '@/lib/db';
+import { withApiHandlerResponse } from '@/lib/api/handler';
 import {
   parseState,
   exchangeCodeForTokens,
   getUserInfo,
   type OAuthContext,
 } from '@/lib/auth/google-oauth';
-import { createSession } from '@/lib/auth/session';
+import { sign, AUTH_COOKIE_NAME } from '@/lib/auth/session';
+import { getCachedRoleByName } from '@/lib/cache';
+import type { RequestLogger } from '@/lib/api/types';
 
 // JWT secret for collector tokens
 const JWT_SECRET = new TextEncoder().encode(
@@ -42,6 +43,7 @@ async function handleUserCallback(
   googleId: string,
   email: string,
   name: string,
+  logger: RequestLogger,
   picture?: string
 ): Promise<{ success: true; userId: string } | { success: false; error: string }> {
   try {
@@ -96,13 +98,11 @@ async function handleUserCallback(
       return { success: true, userId: user.id };
     }
 
-    // New user - create account
-    const userRole = await prisma.role.findUnique({
-      where: { name: 'user' },
-    });
+    // New user - create account (role lookup com cache)
+    const userRole = await getCachedRoleByName('user');
 
     if (!userRole) {
-      console.error('[GOOGLE_OAUTH] Default role "user" not found');
+      logger.error('google_oauth_role_not_found');
       return { success: false, error: 'Erro de configuração do sistema' };
     }
 
@@ -120,10 +120,10 @@ async function handleUserCallback(
       },
     });
 
-    console.log('[GOOGLE_OAUTH] New user created:', newUser.id);
+    logger.info('google_oauth_user_created', { userId: newUser.id });
     return { success: true, userId: newUser.id };
   } catch (error) {
-    console.error('[GOOGLE_OAUTH] User callback error:', error);
+    logger.error('google_oauth_user_error', { err: error });
     return { success: false, error: 'Erro ao processar autenticação' };
   }
 }
@@ -134,7 +134,8 @@ async function handleUserCallback(
  */
 async function handleCollectorCallback(
   googleId: string,
-  email: string
+  email: string,
+  logger: RequestLogger
 ): Promise<
   | { success: true; collector: { id: string; pfNome: string; pfEmail: string | null; pjRazaoSocial: string; pjCnpj: string; status: string } }
   | { success: false; error: string; code?: string }
@@ -237,22 +238,22 @@ async function handleCollectorCallback(
       code: 'COLLECTOR_NOT_FOUND',
     };
   } catch (error) {
-    console.error('[GOOGLE_OAUTH] Collector callback error:', error);
+    logger.error('google_oauth_collector_error', { err: error });
     return { success: false, error: 'Erro ao processar autenticação' };
   }
 }
 
 /**
- * Create collector JWT session
+ * Create collector JWT token (cookie will be set on response)
  */
-async function createCollectorSession(collector: {
+async function createCollectorToken(collector: {
   id: string;
   pfNome: string;
   pfEmail: string | null;
   pjRazaoSocial: string;
   status: string;
-}): Promise<void> {
-  const token = await new SignJWT({
+}): Promise<string> {
+  return new SignJWT({
     coletorId: collector.id,
     pfEmail: collector.pfEmail,
     pfNome: collector.pfNome,
@@ -263,53 +264,50 @@ async function createCollectorSession(collector: {
     .setIssuedAt()
     .setExpirationTime('7d')
     .sign(JWT_SECRET);
-
-  const cookieStore = await cookies();
-  cookieStore.set('coletor-token', token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    maxAge: 60 * 60 * 24 * 7, // 7 days
-    path: '/',
-  });
 }
 
-export async function GET(request: NextRequest) {
-  const searchParams = request.nextUrl.searchParams;
+// Cookie config
+const SESSION_TTL_DAYS = parseInt(process.env.CLIENT_SESSION_TTL_DAYS || '7', 10);
+const COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * SESSION_TTL_DAYS;
+
+export const GET = withApiHandlerResponse(async (context) => {
+  const { req, logger } = context;
+
+  const searchParams = req.nextUrl.searchParams;
   const code = searchParams.get('code');
   const stateParam = searchParams.get('state');
   const error = searchParams.get('error');
 
   // Handle OAuth errors from Google
   if (error) {
-    console.error('[GOOGLE_OAUTH] Error from Google:', error);
+    logger.warn('google_oauth_google_error', { error, errorDesc: searchParams.get('error_description') });
     const errorDesc = searchParams.get('error_description');
     // Default to user login page on error
     return NextResponse.redirect(
-      new URL(`/auth/login?error=${encodeURIComponent(errorDesc || error)}`, request.url)
+      new URL(`/auth/login?error=${encodeURIComponent(errorDesc || error)}`, req.url)
     );
   }
 
   // Validate required parameters
   if (!code || !stateParam) {
-    console.error('[GOOGLE_OAUTH] Missing code or state parameter');
+    logger.warn('google_oauth_missing_params', { hasCode: !!code, hasState: !!stateParam });
     return NextResponse.redirect(
-      new URL('/auth/login?error=Parâmetros inválidos', request.url)
+      new URL('/auth/login?error=Parâmetros inválidos', req.url)
     );
   }
 
   // Parse state to get context
   const state = parseState(stateParam);
   if (!state) {
-    console.error('[GOOGLE_OAUTH] Invalid state parameter');
+    logger.warn('google_oauth_invalid_state');
     return NextResponse.redirect(
-      new URL('/auth/login?error=Estado inválido', request.url)
+      new URL('/auth/login?error=Estado inválido', req.url)
     );
   }
 
-  const { context, redirectUrl } = state;
-  const errorRedirect = ERROR_REDIRECTS[context];
-  const successRedirect = redirectUrl || DEFAULT_REDIRECTS[context];
+  const { context: oauthContext, redirectUrl } = state;
+  const errorRedirect = ERROR_REDIRECTS[oauthContext];
+  const successRedirect = redirectUrl || DEFAULT_REDIRECTS[oauthContext];
 
   try {
     // Exchange code for tokens
@@ -318,25 +316,24 @@ export async function GET(request: NextRequest) {
     // Get user info from Google
     const googleUser = await getUserInfo(tokens.access_token);
 
-    console.log('[GOOGLE_OAUTH] Got user info:', {
-      sub: googleUser.sub,
-      email: googleUser.email,
-      name: googleUser.name,
-      context,
+    logger.debug('google_oauth_user_info', {
+      googleId: googleUser.sub,
+      context: oauthContext,
     });
 
-    if (context === 'user') {
+    if (oauthContext === 'user') {
       // Handle User authentication
       const result = await handleUserCallback(
         googleUser.sub,
         googleUser.email,
         googleUser.name,
+        logger,
         googleUser.picture
       );
 
       if (!result.success) {
         return NextResponse.redirect(
-          new URL(`${errorRedirect}?error=${encodeURIComponent(result.error)}`, request.url)
+          new URL(`${errorRedirect}?error=${encodeURIComponent(result.error)}`, req.url)
         );
       }
 
@@ -348,23 +345,40 @@ export async function GET(request: NextRequest) {
 
       if (!user) {
         return NextResponse.redirect(
-          new URL(`${errorRedirect}?error=Usuário não encontrado`, request.url)
+          new URL(`${errorRedirect}?error=Usuário não encontrado`, req.url)
         );
       }
 
-      // Create session
-      await createSession({
+      // Create JWT token for session
+      const token = await sign({
         userId: user.id,
         email: user.email,
         role: user.role?.name || 'user',
         tokenVersion: user.tokenVersion,
       });
 
-      console.log('[GOOGLE_OAUTH] User session created:', user.id);
-      return NextResponse.redirect(new URL(successRedirect, request.url));
+      logger.info('google_oauth_user_session', { userId: user.id });
+
+      // Create redirect response and set auth cookie directly on it
+      const response = NextResponse.redirect(new URL(successRedirect, req.url));
+      response.cookies.set(AUTH_COOKIE_NAME, token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path: '/',
+        maxAge: COOKIE_MAX_AGE_SECONDS,
+      });
+      response.cookies.set('last_activity', Date.now().toString(), {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path: '/',
+        maxAge: 60 * 60 * 24,
+      });
+      return response;
     } else {
       // Handle Collector authentication
-      const result = await handleCollectorCallback(googleUser.sub, googleUser.email);
+      const result = await handleCollectorCallback(googleUser.sub, googleUser.email, logger);
 
       if (!result.success) {
         const errorParams = new URLSearchParams({
@@ -372,21 +386,31 @@ export async function GET(request: NextRequest) {
           ...(result.code && { code: result.code }),
         });
         return NextResponse.redirect(
-          new URL(`${errorRedirect}?${errorParams.toString()}`, request.url)
+          new URL(`${errorRedirect}?${errorParams.toString()}`, req.url)
         );
       }
 
-      // Create collector session
-      await createCollectorSession(result.collector);
+      // Create collector token
+      const collectorToken = await createCollectorToken(result.collector);
 
-      console.log('[GOOGLE_OAUTH] Collector session created:', result.collector.id);
-      return NextResponse.redirect(new URL(successRedirect, request.url));
+      logger.info('google_oauth_collector_session', { collectorId: result.collector.id });
+
+      // Create redirect response and set collector cookie directly on it
+      const response = NextResponse.redirect(new URL(successRedirect, req.url));
+      response.cookies.set('coletor-token', collectorToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path: '/',
+        maxAge: 60 * 60 * 24 * 7, // 7 days
+      });
+      return response;
     }
   } catch (error) {
-    console.error('[GOOGLE_OAUTH] Callback error:', error);
+    logger.error('google_oauth_callback_error', { err: error });
     const message = error instanceof Error ? error.message : 'Erro ao processar autenticação';
     return NextResponse.redirect(
-      new URL(`${errorRedirect}?error=${encodeURIComponent(message)}`, request.url)
+      new URL(`${errorRedirect}?error=${encodeURIComponent(message)}`, req.url)
     );
   }
-}
+});

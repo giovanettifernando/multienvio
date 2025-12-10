@@ -23,7 +23,9 @@ export function useGeocode(cep: string | null | undefined, enabled = true) {
         return null;
       }
 
-      const data: GeocodeResponse = await response.json();
+      const json = await response.json();
+      // Handle standardized API response format { data: T, error, meta }
+      const data: GeocodeResponse = json.data ?? json;
       return data;
     },
     enabled: enabled && !!cep,

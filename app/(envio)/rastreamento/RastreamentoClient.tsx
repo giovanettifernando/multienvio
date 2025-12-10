@@ -19,7 +19,9 @@ async function fetchShipments(): Promise<{ dados: Shipment[] }> {
   if (!response.ok) {
     throw new Error("Não foi possível carregar os envios");
   }
-  return response.json();
+  const json = await response.json();
+  // Handle standardized API response format { data: T, error, meta }
+  return (json.data ?? json) as { dados: Shipment[] };
 }
 
 async function fetchTracking(shipmentId: string): Promise<Tracking> {
@@ -27,7 +29,9 @@ async function fetchTracking(shipmentId: string): Promise<Tracking> {
   if (!response.ok) {
     throw new Error("Não foi possível carregar rastreamento");
   }
-  return response.json();
+  const json = await response.json();
+  // Handle standardized API response format { data: T, error, meta }
+  return (json.data ?? json) as Tracking;
 }
 
 const STATUS_FILTERS = [

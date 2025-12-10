@@ -68,9 +68,11 @@ export default function PublicTrackingClient() {
       const res = await fetch(`/api/public/track/${code}`);
       if (!res.ok) {
         const errorData = await res.json();
-        throw new Error(errorData.message || "Erro ao buscar rastreamento");
+        throw new Error(errorData.error?.message || errorData.message || "Erro ao buscar rastreamento");
       }
-      return res.json();
+      const json = await res.json();
+      // Handle standardized API response format { data: T, error, meta }
+      return (json.data ?? json) as TrackingData;
     },
     enabled: !!code,
   });

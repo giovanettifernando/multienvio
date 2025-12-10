@@ -2,31 +2,13 @@
  * POST /api/admin/ceps/force-regeocode
  *
  * Força re-geocodificação de um CEP específico
- *
- * Body:
- * {
- *   "cep": "58035100"
- * }
- *
- * Response:
- * {
- *   "success": true,
- *   "cepLocation": {
- *     "cep": "58035100",
- *     "latitude": -7.1198028,
- *     "longitude": -34.8623789,
- *     "precision": "address",
- *     "provider": "nominatim",
- *     ...
- *   }
- * }
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { withApiHandler } from '@/lib/api/handler';
+import { ApiError } from '@/lib/api/errors';
 import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
-import { requirePermission } from '@/lib/auth/permissions';
-import { AdminPermission } from '@prisma/client';
-import { rateLimitByUser, RATE_LIMITS } from '@/lib/rate-limit';
+import { AdminPermission, type CepLocation } from '@prisma/client';
+import { rateLimitByUser, RATE_LIMITS } from '@/lib/rate-limit-redis';
 import { forceRegeocodeCep } from '@/lib/services/cepLocation';
 import { z } from 'zod';
 
@@ -34,56 +16,54 @@ const forceRegeocodeSchema = z.object({
   cep: z.string().min(8).max(9),
 });
 
-export async function POST(request: NextRequest) {
-  const session = await getAdminSessionFromRequest(request);
+type ForceRegeocodeResponse = {
+  success: boolean;
+  cepLocation: CepLocation;
+  message: string;
+};
+
+export const POST = withApiHandler<ForceRegeocodeResponse>(async (context) => {
+  const { req } = context;
+
+  const session = await getAdminSessionFromRequest(req);
   if (!session) {
-    return NextResponse.json({ message: 'Não autenticado' }, { status: 401 });
+    throw new ApiError({ code: 'unauthorized', message: 'Não autenticado', status: 401 });
   }
 
-  const permissionError = requirePermission(session, AdminPermission.CONFIGURACOES);
-  if (permissionError) return permissionError;
+  if (!session.permissions.includes(AdminPermission.CONFIGURACOES)) {
+    throw new ApiError({ code: 'forbidden', message: 'Permissão negada', status: 403 });
+  }
 
-  const rateLimitError = rateLimitByUser(session.staffId, 'cep_regeocode', RATE_LIMITS.WRITE);
-  if (rateLimitError) return rateLimitError;
+  const rateLimitError = await rateLimitByUser(session.staffId, 'cep_regeocode', RATE_LIMITS.WRITE);
+  if (rateLimitError) {
+    throw new ApiError({ code: 'rate_limited', message: 'Muitas tentativas. Tente novamente mais tarde.', status: 429 });
+  }
 
-  try {
+  const body = await req.json();
+  const parsed = forceRegeocodeSchema.safeParse(body);
 
-    const body = await request.json();
-    const parsed = forceRegeocodeSchema.safeParse(body);
+  if (!parsed.success) {
+    throw new ApiError({
+      code: 'validation_error',
+      message: 'Validação falhou',
+      status: 400,
+      details: { errors: parsed.error.issues },
+    });
+  }
 
-    if (!parsed.success) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Validação falhou',
-          details: parsed.error.issues,
-        },
-        { status: 400 }
-      );
-    }
+  const { cep } = parsed.data;
 
-    const { cep } = parsed.data;
+  context.logger.info('cep_force_regeocode_requested', { cep });
 
-    console.log(`[API] Force re-geocode requested for CEP: ${cep}`);
+  const cepLocation = await forceRegeocodeCep(cep);
 
-    const cepLocation = await forceRegeocodeCep(cep);
+  context.logger.info('cep_force_regeocode_success', { cep });
 
-    console.log(`[API] Re-geocoding successful for CEP ${cep}`);
-
-    return NextResponse.json({
+  return {
+    data: {
       success: true,
       cepLocation,
       message: `CEP ${cep} re-geocodificado com sucesso`,
-    });
-  } catch (error) {
-    console.error('[API] Force re-geocode error:', error);
-
-    return NextResponse.json(
-      {
-        success: false,
-        error: error instanceof Error ? error.message : 'Erro desconhecido ao re-geocodificar CEP',
-      },
-      { status: 500 }
-    );
-  }
-}
+    },
+  };
+});

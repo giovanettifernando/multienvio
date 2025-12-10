@@ -1,4 +1,10 @@
-type LogLevel = "info" | "warn" | "error" | "debug" | "audit";
+import { logger } from '@/lib/logger';
+import type { LoggerInterface } from '@/lib/logger';
+
+// ============================================================================
+// LOGGER DE REQUEST PARA API ROUTES
+// Usa logger estruturado internamente, mantem interface existente
+// ============================================================================
 
 type LoggerContext = {
   requestId: string;
@@ -6,53 +12,48 @@ type LoggerContext = {
   method: string;
   ip?: string | null;
   userAgent?: string | null;
+  userId?: string;
+  staffId?: string;
 };
 
 type LogPayload = Record<string, unknown> | undefined;
 
-function stringify(value: Record<string, unknown>): string {
-  try {
-    return JSON.stringify(value);
-  } catch {
-    return JSON.stringify({ message: "failed-to-serialize-payload" });
-  }
-}
-
-function writeLog(level: Exclude<LogLevel, "audit">, event: string, payload: LogPayload) {
-  const entry = payload ?? {};
-  const consoleMethod =
-    level === "error" ? console.error : level === "warn" ? console.warn : console.log;
-  consoleMethod(stringify({ level, event, ...entry }));
-}
-
+/**
+ * Cria um logger para request com contexto
+ * Usa child logger para incluir contexto em todos os logs
+ */
 export function createRequestLogger(context: LoggerContext) {
-  const base = {
+  // Criar child logger com contexto do request
+  const childLogger = logger.child({
     requestId: context.requestId,
     path: context.path,
     method: context.method,
     ip: context.ip ?? undefined,
     userAgent: context.userAgent ?? undefined,
-  };
-
-  const log = (level: Exclude<LogLevel, "audit">, event: string, payload?: LogPayload) => {
-    writeLog(level, event, { ...base, ...payload });
-  };
+    userId: context.userId,
+    staffId: context.staffId,
+  });
 
   return {
     info(event: string, payload?: LogPayload) {
-      log("info", event, payload);
+      childLogger.info({ event, ...payload }, event);
     },
     warn(event: string, payload?: LogPayload) {
-      log("warn", event, payload);
+      childLogger.warn({ event, ...payload }, event);
     },
     error(event: string, payload?: LogPayload) {
-      log("error", event, payload);
+      childLogger.error({ event, ...payload }, event);
     },
     debug(event: string, payload?: LogPayload) {
-      log("debug", event, payload);
+      childLogger.debug({ event, ...payload }, event);
     },
     audit(event: string, payload?: LogPayload) {
-      writeLog("info", event, { ...base, category: "audit", ...payload });
+      childLogger.info({ event, category: 'audit', ...payload }, `[AUDIT] ${event}`);
     },
+    // Expor o logger subjacente para uso avancado
+    _logger: childLogger as LoggerInterface,
   };
 }
+
+// Re-export o tipo do logger para uso em outros arquivos
+export type RequestLogger = ReturnType<typeof createRequestLogger>;

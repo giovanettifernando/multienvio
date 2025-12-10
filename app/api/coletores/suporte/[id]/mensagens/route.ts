@@ -1,16 +1,15 @@
-
-import { NextRequest, NextResponse } from 'next/server';
+import { withApiHandler } from '@/lib/api/handler';
+import { ApiError } from '@/lib/api/errors';
 import { getAutonomousCollectorSession } from '@/lib/auth/autonomous-collector-session';
 import {
   addMessageToTicketForAutonomousCollector,
   getTicketForAutonomousCollector,
 } from '@/lib/support/autonomous-collector-service';
+import { type SupportMessage } from '@/lib/validation/support';
 import { z } from 'zod';
 
 const AddMessageSchema = z.object({
   content: z.string().min(1, 'Mensagem não pode estar vazia'),
-  // NOTA: Upload de anexos não está implementado para coletores autônomos
-  // Campo mantido para futura implementação quando houver storage configurado
   attachments: z
     .array(
       z.object({
@@ -22,29 +21,33 @@ const AddMessageSchema = z.object({
     .optional(),
 });
 
+type AddMessageResponse = {
+  message: SupportMessage;
+};
+
 /**
  * POST /api/coletores/suporte/[id]/mensagens
  * Adiciona mensagem a um ticket do coletor autônomo
  */
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export const POST = withApiHandler<AddMessageResponse, { id: string }>(async (context) => {
+  const { req, params, logger } = context;
+
+  const session = await getAutonomousCollectorSession();
+  if (!session) {
+    throw new ApiError({ code: 'unauthorized', message: 'Não autenticado', status: 401 });
+  }
+
+  const { id } = params;
+
+  // Verificar se o ticket existe e pertence ao coletor
+  const ticket = await getTicketForAutonomousCollector(id, session.coletorId);
+  if (!ticket) {
+    throw new ApiError({ code: 'not_found', message: 'Ticket não encontrado', status: 404 });
+  }
+
+  const body = await req.json();
+
   try {
-    const session = await getAutonomousCollectorSession();
-    if (!session) {
-      return NextResponse.json({ message: 'Não autenticado' }, { status: 401 });
-    }
-
-    const { id } = await params;
-
-    // Verificar se o ticket existe e pertence ao coletor
-    const ticket = await getTicketForAutonomousCollector(id, session.coletorId);
-    if (!ticket) {
-      return NextResponse.json({ message: 'Ticket não encontrado' }, { status: 404 });
-    }
-
-    const body = await request.json();
     const validatedData = AddMessageSchema.parse(body);
 
     const message = await addMessageToTicketForAutonomousCollector(
@@ -54,18 +57,18 @@ export async function POST(
       validatedData.attachments
     );
 
-    return NextResponse.json({ message }, { status: 201 });
+    logger.info('coletores_suporte_add_message', { coletorId: session.coletorId, ticketId: id });
+
+    return { data: { message }, status: 201 };
   } catch (error) {
-    console.error('[COLETORES_SUPORTE_ADD_MESSAGE]', error);
-
-    if (error instanceof Error && error.name === 'ZodError') {
-      return NextResponse.json(
-        { message: 'Dados inválidos', errors: error },
-        { status: 400 }
-      );
+    if (error instanceof z.ZodError) {
+      throw new ApiError({
+        code: 'validation_error',
+        message: 'Dados inválidos',
+        status: 400,
+        details: { errors: error.issues },
+      });
     }
-
-    const message = error instanceof Error ? error.message : 'Erro ao adicionar mensagem';
-    return NextResponse.json({ message }, { status: 500 });
+    throw error;
   }
-}
+});

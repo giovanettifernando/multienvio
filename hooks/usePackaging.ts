@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { PackagingCreateInput } from '@/lib/validation/packaging';
+import { apiFetch } from '@/lib/api/client';
 
 export interface PackagingTemplate {
   id: string;
@@ -17,16 +18,7 @@ export interface PackagingTemplate {
 export function useListPackaging() {
   return useQuery({
     queryKey: ['packaging'],
-    queryFn: async () => {
-      const response = await fetch('/api/packaging');
-
-      if (!response.ok) {
-        throw new Error('Erro ao buscar embalagens');
-      }
-
-      const data: PackagingTemplate[] = await response.json();
-      return data;
-    },
+    queryFn: () => apiFetch<PackagingTemplate[]>('/api/packaging'),
     staleTime: 5 * 60 * 1000, // 5 minutos
   });
 }
@@ -38,21 +30,12 @@ export function useCreatePackaging() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (data: PackagingCreateInput) => {
-      const response = await fetch('/api/packaging', {
+    mutationFn: (data: PackagingCreateInput) =>
+      apiFetch<PackagingTemplate>('/api/packaging', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Erro ao criar embalagem');
-      }
-
-      const result: PackagingTemplate = await response.json();
-      return result;
-    },
+      }),
     onSuccess: () => {
       // Invalidar cache para forçar refetch
       queryClient.invalidateQueries({ queryKey: ['packaging'] });
@@ -67,21 +50,12 @@ export function useUpdatePackaging() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Partial<PackagingCreateInput> }) => {
-      const response = await fetch(`/api/packaging/${id}`, {
+    mutationFn: ({ id, data }: { id: string; data: Partial<PackagingCreateInput> }) =>
+      apiFetch<PackagingTemplate>(`/api/packaging/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Erro ao atualizar embalagem');
-      }
-
-      const result: PackagingTemplate = await response.json();
-      return result;
-    },
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['packaging'] });
     },
@@ -95,16 +69,8 @@ export function useDeletePackaging() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (id: string) => {
-      const response = await fetch(`/api/packaging/${id}`, {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Erro ao remover embalagem');
-      }
-    },
+    mutationFn: (id: string) =>
+      apiFetch<void>(`/api/packaging/${id}`, { method: 'DELETE' }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['packaging'] });
     },

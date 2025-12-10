@@ -8,20 +8,22 @@
  * - redirect: URL to redirect after successful auth (optional)
  */
 
-
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
+import { withApiHandlerResponse } from '@/lib/api/handler';
 import {
   validateGoogleConfigAsync,
   buildAuthorizationUrl,
   type OAuthContext,
 } from '@/lib/auth/google-oauth';
 
-export async function GET(request: NextRequest) {
+export const GET = withApiHandlerResponse(async (context) => {
+  const { req, logger } = context;
+
   try {
     // Validate Google OAuth configuration (loads from database if needed)
     const configValidation = await validateGoogleConfigAsync();
     if (!configValidation.valid) {
-      console.error('[GOOGLE_OAUTH] Configuration error:', configValidation.error);
+      logger.error('google_oauth_config_error', { error: configValidation.error });
       return NextResponse.json(
         { error: 'Configuração OAuth incompleta', details: configValidation.error },
         { status: 500 }
@@ -29,12 +31,12 @@ export async function GET(request: NextRequest) {
     }
 
     // Get context from query params
-    const searchParams = request.nextUrl.searchParams;
-    const context = searchParams.get('context') as OAuthContext | null;
+    const searchParams = req.nextUrl.searchParams;
+    const oauthContext = searchParams.get('context') as OAuthContext | null;
     const redirectUrl = searchParams.get('redirect');
 
     // Validate context
-    if (!context || (context !== 'user' && context !== 'collector')) {
+    if (!oauthContext || (oauthContext !== 'user' && oauthContext !== 'collector')) {
       return NextResponse.json(
         {
           error: 'Contexto inválido',
@@ -44,17 +46,17 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    console.log('[GOOGLE_OAUTH] Initiating flow for context:', context);
+    logger.info('google_oauth_initiate', { context: oauthContext });
 
     // Build authorization URL and redirect
-    const authUrl = await buildAuthorizationUrl(context, redirectUrl || undefined);
+    const authUrl = await buildAuthorizationUrl(oauthContext, redirectUrl || undefined);
 
     return NextResponse.redirect(authUrl);
   } catch (error) {
-    console.error('[GOOGLE_OAUTH] Error initiating OAuth:', error);
+    logger.error('google_oauth_initiate_error', { err: error });
     return NextResponse.json(
       { error: 'Erro ao iniciar autenticação Google' },
       { status: 500 }
     );
   }
-}
+});

@@ -4,159 +4,206 @@
  * Lista coletas do coletor com filtro de período e estatísticas
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { withApiHandler } from '@/lib/api/handler';
+import { ApiError } from '@/lib/api/errors';
 import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
-import { requirePermission } from '@/lib/auth/permissions';
 import { AdminPermission } from '@prisma/client';
 import { prisma } from '@/lib/db';
 
-
-type RouteContext = {
-  params: Promise<{
+interface PickupItem {
+  id: string;
+  status: string;
+  originCep: string;
+  originAddress: string | null;
+  originCity: string | null;
+  originUf: string | null;
+  collectedAt: string | null;
+  collectedBy: string | null;
+  scannedCode: string | null;
+  scheduleAt: string | null;
+  createdAt: string;
+  shipment: {
     id: string;
-  }>;
-};
+    trackingCode: string;
+    carrierTrackingCode: string | null;
+    carrier: string | null;
+    service: string | null;
+    weight: number;
+    declaredValue: number;
+    recipientName: string | null;
+    destinationCity: string;
+    destinationState: string;
+    pickupFee: number | null;
+  } | null;
+  user: {
+    id: string;
+    name: string;
+    email: string;
+  } | null;
+}
 
-export async function GET(request: NextRequest, context: RouteContext) {
-  const session = await getAdminSessionFromRequest(request);
+interface PickupStats {
+  totalPickups: number;
+  totalKm: number;
+  totalCommission: number;
+  dateFrom: string;
+  dateTo: string;
+}
+
+interface GetCollectorPickupsResponse {
+  items: PickupItem[];
+  page: number;
+  pageSize: number;
+  total: number;
+  stats: PickupStats;
+}
+
+export const GET = withApiHandler<GetCollectorPickupsResponse, { id: string }>(async (context) => {
+  const { req, params, logger } = context;
+
+  const session = await getAdminSessionFromRequest(req);
   if (!session) {
-    return NextResponse.json({ message: 'Não autenticado' }, { status: 401 });
+    throw new ApiError({ code: 'unauthorized', message: 'Não autenticado', status: 401 });
   }
 
-  const permissionError = requirePermission(session, AdminPermission.COLETORES);
-  if (permissionError) return permissionError;
+  if (!session.permissions.includes(AdminPermission.COLETORES)) {
+    throw new ApiError({ code: 'forbidden', message: 'Permissão negada', status: 403 });
+  }
 
-  try {
-    const { id } = await context.params;
-    const { searchParams } = new URL(request.url);
+  const { id } = params;
+  const { searchParams } = new URL(req.url);
 
-    // Parse date filters - default to start of current month to today
-    const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  // Parse date filters - default to start of current month to today
+  const now = new Date();
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-    const dateFromParam = searchParams.get('dateFrom');
-    const dateToParam = searchParams.get('dateTo');
+  const dateFromParam = searchParams.get('dateFrom');
+  const dateToParam = searchParams.get('dateTo');
 
-    const dateFrom = dateFromParam ? new Date(dateFromParam) : startOfMonth;
-    const dateTo = dateToParam ? new Date(dateToParam) : now;
+  const dateFrom = dateFromParam ? new Date(dateFromParam) : startOfMonth;
+  const dateTo = dateToParam ? new Date(dateToParam) : now;
 
-    // Ensure dateTo includes the full day
-    dateTo.setHours(23, 59, 59, 999);
+  // Ensure dateTo includes the full day
+  dateTo.setHours(23, 59, 59, 999);
 
-    // Pagination
-    const page = parseInt(searchParams.get('page') || '1', 10);
-    const pageSize = parseInt(searchParams.get('pageSize') || '20', 10);
-    const skip = (page - 1) * pageSize;
+  // Pagination
+  const page = parseInt(searchParams.get('page') || '1', 10);
+  const pageSize = parseInt(searchParams.get('pageSize') || '20', 10);
+  const skip = (page - 1) * pageSize;
 
-    // Status filter (optional)
-    const statusFilter = searchParams.get('status');
+  // Status filter (optional)
+  const statusFilter = searchParams.get('status');
 
-    // Verify collector exists
-    const collector = await prisma.collector.findUnique({
-      where: { id },
-      select: {
-        id: true,
-        commissionKind: true,
-        commissionAmount: true,
-        commissionAmountPerKm: true,
-      },
-    });
+  // Verify collector exists
+  const collector = await prisma.collector.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      commissionKind: true,
+      commissionAmount: true,
+      commissionAmountPerKm: true,
+    },
+  });
 
-    if (!collector) {
-      return NextResponse.json(
-        { message: 'Coletor não encontrado' },
-        { status: 404 }
-      );
-    }
+  if (!collector) {
+    throw new ApiError({ code: 'not_found', message: 'Coletor não encontrado', status: 404 });
+  }
 
-    // Build where clause
-    const whereClause: {
-      collectorId: string;
-      collectedAt?: { gte: Date; lte: Date };
-      status?: string | { in: string[] };
-    } = {
-      collectorId: id,
-      collectedAt: {
-        gte: dateFrom,
-        lte: dateTo,
-      },
-    };
+  // Build where clause
+  const whereClause: {
+    collectorId: string;
+    collectedAt?: { gte: Date; lte: Date };
+    status?: string | { in: string[] };
+  } = {
+    collectorId: id,
+    collectedAt: {
+      gte: dateFrom,
+      lte: dateTo,
+    },
+  };
 
-    if (statusFilter && statusFilter !== 'all') {
-      whereClause.status = statusFilter;
-    } else {
-      // By default, show only completed pickups (COLLECTED or COMPLETED)
-      whereClause.status = { in: ['COLLECTED', 'COMPLETED'] };
-    }
+  if (statusFilter && statusFilter !== 'all') {
+    whereClause.status = statusFilter;
+  } else {
+    // By default, show only completed pickups (COLLECTED or COMPLETED)
+    whereClause.status = { in: ['COLLECTED', 'COMPLETED'] };
+  }
 
-    // Fetch pickups with shipment data
-    const [pickups, total] = await Promise.all([
-      prisma.pickupRequest.findMany({
-        where: whereClause,
-        include: {
-          shipment: {
-            select: {
-              id: true,
-              platformTrackingCode: true,
-              carrierTrackingCode: true,
-              carrier: true,
-              service: true,
-              weight: true,
-              declaredValue: true,
-              recipientName: true,
-              destinationCity: true,
-              destinationState: true,
-              originCep: true,
-              pickupFee: true,
-            },
-          },
-          user: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-            },
-          },
-        },
-        orderBy: { collectedAt: 'desc' },
-        skip,
-        take: pageSize,
-      }),
-      prisma.pickupRequest.count({ where: whereClause }),
-    ]);
-
-    // Calculate statistics for the filtered period
-    const statsWhere = {
-      collectorId: id,
-      collectedAt: {
-        gte: dateFrom,
-        lte: dateTo,
-      },
-      status: { in: ['COLLECTED', 'COMPLETED'] },
-    };
-
-    const statsPickups = await prisma.pickupRequest.findMany({
-      where: statsWhere,
+  // Fetch pickups with shipment data
+  const [pickups, total] = await Promise.all([
+    prisma.pickupRequest.findMany({
+      where: whereClause,
       include: {
         shipment: {
           select: {
+            id: true,
+            platformTrackingCode: true,
+            carrierTrackingCode: true,
+            carrier: true,
+            service: true,
+            weight: true,
+            declaredValue: true,
+            recipientName: true,
+            destinationCity: true,
+            destinationState: true,
+            originCep: true,
             pickupFee: true,
           },
         },
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
       },
-    });
+      orderBy: { collectedAt: 'desc' },
+      skip,
+      take: pageSize,
+    }),
+    prisma.pickupRequest.count({ where: whereClause }),
+  ]);
 
-    // Calculate totals
-    const totalPickups = statsPickups.length;
-    const totalCommission = statsPickups.reduce((acc, pickup) => {
-      return acc + (pickup.shipment?.pickupFee || 0);
-    }, 0);
+  // Calculate statistics for the filtered period
+  const statsWhere = {
+    collectorId: id,
+    collectedAt: {
+      gte: dateFrom,
+      lte: dateTo,
+    },
+    status: { in: ['COLLECTED', 'COMPLETED'] },
+  };
 
-    // Note: We don't have km tracking per pickup in the current schema
-    // If you have a distanceKm field or similar, it would be calculated here
-    const totalKm = 0; // Placeholder - would need distanceKm field in schema
+  const statsPickups = await prisma.pickupRequest.findMany({
+    where: statsWhere,
+    include: {
+      shipment: {
+        select: {
+          pickupFee: true,
+        },
+      },
+    },
+  });
 
-    return NextResponse.json({
+  // Calculate totals
+  const totalPickups = statsPickups.length;
+  const totalCommission = statsPickups.reduce((acc, pickup) => {
+    return acc + (pickup.shipment?.pickupFee || 0);
+  }, 0);
+
+  // Note: We don't have km tracking per pickup in the current schema
+  const totalKm = 0; // Placeholder - would need distanceKm field in schema
+
+  logger.info('admin_collector_pickups_list', {
+    staffId: session.staffId,
+    collectorId: id,
+    total,
+    page,
+  });
+
+  return {
+    data: {
       items: pickups.map((pickup) => ({
         id: pickup.id,
         status: pickup.status,
@@ -202,12 +249,6 @@ export async function GET(request: NextRequest, context: RouteContext) {
         dateFrom: dateFrom.toISOString(),
         dateTo: dateTo.toISOString(),
       },
-    });
-  } catch (error) {
-    console.error('[GET /api/admin/coletores/[id]/pickups]', error);
-    return NextResponse.json(
-      { message: 'Erro ao buscar coletas do coletor' },
-      { status: 500 }
-    );
-  }
-}
+    },
+  };
+});

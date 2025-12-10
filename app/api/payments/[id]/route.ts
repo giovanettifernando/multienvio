@@ -5,61 +5,59 @@
  * Usado pelo frontend para polling de status de PIX
  */
 
-import { NextResponse } from 'next/server';
+import { withApiHandler } from '@/lib/api/handler';
+import { ApiError } from '@/lib/api/errors';
+import { getUserFromRequest } from '@/lib/auth/session';
 import { prisma } from '@/lib/db';
-import { getUserSessionFromRequest } from '@/lib/auth/user-session';
 
+type PaymentStatusResponse = {
+  payment: {
+    id: string;
+    status: string;
+    method: string;
+    amountCents: number;
+    referenceId: string;
+    externalId: string | null;
+    metadata: unknown;
+    createdAt: string;
+    paidAt: string | null;
+  };
+};
 
-interface RouteParams {
-  params: Promise<{ id: string }>;
-}
+export const GET = withApiHandler<PaymentStatusResponse, { id: string }>(async (context) => {
+  const session = await getUserFromRequest(context.req);
+  if (!session?.userId) {
+    throw new ApiError({ code: 'unauthorized', message: 'Não autorizado', status: 401 });
+  }
 
-export async function GET(request: Request, { params }: RouteParams) {
-  try {
-    // Verificar autenticação
-    const session = await getUserSessionFromRequest(request);
-    if (!session) {
-      return NextResponse.json(
-        { error: 'Não autorizado' },
-        { status: 401 }
-      );
-    }
+  const { id } = await context.params;
 
-    const { id } = await params;
+  const payment = await prisma.paymentTransaction.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      status: true,
+      method: true,
+      amountCents: true,
+      referenceId: true,
+      externalId: true,
+      userId: true,
+      metadata: true,
+      createdAt: true,
+      paidAt: true,
+    },
+  });
 
-    // Buscar pagamento
-    const payment = await prisma.paymentTransaction.findUnique({
-      where: { id },
-      select: {
-        id: true,
-        status: true,
-        method: true,
-        amountCents: true,
-        referenceId: true,
-        externalId: true,
-        userId: true,
-        metadata: true,
-        createdAt: true,
-        paidAt: true,
-      },
-    });
+  if (!payment) {
+    throw new ApiError({ code: 'not_found', message: 'Pagamento não encontrado', status: 404 });
+  }
 
-    if (!payment) {
-      return NextResponse.json(
-        { error: 'Pagamento não encontrado' },
-        { status: 404 }
-      );
-    }
+  if (payment.userId && payment.userId !== session.userId) {
+    throw new ApiError({ code: 'forbidden', message: 'Não autorizado', status: 403 });
+  }
 
-    // Verificar se o usuário é o dono do pagamento
-    if (payment.userId && payment.userId !== session.userId) {
-      return NextResponse.json(
-        { error: 'Não autorizado' },
-        { status: 403 }
-      );
-    }
-
-    return NextResponse.json({
+  return {
+    data: {
       payment: {
         id: payment.id,
         status: payment.status,
@@ -68,15 +66,9 @@ export async function GET(request: Request, { params }: RouteParams) {
         referenceId: payment.referenceId,
         externalId: payment.externalId,
         metadata: payment.metadata,
-        createdAt: payment.createdAt,
-        paidAt: payment.paidAt,
+        createdAt: payment.createdAt.toISOString(),
+        paidAt: payment.paidAt?.toISOString() ?? null,
       },
-    });
-  } catch (error) {
-    console.error('[PAYMENT_STATUS_ERROR]', error);
-    return NextResponse.json(
-      { error: 'Erro ao consultar pagamento' },
-      { status: 500 }
-    );
-  }
-}
+    },
+  };
+});

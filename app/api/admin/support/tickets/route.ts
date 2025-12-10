@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { withApiHandler } from '@/lib/api/handler';
+import { ApiError } from '@/lib/api/errors';
 import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
-import { requirePermission } from '@/lib/auth/permissions';
 import { AdminPermission } from '@prisma/client';
 import { listTicketsForAdmin } from '@/lib/support/service';
 import type { Priority, Status } from '@/lib/validation/support';
@@ -25,16 +25,25 @@ function parseInteger(value: string | null, fallback: number): number {
   return Number.isNaN(parsed) || parsed <= 0 ? fallback : parsed;
 }
 
-export async function GET(request: Request) {
-  const session = await getAdminSessionFromRequest(request);
+export const GET = withApiHandler(async ({ req }) => {
+  const session = await getAdminSessionFromRequest(req);
   if (!session) {
-    return NextResponse.json({ message: 'Não autenticado' }, { status: 401 });
+    throw new ApiError({
+      code: 'UNAUTHORIZED',
+      message: 'Não autenticado',
+      status: 401,
+    });
   }
 
-  const permissionError = requirePermission(session, AdminPermission.SUPORTE);
-  if (permissionError) return permissionError;
+  if (!session.permissions.includes(AdminPermission.SUPORTE) && !session.isSuperAdmin) {
+    throw new ApiError({
+      code: 'FORBIDDEN',
+      message: 'Sem permissão para acessar este recurso',
+      status: 403,
+    });
+  }
 
-  const url = new URL(request.url);
+  const url = new URL(req.url);
   const params = url.searchParams;
 
   const statusValues = parseArrayParam(params, 'status') as Status[];
@@ -48,22 +57,17 @@ export async function GET(request: Request) {
   const page = parseInteger(params.get('page'), 1);
   const pageSize = parseInteger(params.get('pageSize'), 20);
 
-  try {
-    const result = await listTicketsForAdmin(
-      {
-        status: statusValues.length ? statusValues : undefined,
-        priority: priorityValues.length ? priorityValues : undefined,
-        query,
-        requesterEmail,
-        assignedTo,
-      },
-      page,
-      pageSize,
-    );
+  const result = await listTicketsForAdmin(
+    {
+      status: statusValues.length ? statusValues : undefined,
+      priority: priorityValues.length ? priorityValues : undefined,
+      query,
+      requesterEmail,
+      assignedTo,
+    },
+    page,
+    pageSize,
+  );
 
-    return NextResponse.json(result);
-  } catch (error) {
-    console.error('[ADMIN_SUPPORT_TICKETS_GET]', error);
-    return NextResponse.json({ message: 'Erro ao carregar tickets' }, { status: 500 });
-  }
-}
+  return { data: result };
+});

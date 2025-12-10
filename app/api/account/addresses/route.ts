@@ -3,170 +3,160 @@
  * POST /api/account/addresses - Cria novo endereço
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { withApiHandler } from '@/lib/api/handler';
+import { ApiError } from '@/lib/api/errors';
 import { getUserFromRequest } from '@/lib/auth/session';
 import { prisma } from '@/lib/db';
+import { AddressSchema } from '@/lib/validation/address';
+import { logger } from '@/lib/logger';
 
+type AddressDto = {
+  id: string;
+  label: string | null;
+  cep: string;
+  logradouro: string;
+  numero: string;
+  complemento: string | null;
+  bairro: string;
+  cidade: string;
+  uf: string;
+  isDefault: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+type GetAddressesResponse = {
+  success: boolean;
+  addresses: AddressDto[];
+};
+
+type CreateAddressResponse = {
+  success: boolean;
+  message: string;
+  address: AddressDto;
+};
 
 /**
  * GET /api/account/addresses
  * Lista todos os endereços do usuário autenticado
  */
-export async function GET(request: NextRequest) {
-  try {
-    const currentUser = await getUserFromRequest(request);
-
-    if (!currentUser) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: 'Não autenticado',
-          code: 'UNAUTHORIZED',
-        },
-        { status: 401 }
-      );
-    }
-
-    // Buscar endereços do usuário ordenados por: default primeiro, depois por data de criação
-    const addresses = await prisma.address.findMany({
-      where: { userId: currentUser.userId },
-      select: {
-        id: true,
-        label: true,
-        cep: true,
-        logradouro: true,
-        numero: true,
-        complemento: true,
-        bairro: true,
-        cidade: true,
-        uf: true,
-        isDefault: true,
-        createdAt: true,
-        updatedAt: true,
-      },
-      orderBy: [
-        { isDefault: 'desc' }, // Default primeiro
-        { createdAt: 'desc' },  // Mais recente depois
-      ],
-    });
-
-    return NextResponse.json({
-      success: true,
-      addresses,
-    });
-  } catch (error) {
-    console.error('[GET /api/account/addresses] Error:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        message: 'Erro ao buscar endereços',
-        code: 'INTERNAL_ERROR',
-      },
-      { status: 500 }
-    );
+export const GET = withApiHandler<GetAddressesResponse>(async (context) => {
+  const session = await getUserFromRequest(context.req);
+  if (!session?.userId) {
+    throw new ApiError({ code: 'unauthorized', message: 'Não autenticado', status: 401 });
   }
-}
+
+  // Buscar endereços do usuário ordenados por: default primeiro, depois por data de criação
+  const addresses = await prisma.address.findMany({
+    where: { userId: session.userId },
+    select: {
+      id: true,
+      label: true,
+      cep: true,
+      logradouro: true,
+      numero: true,
+      complemento: true,
+      bairro: true,
+      cidade: true,
+      uf: true,
+      isDefault: true,
+      createdAt: true,
+      updatedAt: true,
+    },
+    orderBy: [
+      { isDefault: 'desc' }, // Default primeiro
+      { createdAt: 'desc' },  // Mais recente depois
+    ],
+  });
+
+  return {
+    data: {
+      success: true,
+      addresses: addresses.map(addr => ({
+        ...addr,
+        createdAt: addr.createdAt.toISOString(),
+        updatedAt: addr.updatedAt.toISOString(),
+      })),
+    },
+  };
+});
 
 /**
  * POST /api/account/addresses
  * Cria um novo endereço para o usuário autenticado
  */
-export async function POST(request: NextRequest) {
-  try {
-    const currentUser = await getUserFromRequest(request);
+export const POST = withApiHandler<CreateAddressResponse>(async (context) => {
+  const session = await getUserFromRequest(context.req);
+  if (!session?.userId) {
+    throw new ApiError({ code: 'unauthorized', message: 'Não autenticado', status: 401 });
+  }
 
-    if (!currentUser) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: 'Não autenticado',
-          code: 'UNAUTHORIZED',
-        },
-        { status: 401 }
-      );
-    }
+  const body = await context.req.json();
 
-    const body = await request.json();
-
-    // Importação dinâmica do schema
-    const { AddressSchema } = await import('@/lib/validation/address');
-
-    // Validar dados
-    const validated = AddressSchema.parse(body);
-
-    console.log('[POST /api/account/addresses] Creating address:', currentUser.userId, validated);
-
-    // Se isDefault=true, desmarcar todos os outros endereços como default
-    if (validated.isDefault) {
-      await prisma.address.updateMany({
-        where: { userId: currentUser.userId, isDefault: true },
-        data: { isDefault: false },
-      });
-    }
-
-    // Criar endereço
-    const address = await prisma.address.create({
-      data: {
-        userId: currentUser.userId,
-        label: validated.label,
-        cep: validated.cep,
-        logradouro: validated.logradouro,
-        numero: validated.numero,
-        complemento: validated.complemento,
-        bairro: validated.bairro,
-        cidade: validated.cidade,
-        uf: validated.uf,
-        isDefault: validated.isDefault,
-      },
-      select: {
-        id: true,
-        label: true,
-        cep: true,
-        logradouro: true,
-        numero: true,
-        complemento: true,
-        bairro: true,
-        cidade: true,
-        uf: true,
-        isDefault: true,
-        createdAt: true,
-        updatedAt: true,
-      },
+  // Validar dados com Zod
+  const validation = AddressSchema.safeParse(body);
+  if (!validation.success) {
+    logger.debug({ event: 'address_validation_error', errors: validation.error.flatten() }, 'Address validation failed');
+    throw new ApiError({
+      code: 'validation_error',
+      message: validation.error.issues[0]?.message || 'Dados inválidos',
+      status: 400,
+      details: validation.error.flatten(),
     });
+  }
 
-    console.log('[POST /api/account/addresses] Address created:', address.id);
+  const validated = validation.data;
 
-    return NextResponse.json({
+  // Se isDefault=true, desmarcar todos os outros endereços como default
+  if (validated.isDefault) {
+    await prisma.address.updateMany({
+      where: { userId: session.userId, isDefault: true },
+      data: { isDefault: false },
+    });
+  }
+
+  // Criar endereço
+  const address = await prisma.address.create({
+    data: {
+      userId: session.userId,
+      label: validated.label,
+      cep: validated.cep,
+      logradouro: validated.logradouro,
+      numero: validated.numero,
+      complemento: validated.complemento,
+      bairro: validated.bairro,
+      cidade: validated.cidade,
+      uf: validated.uf,
+      isDefault: validated.isDefault,
+    },
+    select: {
+      id: true,
+      label: true,
+      cep: true,
+      logradouro: true,
+      numero: true,
+      complemento: true,
+      bairro: true,
+      cidade: true,
+      uf: true,
+      isDefault: true,
+      createdAt: true,
+      updatedAt: true,
+    },
+  });
+
+  logger.info({ event: 'address_created', addressId: address.id, userId: session.userId }, 'Address created');
+
+  return {
+    data: {
       success: true,
       message: 'Endereço criado com sucesso',
-      address,
-    }, { status: 201 });
-  } catch (error: unknown) {
-    // Erro de validação Zod
-    if (error && typeof error === 'object' && 'issues' in error) {
-      const zodError = error as { issues: Array<{ path: string[]; message: string }> };
-      return NextResponse.json(
-        {
-          success: false,
-          message: 'Dados inválidos',
-          code: 'VALIDATION_ERROR',
-          errors: zodError.issues.map((issue) => ({
-            field: issue.path.join('.'),
-            message: issue.message,
-          })),
-        },
-        { status: 400 }
-      );
-    }
-
-    console.error('[POST /api/account/addresses] Error:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        message: 'Erro ao criar endereço',
-        code: 'INTERNAL_ERROR',
+      address: {
+        ...address,
+        createdAt: address.createdAt.toISOString(),
+        updatedAt: address.updatedAt.toISOString(),
       },
-      { status: 500 }
-    );
-  }
-}
+    },
+    status: 201,
+  };
+});

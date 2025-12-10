@@ -6,8 +6,8 @@
  * Não requer autenticação
  */
 
-
-import { NextRequest, NextResponse } from 'next/server';
+import { withApiHandler } from '@/lib/api/handler';
+import { ApiError } from '@/lib/api/errors';
 import { prisma } from '@/lib/db';
 import { z } from 'zod';
 
@@ -18,59 +18,63 @@ const feedbackSchema = z.object({
   message: 'Informe helpful ou view',
 });
 
-interface RouteParams {
-  params: Promise<{ id: string }>;
-}
+type FAQFeedbackResponse = {
+  success: boolean;
+  message: string;
+};
 
-export async function POST(request: NextRequest, { params }: RouteParams) {
-  try {
-    const { id } = await params;
+export const POST = withApiHandler<FAQFeedbackResponse, { id: string }>(async ({ req, params }) => {
+  const { id } = params;
 
-    const body = await request.json();
-    const parsed = feedbackSchema.safeParse(body);
+  const body = await req.json();
+  const parsed = feedbackSchema.safeParse(body);
 
-    if (!parsed.success) {
-      return NextResponse.json(
-        { error: 'Dados inválidos', details: parsed.error.flatten() },
-        { status: 400 }
-      );
-    }
-
-    const { helpful, view } = parsed.data;
-
-    // Verificar se FAQ existe e está ativo
-    const faq = await prisma.fAQItem.findFirst({
-      where: { id, isActive: true },
+  if (!parsed.success) {
+    throw new ApiError({
+      code: 'VALIDATION_ERROR',
+      message: 'Dados inválidos',
+      status: 400,
+      details: parsed.error.flatten()
     });
+  }
 
-    if (!faq) {
-      return NextResponse.json({ error: 'FAQ não encontrada' }, { status: 404 });
-    }
+  const { helpful, view } = parsed.data;
 
-    // Determinar o que atualizar
-    const updateData: { views?: { increment: number }; helpfulYes?: { increment: number }; helpfulNo?: { increment: number } } = {};
+  // Verificar se FAQ existe e está ativo
+  const faq = await prisma.fAQItem.findFirst({
+    where: { id, isActive: true },
+  });
 
-    if (view) {
-      updateData.views = { increment: 1 };
-    } else if (helpful !== undefined) {
-      if (helpful) {
-        updateData.helpfulYes = { increment: 1 };
-      } else {
-        updateData.helpfulNo = { increment: 1 };
-      }
-    }
-
-    await prisma.fAQItem.update({
-      where: { id },
-      data: updateData,
+  if (!faq) {
+    throw new ApiError({
+      code: 'NOT_FOUND',
+      message: 'FAQ não encontrada',
+      status: 404
     });
+  }
 
-    return NextResponse.json({
+  // Determinar o que atualizar
+  const updateData: { views?: { increment: number }; helpfulYes?: { increment: number }; helpfulNo?: { increment: number } } = {};
+
+  if (view) {
+    updateData.views = { increment: 1 };
+  } else if (helpful !== undefined) {
+    if (helpful) {
+      updateData.helpfulYes = { increment: 1 };
+    } else {
+      updateData.helpfulNo = { increment: 1 };
+    }
+  }
+
+  await prisma.fAQItem.update({
+    where: { id },
+    data: updateData,
+  });
+
+  return {
+    data: {
       success: true,
       message: view ? 'Visualização registrada' : 'Obrigado pelo feedback!',
-    });
-  } catch (error) {
-    console.error('[FAQ_FEEDBACK]', error);
-    return NextResponse.json({ error: 'Erro ao registrar feedback' }, { status: 500 });
-  }
-}
+    }
+  };
+});

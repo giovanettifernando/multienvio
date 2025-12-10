@@ -8,7 +8,9 @@ async function fetchWalletStatus(): Promise<WalletStatusResponse> {
   if (!res.ok) {
     throw new Error('Erro ao buscar status da carteira');
   }
-  return res.json();
+  const json = await res.json();
+  // Handle standardized API response format { data: T, error, meta }
+  return (json.data ?? json) as WalletStatusResponse;
 }
 
 /**

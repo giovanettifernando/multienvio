@@ -5,9 +5,9 @@
  * DELETE /api/admin/coletores/[id] - Deleta coletor
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { withApiHandler } from '@/lib/api/handler';
+import { ApiError } from '@/lib/api/errors';
 import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
-import { requirePermission } from '@/lib/auth/permissions';
 import { AdminPermission } from '@prisma/client';
 import {
   getCollectorById,
@@ -15,139 +15,120 @@ import {
   deleteCollector,
 } from '@/lib/collectors/service';
 import { collectorFormSchema } from '@/lib/collectors/schemas';
+import type { Collector } from '@/lib/collectors/types';
+import { z } from 'zod';
 
-type RouteContext = {
-  params: Promise<{
-    id: string;
-  }>;
-};
+interface GetCollectorResponse {
+  collector: Collector;
+}
+
+interface PatchCollectorResponse {
+  collector: Collector;
+  message: string;
+}
+
+interface DeleteCollectorResponse {
+  message: string;
+}
 
 /**
  * GET /api/admin/coletores/[id]
  * Busca um coletor por ID
  */
-export async function GET(request: NextRequest, context: RouteContext) {
-  const session = await getAdminSessionFromRequest(request);
+export const GET = withApiHandler<GetCollectorResponse, { id: string }>(async (context) => {
+  const { req, params, logger } = context;
+
+  const session = await getAdminSessionFromRequest(req);
   if (!session) {
-    return NextResponse.json({ message: 'Não autenticado' }, { status: 401 });
+    throw new ApiError({ code: 'unauthorized', message: 'Não autenticado', status: 401 });
   }
 
-  const permissionError = requirePermission(session, AdminPermission.COLETORES);
-  if (permissionError) return permissionError;
-
-  try {
-    const { id } = await context.params;
-
-    const collector = await getCollectorById(id);
-
-    if (!collector) {
-      return NextResponse.json(
-        { message: 'Coletor não encontrado' },
-        { status: 404 }
-      );
-    }
-
-    return NextResponse.json({ collector }, { status: 200 });
-  } catch (error) {
-    console.error(`[GET /api/admin/coletores] Error:`, error);
-    return NextResponse.json(
-      {
-        message: error instanceof Error ? error.message : 'Erro ao buscar coletor',
-      },
-      { status: 500 }
-    );
+  if (!session.permissions.includes(AdminPermission.COLETORES)) {
+    throw new ApiError({ code: 'forbidden', message: 'Permissão negada', status: 403 });
   }
-}
+
+  const { id } = params;
+
+  const collector = await getCollectorById(id);
+
+  if (!collector) {
+    throw new ApiError({ code: 'not_found', message: 'Coletor não encontrado', status: 404 });
+  }
+
+  logger.info('admin_coletores_get', { staffId: session.staffId, collectorId: id });
+
+  return { data: { collector } };
+});
 
 /**
  * PATCH /api/admin/coletores/[id]
  * Atualiza um coletor
  */
-export async function PATCH(request: NextRequest, context: RouteContext) {
-  const session = await getAdminSessionFromRequest(request);
+export const PATCH = withApiHandler<PatchCollectorResponse, { id: string }>(async (context) => {
+  const { req, params, logger } = context;
+
+  const session = await getAdminSessionFromRequest(req);
   if (!session) {
-    return NextResponse.json({ message: 'Não autenticado' }, { status: 401 });
+    throw new ApiError({ code: 'unauthorized', message: 'Não autenticado', status: 401 });
   }
 
-  try {
-    const { id } = await context.params;
-    const body = await request.json();
+  const { id } = params;
+  const body = await req.json();
 
+  try {
     // Validate with Zod schema
     const validatedData = collectorFormSchema.parse(body);
 
     const collector = await updateCollector(id, validatedData);
 
-    return NextResponse.json(
-      { collector, message: 'Coletor atualizado com sucesso' },
-      { status: 200 }
-    );
-  } catch (error) {
-    console.error(`[PATCH /api/admin/coletores] Error:`, error);
+    logger.info('admin_coletores_update', { staffId: session.staffId, collectorId: id });
 
-    // Zod validation error
-    if (error && typeof error === 'object' && 'issues' in error) {
-      return NextResponse.json(
-        {
-          message: 'Dados inválidos',
-          errors: error,
-        },
-        { status: 400 }
-      );
+    return { data: { collector, message: 'Coletor atualizado com sucesso' } };
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      throw new ApiError({
+        code: 'validation_error',
+        message: 'Dados inválidos',
+        status: 400,
+        details: { errors: error.issues },
+      });
     }
 
     // Prisma not found error
     if (error instanceof Error && error.message.includes('Record to update not found')) {
-      return NextResponse.json(
-        { message: 'Coletor não encontrado' },
-        { status: 404 }
-      );
+      throw new ApiError({ code: 'not_found', message: 'Coletor não encontrado', status: 404 });
     }
 
-    return NextResponse.json(
-      {
-        message: error instanceof Error ? error.message : 'Erro ao atualizar coletor',
-      },
-      { status: 500 }
-    );
+    throw error;
   }
-}
+});
 
 /**
  * DELETE /api/admin/coletores/[id]
  * Deleta um coletor
  */
-export async function DELETE(request: NextRequest, context: RouteContext) {
-  const session = await getAdminSessionFromRequest(request);
+export const DELETE = withApiHandler<DeleteCollectorResponse, { id: string }>(async (context) => {
+  const { req, params, logger } = context;
+
+  const session = await getAdminSessionFromRequest(req);
   if (!session) {
-    return NextResponse.json({ message: 'Não autenticado' }, { status: 401 });
+    throw new ApiError({ code: 'unauthorized', message: 'Não autenticado', status: 401 });
   }
+
+  const { id } = params;
 
   try {
-    const { id } = await context.params;
-
     await deleteCollector(id);
 
-    return NextResponse.json(
-      { message: 'Coletor excluído com sucesso' },
-      { status: 200 }
-    );
-  } catch (error) {
-    console.error(`[DELETE /api/admin/coletores] Error:`, error);
+    logger.info('admin_coletores_delete', { staffId: session.staffId, collectorId: id });
 
+    return { data: { message: 'Coletor excluído com sucesso' } };
+  } catch (error) {
     // Prisma not found error
     if (error instanceof Error && error.message.includes('Record to delete does not exist')) {
-      return NextResponse.json(
-        { message: 'Coletor não encontrado' },
-        { status: 404 }
-      );
+      throw new ApiError({ code: 'not_found', message: 'Coletor não encontrado', status: 404 });
     }
 
-    return NextResponse.json(
-      {
-        message: error instanceof Error ? error.message : 'Erro ao excluir coletor',
-      },
-      { status: 500 }
-    );
+    throw error;
   }
-}
+});

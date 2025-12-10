@@ -1,35 +1,43 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { withApiHandler } from '@/lib/api/handler';
+import { ApiError } from '@/lib/api/errors';
 import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
-import { requirePermission } from '@/lib/auth/permissions';
 import { AdminPermission } from '@prisma/client';
 import type { FinanceSummary } from '@/lib/admin/finance/types';
 
-export async function GET(request: NextRequest) {
-  const session = await getAdminSessionFromRequest(request);
+export const GET = withApiHandler<FinanceSummary>(async ({ req }) => {
+  const session = await getAdminSessionFromRequest(req);
   if (!session) {
-    return NextResponse.json({ message: 'Não autenticado' }, { status: 401 });
+    throw new ApiError({
+      code: 'UNAUTHORIZED',
+      message: 'Não autenticado',
+      status: 401,
+    });
   }
 
-  // Check permission
-  const permissionError = requirePermission(session, AdminPermission.FINANCEIRO);
-  if (permissionError) return permissionError;
+  if (!session.permissions.includes(AdminPermission.FINANCEIRO)) {
+    throw new ApiError({
+      code: 'FORBIDDEN',
+      message: 'Sem permissão para acessar finanças',
+      status: 403,
+    });
+  }
 
-  const searchParams = request.nextUrl.searchParams;
+  const searchParams = req.nextUrl.searchParams;
   const dateStart = searchParams.get('dateStart') || undefined;
   const dateEnd = searchParams.get('dateEnd') || undefined;
 
   // Mock data
   const summary: FinanceSummary = {
     period: { dateStart, dateEnd },
-    grossRevenue: 850000.00,
-    platformFees: 42500.00,
-    carrierPayouts: 650000.00,
-    partnerCommissions: 25000.00,
-    refunds: 12000.00,
-    chargebacks: 3500.00,
-    customersWalletBalance: 180000.00,
-    platformOperationalBalance: 117000.00, // grossRevenue - carrierPayouts - partnerCommissions - refunds - chargebacks
+    grossRevenue: 850000.0,
+    platformFees: 42500.0,
+    carrierPayouts: 650000.0,
+    partnerCommissions: 25000.0,
+    refunds: 12000.0,
+    chargebacks: 3500.0,
+    customersWalletBalance: 180000.0,
+    platformOperationalBalance: 117000.0,
   };
 
-  return NextResponse.json(summary);
-}
+  return { data: summary };
+});

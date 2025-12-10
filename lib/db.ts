@@ -25,11 +25,71 @@ const isBuildPhase = process.env.NEXT_PHASE?.includes("build") ||
                      (process.env.NODE_ENV === "production" && !process.env.NEXTAUTH_SECRET);
 const databaseConfig = resolveDatabaseConfig();
 
-function createPrismaClient() {
-  // Prisma 7: usar adapter para conexão com PostgreSQL
-  const pool = new Pool({
+// ============================================================================
+// DATABASE POOL CONFIGURATION
+// ============================================================================
+
+/**
+ * Connection pool settings optimized for self-hosted environments
+ * Adjust based on your server resources and expected load
+ *
+ * Environment variables:
+ * - DB_POOL_MAX: Maximum connections (default: 20 prod, 10 dev)
+ * - DB_POOL_MIN: Minimum idle connections (default: 2)
+ * - DB_CONNECTION_TIMEOUT_MS: Wait time for connection (default: 10000)
+ * - DB_IDLE_TIMEOUT_MS: Close idle connections after (default: 30000)
+ * - DB_STATEMENT_TIMEOUT_MS: Max query time (default: 60000)
+ * - DB_APPLICATION_NAME: App name in pg_stat_activity
+ */
+function getPoolConfig() {
+  const isProduction = process.env.NODE_ENV === "production";
+
+  return {
     connectionString: process.env.DATABASE_URL,
+
+    // Pool size configuration
+    // For self-hosted: (num_cores * 2) + spindles is a good baseline
+    max: parseInt(process.env.DB_POOL_MAX || (isProduction ? "20" : "10"), 10),
+    min: parseInt(process.env.DB_POOL_MIN || "2", 10),
+
+    // Connection timeout: how long to wait for a connection from the pool (ms)
+    connectionTimeoutMillis: parseInt(process.env.DB_CONNECTION_TIMEOUT_MS || "10000", 10),
+
+    // Idle timeout: close connections that have been idle for this long (ms)
+    // Helps prevent "too many connections" errors
+    idleTimeoutMillis: parseInt(process.env.DB_IDLE_TIMEOUT_MS || "30000", 10),
+
+    // Allow exit when idle - important for serverless/containers
+    allowExitOnIdle: process.env.DB_ALLOW_EXIT_ON_IDLE !== "false",
+
+    // Statement timeout: maximum time for any query (ms)
+    statement_timeout: parseInt(process.env.DB_STATEMENT_TIMEOUT_MS || "60000", 10),
+
+    // Application name for monitoring in pg_stat_activity
+    application_name: process.env.DB_APPLICATION_NAME || "enviolegal-app",
+  };
+}
+
+function createPrismaClient() {
+  // Prisma 7: usar adapter para conexão com PostgreSQL com pool otimizado
+  const poolConfig = getPoolConfig();
+  const pool = new Pool(poolConfig);
+
+  // Log pool configuration in development
+  if (process.env.NODE_ENV === "development") {
+    console.log("[DB] Pool config:", {
+      max: poolConfig.max,
+      min: poolConfig.min,
+      connectionTimeoutMillis: poolConfig.connectionTimeoutMillis,
+      idleTimeoutMillis: poolConfig.idleTimeoutMillis,
+    });
+  }
+
+  // Handle pool errors gracefully
+  pool.on("error", (err) => {
+    console.error("[DB] Unexpected pool error:", err.message);
   });
+
   const adapter = new PrismaPg(pool);
 
   return new PrismaClient({

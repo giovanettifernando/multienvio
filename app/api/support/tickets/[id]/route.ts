@@ -1,28 +1,25 @@
-import { NextResponse } from 'next/server';
-import { getSession } from '@/lib/auth/session';
+import { withApiHandler } from '@/lib/api/handler';
+import { ApiError } from '@/lib/api/errors';
+import { getUserFromRequest } from '@/lib/auth/session';
 import { getTicketForUser } from '@/lib/support/service';
+import type { SupportTicket } from '@/lib/validation/support';
 
 
-export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const session = await getSession();
-  if (!session) {
-    return NextResponse.json({ message: 'Não autenticado' }, { status: 401 });
+export const GET = withApiHandler<SupportTicket, { id: string }>(async (context) => {
+  const session = await getUserFromRequest(context.req);
+  if (!session?.userId) {
+    throw new ApiError({ code: 'unauthorized', message: 'Não autenticado', status: 401 });
   }
 
-  const { id: ticketId } = await params;
+  const ticketId = context.params.id;
   if (!ticketId) {
-    return NextResponse.json({ message: 'Ticket inválido' }, { status: 400 });
+    throw new ApiError({ code: 'validation_error', message: 'Ticket inválido', status: 400 });
   }
 
-  try {
-    const ticket = await getTicketForUser(session.userId, ticketId);
-    if (!ticket) {
-      return NextResponse.json({ message: 'Ticket não encontrado' }, { status: 404 });
-    }
-
-    return NextResponse.json(ticket);
-  } catch (error) {
-    console.error('[SUPPORT_TICKET_GET]', error);
-    return NextResponse.json({ message: 'Erro ao carregar ticket' }, { status: 500 });
+  const ticket = await getTicketForUser(session.userId, ticketId);
+  if (!ticket) {
+    throw new ApiError({ code: 'not_found', message: 'Ticket não encontrado', status: 404 });
   }
-}
+
+  return { data: ticket };
+});

@@ -1,5 +1,5 @@
-
-import { NextRequest, NextResponse } from 'next/server';
+import { withApiHandler } from '@/lib/api/handler';
+import { ApiError } from '@/lib/api/errors';
 import { prisma } from '@/lib/db';
 import { getAutonomousCollectorSession } from '@/lib/auth/autonomous-collector-session';
 import { ShipmentStatus } from '@/lib/shipments/shipment-status';
@@ -60,130 +60,139 @@ function validateScheduleDate(createdAt: Date, scheduleAt: Date): {
   }
 }
 
+type AgendarColetaResponse = {
+  message: string;
+  pickup: {
+    id: string;
+    scheduleAt: string | null;
+    status: string;
+  };
+};
+
 /**
  * PATCH /api/coletores/coletas/[id]/agendar
  * Atualiza a data/hora de agendamento da coleta
  */
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    // Validar autenticação
-    const session = await getAutonomousCollectorSession();
-    if (!session) {
-      return NextResponse.json({ message: 'Não autenticado' }, { status: 401 });
-    }
+export const PATCH = withApiHandler<AgendarColetaResponse, { id: string }>(async (context) => {
+  const { req, params, logger } = context;
 
-    const { id } = await params;
+  // Validar autenticação
+  const session = await getAutonomousCollectorSession();
+  if (!session) {
+    throw new ApiError({ code: 'unauthorized', message: 'Não autenticado', status: 401 });
+  }
 
-    // Validar dados do body
-    const body: SchedulePickupBody = await request.json();
-    const { scheduleAt: scheduleAtString } = body;
+  const { id } = params;
 
-    if (!scheduleAtString) {
-      return NextResponse.json(
-        { message: 'Data de agendamento é obrigatória' },
-        { status: 400 }
-      );
-    }
+  // Validar dados do body
+  const body: SchedulePickupBody = await req.json();
+  const { scheduleAt: scheduleAtString } = body;
 
-    const scheduleAt = new Date(scheduleAtString);
-    if (isNaN(scheduleAt.getTime())) {
-      return NextResponse.json(
-        { message: 'Data de agendamento inválida' },
-        { status: 400 }
-      );
-    }
+  if (!scheduleAtString) {
+    throw new ApiError({
+      code: 'validation_error',
+      message: 'Data de agendamento é obrigatória',
+      status: 400,
+    });
+  }
 
-    // Buscar pickup request
-    const pickupRequest = await prisma.pickupRequest.findUnique({
+  const scheduleAt = new Date(scheduleAtString);
+  if (isNaN(scheduleAt.getTime())) {
+    throw new ApiError({
+      code: 'validation_error',
+      message: 'Data de agendamento inválida',
+      status: 400,
+    });
+  }
+
+  // Buscar pickup request
+  const pickupRequest = await prisma.pickupRequest.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      collectorId: true,
+      status: true,
+      createdAt: true,
+      scheduleAt: true,
+    },
+  });
+
+  if (!pickupRequest) {
+    throw new ApiError({ code: 'not_found', message: 'Coleta não encontrada', status: 404 });
+  }
+
+  // Validar que a coleta pertence ao coletor logado
+  if (pickupRequest.collectorId !== session.coletorId) {
+    throw new ApiError({
+      code: 'forbidden',
+      message: 'Esta coleta não está atribuída a você',
+      status: 403,
+    });
+  }
+
+  // Validar que a coleta está pendente
+  if (pickupRequest.status !== 'PENDING') {
+    throw new ApiError({
+      code: 'invalid_status',
+      message: `Não é possível agendar coleta com status: ${pickupRequest.status}`,
+      status: 400,
+    });
+  }
+
+  // Validar data de agendamento de acordo com as regras de tolerância
+  const validation = validateScheduleDate(pickupRequest.createdAt, scheduleAt);
+  if (!validation.valid) {
+    throw new ApiError({
+      code: 'validation_error',
+      message: validation.message || 'Data de agendamento inválida',
+      status: 400,
+    });
+  }
+
+  // Atualizar pickup request e shipment status em uma transação
+  const result = await prisma.$transaction(async (tx) => {
+    // 1. Atualizar PickupRequest com scheduleAt e status SCHEDULED
+    const updatedPickupRequest = await tx.pickupRequest.update({
       where: { id },
+      data: {
+        scheduleAt,
+        status: 'SCHEDULED',
+        updatedAt: new Date(),
+      },
       select: {
         id: true,
-        collectorId: true,
-        status: true,
-        createdAt: true,
         scheduleAt: true,
+        status: true,
+        shipmentId: true,
       },
     });
 
-    if (!pickupRequest) {
-      return NextResponse.json({ message: 'Coleta não encontrada' }, { status: 404 });
-    }
-
-    // Validar que a coleta pertence ao coletor logado
-    if (pickupRequest.collectorId !== session.coletorId) {
-      return NextResponse.json(
-        { message: 'Esta coleta não está atribuída a você' },
-        { status: 403 }
-      );
-    }
-
-    // Validar que a coleta está pendente
-    if (pickupRequest.status !== 'PENDING') {
-      return NextResponse.json(
-        { message: `Não é possível agendar coleta com status: ${pickupRequest.status}` },
-        { status: 400 }
-      );
-    }
-
-    // Validar data de agendamento de acordo com as regras de tolerância
-    const validation = validateScheduleDate(pickupRequest.createdAt, scheduleAt);
-    if (!validation.valid) {
-      return NextResponse.json(
-        { message: validation.message || 'Data de agendamento inválida' },
-        { status: 400 }
-      );
-    }
-
-    // Atualizar pickup request e shipment status em uma transação
-    const result = await prisma.$transaction(async (tx) => {
-      // 1. Atualizar PickupRequest com scheduleAt e status SCHEDULED
-      const updatedPickupRequest = await tx.pickupRequest.update({
-        where: { id },
-        data: {
-          scheduleAt,
-          status: 'SCHEDULED',
-          updatedAt: new Date(),
-        },
-        select: {
-          id: true,
-          scheduleAt: true,
-          status: true,
-          shipmentId: true,
-        },
-      });
-
-      // 2. Atualizar Shipment.status para PICKUP_SCHEDULED
-      await tx.shipment.update({
-        where: { id: updatedPickupRequest.shipmentId },
-        data: {
-          status: ShipmentStatus.PICKUP_SCHEDULED,
-        },
-      });
-
-      return updatedPickupRequest;
+    // 2. Atualizar Shipment.status para PICKUP_SCHEDULED
+    await tx.shipment.update({
+      where: { id: updatedPickupRequest.shipmentId },
+      data: {
+        status: ShipmentStatus.PICKUP_SCHEDULED,
+      },
     });
 
-    console.log('[AGENDAR_COLETA] Coleta agendada:', {
-      pickupId: id,
-      collectorId: session.coletorId,
-      scheduleAt: scheduleAt.toISOString(),
-      shipmentStatus: ShipmentStatus.PICKUP_SCHEDULED,
-    });
+    return updatedPickupRequest;
+  });
 
-    return NextResponse.json({
+  logger.info('agendar_coleta_success', {
+    pickupId: id,
+    collectorId: session.coletorId,
+    scheduleAt: scheduleAt.toISOString(),
+    shipmentStatus: ShipmentStatus.PICKUP_SCHEDULED,
+  });
+
+  return {
+    data: {
       message: 'Coleta agendada com sucesso',
       pickup: {
         id: result.id,
-        scheduleAt: result.scheduleAt?.toISOString(),
+        scheduleAt: result.scheduleAt?.toISOString() ?? null,
         status: result.status,
       },
-    }, { status: 200 });
-  } catch (error) {
-    console.error('[AGENDAR_COLETA_ERROR]', error);
-    const message = error instanceof Error ? error.message : 'Erro ao agendar coleta';
-    return NextResponse.json({ message }, { status: 500 });
-  }
-}
+    },
+  };
+});

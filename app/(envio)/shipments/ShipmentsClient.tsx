@@ -124,7 +124,9 @@ export default function ShipmentsClient() {
       if (!res.ok) {
         throw new Error('Erro ao buscar divergências');
       }
-      return res.json();
+      const json = await res.json();
+      // Handle standardized API response format { data: T, error, meta }
+      return (json.data ?? json) as { divergences: ShipmentVolumeDivergence[] };
     },
     enabled: !!selectedShipmentId && divergenceModalOpen,
   });

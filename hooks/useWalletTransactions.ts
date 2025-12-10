@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import type { StatementResponse } from "@/types/wallet-statement";
+import { apiFetch } from "@/lib/api/client";
 
 export interface WalletTransactionsFilters {
   dateFrom?: string;
@@ -21,17 +22,7 @@ export function useWalletTransactions(filters: WalletTransactionsFilters = {}) {
 
   return useQuery<StatementResponse>({
     queryKey: ["wallet", "transactions", dateFrom, dateTo, search, page, limit],
-    queryFn: async () => {
-      const response = await fetch(`/api/wallet/transactions?${params.toString()}`);
-      if (!response.ok) {
-        const error = await response.json().catch(() => ({}));
-        console.error('[useWalletTransactions] Error:', response.status, error);
-        throw new Error(error.message || "Falha ao carregar transações");
-      }
-      const data = await response.json();
-      console.log('[useWalletTransactions] Loaded transactions:', data.transactions?.length || 0);
-      return data;
-    },
+    queryFn: () => apiFetch<StatementResponse>(`/api/wallet/transactions?${params.toString()}`),
     retry: 1,
     staleTime: 30000, // 30 segundos
   });

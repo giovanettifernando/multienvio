@@ -1,5 +1,5 @@
-import type { NextRequest } from "next/server";
-import { NextResponse } from "next/server";
+import { withApiHandler } from '@/lib/api/handler';
+import { ApiError } from '@/lib/api/errors';
 import {
   consultarCep,
   CepError,
@@ -7,7 +7,15 @@ import {
   isValidCep,
 } from "@/lib/integrations/correios";
 
-type CepRouteParams = Promise<{ cep: string }>;
+type CepResponse = {
+  cep: string;
+  logradouro: string;
+  complemento: string;
+  bairro: string;
+  cidade: string;
+  uf: string;
+  source: string;
+};
 
 /**
  * GET /api/cep/[cep]
@@ -21,36 +29,37 @@ type CepRouteParams = Promise<{ cep: string }>;
  *
  * @returns {CepResult} Dados do endereço normalizado
  */
-export async function GET(_request: NextRequest, context: { params: CepRouteParams }) {
+export const GET = withApiHandler<CepResponse, { cep: string }>(async (context) => {
+  const cep = context.params.cep;
+
+  // Normaliza e valida o CEP
+  const digits = normalizeCep(cep);
+
+  if (!isValidCep(digits)) {
+    throw new ApiError({
+      code: 'invalid_cep',
+      message: 'CEP inválido. Deve conter 8 dígitos.',
+      status: 400,
+    });
+  }
+
   try {
-    const { cep } = await context.params;
-
-    // Normaliza e valida o CEP
-    const digits = normalizeCep(cep);
-
-    if (!isValidCep(digits)) {
-      return NextResponse.json(
-        { error: "CEP inválido. Deve conter 8 dígitos." },
-        { status: 400 }
-      );
-    }
-
     // Consulta CEP usando Correios como primário com fallback automático
     const result = await consultarCep(digits);
 
     // Retorna no formato esperado pela aplicação
-    return NextResponse.json({
-      cep: result.cep,
-      logradouro: result.logradouro,
-      complemento: result.complemento,
-      bairro: result.bairro,
-      cidade: result.cidade,
-      uf: result.uf,
-      source: result.source, // Indica qual API retornou o resultado
-    });
+    return {
+      data: {
+        cep: result.cep,
+        logradouro: result.logradouro,
+        complemento: result.complemento,
+        bairro: result.bairro,
+        cidade: result.cidade,
+        uf: result.uf,
+        source: result.source, // Indica qual API retornou o resultado
+      },
+    };
   } catch (error) {
-    console.error('[GET /api/cep/[cep]] Error:', error);
-
     // Trata erros específicos do serviço de CEP
     if (error instanceof CepError) {
       const statusMap: Record<string, number> = {
@@ -60,15 +69,13 @@ export async function GET(_request: NextRequest, context: { params: CepRoutePara
         SERVICE_UNAVAILABLE: 503,
       };
 
-      return NextResponse.json(
-        { error: error.message, code: error.code },
-        { status: statusMap[error.code] || 500 }
-      );
+      throw new ApiError({
+        code: error.code.toLowerCase(),
+        message: error.message,
+        status: statusMap[error.code] || 500,
+      });
     }
 
-    return NextResponse.json(
-      { error: "Erro ao buscar CEP" },
-      { status: 500 }
-    );
+    throw error;
   }
-}
+});

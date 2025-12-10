@@ -46,7 +46,9 @@ export function useFAQ(options: UseFAQOptions = {}) {
       if (!response.ok) {
         throw new Error('Falha ao carregar FAQ');
       }
-      return response.json();
+      const json = await response.json();
+      // Handle standardized API response format { data: T, error, meta }
+      return (json.data ?? json) as FAQListResponse;
     },
     enabled,
     staleTime: 5 * 60 * 1000, // 5 minutos - FAQ não muda com frequência
@@ -68,11 +70,14 @@ export function useFAQFeedback() {
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Falha ao enviar feedback');
+        const errorJson = await response.json();
+        const error = errorJson.error ?? errorJson;
+        throw new Error(error.error || error.message || 'Falha ao enviar feedback');
       }
 
-      return response.json();
+      const json = await response.json();
+      // Handle standardized API response format { data: T, error, meta }
+      return json.data ?? json;
     },
     onSuccess: () => {
       // Invalidar cache de FAQ após feedback
@@ -98,7 +103,9 @@ export function useFAQView() {
         return null;
       }
 
-      return response.json();
+      const json = await response.json();
+      // Handle standardized API response format { data: T, error, meta }
+      return json.data ?? json;
     },
   });
 }

@@ -187,9 +187,13 @@ export async function getUserFromRequest(request: Request): Promise<JWTPayload |
     const cookieHeader = request.headers.get('cookie');
     if (!cookieHeader) return null;
 
-    // Parsear cookies
+    // Parsear cookies (usando indexOf para preservar '=' no valor do JWT)
     const cookies = cookieHeader.split(';').reduce((acc, cookie) => {
-      const [key, value] = cookie.trim().split('=');
+      const trimmed = cookie.trim();
+      const eqIndex = trimmed.indexOf('=');
+      if (eqIndex === -1) return acc;
+      const key = trimmed.substring(0, eqIndex);
+      const value = trimmed.substring(eqIndex + 1);
       acc[key] = value;
       return acc;
     }, {} as Record<string, string>);

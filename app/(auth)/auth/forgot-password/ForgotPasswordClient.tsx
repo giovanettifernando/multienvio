@@ -34,10 +34,12 @@ async function forgotRequest(
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.message || "Erro ao enviar instruções");
+    throw new Error(error.error?.message || error.message || "Erro ao enviar instruções");
   }
 
-  return response.json();
+  const json = await response.json();
+  // Handle standardized API response format { data: T, error, meta }
+  return (json.data ?? json) as ForgotResponse;
 }
 
 export default function ForgotPasswordClient() {

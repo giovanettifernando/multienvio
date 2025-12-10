@@ -3,11 +3,12 @@
  * POST /api/pontos-coleta/receptions/volumes/[id]/divergence
  */
 
-
-import { NextRequest, NextResponse } from 'next/server';
+import { withApiHandler } from '@/lib/api/handler';
+import { ApiError } from '@/lib/api/errors';
 import { prisma } from '@/lib/db';
 import { z } from 'zod';
 import { saveBase64Image, validateBase64Image } from '@/lib/upload/file-upload';
+import { getCollectorSessionFromRequest } from '@/lib/auth/collector-session';
 
 const DivergenceSchema = z.object({
   divergenceType: z.enum(['DIMENSAO', 'PESO', 'DIMENSAO_E_PESO']),
@@ -19,97 +20,114 @@ const DivergenceSchema = z.object({
   photo: z.string().optional(), // Base64 da foto (opcional)
 });
 
+type DivergenceResponse = {
+  message: string;
+  package: {
+    id: string;
+    packageNumber: number;
+    hasDivergence: boolean;
+    divergenceType: string | null;
+  };
+};
+
 /**
  * POST /api/pontos-coleta/receptions/volumes/[id]/divergence
  * Registra divergência em um volume
  */
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const { id } = await params;
-    const body = await request.json();
-    const validatedData = DivergenceSchema.parse(body);
-
-    // Buscar o volume
-    const packageItem = await prisma.package.findUnique({
-      where: { id },
+export const POST = withApiHandler<DivergenceResponse, { id: string }>(async ({ req, params, logger }) => {
+  // Verificar autenticação do ponto de coleta
+  const session = await getCollectorSessionFromRequest(req);
+  if (!session) {
+    throw new ApiError({
+      code: 'UNAUTHORIZED',
+      message: 'Não autenticado',
+      status: 401,
     });
+  }
 
-    if (!packageItem) {
-      return NextResponse.json({ message: 'Volume não encontrado' }, { status: 404 });
-    }
+  const body = await req.json();
+  const validatedData = DivergenceSchema.parse(body);
 
-    // Validar campos obrigatórios conforme tipo de divergência
-    if (
-      (validatedData.divergenceType === 'DIMENSAO' ||
-        validatedData.divergenceType === 'DIMENSAO_E_PESO') &&
-      (!validatedData.newWidth || !validatedData.newHeight || !validatedData.newLength)
-    ) {
-      return NextResponse.json(
-        { message: 'Novas dimensões são obrigatórias para divergência de dimensão' },
-        { status: 400 }
-      );
-    }
+  // Buscar o volume
+  const packageItem = await prisma.package.findUnique({
+    where: { id: params.id },
+  });
 
-    if (
-      (validatedData.divergenceType === 'PESO' ||
-        validatedData.divergenceType === 'DIMENSAO_E_PESO') &&
-      !validatedData.newWeight
-    ) {
-      return NextResponse.json(
-        { message: 'Novo peso é obrigatório para divergência de peso' },
-        { status: 400 }
-      );
-    }
+  if (!packageItem) {
+    throw new ApiError({ code: 'NOT_FOUND', message: 'Volume não encontrado', status: 404 });
+  }
 
-    // Processar foto se fornecida
-    let photoUrl: string | null = null;
-    if (validatedData.photo) {
-      // Validar foto
-      const validation = validateBase64Image(validatedData.photo);
-      if (!validation.valid) {
-        return NextResponse.json(
-          { message: validation.error || 'Foto inválida' },
-          { status: 400 }
-        );
-      }
-
-      try {
-        // Salvar foto
-        const uploadedFile = await saveBase64Image(
-          validatedData.photo,
-          `divergence-pkg-${packageItem.id}`
-        );
-        photoUrl = uploadedFile.url;
-      } catch (error) {
-        console.error('[DIVERGENCE_PHOTO_UPLOAD]', error);
-        return NextResponse.json(
-          { message: error instanceof Error ? error.message : 'Erro ao fazer upload da foto' },
-          { status: 400 }
-        );
-      }
-    }
-
-    // Registrar divergência
-    const updatedPackage = await prisma.package.update({
-      where: { id },
-      data: {
-        hasDivergence: true,
-        divergenceType: validatedData.divergenceType,
-        divergenceWidth: validatedData.newWidth,
-        divergenceHeight: validatedData.newHeight,
-        divergenceLength: validatedData.newLength,
-        divergenceWeight: validatedData.newWeight,
-        divergenceNotes: validatedData.notes,
-        divergencePhotoUrl: photoUrl,
-        divergenceRegisteredAt: new Date(),
-        divergenceRegisteredBy: 'collector-user', // TODO: Pegar ID do usuário autenticado
-      },
+  // Validar campos obrigatórios conforme tipo de divergência
+  if (
+    (validatedData.divergenceType === 'DIMENSAO' ||
+      validatedData.divergenceType === 'DIMENSAO_E_PESO') &&
+    (!validatedData.newWidth || !validatedData.newHeight || !validatedData.newLength)
+  ) {
+    throw new ApiError({
+      code: 'VALIDATION_ERROR',
+      message: 'Novas dimensões são obrigatórias para divergência de dimensão',
+      status: 400,
     });
+  }
 
-    return NextResponse.json({
+  if (
+    (validatedData.divergenceType === 'PESO' ||
+      validatedData.divergenceType === 'DIMENSAO_E_PESO') &&
+    !validatedData.newWeight
+  ) {
+    throw new ApiError({
+      code: 'VALIDATION_ERROR',
+      message: 'Novo peso é obrigatório para divergência de peso',
+      status: 400,
+    });
+  }
+
+  // Processar foto se fornecida
+  let photoUrl: string | null = null;
+  if (validatedData.photo) {
+    // Validar foto
+    const validation = validateBase64Image(validatedData.photo);
+    if (!validation.valid) {
+      throw new ApiError({
+        code: 'VALIDATION_ERROR',
+        message: validation.error || 'Foto inválida',
+        status: 400,
+      });
+    }
+
+    // Salvar foto
+    const uploadedFile = await saveBase64Image(
+      validatedData.photo,
+      `divergence-pkg-${packageItem.id}`
+    );
+    photoUrl = uploadedFile.url;
+  }
+
+  // Registrar divergência
+  const updatedPackage = await prisma.package.update({
+    where: { id: params.id },
+    data: {
+      hasDivergence: true,
+      divergenceType: validatedData.divergenceType,
+      divergenceWidth: validatedData.newWidth,
+      divergenceHeight: validatedData.newHeight,
+      divergenceLength: validatedData.newLength,
+      divergenceWeight: validatedData.newWeight,
+      divergenceNotes: validatedData.notes,
+      divergencePhotoUrl: photoUrl,
+      divergenceRegisteredAt: new Date(),
+      divergenceRegisteredBy: session.pointId,
+    },
+  });
+
+  logger.info('package_divergence_registered', {
+    packageId: params.id,
+    pointId: session.pointId,
+    divergenceType: validatedData.divergenceType,
+  });
+
+  return {
+    data: {
       message: 'Divergência registrada com sucesso',
       package: {
         id: updatedPackage.id,
@@ -117,18 +135,6 @@ export async function POST(
         hasDivergence: updatedPackage.hasDivergence,
         divergenceType: updatedPackage.divergenceType,
       },
-    });
-  } catch (error) {
-    console.error('[DIVERGENCE_POST]', error);
-
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { message: 'Dados inválidos', details: error.message },
-        { status: 400 }
-      );
-    }
-
-    const message = error instanceof Error ? error.message : 'Erro ao registrar divergência';
-    return NextResponse.json({ message }, { status: 500 });
-  }
-}
+    },
+  };
+});

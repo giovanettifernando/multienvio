@@ -4,6 +4,7 @@ import {
   getRecipient,
   deleteRecipient,
   updateRecipient,
+  type AccountRecipientDto,
 } from "@/lib/services/account-recipients.service";
 import {
   validateRecipientUpdateInput,
@@ -15,8 +16,15 @@ import {
   handleRecipientDataStoreError,
 } from "../helpers";
 
+type GetRecipientResponse = AccountRecipientDto;
 
-export const GET = withApiHandler(async (context) => {
+type UpdateRecipientResponse = AccountRecipientDto;
+
+type DeleteRecipientResponse = {
+  deleted: boolean;
+};
+
+export const GET = withApiHandler<GetRecipientResponse>(async (context) => {
   const { req, params, logger } = context;
   const userId = await requireUserId(req);
 
@@ -34,10 +42,10 @@ export const GET = withApiHandler(async (context) => {
   }
 });
 
-export const PUT = withApiHandler(async (context) => {
+export const PUT = withApiHandler<UpdateRecipientResponse>(async (context) => {
   const { req, params, logger } = context;
   const userId = await requireUserId(req);
-  enforceRecipientWriteLimit(context);
+  await enforceRecipientWriteLimit(context);
 
   const { id } = await params;
 
@@ -71,10 +79,10 @@ export const PUT = withApiHandler(async (context) => {
   }
 });
 
-export const DELETE = withApiHandler(async (context) => {
+export const DELETE = withApiHandler<DeleteRecipientResponse>(async (context) => {
   const { req, params, logger } = context;
   const userId = await requireUserId(req);
-  enforceRecipientWriteLimit(context);
+  await enforceRecipientWriteLimit(context);
 
   const { id } = await params;
   try {

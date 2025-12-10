@@ -63,12 +63,15 @@ export function usePickupFee(
       });
 
       if (!response.ok) {
-        const error = await response.json();
+        const errorJson = await response.json();
+        const error = errorJson?.error ?? errorJson;
         console.error('[usePickupFee] API error:', error);
-        return { success: false, error: error.error || 'Erro ao calcular taxa de coleta' };
+        return { success: false, error: error?.message || error?.error || 'Erro ao calcular taxa de coleta' };
       }
 
-      const data: PickupFeeResult = await response.json();
+      const json = await response.json();
+      // Handle standardized API response format { data: T, error, meta }
+      const data: PickupFeeResult = json.data ?? json;
       console.log('[usePickupFee] Success:', JSON.stringify(data, null, 2));
       return data;
     },

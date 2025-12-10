@@ -1,12 +1,11 @@
-
-import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import bcrypt from 'bcrypt';
 import { prisma } from '@/lib/db';
-import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
-import { AdminPermission, Prisma } from '@prisma/client';
-import { canAccess } from '@/lib/auth/permissions';
+import { requireAdminUser } from '@/lib/auth/admin-helpers';
+import { AdminPermission, Prisma, PickupPointStatus } from '@prisma/client';
 import { Decimal } from '@prisma/client/runtime/client';
+import { withApiHandler } from '@/lib/api/handler';
+import { ApiError } from '@/lib/api/errors';
 
 const pixMethodSchema = z.object({
   kind: z.literal('pix'),
@@ -50,36 +49,50 @@ const updatePickupPointSchema = z.object({
   capacityPerDay: z.number().optional().nullable(),
 });
 
-async function requireAdminUser(request: Request) {
-  const session = await getAdminSessionFromRequest(request);
-  if (!session) {
-    throw NextResponse.json({ message: 'Não autenticado' }, { status: 401 });
-  }
+/**
+ * Tipo de resposta para ponto de coleta
+ */
+interface PickupPointResponse {
+  id: string;
+  status: PickupPointStatus;
+  razaoSocial: string;
+  nomeFantasia: string;
+  cnpj: string;
+  ie: string | null;
+  email: string | null;
+  telefone: string | null;
+  cep: string | null;
+  logradouro: string | null;
+  numero: string | null;
+  complemento: string | null;
+  bairro: string | null;
+  cidade: string | null;
+  uf: string | null;
+  paymentMethod: unknown;
+  payoutDay: number | null;
+  minPayoutAmount: number | null;
+  commissionPerItem: number | null;
+  capacityPerDay: number | null;
+  monthlyReceived: number;
+  createdAt: string;
+  updatedAt: string;
+}
 
-  const staffUser = await prisma.staffUser.findUnique({
-    where: { id: session.staffId },
-    select: {
-      id: true,
-      status: true,
-      isSuperAdmin: true,
-      permissions: true,
-    },
-  });
+interface GetPickupPointResponse {
+  point: PickupPointResponse;
+}
 
-  if (!staffUser) {
-    throw NextResponse.json({ message: 'Usuário não encontrado' }, { status: 404 });
-  }
+interface PatchPickupPointResponse {
+  point: PickupPointResponse;
+}
 
-  if (staffUser.status !== 'ACTIVE') {
-    throw NextResponse.json({ message: 'Conta inativa ou bloqueada' }, { status: 403 });
-  }
-
-  return staffUser;
+interface DeletePickupPointResponse {
+  message: string;
 }
 
 function toApiPickupPoint(point: {
   id: string;
-  status: import('@prisma/client').PickupPointStatus;
+  status: PickupPointStatus;
   razaoSocial: string;
   nomeFantasia: string;
   cnpj: string;
@@ -101,7 +114,7 @@ function toApiPickupPoint(point: {
   monthlyReceived: number;
   createdAt: Date;
   updatedAt: Date;
-}) {
+}): PickupPointResponse {
   return {
     id: point.id,
     status: point.status,
@@ -118,7 +131,6 @@ function toApiPickupPoint(point: {
     bairro: point.bairro,
     cidade: point.cidade,
     uf: point.uf,
-    // geo removido - usar CEP para geolocalização
     paymentMethod: point.paymentMethod,
     payoutDay: point.payoutDay,
     minPayoutAmount: point.minPayoutAmount ? parseFloat(point.minPayoutAmount.toString()) : null,
@@ -130,145 +142,122 @@ function toApiPickupPoint(point: {
   };
 }
 
-// GET /api/admin/pickup-points/[id] - Buscar ponto específico
-export async function GET(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const staff = await requireAdminUser(request);
-    if (!canAccess(staff, AdminPermission.PONTOS_COLETA)) {
-      return NextResponse.json({ message: 'Acesso negado' }, { status: 403 });
-    }
-
-    const { id } = await params;
-
-    const point = await prisma.pickupPoint.findUnique({
-      where: { id },
-    });
-
-    if (!point) {
-      return NextResponse.json({ message: 'Ponto não encontrado' }, { status: 404 });
-    }
-
-    return NextResponse.json({ point: toApiPickupPoint(point) });
-  } catch (error) {
-    if (error instanceof NextResponse) {
-      return error;
-    }
-    console.error('[ADMIN_PICKUP_POINT_GET]', error);
-    return NextResponse.json({ message: 'Erro ao buscar ponto' }, { status: 500 });
+/**
+ * GET /api/admin/pickup-points/[id] - Buscar ponto específico
+ */
+export const GET = withApiHandler<GetPickupPointResponse, { id: string }>(async ({ req, params }) => {
+  const authResult = await requireAdminUser(req, AdminPermission.PONTOS_COLETA);
+  if (authResult instanceof Response) {
+    throw new ApiError({ code: 'UNAUTHORIZED', message: 'Não autorizado', status: 401 });
   }
-}
 
-// PATCH /api/admin/pickup-points/[id] - Atualizar ponto
-export async function PATCH(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const staff = await requireAdminUser(request);
-    if (!canAccess(staff, AdminPermission.PONTOS_COLETA)) {
-      return NextResponse.json({ message: 'Acesso negado' }, { status: 403 });
-    }
+  const { id } = params;
 
-    const { id } = await params;
-    const body = await request.json();
-    const data = updatePickupPointSchema.parse(body);
+  const point = await prisma.pickupPoint.findUnique({
+    where: { id },
+  });
 
-    // Verificar se existe
-    const existing = await prisma.pickupPoint.findUnique({
-      where: { id },
-    });
-
-    if (!existing) {
-      return NextResponse.json({ message: 'Ponto não encontrado' }, { status: 404 });
-    }
-
-    // Preparar dados para update
-    const updateData: Prisma.PickupPointUpdateInput = {};
-
-    if (data.razaoSocial !== undefined) updateData.razaoSocial = data.razaoSocial;
-    if (data.nomeFantasia !== undefined) updateData.nomeFantasia = data.nomeFantasia;
-    if (data.ie !== undefined) updateData.ie = data.ie;
-    if (data.email !== undefined) updateData.email = data.email;
-    if (data.telefone !== undefined) updateData.telefone = data.telefone;
-
-    // Hash da senha se fornecida
-    if (data.password !== undefined && data.password && data.password.trim() !== '') {
-      updateData.passwordHash = await bcrypt.hash(data.password, 10);
-    }
-
-    if (data.cep !== undefined) updateData.cep = data.cep;
-    if (data.logradouro !== undefined) updateData.logradouro = data.logradouro;
-    if (data.numero !== undefined) updateData.numero = data.numero;
-    if (data.complemento !== undefined) updateData.complemento = data.complemento;
-    if (data.bairro !== undefined) updateData.bairro = data.bairro;
-    if (data.cidade !== undefined) updateData.cidade = data.cidade;
-    if (data.uf !== undefined) updateData.uf = data.uf;
-    if (data.paymentMethod !== undefined) updateData.paymentMethod = data.paymentMethod as unknown as Prisma.InputJsonValue;
-    if (data.payoutDay !== undefined) updateData.payoutDay = data.payoutDay;
-    if (data.minPayoutAmount !== undefined) {
-      updateData.minPayoutAmount = data.minPayoutAmount ? new Decimal(data.minPayoutAmount) : null;
-    }
-    if (data.commissionPerItem !== undefined) {
-      updateData.commissionPerItem = data.commissionPerItem ? new Decimal(data.commissionPerItem) : null;
-    }
-    if (data.capacityPerDay !== undefined) updateData.capacityPerDay = data.capacityPerDay;
-
-
-    const point = await prisma.pickupPoint.update({
-      where: { id },
-      data: updateData,
-    });
-
-    return NextResponse.json({ point: toApiPickupPoint(point) });
-  } catch (error) {
-    if (error instanceof NextResponse) {
-      return error;
-    }
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { message: 'Dados inválidos', errors: error.flatten() },
-        { status: 400 }
-      );
-    }
-    console.error('[ADMIN_PICKUP_POINT_UPDATE]', error);
-    return NextResponse.json({ message: 'Erro ao atualizar ponto' }, { status: 500 });
+  if (!point) {
+    throw new ApiError({ code: 'NOT_FOUND', message: 'Ponto não encontrado', status: 404 });
   }
-}
 
-// DELETE /api/admin/pickup-points/[id] - Deletar ponto
-export async function DELETE(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const staff = await requireAdminUser(request);
-    if (!canAccess(staff, AdminPermission.PONTOS_COLETA)) {
-      return NextResponse.json({ message: 'Acesso negado' }, { status: 403 });
-    }
+  return { data: { point: toApiPickupPoint(point) } };
+});
 
-    const { id } = await params;
-
-    const existing = await prisma.pickupPoint.findUnique({
-      where: { id },
-    });
-
-    if (!existing) {
-      return NextResponse.json({ message: 'Ponto não encontrado' }, { status: 404 });
-    }
-
-    await prisma.pickupPoint.delete({
-      where: { id },
-    });
-
-    return NextResponse.json({ message: 'Ponto excluído com sucesso' });
-  } catch (error) {
-    if (error instanceof NextResponse) {
-      return error;
-    }
-    console.error('[ADMIN_PICKUP_POINT_DELETE]', error);
-    return NextResponse.json({ message: 'Erro ao excluir ponto' }, { status: 500 });
+/**
+ * PATCH /api/admin/pickup-points/[id] - Atualizar ponto
+ */
+export const PATCH = withApiHandler<PatchPickupPointResponse, { id: string }>(async ({ req, params }) => {
+  const authResult = await requireAdminUser(req, AdminPermission.PONTOS_COLETA);
+  if (authResult instanceof Response) {
+    throw new ApiError({ code: 'UNAUTHORIZED', message: 'Não autorizado', status: 401 });
   }
-}
+
+  const { id } = params;
+  const body = await req.json();
+  const parsed = updatePickupPointSchema.safeParse(body);
+
+  if (!parsed.success) {
+    throw new ApiError({
+      code: 'VALIDATION_ERROR',
+      message: 'Dados inválidos',
+      status: 400,
+      details: parsed.error.flatten(),
+    });
+  }
+
+  const data = parsed.data;
+
+  // Verificar se existe
+  const existing = await prisma.pickupPoint.findUnique({
+    where: { id },
+  });
+
+  if (!existing) {
+    throw new ApiError({ code: 'NOT_FOUND', message: 'Ponto não encontrado', status: 404 });
+  }
+
+  // Preparar dados para update
+  const updateData: Prisma.PickupPointUpdateInput = {};
+
+  if (data.razaoSocial !== undefined) updateData.razaoSocial = data.razaoSocial;
+  if (data.nomeFantasia !== undefined) updateData.nomeFantasia = data.nomeFantasia;
+  if (data.ie !== undefined) updateData.ie = data.ie;
+  if (data.email !== undefined) updateData.email = data.email;
+  if (data.telefone !== undefined) updateData.telefone = data.telefone;
+
+  // Hash da senha se fornecida
+  if (data.password !== undefined && data.password && data.password.trim() !== '') {
+    updateData.passwordHash = await bcrypt.hash(data.password, 10);
+  }
+
+  if (data.cep !== undefined) updateData.cep = data.cep;
+  if (data.logradouro !== undefined) updateData.logradouro = data.logradouro;
+  if (data.numero !== undefined) updateData.numero = data.numero;
+  if (data.complemento !== undefined) updateData.complemento = data.complemento;
+  if (data.bairro !== undefined) updateData.bairro = data.bairro;
+  if (data.cidade !== undefined) updateData.cidade = data.cidade;
+  if (data.uf !== undefined) updateData.uf = data.uf;
+  if (data.paymentMethod !== undefined) updateData.paymentMethod = data.paymentMethod as Prisma.InputJsonValue;
+  if (data.payoutDay !== undefined) updateData.payoutDay = data.payoutDay;
+  if (data.minPayoutAmount !== undefined) {
+    updateData.minPayoutAmount = data.minPayoutAmount ? new Decimal(data.minPayoutAmount) : null;
+  }
+  if (data.commissionPerItem !== undefined) {
+    updateData.commissionPerItem = data.commissionPerItem ? new Decimal(data.commissionPerItem) : null;
+  }
+  if (data.capacityPerDay !== undefined) updateData.capacityPerDay = data.capacityPerDay;
+
+  const point = await prisma.pickupPoint.update({
+    where: { id },
+    data: updateData,
+  });
+
+  return { data: { point: toApiPickupPoint(point) } };
+});
+
+/**
+ * DELETE /api/admin/pickup-points/[id] - Deletar ponto
+ */
+export const DELETE = withApiHandler<DeletePickupPointResponse, { id: string }>(async ({ req, params }) => {
+  const authResult = await requireAdminUser(req, AdminPermission.PONTOS_COLETA);
+  if (authResult instanceof Response) {
+    throw new ApiError({ code: 'UNAUTHORIZED', message: 'Não autorizado', status: 401 });
+  }
+
+  const { id } = params;
+
+  const existing = await prisma.pickupPoint.findUnique({
+    where: { id },
+  });
+
+  if (!existing) {
+    throw new ApiError({ code: 'NOT_FOUND', message: 'Ponto não encontrado', status: 404 });
+  }
+
+  await prisma.pickupPoint.delete({
+    where: { id },
+  });
+
+  return { data: { message: 'Ponto excluído com sucesso' } };
+});

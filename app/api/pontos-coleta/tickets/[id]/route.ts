@@ -1,28 +1,24 @@
-
-import { NextResponse } from 'next/server';
+import { withApiHandler } from '@/lib/api/handler';
+import { ApiError } from '@/lib/api/errors';
 import { getCollectorSessionFromRequest } from '@/lib/auth/collector-session';
 import { getTicketForCollector } from '@/lib/support/collector-service';
+import type { SupportTicket } from '@/lib/validation/support';
 
-export async function GET(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const session = await getCollectorSessionFromRequest(request);
-    if (!session) {
-      return NextResponse.json({ message: 'Não autenticado' }, { status: 401 });
-    }
+type TicketDetailResponse = {
+  ticket: SupportTicket;
+};
 
-    const { id } = await params;
-    const ticket = await getTicketForCollector(id, session.pointId);
-
-    if (!ticket) {
-      return NextResponse.json({ message: 'Ticket não encontrado' }, { status: 404 });
-    }
-
-    return NextResponse.json(ticket);
-  } catch (error) {
-    console.error('[COLLECTOR_TICKET_GET]', error);
-    return NextResponse.json({ message: 'Erro ao buscar ticket' }, { status: 500 });
+export const GET = withApiHandler<TicketDetailResponse, { id: string }>(async ({ req, params }) => {
+  const session = await getCollectorSessionFromRequest(req);
+  if (!session) {
+    throw new ApiError({ code: 'UNAUTHORIZED', message: 'Não autenticado', status: 401 });
   }
-}
+
+  const ticket = await getTicketForCollector(params.id, session.pointId);
+
+  if (!ticket) {
+    throw new ApiError({ code: 'NOT_FOUND', message: 'Ticket não encontrado', status: 404 });
+  }
+
+  return { data: { ticket } };
+});

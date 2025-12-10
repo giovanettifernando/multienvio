@@ -4,7 +4,8 @@
  * Gera PDF do extrato da carteira com filtros de período
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
+import { withApiHandlerResponse } from '@/lib/api/handler';
 import { getSession } from '@/lib/auth/session';
 import { prisma } from '@/lib/db';
 import { calculatePeriodSummary, getLastNDaysRange, formatPeriodLabel } from '@/lib/wallet/period-summary';
@@ -16,8 +17,9 @@ import {
 import { formatNumberBR, formatWalletDescription } from '@/lib/format';
 import type { Prisma, WalletTxType } from '@prisma/client';
 
+export const GET = withApiHandlerResponse(async (context) => {
+  const { req, logger } = context;
 
-export async function GET(request: Request) {
   try {
     // Verificar autenticação
     const session = await getSession();
@@ -55,7 +57,7 @@ export async function GET(request: Request) {
     }
 
     // Parsear query params
-    const { searchParams } = new URL(request.url);
+    const { searchParams } = new URL(req.url);
     const dateFrom = searchParams.get('dateFrom');
     const dateTo = searchParams.get('dateTo');
     const search = searchParams.get('search');
@@ -104,6 +106,11 @@ export async function GET(request: Request) {
     // Formatar período para título
     const periodLabel = formatPeriodLabel(summary.periodStart, summary.periodEnd);
 
+    logger.info('wallet_statement_pdf_generated', {
+      userId: session.userId,
+      transactionCount: transactions.length,
+    });
+
     // Gerar HTML para PDF
     const html = generateStatementHTML({
       user,
@@ -114,9 +121,6 @@ export async function GET(request: Request) {
     });
 
     // Retornar HTML como resposta (o navegador pode usar window.print())
-    // OU usar uma biblioteca como puppeteer/playwright para gerar PDF server-side
-    // Por simplicidade, vamos retornar HTML que pode ser printado
-
     return new NextResponse(html, {
       headers: {
         'Content-Type': 'text/html; charset=utf-8',
@@ -124,13 +128,13 @@ export async function GET(request: Request) {
       },
     });
   } catch (error) {
-    console.error('[WALLET_STATEMENT_PDF] Error generating PDF:', error);
+    logger.error('wallet_statement_pdf_error', { err: error });
     return NextResponse.json(
       { message: 'Erro ao gerar PDF do extrato' },
       { status: 500 }
     );
   }
-}
+});
 
 /**
  * Gerar HTML formatado para impressão/PDF

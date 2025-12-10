@@ -22,6 +22,8 @@
 
 import { correiosFetch, getCorreiosConfigAsync, validateCorreiosConfig } from './client';
 import { CORREIOS_ENDPOINTS } from './constants';
+import { cepCache } from '@/lib/cache';
+import { logger } from '@/lib/logger';
 
 /**
  * Resposta da API de CEP dos Correios
@@ -201,11 +203,12 @@ export async function consultarCepBrasilApi(cep: string): Promise<CepResult | nu
 }
 
 /**
- * Consulta CEP com fallback automático
+ * Consulta CEP com fallback automático e CACHE
  *
  * Ordem de prioridade:
- * 1. API oficial dos Correios (primária)
- * 2. BrasilAPI (fallback)
+ * 1. Cache Redis (7 dias TTL)
+ * 2. API oficial dos Correios (primária)
+ * 3. BrasilAPI (fallback)
  *
  * @param cep - CEP com ou sem formatação
  * @returns Dados do endereço normalizado
@@ -218,15 +221,28 @@ export async function consultarCep(cep: string): Promise<CepResult> {
     throw new CepError('CEP deve ter 8 dígitos', 'INVALID');
   }
 
-  // Tentar API dos Correios primeiro
+  // 1. Verificar cache primeiro
+  const cached = await cepCache.get<CepResult>(normalized);
+  if (cached) {
+    logger.debug({ event: 'cep_cache_hit', cep: normalized }, 'CEP found in cache');
+    return cached;
+  }
+
+  logger.debug({ event: 'cep_cache_miss', cep: normalized }, 'CEP not in cache, fetching');
+
+  // 2. Tentar API dos Correios primeiro
   try {
     const result = await consultarCepCorreios(normalized);
-    console.log(`[consultarCep] Sucesso via Correios: ${normalized}`);
+    logger.info({ event: 'cep_correios_success', cep: normalized }, 'CEP found via Correios');
+
+    // Salvar no cache (fire and forget)
+    cepCache.set(normalized, result).catch(() => {});
+
     return result;
   } catch (error) {
     // Log do erro para diagnóstico
     if (error instanceof CepError) {
-      console.warn(`[consultarCep] Correios falhou (${error.code}): ${error.message}`);
+      logger.warn({ event: 'cep_correios_failed', cep: normalized, code: error.code }, error.message);
 
       // Se CEP não foi encontrado nos Correios, não tentar fallback
       // (a base dos Correios é autoritativa)
@@ -234,16 +250,20 @@ export async function consultarCep(cep: string): Promise<CepResult> {
         throw error;
       }
     } else {
-      console.warn('[consultarCep] Correios falhou com erro inesperado:', error);
+      logger.warn({ event: 'cep_correios_unexpected_error', cep: normalized, err: error }, 'Unexpected error');
     }
   }
 
-  // Fallback para BrasilAPI
-  console.log(`[consultarCep] Tentando BrasilAPI como fallback: ${normalized}`);
+  // 3. Fallback para BrasilAPI
+  logger.debug({ event: 'cep_brasilapi_fallback', cep: normalized }, 'Trying BrasilAPI fallback');
   const brasilApiResult = await consultarCepBrasilApi(normalized);
 
   if (brasilApiResult) {
-    console.log(`[consultarCep] Sucesso via BrasilAPI: ${normalized}`);
+    logger.info({ event: 'cep_brasilapi_success', cep: normalized }, 'CEP found via BrasilAPI');
+
+    // Salvar no cache (fire and forget)
+    cepCache.set(normalized, brasilApiResult).catch(() => {});
+
     return brasilApiResult;
   }
 

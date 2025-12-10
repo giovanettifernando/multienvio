@@ -1,9 +1,32 @@
-
-import { NextResponse } from 'next/server';
-import { requireAdminUser } from '@/lib/auth/admin-helpers';
+import { withApiHandler } from '@/lib/api/handler';
+import { ApiError } from '@/lib/api/errors';
+import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
 import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { AdminPermission, StaffStatus } from '@prisma/client';
+
+type StaffUserApi = {
+  id: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  status: 'active' | 'blocked';
+  isSuperAdmin: boolean;
+  permissions: AdminPermission[];
+  roles: string[];
+  lastAccessAt: string | null;
+  lastLoginAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+type StaffUserResponse = {
+  user: StaffUserApi;
+};
+
+type StaffUserDeleteResponse = {
+  message: string;
+};
 
 const updateSchema = z.object({
   name: z.string().trim().min(1).max(120).optional(),
@@ -13,8 +36,6 @@ const updateSchema = z.object({
   isSuperAdmin: z.boolean().optional(),
   permissions: z.array(z.nativeEnum(AdminPermission)).optional(),
 });
-
-
 
 function toApiUser(user: {
   id: string;
@@ -38,7 +59,7 @@ function toApiUser(user: {
     name: user.name,
     email: user.email,
     phone: user.phone,
-    status: user.status === 'BLOCKED' ? 'blocked' : 'active',
+    status: user.status === 'BLOCKED' ? 'blocked' as const : 'active' as const,
     isSuperAdmin: user.isSuperAdmin,
     permissions: effectivePermissions,
     roles: user.isSuperAdmin
@@ -51,158 +72,141 @@ function toApiUser(user: {
   };
 }
 
-export async function GET(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const authResult = await requireAdminUser(request, AdminPermission.USUARIOS);
-    if (authResult instanceof NextResponse) return authResult;
+export const GET = withApiHandler<StaffUserResponse, { id: string }>(async (context) => {
+  const { req, params } = context;
 
-    const { id } = await params;
-    const user = await prisma.staffUser.findUnique({
-      where: { id },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        phone: true,
-        status: true,
-        isSuperAdmin: true,
-        permissions: true,
-        lastAccessAt: true,
-        lastLoginAt: true,
-        createdAt: true,
-        updatedAt: true,
-      },
-    });
-
-    if (!user) {
-      return NextResponse.json({ message: 'Usuário não encontrado' }, { status: 404 });
-    }
-
-    return NextResponse.json({ user: toApiUser(user) });
-  } catch (error) {
-    if (error instanceof NextResponse) {
-      return error;
-    }
-    console.error('[ADMIN_STAFF_USERS_GET_ID]', error);
-    return NextResponse.json({ message: 'Erro ao carregar usuário' }, { status: 500 });
+  const session = await getAdminSessionFromRequest(req);
+  if (!session) {
+    throw new ApiError({ code: 'unauthorized', message: 'Não autenticado', status: 401 });
   }
-}
 
-export async function PUT(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const authResult = await requireAdminUser(request, AdminPermission.USUARIOS);
-    if (authResult instanceof NextResponse) return authResult;
-
-    const { id } = await params;
-    const payload = updateSchema.parse(await request.json());
-
-    const existing = await prisma.staffUser.findUnique({ where: { id } });
-    if (!existing) {
-      return NextResponse.json({ message: 'Usuário não encontrado' }, { status: 404 });
-    }
-
-    if (payload.email && payload.email !== existing.email) {
-      const emailExists = await prisma.staffUser.findUnique({ where: { email: payload.email } });
-      if (emailExists) {
-        return NextResponse.json({ message: 'E-mail já cadastrado' }, { status: 409 });
-      }
-    }
-
-    let isSuperAdmin = existing.isSuperAdmin;
-    let permissions = existing.permissions;
-
-    if (typeof payload.isSuperAdmin === 'boolean') {
-      isSuperAdmin = payload.isSuperAdmin;
-      if (isSuperAdmin) {
-        permissions = [];
-      }
-    }
-
-    if (Array.isArray(payload.permissions)) {
-      permissions = Array.from(new Set(payload.permissions));
-    }
-
-    if (!isSuperAdmin && permissions.length === 0) {
-      return NextResponse.json(
-        { message: 'Selecione ao menos uma permissão' },
-        { status: 400 },
-      );
-    }
-
-    const updated = await prisma.staffUser.update({
-      where: { id },
-      data: {
-        name: payload.name ?? undefined,
-        email: payload.email ?? undefined,
-        phone: payload.phone ?? undefined,
-        status: payload.status ?? undefined,
-        isSuperAdmin,
-        permissions: isSuperAdmin ? [] : permissions,
-      },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        phone: true,
-        status: true,
-        isSuperAdmin: true,
-        permissions: true,
-        lastAccessAt: true,
-        lastLoginAt: true,
-        createdAt: true,
-        updatedAt: true,
-      },
-    });
-
-    return NextResponse.json({ user: toApiUser(updated) });
-  } catch (error) {
-    if (error instanceof NextResponse) {
-      return error;
-    }
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { message: 'Dados inválidos', errors: error.flatten() },
-        { status: 400 },
-      );
-    }
-    console.error('[ADMIN_STAFF_USERS_PUT_ID]', error);
-    return NextResponse.json({ message: 'Erro ao atualizar usuário' }, { status: 500 });
+  if (!session.permissions.includes(AdminPermission.USUARIOS)) {
+    throw new ApiError({ code: 'forbidden', message: 'Permissão negada', status: 403 });
   }
-}
 
-export async function DELETE(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const authResult = await requireAdminUser(request, AdminPermission.USUARIOS);
-    if (authResult instanceof NextResponse) return authResult;
+  const { id } = await params;
+  const user = await prisma.staffUser.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      phone: true,
+      status: true,
+      isSuperAdmin: true,
+      permissions: true,
+      lastAccessAt: true,
+      lastLoginAt: true,
+      createdAt: true,
+      updatedAt: true,
+    },
+  });
 
-    const { id } = await params;
-
-    const existing = await prisma.staffUser.findUnique({
-      where: { id },
-      select: { id: true },
-    });
-
-    if (!existing) {
-      return NextResponse.json({ message: 'Usuário não encontrado' }, { status: 404 });
-    }
-
-    await prisma.staffUser.delete({ where: { id } });
-
-    return NextResponse.json({ message: 'Usuário excluído com sucesso' });
-  } catch (error) {
-    if (error instanceof NextResponse) {
-      return error;
-    }
-    console.error('[ADMIN_STAFF_USERS_DELETE_ID]', error);
-    return NextResponse.json({ message: 'Erro ao excluir usuário' }, { status: 500 });
+  if (!user) {
+    throw new ApiError({ code: 'not_found', message: 'Usuário não encontrado', status: 404 });
   }
-}
+
+  return { data: { user: toApiUser(user) } };
+});
+
+export const PUT = withApiHandler<StaffUserResponse, { id: string }>(async (context) => {
+  const { req, params } = context;
+
+  const session = await getAdminSessionFromRequest(req);
+  if (!session) {
+    throw new ApiError({ code: 'unauthorized', message: 'Não autenticado', status: 401 });
+  }
+
+  if (!session.permissions.includes(AdminPermission.USUARIOS)) {
+    throw new ApiError({ code: 'forbidden', message: 'Permissão negada', status: 403 });
+  }
+
+  const { id } = await params;
+  const body = await req.json();
+  const payload = updateSchema.parse(body);
+
+  const existing = await prisma.staffUser.findUnique({ where: { id } });
+  if (!existing) {
+    throw new ApiError({ code: 'not_found', message: 'Usuário não encontrado', status: 404 });
+  }
+
+  if (payload.email && payload.email !== existing.email) {
+    const emailExists = await prisma.staffUser.findUnique({ where: { email: payload.email } });
+    if (emailExists) {
+      throw new ApiError({ code: 'conflict', message: 'E-mail já cadastrado', status: 409 });
+    }
+  }
+
+  let isSuperAdmin = existing.isSuperAdmin;
+  let permissions = existing.permissions;
+
+  if (typeof payload.isSuperAdmin === 'boolean') {
+    isSuperAdmin = payload.isSuperAdmin;
+    if (isSuperAdmin) {
+      permissions = [];
+    }
+  }
+
+  if (Array.isArray(payload.permissions)) {
+    permissions = Array.from(new Set(payload.permissions));
+  }
+
+  if (!isSuperAdmin && permissions.length === 0) {
+    throw new ApiError({ code: 'validation_error', message: 'Selecione ao menos uma permissão', status: 400 });
+  }
+
+  const updated = await prisma.staffUser.update({
+    where: { id },
+    data: {
+      name: payload.name ?? undefined,
+      email: payload.email ?? undefined,
+      phone: payload.phone ?? undefined,
+      status: payload.status ?? undefined,
+      isSuperAdmin,
+      permissions: isSuperAdmin ? [] : permissions,
+    },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      phone: true,
+      status: true,
+      isSuperAdmin: true,
+      permissions: true,
+      lastAccessAt: true,
+      lastLoginAt: true,
+      createdAt: true,
+      updatedAt: true,
+    },
+  });
+
+  return { data: { user: toApiUser(updated) } };
+});
+
+export const DELETE = withApiHandler<StaffUserDeleteResponse, { id: string }>(async (context) => {
+  const { req, params } = context;
+
+  const session = await getAdminSessionFromRequest(req);
+  if (!session) {
+    throw new ApiError({ code: 'unauthorized', message: 'Não autenticado', status: 401 });
+  }
+
+  if (!session.permissions.includes(AdminPermission.USUARIOS)) {
+    throw new ApiError({ code: 'forbidden', message: 'Permissão negada', status: 403 });
+  }
+
+  const { id } = await params;
+
+  const existing = await prisma.staffUser.findUnique({
+    where: { id },
+    select: { id: true },
+  });
+
+  if (!existing) {
+    throw new ApiError({ code: 'not_found', message: 'Usuário não encontrado', status: 404 });
+  }
+
+  await prisma.staffUser.delete({ where: { id } });
+
+  return { data: { message: 'Usuário excluído com sucesso' } };
+});

@@ -7,54 +7,50 @@
  *   - search: filtro por nome (opcional)
  */
 
-import { NextRequest, NextResponse } from 'next/server';
 import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
 import { prisma } from '@/lib/db';
 import type { FipeVehicleType } from '@prisma/client';
+import { withApiHandler } from '@/lib/api/handler';
+import { ApiError } from '@/lib/api/errors';
 
-
-export async function GET(request: NextRequest) {
-  const session = await getAdminSessionFromRequest(request);
+export const GET = withApiHandler(async ({ req }) => {
+  const session = await getAdminSessionFromRequest(req);
   if (!session) {
-    return NextResponse.json({ message: 'Não autenticado' }, { status: 401 });
-  }
-
-  try {
-    const { searchParams } = new URL(request.url);
-    const vehicleType = (searchParams.get('vehicleType') || 'cars') as FipeVehicleType;
-    const search = searchParams.get('search') || '';
-
-    // Validar vehicleType
-    if (!['cars', 'motorcycles', 'trucks'].includes(vehicleType)) {
-      return NextResponse.json(
-        { message: 'vehicleType inválido' },
-        { status: 400 }
-      );
-    }
-
-    const brands = await prisma.fipeVehicleBrand.findMany({
-      where: {
-        vehicleType,
-        isActive: true,
-        ...(search && {
-          name: { contains: search, mode: 'insensitive' },
-        }),
-      },
-      orderBy: { name: 'asc' },
-      select: {
-        id: true,
-        fipeCode: true,
-        name: true,
-      },
+    throw new ApiError({
+      code: 'UNAUTHORIZED',
+      message: 'Não autenticado',
+      status: 401,
     });
-
-    return NextResponse.json({ brands });
-
-  } catch (error) {
-    console.error('[FIPE Brands API] Erro:', error);
-    return NextResponse.json(
-      { message: 'Erro ao buscar marcas' },
-      { status: 500 }
-    );
   }
-}
+
+  const { searchParams } = new URL(req.url);
+  const vehicleType = (searchParams.get('vehicleType') || 'cars') as FipeVehicleType;
+  const search = searchParams.get('search') || '';
+
+  // Validar vehicleType
+  if (!['cars', 'motorcycles', 'trucks'].includes(vehicleType)) {
+    throw new ApiError({
+      code: 'VALIDATION_ERROR',
+      message: 'vehicleType inválido',
+      status: 400,
+    });
+  }
+
+  const brands = await prisma.fipeVehicleBrand.findMany({
+    where: {
+      vehicleType,
+      isActive: true,
+      ...(search && {
+        name: { contains: search, mode: 'insensitive' },
+      }),
+    },
+    orderBy: { name: 'asc' },
+    select: {
+      id: true,
+      fipeCode: true,
+      name: true,
+    },
+  });
+
+  return { data: { brands } };
+});

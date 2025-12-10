@@ -5,13 +5,13 @@
  * Rotas de configuração das credenciais Google OAuth (Admin)
  */
 
-
-import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { requireAdminUser } from '@/lib/auth/admin-helpers';
 import { AdminPermission } from '@prisma/client';
 import { encrypt, decrypt } from '@/lib/integrations/shared/encryption.service';
+import { withApiHandler } from '@/lib/api/handler';
+import { ApiError } from '@/lib/api/errors';
 
 /**
  * Schema de validação para configuração Google OAuth
@@ -25,110 +25,112 @@ const googleOAuthConfigSchema = z.object({
 /**
  * GET - Retorna a configuração atual
  */
-export async function GET(request: Request) {
-  try {
-    const authResult = await requireAdminUser(request, AdminPermission.CONFIGURACOES);
-    if (authResult instanceof NextResponse) return authResult;
-
-    // Buscar configuração ativa
-    const config = await prisma.googleOAuthConfig.findFirst({
-      where: { isActive: true },
-      orderBy: { updatedAt: 'desc' },
+export const GET = withApiHandler(async ({ req }) => {
+  const authResult = await requireAdminUser(req, AdminPermission.CONFIGURACOES);
+  if (authResult instanceof Response) {
+    throw new ApiError({
+      code: 'UNAUTHORIZED',
+      message: 'Não autorizado',
+      status: 401,
     });
+  }
 
-    if (!config) {
-      return NextResponse.json({
+  // Buscar configuração ativa
+  const config = await prisma.googleOAuthConfig.findFirst({
+    where: { isActive: true },
+    orderBy: { updatedAt: 'desc' },
+  });
+
+  if (!config) {
+    return {
+      data: {
         configured: false,
         clientId: '',
         clientSecret: '',
         isActive: false,
-      });
-    }
+        updatedAt: null as Date | null,
+      },
+    };
+  }
 
-    // Descriptografar clientSecret para exibição mascarada
-    let clientSecretMasked = '';
-    try {
-      const decrypted = decrypt(config.clientSecret);
-      clientSecretMasked = decrypted.length > 0 ? '***configurado***' : '';
-    } catch {
-      clientSecretMasked = '***';
-    }
+  // Descriptografar clientSecret para exibição mascarada
+  let clientSecretMasked = '';
+  try {
+    const decrypted = decrypt(config.clientSecret);
+    clientSecretMasked = decrypted.length > 0 ? '***configurado***' : '';
+  } catch {
+    clientSecretMasked = '***';
+  }
 
-    return NextResponse.json({
+  return {
+    data: {
       configured: true,
       clientId: config.clientId,
       clientSecret: clientSecretMasked,
       isActive: config.isActive,
-      updatedAt: config.updatedAt,
-    });
-  } catch (error) {
-    console.error('[ADMIN_GOOGLE_OAUTH_GET]', error);
-    return NextResponse.json(
-      { error: 'Erro ao carregar configuração' },
-      { status: 500 }
-    );
-  }
-}
+      updatedAt: config.updatedAt as Date | null,
+    },
+  };
+});
 
 /**
  * POST - Salva a configuração
  */
-export async function POST(request: Request) {
+export const POST = withApiHandler(async ({ req }) => {
+  const authResult = await requireAdminUser(req, AdminPermission.CONFIGURACOES);
+  if (authResult instanceof Response) {
+    throw new ApiError({
+      code: 'UNAUTHORIZED',
+      message: 'Não autorizado',
+      status: 401,
+    });
+  }
+
+  const body = await req.json();
+  const parsed = googleOAuthConfigSchema.safeParse(body);
+
+  if (!parsed.success) {
+    throw new ApiError({
+      code: 'VALIDATION_ERROR',
+      message: 'Dados inválidos',
+      status: 400,
+      details: parsed.error.flatten(),
+    });
+  }
+
+  const { clientId, clientSecret, isActive } = parsed.data;
+
+  // Criptografar clientSecret
+  const encryptedSecret = encrypt(clientSecret);
+
+  // Desativar configurações anteriores
+  await prisma.googleOAuthConfig.updateMany({
+    where: { isActive: true },
+    data: { isActive: false },
+  });
+
+  // Criar nova configuração
+  const config = await prisma.googleOAuthConfig.create({
+    data: {
+      clientId,
+      clientSecret: encryptedSecret,
+      isActive,
+    },
+  });
+
+  // Invalidar cache do módulo google-oauth
   try {
-    const authResult = await requireAdminUser(request, AdminPermission.CONFIGURACOES);
-    if (authResult instanceof NextResponse) return authResult;
+    const { invalidateGoogleOAuthCache } = await import('@/lib/auth/google-oauth');
+    invalidateGoogleOAuthCache();
+  } catch {
+    // Cache não implementado ainda
+  }
 
-    const body = await request.json();
-    const parsed = googleOAuthConfigSchema.safeParse(body);
-
-    if (!parsed.success) {
-      return NextResponse.json(
-        {
-          error: 'Dados inválidos',
-          details: parsed.error.flatten(),
-        },
-        { status: 400 }
-      );
-    }
-
-    const { clientId, clientSecret, isActive } = parsed.data;
-
-    // Criptografar clientSecret
-    const encryptedSecret = encrypt(clientSecret);
-
-    // Desativar configurações anteriores
-    await prisma.googleOAuthConfig.updateMany({
-      where: { isActive: true },
-      data: { isActive: false },
-    });
-
-    // Criar nova configuração
-    const config = await prisma.googleOAuthConfig.create({
-      data: {
-        clientId,
-        clientSecret: encryptedSecret,
-        isActive,
-      },
-    });
-
-    // Invalidar cache do módulo google-oauth
-    try {
-      const { invalidateGoogleOAuthCache } = await import('@/lib/auth/google-oauth');
-      invalidateGoogleOAuthCache();
-    } catch {
-      // Cache não implementado ainda
-    }
-
-    return NextResponse.json({
+  return {
+    data: {
       success: true,
       message: 'Configuração salva com sucesso',
       id: config.id,
-    });
-  } catch (error) {
-    console.error('[ADMIN_GOOGLE_OAUTH_POST]', error);
-    return NextResponse.json(
-      { error: 'Erro ao salvar configuração' },
-      { status: 500 }
-    );
-  }
-}
+    },
+  };
+});

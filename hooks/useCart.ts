@@ -89,8 +89,9 @@ export function useCart() {
       if (!response.ok) {
         throw new Error("Falha ao carregar carrinho");
       }
-      const data = await response.json();
-      // A API retorna { cart: { ... } }, extrair e adaptar
+      const json = await response.json();
+      // Handle standardized API response { data: { cart: ... } }
+      const data = json.data ?? json;
       return adaptCartSnapshot(data.cart);
     },
   });
@@ -108,7 +109,9 @@ export function useCartAdd() {
       if (!response.ok) {
         throw new Error("Falha ao adicionar ao carrinho");
       }
-      return response.json();
+      const json = await response.json();
+      // Handle standardized API response format { data: T, error, meta }
+      return json.data ?? json;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["cart"] });
@@ -128,7 +131,9 @@ export function useCartUpdate(itemId: string) {
       if (!response.ok) {
         throw new Error("Falha ao atualizar item do carrinho");
       }
-      return response.json();
+      const json = await response.json();
+      // Handle standardized API response format { data: T, error, meta }
+      return json.data ?? json;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["cart"] });
@@ -184,7 +189,9 @@ export function useCartCheckout() {
       if (!response.ok) {
         throw new Error("Falha no checkout");
       }
-      return response.json() as Promise<CheckoutResponse>;
+      const json = await response.json();
+      // Handle standardized API response format { data: T, error, meta }
+      return (json.data ?? json) as CheckoutResponse;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["cart"] });

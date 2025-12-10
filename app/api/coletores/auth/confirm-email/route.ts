@@ -3,25 +3,28 @@
  * GET /api/coletores/auth/confirm-email?token=... - Confirma o e-mail e redireciona
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
+import { withApiHandlerResponse } from '@/lib/api/handler';
 import { prisma } from '@/lib/db';
 
 /**
  * GET /api/coletores/auth/confirm-email?token=...
  * Confirma o token de email e atualiza o coletor
  */
-export async function GET(request: NextRequest) {
+export const GET = withApiHandlerResponse(async (context) => {
+  const { req, logger } = context;
+
+  const { searchParams } = new URL(req.url);
+  const token = searchParams.get('token');
+
+  if (!token || typeof token !== 'string') {
+    logger.warn('collector_confirm_email_invalid_token');
+    return NextResponse.redirect(
+      new URL('/coletores/verificar-email?error=token_invalid', req.url)
+    );
+  }
+
   try {
-    const { searchParams } = new URL(request.url);
-    const token = searchParams.get('token');
-
-    if (!token || typeof token !== 'string') {
-      console.warn('[confirm-email] TOKEN_INVALID: Token missing or invalid type');
-      return NextResponse.redirect(
-        new URL('/coletores/verificar-email?error=token_invalid', request.url)
-      );
-    }
-
     // Find collector with this token in a transaction
     const result = await prisma.$transaction(async (tx) => {
       // Lookup token
@@ -40,13 +43,13 @@ export async function GET(request: NextRequest) {
       });
 
       if (!collector) {
-        console.warn('[confirm-email] TOKEN_NOT_FOUND: No collector found with token:', token.substring(0, 8) + '...');
+        logger.warn('collector_confirm_email_not_found');
         return { status: 'TOKEN_NOT_FOUND' };
       }
 
       // Check if already verified (token consumed)
       if (collector.pfEmailVerified) {
-        console.info('[confirm-email] TOKEN_USED: Collector', collector.id, 'already verified at', collector.pfEmailVerifiedAt);
+        logger.info('collector_confirm_email_already_verified', { collectorId: collector.id });
         return { status: 'TOKEN_USED', collectorId: collector.id };
       }
 
@@ -55,7 +58,7 @@ export async function GET(request: NextRequest) {
       const sevenDaysInMs = 7 * 24 * 60 * 60 * 1000;
 
       if (tokenAge > sevenDaysInMs) {
-        console.warn('[confirm-email] TOKEN_EXPIRED: Token created', Math.floor(tokenAge / (24 * 60 * 60 * 1000)), 'days ago for collector', collector.id);
+        logger.warn('collector_confirm_email_expired', { collectorId: collector.id, tokenAgeDays: Math.floor(tokenAge / (24 * 60 * 60 * 1000)) });
         return { status: 'TOKEN_EXPIRED', collectorId: collector.id };
       }
 
@@ -70,7 +73,7 @@ export async function GET(request: NextRequest) {
         },
       });
 
-      console.info('[confirm-email] PF_EMAIL_VERIFIED_OK: Collector', collector.id, '(', collector.pfNome, ') verified successfully. Status: BLOCKED → INACTIVE');
+      logger.info('collector_confirm_email_success', { collectorId: collector.id, pfNome: collector.pfNome });
 
       return { status: 'SUCCESS', collectorId: collector.id, name: collector.pfNome };
     });
@@ -79,33 +82,32 @@ export async function GET(request: NextRequest) {
     switch (result.status) {
       case 'TOKEN_NOT_FOUND':
         return NextResponse.redirect(
-          new URL('/coletores/verificar-email?error=token_not_found', request.url)
+          new URL('/coletores/verificar-email?error=token_not_found', req.url)
         );
 
       case 'TOKEN_USED':
         return NextResponse.redirect(
-          new URL('/coletores/verificar-email?success=already_verified', request.url)
+          new URL('/coletores/verificar-email?success=already_verified', req.url)
         );
 
       case 'TOKEN_EXPIRED':
         return NextResponse.redirect(
-          new URL('/coletores/verificar-email?error=token_expired', request.url)
+          new URL('/coletores/verificar-email?error=token_expired', req.url)
         );
 
       case 'SUCCESS':
         return NextResponse.redirect(
-          new URL('/coletores/verificar-email?success=verified', request.url)
+          new URL('/coletores/verificar-email?success=verified', req.url)
         );
 
       default:
         throw new Error('Unknown status');
     }
-
   } catch (error) {
-    console.error('[confirm-email] Error:', error);
+    logger.error('collector_confirm_email_error', { err: error });
 
     return NextResponse.redirect(
-      new URL('/coletores/verificar-email?error=server_error', request.url)
+      new URL('/coletores/verificar-email?error=server_error', req.url)
     );
   }
-}
+});

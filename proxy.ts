@@ -59,6 +59,15 @@ interface TokenVersionCache {
 const tokenVersionCache = new Map<string, TokenVersionCache>();
 const TOKEN_VERSION_CACHE_TTL = 30 * 1000; // 30 segundos
 
+// Collector JWT Secret (for pickup points) - Nunca usar fallbacks em produção
+const COLLECTOR_JWT_SECRET = process.env.COLLECTOR_JWT_SECRET
+  ? new TextEncoder().encode(process.env.COLLECTOR_JWT_SECRET)
+  : null;
+
+// Cookie names for collectors
+const COLLECTOR_AUTH_COOKIE_NAME = 'collector_auth'; // Pickup points
+const AUTONOMOUS_COLLECTOR_COOKIE_NAME = 'coletor-token'; // Autonomous collectors
+
 interface JWTPayload {
   userId: string;
   email: string;
@@ -74,6 +83,28 @@ interface AdminJWTPayload {
   tokenVersion: number;
   iss?: string;
   aud?: string;
+  iat?: number;
+  exp?: number;
+}
+
+interface CollectorJWTPayload {
+  pointId: string;
+  cnpj: string;
+  nomeFantasia: string;
+  tokenVersion: number;
+  iss?: string;
+  aud?: string;
+  iat?: number;
+  exp?: number;
+}
+
+interface AutonomousCollectorJWTPayload {
+  coletorId: string;
+  pfEmail: string;
+  pfNome: string;
+  pjRazaoSocial: string;
+  status: string;
+  tokenVersion: number;
   iat?: number;
   exp?: number;
 }
@@ -111,6 +142,48 @@ async function verifyAdminToken(token: string): Promise<{ payload: AdminJWTPaylo
       return { payload: null, error: 'expired' };
     }
     // Token invalid
+    return { payload: null, error: 'invalid' };
+  }
+}
+
+/**
+ * Verify pickup point JWT token and return payload with error type
+ */
+async function verifyCollectorToken(token: string): Promise<{ payload: CollectorJWTPayload | null; error: 'expired' | 'invalid' | null }> {
+  if (!COLLECTOR_JWT_SECRET) {
+    // Secret not configured - fail open (let route handle auth)
+    console.warn('[PROXY] COLLECTOR_JWT_SECRET not configured, skipping proxy-level auth');
+    return { payload: null, error: null };
+  }
+  try {
+    const { payload } = await jwtVerify(token, COLLECTOR_JWT_SECRET, {
+      issuer: 'enviolegal-collector',
+      audience: 'collector',
+    });
+    return { payload: payload as unknown as CollectorJWTPayload, error: null };
+  } catch (error) {
+    if (error instanceof joseErrors.JWTExpired) {
+      return { payload: null, error: 'expired' };
+    }
+    return { payload: null, error: 'invalid' };
+  }
+}
+
+/**
+ * Verify autonomous collector JWT token and return payload with error type
+ */
+async function verifyAutonomousCollectorToken(token: string): Promise<{ payload: AutonomousCollectorJWTPayload | null; error: 'expired' | 'invalid' | null }> {
+  try {
+    const { payload } = await jwtVerify(token, JWT_SECRET);
+    // Validate it's an autonomous collector token (has coletorId field)
+    if (!payload.coletorId) {
+      return { payload: null, error: 'invalid' };
+    }
+    return { payload: payload as unknown as AutonomousCollectorJWTPayload, error: null };
+  } catch (error) {
+    if (error instanceof joseErrors.JWTExpired) {
+      return { payload: null, error: 'expired' };
+    }
     return { payload: null, error: 'invalid' };
   }
 }
@@ -343,19 +416,72 @@ export async function proxy(request: NextRequest) {
 
   const payload = tokenResult.payload;
 
-  // Handle collector routes
+  // Handle autonomous collector routes (/api/coletores/*)
   if (protection === 'collector') {
-    // TODO: Implement collector authentication
-    // For now, collectors use their own auth system in their routes
-    // This middleware just ensures the route is recognized as protected
+    // Allow auth routes without authentication
+    if (pathname.startsWith('/api/coletores/auth/')) {
+      return NextResponse.next();
+    }
+
+    // Get autonomous collector token
+    const collectorToken = request.cookies.get(AUTONOMOUS_COLLECTOR_COOKIE_NAME)?.value;
+    const collectorResult = collectorToken
+      ? await verifyAutonomousCollectorToken(collectorToken)
+      : { payload: null, error: null };
+
+    // If JWT expired, return 401
+    if (collectorResult.error === 'expired') {
+      return NextResponse.json(
+        { error: 'Session expired', message: 'Sessão expirada. Faça login novamente.' },
+        { status: 401 }
+      );
+    }
+
+    // If no valid token, return 401
+    if (!collectorResult.payload) {
+      return NextResponse.json(
+        { error: 'Unauthorized', message: 'Autenticação de coletor necessária' },
+        { status: 401 }
+      );
+    }
+
+    // Token is valid at JWT level - route will do full validation (tokenVersion, status, etc.)
+    // No idle timeout for collectors (only fixed JWT expiration)
     return NextResponse.next();
   }
 
-  // Handle pickup point routes
+  // Handle pickup point routes (/api/pontos-coleta/*)
   if (protection === 'pickup_point') {
-    // TODO: Implement pickup point authentication
-    // For now, pickup points use their own auth system in their routes
-    // This middleware just ensures the route is recognized as protected
+    // Allow auth routes without authentication
+    if (pathname.startsWith('/api/pontos-coleta/auth/')) {
+      return NextResponse.next();
+    }
+
+    // Get pickup point token
+    const pickupToken = request.cookies.get(COLLECTOR_AUTH_COOKIE_NAME)?.value;
+    const pickupResult = pickupToken
+      ? await verifyCollectorToken(pickupToken)
+      : { payload: null, error: null };
+
+    // If JWT expired, return 401
+    if (pickupResult.error === 'expired') {
+      return NextResponse.json(
+        { error: 'Session expired', message: 'Sessão expirada. Faça login novamente.' },
+        { status: 401 }
+      );
+    }
+
+    // If COLLECTOR_JWT_SECRET not configured, fail-open (let route handle)
+    // Otherwise, if no valid token, return 401
+    if (COLLECTOR_JWT_SECRET && !pickupResult.payload) {
+      return NextResponse.json(
+        { error: 'Unauthorized', message: 'Autenticação de ponto de coleta necessária' },
+        { status: 401 }
+      );
+    }
+
+    // Token is valid at JWT level - route will do full validation (tokenVersion, status, etc.)
+    // No idle timeout for pickup points (only fixed JWT expiration)
     return NextResponse.next();
   }
 

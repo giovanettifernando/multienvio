@@ -3,7 +3,8 @@
  * POST /api/coletores/auth/register - Registra um novo coletor
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { withApiHandler } from '@/lib/api/handler';
+import { ApiError } from '@/lib/api/errors';
 import { createCollector } from '@/lib/collectors/service';
 import { publicRegistrationSchema } from '@/lib/collectors/schemas';
 import { prisma } from '@/lib/db';
@@ -11,13 +12,25 @@ import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 import { sendEmail } from '@/lib/email/mailer';
 
+type CollectorRegisterResponse = {
+  message: string;
+  collector: {
+    id: string;
+    pfNome: string;
+    pjRazaoSocial: string;
+    status: string;
+  };
+};
+
 /**
  * POST /api/coletores/auth/register
  * Cria um novo coletor com status INATIVO aguardando aprovação
  */
-export async function POST(request: NextRequest) {
+export const POST = withApiHandler<CollectorRegisterResponse>(async (context) => {
+  const { req, logger } = context;
+
   try {
-    const body = await request.json();
+    const body = await req.json();
 
     // Validate with Zod schema (public registration requires password)
     const validatedData = publicRegistrationSchema.parse(body);
@@ -29,10 +42,11 @@ export async function POST(request: NextRequest) {
     });
 
     if (existingCnpj) {
-      return NextResponse.json(
-        { message: 'Já existe um cadastro com este CNPJ' },
-        { status: 400 }
-      );
+      throw new ApiError({
+        code: 'CNPJ_EXISTS',
+        message: 'Já existe um cadastro com este CNPJ',
+        status: 400,
+      });
     }
 
     // Check if CPF already exists
@@ -43,10 +57,11 @@ export async function POST(request: NextRequest) {
       });
 
       if (existingCpf) {
-        return NextResponse.json(
-          { message: 'Já existe um cadastro com este CPF' },
-          { status: 400 }
-        );
+        throw new ApiError({
+          code: 'CPF_EXISTS',
+          message: 'Já existe um cadastro com este CPF',
+          status: 400,
+        });
       }
     }
 
@@ -57,10 +72,11 @@ export async function POST(request: NextRequest) {
       });
 
       if (existingEmail) {
-        return NextResponse.json(
-          { message: 'Já existe um cadastro com este e-mail' },
-          { status: 400 }
-        );
+        throw new ApiError({
+          code: 'EMAIL_EXISTS',
+          message: 'Já existe um cadastro com este e-mail',
+          status: 400,
+        });
       }
     }
 
@@ -83,7 +99,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    console.info('[register] COLLECTOR_CREATED: ID', collector.id, '- Status: BLOCKED, awaiting email verification');
+    logger.info('collector_registered', { collectorId: collector.id, status: 'BLOCKED' });
 
     // Store password hash
     await prisma.collectorCredential.create({
@@ -94,19 +110,11 @@ export async function POST(request: NextRequest) {
     });
 
     // Save documents if provided
-    console.info('[register] DOCUMENTS_CHECK: Has documents?', !!validatedData.documents);
     if (validatedData.documents) {
-      console.info('[register] DOCUMENTS_STRUCTURE:', {
-        cnhFiles: validatedData.documents.cnhFiles?.length || 0,
-        crlvFile: validatedData.documents.crlvFile?.length || 0,
-        pfAddressProofFile: validatedData.documents.pfAddressProofFile?.length || 0,
-      });
-
       const documentsToSave = [];
 
       // CNH files
       if (validatedData.documents.cnhFiles && validatedData.documents.cnhFiles.length > 0) {
-        console.info('[register] DOCUMENTS_CNH: Processing', validatedData.documents.cnhFiles.length, 'files');
         for (const file of validatedData.documents.cnhFiles) {
           if (file.url) {
             documentsToSave.push({
@@ -143,9 +151,7 @@ export async function POST(request: NextRequest) {
       }
 
       // Create documents in database
-      console.info('[register] DOCUMENTS_TO_SAVE:', documentsToSave.length, 'total documents with URLs');
       if (documentsToSave.length > 0) {
-        console.info('[register] DOCUMENTS_DETAILS:', JSON.stringify(documentsToSave, null, 2));
         try {
           const result = await prisma.collectorDocument.createMany({
             data: documentsToSave.map(doc => ({
@@ -156,22 +162,16 @@ export async function POST(request: NextRequest) {
             })),
             skipDuplicates: true,
           });
-          console.info('[register] DOCUMENTS_SAVED:', result.count, 'documents created for collector', collector.id);
+          logger.info('collector_documents_saved', { collectorId: collector.id, count: result.count });
         } catch (docError) {
-          console.error('[register] DOCUMENTS_SAVE_ERROR:', docError);
+          logger.error('collector_documents_error', { collectorId: collector.id, err: docError });
           // Don't fail registration if documents fail
         }
-      } else {
-        console.warn('[register] DOCUMENTS_EMPTY: No documents have URLs to save');
       }
-    } else {
-      console.warn('[register] DOCUMENTS_NULL: No documents provided in payload');
     }
 
     // Send verification email
     const verificationUrl = `${process.env.NEXT_PUBLIC_APP_URL}/api/coletores/auth/confirm-email?token=${emailVerificationToken}`;
-
-    console.info('[register] EMAIL_VERIFICATION_SENDING: to', validatedData.pf.email, 'for collector', collector.id, '- Token:', emailVerificationToken.substring(0, 16) + '...');
 
     try {
       await sendEmail({
@@ -191,14 +191,14 @@ export async function POST(request: NextRequest) {
           <p>Atenciosamente,<br/>Equipe Envio Legal</p>
         `,
       });
-      console.info('[register] EMAIL_VERIFICATION_SENT: Successfully sent to', validatedData.pf.email);
+      logger.info('collector_verification_email_sent', { collectorId: collector.id });
     } catch (emailError) {
-      console.error('[register] EMAIL_VERIFICATION_FAILED: Error sending email to', validatedData.pf.email, ':', emailError);
+      logger.error('collector_verification_email_error', { collectorId: collector.id, err: emailError });
       // Don't fail the registration if email fails
     }
 
-    return NextResponse.json(
-      {
+    return {
+      data: {
         message: 'Cadastro criado com sucesso! Verifique seu e-mail para confirmar o cadastro.',
         collector: {
           id: collector.id,
@@ -207,26 +207,28 @@ export async function POST(request: NextRequest) {
           status: collector.status,
         },
       },
-      { status: 201 }
-    );
+      status: 201,
+    };
   } catch (error) {
-    console.error('[POST /api/coletores/auth/register] Error:', error);
+    if (error instanceof ApiError) {
+      throw error;
+    }
 
     // Zod validation error
     if (error && typeof error === 'object' && 'issues' in error) {
-      return NextResponse.json(
-        {
-          message: 'Dados inválidos',
-          errors: error,
-        },
-        { status: 400 }
-      );
+      throw new ApiError({
+        code: 'VALIDATION_ERROR',
+        message: 'Dados inválidos',
+        status: 400,
+        details: { errors: error },
+      });
     }
 
-    // 🛡️ SECURITY FIX: Não expor mensagens de erro internas
-    return NextResponse.json(
-      { message: 'Erro ao criar cadastro' },
-      { status: 500 }
-    );
+    logger.error('collector_register_error', { err: error });
+    throw new ApiError({
+      code: 'INTERNAL_ERROR',
+      message: 'Erro ao criar cadastro',
+      status: 500,
+    });
   }
-}
+});

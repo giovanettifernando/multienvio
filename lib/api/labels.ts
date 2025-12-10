@@ -9,5 +9,7 @@ export async function fetchLabels(params: LabelsQuery = {}): Promise<LabelsRespo
 
   const res = await fetch(`/api/labels?${sp.toString()}`, { cache: 'no-store' });
   if (!res.ok) throw new Error('Falha ao carregar etiquetas');
-  return (await res.json()) as LabelsResponse;
+  const json = await res.json();
+  // Handle standardized API response format { data: T, error, meta }
+  return (json.data ?? json) as LabelsResponse;
 }

@@ -1,38 +1,40 @@
-import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
 import { getTicketForUser } from "@/lib/support/service";
+import { withApiHandler } from "@/lib/api/handler";
+import { ApiError } from "@/lib/api/errors";
+import type { SupportAttachment } from "@/lib/validation/support";
 
+interface GetAttachmentsResponse {
+  attachments: SupportAttachment[];
+}
 
-export async function GET(
-  _request: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
+interface PostAttachmentsResponse {
+  message: string;
+}
+
+export const GET = withApiHandler<GetAttachmentsResponse, { id: string }>(async ({ params }) => {
   const session = await getSession();
   if (!session) {
-    return NextResponse.json({ message: "Não autenticado" }, { status: 401 });
+    throw new ApiError({ code: "UNAUTHORIZED", message: "Não autenticado", status: 401 });
   }
 
-  const { id: ticketId } = await params;
+  const { id: ticketId } = params;
   if (!ticketId) {
-    return NextResponse.json({ message: "Ticket inválido" }, { status: 400 });
+    throw new ApiError({ code: "VALIDATION_ERROR", message: "Ticket inválido", status: 400 });
   }
 
-  try {
-    const ticket = await getTicketForUser(session.userId, ticketId);
-    if (!ticket) {
-      return NextResponse.json({ message: "Ticket não encontrado" }, { status: 404 });
-    }
-
-    return NextResponse.json({ attachments: ticket.attachments ?? [] });
-  } catch (error) {
-    console.error("[SUPPORT_TICKET_ATTACHMENTS_GET]", error);
-    return NextResponse.json({ message: "Erro ao carregar anexos" }, { status: 500 });
+  const ticket = await getTicketForUser(session.userId, ticketId);
+  if (!ticket) {
+    throw new ApiError({ code: "NOT_FOUND", message: "Ticket não encontrado", status: 404 });
   }
-}
 
-export async function POST() {
-  return NextResponse.json(
-    { message: "Upload de anexos não implementado." },
-    { status: 501 },
-  );
-}
+  return { data: { attachments: ticket.attachments ?? [] } };
+});
+
+export const POST = withApiHandler<PostAttachmentsResponse>(async () => {
+  throw new ApiError({
+    code: "NOT_IMPLEMENTED",
+    message: "Upload de anexos não implementado.",
+    status: 501,
+  });
+});

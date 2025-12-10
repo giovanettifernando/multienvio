@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { withApiHandler } from '@/lib/api/handler';
+import { ApiError } from '@/lib/api/errors';
 import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
-import { requirePermission } from '@/lib/auth/permissions';
 import { AdminPermission } from '@prisma/client';
 import type { LedgerEntry, Paged } from '@/lib/admin/finance/types';
 
@@ -233,16 +233,25 @@ const mockLedger: LedgerEntry[] = [
   },
 ];
 
-export async function GET(request: NextRequest) {
-  const session = await getAdminSessionFromRequest(request);
+export const GET = withApiHandler<Paged<LedgerEntry>>(async ({ req }) => {
+  const session = await getAdminSessionFromRequest(req);
   if (!session) {
-    return NextResponse.json({ message: 'Não autenticado' }, { status: 401 });
+    throw new ApiError({
+      code: 'UNAUTHORIZED',
+      message: 'Não autenticado',
+      status: 401,
+    });
   }
 
-  const permissionError = requirePermission(session, AdminPermission.FINANCEIRO);
-  if (permissionError) return permissionError;
+  if (!session.permissions.includes(AdminPermission.FINANCEIRO)) {
+    throw new ApiError({
+      code: 'FORBIDDEN',
+      message: 'Sem permissão para acessar finanças',
+      status: 403,
+    });
+  }
 
-  const searchParams = request.nextUrl.searchParams;
+  const searchParams = req.nextUrl.searchParams;
   const page = parseInt(searchParams.get('page') || '1');
   const pageSize = parseInt(searchParams.get('pageSize') || '10');
   const q = searchParams.get('q') || '';
@@ -298,5 +307,5 @@ export async function GET(request: NextRequest) {
     total,
   };
 
-  return NextResponse.json(response);
-}
+  return { data: response };
+});

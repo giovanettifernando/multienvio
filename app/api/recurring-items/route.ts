@@ -2,9 +2,20 @@ import { withApiHandler } from "@/lib/api/handler";
 import { ApiError } from "@/lib/api/errors";
 import prisma from "@/lib/db";
 import { getUserFromRequest } from "@/lib/auth/session";
+import { RecurringItemCreateSchema } from "@/lib/validation/account";
 
+interface RecurringItem {
+  id: string;
+  userId: string;
+  descricao: string;
+  valorUnitario: number;
+  createdAt: string;
+  updatedAt: string;
+}
 
-export const GET = withApiHandler(async (context) => {
+type RecurringItemsListResponse = RecurringItem[];
+
+export const GET = withApiHandler<RecurringItemsListResponse>(async (context) => {
   const session = await getUserFromRequest(context.req);
   if (!session?.userId) {
     throw new ApiError({ code: "unauthorized", message: "Não autorizado", status: 401 });
@@ -16,21 +27,39 @@ export const GET = withApiHandler(async (context) => {
     orderBy: { createdAt: "desc" },
   });
 
-  return { data: items };
+  const result = items.map((item) => ({
+    id: item.id,
+    userId: item.userId,
+    descricao: item.descricao,
+    valorUnitario: Number(item.valorUnitario),
+    createdAt: item.createdAt.toISOString(),
+    updatedAt: item.updatedAt.toISOString(),
+  }));
+
+  return { data: result };
 });
 
-export const POST = withApiHandler(async (context) => {
+type RecurringItemCreateResponse = RecurringItem;
+
+export const POST = withApiHandler<RecurringItemCreateResponse>(async (context) => {
   const session = await getUserFromRequest(context.req);
   if (!session?.userId) {
     throw new ApiError({ code: "unauthorized", message: "Não autorizado", status: 401 });
   }
   const userId = session.userId;
   const body = await context.req.json();
-  const { descricao, valorUnitario } = body;
 
-  if (!descricao || typeof valorUnitario !== "number") {
-    throw new ApiError({ code: "bad_request", message: "Descrição e valor unitário são obrigatórios", status: 400 });
+  // Validação com Zod
+  const validation = RecurringItemCreateSchema.safeParse(body);
+  if (!validation.success) {
+    throw new ApiError({
+      code: "validation_error",
+      message: validation.error.issues[0]?.message || "Dados inválidos",
+      status: 400,
+    });
   }
+
+  const { descricao, valorUnitario } = validation.data;
 
   const item = await prisma.recurringItem.create({
     data: {
@@ -40,5 +69,14 @@ export const POST = withApiHandler(async (context) => {
     },
   });
 
-  return { data: item };
+  const result = {
+    id: item.id,
+    userId: item.userId,
+    descricao: item.descricao,
+    valorUnitario: Number(item.valorUnitario),
+    createdAt: item.createdAt.toISOString(),
+    updatedAt: item.updatedAt.toISOString(),
+  };
+
+  return { data: result };
 });
