@@ -59,7 +59,7 @@ export function SessionIdleModal({
 
   // Refs para timers (evitar memory leaks)
   const idleTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const lastActivityRef = useRef<number>(Date.now());
+  const lastActivityRef = useRef<number>(0);
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
 
   // Ref para evitar double-mount em Strict Mode

@@ -110,7 +110,7 @@ export function WalletTransactionsTable() {
     if (!data?.items) return [];
     if (direction === 'all') return data.items;
     return data.items.filter((item) => item.direction === direction);
-  }, [data?.items, direction]);
+  }, [data, direction]);
 
   const handleExportCSV = () => {
     const csv = [
