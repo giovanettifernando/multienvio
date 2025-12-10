@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getRedisClient, isRedisAvailable, openCircuitBreaker } from './redis';
+import { getRedisClient, isRedisAvailable, openCircuitBreaker, waitForRedisConnection } from './redis';
 import { ApiError } from '@/lib/api/errors';
 
 // ============================================================================
@@ -187,40 +187,59 @@ export async function checkRateLimit(
 
 /**
  * Verifica rate limit com estrategia fail-close (SEGURO)
- * Se Redis falhar, BLOQUEIA a requisição (não permite fallback local)
+ * PRODUÇÃO: Se Redis falhar, BLOQUEIA a requisição (não permite fallback local)
+ * DESENVOLVIMENTO: Se Redis falhar, usa fallback local (para não bloquear dev)
  * Use para rotas sensíveis: login, reset-password, checkout
  */
 export async function checkRateLimitStrict(
   key: string,
   config: RateLimitConfig
 ): Promise<RateLimitResult & { redisUnavailable?: boolean }> {
-  // Se Redis nao esta disponivel, retorna como se estivesse bloqueado
+  const isProduction = process.env.NODE_ENV === 'production';
+
+  // Aguardar conexão inicial do Redis (com timeout de 2s)
+  // Isso evita falsos positivos de "Redis indisponível" na primeira requisição
+  await waitForRedisConnection();
+
+  // Se Redis nao esta disponivel após aguardar
   if (!isRedisAvailable()) {
-    console.error(`[RateLimit][STRICT] Redis indisponivel - bloqueando requisição para: ${key}`);
-    return {
-      allowed: false,
-      remaining: 0,
-      resetTime: Date.now() + 60000, // Retry em 1 minuto
-      fromRedis: false,
-      redisUnavailable: true,
-    };
+    // Em produção: bloquear (fail-close)
+    if (isProduction) {
+      console.error(`[RateLimit][STRICT] Redis indisponivel - bloqueando requisição para: ${key}`);
+      return {
+        allowed: false,
+        remaining: 0,
+        resetTime: Date.now() + 60000, // Retry em 1 minuto
+        fromRedis: false,
+        redisUnavailable: true,
+      };
+    }
+    // Em desenvolvimento: usar fallback local (sem log excessivo)
+    return checkLocalRateLimit(key, config);
   }
 
   try {
     return await checkRedisRateLimit(key, config);
   } catch (error) {
-    // FAIL-CLOSE: Redis falhou, BLOQUEIA a requisição
     openCircuitBreaker();
-    console.error(
-      `[RateLimit][STRICT] Redis falhou - bloqueando requisição. Erro: ${(error as Error).message}`
+    // Em produção: bloquear (fail-close)
+    if (isProduction) {
+      console.error(
+        `[RateLimit][STRICT] Redis falhou - bloqueando requisição. Erro: ${(error as Error).message}`
+      );
+      return {
+        allowed: false,
+        remaining: 0,
+        resetTime: Date.now() + 60000,
+        fromRedis: false,
+        redisUnavailable: true,
+      };
+    }
+    // Em desenvolvimento: usar fallback local
+    console.warn(
+      `[RateLimit][STRICT] Redis falhou em dev - usando fallback local. Erro: ${(error as Error).message}`
     );
-    return {
-      allowed: false,
-      remaining: 0,
-      resetTime: Date.now() + 60000,
-      fromRedis: false,
-      redisUnavailable: true,
-    };
+    return checkLocalRateLimit(key, config);
   }
 }
 
@@ -322,6 +341,58 @@ export async function rateLimitByIP(
 }
 
 /**
+ * Rate limit por IP - STRICT (fail-close)
+ * Se Redis falhar, BLOQUEIA a requisição (retorna 503)
+ * Use para rotas sensíveis: login, reset-password, checkout
+ */
+export async function rateLimitByIPStrict(
+  request: NextRequest,
+  action: string,
+  config: RateLimitConfig = { windowMs: 60000, maxRequests: 5 }
+): Promise<NextResponse | null> {
+  const TRUSTED_PROXY_ENABLED = process.env.TRUST_PROXY === 'true';
+  let ip: string | null = null;
+
+  if (TRUSTED_PROXY_ENABLED) {
+    const forwarded = request.headers.get('x-forwarded-for');
+    const realIp = request.headers.get('x-real-ip');
+    ip = forwarded ? forwarded.split(',')[0].trim() : realIp;
+  }
+
+  // Se nao conseguir identificar IP, usar bucket global mais restritivo
+  const key = ip ? `ip:${ip}:${action}` : `global:${action}`;
+  const effectiveConfig = ip ? config : { ...config, maxRequests: Math.ceil(config.maxRequests / 2) };
+
+  const result = await checkRateLimitStrict(key, effectiveConfig);
+
+  // Se Redis indisponível, retornar 503 (fail-close)
+  if (result.redisUnavailable) {
+    return NextResponse.json(
+      { message: 'Serviço temporariamente indisponível. Tente novamente em instantes.' },
+      { status: 503, headers: { 'Retry-After': '60' } }
+    );
+  }
+
+  if (!result.allowed) {
+    const retryAfter = Math.ceil((result.resetTime - Date.now()) / 1000);
+    return NextResponse.json(
+      { message: 'Muitas requisições. Tente novamente mais tarde.', retryAfter },
+      {
+        status: 429,
+        headers: {
+          'Retry-After': retryAfter.toString(),
+          'X-RateLimit-Limit': config.maxRequests.toString(),
+          'X-RateLimit-Remaining': '0',
+          'X-RateLimit-Reset': result.resetTime.toString(),
+        },
+      }
+    );
+  }
+
+  return null;
+}
+
+/**
  * Enforce rate limit (throws ApiError se excedido)
  * Compativel com withApiHandler
  */
@@ -406,6 +477,35 @@ export async function enforceRateLimitByIP(
   const effectiveConfig = ip ? config : { ...config, maxRequests: Math.ceil(config.maxRequests / 2) };
 
   await enforceRateLimit({
+    key,
+    limit: effectiveConfig.maxRequests,
+    windowMs: effectiveConfig.windowMs,
+  });
+}
+
+/**
+ * Enforce rate limit by IP - STRICT (fail-close)
+ * Se Redis falhar, BLOQUEIA a requisição (throws ApiError 503)
+ * Use para rotas sensíveis: login, reset-password, checkout
+ */
+export async function enforceRateLimitByIPStrict(
+  request: NextRequest,
+  action: string,
+  config: RateLimitConfig = { windowMs: 60000, maxRequests: 5 }
+): Promise<void> {
+  const TRUSTED_PROXY_ENABLED = process.env.TRUST_PROXY === 'true';
+  let ip: string | null = null;
+
+  if (TRUSTED_PROXY_ENABLED) {
+    const forwarded = request.headers.get('x-forwarded-for');
+    const realIp = request.headers.get('x-real-ip');
+    ip = forwarded ? forwarded.split(',')[0].trim() : realIp;
+  }
+
+  const key = ip ? `ip:${ip}:${action}` : `global:${action}`;
+  const effectiveConfig = ip ? config : { ...config, maxRequests: Math.ceil(config.maxRequests / 2) };
+
+  await enforceRateLimitStrict({
     key,
     limit: effectiveConfig.maxRequests,
     windowMs: effectiveConfig.windowMs,

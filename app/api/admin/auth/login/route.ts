@@ -7,7 +7,7 @@ import { prisma } from '@/lib/db';
 import { adminSign, createAdminCookieHeader } from '@/lib/auth/admin-session';
 import { logAdminLogin } from '@/lib/audit-admin';
 import { AdminPermission, StaffStatus } from '@prisma/client';
-import { rateLimitByIP, RATE_LIMITS } from '@/lib/rate-limit-redis';
+import { rateLimitByIPStrict, RATE_LIMITS } from '@/lib/rate-limit-redis';
 
 type AdminLoginResponse = {
   staff: {
@@ -29,8 +29,9 @@ type AdminLoginResponse = {
 export const POST = withApiHandlerResponse<Record<string, never>>(async (context) => {
   const { req, logger } = context;
 
-  // Rate limiting por IP para prevenir brute force (Redis distribuido com fallback local)
-  const rateLimitError = await rateLimitByIP(req as NextRequest, 'admin_login', RATE_LIMITS.LOGIN);
+  // Rate limiting por IP - STRICT (fail-close) para prevenir brute force
+  // Se Redis indisponível, retorna 503 ao invés de permitir acesso
+  const rateLimitError = await rateLimitByIPStrict(req as NextRequest, 'admin_login', RATE_LIMITS.LOGIN);
   if (rateLimitError) return rateLimitError;
 
   try {
@@ -99,12 +100,17 @@ export const POST = withApiHandlerResponse<Record<string, never>>(async (context
     });
 
     // Create JWT token
+    // SuperAdmin gets all permissions
+    const jwtPermissions = staffUser.isSuperAdmin
+      ? Object.values(AdminPermission)
+      : staffUser.permissions;
+
     const token = await adminSign({
       staffId: staffUser.id,
       email: staffUser.email,
       role: staffUser.role?.name || 'operator',
       isSuperAdmin: staffUser.isSuperAdmin,
-      permissions: staffUser.permissions,
+      permissions: jwtPermissions,
       tokenVersion: staffUser.tokenVersion,
     });
 

@@ -26,8 +26,9 @@ export async function checkAdminAuth(): Promise<AdminUser | null> {
       credentials: 'include',
     });
     if (!response.ok) return null;
-    const data = await response.json();
-    const staff = data?.staff;
+    const json = await response.json();
+    // API returns { data: { staff } } format from withApiHandler
+    const staff = json?.data?.staff ?? json?.staff;
     if (!staff) return null;
 
     const permissionSet = new Set<AdminPermissionKey>(ADMIN_PERMISSION_KEYS);

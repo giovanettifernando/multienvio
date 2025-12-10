@@ -62,7 +62,9 @@ async function listWalletTransactions(params: {
     credentials: 'include',
   });
   if (!res.ok) throw new Error('Failed to fetch wallet transactions');
-  return res.json();
+  const json = await res.json();
+  // API returns { data: { items, ... } } format
+  return json.data ?? json;
 }
 
 type Direction = 'all' | 'credit' | 'debit';

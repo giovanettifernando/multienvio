@@ -81,13 +81,15 @@ interface TestResult {
 async function fetchConfig(): Promise<CorreiosConfig> {
   const res = await fetch('/api/admin/integrations/correios');
   if (!res.ok) throw new Error('Erro ao carregar configuração');
-  return res.json();
+  const json = await res.json();
+  return json.data ?? json;
 }
 
 async function fetchConfigRevealed(): Promise<CorreiosConfig> {
   const res = await fetch('/api/admin/integrations/correios?reveal=true');
   if (!res.ok) throw new Error('Erro ao carregar configuração');
-  return res.json();
+  const json = await res.json();
+  return json.data ?? json;
 }
 
 async function saveConfig(data: Record<string, unknown>): Promise<{ message: string }> {
@@ -100,7 +102,8 @@ async function saveConfig(data: Record<string, unknown>): Promise<{ message: str
     const err = await res.json();
     throw new Error(err.message || 'Erro ao salvar');
   }
-  return res.json();
+  const json = await res.json();
+  return json.data ?? json;
 }
 
 async function runTest(data: Record<string, unknown>): Promise<TestResult> {
@@ -109,7 +112,8 @@ async function runTest(data: Record<string, unknown>): Promise<TestResult> {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
-  return res.json();
+  const json = await res.json();
+  return json.data ?? json;
 }
 
 // ============================================================================

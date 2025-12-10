@@ -1,5 +1,13 @@
 import type { AdminClient, ClientsQuery, ClientsResponse } from '../types';
 
+/**
+ * Helper to extract data from standardized API response format { data: T, error, meta }
+ */
+async function extractData<T>(res: Response): Promise<T> {
+  const json = await res.json();
+  return (json.data ?? json) as T;
+}
+
 export async function fetchClients(params: ClientsQuery = {}): Promise<ClientsResponse> {
   const sp = new URLSearchParams();
   if (params.page) sp.set('page', String(params.page));
@@ -13,7 +21,7 @@ export async function fetchClients(params: ClientsQuery = {}): Promise<ClientsRe
     credentials: 'include',
   });
   if (!res.ok) throw new Error('Falha ao carregar clientes');
-  return res.json();
+  return extractData<ClientsResponse>(res);
 }
 
 export async function blockAccounts(ids: string[]): Promise<{ ok: boolean }> {
@@ -24,7 +32,7 @@ export async function blockAccounts(ids: string[]): Promise<{ ok: boolean }> {
     body: JSON.stringify({ ids }),
   });
   if (!res.ok) throw new Error('Falha ao bloquear contas');
-  return res.json();
+  return extractData<{ ok: boolean }>(res);
 }
 
 export async function unblockAccounts(ids: string[]): Promise<{ ok: boolean }> {
@@ -35,7 +43,7 @@ export async function unblockAccounts(ids: string[]): Promise<{ ok: boolean }> {
     body: JSON.stringify({ ids }),
   });
   if (!res.ok) throw new Error('Falha ao desbloquear contas');
-  return res.json();
+  return extractData<{ ok: boolean }>(res);
 }
 
 export async function updateAccount(id: string, patch: Partial<AdminClient>): Promise<{ ok: boolean }> {
@@ -46,7 +54,7 @@ export async function updateAccount(id: string, patch: Partial<AdminClient>): Pr
     body: JSON.stringify(patch),
   });
   if (!res.ok) throw new Error('Falha ao atualizar conta');
-  return res.json();
+  return extractData<{ ok: boolean }>(res);
 }
 
 export async function resetPassword(ids: string[]): Promise<{ ok: boolean }> {
@@ -57,5 +65,17 @@ export async function resetPassword(ids: string[]): Promise<{ ok: boolean }> {
     body: JSON.stringify({ ids }),
   });
   if (!res.ok) throw new Error('Falha ao resetar senha');
-  return res.json();
+  return extractData<{ ok: boolean }>(res);
+}
+
+export async function deleteAccount(id: string): Promise<{ ok: boolean; message: string }> {
+  const res = await fetch(`/api/admin/clients/${id}`, {
+    method: 'DELETE',
+    credentials: 'include',
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.message ?? body.error?.message ?? 'Falha ao excluir conta');
+  }
+  return extractData<{ ok: boolean; message: string }>(res);
 }

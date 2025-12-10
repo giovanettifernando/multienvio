@@ -121,7 +121,8 @@ async function fetchPickups(params: {
   });
 
   if (!res.ok) throw new Error('Erro ao carregar coletas');
-  return res.json();
+  const json = await res.json();
+  return json.data ?? json;
 }
 
 function formatDate(dateStr: string | null): string {

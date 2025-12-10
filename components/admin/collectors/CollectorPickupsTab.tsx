@@ -94,7 +94,8 @@ async function fetchPickups(
   if (!res.ok) {
     throw new Error("Erro ao carregar coletas");
   }
-  return res.json();
+  const json = await res.json();
+  return json.data ?? json;
 }
 
 const statusColors: Record<string, string> = {

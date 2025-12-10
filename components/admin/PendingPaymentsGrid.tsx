@@ -39,7 +39,8 @@ export default function PendingPaymentsGrid() {
       });
       if (!res.ok) throw new Error('Erro ao carregar pagamentos');
 
-      const data = await res.json();
+      const json = await res.json();
+      const data = json.data ?? json;
       setPayments(data.payments || []);
     } catch {
       message.error('Erro ao carregar pagamentos pendentes');

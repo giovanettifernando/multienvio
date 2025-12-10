@@ -116,7 +116,8 @@ async function fetchUsers(filters?: AdminUserFilters): Promise<AdminUserListResp
     throw new Error(error.message || "Erro ao carregar usuários");
   }
 
-  const payload = await res.json();
+  const json = await res.json();
+  const payload = json.data ?? json;
   const rawItems = Array.isArray(payload.items)
     ? payload.items
     : Array.isArray(payload.users)
@@ -141,7 +142,8 @@ async function fetchUser(id: string): Promise<AdminUser> {
     throw new Error(error.message || "Erro ao carregar usuário");
   }
 
-  const payload = await res.json();
+  const json = await res.json();
+  const payload = json.data ?? json;
   return mapUserResponse(payload.user ?? payload);
 }
 
@@ -167,7 +169,8 @@ async function createUser(data: CreateAdminUserInput): Promise<AdminUser> {
     throw new Error(error.message || "Erro ao criar usuário");
   }
 
-  const payload = await res.json();
+  const json = await res.json();
+  const payload = json.data ?? json;
   return mapUserResponse(payload.user ?? payload);
 }
 
@@ -195,7 +198,8 @@ async function updateUser(id: string, data: UpdateAdminUserInput): Promise<Admin
     throw new Error(error.message || "Erro ao atualizar usuário");
   }
 
-  const payload = await res.json();
+  const json = await res.json();
+  const payload = json.data ?? json;
   return mapUserResponse(payload.user ?? payload);
 }
 
@@ -223,7 +227,8 @@ async function toggleUserStatus(id: string, status: "active" | "blocked"): Promi
     throw new Error(error.message || "Erro ao atualizar status");
   }
 
-  const payload = await res.json();
+  const json = await res.json();
+  const payload = json.data ?? json;
   return mapUserResponse(payload.user ?? payload);
 }
 
@@ -235,10 +240,11 @@ async function resetPassword(id: string): Promise<ResetPasswordResponse> {
 
   if (!res.ok) {
     const error = await res.json().catch(() => ({}));
-    throw new Error(error.message || "Erro ao resetar senha");
+    throw new Error(error.message || error.error?.message || "Erro ao resetar senha");
   }
 
-  return res.json();
+  const json = await res.json();
+  return (json.data ?? json) as ResetPasswordResponse;
 }
 
 async function fetchRoles(): Promise<{ groups: RoleGroup[] }> {

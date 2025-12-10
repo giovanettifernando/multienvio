@@ -54,15 +54,6 @@ export interface AdminJWTPayload {
  * Assina um payload e gera um JWT para admin
  */
 export async function adminSign(payload: Omit<AdminJWTPayload, 'iss' | 'aud' | 'iat' | 'exp'>): Promise<string> {
-  console.log('[ADMIN_SIGN] Creating JWT with payload:', {
-    staffId: payload.staffId,
-    email: payload.email,
-    isSuperAdmin: payload.isSuperAdmin,
-    permissions: payload.permissions,
-    permissionsType: typeof payload.permissions,
-    permissionsIsArray: Array.isArray(payload.permissions),
-  });
-
   // Convert payload to plain object to ensure all fields are serialized
   const jwtPayload = {
     staffId: payload.staffId,
@@ -72,8 +63,6 @@ export async function adminSign(payload: Omit<AdminJWTPayload, 'iss' | 'aud' | '
     permissions: payload.permissions || [],
     tokenVersion: payload.tokenVersion,
   };
-
-  console.log('[ADMIN_SIGN] JWT payload after conversion:', jwtPayload);
 
   const jwt = await new SignJWT(jwtPayload)
     .setProtectedHeader({ alg: JWT_ALGORITHM })
@@ -97,23 +86,13 @@ export async function adminVerify(token: string): Promise<{ payload: AdminJWTPay
       audience: JWT_AUDIENCE,
     });
     const decoded = payload as unknown as AdminJWTPayload;
-    console.log('[ADMIN_VERIFY] Decoded JWT payload:', {
-      staffId: decoded.staffId,
-      email: decoded.email,
-      isSuperAdmin: decoded.isSuperAdmin,
-      permissions: decoded.permissions,
-      permissionsType: typeof decoded.permissions,
-      permissionsIsArray: Array.isArray(decoded.permissions),
-    });
     return { payload: decoded, error: null };
   } catch (error) {
     // Detectar erro de token expirado especificamente
     if (error instanceof joseErrors.JWTExpired) {
-      console.warn('[ADMIN_SESSION] JWT expired');
       return { payload: null, error: 'expired' };
     }
     // Token invalid or wrong issuer/audience
-    console.error('[ADMIN_SESSION] Admin JWT verification failed:', error);
     return { payload: null, error: 'invalid' };
   }
 }
@@ -183,17 +162,14 @@ export async function getAdminSessionFromRequest(request: Request): Promise<Admi
   });
 
   if (!staffUser) {
-    console.log('[ADMIN_SESSION] Staff user not found:', jwtPayload.staffId);
     return null;
   }
 
   if (staffUser.tokenVersion !== jwtPayload.tokenVersion) {
-    console.log('[ADMIN_SESSION] Token version mismatch. Expected:', staffUser.tokenVersion, 'Got:', jwtPayload.tokenVersion);
     return null;
   }
 
   if (staffUser.status !== 'ACTIVE') {
-    console.log('[ADMIN_SESSION] Staff user is not active:', staffUser.status);
     return null;
   }
 

@@ -130,7 +130,8 @@ async function fetchClientDetails(id: string): Promise<ClientDetails> {
   if (!res.ok) {
     throw new Error("Erro ao carregar dados do usuário");
   }
-  return res.json();
+  const json = await res.json();
+  return json.data ?? json;
 }
 
 const STATUS_OPTIONS = [

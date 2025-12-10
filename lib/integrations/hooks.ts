@@ -37,7 +37,8 @@ export function useCarrier(id: string | null) {
         credentials: 'include',
       });
       if (!res.ok) throw new Error('Erro ao carregar transportadora');
-      return res.json();
+      const json = await res.json();
+      return (json.data ?? json) as Carrier;
     },
     enabled: !!id,
   });
@@ -56,9 +57,10 @@ export function useCreateCarrier() {
       });
       if (!res.ok) {
         const error = await res.json();
-        throw new Error(error.message || 'Erro ao criar transportadora');
+        throw new Error(error.message || error.error?.message || 'Erro ao criar transportadora');
       }
-      return res.json();
+      const json = await res.json();
+      return (json.data ?? json) as Carrier;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: integrationKeys.carriers() });
@@ -83,9 +85,10 @@ export function useUpdateCarrier() {
       });
       if (!res.ok) {
         const error = await res.json();
-        throw new Error(error.message || 'Erro ao atualizar transportadora');
+        throw new Error(error.message || error.error?.message || 'Erro ao atualizar transportadora');
       }
-      return res.json();
+      const json = await res.json();
+      return (json.data ?? json) as Carrier;
     },
     onMutate: async ({ id, data }) => {
       await queryClient.cancelQueries({ queryKey: integrationKeys.carrier(id) });
@@ -143,7 +146,8 @@ export function useApis(carrierId?: string) {
         : '/api/integrations/apis';
       const res = await fetch(url);
       if (!res.ok) throw new Error('Erro ao carregar APIs');
-      return res.json();
+      const json = await res.json();
+      return (json.data ?? json) as CarrierApi[];
     },
   });
 }
@@ -159,7 +163,8 @@ export function useCreateApi() {
         body: JSON.stringify(data),
       });
       if (!res.ok) throw new Error('Erro ao criar API');
-      return res.json();
+      const json = await res.json();
+      return (json.data ?? json) as CarrierApi;
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: integrationKeys.apis(variables.carrierId) });
@@ -183,7 +188,8 @@ export function useUpdateApi() {
         body: JSON.stringify(data),
       });
       if (!res.ok) throw new Error('Erro ao atualizar API');
-      return res.json();
+      const json = await res.json();
+      return (json.data ?? json) as CarrierApi;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: integrationKeys.apis() });
@@ -224,7 +230,8 @@ export function useAuth(carrierId: string | null) {
       const res = await fetch(`/api/integrations/auth/${carrierId}`);
       if (res.status === 404) return null;
       if (!res.ok) throw new Error('Erro ao carregar autenticação');
-      return res.json();
+      const json = await res.json();
+      return (json.data ?? json) as AuthConfig;
     },
     enabled: !!carrierId,
   });
@@ -241,7 +248,8 @@ export function useSaveAuth() {
         body: JSON.stringify(data),
       });
       if (!res.ok) throw new Error('Erro ao salvar autenticação');
-      return res.json();
+      const json = await res.json();
+      return (json.data ?? json) as AuthConfig;
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: integrationKeys.auth(variables.carrierId) });
@@ -264,7 +272,8 @@ export function useRotateSecret() {
         body: JSON.stringify({ fieldKey }),
       });
       if (!res.ok) throw new Error('Erro ao rotacionar credencial');
-      return res.json();
+      const json = await res.json();
+      return (json.data ?? json) as AuthConfig;
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: integrationKeys.auth(variables.carrierId) });
@@ -331,7 +340,8 @@ export function useSavePaymentGateway() {
         const error = await res.json();
         throw new Error(error.message || 'Erro ao salvar gateway de pagamento');
       }
-      return res.json();
+      const json = await res.json();
+      return (json.data ?? json) as PaymentGatewayConfig;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: integrationKeys.paymentGateway() });
@@ -350,7 +360,8 @@ export function useTestPaymentWebhook() {
         method: 'POST',
       });
       if (!res.ok) throw new Error('Erro ao testar webhook');
-      return res.json();
+      const json = await res.json();
+      return (json.data ?? json) as { success: boolean; message: string };
     },
     onSuccess: (data) => {
       message.success(data.message || 'Webhook testado com sucesso');
@@ -369,7 +380,8 @@ export function useHealth() {
     queryFn: async (): Promise<IntegrationHealth[]> => {
       const res = await fetch('/api/integrations/health');
       if (!res.ok) throw new Error('Erro ao carregar status das integrações');
-      return res.json();
+      const json = await res.json();
+      return (json.data ?? json) as IntegrationHealth[];
     },
     refetchInterval: 30000, // Refetch every 30s
   });
@@ -384,7 +396,8 @@ export function useTestConnection() {
         method: 'POST',
       });
       if (!res.ok) throw new Error('Erro ao testar conexão');
-      return res.json();
+      const json = await res.json();
+      return (json.data ?? json) as IntegrationHealth;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: integrationKeys.health() });

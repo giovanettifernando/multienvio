@@ -115,7 +115,8 @@ async function fetchPoCQueue(params: {
   });
 
   if (!res.ok) throw new Error('Erro ao carregar fila dos pontos de coleta');
-  return res.json();
+  const json = await res.json();
+  return json.data ?? json;
 }
 
 async function fetchPickupPoints(): Promise<PickupPointOption[]> {
@@ -124,7 +125,8 @@ async function fetchPickupPoints(): Promise<PickupPointOption[]> {
   });
 
   if (!res.ok) return [];
-  const data = await res.json();
+  const json = await res.json();
+  const data = json.data ?? json;
   return (data.items || []).map((p: { id: string; nomeFantasia: string }) => ({
     id: p.id,
     name: p.nomeFantasia,

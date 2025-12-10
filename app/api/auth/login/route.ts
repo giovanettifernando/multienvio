@@ -12,13 +12,14 @@ import {
   REFRESH_TOKEN_MAX_AGE_SECONDS,
 } from '@/lib/auth/jwt-tokens';
 import { UserStatus, AuthRole, type User } from '@/types/contracts';
-import { rateLimitByIP, RATE_LIMITS } from '@/lib/rate-limit-redis';
+import { rateLimitByIPStrict, RATE_LIMITS } from '@/lib/rate-limit-redis';
 
 export const POST = withApiHandlerResponse(async (context) => {
   const { req, logger } = context;
 
-  // Rate limiting by IP - 5 attempts per 5 minutes
-  const rateLimitError = await rateLimitByIP(req as NextRequest, 'client_login', RATE_LIMITS.LOGIN);
+  // Rate limiting by IP - STRICT (fail-close) - 5 attempts per 5 minutes
+  // Se Redis indisponível, retorna 503 ao invés de permitir acesso
+  const rateLimitError = await rateLimitByIPStrict(req as NextRequest, 'client_login', RATE_LIMITS.LOGIN);
   if (rateLimitError) return rateLimitError;
 
   try {

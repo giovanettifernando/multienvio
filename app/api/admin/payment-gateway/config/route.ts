@@ -2,12 +2,15 @@
  * GET/POST /api/admin/payment-gateway/config
  *
  * Gerencia configuração do gateway de pagamento
+ *
+ * SECURITY: Credenciais sensíveis (accessToken, webhookSecret) não são expostas.
+ * Se precisar atualizar, basta cadastrar novos valores.
  */
 
 import { requireAdminUser } from '@/lib/auth/admin-helpers';
 import { AdminPermission } from '@prisma/client';
 import { prisma } from '@/lib/db';
-import { encrypt, decrypt } from '@/lib/integrations/shared/encryption.service';
+import { encrypt } from '@/lib/integrations/shared/encryption.service';
 import { withApiHandler } from '@/lib/api/handler';
 import { ApiError } from '@/lib/api/errors';
 import { z } from 'zod';
@@ -17,7 +20,7 @@ import { z } from 'zod';
  */
 type PaymentGatewayGetResponse =
   | { config: null }
-  | { config: Record<string, string> };
+  | { config: Record<string, string | boolean> };
 
 /**
  * Tipo de resposta do POST
@@ -58,30 +61,15 @@ export const GET = withApiHandler<PaymentGatewayGetResponse>(async ({ req }) => 
 
   const credential = gateway.credentials[0];
 
-  // Verificar se foi solicitado reveal de campo sensível
-  const { searchParams } = new URL(req.url);
-  const revealField = searchParams.get('reveal');
-
-  const config: Record<string, string> = {
+  // SECURITY: Não expor credenciais sensíveis - apenas indicar se estão configuradas
+  const config: Record<string, string | boolean> = {
     environment: gateway.environment,
     publicKey: credential.publicKey || '',
     applicationId: credential.applicationId || '',
+    // Indicar que credenciais sensíveis estão configuradas (sem expor valores)
+    hasAccessToken: Boolean(credential.accessToken),
+    hasWebhookSecret: Boolean(credential.secretKey),
   };
-
-  // Revelar campo sensível se solicitado
-  if (revealField === 'accessToken' && credential.accessToken) {
-    try {
-      config.accessToken = decrypt(credential.accessToken);
-    } catch {
-      config.accessToken = '';
-    }
-  } else if (revealField === 'webhookSecret' && credential.secretKey) {
-    try {
-      config.webhookSecret = decrypt(credential.secretKey);
-    } catch {
-      config.webhookSecret = '';
-    }
-  }
 
   return { data: { config } };
 });

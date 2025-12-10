@@ -61,7 +61,8 @@ async function fetchPickupPoint(id: string): Promise<{ point: PickupPoint }> {
   if (!res.ok) {
     throw new Error("Erro ao carregar dados do ponto de coleta");
   }
-  return res.json();
+  const json = await res.json();
+  return json.data ?? json;
 }
 
 export default function AdminPickupPointDetailsClient() {

@@ -243,6 +243,14 @@ export function formatCurrency(cents: number): string {
   });
 }
 
+/**
+ * Helper to extract data from standardized API response format { data: T, error, meta }
+ */
+async function extractData<T>(res: Response): Promise<T> {
+  const json = await res.json();
+  return (json.data ?? json) as T;
+}
+
 // API function
 export async function fetchDREData(filters: DREFilters): Promise<DREResponse> {
   const params = new URLSearchParams({
@@ -259,5 +267,5 @@ export async function fetchDREData(filters: DREFilters): Promise<DREResponse> {
     throw new Error('Erro ao buscar dados do DRE');
   }
 
-  return res.json();
+  return extractData<DREResponse>(res);
 }

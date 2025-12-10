@@ -52,7 +52,8 @@ interface CommissionConfig {
 async function fetchConfig(): Promise<CommissionConfig> {
   const res = await fetch('/api/admin/config/comissoes');
   if (!res.ok) throw new Error('Erro ao carregar configuração');
-  return res.json();
+  const json = await res.json();
+  return json.data ?? json;
 }
 
 async function saveConfig(data: {
@@ -69,7 +70,8 @@ async function saveConfig(data: {
     const err = await res.json();
     throw new Error(err.error || 'Erro ao salvar');
   }
-  return res.json();
+  const json = await res.json();
+  return json.data ?? json;
 }
 
 // ============================================================================

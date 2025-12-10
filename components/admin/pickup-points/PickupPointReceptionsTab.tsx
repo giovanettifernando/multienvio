@@ -83,7 +83,8 @@ async function fetchReceptions(
   if (!res.ok) {
     throw new Error("Erro ao carregar recepções");
   }
-  return res.json();
+  const json = await res.json();
+  return json.data ?? json;
 }
 
 const statusColors: Record<string, string> = {

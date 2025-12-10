@@ -124,6 +124,14 @@ export const EXPENSE_STATUS_LABELS: Record<ExpenseStatus, string> = {
   CANCELED: 'Cancelado',
 };
 
+/**
+ * Helper to extract data from standardized API response format { data: T, error, meta }
+ */
+async function extractData<T>(res: Response): Promise<T> {
+  const json = await res.json();
+  return (json.data ?? json) as T;
+}
+
 // API functions
 export async function listExpenses(
   params: ExpenseListParams
@@ -142,7 +150,7 @@ export async function listExpenses(
     credentials: 'include',
   });
   if (!res.ok) throw new Error('Erro ao listar despesas');
-  return res.json();
+  return extractData<ExpenseListResponse>(res);
 }
 
 export async function getExpense(id: string): Promise<Expense> {
@@ -150,7 +158,7 @@ export async function getExpense(id: string): Promise<Expense> {
     credentials: 'include',
   });
   if (!res.ok) throw new Error('Erro ao buscar despesa');
-  return res.json();
+  return extractData<Expense>(res);
 }
 
 export async function createExpense(
@@ -181,9 +189,9 @@ export async function createExpense(
   });
   if (!res.ok) {
     const error = await res.json().catch(() => ({}));
-    throw new Error(error.message || 'Erro ao criar despesa');
+    throw new Error(error.message || error.error?.message || 'Erro ao criar despesa');
   }
-  return res.json();
+  return extractData<{ ok: true; expense: Expense }>(res);
 }
 
 export async function updateExpense(
@@ -224,9 +232,9 @@ export async function updateExpense(
   });
   if (!res.ok) {
     const error = await res.json().catch(() => ({}));
-    throw new Error(error.message || 'Erro ao atualizar despesa');
+    throw new Error(error.message || error.error?.message || 'Erro ao atualizar despesa');
   }
-  return res.json();
+  return extractData<{ ok: true; expense: Expense }>(res);
 }
 
 export async function deleteExpense(id: string): Promise<{ ok: true }> {
@@ -235,7 +243,7 @@ export async function deleteExpense(id: string): Promise<{ ok: true }> {
     credentials: 'include',
   });
   if (!res.ok) throw new Error('Erro ao remover despesa');
-  return res.json();
+  return extractData<{ ok: true }>(res);
 }
 
 export async function markExpensePaid(
@@ -281,7 +289,7 @@ export async function listExpenseTemplates(
     credentials: 'include',
   });
   if (!res.ok) throw new Error('Erro ao listar templates');
-  return res.json();
+  return extractData<{ items: ExpenseTemplate[] }>(res);
 }
 
 export async function createExpenseTemplate(
@@ -295,9 +303,9 @@ export async function createExpenseTemplate(
   });
   if (!res.ok) {
     const error = await res.json().catch(() => ({}));
-    throw new Error(error.message || 'Erro ao criar template');
+    throw new Error(error.message || error.error?.message || 'Erro ao criar template');
   }
-  return res.json();
+  return extractData<{ ok: true; template: ExpenseTemplate }>(res);
 }
 
 export async function incrementTemplateUsage(id: string): Promise<{ ok: true }> {
@@ -306,7 +314,7 @@ export async function incrementTemplateUsage(id: string): Promise<{ ok: true }> 
     credentials: 'include',
   });
   if (!res.ok) throw new Error('Erro ao registrar uso');
-  return res.json();
+  return extractData<{ ok: true }>(res);
 }
 
 export async function deleteExpenseTemplate(id: string): Promise<{ ok: true }> {
@@ -315,5 +323,5 @@ export async function deleteExpenseTemplate(id: string): Promise<{ ok: true }> {
     credentials: 'include',
   });
   if (!res.ok) throw new Error('Erro ao remover template');
-  return res.json();
+  return extractData<{ ok: true }>(res);
 }

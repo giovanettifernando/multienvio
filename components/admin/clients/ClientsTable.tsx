@@ -7,14 +7,15 @@ import type { ColumnsType } from 'antd/es/table';
 import type { TableRowSelection } from 'antd/lib/table/interface';
 import { useMutation } from '@tanstack/react-query';
 import dayjs from 'dayjs';
-import { EyeOutlined, KeyOutlined, LockOutlined, UnlockOutlined } from '@ant-design/icons';
+import { DeleteOutlined, EyeOutlined, KeyOutlined, LockOutlined, UnlockOutlined } from '@ant-design/icons';
 import type { AccountStatus, AdminClient, ClientType } from '@/lib/admin/types';
-import { blockAccounts, resetPassword, unblockAccounts } from '@/lib/admin/api/clients';
+import { blockAccounts, deleteAccount, resetPassword, unblockAccounts } from '@/lib/admin/api/clients';
 
 interface ClientsTableProps {
   clients: AdminClient[];
   onViewClient: (client: AdminClient) => void;
   onStatusChange: (id: string, status: AccountStatus) => void;
+  onDelete: (id: string) => void;
 }
 
 const statusColors: Record<AccountStatus, string> = {
@@ -33,7 +34,7 @@ function formatCurrencyFromCents(value: number): string {
   return (value / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
 
-export function ClientsTable({ clients, onViewClient, onStatusChange }: ClientsTableProps) {
+export function ClientsTable({ clients, onViewClient, onStatusChange, onDelete }: ClientsTableProps) {
   const { message } = App.useApp();
   const router = useRouter();
 
@@ -113,6 +114,19 @@ export function ClientsTable({ clients, onViewClient, onStatusChange }: ClientsT
     },
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: deleteAccount,
+    onSuccess: (_data, id) => {
+      onDelete(id);
+      message.success('Conta excluída com sucesso');
+      setSelectedRowKeys([]);
+    },
+    onError: (error) => {
+      const msg = error instanceof Error ? error.message : 'Falha ao excluir conta';
+      message.error(msg);
+    },
+  });
+
   const handleBlock = (ids: string[]) => {
     blockMutation.mutate(ids);
   };
@@ -123,6 +137,10 @@ export function ClientsTable({ clients, onViewClient, onStatusChange }: ClientsT
 
   const handleResetPassword = (ids: string[]) => {
     resetPasswordMutation.mutate(ids);
+  };
+
+  const handleDelete = (id: string) => {
+    deleteMutation.mutate(id);
   };
 
   const columns: ColumnsType<AdminClient> = [
@@ -162,7 +180,7 @@ export function ClientsTable({ clients, onViewClient, onStatusChange }: ClientsT
       title: 'Ações',
       key: 'actions',
       fixed: 'right',
-      width: 180,
+      width: 260,
       render: (_, record) => (
         <Space size="small">
           <Button
@@ -184,7 +202,7 @@ export function ClientsTable({ clients, onViewClient, onStatusChange }: ClientsT
                 type="link"
                 size="small"
                 icon={<UnlockOutlined />}
-                disabled={unblockMutation.isPending || blockMutation.isPending}
+                disabled={unblockMutation.isPending || blockMutation.isPending || deleteMutation.isPending}
               >
                 Desbloquear
               </Button>
@@ -202,13 +220,31 @@ export function ClientsTable({ clients, onViewClient, onStatusChange }: ClientsT
                   size="small"
                   danger
                   icon={<LockOutlined />}
-                  disabled={blockMutation.isPending || unblockMutation.isPending}
+                  disabled={blockMutation.isPending || unblockMutation.isPending || deleteMutation.isPending}
                 >
                   Bloquear
                 </Button>
               </Popconfirm>
             )
           )}
+          <Popconfirm
+            title="Deseja realmente excluir o usuário?"
+            description="Esta ação não pode ser desfeita."
+            onConfirm={() => handleDelete(record.id)}
+            okText="Sim, excluir"
+            cancelText="Cancelar"
+            okButtonProps={{ danger: true }}
+          >
+            <Button
+              type="link"
+              size="small"
+              danger
+              icon={<DeleteOutlined />}
+              disabled={deleteMutation.isPending || blockMutation.isPending || unblockMutation.isPending}
+            >
+              Excluir
+            </Button>
+          </Popconfirm>
         </Space>
       ),
     },
@@ -312,7 +348,7 @@ export function ClientsTable({ clients, onViewClient, onStatusChange }: ClientsT
         rowKey="id"
         dataSource={paginatedClients}
         columns={columns}
-        loading={blockMutation.isPending || unblockMutation.isPending}
+        loading={blockMutation.isPending || unblockMutation.isPending || deleteMutation.isPending}
         rowSelection={rowSelection}
         scroll={{ x: 980 }}
         pagination={{

@@ -113,7 +113,8 @@ async function fetchExceptions(params: {
   });
 
   if (!res.ok) throw new Error('Erro ao carregar exceções');
-  return res.json();
+  const json = await res.json();
+  return json.data ?? json;
 }
 
 function formatDate(dateStr: string | null): string {

@@ -56,8 +56,15 @@ interface TokenVersionCache {
   status: string;
   cachedAt: number;
 }
-const tokenVersionCache = new Map<string, TokenVersionCache>();
+// Caches separados por tipo de usuário
+const staffTokenVersionCache = new Map<string, TokenVersionCache>();
+const userTokenVersionCache = new Map<string, TokenVersionCache>();
+const collectorTokenVersionCache = new Map<string, TokenVersionCache>();
+const pickupPointTokenVersionCache = new Map<string, TokenVersionCache>();
 const TOKEN_VERSION_CACHE_TTL = 30 * 1000; // 30 segundos
+
+// Alias para compatibilidade (admin usa o mesmo cache de antes)
+const tokenVersionCache = staffTokenVersionCache;
 
 // Collector JWT Secret (for pickup points) - OBRIGATÓRIO, sem fallback
 const COLLECTOR_JWT_SECRET_RAW = process.env.COLLECTOR_JWT_SECRET;
@@ -74,6 +81,7 @@ interface JWTPayload {
   userId: string;
   email: string;
   role: string;
+  tokenVersion?: number; // Adicionado para validação de revogação
   iat?: number;
   exp?: number;
 }
@@ -224,6 +232,173 @@ function isInactiveSession(lastActivityValue: string | undefined): boolean {
 
   const now = Date.now();
   return (now - lastActivityTime) > INACTIVITY_LIMIT_MS;
+}
+
+/**
+ * Validate user tokenVersion and status against database
+ * Returns true if valid, false if token should be rejected
+ */
+async function validateUserTokenVersion(
+  userId: string,
+  tokenVersion: number | undefined
+): Promise<{ valid: boolean; reason?: string }> {
+  // Se token não tem tokenVersion, consideramos válido por compatibilidade
+  // (tokens antigos não tinham tokenVersion)
+  if (tokenVersion === undefined) {
+    return { valid: true };
+  }
+
+  const now = Date.now();
+  const cached = userTokenVersionCache.get(userId);
+
+  let user: { tokenVersion: number; status: string } | null = null;
+
+  if (cached && (now - cached.cachedAt) < TOKEN_VERSION_CACHE_TTL) {
+    user = { tokenVersion: cached.tokenVersion, status: cached.status };
+  } else {
+    try {
+      const dbUser = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { tokenVersion: true, status: true },
+      });
+
+      if (dbUser) {
+        user = dbUser;
+        userTokenVersionCache.set(userId, {
+          tokenVersion: dbUser.tokenVersion,
+          status: dbUser.status,
+          cachedAt: now,
+        });
+      }
+    } catch (error) {
+      console.error('[PROXY] Database error validating user tokenVersion:', error);
+      // On database error, reject for security
+      return { valid: false, reason: 'database_error' };
+    }
+  }
+
+  if (!user) {
+    userTokenVersionCache.delete(userId);
+    return { valid: false, reason: 'user_not_found' };
+  }
+
+  if (user.tokenVersion !== tokenVersion) {
+    userTokenVersionCache.delete(userId);
+    return { valid: false, reason: 'token_revoked' };
+  }
+
+  if (user.status !== 'active') {
+    userTokenVersionCache.delete(userId);
+    return { valid: false, reason: 'user_blocked' };
+  }
+
+  return { valid: true };
+}
+
+/**
+ * Validate autonomous collector tokenVersion and status against database
+ */
+async function validateCollectorTokenVersion(
+  collectorId: string,
+  tokenVersion: number
+): Promise<{ valid: boolean; reason?: string }> {
+  const now = Date.now();
+  const cached = collectorTokenVersionCache.get(collectorId);
+
+  let collector: { tokenVersion: number; status: string } | null = null;
+
+  if (cached && (now - cached.cachedAt) < TOKEN_VERSION_CACHE_TTL) {
+    collector = { tokenVersion: cached.tokenVersion, status: cached.status };
+  } else {
+    try {
+      const dbCollector = await prisma.collector.findUnique({
+        where: { id: collectorId },
+        select: { tokenVersion: true, status: true },
+      });
+
+      if (dbCollector) {
+        collector = dbCollector;
+        collectorTokenVersionCache.set(collectorId, {
+          tokenVersion: dbCollector.tokenVersion,
+          status: dbCollector.status,
+          cachedAt: now,
+        });
+      }
+    } catch (error) {
+      console.error('[PROXY] Database error validating collector tokenVersion:', error);
+      return { valid: false, reason: 'database_error' };
+    }
+  }
+
+  if (!collector) {
+    collectorTokenVersionCache.delete(collectorId);
+    return { valid: false, reason: 'collector_not_found' };
+  }
+
+  if (collector.tokenVersion !== tokenVersion) {
+    collectorTokenVersionCache.delete(collectorId);
+    return { valid: false, reason: 'token_revoked' };
+  }
+
+  if (collector.status !== 'ACTIVE') {
+    collectorTokenVersionCache.delete(collectorId);
+    return { valid: false, reason: 'collector_blocked' };
+  }
+
+  return { valid: true };
+}
+
+/**
+ * Validate pickup point tokenVersion and status against database
+ */
+async function validatePickupPointTokenVersion(
+  pointId: string,
+  tokenVersion: number
+): Promise<{ valid: boolean; reason?: string }> {
+  const now = Date.now();
+  const cached = pickupPointTokenVersionCache.get(pointId);
+
+  let point: { tokenVersion: number; status: string } | null = null;
+
+  if (cached && (now - cached.cachedAt) < TOKEN_VERSION_CACHE_TTL) {
+    point = { tokenVersion: cached.tokenVersion, status: cached.status };
+  } else {
+    try {
+      const dbPoint = await prisma.pickupPoint.findUnique({
+        where: { id: pointId },
+        select: { tokenVersion: true, status: true },
+      });
+
+      if (dbPoint) {
+        point = dbPoint;
+        pickupPointTokenVersionCache.set(pointId, {
+          tokenVersion: dbPoint.tokenVersion,
+          status: dbPoint.status,
+          cachedAt: now,
+        });
+      }
+    } catch (error) {
+      console.error('[PROXY] Database error validating pickup point tokenVersion:', error);
+      return { valid: false, reason: 'database_error' };
+    }
+  }
+
+  if (!point) {
+    pickupPointTokenVersionCache.delete(pointId);
+    return { valid: false, reason: 'point_not_found' };
+  }
+
+  if (point.tokenVersion !== tokenVersion) {
+    pickupPointTokenVersionCache.delete(pointId);
+    return { valid: false, reason: 'token_revoked' };
+  }
+
+  if (point.status !== 'ACTIVE') {
+    pickupPointTokenVersionCache.delete(pointId);
+    return { valid: false, reason: 'point_blocked' };
+  }
+
+  return { valid: true };
 }
 
 /**
@@ -442,8 +617,26 @@ export async function proxy(request: NextRequest) {
       );
     }
 
-    // Token is valid at JWT level - route will do full validation (tokenVersion, status, etc.)
-    // No idle timeout for collectors (only fixed JWT expiration)
+    // SECURITY: Validate tokenVersion and status against database
+    const collectorValidation = await validateCollectorTokenVersion(
+      collectorResult.payload.coletorId,
+      collectorResult.payload.tokenVersion
+    );
+
+    if (!collectorValidation.valid) {
+      return NextResponse.json(
+        {
+          error: 'Unauthorized',
+          message: collectorValidation.reason === 'collector_blocked'
+            ? 'Conta bloqueada. Entre em contato com o suporte.'
+            : 'Sessão inválida. Faça login novamente.',
+          code: collectorValidation.reason
+        },
+        { status: 401 }
+      );
+    }
+
+    // Token is valid - no idle timeout for collectors (only fixed JWT expiration)
     return NextResponse.next();
   }
 
@@ -476,8 +669,26 @@ export async function proxy(request: NextRequest) {
       );
     }
 
-    // Token is valid at JWT level - route will do full validation (tokenVersion, status, etc.)
-    // No idle timeout for pickup points (only fixed JWT expiration)
+    // SECURITY: Validate tokenVersion and status against database
+    const pickupValidation = await validatePickupPointTokenVersion(
+      pickupResult.payload.pointId,
+      pickupResult.payload.tokenVersion
+    );
+
+    if (!pickupValidation.valid) {
+      return NextResponse.json(
+        {
+          error: 'Unauthorized',
+          message: pickupValidation.reason === 'point_blocked'
+            ? 'Ponto de coleta bloqueado. Entre em contato com o suporte.'
+            : 'Sessão inválida. Faça login novamente.',
+          code: pickupValidation.reason
+        },
+        { status: 401 }
+      );
+    }
+
+    // Token is valid - no idle timeout for pickup points (only fixed JWT expiration)
     return NextResponse.next();
   }
 
@@ -511,6 +722,28 @@ export async function proxy(request: NextRequest) {
       return NextResponse.redirect(loginUrl);
     }
 
+    // SECURITY: Validate user tokenVersion and status against database
+    const userAdminValidation = await validateUserTokenVersion(
+      payload!.userId,
+      payload!.tokenVersion
+    );
+
+    if (!userAdminValidation.valid) {
+      if (isApiRoute) {
+        return NextResponse.json(
+          {
+            error: 'Unauthorized',
+            message: userAdminValidation.reason === 'user_blocked'
+              ? 'Conta bloqueada. Entre em contato com o suporte.'
+              : 'Sessão inválida. Faça login novamente.',
+            code: userAdminValidation.reason
+          },
+          { status: 401 }
+        );
+      }
+      return createSessionExpiredRedirect(request, '/auth/login', 'returnUrl', pathname, AUTH_COOKIE_NAME);
+    }
+
     // Check inactivity timeout for customer admin
     const customerAdminLastActivity = request.cookies.get(LAST_ACTIVITY_COOKIE_NAME)?.value;
     if (isInactiveSession(customerAdminLastActivity)) {
@@ -541,6 +774,28 @@ export async function proxy(request: NextRequest) {
       const loginUrl = new URL('/auth/login', request.url);
       loginUrl.searchParams.set('returnUrl', pathname);
       return NextResponse.redirect(loginUrl);
+    }
+
+    // SECURITY: Validate user tokenVersion and status against database
+    const userValidation = await validateUserTokenVersion(
+      payload!.userId,
+      payload!.tokenVersion
+    );
+
+    if (!userValidation.valid) {
+      if (isApiRoute) {
+        return NextResponse.json(
+          {
+            error: 'Unauthorized',
+            message: userValidation.reason === 'user_blocked'
+              ? 'Conta bloqueada. Entre em contato com o suporte.'
+              : 'Sessão inválida. Faça login novamente.',
+            code: userValidation.reason
+          },
+          { status: 401 }
+        );
+      }
+      return createSessionExpiredRedirect(request, '/auth/login', 'returnUrl', pathname, AUTH_COOKIE_NAME);
     }
 
     // Check inactivity timeout for authenticated users (cliente)

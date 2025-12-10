@@ -68,7 +68,8 @@ interface ShipmentDetailDrawerProps {
 async function fetchShipmentDetails(id: string) {
   const res = await fetch(`/api/admin/ops/shipments/${id}`);
   if (!res.ok) throw new Error('Failed to fetch shipment');
-  return res.json();
+  const json = await res.json();
+  return json.data ?? json;
 }
 
 // Update shipment
@@ -79,14 +80,16 @@ async function updateShipment(id: string, data: Record<string, unknown>) {
     body: JSON.stringify(data),
   });
   if (!res.ok) throw new Error('Failed to update shipment');
-  return res.json();
+  const json = await res.json();
+  return json.data ?? json;
 }
 
 // Fetch collectors list
 async function fetchCollectors() {
   const res = await fetch('/api/admin/ops/collectors');
   if (!res.ok) throw new Error('Failed to fetch collectors');
-  return res.json();
+  const json = await res.json();
+  return json.data ?? json;
 }
 
 // Manage pickup request (create or update)
@@ -97,7 +100,8 @@ async function managePickupRequest(shipmentId: string, data: Record<string, unkn
     body: JSON.stringify(data),
   });
   if (!res.ok) throw new Error('Failed to manage pickup request');
-  return res.json();
+  const json = await res.json();
+  return json.data ?? json;
 }
 
 export default function ShipmentDetailDrawer({

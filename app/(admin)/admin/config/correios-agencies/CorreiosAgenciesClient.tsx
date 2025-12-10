@@ -95,7 +95,8 @@ async function fetchAgencies(params: {
   if (!response.ok) {
     throw new Error('Erro ao buscar agências');
   }
-  return response.json();
+  const json = await response.json();
+  return json.data ?? json;
 }
 
 async function syncAgencies(ufs?: string[]): Promise<SyncResponse> {
@@ -108,7 +109,8 @@ async function syncAgencies(ufs?: string[]): Promise<SyncResponse> {
     const error = await response.json();
     throw new Error(error.error || 'Erro ao sincronizar');
   }
-  return response.json();
+  const json = await response.json();
+  return json.data ?? json;
 }
 
 export default function CorreiosAgenciesClient() {
@@ -157,7 +159,7 @@ export default function CorreiosAgenciesClient() {
       key: 'nome',
       width: 250,
       render: (_, record) => (
-        <Space direction="vertical" size={0}>
+        <Space orientation="vertical" size={0}>
           <Text strong>{record.nome}</Text>
           <Text type="secondary" style={{ fontSize: 12 }}>
             {record.tipoUnidadeDescricao || record.tipoUnidadeSigla}
@@ -170,7 +172,7 @@ export default function CorreiosAgenciesClient() {
       key: 'localizacao',
       width: 250,
       render: (_, record) => (
-        <Space direction="vertical" size={0}>
+        <Space orientation="vertical" size={0}>
           <Text>{record.municipio}/{record.uf}</Text>
           <Text type="secondary" style={{ fontSize: 12 }}>
             {record.bairro || '-'}
@@ -221,7 +223,7 @@ export default function CorreiosAgenciesClient() {
 
   return (
     <div style={{ padding: 24 }}>
-      <Space direction="vertical" size={24} style={{ width: '100%' }}>
+      <Space orientation="vertical" size={24} style={{ width: '100%' }}>
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
           <Title level={4} style={{ margin: 0 }}>

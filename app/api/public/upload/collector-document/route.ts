@@ -4,13 +4,21 @@
  * Public endpoint for uploading collector documents during registration
  * Accepts multipart/form-data with a single file
  * Returns the public URL for the uploaded file
+ *
+ * SECURITY:
+ * - Rate limited STRICT (fail-close) - se Redis indisponível, bloqueia
+ * - Limite restritivo por IP: 5 uploads por 10 minutos
+ * - Validação de magic bytes para prevenir upload de arquivos maliciosos
+ * - Arquivos temporários são limpos periodicamente
  */
 
 import { withApiHandler } from '@/lib/api/handler';
 import { ApiError } from '@/lib/api/errors';
+import { enforceRateLimitByIPStrict } from '@/lib/rate-limit-redis';
 import { mkdir, writeFile } from 'fs/promises';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
+import type { NextRequest } from 'next/server';
 
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
@@ -98,6 +106,14 @@ interface CollectorDocumentUploadResponse {
 }
 
 export const POST = withApiHandler<CollectorDocumentUploadResponse>(async ({ req }) => {
+  // SECURITY: Rate limit STRICT por IP - 5 uploads por 10 minutos
+  // Se Redis indisponível, bloqueia requisição (fail-close)
+  await enforceRateLimitByIPStrict(
+    req as NextRequest,
+    'public_upload_collector_document',
+    { windowMs: 10 * 60 * 1000, maxRequests: 5 }
+  );
+
   const formData = await req.formData();
   const file = formData.get('file') as File | null;
   const documentType = (formData.get('documentType') as string) || 'document';

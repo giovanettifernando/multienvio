@@ -213,6 +213,32 @@ export function generateState(context: OAuthContext, redirectUrl?: string): stri
 }
 
 /**
+ * Valida se a URL de redirect é segura (previne open redirect)
+ * Permite apenas URLs relativas ou do mesmo domínio
+ */
+function isValidRedirectUrl(url: string | undefined): boolean {
+  if (!url) return true; // undefined/empty é válido (usa default)
+
+  // URLs relativas são sempre válidas
+  if (url.startsWith('/') && !url.startsWith('//')) {
+    return true;
+  }
+
+  // Verificar se é do mesmo domínio
+  try {
+    const baseUrl = getBaseUrl();
+    const redirectUrl = new URL(url, baseUrl);
+    const appUrl = new URL(baseUrl);
+
+    // Deve ser do mesmo host
+    return redirectUrl.host === appUrl.host;
+  } catch {
+    // URL inválida = não permitir
+    return false;
+  }
+}
+
+/**
  * Parse and validate the state parameter
  */
 export function parseState(state: string): OAuthState | null {
@@ -226,6 +252,13 @@ export function parseState(state: string): OAuthState | null {
     }
     if (parsed.context !== 'user' && parsed.context !== 'collector') {
       return null;
+    }
+
+    // SECURITY: Validar redirectUrl para prevenir open redirect
+    if (!isValidRedirectUrl(parsed.redirectUrl)) {
+      console.warn('[GOOGLE_OAUTH] Redirect URL inválida bloqueada:', parsed.redirectUrl);
+      // Retornar estado sem redirectUrl em vez de falhar completamente
+      return { ...parsed, redirectUrl: undefined };
     }
 
     return parsed;

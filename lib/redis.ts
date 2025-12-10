@@ -9,6 +9,7 @@ const REDIS_RETRY_DELAY = 100; // ms
 let redisClient: Redis | null = null;
 let isConnected = false;
 let connectionError: Error | null = null;
+let connectionPromise: Promise<void> | null = null;
 
 // Circuit breaker state
 let circuitOpen = false;
@@ -33,13 +34,37 @@ export function getRedisClient(): Redis {
       lazyConnect: false,
     });
 
+    // Criar promise que resolve quando conectar ou rejeita após timeout
+    connectionPromise = new Promise<void>((resolve) => {
+      const timeout = setTimeout(() => {
+        // Timeout de 2 segundos para conexão inicial
+        if (!isConnected) {
+          console.warn('[Redis] Timeout na conexão inicial');
+        }
+        resolve();
+      }, 2000);
+
+      redisClient!.once('ready', () => {
+        clearTimeout(timeout);
+        isConnected = true;
+        connectionError = null;
+        circuitOpen = false;
+        if (process.env.NODE_ENV !== 'test') {
+          console.log('[Redis] Conectado com sucesso');
+        }
+        resolve();
+      });
+
+      redisClient!.once('error', () => {
+        clearTimeout(timeout);
+        resolve(); // Resolve mesmo com erro para não bloquear
+      });
+    });
+
     redisClient.on('connect', () => {
       isConnected = true;
       connectionError = null;
       circuitOpen = false;
-      if (process.env.NODE_ENV !== 'test') {
-        console.log('[Redis] Conectado com sucesso');
-      }
     });
 
     redisClient.on('error', (err) => {
@@ -62,6 +87,18 @@ export function getRedisClient(): Redis {
   }
 
   return redisClient;
+}
+
+/**
+ * Aguarda a conexão inicial do Redis (com timeout)
+ * Use isso antes da primeira operação se precisar garantir que está conectado
+ */
+export async function waitForRedisConnection(): Promise<boolean> {
+  getRedisClient(); // Garante que o cliente foi criado
+  if (connectionPromise) {
+    await connectionPromise;
+  }
+  return isConnected;
 }
 
 /**

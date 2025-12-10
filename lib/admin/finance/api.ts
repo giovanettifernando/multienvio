@@ -14,6 +14,14 @@ import type {
   ProfileCommissionsResponse,
 } from './types';
 
+/**
+ * Helper to extract data from standardized API response format { data: T, error, meta }
+ */
+async function extractData<T>(res: Response): Promise<T> {
+  const json = await res.json();
+  return (json.data ?? json) as T;
+}
+
 // GET summary
 export async function getFinanceSummary(p: PeriodFilter): Promise<FinanceSummary> {
   const params = new URLSearchParams();
@@ -24,7 +32,7 @@ export async function getFinanceSummary(p: PeriodFilter): Promise<FinanceSummary
     credentials: 'include',
   });
   if (!res.ok) throw new Error('Failed to fetch finance summary');
-  return res.json();
+  return extractData<FinanceSummary>(res);
 }
 
 // Ledgers
@@ -45,7 +53,7 @@ export async function listLedger(p: ListParams): Promise<Paged<LedgerEntry>> {
     credentials: 'include',
   });
   if (!res.ok) throw new Error('Failed to fetch ledger');
-  return res.json();
+  return extractData<Paged<LedgerEntry>>(res);
 }
 
 export async function reconcileLedger(ids: string[]): Promise<{ ok: true }> {
@@ -56,7 +64,7 @@ export async function reconcileLedger(ids: string[]): Promise<{ ok: true }> {
     body: JSON.stringify({ ids }),
   });
   if (!res.ok) throw new Error('Failed to reconcile ledger');
-  return res.json();
+  return extractData<{ ok: true }>(res);
 }
 
 export async function createAdjustment(entry: Partial<LedgerEntry>): Promise<{ ok: true; id: string }> {
@@ -67,7 +75,7 @@ export async function createAdjustment(entry: Partial<LedgerEntry>): Promise<{ o
     body: JSON.stringify(entry),
   });
   if (!res.ok) throw new Error('Failed to create adjustment');
-  return res.json();
+  return extractData<{ ok: true; id: string }>(res);
 }
 
 // Invoices
@@ -85,7 +93,7 @@ export async function listInvoices(p: ListParams): Promise<Paged<Invoice>> {
     credentials: 'include',
   });
   if (!res.ok) throw new Error('Failed to fetch invoices');
-  return res.json();
+  return extractData<Paged<Invoice>>(res);
 }
 
 export async function markInvoicePaid(id: string): Promise<{ ok: true }> {
@@ -94,7 +102,7 @@ export async function markInvoicePaid(id: string): Promise<{ ok: true }> {
     credentials: 'include',
   });
   if (!res.ok) throw new Error('Failed to mark invoice as paid');
-  return res.json();
+  return extractData<{ ok: true }>(res);
 }
 
 export async function cancelInvoice(id: string): Promise<{ ok: true }> {
@@ -103,7 +111,7 @@ export async function cancelInvoice(id: string): Promise<{ ok: true }> {
     credentials: 'include',
   });
   if (!res.ok) throw new Error('Failed to cancel invoice');
-  return res.json();
+  return extractData<{ ok: true }>(res);
 }
 
 // Reconciliation
@@ -119,7 +127,7 @@ export async function listUnreconciled(p: ListParams): Promise<Paged<LedgerEntry
     credentials: 'include',
   });
   if (!res.ok) throw new Error('Failed to fetch unreconciled entries');
-  return res.json();
+  return extractData<Paged<LedgerEntry>>(res);
 }
 
 export async function markReconciled(ids: string[]): Promise<{ ok: true }> {
@@ -130,7 +138,7 @@ export async function markReconciled(ids: string[]): Promise<{ ok: true }> {
     body: JSON.stringify({ ids }),
   });
   if (!res.ok) throw new Error('Failed to mark as reconciled');
-  return res.json();
+  return extractData<{ ok: true }>(res);
 }
 
 // Chargebacks
@@ -149,7 +157,7 @@ export async function listChargebacks(p: ListParams): Promise<Paged<ChargebackIt
     credentials: 'include',
   });
   if (!res.ok) throw new Error('Failed to fetch chargebacks');
-  return res.json();
+  return extractData<Paged<ChargebackItem>>(res);
 }
 
 export async function updateChargeback(id: string, status: 'approved' | 'denied'): Promise<{ ok: true }> {
@@ -160,7 +168,7 @@ export async function updateChargeback(id: string, status: 'approved' | 'denied'
     body: JSON.stringify({ status }),
   });
   if (!res.ok) throw new Error('Failed to update chargeback');
-  return res.json();
+  return extractData<{ ok: true }>(res);
 }
 
 // Carrier payouts
@@ -177,7 +185,7 @@ export async function listPayouts(p: ListParams): Promise<Paged<CarrierPayout>> 
     credentials: 'include',
   });
   if (!res.ok) throw new Error('Failed to fetch payouts');
-  return res.json();
+  return extractData<Paged<CarrierPayout>>(res);
 }
 
 export async function markPayoutPaid(id: string, reference?: string, proofUrl?: string): Promise<{ ok: true }> {
@@ -188,7 +196,7 @@ export async function markPayoutPaid(id: string, reference?: string, proofUrl?: 
     body: JSON.stringify({ reference, proofUrl }),
   });
   if (!res.ok) throw new Error('Failed to mark payout as paid');
-  return res.json();
+  return extractData<{ ok: true }>(res);
 }
 
 // Carrier payouts calculation (for reconciliation)
@@ -202,7 +210,7 @@ export async function getCarrierPayouts(p: PeriodFilter & { carrier?: string }):
     credentials: 'include',
   });
   if (!res.ok) throw new Error('Failed to fetch carrier payouts');
-  return res.json();
+  return extractData<CarrierPayoutsResponse>(res);
 }
 
 // Profile commissions (collectors and pickup points)
@@ -219,7 +227,7 @@ export async function getProfileCommissions(
     credentials: 'include',
   });
   if (!res.ok) throw new Error('Failed to fetch profile commissions');
-  return res.json();
+  return extractData<ProfileCommissionsResponse>(res);
 }
 
 // Commissions
@@ -236,7 +244,7 @@ export async function listCommissions(p: ListParams): Promise<Paged<CommissionIt
     credentials: 'include',
   });
   if (!res.ok) throw new Error('Failed to fetch commissions');
-  return res.json();
+  return extractData<Paged<CommissionItem>>(res);
 }
 
 export async function approveCommission(id: string): Promise<{ ok: true }> {
@@ -245,7 +253,7 @@ export async function approveCommission(id: string): Promise<{ ok: true }> {
     credentials: 'include',
   });
   if (!res.ok) throw new Error('Failed to approve commission');
-  return res.json();
+  return extractData<{ ok: true }>(res);
 }
 
 export async function markCommissionPaid(id: string): Promise<{ ok: true }> {
@@ -254,7 +262,7 @@ export async function markCommissionPaid(id: string): Promise<{ ok: true }> {
     credentials: 'include',
   });
   if (!res.ok) throw new Error('Failed to mark commission as paid');
-  return res.json();
+  return extractData<{ ok: true }>(res);
 }
 
 // Reports

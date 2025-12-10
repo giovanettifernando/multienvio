@@ -35,11 +35,12 @@ export function usePickupPointsAPI() {
       });
 
       if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.message || 'Erro ao buscar pontos');
+        const err = await response.json();
+        throw new Error(err.message || 'Erro ao buscar pontos');
       }
 
-      const data = await response.json();
+      const json = await response.json();
+      const data = json.data ?? json;
       return data;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Erro desconhecido';
@@ -59,11 +60,12 @@ export function usePickupPointsAPI() {
       });
 
       if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.message || 'Erro ao buscar ponto');
+        const err = await response.json();
+        throw new Error(err.message || 'Erro ao buscar ponto');
       }
 
-      const data = await response.json();
+      const json = await response.json();
+      const data = json.data ?? json;
       return data.point;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Erro desconhecido';
@@ -88,12 +90,13 @@ export function usePickupPointsAPI() {
       });
 
       if (!response.ok) {
-        const result = await response.json();
-        throw new Error(result.message || 'Erro ao criar ponto');
+        const err = await response.json();
+        throw new Error(err.message || 'Erro ao criar ponto');
       }
 
-      const result = await response.json();
-      return result.point;
+      const json = await response.json();
+      const data = json.data ?? json;
+      return data.point;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Erro desconhecido';
       setError(message);
@@ -117,12 +120,13 @@ export function usePickupPointsAPI() {
       });
 
       if (!response.ok) {
-        const result = await response.json();
-        throw new Error(result.message || 'Erro ao atualizar ponto');
+        const err = await response.json();
+        throw new Error(err.message || 'Erro ao atualizar ponto');
       }
 
-      const result = await response.json();
-      return result.point;
+      const json = await response.json();
+      const data = json.data ?? json;
+      return data.point;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Erro desconhecido';
       setError(message);
@@ -164,11 +168,12 @@ export function usePickupPointsAPI() {
       });
 
       if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.message || 'Erro ao atualizar status');
+        const err = await response.json();
+        throw new Error(err.message || 'Erro ao atualizar status');
       }
 
-      const data = await response.json();
+      const json = await response.json();
+      const data = json.data ?? json;
       return data.point;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Erro desconhecido';

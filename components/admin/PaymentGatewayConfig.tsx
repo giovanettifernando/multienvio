@@ -42,7 +42,8 @@ export default function PaymentGatewayConfig() {
       });
       if (!res.ok) throw new Error('Erro ao revelar');
 
-      const data = await res.json();
+      const json = await res.json();
+      const data = json.data ?? json;
       const value = data.config?.[field] || '';
 
       if (value) {
@@ -66,7 +67,8 @@ export default function PaymentGatewayConfig() {
       });
       if (!res.ok) throw new Error('Erro ao carregar configuração');
 
-      const data = await res.json();
+      const json = await res.json();
+      const data = json.data ?? json;
 
       if (data.config) {
         form.setFieldsValue({

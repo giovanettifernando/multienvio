@@ -63,7 +63,8 @@ async function fetchCollector(id: string): Promise<{ collector: Collector }> {
   if (!res.ok) {
     throw new Error("Erro ao carregar dados do coletor");
   }
-  return res.json();
+  const json = await res.json();
+  return json.data ?? json;
 }
 
 export default function CollectorDetailClient() {

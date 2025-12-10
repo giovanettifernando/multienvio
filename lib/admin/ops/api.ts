@@ -10,6 +10,14 @@ import type {
   TimelineEvent,
 } from './types';
 
+/**
+ * Helper to extract data from standardized API response format { data: T, error, meta }
+ */
+async function extractData<T>(res: Response): Promise<T> {
+  const json = await res.json();
+  return (json.data ?? json) as T;
+}
+
 // Shipments
 export async function listShipments(p: ListParams): Promise<Paged<OpsShipment>> {
   const params = new URLSearchParams();
@@ -28,7 +36,7 @@ export async function listShipments(p: ListParams): Promise<Paged<OpsShipment>> 
     credentials: 'include',
   });
   if (!res.ok) throw new Error('Failed to fetch shipments');
-  return res.json();
+  return extractData<Paged<OpsShipment>>(res);
 }
 
 export async function bulkUpdateShipmentStatus(ids: string[], status: string): Promise<{ ok: true }> {
@@ -39,7 +47,7 @@ export async function bulkUpdateShipmentStatus(ids: string[], status: string): P
     body: JSON.stringify({ ids, status }),
   });
   if (!res.ok) throw new Error('Failed to update shipments');
-  return res.json();
+  return extractData<{ ok: true }>(res);
 }
 
 export async function reprocessShipment(id: string): Promise<{ ok: true }> {
@@ -48,7 +56,7 @@ export async function reprocessShipment(id: string): Promise<{ ok: true }> {
     credentials: 'include',
   });
   if (!res.ok) throw new Error('Failed to reprocess shipment');
-  return res.json();
+  return extractData<{ ok: true }>(res);
 }
 
 export async function getShipmentTimeline(id: string): Promise<TimelineEvent[]> {
@@ -56,7 +64,7 @@ export async function getShipmentTimeline(id: string): Promise<TimelineEvent[]> 
     credentials: 'include',
   });
   if (!res.ok) throw new Error('Failed to fetch timeline');
-  return res.json();
+  return extractData<TimelineEvent[]>(res);
 }
 
 // Pickups
@@ -75,7 +83,7 @@ export async function listPickups(p: ListParams): Promise<Paged<PickupOrder>> {
     credentials: 'include',
   });
   if (!res.ok) throw new Error('Failed to fetch pickups');
-  return res.json();
+  return extractData<Paged<PickupOrder>>(res);
 }
 
 export async function updatePickup(id: string, patch: Partial<PickupOrder>): Promise<{ ok: true }> {
@@ -86,7 +94,7 @@ export async function updatePickup(id: string, patch: Partial<PickupOrder>): Pro
     body: JSON.stringify(patch),
   });
   if (!res.ok) throw new Error('Failed to update pickup');
-  return res.json();
+  return extractData<{ ok: true }>(res);
 }
 
 // Points of Collection
@@ -101,7 +109,7 @@ export async function listPoC(p: ListParams): Promise<PointOfCollection[]> {
     credentials: 'include',
   });
   if (!res.ok) throw new Error('Failed to fetch PoCs');
-  return res.json();
+  return extractData<PointOfCollection[]>(res);
 }
 
 export async function togglePoCActive(id: string, active: boolean): Promise<{ ok: true }> {
@@ -112,7 +120,7 @@ export async function togglePoCActive(id: string, active: boolean): Promise<{ ok
     body: JSON.stringify({ active }),
   });
   if (!res.ok) throw new Error('Failed to toggle PoC');
-  return res.json();
+  return extractData<{ ok: true }>(res);
 }
 
 export async function updatePoC(id: string, patch: Partial<PointOfCollection>): Promise<{ ok: true }> {
@@ -123,7 +131,7 @@ export async function updatePoC(id: string, patch: Partial<PointOfCollection>): 
     body: JSON.stringify(patch),
   });
   if (!res.ok) throw new Error('Failed to update PoC');
-  return res.json();
+  return extractData<{ ok: true }>(res);
 }
 
 // Exceptions
@@ -142,7 +150,7 @@ export async function listExceptions(p: ListParams): Promise<Paged<OpsException>
     credentials: 'include',
   });
   if (!res.ok) throw new Error('Failed to fetch exceptions');
-  return res.json();
+  return extractData<Paged<OpsException>>(res);
 }
 
 export async function updateException(id: string, patch: Partial<OpsException>): Promise<{ ok: true }> {
@@ -153,7 +161,7 @@ export async function updateException(id: string, patch: Partial<OpsException>):
     body: JSON.stringify(patch),
   });
   if (!res.ok) throw new Error('Failed to update exception');
-  return res.json();
+  return extractData<{ ok: true }>(res);
 }
 
 // SLA
@@ -166,7 +174,7 @@ export async function getSlaSummary(p: { dateStart?: string; dateEnd?: string })
     credentials: 'include',
   });
   if (!res.ok) throw new Error('Failed to fetch SLA');
-  return res.json();
+  return extractData<OpsSLA[]>(res);
 }
 
 // Events/Webhooks
@@ -181,7 +189,7 @@ export async function listEvents(p: ListParams): Promise<Paged<OpsEvent>> {
     credentials: 'include',
   });
   if (!res.ok) throw new Error('Failed to fetch events');
-  return res.json();
+  return extractData<Paged<OpsEvent>>(res);
 }
 
 export async function retryEvent(id: string): Promise<{ ok: true }> {
@@ -190,7 +198,7 @@ export async function retryEvent(id: string): Promise<{ ok: true }> {
     credentials: 'include',
   });
   if (!res.ok) throw new Error('Failed to retry event');
-  return res.json();
+  return extractData<{ ok: true }>(res);
 }
 
 export async function markEventProcessed(id: string): Promise<{ ok: true }> {
@@ -199,5 +207,5 @@ export async function markEventProcessed(id: string): Promise<{ ok: true }> {
     credentials: 'include',
   });
   if (!res.ok) throw new Error('Failed to mark event');
-  return res.json();
+  return extractData<{ ok: true }>(res);
 }

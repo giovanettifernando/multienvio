@@ -32,6 +32,14 @@ export function AdminClientsPage({ clients: initialClients }: AdminClientsPagePr
     setClients((prev) => prev.map((client) => (client.id === id ? { ...client, status } : client)));
   };
 
+  const handleDelete = (id: string) => {
+    setClients((prev) => prev.filter((client) => client.id !== id));
+    // Se o cliente excluído estava selecionado, fechar o drawer
+    if (selectedClientId === id) {
+      setSelectedClientId(null);
+    }
+  };
+
   return (
     <App>
       <PageShell title="Contas de clientes" gap="md">
@@ -39,6 +47,7 @@ export function AdminClientsPage({ clients: initialClients }: AdminClientsPagePr
           clients={clients}
           onViewClient={handleViewClient}
           onStatusChange={handleStatusChange}
+          onDelete={handleDelete}
         />
 
         <ClientDrawer

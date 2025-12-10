@@ -95,7 +95,8 @@ async function fetchWalletDetails(
   const url = `/api/admin/clients/${clientId}/wallet${params.toString() ? `?${params}` : ""}`;
   const res = await fetch(url);
   if (!res.ok) return null;
-  return res.json();
+  const json = await res.json();
+  return json.data ?? json;
 }
 
 // Formatter para valores em formato brasileiro

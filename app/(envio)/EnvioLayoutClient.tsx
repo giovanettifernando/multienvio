@@ -1,16 +1,24 @@
 'use client';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore, useAuthHydrated } from '@/stores/auth';
 import { DashboardShell } from '@/components/layout/dashboard-shell';
+import { SessionIdleModal } from '@/components/session/SessionIdleModal';
 import { Spin } from 'antd';
 
 export default function EnvioLayoutClient({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const fetchCurrentUser = useAuthStore((s) => s.fetchCurrentUser);
+  const logout = useAuthStore((s) => s.logout);
+  const user = useAuthStore((s) => s.user);
   const storeHydrated = useAuthHydrated();
   const [sessionChecked, setSessionChecked] = useState(false);
   const hasValidated = useRef(false);
+
+  // Logout handler para o SessionIdleModal
+  const handleLogout = useCallback(async () => {
+    await logout();
+  }, [logout]);
 
   // Validate session with server after zustand hydration (only once)
   useEffect(() => {
@@ -44,5 +52,16 @@ export default function EnvioLayoutClient({ children }: { children: React.ReactN
     );
   }
 
-  return <DashboardShell>{children}</DashboardShell>;
+  return (
+    <>
+      <DashboardShell>{children}</DashboardShell>
+      <SessionIdleModal
+        isAuthenticated={!!user}
+        onLogout={handleLogout}
+        loginPath="/auth/login"
+        returnParam="returnUrl"
+        refreshEndpoint="/api/auth/refresh"
+      />
+    </>
+  );
 }

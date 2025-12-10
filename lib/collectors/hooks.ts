@@ -104,7 +104,8 @@ export function useCollectors(params?: CollectorFilters) {
         credentials: 'include',
       });
       if (!res.ok) throw new Error('Erro ao carregar coletores');
-      return res.json();
+      const json = await res.json();
+      return (json.data ?? json) as CollectorListResponse;
     },
   });
 }

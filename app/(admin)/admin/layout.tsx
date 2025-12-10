@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore, useCallback } from "react";
 import Link from "next/link";
 import { Layout, Menu, Typography, Flex, Spin, Button, Drawer } from "antd";
 import { MenuOutlined, CloseOutlined } from "@ant-design/icons";
@@ -8,6 +8,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { ADMIN_NAV } from "@/lib/admin/nav";
 import { checkAdminAuth } from "@/lib/admin/auth";
 import { useAdminSession } from "@/stores/useAdminSession";
+import { SessionIdleModal } from "@/components/session/SessionIdleModal";
 import { spacing } from "@/lib/ui/theme";
 
 const { Header, Content } = Layout;
@@ -37,6 +38,19 @@ export default function AdminLayout({
   const hasVerified = useRef(false);
   const isMobile = useIsMobile();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Logout handler para o SessionIdleModal
+  const handleAdminLogout = useCallback(async () => {
+    try {
+      await fetch("/api/admin/auth/logout", {
+        method: "POST",
+        credentials: "include",
+      });
+    } catch {
+      // Ignorar erros
+    }
+    clearAdmin();
+  }, [clearAdmin]);
 
   // isChecking starts false for login page (computed from pathname)
   const [isChecking, setIsChecking] = useState(() => pathname !== "/admin/login");
@@ -81,8 +95,15 @@ export default function AdminLayout({
   useEffect(() => {
     if (isLoginPage) return;
 
-    // Prevent duplicate checks
-    if (hasVerified.current && admin) return;
+    // Se já verificou nesta sessão, não verificar novamente
+    if (hasVerified.current) {
+      // Se já verificou e tem admin no store, apenas marca como não-checking
+      if (admin) {
+        setIsChecking(false);
+      }
+      // Se já verificou e não tem admin, o redirect já foi disparado
+      return;
+    }
 
     const verifyAuth = async () => {
       hasVerified.current = true;
@@ -288,6 +309,7 @@ export default function AdminLayout({
   );
 
   return (
+    <>
     <Layout style={{ minHeight: "100vh", background: "var(--color-background)" }}>
       {/* Desktop: Sidebar fixa */}
       {!isMobile && (
@@ -413,5 +435,13 @@ export default function AdminLayout({
         </Content>
       </Layout>
     </Layout>
+    <SessionIdleModal
+      isAuthenticated={!!admin}
+      onLogout={handleAdminLogout}
+      loginPath="/admin/login"
+      returnParam="next"
+      refreshEndpoint="/api/admin/auth/me"
+    />
+    </>
   );
 }

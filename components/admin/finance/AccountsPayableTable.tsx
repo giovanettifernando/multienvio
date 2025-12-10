@@ -109,7 +109,8 @@ async function fetchAccountsPayable(params: {
   });
 
   if (!res.ok) throw new Error('Erro ao carregar contas a pagar');
-  return res.json();
+  const json = await res.json();
+  return json.data ?? json;
 }
 
 function formatCurrency(valueReais: number): string {

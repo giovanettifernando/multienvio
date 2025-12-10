@@ -136,6 +136,12 @@ export const ADMIN_NAV: AdminNavItem[] = [
         href: "/admin/config/correios-agencies",
         permissions: ["CONFIGURACOES"],
       },
+      {
+        key: "sql",
+        label: "SQL",
+        href: "/admin/config/sql",
+        permissions: ["CONFIGURACOES"],
+      },
     ],
   },
 ];

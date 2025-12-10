@@ -6,7 +6,7 @@ import { ForgotPasswordSchema } from '@/lib/validation/auth';
 import prisma from '@/lib/db';
 import { sendPasswordResetEmail } from '@/lib/email/mailer';
 import crypto from 'crypto';
-import { rateLimitByIP, RATE_LIMITS } from '@/lib/rate-limit-redis';
+import { enforceRateLimitByIPStrict, RATE_LIMITS } from '@/lib/rate-limit-redis';
 
 interface ForgotPasswordResponse {
   message: string;
@@ -15,15 +15,9 @@ interface ForgotPasswordResponse {
 export const POST = withApiHandler<ForgotPasswordResponse>(async (context) => {
   const { req, logger } = context;
 
-  // Rate limiting by IP - 3 attempts per 10 minutes (Redis distribuido com fallback local)
-  const rateLimitError = await rateLimitByIP(req as NextRequest, 'client_forgot_password', RATE_LIMITS.PASSWORD_RESET);
-  if (rateLimitError) {
-    throw new ApiError({
-      code: 'RATE_LIMITED',
-      message: 'Muitas tentativas. Aguarde alguns minutos.',
-      status: 429,
-    });
-  }
+  // Rate limiting by IP - STRICT (fail-close) - 3 attempts per 10 minutes
+  // Se Redis indisponível, retorna 503 ao invés de permitir acesso
+  await enforceRateLimitByIPStrict(req as NextRequest, 'client_forgot_password', RATE_LIMITS.PASSWORD_RESET);
 
   try {
     const payload = await req.json();

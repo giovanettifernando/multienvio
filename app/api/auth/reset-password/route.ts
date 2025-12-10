@@ -6,7 +6,7 @@ import { ApiError } from '@/lib/api/errors';
 import { ResetPasswordSchema } from '@/lib/validation/auth';
 import prisma from '@/lib/db';
 import crypto from 'crypto';
-import { enforceRateLimitByIP, RATE_LIMITS } from '@/lib/rate-limit-redis';
+import { enforceRateLimitByIPStrict, RATE_LIMITS } from '@/lib/rate-limit-redis';
 
 interface ResetPasswordResponse {
   message: string;
@@ -16,8 +16,9 @@ interface ResetPasswordResponse {
 export const POST = withApiHandler<ResetPasswordResponse>(async (context) => {
   const { req, logger } = context;
 
-  // Rate limiting by IP - 3 attempts per 10 minutes (PASSWORD_RESET preset)
-  await enforceRateLimitByIP(req as NextRequest, 'reset_password', RATE_LIMITS.PASSWORD_RESET);
+  // Rate limiting by IP - STRICT (fail-close) - 3 attempts per 10 minutes
+  // Se Redis indisponível, retorna 503 ao invés de permitir acesso
+  await enforceRateLimitByIPStrict(req as NextRequest, 'reset_password', RATE_LIMITS.PASSWORD_RESET);
 
   try {
     const payload = await req.json();

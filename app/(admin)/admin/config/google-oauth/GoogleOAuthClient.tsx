@@ -53,7 +53,8 @@ interface TestResult {
 async function fetchConfig(): Promise<GoogleOAuthConfig> {
   const res = await fetch('/api/admin/config/google-oauth');
   if (!res.ok) throw new Error('Erro ao carregar configuração');
-  return res.json();
+  const json = await res.json();
+  return json.data ?? json;
 }
 
 async function saveConfig(data: { clientId: string; clientSecret: string }): Promise<{ success: boolean; message: string }> {
@@ -66,7 +67,8 @@ async function saveConfig(data: { clientId: string; clientSecret: string }): Pro
     const err = await res.json();
     throw new Error(err.error || 'Erro ao salvar');
   }
-  return res.json();
+  const json = await res.json();
+  return json.data ?? json;
 }
 
 async function testCredentials(data: { clientId: string; clientSecret: string }): Promise<TestResult> {
@@ -75,7 +77,8 @@ async function testCredentials(data: { clientId: string; clientSecret: string })
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
-  return res.json();
+  const json = await res.json();
+  return json.data ?? json;
 }
 
 // ============================================================================
