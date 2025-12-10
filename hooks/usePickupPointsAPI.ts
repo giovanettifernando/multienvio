@@ -76,7 +76,7 @@ export function usePickupPointsAPI() {
     }
   }, []);
 
-  const createPoint = useCallback(async (data: PickupPointFormData): Promise<PickupPoint> => {
+  const createPoint = useCallback(async (formData: PickupPointFormData): Promise<PickupPoint> => {
     setLoading(true);
     setError(null);
     try {
@@ -86,7 +86,7 @@ export function usePickupPointsAPI() {
           'Content-Type': 'application/json',
         },
         credentials: 'include',
-        body: JSON.stringify(data),
+        body: JSON.stringify(formData),
       });
 
       if (!response.ok) {
@@ -95,8 +95,8 @@ export function usePickupPointsAPI() {
       }
 
       const json = await response.json();
-      const data = json.data ?? json;
-      return data.point;
+      const payload = json.data ?? json;
+      return payload.point;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Erro desconhecido';
       setError(message);
@@ -106,7 +106,7 @@ export function usePickupPointsAPI() {
     }
   }, []);
 
-  const updatePoint = useCallback(async (id: string, data: Partial<PickupPointFormData>): Promise<PickupPoint> => {
+  const updatePoint = useCallback(async (id: string, formData: Partial<PickupPointFormData>): Promise<PickupPoint> => {
     setLoading(true);
     setError(null);
     try {
@@ -116,7 +116,7 @@ export function usePickupPointsAPI() {
           'Content-Type': 'application/json',
         },
         credentials: 'include',
-        body: JSON.stringify(data),
+        body: JSON.stringify(formData),
       });
 
       if (!response.ok) {
@@ -125,8 +125,8 @@ export function usePickupPointsAPI() {
       }
 
       const json = await response.json();
-      const data = json.data ?? json;
-      return data.point;
+      const payload = json.data ?? json;
+      return payload.point;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Erro desconhecido';
       setError(message);
