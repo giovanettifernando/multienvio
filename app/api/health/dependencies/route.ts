@@ -4,7 +4,7 @@
  */
 
 import { withApiHandler } from "@/lib/api/handler";
-import { pingDatabase } from "@/lib/db";
+import { pingDatabase, getPoolMetrics } from "@/lib/db";
 
 
 interface DependencyStatus {
@@ -12,6 +12,7 @@ interface DependencyStatus {
   status: "ok" | "degraded" | "unavailable";
   latencyMs?: number;
   message?: string;
+  details?: Record<string, unknown>;
 }
 
 interface HealthDependenciesResponse {
@@ -25,12 +26,25 @@ interface HealthDependenciesResponse {
  */
 async function checkDatabase(): Promise<DependencyStatus> {
   const start = Date.now();
+  const poolMetrics = getPoolMetrics();
+
   try {
     await pingDatabase();
+    const latencyMs = Date.now() - start;
+
+    // Check if pool is under pressure (waiting > 0 means queries are queuing)
+    const isUnderPressure = poolMetrics.waitingCount > 0;
+    const poolUtilization = poolMetrics.totalCount / poolMetrics.maxPoolSize;
+
     return {
       name: "database",
-      status: "ok",
-      latencyMs: Date.now() - start,
+      status: isUnderPressure || poolUtilization > 0.8 ? "degraded" : "ok",
+      latencyMs,
+      message: isUnderPressure ? `${poolMetrics.waitingCount} queries waiting` : undefined,
+      details: {
+        pool: poolMetrics,
+        utilizationPercent: Math.round(poolUtilization * 100),
+      },
     };
   } catch (error) {
     return {
@@ -38,6 +52,7 @@ async function checkDatabase(): Promise<DependencyStatus> {
       status: "unavailable",
       latencyMs: Date.now() - start,
       message: error instanceof Error ? error.message : "Unknown error",
+      details: { pool: poolMetrics },
     };
   }
 }

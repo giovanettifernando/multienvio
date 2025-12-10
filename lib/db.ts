@@ -6,6 +6,7 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { Prisma, PrismaClient } from "@prisma/client";
 import { resolveDatabaseConfig } from "./config/database";
 import { validateEnv } from "./env-validation";
+import { logger } from "./logger";
 
 // Validate environment variables (warns during build, throws at runtime in production)
 validateEnv();
@@ -15,6 +16,7 @@ type GlobalPrismaStore = {
   prismaReady?: Promise<void>;
   migrationCheck?: Promise<void>;
   disconnectRegistered?: boolean;
+  pgPool?: Pool;
 };
 
 const execFileAsync = promisify(execFile);
@@ -75,19 +77,23 @@ function createPrismaClient() {
   const poolConfig = getPoolConfig();
   const pool = new Pool(poolConfig);
 
+  // Store pool reference for metrics
+  globalForPrisma.pgPool = pool;
+
   // Log pool configuration in development
   if (process.env.NODE_ENV === "development") {
-    console.log("[DB] Pool config:", {
+    logger.info({
+      event: "db_pool_config",
       max: poolConfig.max,
       min: poolConfig.min,
       connectionTimeoutMillis: poolConfig.connectionTimeoutMillis,
       idleTimeoutMillis: poolConfig.idleTimeoutMillis,
-    });
+    }, "Database pool initialized");
   }
 
   // Handle pool errors gracefully
   pool.on("error", (err) => {
-    console.error("[DB] Unexpected pool error:", err.message);
+    logger.error({ event: "db_pool_error", error: err.message }, "Unexpected pool error");
   });
 
   const adapter = new PrismaPg(pool);
@@ -106,6 +112,12 @@ async function checkPendingMigrationsOnce(): Promise<void> {
   if (isTestEnv) return;
   if (globalForPrisma.migrationCheck) return globalForPrisma.migrationCheck;
 
+  // Skip migration check if explicitly disabled (useful for production cold starts)
+  if (process.env.SKIP_MIGRATION_CHECK === "true" || process.env.SKIP_MIGRATION_CHECK === "1") {
+    logger.debug({ event: "db_migration_check_skipped", reason: "SKIP_MIGRATION_CHECK enabled" }, "Migration check skipped");
+    return;
+  }
+
   const command = process.platform === "win32" ? "npx.cmd" : "npx";
   const args = ["prisma", "migrate", "status", "--schema", path.join(process.cwd(), "prisma", "schema.prisma")];
 
@@ -118,7 +130,7 @@ async function checkPendingMigrationsOnce(): Promise<void> {
       if (isBuildPhase) return;
       const trimmed = stdout.trim();
       if (!/Database schema is up to date/i.test(trimmed)) {
-        console.warn("[DB] Prisma migrate status indicates pending changes. Run `npx prisma migrate deploy`.");
+        logger.warn({ event: "db_migrations_pending" }, "Run `npx prisma migrate deploy`");
       }
     })
     .catch(() => {
@@ -212,6 +224,53 @@ export async function schedulePrismaReconnect() {
   }
   globalForPrisma.prismaReady = initializePrisma(prisma);
   return globalForPrisma.prismaReady;
+}
+
+/**
+ * Pool metrics for monitoring and health checks
+ */
+export interface PoolMetrics {
+  /** Total number of clients in the pool */
+  totalCount: number;
+  /** Number of clients currently idle */
+  idleCount: number;
+  /** Number of clients currently in use */
+  waitingCount: number;
+  /** Maximum pool size configured */
+  maxPoolSize: number;
+  /** Minimum pool size configured */
+  minPoolSize: number;
+  /** Pool is available */
+  available: boolean;
+}
+
+/**
+ * Get current database pool metrics
+ * Useful for health checks and monitoring dashboards
+ */
+export function getPoolMetrics(): PoolMetrics {
+  const pool = globalForPrisma.pgPool;
+  const poolConfig = getPoolConfig();
+
+  if (!pool) {
+    return {
+      totalCount: 0,
+      idleCount: 0,
+      waitingCount: 0,
+      maxPoolSize: poolConfig.max,
+      minPoolSize: poolConfig.min,
+      available: false,
+    };
+  }
+
+  return {
+    totalCount: pool.totalCount,
+    idleCount: pool.idleCount,
+    waitingCount: pool.waitingCount,
+    maxPoolSize: poolConfig.max,
+    minPoolSize: poolConfig.min,
+    available: true,
+  };
 }
 
 export default prisma;

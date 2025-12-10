@@ -29,7 +29,7 @@ const AdminClientResetPasswordSchema = z.object({
   ids: z.array(z.string().min(1, 'ID não pode ser vazio')).min(1, 'Pelo menos um ID é obrigatório'),
 });
 
-export const POST = withApiHandler<AdminClientResetPasswordResponse>(async ({ req }) => {
+export const POST = withApiHandler<AdminClientResetPasswordResponse>(async ({ req, logger }) => {
   const authResult = await requireAdminUser(req, AdminPermission.CONTAS);
   if (authResult instanceof NextResponse) {
     throw new ApiError({
@@ -98,14 +98,14 @@ export const POST = withApiHandler<AdminClientResetPasswordResponse>(async ({ re
 
       results.push({ email: user.email, success: emailSent });
 
-      console.log('[ADMIN_RESET_PASSWORD]', {
+      logger.info('admin_reset_password_sent', {
         adminId: authResult.user.id,
         userId: user.id,
         userEmail: user.email,
         emailSent,
       });
     } catch (err) {
-      console.error('[ADMIN_RESET_PASSWORD] Error for user:', user.id, err);
+      logger.error('admin_reset_password_error', { userId: user.id, error: String(err) });
       results.push({ email: user.email, success: false });
     }
   }

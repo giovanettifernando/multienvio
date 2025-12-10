@@ -168,10 +168,18 @@ export const POST = withApiHandler<WalletDebitResponse>(async (context) => {
 
         const mockPdfBase64 = 'JVBERi0xLjQKJeLjz9MKMSAwIG9iago8PC9UeXBlL0NhdGFsb2cvUGFnZXMgMiAwIFI+PgplbmRvYmoKMiAwIG9iago8PC9UeXBlL1BhZ2VzL0tpZHNbMyAwIFJdL0NvdW50IDE+PgplbmRvYmoKMyAwIG9iago8PC9UeXBlL1BhZ2UvTWVkaWFCb3hbMCAwIDYxMiA3OTJdL1BhcmVudCAyIDAgUi9SZXNvdXJjZXM8PC9Gb250PDwvRjEgNCAwIFI+Pj4+L0NvbnRlbnRzIDUgMCBSPj4KZW5kb2JqCjQgMCBvYmoKPDwvVHlwZS9Gb250L1N1YnR5cGUvVHlwZTEvQmFzZUZvbnQvVGltZXMtUm9tYW4+PgplbmRvYmoKNSAwIG9iago8PC9MZW5ndGggNDQ+PgpzdHJlYW0KQlQKL0YxIDI0IFRmCjEwMCA3MDAgVGQKKEV0aXF1ZXRhIFRlc3RlKSBUagpFVAplbmRzdHJlYW0KZW5kb2JqCnhyZWYKMCA2CjAwMDAwMDAwMDAgNjU1MzUgZiAKMDAwMDAwMDAxNSAwMDAwMCBuIAowMDAwMDAwMDY0IDAwMDAwIG4gCjAwMDAwMDAxMTUgMDAwMDAgbiAKMDAwMDAwMDI0NSAwMDAwMCBuIAowMDAwMDAwMzI4IDAwMDAwIG4gCnRyYWlsZXIKPDwvU2l6ZSA2L1Jvb3QgMSAwIFI+PgpzdGFydHhyZWYKNDIwCiUlRU9GCg==';
 
-        for (const ship of shipmentsToUpdate) {
-          const currentDoc = (ship.document as Record<string, unknown>) || {};
+        // OTIMIZAÇÃO N+1: Buscar todas as labels de uma vez
+        const shipmentIds = shipmentsToUpdate.map(s => s.id);
+        const existingLabels = await tx.label.findMany({
+          where: { shipmentId: { in: shipmentIds } },
+          select: { id: true, shipmentId: true },
+        });
+        const labelsByShipmentId = new Map(existingLabels.map(l => [l.shipmentId, l.id]));
 
-          await tx.shipment.update({
+        // OTIMIZAÇÃO N+1: Atualizar todos os shipments em batch
+        await Promise.all(shipmentsToUpdate.map(ship => {
+          const currentDoc = (ship.document as Record<string, unknown>) || {};
+          return tx.shipment.update({
             where: { id: ship.id },
             data: {
               paymentMethod: 'WALLET',
@@ -187,22 +195,20 @@ export const POST = withApiHandler<WalletDebitResponse>(async (context) => {
               },
             },
           });
+        }));
 
-          const label = await tx.label.findUnique({
-            where: { shipmentId: ship.id },
+        // OTIMIZAÇÃO N+1: Atualizar todas as labels existentes em batch
+        const labelIdsToUpdate = existingLabels.map(l => l.id);
+        if (labelIdsToUpdate.length > 0) {
+          await tx.label.updateMany({
+            where: { id: { in: labelIdsToUpdate } },
+            data: {
+              status: 'issued',
+              fileBase64: mockPdfBase64,
+              contentType: 'application/pdf',
+              sizeBytes: 420,
+            },
           });
-
-          if (label) {
-            await tx.label.update({
-              where: { id: label.id },
-              data: {
-                status: 'issued',
-                fileBase64: mockPdfBase64,
-                contentType: 'application/pdf',
-                sizeBytes: 420,
-              },
-            });
-          }
         }
 
         // 8) Marcar carrinho como CHECKED_OUT

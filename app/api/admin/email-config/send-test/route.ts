@@ -65,23 +65,14 @@ export const POST = withApiHandler<EmailSendTestResponse>(async (context) => {
     });
   }
 
-  console.log('[EMAIL_SEND_TEST] Sending test email to:', to);
-  console.log('[EMAIL_SEND_TEST] Config found:', {
-    host: config.host,
-    port: config.port,
-    secure: config.secure,
-    user: config.user,
-    hasPassword: !!config.password,
-    passwordFormat: config.password ? `${config.password.substring(0, 10)}...` : 'EMPTY',
-  });
+  context.logger.info('email_send_test_started', { to, host: config.host, port: config.port });
 
   // Descriptografar senha
   let password: string;
   try {
     password = decrypt(config.password);
-    console.log('[EMAIL_SEND_TEST] Password decrypted successfully, length:', password.length);
   } catch (error) {
-    console.error('[EMAIL_SEND_TEST] Failed to decrypt password:', error);
+    context.logger.error('email_send_test_decrypt_failed', { error: String(error) });
     throw new ApiError({
       code: 'decryption_error',
       message: 'Falha ao descriptografar senha. Verifique a ENCRYPTION_KEY e reconfigure o SMTP.',
@@ -213,7 +204,7 @@ Data de envio: ${new Date().toLocaleString('pt-BR')}
       `,
     });
 
-    console.log('[EMAIL_SEND_TEST] Test email sent successfully');
+    context.logger.info('email_send_test_success', { to });
 
     return {
       data: {
@@ -222,7 +213,7 @@ Data de envio: ${new Date().toLocaleString('pt-BR')}
       },
     };
   } catch (error) {
-    console.error('[EMAIL_SEND_TEST]', error);
+    context.logger.error('email_send_test_failed', { to, error: String(error) });
 
     // Mensagens de erro mais amigáveis
     let errorMessage = 'Erro ao enviar email de teste';

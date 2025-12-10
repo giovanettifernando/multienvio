@@ -82,29 +82,64 @@ export const POST = withApiHandler<CorreiosAgencySyncResponse>(async (context) =
 
       logger.debug({ event: 'correios_sync_uf_found', uf, count: agencias.length }, 'Agencies found');
 
-      // Upsert em lote
-      for (const agencia of agencias) {
-        try {
-          const data = mapAgenciaToDb(agencia, syncedAt);
+      // OTIMIZAÇÃO N+1: Processar em batches de 100 para evitar queries sequenciais
+      const BATCH_SIZE = 100;
+      for (let i = 0; i < agencias.length; i += BATCH_SIZE) {
+        const batch = agencias.slice(i, i + BATCH_SIZE);
+        const agencyIds = batch.map(a => a.id);
 
-          await prisma.correiosAgency.upsert({
-            where: { id: agencia.id },
-            create: data,
-            update: {
-              ...data,
-              createdAt: undefined, // Não atualizar createdAt
-            },
-          });
+        // Buscar todas as existentes do batch de uma vez
+        const existingAgencies = await prisma.correiosAgency.findMany({
+          where: { id: { in: agencyIds } },
+          select: { id: true },
+        });
+        const existingIds = new Set(existingAgencies.map(a => a.id));
 
-          // Contar como criado ou atualizado (aproximação)
-          totalUpdated++;
-        } catch (err) {
-          logger.error({ event: 'correios_sync_agency_error', agencyId: agencia.id, err }, 'Failed to save agency');
-          totalErrors++;
+        // Separar em criar vs atualizar
+        const toCreate: CorreiosAgenciaAPI[] = [];
+        const toUpdate: CorreiosAgenciaAPI[] = [];
+
+        for (const agencia of batch) {
+          if (existingIds.has(agencia.id)) {
+            toUpdate.push(agencia);
+          } else {
+            toCreate.push(agencia);
+          }
+        }
+
+        // Criar novos em batch
+        if (toCreate.length > 0) {
+          try {
+            await prisma.correiosAgency.createMany({
+              data: toCreate.map(a => mapAgenciaToDb(a, syncedAt)),
+              skipDuplicates: true,
+            });
+            totalCreated += toCreate.length;
+          } catch (err) {
+            logger.error({ event: 'correios_sync_create_batch_error', uf, count: toCreate.length, err }, 'Failed to create batch');
+            totalErrors += toCreate.length;
+          }
+        }
+
+        // Atualizar existentes em paralelo (Promise.all é mais eficiente que sequencial)
+        if (toUpdate.length > 0) {
+          const updateResults = await Promise.allSettled(
+            toUpdate.map(agencia => {
+              const data = mapAgenciaToDb(agencia, syncedAt);
+              return prisma.correiosAgency.update({
+                where: { id: agencia.id },
+                data: {
+                  ...data,
+                  createdAt: undefined, // Não atualizar createdAt
+                },
+              });
+            })
+          );
+
+          totalUpdated += updateResults.filter(r => r.status === 'fulfilled').length;
+          totalErrors += updateResults.filter(r => r.status === 'rejected').length;
         }
       }
-
-      totalCreated += agencias.length;
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Erro desconhecido';
       logger.error({ event: 'correios_sync_uf_error', uf, err }, 'Failed to sync UF');

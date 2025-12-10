@@ -53,13 +53,7 @@ export const POST = withApiHandler<EmailTestConnectionResponse>(async (context) 
 
   const { host, port, secure, user, password } = parsed.data;
 
-  console.log('[EMAIL_TEST_CONNECTION] Testing SMTP connection:', {
-    host,
-    port,
-    secure,
-    user,
-    hasPassword: !!password,
-  });
+  context.logger.info('email_test_connection_started', { host, port, secure, user, hasPassword: !!password });
 
   try {
     // Criar transporter de teste
@@ -75,7 +69,6 @@ export const POST = withApiHandler<EmailTestConnectionResponse>(async (context) 
 
     // Verificar conexão (testa apenas conectividade, não autenticação)
     await transporter.verify();
-    console.log('[EMAIL_TEST_CONNECTION] Connectivity test passed');
 
     // Testar autenticação enviando email para si mesmo (sem realmente enviar)
     if (password) {
@@ -87,14 +80,13 @@ export const POST = withApiHandler<EmailTestConnectionResponse>(async (context) 
           subject: 'Test Connection',
           text: 'This is a test',
         });
-        console.log('[EMAIL_TEST_CONNECTION] Authentication test passed');
       } catch (authError) {
-        console.error('[EMAIL_TEST_CONNECTION] Authentication failed:', authError);
+        context.logger.error('email_test_connection_auth_failed', { error: String(authError) });
         throw authError;
       }
     }
 
-    console.log('[EMAIL_TEST_CONNECTION] Connection and authentication successful');
+    context.logger.info('email_test_connection_success', { host, port });
 
     return {
       data: {
@@ -103,7 +95,7 @@ export const POST = withApiHandler<EmailTestConnectionResponse>(async (context) 
       },
     };
   } catch (error) {
-    console.error('[EMAIL_TEST_CONNECTION]', error);
+    context.logger.error('email_test_connection_failed', { host, port, error: String(error) });
 
     // Mensagens de erro mais amigáveis
     let errorMessage = 'Erro ao testar conexão SMTP';

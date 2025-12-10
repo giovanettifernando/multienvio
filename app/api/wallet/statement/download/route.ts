@@ -186,8 +186,8 @@ async function generateStatementPdf(params: {
     const logoPath = join(process.cwd(), 'public', 'images', 'envio-legal-logo.png');
     const logoBuffer = await readFile(logoPath);
     logoImage = await pdfDoc.embedPng(logoBuffer);
-  } catch (e) {
-    console.warn('[WALLET_STATEMENT_PDF] Failed to load logo:', e);
+  } catch {
+    // Logo optional - continue without it
   }
 
   // Logo maior com proporção 2000x800 = 2.5:1

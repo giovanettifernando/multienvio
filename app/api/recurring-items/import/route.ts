@@ -71,14 +71,18 @@ export const POST = withApiHandler(async (context) => {
   const toUpdate = itemsToImport.filter((item) => existingMap.has(item.descricao));
   const toCreate = itemsToImport.filter((item) => !existingMap.has(item.descricao));
 
-  for (const item of toUpdate) {
-    const id = existingMap.get(item.descricao);
-    if (id) {
-      await prisma.recurringItem.update({
-        where: { id },
-        data: { valorUnitario: item.valorUnitario },
-      });
-    }
+  // OTIMIZAÇÃO N+1: Atualizar em paralelo com Promise.all ao invés de sequencial
+  if (toUpdate.length > 0) {
+    await Promise.all(
+      toUpdate.map((item) => {
+        const id = existingMap.get(item.descricao);
+        if (!id) return Promise.resolve();
+        return prisma.recurringItem.update({
+          where: { id },
+          data: { valorUnitario: item.valorUnitario },
+        });
+      })
+    );
   }
 
   if (toCreate.length > 0) {

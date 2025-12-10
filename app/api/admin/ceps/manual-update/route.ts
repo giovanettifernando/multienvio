@@ -57,14 +57,11 @@ export const POST = withApiHandler<ManualUpdateResponse>(async (context) => {
 
   const { cep, lat, lng, precision, motivo } = parsed.data;
 
-  console.log(`[API] Manual update requested for CEP: ${cep}`);
-  console.log(`[API] Coordinates: ${lat}, ${lng}`);
-  console.log(`[API] Precision: ${precision}`);
-  console.log(`[API] Reason: ${motivo || 'Not specified'}`);
+  context.logger.info('cep_manual_update_requested', { cep, lat, lng, precision, motivo });
 
   const cepLocation = await updateCepManual(cep, lat, lng, precision, motivo);
 
-  console.log(`[API] Manual update successful for CEP ${cep}`);
+  context.logger.info('cep_manual_update_success', { cep });
 
   return {
     data: {

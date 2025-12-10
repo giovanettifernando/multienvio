@@ -142,7 +142,7 @@ export const GET = withApiHandler<MercadoPagoGetResponse>(async ({ req }) => {
 /**
  * POST - Salva/atualiza configuração do Mercado Pago
  */
-export const POST = withApiHandler<MercadoPagoPostResponse>(async ({ req }) => {
+export const POST = withApiHandler<MercadoPagoPostResponse>(async ({ req, logger }) => {
   const authResult = await requireAdminUser(req, AdminPermission.INTEGRACOES);
   if (authResult instanceof Response) {
     throw new ApiError({
@@ -218,8 +218,7 @@ export const POST = withApiHandler<MercadoPagoPostResponse>(async ({ req }) => {
     let finalAccessToken = data.accessToken;
     let finalWebhookSecret = data.webhookSecret;
 
-    // 🔒 SECURITY: Não logar prévias de tokens para evitar exposição em logs
-    console.log('[ADMIN_MERCADOPAGO_POST] Verificando tokens:', {
+    logger.info('mercadopago_config_update', {
       accessTokenIsMasked: data.accessToken.startsWith('***'),
       webhookSecretIsMasked: data.webhookSecret?.startsWith('***'),
     });
@@ -238,8 +237,7 @@ export const POST = withApiHandler<MercadoPagoPostResponse>(async ({ req }) => {
       if (existingCred?.accessToken) {
         // Usar o token criptografado existente (já está criptografado, não criptografar novamente)
         finalAccessToken = decrypt(existingCred.accessToken); // Descriptografar para re-criptografar depois
-        // 🔒 SECURITY: Não logar preview do token
-        console.log('[ADMIN_MERCADOPAGO_POST] Token mascarado detectado. Recuperado token existente.');
+        logger.info('mercadopago_config_masked_token_recovered');
       } else {
         throw new Error('Token mascarado detectado mas não há credencial anterior. Por favor, insira o Access Token completo.');
       }
