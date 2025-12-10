@@ -56,7 +56,9 @@ export const POST = withApiHandler<MarkPayoutPaidResponse, { id: string }>(async
   }
 
   const { reference, proofUrl } = parsed.data;
-  logger.debug({ event: 'mock_payout_paid', id, reference, proofUrl }, 'Marking payout as paid');
+
+  // TODO: Implementar atualização real no banco de dados
+  logger.debug({ event: 'payout_paid', id, reference, proofUrl }, 'Marking payout as paid');
 
   return { data: { ok: true } };
 });

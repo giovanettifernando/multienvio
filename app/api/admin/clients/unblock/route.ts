@@ -48,8 +48,7 @@ export const POST = withApiHandler<AdminClientUnblockResponse>(async ({ req }) =
 
   const { clientId, reason } = parsed.data;
 
-  // Mock: apenas retorna sucesso
-  // Em produção, aqui desbloquearia o cliente no banco
+  // TODO: Implementar desbloqueio real do cliente no banco
 
   // Audit log
   await logClientStatusChange(session.staffId, clientId, 'unblock', reason);

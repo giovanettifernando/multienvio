@@ -310,7 +310,7 @@ async function applyWalletTopup(transaction: PaymentTransaction): Promise<void> 
  * Operações:
  * 1. Atualiza Shipment.paymentMethod
  * 2. Atualiza Shipment.document.payment com status approved
- * 3. Emite Label associada (status issued + PDF mock)
+ * 3. Emite Label associada (status issued)
  * 4. Idempotente: verifica se já foi aplicado antes de processar
  */
 async function applyCheckoutPayment(transaction: PaymentTransaction): Promise<void> {

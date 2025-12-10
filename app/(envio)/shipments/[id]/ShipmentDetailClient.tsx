@@ -13,24 +13,42 @@ import { ELSkeleton } from "@/components/ui/ELSkeleton";
 import { ELCard } from "@/components/ui/ELCard";
 import { ELButton } from "@/components/ui/ELButton";
 import { ELGrid, ELGridSpanFull } from "@/components/ui/ELGrid";
-import { ShareAltOutlined, CopyOutlined } from "@ant-design/icons";
+import { ShareAltOutlined, CopyOutlined, PrinterOutlined } from "@ant-design/icons";
 import { useQuery } from "@tanstack/react-query";
 import { TrackingTimeline } from "@/components/track/TrackingTimeline";
 import { PageShell } from "@/components/shared/PageShell";
+import { ShipmentLabelPdfModal } from "@/components/labels";
+import { useState } from "react";
 
 const { Text } = Typography;
 
+// Status válidos de shipment (alinhado com ShipmentStatus de types/contracts.ts)
+// Shipments só são criados após pagamento aprovado
 const STATUS_LABELS: Record<string, string> = {
-  "pending_payment": "Aguardando pagamento",
-  "awaiting_pickup": "Aguardando coleta",
-  "awaiting_posting": "Aguardando postagem",
-  "ready_for_posting": "Pronto para postagem",
+  // Enum principal (snake_case)
+  "criado": "Criado",
+  "etiqueta_emitida": "Etiqueta Emitida",
+  "postado": "Postado",
+  "em_transporte": "Em Transporte",
+  "entregue": "Entregue",
+  "cancelado": "Cancelado",
+  // Aliases legados (compatibilidade)
+  "awaiting_pickup": "Aguardando Coleta",
+  "awaiting_posting": "Aguardando Postagem",
+  "ready_for_posting": "Pronto para Postagem",
   "posted": "Postado",
-  "in_transit": "Em trânsito",
-  "out_for_delivery": "Em rota de entrega",
+  "in_transit": "Em Trânsito",
+  "out_for_delivery": "Em Rota de Entrega",
   "delivered": "Entregue",
   "cancelled": "Cancelado",
-  "payment_failed": "Falha no pagamento",
+  // Status de banco (UPPER_SNAKE_CASE)
+  "PICKUP_REQUESTED": "Coleta Solicitada",
+  "AWAITING_PICKUP": "Aguardando Coleta",
+  "AWAITING_POSTING": "Aguardando Postagem",
+  "POSTED": "Postado",
+  "IN_TRANSIT": "Em Trânsito",
+  "DELIVERED": "Entregue",
+  "CANCELLED": "Cancelado",
 };
 
 // Type definitions
@@ -63,9 +81,18 @@ interface Item {
   volumeIndex?: number;
 }
 
+interface Label {
+  id: string;
+  status: string;
+  carrier: string;
+  service: string;
+  isPrinted: boolean;
+}
+
 interface ShipmentDetail {
   id: string;
-  trackingCode: string;
+  trackingCode?: string; // Alias (compatibilidade)
+  platformTrackingCode: string; // Campo real da API
   publicTrackingId: string | null;
   status: string;
   paymentMethod: string | null;
@@ -102,12 +129,14 @@ interface ShipmentDetail {
     uf: string | null;
     occurredAt: string;
   }>;
+  label: Label | null;
 }
 
 export default function ShipmentDetailClient() {
   const { message } = App.useApp();
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const [labelModalOpen, setLabelModalOpen] = useState(false);
 
   console.debug('[DETAIL] params.id=', id);
 
@@ -154,6 +183,14 @@ export default function ShipmentDetailClient() {
       extra={
         <Space wrap>
           <ELButton onClick={() => router.push("/shipments")}>Voltar</ELButton>
+          {shipment?.label && shipment.label.status === 'issued' && (
+            <ELButton
+              icon={<PrinterOutlined />}
+              onClick={() => setLabelModalOpen(true)}
+            >
+              Imprimir Etiqueta
+            </ELButton>
+          )}
           {shipment?.publicTrackingId && (
             <>
               <ELButton
@@ -203,7 +240,7 @@ export default function ShipmentDetailClient() {
               </div>
               <div>
                 <Text type="secondary">Código de rastreio</Text>
-                <div style={{ marginTop: 4, fontWeight: 500 }}>{shipment.trackingCode}</div>
+                <div style={{ marginTop: 4, fontWeight: 500 }}>{shipment.platformTrackingCode}</div>
               </div>
               <div>
                 <Text type="secondary">Método de pagamento</Text>
@@ -528,6 +565,22 @@ export default function ShipmentDetailClient() {
             />
           )}
         </>
+      )}
+
+      {/* Modal de impressão de etiqueta */}
+      {shipment && (
+        <ShipmentLabelPdfModal
+          open={labelModalOpen}
+          onClose={() => setLabelModalOpen(false)}
+          shipmentId={shipment.id}
+          trackingCode={shipment.platformTrackingCode}
+          volumes={shipment.volumes.map((v) => ({
+            id: v.id,
+            packageNumber: v.packageNumber,
+            weight: v.weight,
+          }))}
+          labelId={shipment.label?.id}
+        />
       )}
     </PageShell>
   );

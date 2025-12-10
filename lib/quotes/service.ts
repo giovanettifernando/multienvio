@@ -78,7 +78,7 @@ export type QuoteDetail = Quote & {
 
 /**
  * Calcula cotações usando exclusivamente a integração dos Correios
- * Sem fallback para mocks - retorna erro se integração não disponível
+ * Retorna erro se integração não disponível
  */
 async function calculateShippingOptions(
   request: QuoteRequest

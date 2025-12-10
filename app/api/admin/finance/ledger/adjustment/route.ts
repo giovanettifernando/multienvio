@@ -60,9 +60,8 @@ export const POST = withApiHandler<AdjustmentResponse>(async ({ req }) => {
 
   const { type, amountCents, reason, category, reference } = parsed.data;
 
-  // Mock: just return success with generated ID
-  // In real implementation, would create entry in DB
-  logger.debug({ event: 'mock_create_adjustment', type, amountCents, reason, category, reference }, 'Creating adjustment');
+  // TODO: Implementar criação real no banco de dados
+  logger.debug({ event: 'create_adjustment', type, amountCents, reason, category, reference }, 'Creating adjustment');
 
   const id = `ldg_adj_${Date.now()}`;
 

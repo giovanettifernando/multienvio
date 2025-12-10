@@ -28,7 +28,7 @@ export const PUT = withApiHandler<AdminClientUpdateResponse, { id: string }>(asy
 
   logger.info('admin_client_update', { adminId: authResult.user.id });
 
-  // Mock: apenas retorna sucesso
+  // TODO: Implementar atualização real de cliente
   return { data: { ok: true } };
 });
 

@@ -4,6 +4,7 @@ import { Form, Input, Select, Radio, InputNumber, Row, Col } from 'antd';
 import { Controller, Control, FieldErrors, UseFormWatch } from 'react-hook-form';
 import { maskCNPJ, maskCPF, unmaskDigits } from '@/lib/pickup/masks';
 import type { PickupPointFormData } from '@/lib/pickup/types';
+import { inputNumberFormatterBRL, inputNumberParserBRL } from '@/lib/utils/format';
 
 interface PagamentoFormProps {
   control: Control<PickupPointFormData>;
@@ -244,10 +245,13 @@ export default function PagamentoForm({ control, errors, watch }: PagamentoFormP
                 {...field}
                 value={field.value ?? undefined}
                 min={0}
-                placeholder="100.00"
+                placeholder="100,00"
                 style={{ width: 160 }}
                 prefix="R$"
                 precision={2}
+                decimalSeparator=","
+                formatter={inputNumberFormatterBRL}
+                parser={inputNumberParserBRL}
                 aria-label="Valor Mínimo para Repasse"
               />
             )}
@@ -269,10 +273,13 @@ export default function PagamentoForm({ control, errors, watch }: PagamentoFormP
                 onChange={(value) => field.onChange(value === null || value === undefined ? null : value)}
                 min={0}
                 step={0.01}
-                placeholder="0.00"
+                placeholder="0,00"
                 style={{ width: 160 }}
                 prefix="R$"
                 precision={2}
+                decimalSeparator=","
+                formatter={inputNumberFormatterBRL}
+                parser={inputNumberParserBRL}
                 aria-label="Comissão por Item Recebido"
               />
             )}

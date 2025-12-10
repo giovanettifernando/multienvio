@@ -5,10 +5,9 @@ export type PrintStatus = 'printed' | 'not_printed' | 'all';
 export type PackageLabelStatus = 'pending' | 'generated' | 'canceled' | 'error';
 
 export interface LabelFile {
-  // preferencialmente uma URL (quando existir). Se vier base64, marcar contentType.
-  url?: string;           // ex.: "/api/labels/{id}/pdf" (mock no FE)
-  base64?: string;        // se o mock devolver base64
-  contentType?: string;   // "application/pdf"
+  url?: string;
+  base64?: string;
+  contentType?: string;
   sizeBytes?: number | null;
 }
 

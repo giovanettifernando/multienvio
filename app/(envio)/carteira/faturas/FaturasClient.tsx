@@ -11,6 +11,7 @@ import { ELAlert } from "@/components/ui/ELAlert";
 import { ELModal } from "@/components/ui/ELModal";
 import { DataTable, type DataTableColumn } from "@/components/ui/DataTable";
 import tableStyles from "@/components/ui/ELTableWrapper.module.css";
+import { inputNumberFormatterBRL, inputNumberParserBRL } from "@/lib/utils/format";
 
 async function fetchInvoices(): Promise<Invoice[]> {
   const response = await fetch("/api/invoices");
@@ -111,16 +112,15 @@ export default function FaturasClient() {
           value={amount}
           onChange={(value) => setAmount(value ?? 10)}
           style={{ width: "100%" }}
+          precision={2}
+          prefix="R$"
+          decimalSeparator=","
+          formatter={inputNumberFormatterBRL}
+          parser={inputNumberParserBRL}
         />
       </ELModal>
 
       <PageShell title="Faturas e recibos" gap="md">
-        <ELAlert
-          variant="info"
-          title="Modo de Demonstração"
-          description="Esta seção está usando dados simulados (mock). A funcionalidade de faturas será implementada quando a integração com o gateway de pagamento estiver completa."
-          closable
-        />
 
         <ELButton variant="primary" onClick={() => setModalOpen(true)}>
           Gerar nova fatura

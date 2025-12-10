@@ -48,8 +48,7 @@ export const POST = withApiHandler<AdminClientBlockResponse>(async ({ req }) => 
 
   const { clientId, reason } = parsed.data;
 
-  // Mock: apenas retorna sucesso
-  // Em produção, aqui bloquearia o cliente no banco
+  // TODO: Implementar bloqueio real do cliente no banco
 
   // Audit log
   await logClientStatusChange(session.staffId, clientId, 'block', reason);

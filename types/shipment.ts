@@ -18,7 +18,7 @@ export type ShipmentStatus =
 export type ShipmentTag = "express" | "economico" | "seguro" | "declarado";
 
 /**
- * Estrutura mínima persistida em memória (mock DB do front).
+ * Estrutura mínima persistida em memória.
  * Deve ser estável, simples e serializável.
  */
 export type StoredShipment = {

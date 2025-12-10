@@ -3,6 +3,7 @@
 import { Card, Form, InputNumber, Typography } from "antd";
 import { Controller, Control } from "react-hook-form";
 import type { QuoteFormValues } from "./quoteFormSchema";
+import { inputNumberFormatterBRL, inputNumberParserBRL } from "@/lib/utils/format";
 
 const { Text } = Typography;
 
@@ -51,6 +52,11 @@ export function InsuranceInput({ control }: InsuranceInputProps) {
                 placeholder="Opcional"
                 min={0}
                 step={100}
+                precision={2}
+                prefix="R$"
+                decimalSeparator=","
+                formatter={inputNumberFormatterBRL}
+                parser={inputNumberParserBRL}
                 style={{ width: "100%" }}
                 onChange={(val) => field.onChange(val ?? undefined)}
               />

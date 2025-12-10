@@ -14,6 +14,7 @@ import {
   InputNumber,
   App,
 } from 'antd';
+import { inputNumberFormatterBRL, inputNumberParserBRL } from '@/lib/utils/format';
 import type { ColumnsType } from 'antd/es/table';
 import type { TableRowSelection } from 'antd/lib/table/interface';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -407,9 +408,12 @@ export function LedgerTable({ period }: LedgerTableProps) {
             <InputNumber
               min={0}
               step={0.01}
+              precision={2}
               style={{ width: '100%' }}
-              formatter={(value) => `R$ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, '.')}
-              parser={(value) => Number(value?.replace(/R\$\s?|(\.)/g, '').replace(',', '.') || 0) as 0}
+              prefix="R$"
+              decimalSeparator=","
+              formatter={inputNumberFormatterBRL}
+              parser={inputNumberParserBRL}
             />
           </Form.Item>
           <Form.Item name="description" label="Descrição">

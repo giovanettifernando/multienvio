@@ -37,7 +37,9 @@ export const POST = withApiHandler<MarkInvoicePaidResponse, { id: string }>(asyn
   }
 
   const { id } = params;
-  logger.debug({ event: 'mock_invoice_paid', id }, 'Marking invoice as paid');
+
+  // TODO: Implementar atualização real no banco de dados
+  logger.debug({ event: 'invoice_paid', id }, 'Marking invoice as paid');
 
   return { data: { ok: true } };
 });

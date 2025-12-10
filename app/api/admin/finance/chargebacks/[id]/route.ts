@@ -56,7 +56,9 @@ export const POST = withApiHandler<UpdateChargebackResponse, { id: string }>(asy
   }
 
   const { status, notes } = parsed.data;
-  logger.debug({ event: 'mock_chargeback_update', id, status, notes }, 'Updating chargeback');
+
+  // TODO: Implementar atualização real no banco de dados
+  logger.debug({ event: 'chargeback_update', id, status, notes }, 'Updating chargeback');
 
   return { data: { ok: true } };
 });

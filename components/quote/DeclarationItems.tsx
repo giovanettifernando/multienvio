@@ -18,6 +18,7 @@ import {
 } from "react-hook-form";
 import type { FinalizeFormValues } from "@/types/quoteFinalize";
 import styles from "@/app/(envio)/cotacoes/cotacoes.module.css";
+import { inputNumberFormatterBRL, inputNumberParserBRL } from "@/lib/utils/format";
 import { generateUUID } from "@/lib/utils/uuid";
 
 const currency = new Intl.NumberFormat("pt-BR", {
@@ -109,6 +110,11 @@ export function DeclarationItems() {
                       value={controllerField.value ?? undefined}
                       min={0}
                       step={1}
+                      precision={2}
+                      prefix="R$"
+                      decimalSeparator=","
+                      formatter={inputNumberFormatterBRL}
+                      parser={inputNumberParserBRL}
                       style={{ width: "100%" }}
                       onChange={(value) =>
                         controllerField.onChange(value ?? undefined)

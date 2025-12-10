@@ -18,7 +18,8 @@ export const GET = withApiHandler<TimelineEvent[], { id: string }>(async (contex
 
   await params;
 
-  const mockTimeline: TimelineEvent[] = [
+  // TODO: Implementar consulta real ao banco de dados
+  const timeline: TimelineEvent[] = [
     {
       timestamp: '2025-01-23T10:00:00Z',
       status: 'created',
@@ -45,5 +46,5 @@ export const GET = withApiHandler<TimelineEvent[], { id: string }>(async (contex
     },
   ];
 
-  return { data: mockTimeline };
+  return { data: timeline };
 });

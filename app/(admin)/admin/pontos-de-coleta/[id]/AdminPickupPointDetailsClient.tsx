@@ -40,7 +40,7 @@ import {
 import { PageShell } from "@/components/shared/PageShell";
 import { pickupPointSchema } from "@/lib/pickup/schemas";
 import { maskCNPJ, maskCEP, maskPhone, maskCPF, unmaskDigits } from "@/lib/pickup/masks";
-import { formatBRL } from "@/lib/utils/format";
+import { formatBRL, inputNumberFormatterBRL, inputNumberParserBRL } from "@/lib/utils/format";
 import type { PickupPoint, PickupPointFormData } from "@/lib/pickup/types";
 import PickupPointReceptionsTab from "@/components/admin/pickup-points/PickupPointReceptionsTab";
 
@@ -670,6 +670,9 @@ export default function AdminPickupPointDetailsClient() {
                     style={{ width: 160 }}
                     prefix="R$"
                     precision={2}
+                    decimalSeparator=","
+                    formatter={inputNumberFormatterBRL}
+                    parser={inputNumberParserBRL}
                   />
                 )}
               />
@@ -689,6 +692,9 @@ export default function AdminPickupPointDetailsClient() {
                     style={{ width: 160 }}
                     prefix="R$"
                     precision={2}
+                    decimalSeparator=","
+                    formatter={inputNumberFormatterBRL}
+                    parser={inputNumberParserBRL}
                   />
                 )}
               />

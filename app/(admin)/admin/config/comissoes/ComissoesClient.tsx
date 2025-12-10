@@ -27,6 +27,7 @@ import {
   CalculatorOutlined,
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { inputNumberFormatterBRL, inputNumberParserBRL } from '@/lib/utils/format';
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -114,6 +115,10 @@ function CommissionSimulator({
               onChange={(v) => setBaseShipping(v || 0)}
               prefix="R$"
               min={0}
+              precision={2}
+              decimalSeparator=","
+              formatter={inputNumberFormatterBRL}
+              parser={inputNumberParserBRL}
               style={{ width: '100%', marginTop: 4 }}
             />
           </Col>
@@ -124,6 +129,10 @@ function CommissionSimulator({
               onChange={(v) => setBasePickup(v || 0)}
               prefix="R$"
               min={0}
+              precision={2}
+              decimalSeparator=","
+              formatter={inputNumberFormatterBRL}
+              parser={inputNumberParserBRL}
               style={{ width: '100%', marginTop: 4 }}
             />
           </Col>

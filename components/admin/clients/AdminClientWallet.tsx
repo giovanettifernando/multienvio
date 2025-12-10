@@ -21,6 +21,7 @@ import {
   Empty,
   DatePicker,
 } from "antd";
+import { inputNumberFormatterBRL, inputNumberParserBRL } from "@/lib/utils/format";
 import {
   PlusOutlined,
   MinusOutlined,
@@ -307,6 +308,9 @@ export default function AdminClientWallet({
                 precision={2}
                 style={{ width: "100%" }}
                 prefix="R$"
+                decimalSeparator=","
+                formatter={inputNumberFormatterBRL}
+                parser={inputNumberParserBRL}
               />
             </Form.Item>
 
@@ -519,6 +523,9 @@ export default function AdminClientWallet({
               precision={2}
               style={{ width: "100%" }}
               prefix="R$"
+              decimalSeparator=","
+              formatter={inputNumberFormatterBRL}
+              parser={inputNumberParserBRL}
             />
           </Form.Item>
 

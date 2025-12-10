@@ -27,6 +27,7 @@ import { useCards } from "@/hooks/useAccount";
 import { ELModal } from "@/components/ui/ELModal";
 import { ELButton } from "@/components/ui/ELButton";
 import { ELAlert } from "@/components/ui/ELAlert";
+import { inputNumberFormatterBRL, inputNumberParserBRL } from "@/lib/utils/format";
 
 const { Text } = Typography;
 
@@ -699,11 +700,12 @@ export function PaymentModal({
               min={1}
               max={10000}
               step={10}
-              placeholder="R$ 0,00"
+              placeholder="0,00"
               style={{ width: "100%" }}
               prefix="R$"
-              formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
-              parser={(value) => value?.replace(/\$\s?|(,*)/g, "") as unknown as number}
+              decimalSeparator=","
+              formatter={inputNumberFormatterBRL}
+              parser={inputNumberParserBRL}
             />
           </Form.Item>
         )}

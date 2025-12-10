@@ -55,9 +55,8 @@ export const POST = withApiHandler<ReconcileResponse>(async ({ req }) => {
 
   const { ids } = parsed.data;
 
-  // Mock: just return success
-  // In real implementation, would update DB
-  logger.debug({ event: 'mock_reconcile_ledger', ids }, 'Reconciling ledger entries');
+  // TODO: Implementar atualização real no banco de dados
+  logger.debug({ event: 'reconcile_ledger', ids }, 'Reconciling ledger entries');
 
   return { data: { ok: true } };
 });

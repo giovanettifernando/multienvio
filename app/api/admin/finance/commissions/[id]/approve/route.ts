@@ -37,7 +37,9 @@ export const POST = withApiHandler<ApproveCommissionResponse, { id: string }>(as
   }
 
   const { id } = params;
-  logger.debug({ event: 'mock_commission_approve', id }, 'Approving commission');
+
+  // TODO: Implementar atualização real no banco de dados
+  logger.debug({ event: 'commission_approve', id }, 'Approving commission');
 
   return { data: { ok: true } };
 });

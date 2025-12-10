@@ -37,7 +37,9 @@ export const POST = withApiHandler<MarkCommissionPaidResponse, { id: string }>(a
   }
 
   const { id } = params;
-  logger.debug({ event: 'mock_commission_paid', id }, 'Marking commission as paid');
+
+  // TODO: Implementar atualização real no banco de dados
+  logger.debug({ event: 'commission_paid', id }, 'Marking commission as paid');
 
   return { data: { ok: true } };
 });

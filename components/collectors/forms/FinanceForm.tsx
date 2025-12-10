@@ -3,6 +3,7 @@
 import { Controller, useFormContext } from 'react-hook-form';
 import { Segmented, Form, Input, InputNumber, Select, Space, Typography } from 'antd';
 import type { CollectorFormInput } from '@/lib/collectors/types';
+import { inputNumberFormatterBRL, inputNumberParserBRL } from '@/lib/utils/format';
 
 const { Title } = Typography;
 
@@ -66,6 +67,9 @@ export default function FinanceForm() {
                   step={0.01}
                   precision={2}
                   prefix="R$"
+                  decimalSeparator=","
+                  formatter={inputNumberFormatterBRL}
+                  parser={inputNumberParserBRL}
                   placeholder={commissionPlaceholder}
                   style={{ width: 220 }}
                 />
@@ -82,6 +86,9 @@ export default function FinanceForm() {
                   step={0.01}
                   precision={2}
                   prefix="R$"
+                  decimalSeparator=","
+                  formatter={inputNumberFormatterBRL}
+                  parser={inputNumberParserBRL}
                   placeholder={commissionPlaceholder}
                   style={{ width: 220 }}
                 />

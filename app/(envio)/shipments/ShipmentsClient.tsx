@@ -21,7 +21,6 @@ import {
 import Link from "next/link";
 import { useShipments, useShipmentCancel } from "@/hooks/useShipments";
 import type { Shipment, ShipmentStatus } from "@/types/shipments";
-import type { LabelItem } from "@/lib/types/label";
 import { PageShell } from "@/components/shared/PageShell";
 import { useQuery } from "@tanstack/react-query";
 import { ELButton } from "@/components/ui/ELButton";
@@ -33,6 +32,7 @@ import { ELTag } from "@/components/ui/ELTag";
 import { ELSkeleton } from "@/components/ui/ELSkeleton";
 import { DataTable, type DataTableColumn } from "@/components/ui/DataTable";
 import tableStyles from "@/components/ui/ELTableWrapper.module.css";
+import { ShipmentLabelPdfModal } from "@/components/labels";
 
 const { Text } = Typography;
 
@@ -90,6 +90,8 @@ export default function ShipmentsClient() {
   const [pageSize, setPageSize] = useState(10);
   const [selectedShipmentId, setSelectedShipmentId] = useState<string | null>(null);
   const [divergenceModalOpen, setDivergenceModalOpen] = useState(false);
+  const [labelModalOpen, setLabelModalOpen] = useState(false);
+  const [selectedShipmentForLabel, setSelectedShipmentForLabel] = useState<Shipment | null>(null);
 
   const { data, isLoading, refetch } = useShipments({ q: query, status, page, limit: pageSize });
   const cancelMut = useShipmentCancel();
@@ -131,6 +133,31 @@ export default function ShipmentsClient() {
     enabled: !!selectedShipmentId && divergenceModalOpen,
   });
 
+  // Buscar dados completos do shipment para o modal de etiqueta
+  const { data: shipmentDetailForLabel } = useQuery<{
+    label: { id: string; status: string } | null;
+    volumes: Array<{ id: string; packageNumber: number; weight: number }>;
+  }>({
+    queryKey: ['shipment-label-detail', selectedShipmentForLabel?.id],
+    queryFn: async () => {
+      const res = await fetch(`/api/shipments/${selectedShipmentForLabel?.id}`);
+      if (!res.ok) {
+        throw new Error('Erro ao buscar dados do envio');
+      }
+      const json = await res.json();
+      const data = json.data ?? json;
+      return {
+        label: data.label,
+        volumes: data.volumes?.map((v: { id: string; packageNumber: number; weight: number }) => ({
+          id: v.id,
+          packageNumber: v.packageNumber,
+          weight: v.weight,
+        })) || [],
+      };
+    },
+    enabled: !!selectedShipmentForLabel?.id && labelModalOpen,
+  });
+
   const handleOpenDivergenceModal = useCallback((shipmentId: string) => {
     setSelectedShipmentId(shipmentId);
     setDivergenceModalOpen(true);
@@ -141,23 +168,15 @@ export default function ShipmentsClient() {
     setSelectedShipmentId(null);
   }, []);
 
-  const handlePrintLabel = useCallback(async (shipmentId: string, labelUrl: string) => {
-    try {
-      window.open(labelUrl, "_blank");
-      const response = await fetch(`/api/labels?q=${shipmentId}`);
-      if (response.ok) {
-        const data = await response.json();
-        const label = data.items?.find((item: LabelItem) => item.shipmentId === shipmentId);
-        if (label) {
-          await fetch(`/api/labels?id=${label.id}`, { method: 'PATCH' });
-          message.success('Etiqueta marcada como impressa');
-          refetch();
-        }
-      }
-    } catch (error) {
-      console.error('Erro ao imprimir etiqueta:', error);
-    }
-  }, [message, refetch]);
+  const handleOpenLabelModal = useCallback((shipment: Shipment) => {
+    setSelectedShipmentForLabel(shipment);
+    setLabelModalOpen(true);
+  }, []);
+
+  const handleCloseLabelModal = useCallback(() => {
+    setLabelModalOpen(false);
+    setSelectedShipmentForLabel(null);
+  }, []);
 
   const columns: DataTableColumn<Shipment>[] = useMemo(
     () => [
@@ -308,8 +327,7 @@ export default function ShipmentsClient() {
                   variant="ghost"
                   size="small"
                   icon={<PrinterOutlined />}
-                  disabled={!row.labelUrl}
-                  onClick={() => row.labelUrl && handlePrintLabel(row.id, row.labelUrl)}
+                  onClick={() => handleOpenLabelModal(row)}
                 />
               </Tooltip>
 
@@ -347,7 +365,7 @@ export default function ShipmentsClient() {
         },
       },
     ],
-    [cancelMut, handlePrintLabel, handleOpenDivergenceModal],
+    [cancelMut, handleOpenLabelModal, handleOpenDivergenceModal],
   );
 
   return (
@@ -485,6 +503,18 @@ export default function ShipmentsClient() {
           </div>
         )}
       </ELModal>
+
+      {/* Modal de impressão de etiqueta */}
+      {selectedShipmentForLabel && (
+        <ShipmentLabelPdfModal
+          open={labelModalOpen}
+          onClose={handleCloseLabelModal}
+          shipmentId={selectedShipmentForLabel.id}
+          trackingCode={selectedShipmentForLabel.trackingCode}
+          volumes={shipmentDetailForLabel?.volumes || []}
+          labelId={shipmentDetailForLabel?.label?.id}
+        />
+      )}
     </PageShell>
   );
 }

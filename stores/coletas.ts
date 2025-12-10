@@ -166,7 +166,6 @@ export const useColetasStore = create<State & Actions>()(
 
       hydrateFromLegacy: () => {
         // Placeholder para migração futura se necessário
-        // Pode ser usado para migrar dados do mock-db antigo
         console.log("Hydration from legacy data não implementado");
       },
     }),

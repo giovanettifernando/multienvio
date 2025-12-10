@@ -54,7 +54,9 @@ export const POST = withApiHandler<MarkReconciliationResponse>(async ({ req }) =
   }
 
   const { ids } = parsed.data;
-  logger.debug({ event: 'mock_mark_reconciled', ids }, 'Marking as reconciled');
+
+  // TODO: Implementar atualização real no banco de dados
+  logger.debug({ event: 'mark_reconciled', ids }, 'Marking as reconciled');
 
   return { data: { ok: true } };
 });

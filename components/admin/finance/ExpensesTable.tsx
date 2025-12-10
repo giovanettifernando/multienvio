@@ -27,6 +27,7 @@ import {
   Tooltip,
   TreeSelect,
 } from 'antd';
+import { inputNumberFormatterBRL, inputNumberParserBRL } from '@/lib/utils/format';
 import type { ColumnsType } from 'antd/es/table';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
@@ -795,6 +796,8 @@ export function ExpensesTable() {
                   precision={2}
                   decimalSeparator=","
                   prefix="R$"
+                  formatter={inputNumberFormatterBRL}
+                  parser={inputNumberParserBRL}
                 />
               </Form.Item>
             </Col>

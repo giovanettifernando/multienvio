@@ -26,17 +26,17 @@ export const GET = withApiHandler<FinanceSummary>(async ({ req }) => {
   const dateStart = searchParams.get('dateStart') || undefined;
   const dateEnd = searchParams.get('dateEnd') || undefined;
 
-  // Mock data
+  // TODO: Implementar consulta real ao banco de dados
   const summary: FinanceSummary = {
     period: { dateStart, dateEnd },
-    grossRevenue: 850000.0,
-    platformFees: 42500.0,
-    carrierPayouts: 650000.0,
-    partnerCommissions: 25000.0,
-    refunds: 12000.0,
-    chargebacks: 3500.0,
-    customersWalletBalance: 180000.0,
-    platformOperationalBalance: 117000.0,
+    grossRevenue: 0,
+    platformFees: 0,
+    carrierPayouts: 0,
+    partnerCommissions: 0,
+    refunds: 0,
+    chargebacks: 0,
+    customersWalletBalance: 0,
+    platformOperationalBalance: 0,
   };
 
   return { data: summary };

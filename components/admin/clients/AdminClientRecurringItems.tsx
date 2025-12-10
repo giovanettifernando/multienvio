@@ -17,6 +17,7 @@ import {
   EditOutlined,
   DeleteOutlined,
 } from "@ant-design/icons";
+import { inputNumberFormatterBRL, inputNumberParserBRL } from "@/lib/utils/format";
 import type { ColumnsType } from "antd/es/table";
 import { formatNumberBR } from "@/lib/format";
 
@@ -185,6 +186,10 @@ export default function AdminClientRecurringItems({
               step={0.01}
               precision={2}
               style={{ width: "100%" }}
+              prefix="R$"
+              decimalSeparator=","
+              formatter={inputNumberFormatterBRL}
+              parser={inputNumberParserBRL}
             />
           </Form.Item>
 

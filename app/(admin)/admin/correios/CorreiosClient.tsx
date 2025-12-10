@@ -19,6 +19,7 @@ import {
   message,
   Badge,
 } from 'antd';
+import { inputNumberFormatterBRL, inputNumberParserBRL } from '@/lib/utils/format';
 import {
   SaveOutlined,
   ApiOutlined,
@@ -574,7 +575,7 @@ function TestQuoteTab() {
           </Form.Item>
 
           <Form.Item name="valorDeclarado" label="Valor Decl.">
-            <InputNumber min={0} prefix="R$" style={{ width: 100 }} />
+            <InputNumber min={0} prefix="R$" precision={2} decimalSeparator="," formatter={inputNumberFormatterBRL} parser={inputNumberParserBRL} style={{ width: 100 }} />
           </Form.Item>
         </Space>
 
@@ -927,7 +928,7 @@ function TestPrePostagemTab() {
               label="Valor Declarado (R$)"
               rules={[{ required: true, message: 'Obrigatório' }]}
             >
-              <InputNumber min={1} max={10000} prefix="R$" style={{ width: 120 }} />
+              <InputNumber min={1} max={10000} prefix="R$" precision={2} decimalSeparator="," formatter={inputNumberFormatterBRL} parser={inputNumberParserBRL} style={{ width: 120 }} />
             </Form.Item>
           </Space>
         </Card>

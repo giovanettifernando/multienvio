@@ -53,7 +53,7 @@ export interface Invoice {
   customerId?: string | null; // se aplicável
   customerName?: string | null;
   total: number;         // R$
-  link?: string | null;  // URL da fatura/nota (mock)
+  link?: string | null;  // URL da fatura/nota
 }
 
 export type PayoutStatus = 'pending' | 'paid' | 'failed';
@@ -65,7 +65,7 @@ export interface CarrierPayout {
   amount: number;
   status: PayoutStatus;
   reference?: string | null; // ex: Nº remessa
-  proofUrl?: string | null;  // comprovante (mock)
+  proofUrl?: string | null;  // comprovante
 }
 
 // Tipos para cálculo de repasses (reconciliação com transportadoras)

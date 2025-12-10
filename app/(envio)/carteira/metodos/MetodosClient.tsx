@@ -52,7 +52,6 @@ export default function MetodosClient() {
 
   const addCardMutation = useMutation<CardMethod, Error, { holder: string; number: string; expMonth: number; expYear: number; cvc: string }>({
     mutationFn: async (values) => {
-      // ✅ Migrado para endpoint real (Prisma) ao invés de mock
       const response = await fetch("/api/account/cards", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -85,7 +84,6 @@ export default function MetodosClient() {
 
   const setDefaultMutation = useMutation<void, Error, string>({
     mutationFn: async (cardId) => {
-      // ✅ Migrado para endpoint real (Prisma) ao invés de mock
       const res = await fetch(`/api/account/cards/${cardId}/make-default`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -102,7 +100,6 @@ export default function MetodosClient() {
 
   const removeMutation = useMutation<void, Error, string>({
     mutationFn: async (cardId) => {
-      // ✅ Migrado para endpoint real (Prisma) ao invés de mock
       const res = await fetch(`/api/account/cards/${cardId}`, {
         method: "DELETE",
       });

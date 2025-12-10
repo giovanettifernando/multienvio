@@ -23,7 +23,7 @@ type AddressStore = {
   remove: (id: string) => void;
   setDefault: (id: string) => void;
   selectOrigin: (id: string | null) => void;
-  upsertMany?: (arr: Address[]) => void; // opcional para migração de mocks
+  upsertMany?: (arr: Address[]) => void;
   clearAll: () => void;                  // util de debug
   getDefaultId: () => string | null;
 };

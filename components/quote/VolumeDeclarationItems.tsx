@@ -18,6 +18,7 @@ import type { FinalizeFormValues } from "@/types/quoteFinalize";
 import styles from "@/app/(envio)/cotacoes/cotacoes.module.css";
 import { RecurringItemAutocompleteInput } from "./RecurringItemAutocompleteInput";
 import { generateUUID } from "@/lib/utils/uuid";
+import { inputNumberFormatterBRL, inputNumberParserBRL } from "@/lib/utils/format";
 
 type VolumeDeclarationItemsProps = {
   volumeIndex: number;
@@ -107,6 +108,11 @@ export function VolumeDeclarationItems({ volumeIndex }: VolumeDeclarationItemsPr
                       value={controllerField.value ?? undefined}
                       min={0}
                       step={1}
+                      precision={2}
+                      prefix="R$"
+                      decimalSeparator=","
+                      formatter={inputNumberFormatterBRL}
+                      parser={inputNumberParserBRL}
                       style={{ width: "100%" }}
                       onChange={(value) =>
                         controllerField.onChange(value ?? undefined)

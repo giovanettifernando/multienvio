@@ -20,6 +20,7 @@ import {
   Divider,
   DatePicker,
 } from 'antd';
+import { inputNumberFormatterBRL, inputNumberParserBRL } from '@/lib/utils/format';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   EditOutlined,
@@ -316,19 +317,19 @@ export default function ShipmentDetailDrawer({
 
               <Title level={5}>Peso e Valores</Title>
               <Form.Item label="Peso (kg)" name="weight">
-                <InputNumber min={0} step={0.01} style={{ width: '100%' }} />
+                <InputNumber min={0} step={0.01} precision={2} decimalSeparator="," style={{ width: '100%' }} />
               </Form.Item>
 
               <Form.Item label="Valor Declarado (R$)" name="declaredValue">
-                <InputNumber min={0} step={0.01} style={{ width: '100%' }} />
+                <InputNumber min={0} step={0.01} precision={2} style={{ width: '100%' }} prefix="R$" decimalSeparator="," formatter={inputNumberFormatterBRL} parser={inputNumberParserBRL} />
               </Form.Item>
 
               <Form.Item label="Custo do Frete (R$)" name="freightCost">
-                <InputNumber min={0} step={0.01} style={{ width: '100%' }} />
+                <InputNumber min={0} step={0.01} precision={2} style={{ width: '100%' }} prefix="R$" decimalSeparator="," formatter={inputNumberFormatterBRL} parser={inputNumberParserBRL} />
               </Form.Item>
 
               <Form.Item label="Taxa de Coleta (R$)" name="pickupFee">
-                <InputNumber min={0} step={0.01} style={{ width: '100%' }} />
+                <InputNumber min={0} step={0.01} precision={2} style={{ width: '100%' }} prefix="R$" decimalSeparator="," formatter={inputNumberFormatterBRL} parser={inputNumberParserBRL} />
               </Form.Item>
 
               <Form.Item label="Prazo Estimado (dias)" name="estimatedDays">

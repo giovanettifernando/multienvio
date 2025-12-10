@@ -21,7 +21,8 @@ export const POST = withApiHandler<ReprocessResponse, { id: string }>(async (con
   }
 
   const { id } = await params;
-  logger.debug({ event: 'mock_reprocess_shipment', id }, 'Reprocessing shipment');
+  // TODO: Implementar reprocessamento real
+  logger.debug({ event: 'reprocess_shipment', id }, 'Reprocessing shipment');
 
   return { data: { ok: true } };
 });

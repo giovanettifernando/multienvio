@@ -13,6 +13,7 @@ import { useFormContext } from "react-hook-form";
 import type { FinalizeFormValues, DeclarationFormItem } from "@/types/quoteFinalize";
 import { generateUUID } from "@/lib/utils/uuid";
 import { RecurringItemAutocompleteInput } from "./RecurringItemAutocompleteInput";
+import { inputNumberFormatterBRL, inputNumberParserBRL } from "@/lib/utils/format";
 
 interface VolumeDeclarationTabProps {
   volumeCount: number;
@@ -185,6 +186,9 @@ export function VolumeDeclarationTab({ volumeCount }: VolumeDeclarationTabProps)
                 min={0}
                 precision={2}
                 prefix="R$"
+                decimalSeparator=","
+                formatter={inputNumberFormatterBRL}
+                parser={inputNumberParserBRL}
                 style={{ width: 120 }}
                 value={item.valorUnitario}
                 onChange={(val) => updateItem(index, item.id, "valorUnitario", val ?? 0)}

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { App, Button, Table, Input, InputNumber, Popconfirm, Upload, Space, Flex } from "antd";
 import { DeleteOutlined, PlusOutlined, UploadOutlined, DownloadOutlined, EditOutlined, SaveOutlined, CloseOutlined } from "@ant-design/icons";
+import { inputNumberFormatterBRL, inputNumberParserBRL } from "@/lib/utils/format";
 
 interface RecurringItem {
   id: string;
@@ -212,8 +213,9 @@ export default function RecurringItemsList() {
               min={0}
               precision={2}
               decimalSeparator=","
-              formatter={(val) => `R$ ${val}`.replace(/\B(?=(\d{3})+(?!\d))/g, ".")}
-              parser={(val) => parseFloat(val?.replace(/R\$\s?|(,*)/g, "") || "0")}
+              prefix="R$"
+              formatter={inputNumberFormatterBRL}
+              parser={inputNumberParserBRL}
             />
           );
         }
@@ -305,15 +307,16 @@ export default function RecurringItemsList() {
           onPressEnter={handleAdd}
         />
         <InputNumber
-          placeholder="Valor unitário (R$)"
+          placeholder="Valor unitário"
           value={newItem.valorUnitario}
           onChange={(value) => setNewItem({ ...newItem, valorUnitario: value })}
           style={{ width: 200 }}
           min={0}
           precision={2}
           decimalSeparator=","
-          formatter={(value) => `R$ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ".")}
-          parser={(value) => parseFloat(value?.replace(/R\$\s?|(,*)/g, "") || "0")}
+          prefix="R$"
+          formatter={inputNumberFormatterBRL}
+          parser={inputNumberParserBRL}
           onPressEnter={handleAdd}
         />
         <Button

@@ -37,7 +37,9 @@ export const POST = withApiHandler<CancelInvoiceResponse, { id: string }>(async 
   }
 
   const { id } = params;
-  logger.debug({ event: 'mock_invoice_cancel', id }, 'Canceling invoice');
+
+  // TODO: Implementar atualização real no banco de dados
+  logger.debug({ event: 'invoice_cancel', id }, 'Canceling invoice');
 
   return { data: { ok: true } };
 });
