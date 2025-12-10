@@ -112,6 +112,7 @@ export default function ShipmentDetailClient() {
   console.debug('[DETAIL] params.id=', id);
 
   // Buscar shipment diretamente por ID
+  // Retry configurado para casos onde o shipment ainda está sendo criado (pós-checkout)
   const { data: shipment, isLoading, error } = useQuery<ShipmentDetail>({
     queryKey: ['shipment', id],
     queryFn: async () => {
@@ -127,6 +128,8 @@ export default function ShipmentDetailClient() {
       return (json.data ?? json) as ShipmentDetail;
     },
     enabled: !!id,
+    retry: 3, // Tentar 3 vezes caso falhe (shipment pode estar sendo criado)
+    retryDelay: (attemptIndex) => Math.min(1000 * (attemptIndex + 1), 3000), // 1s, 2s, 3s
   });
 
   const handleOpenPublicLink = () => {

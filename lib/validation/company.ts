@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { onlyDigits } from "@/lib/masks";
-import { isValidCPF, isValidCNPJ } from "@/lib/validation/utils";
+// Import from validators.ts (client-safe) instead of utils.ts (has server deps)
+import { isValidCPF, isValidCNPJ } from "@/lib/validation/validators";
 
 export const regimeTributarioOptions = ["SIMPLES", "PRESUMIDO", "REAL"] as const;
 
@@ -164,4 +165,4 @@ export type EnderecoData = z.infer<typeof enderecoSchema>;
 export type PreferenciasData = z.infer<typeof preferenciasSchema>;
 export type CompanyWizardData = z.infer<typeof companyWizardSchema>;
 
-export { getCompanyDisplayName, getCompanyDocument } from "./utils";
+export { getCompanyDisplayName, getCompanyDocument } from "./validators";

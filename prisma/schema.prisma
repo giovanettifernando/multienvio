@@ -332,6 +332,7 @@ model PickupRequest {
   @@index([scheduleAt])
   @@index([userId, status, createdAt]) // PERFORMANCE: Dashboard do usuário
   @@index([collectorId, status]) // PERFORMANCE: Dashboard do coletor
+  @@index([collectorId, collectedAt]) // PERFORMANCE: Coletas realizadas pelo coletor
   @@map("pickup_requests")
 }
 

@@ -55,7 +55,9 @@ export function CardPaymentForm({
         if (!response.ok) {
           throw new Error("Não foi possível carregar as credenciais do Mercado Pago");
         }
-        const data = await response.json();
+        const json = await response.json();
+        // Handle standardized API response format { data: T, error, meta }
+        const data = json.data ?? json;
         setPublicKey(data.publicKey);
 
         // Inicializar SDK do Mercado Pago
@@ -131,11 +133,14 @@ export function CardPaymentForm({
 
       if (!response.ok) {
         const errorData = await response.json();
-        // Usar mensagem do backend (status_detail mapeado)
-        throw new Error(errorData.message || "Cartão não autorizado");
+        // Handle standardized API error format { error: { message } }
+        const errorMessage = errorData.error?.message || errorData.message || "Cartão não autorizado";
+        throw new Error(errorMessage);
       }
 
-      const result = await response.json();
+      const resultJson = await response.json();
+      // Handle standardized API response format { data: T, error, meta }
+      const result = resultJson.data ?? resultJson;
       setProcessing(false);
       onSuccess(result.payment.id);
     } catch (err) {

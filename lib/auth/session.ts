@@ -1,97 +1,66 @@
 /**
  * Customer/Client Session Management
  *
- * - TTL: Configured via CLIENT_SESSION_TTL_DAYS env (default: 7 days)
+ * - Access Token: curta duração (15min), usado em todas as requisições
+ * - Refresh Token: longa duração (7 dias), usado para renovar access token
  * - Idle timeout: YES (10 min by default, configured in proxy.ts)
  * - TokenVersion: YES (validated on every session check for logout invalidation)
+ *
+ * @see lib/auth/jwt-tokens.ts para geração e verificação de tokens
  */
 
-import { SignJWT, jwtVerify, errors as joseErrors } from 'jose';
 import { cookies } from 'next/headers';
+import { logger } from '@/lib/logger';
+import {
+  verifyAccessToken,
+  signTokenPair,
+  signAccessToken,
+  ACCESS_TOKEN_COOKIE,
+  REFRESH_TOKEN_COOKIE,
+  ACCESS_TOKEN_MAX_AGE_SECONDS,
+  REFRESH_TOKEN_MAX_AGE_SECONDS,
+  type TokenPayload,
+  type TokenVerifyError,
+} from './jwt-tokens';
 
-// Validar JWT_SECRET em produção
-if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
-  throw new Error(
-    '🚨 SECURITY ERROR: JWT_SECRET environment variable is required in production. ' +
-    'Please set a secure random secret to prevent token forgery.'
-  );
-}
+// Re-export para compatibilidade com código existente
+export const AUTH_COOKIE_NAME = ACCESS_TOKEN_COOKIE;
 
-// Configuração do JWT - Nunca usar fallbacks em produção
-const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET!);
-const JWT_ALGORITHM = 'HS256';
+// Re-export tipos para compatibilidade
+export type JWTVerifyError = TokenVerifyError;
 
-// TTL configurável via env (default: 7 dias)
-const SESSION_TTL_DAYS = parseInt(process.env.CLIENT_SESSION_TTL_DAYS || '7', 10);
-const JWT_EXPIRATION = `${SESSION_TTL_DAYS}d`;
-const COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * SESSION_TTL_DAYS;
-
-// Nome do cookie
-export const AUTH_COOKIE_NAME = 'auth_token';
-
-// Tipos de erro de verificação JWT
-export type JWTVerifyError = 'expired' | 'invalid' | 'token_version_mismatch' | null;
-
-// Tipo do payload do JWT
+// Tipo do payload do JWT (mantém compatibilidade)
 export interface JWTPayload {
   userId: string;
   email: string;
   role: string;
-  tokenVersion: number; // Versão do token para invalidação de sessões
+  tokenVersion: number;
+  type?: 'access' | 'refresh';
   iat?: number;
   exp?: number;
 }
 
 /**
- * Assina um payload e gera um JWT
+ * Assina um payload e gera um JWT (access token)
+ * @deprecated Use signAccessToken ou signTokenPair de jwt-tokens.ts
  */
-export async function sign(payload: Omit<JWTPayload, 'iat' | 'exp'>): Promise<string> {
-  const jwt = await new SignJWT(payload as Record<string, unknown>)
-    .setProtectedHeader({ alg: JWT_ALGORITHM })
-    .setIssuedAt()
-    .setExpirationTime(JWT_EXPIRATION)
-    .sign(JWT_SECRET);
-
-  return jwt;
+export async function sign(payload: Omit<JWTPayload, 'iat' | 'exp' | 'type'>): Promise<string> {
+  return signAccessToken(payload);
 }
 
 /**
- * Verifica e decodifica um JWT
+ * Verifica e decodifica um JWT (access token)
  * @returns Objeto com payload e erro, se houver
  */
 export async function verify(
   token: string,
   validateTokenVersion: boolean = false
 ): Promise<{ payload: JWTPayload | null; error: JWTVerifyError }> {
-  try {
-    const { payload } = await jwtVerify(token, JWT_SECRET);
-    const jwtPayload = payload as unknown as JWTPayload;
-
-    // Se solicitado, validar tokenVersion contra o banco de dados
-    if (validateTokenVersion && jwtPayload.userId) {
-      const { prisma } = await import('../db');
-      const user = await prisma.user.findUnique({
-        where: { id: jwtPayload.userId },
-        select: { tokenVersion: true },
-      });
-
-      // Se o usuário não existe ou o tokenVersion não bate, token inválido
-      if (!user || user.tokenVersion !== jwtPayload.tokenVersion) {
-        console.warn('[CLIENT_SESSION] Token version mismatch - session invalidated');
-        return { payload: null, error: 'token_version_mismatch' };
-      }
-    }
-
-    return { payload: jwtPayload, error: null };
-  } catch (error) {
-    // Detectar erro de token expirado especificamente
-    if (error instanceof joseErrors.JWTExpired) {
-      console.warn('[CLIENT_SESSION] JWT expired');
-      return { payload: null, error: 'expired' };
-    }
-    console.error('[CLIENT_SESSION] JWT verification failed:', error);
-    return { payload: null, error: 'invalid' };
-  }
+  const result = await verifyAccessToken(token, validateTokenVersion);
+  return {
+    payload: result.payload as JWTPayload | null,
+    error: result.error,
+  };
 }
 
 /**
@@ -103,42 +72,67 @@ export async function verifySimple(token: string, validateTokenVersion: boolean 
 }
 
 /**
- * Seta o cookie de autenticação
- * Por padrão, cookie de sessão (sem Max-Age) - fecha ao fechar o navegador
- * Para "lembrar de mim", passar rememberMe: true
+ * Seta o cookie de autenticação (access token)
+ * @deprecated Use setAuthCookies para setar ambos os cookies
  */
 export async function setAuthCookie(token: string, rememberMe: boolean = false): Promise<void> {
   const cookieStore = await cookies();
+  const isProduction = process.env.NODE_ENV === 'production';
 
-  const cookieOptions: Record<string, unknown> = {
+  cookieStore.set(AUTH_COOKIE_NAME, token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: isProduction,
     sameSite: 'lax',
     path: '/',
-  };
-
-  // Se "lembrar de mim", adicionar maxAge (usa SESSION_TTL_DAYS)
-  if (rememberMe) {
-    cookieOptions.maxAge = COOKIE_MAX_AGE_SECONDS;
-  }
-  // Caso contrário, cookie de sessão (sem maxAge) - fecha ao fechar navegador
-
-  cookieStore.set(AUTH_COOKIE_NAME, token, cookieOptions as Parameters<typeof cookieStore.set>[2]);
+    maxAge: rememberMe ? ACCESS_TOKEN_MAX_AGE_SECONDS : undefined,
+  });
 }
 
 /**
- * Remove o cookie de autenticação
+ * Seta ambos os cookies de autenticação (access + refresh)
+ */
+export async function setAuthCookies(
+  accessToken: string,
+  refreshToken: string,
+  rememberMe: boolean = true
+): Promise<void> {
+  const cookieStore = await cookies();
+  const isProduction = process.env.NODE_ENV === 'production';
+
+  cookieStore.set(ACCESS_TOKEN_COOKIE, accessToken, {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: 'lax',
+    path: '/',
+    maxAge: rememberMe ? ACCESS_TOKEN_MAX_AGE_SECONDS : undefined,
+  });
+
+  cookieStore.set(REFRESH_TOKEN_COOKIE, refreshToken, {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: 'lax',
+    path: '/',
+    maxAge: rememberMe ? REFRESH_TOKEN_MAX_AGE_SECONDS : undefined,
+  });
+}
+
+/**
+ * Remove os cookies de autenticação
  */
 export async function removeAuthCookie(): Promise<void> {
   const cookieStore = await cookies();
+  const isProduction = process.env.NODE_ENV === 'production';
 
-  cookieStore.set(AUTH_COOKIE_NAME, '', {
+  const clearOptions = {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
+    secure: isProduction,
+    sameSite: 'lax' as const,
     path: '/',
-    maxAge: 0, // Expira imediatamente
-  });
+    maxAge: 0,
+  };
+
+  cookieStore.set(ACCESS_TOKEN_COOKIE, '', clearOptions);
+  cookieStore.set(REFRESH_TOKEN_COOKIE, '', clearOptions);
 }
 
 /**
@@ -162,12 +156,15 @@ export async function getSession(): Promise<JWTPayload | null> {
 }
 
 /**
- * Cria um token e seta o cookie em uma única operação
+ * Cria um par de tokens e seta os cookies em uma única operação
  */
-export async function createSession(payload: Omit<JWTPayload, 'iat' | 'exp'>, rememberMe: boolean = false): Promise<string> {
-  const token = await sign(payload);
-  await setAuthCookie(token, rememberMe);
-  return token;
+export async function createSession(
+  payload: Omit<JWTPayload, 'iat' | 'exp' | 'type'>,
+  rememberMe: boolean = true
+): Promise<string> {
+  const { accessToken, refreshToken } = await signTokenPair(payload);
+  await setAuthCookies(accessToken, refreshToken, rememberMe);
+  return accessToken;
 }
 
 /**
@@ -188,7 +185,7 @@ export async function getUserFromRequest(request: Request): Promise<JWTPayload |
     if (!cookieHeader) return null;
 
     // Parsear cookies (usando indexOf para preservar '=' no valor do JWT)
-    const cookies = cookieHeader.split(';').reduce((acc, cookie) => {
+    const parsedCookies = cookieHeader.split(';').reduce((acc, cookie) => {
       const trimmed = cookie.trim();
       const eqIndex = trimmed.indexOf('=');
       if (eqIndex === -1) return acc;
@@ -198,13 +195,16 @@ export async function getUserFromRequest(request: Request): Promise<JWTPayload |
       return acc;
     }, {} as Record<string, string>);
 
-    const token = cookies[AUTH_COOKIE_NAME];
+    const token = parsedCookies[AUTH_COOKIE_NAME];
     if (!token) return null;
 
     // Verificar e decodificar JWT (sempre validar tokenVersion)
     return verifySimple(token, true);
   } catch (error) {
-    console.error('[CLIENT_SESSION] Error getting user from request:', error);
+    logger.error({
+      event: 'session_get_user_error',
+      err: error instanceof Error ? { message: error.message, name: error.name } : error,
+    }, 'Error getting user from request');
     return null;
   }
 }

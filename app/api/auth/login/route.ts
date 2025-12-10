@@ -4,18 +4,15 @@ import bcrypt from 'bcrypt';
 import { withApiHandlerResponse } from '@/lib/api/handler';
 import { LoginSchema } from '@/lib/validation/auth';
 import { prisma } from '@/lib/db';
-import { sign, AUTH_COOKIE_NAME } from '@/lib/auth/session';
+import {
+  signTokenPair,
+  ACCESS_TOKEN_COOKIE,
+  REFRESH_TOKEN_COOKIE,
+  ACCESS_TOKEN_MAX_AGE_SECONDS,
+  REFRESH_TOKEN_MAX_AGE_SECONDS,
+} from '@/lib/auth/jwt-tokens';
 import { UserStatus, AuthRole, type User } from '@/types/contracts';
 import { rateLimitByIP, RATE_LIMITS } from '@/lib/rate-limit-redis';
-
-interface ValidationError {
-  field: string;
-  message: string;
-}
-
-// Cookie options
-const SESSION_TTL_DAYS = parseInt(process.env.CLIENT_SESSION_TTL_DAYS || '7', 10);
-const COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * SESSION_TTL_DAYS;
 
 export const POST = withApiHandlerResponse(async (context) => {
   const { req, logger } = context;
@@ -85,8 +82,8 @@ export const POST = withApiHandlerResponse(async (context) => {
       data: { lastLoginAt: new Date() },
     });
 
-    // Criar token JWT com tokenVersion
-    const token = await sign({
+    // Criar par de tokens JWT (access + refresh)
+    const { accessToken, refreshToken } = await signTokenPair({
       userId: dbUser.id,
       email: dbUser.email,
       role: dbUser.role?.name || 'user',
@@ -115,20 +112,32 @@ export const POST = withApiHandlerResponse(async (context) => {
       message: 'Login realizado com sucesso',
     });
 
-    // Set auth cookie directly on the response
+    // Set auth cookies directly on the response
     // NOTE: cookies() API doesn't work with custom NextResponse - must set on response object
-    response.cookies.set(AUTH_COOKIE_NAME, token, {
+    const isProduction = process.env.NODE_ENV === 'production';
+
+    // Access token (curta duração - 15min)
+    response.cookies.set(ACCESS_TOKEN_COOKIE, accessToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: isProduction,
       sameSite: 'lax',
       path: '/',
-      maxAge: COOKIE_MAX_AGE_SECONDS,
+      maxAge: ACCESS_TOKEN_MAX_AGE_SECONDS,
+    });
+
+    // Refresh token (longa duração - 7 dias)
+    response.cookies.set(REFRESH_TOKEN_COOKIE, refreshToken, {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: 'lax',
+      path: '/',
+      maxAge: REFRESH_TOKEN_MAX_AGE_SECONDS,
     });
 
     // Reset last_activity cookie para evitar timeout de inatividade logo após login
     response.cookies.set('last_activity', Date.now().toString(), {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: isProduction,
       sameSite: 'lax',
       path: '/',
       maxAge: 60 * 60 * 24, // 24 hours

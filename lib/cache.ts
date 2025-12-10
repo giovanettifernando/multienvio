@@ -442,3 +442,48 @@ export const quoteCache = {
     return cacheDeletePattern(`${CachePrefix.QUOTE}*${normalized}*`);
   },
 };
+
+// ============================================================================
+// FAQ CACHE HELPER
+// ============================================================================
+
+/**
+ * Cache de FAQs públicos
+ * Invalidação manual quando admin atualiza
+ */
+export const faqCache = {
+  keyPrefix: 'faq:',
+
+  /**
+   * Invalida todo o cache de FAQ (chamado após criar/editar/deletar)
+   */
+  async invalidateAll(): Promise<number> {
+    return cacheDeletePattern('faq:*');
+  },
+};
+
+// ============================================================================
+// PICKUP POINTS CACHE HELPER
+// ============================================================================
+
+/**
+ * Cache de pontos de coleta
+ * Invalidação manual quando admin atualiza
+ */
+export const pickupPointsCache = {
+  keyPrefix: 'pickup-points:',
+
+  /**
+   * Invalida todo o cache de pontos de coleta
+   */
+  async invalidateAll(): Promise<number> {
+    return cacheDeletePattern('pickup-points:*');
+  },
+
+  /**
+   * Invalida cache por UF específico
+   */
+  async invalidateByUf(uf: string): Promise<number> {
+    return cacheDeletePattern(`pickup-points:${uf.toUpperCase()}:*`);
+  },
+};

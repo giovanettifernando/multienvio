@@ -62,47 +62,47 @@ export const GET = withApiHandler<CollectorDashboardResponse>(async (context) =>
   const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1, 0, 0, 0);
   const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
 
-  // 1. Coletas Pendentes (status PENDING, collectedAt nulo)
-  const pendingCount = await prisma.pickupRequest.count({
-    where: {
-      collectorId: session.coletorId,
-      status: 'PENDING',
-      collectedAt: null,
-    },
-  });
-
-  // 2. Coletas Hoje (collectedAt entre todayStart e todayEnd)
-  const todayCount = await prisma.pickupRequest.count({
-    where: {
-      collectorId: session.coletorId,
-      collectedAt: {
-        gte: todayStart,
-        lte: todayEnd,
+  // Buscar todos os counts em paralelo para melhor performance
+  const [pendingCount, todayCount, monthlyCount, lastMonthCount] = await Promise.all([
+    // 1. Coletas Pendentes (status PENDING, collectedAt nulo)
+    prisma.pickupRequest.count({
+      where: {
+        collectorId: session.coletorId,
+        status: 'PENDING',
+        collectedAt: null,
       },
-    },
-  });
-
-  // 3. Coletas no Mês (collectedAt entre monthStart e monthEnd)
-  const monthlyCount = await prisma.pickupRequest.count({
-    where: {
-      collectorId: session.coletorId,
-      collectedAt: {
-        gte: monthStart,
-        lte: monthEnd,
+    }),
+    // 2. Coletas Hoje (collectedAt entre todayStart e todayEnd)
+    prisma.pickupRequest.count({
+      where: {
+        collectorId: session.coletorId,
+        collectedAt: {
+          gte: todayStart,
+          lte: todayEnd,
+        },
       },
-    },
-  });
-
-  // 4. Coletas no Mês Anterior (para variação percentual)
-  const lastMonthCount = await prisma.pickupRequest.count({
-    where: {
-      collectorId: session.coletorId,
-      collectedAt: {
-        gte: lastMonthStart,
-        lte: lastMonthEnd,
+    }),
+    // 3. Coletas no Mês (collectedAt entre monthStart e monthEnd)
+    prisma.pickupRequest.count({
+      where: {
+        collectorId: session.coletorId,
+        collectedAt: {
+          gte: monthStart,
+          lte: monthEnd,
+        },
       },
-    },
-  });
+    }),
+    // 4. Coletas no Mês Anterior (para variação percentual)
+    prisma.pickupRequest.count({
+      where: {
+        collectorId: session.coletorId,
+        collectedAt: {
+          gte: lastMonthStart,
+          lte: lastMonthEnd,
+        },
+      },
+    }),
+  ]);
 
   // Calcular variação percentual do mês
   const monthlyChange =

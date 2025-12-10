@@ -157,46 +157,46 @@ export const GET = withApiHandler<ColetasRealizadasListResponse>(async (context)
     ];
   }
 
-  // Contar total
-  const total = await prisma.pickupRequest.count({ where });
-  logger.debug('coletores_coletas_realizadas_total', { total });
-
-  // Buscar coletas realizadas
-  const pickups = await prisma.pickupRequest.findMany({
-    where,
-    include: {
-      shipment: {
-        select: {
-          id: true,
-          platformTrackingCode: true,
-          carrier: true,
-          service: true,
-          weight: true,
-          declaredValue: true,
-          recipientName: true,
-          destinationCity: true,
-          destinationState: true,
-          originCep: true,
-          pickupFee: true,
+  // Buscar total e pickups em paralelo para melhor performance
+  const [total, pickups] = await Promise.all([
+    prisma.pickupRequest.count({ where }),
+    prisma.pickupRequest.findMany({
+      where,
+      include: {
+        shipment: {
+          select: {
+            id: true,
+            platformTrackingCode: true,
+            carrier: true,
+            service: true,
+            weight: true,
+            declaredValue: true,
+            recipientName: true,
+            destinationCity: true,
+            destinationState: true,
+            originCep: true,
+            pickupFee: true,
+          },
         },
-      },
-      user: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          phone: true,
-          addresses: {
-            where: { isDefault: true },
-            take: 1,
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+            addresses: {
+              where: { isDefault: true },
+              take: 1,
+            },
           },
         },
       },
-    },
-    orderBy: { collectedAt: 'desc' }, // Mais recentes primeiro
-    skip: (page - 1) * pageSize,
-    take: pageSize,
-  });
+      orderBy: { collectedAt: 'desc' }, // Mais recentes primeiro
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+    }),
+  ]);
+  logger.debug('coletores_coletas_realizadas_total', { total });
 
   // Mapear para formato do frontend
   const items = pickups.map((pickup) => {

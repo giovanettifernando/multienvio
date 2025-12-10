@@ -102,7 +102,9 @@ export function SavedCardPaymentForm({
         if (!response.ok) {
           throw new Error("Falha ao carregar configuração do Mercado Pago");
         }
-        const data = await response.json();
+        const json = await response.json();
+        // Handle standardized API response format { data: T, error, meta }
+        const data = json.data ?? json;
         setPublicKey(data.publicKey);
 
         // Carregar script do SDK do Mercado Pago
@@ -276,7 +278,9 @@ export function SavedCardPaymentForm({
         throw new Error("Cartão não autorizado");
       }
 
-      const result = await paymentResponse.json();
+      const resultJson = await paymentResponse.json();
+      // Handle standardized API response format { data: T, error, meta }
+      const result = resultJson.data ?? resultJson;
 
       // Verificar se o pagamento foi realmente aprovado
       if (result.payment.status === 'approved') {

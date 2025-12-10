@@ -388,7 +388,7 @@ export function PostingUnitPicker() {
   }
 
   return (
-    <>
+    <div>
       <ELCard header={{ title: "Unidade de postagem" }}>
         <Space orientation="vertical" size={16} style={{ width: "100%" }}>
           {/* Barra de pesquisa */}
@@ -646,7 +646,7 @@ export function PostingUnitPicker() {
         selectedPointId={undefined}
         onSelect={handleAgencyMapClose}
       />
-    </>
+    </div>
   );
 }
 

@@ -78,35 +78,35 @@ export const GET = withApiHandler<PickupRequestsResponse>(async (context) => {
     ];
   }
 
-  // Contar total
-  const total = await prisma.pickupRequest.count({ where });
-
-  // Buscar pickup requests
-  const pickups = await prisma.pickupRequest.findMany({
-    where,
-    include: {
-      shipment: {
-        select: {
-          id: true,
-          platformTrackingCode: true,
-          carrier: true,
-          service: true,
+  // Buscar total e pickups em paralelo para melhor performance
+  const [total, pickups] = await Promise.all([
+    prisma.pickupRequest.count({ where }),
+    prisma.pickupRequest.findMany({
+      where,
+      include: {
+        shipment: {
+          select: {
+            id: true,
+            platformTrackingCode: true,
+            carrier: true,
+            service: true,
+          },
+        },
+        collector: {
+          select: {
+            id: true,
+            pfNome: true,
+          },
         },
       },
-      collector: {
-        select: {
-          id: true,
-          pfNome: true,
-        },
-      },
-    },
-    orderBy: [
-      { scheduleAt: { sort: 'asc', nulls: 'last' } },
-      { createdAt: 'desc' },
-    ],
-    skip: (page - 1) * pageSize,
-    take: pageSize,
-  });
+      orderBy: [
+        { scheduleAt: { sort: 'asc', nulls: 'last' } },
+        { createdAt: 'desc' },
+      ],
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+    }),
+  ]);
 
   // Mapear para formato do frontend
   const items: PickupRequestWithShipment[] = pickups.map((pickup) => ({

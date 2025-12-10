@@ -3,10 +3,13 @@
  *
  * Lista pública de FAQs ativos para a Central de Ajuda
  * Não requer autenticação
+ *
+ * CACHE: 1 hora (LONG TTL) - FAQs mudam raramente
  */
 
 import { withApiHandler } from '@/lib/api/handler';
 import { prisma } from '@/lib/db';
+import { configCache, CacheTTL } from '@/lib/cache';
 import type { FAQAudience } from '@prisma/client';
 
 type FAQItem = {
@@ -36,6 +39,21 @@ export const GET = withApiHandler<GetFAQResponse>(async (context) => {
   const audience: FAQAudience = validAudiences.includes(audienceParam as FAQAudience)
     ? (audienceParam as FAQAudience)
     : 'USER';
+
+  // Gerar cache key - só cacheia listagem sem busca (query vazia)
+  // Buscas específicas não são cacheadas pois são únicas
+  const shouldCache = !query;
+  const cacheKey = shouldCache
+    ? `faq:${audience}:${category || 'all'}`
+    : null;
+
+  // Verificar cache se aplicável
+  if (cacheKey) {
+    const cached = await configCache.get<GetFAQResponse>(cacheKey);
+    if (cached) {
+      return { data: cached };
+    }
+  }
 
   // Buscar FAQs ativos ordenados
   const faqs = await prisma.fAQItem.findMany({
@@ -82,11 +100,16 @@ export const GET = withApiHandler<GetFAQResponse>(async (context) => {
     .map((c) => c.category)
     .filter((c): c is string => c !== null);
 
-  return {
-    data: {
-      items: faqs,
-      total: faqs.length,
-      categories: uniqueCategories,
-    },
+  const response: GetFAQResponse = {
+    items: faqs,
+    total: faqs.length,
+    categories: uniqueCategories,
   };
+
+  // Salvar no cache se aplicável (TTL 1 hora)
+  if (cacheKey) {
+    configCache.set(cacheKey, response).catch(() => {});
+  }
+
+  return { data: response };
 });

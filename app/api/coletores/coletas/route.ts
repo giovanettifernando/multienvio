@@ -96,44 +96,44 @@ export const GET = withApiHandler<ColetasListResponse>(async (context) => {
     }
   }
 
-  // Contar total
-  const total = await prisma.pickupRequest.count({ where });
-
-  // Buscar pickup requests
-  const pickups = await prisma.pickupRequest.findMany({
-    where,
-    include: {
-      shipment: {
-        select: {
-          id: true,
-          platformTrackingCode: true,
-          carrier: true,
-          service: true,
-          weight: true,
-          declaredValue: true,
-          recipientName: true,
-          destinationCity: true,
-          destinationState: true,
-          originCep: true,
+  // Buscar total e pickups em paralelo para melhor performance
+  const [total, pickups] = await Promise.all([
+    prisma.pickupRequest.count({ where }),
+    prisma.pickupRequest.findMany({
+      where,
+      include: {
+        shipment: {
+          select: {
+            id: true,
+            platformTrackingCode: true,
+            carrier: true,
+            service: true,
+            weight: true,
+            declaredValue: true,
+            recipientName: true,
+            destinationCity: true,
+            destinationState: true,
+            originCep: true,
+          },
         },
-      },
-      user: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          phone: true,
-          addresses: {
-            where: { isDefault: true },
-            take: 1,
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+            addresses: {
+              where: { isDefault: true },
+              take: 1,
+            },
           },
         },
       },
-    },
-    orderBy: { createdAt: 'desc' },
-    skip: (page - 1) * pageSize,
-    take: pageSize,
-  });
+      orderBy: { createdAt: 'desc' },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+    }),
+  ]);
 
   // Mapear para formato do frontend
   const items = pickups.map((pickup) => {

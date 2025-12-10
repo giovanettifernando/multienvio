@@ -1,7 +1,15 @@
+/**
+ * GET /api/pickup-points
+ *
+ * Lista pontos de coleta ativos filtrados por localização
+ * CACHE: 1 hora - dados de pontos mudam raramente
+ */
+
 import { withApiHandler } from '@/lib/api/handler';
 import { prisma } from '@/lib/db';
 import { getCoordinatesForCep } from '@/lib/services/postgis';
 import { logger } from '@/lib/logger';
+import { cacheGetOrSet, CacheTTL } from '@/lib/cache';
 
 interface PickupPoint {
   id: string;
@@ -19,16 +27,42 @@ interface PickupPoint {
 
 type PickupPointsListResponse = PickupPoint[];
 
-/**
- * GET /api/pickup-points
- * Retorna pontos de coleta ativos filtrados por localização
- */
 export const GET = withApiHandler<PickupPointsListResponse>(async (context) => {
   const { searchParams } = new URL(context.req.url);
   const cidade = searchParams.get('cidade');
   const uf = searchParams.get('uf');
   const q = searchParams.get('q'); // Busca por nome/bairro/cidade
 
+  // Gerar cache key - só cacheia listagem por UF/cidade sem busca textual
+  // Busca textual não é cacheada pois é muito variável
+  const shouldCache = !q;
+  const cacheKey = shouldCache
+    ? `pickup-points:${uf || 'all'}:${cidade || 'all'}`
+    : null;
+
+  // Usar cache-aside pattern se aplicável
+  if (cacheKey) {
+    const result = await cacheGetOrSet<PickupPoint[]>(
+      cacheKey,
+      () => fetchPickupPoints(cidade, uf, q),
+      CacheTTL.LONG // 1 hora
+    );
+    return { data: result };
+  }
+
+  // Sem cache para buscas textuais
+  const result = await fetchPickupPoints(cidade, uf, q);
+  return { data: result };
+});
+
+/**
+ * Busca pontos de coleta no banco de dados
+ */
+async function fetchPickupPoints(
+  cidade: string | null,
+  uf: string | null,
+  q: string | null
+): Promise<PickupPoint[]> {
   // Filtros base
   const where: {
     status: 'ACTIVE' | 'BLOCKED' | 'PENDING';
@@ -115,5 +149,5 @@ export const GET = withApiHandler<PickupPointsListResponse>(async (context) => {
     })
   );
 
-  return { data: result };
-});
+  return result;
+}

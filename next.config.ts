@@ -22,6 +22,10 @@ const nextConfig: NextConfig = {
   // Transpile Ant Design packages
   transpilePackages: ['antd', '@ant-design', 'rc-util', 'rc-pagination', 'rc-picker'],
 
+  // Server-only packages - prevent bundling with Turbopack
+  // pino/thread-stream have test files that break Turbopack
+  serverExternalPackages: ['pino', 'thread-stream', 'pino-pretty'],
+
   // Cache Components temporarily disabled - Math.random() issues with Ant Design
   // TODO: Re-enable after proper configuration of all pages with Ant Design
   // cacheComponents: true,

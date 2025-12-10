@@ -12,6 +12,24 @@ import { ApiError } from '@/lib/api/errors';
 import { processWebhook } from '@/lib/mercadopago';
 import type { MercadoPagoWebhookPayload, WebhookHeaders } from '@/lib/mercadopago';
 import { logger } from '@/lib/logger';
+import { z } from 'zod';
+
+/**
+ * Schema de validação para webhook do MercadoPago
+ * Baseado na documentação oficial do MP
+ */
+const MercadoPagoWebhookSchema = z.object({
+  id: z.union([z.string(), z.number()]).optional(),
+  live_mode: z.boolean().optional(),
+  type: z.string().max(100).optional(),
+  date_created: z.string().optional(),
+  user_id: z.union([z.string(), z.number()]).optional(),
+  api_version: z.string().max(20).optional(),
+  action: z.string().max(100).optional(),
+  data: z.object({
+    id: z.union([z.string(), z.number()]).optional(),
+  }).passthrough().optional(),
+}).passthrough();
 
 interface WebhookProcessResponse {
   success: boolean;
@@ -44,8 +62,24 @@ export const POST = withApiHandler<WebhookProcessResponse>(async (context) => {
     hasRequestId: !!headers['x-request-id'],
   }, 'Webhook MercadoPago received');
 
-  // Parse payload
-  const payload: MercadoPagoWebhookPayload = await context.req.json();
+  // Parse e validar payload
+  let rawPayload: unknown;
+  try {
+    rawPayload = await context.req.json();
+  } catch {
+    throw ApiError.badRequest('JSON inválido');
+  }
+
+  const parseResult = MercadoPagoWebhookSchema.safeParse(rawPayload);
+  if (!parseResult.success) {
+    logger.warn({
+      event: 'webhook_mp_invalid_payload',
+      errors: parseResult.error.issues,
+    }, 'Invalid MercadoPago webhook payload');
+    throw ApiError.badRequest('Payload inválido');
+  }
+
+  const payload = parseResult.data as MercadoPagoWebhookPayload;
 
   logger.info({
     event: 'webhook_mp_payload',

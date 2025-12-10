@@ -76,7 +76,9 @@ export function CardModal({ open, loading, onSubmit, onCancel }: CardModalProps)
         if (!response.ok) {
           throw new Error("Falha ao carregar configuração do Mercado Pago");
         }
-        const data = await response.json();
+        const json = await response.json();
+        // Handle standardized API response format { data: T, error, meta }
+        const data = json.data ?? json;
         setPublicKey(data.publicKey);
 
         // Carregar script do SDK do Mercado Pago

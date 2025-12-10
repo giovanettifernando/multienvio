@@ -27,7 +27,7 @@ import { useProfile, useProfileSave } from "@/hooks/useAccount";
 import type { Profile } from "@/types/account";
 import { useAuthStore } from "@/stores/auth";
 import { maskCPF, maskCNPJ, maskPhone, onlyDigits } from "@/lib/masks";
-import { isValidCNPJ, isValidCPF } from "@/lib/validation/utils";
+import { isValidCNPJ, isValidCPF } from "@/lib/validation/validators";
 
 const formSchema = z
   .object({

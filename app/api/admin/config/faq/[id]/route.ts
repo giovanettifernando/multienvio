@@ -12,6 +12,7 @@ import { requireAdminUser } from '@/lib/auth/admin-helpers';
 import { AdminPermission } from '@prisma/client';
 import { withApiHandler } from '@/lib/api/handler';
 import { ApiError } from '@/lib/api/errors';
+import { faqCache } from '@/lib/cache';
 
 /**
  * Schema de validação para atualizar FAQ (campos opcionais)
@@ -109,6 +110,9 @@ export const PATCH = withApiHandler<unknown, { id: string }>(async ({ req, param
     data: parsed.data,
   });
 
+  // Invalidar cache de FAQ público (fire and forget)
+  faqCache.invalidateAll().catch(() => {});
+
   return {
     data: {
       success: true,
@@ -154,6 +158,9 @@ export const DELETE = withApiHandler<unknown, { id: string }>(async ({ req, para
   await prisma.fAQItem.delete({
     where: { id },
   });
+
+  // Invalidar cache de FAQ público (fire and forget)
+  faqCache.invalidateAll().catch(() => {});
 
   return {
     data: {

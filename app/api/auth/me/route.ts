@@ -2,6 +2,7 @@ import { withApiHandler } from '@/lib/api/handler';
 import { ApiError } from '@/lib/api/errors';
 import { getUserFromRequest } from '@/lib/auth/session';
 import { prisma } from '@/lib/db';
+import { userCache, CacheTTL } from '@/lib/cache';
 import { UserStatus, AuthRole, type User } from '@/types/contracts';
 
 interface MeResponse {
@@ -20,6 +21,21 @@ export const GET = withApiHandler<MeResponse>(async (context) => {
       message: 'Não autenticado',
       status: 401,
     });
+  }
+
+  // Verificar cache primeiro (TTL 5 minutos)
+  const cacheKey = `me:${session.userId}`;
+  const cached = await userCache.get<User>(cacheKey);
+  if (cached) {
+    // Verificar se usuário ainda está ativo no cache
+    if (cached.status !== UserStatus.ACTIVE) {
+      throw new ApiError({
+        code: 'forbidden',
+        message: 'Conta inativa ou bloqueada',
+        status: 403,
+      });
+    }
+    return { data: { user: cached } };
   }
 
   // Buscar usuário no banco
@@ -62,6 +78,9 @@ export const GET = withApiHandler<MeResponse>(async (context) => {
     createdAt: dbUser.createdAt.toISOString(),
     updatedAt: dbUser.updatedAt.toISOString(),
   };
+
+  // Salvar no cache (fire and forget)
+  userCache.set(cacheKey, user).catch(() => {});
 
   return { data: { user } };
 });

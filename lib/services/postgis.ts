@@ -9,6 +9,7 @@
  */
 
 import { prisma } from '@/lib/db';
+import { Prisma } from '@prisma/client';
 import { geocodeCEP as geocodeExternal } from '@/lib/services/geocoding';
 
 /**
@@ -200,16 +201,16 @@ export async function calculateDistanceKmFromCeps(
   await getCoordinatesForCep(a);
   await getCoordinatesForCep(b);
 
-  // Calcular distância usando PostGIS
-  const result = await prisma.$queryRawUnsafe<{ distance_m: number }[]>(`
+  // Calcular distância usando PostGIS com query parametrizada (Prisma.sql)
+  const result = await prisma.$queryRaw<{ distance_m: number }[]>(Prisma.sql`
     SELECT ST_Distance(
       ST_SetSRID(ST_MakePoint(a.longitude, a.latitude), 4326)::geography,
       ST_SetSRID(ST_MakePoint(b.longitude, b.latitude), 4326)::geography
     ) AS distance_m
     FROM cep_locations a
     CROSS JOIN cep_locations b
-    WHERE a.cep = $1 AND b.cep = $2
-  `, a, b);
+    WHERE a.cep = ${a} AND b.cep = ${b}
+  `);
 
   const distanceMeters = result[0]?.distance_m ?? 0;
   const distanceKm = distanceMeters / 1000;
@@ -264,7 +265,7 @@ export async function findNearestCollectorByCep(originCep: string): Promise<{
     distance_m: number;
   };
 
-  const rows = await prisma.$queryRawUnsafe<CollectorQueryRow[]>(`
+  const rows = await prisma.$queryRaw<CollectorQueryRow[]>(Prisma.sql`
     WITH collector_locations AS (
       -- Pegar coordenadas dos CEPs PF dos coletores
       SELECT
@@ -279,7 +280,7 @@ export async function findNearestCollectorByCep(originCep: string): Promise<{
         ST_SetSRID(ST_MakePoint(cl_pf.longitude, cl_pf.latitude), 4326)::geography as geom,
         'PF' as source
       FROM collectors c
-      JOIN cep_locations cl_pf ON cl_pf.cep = regexp_replace(c."pfCep", '\\D', '', 'g')
+      JOIN cep_locations cl_pf ON cl_pf.cep = regexp_replace(c."pfCep", '\D', '', 'g')
       WHERE c.status = 'ACTIVE'
         AND c."pfCep" IS NOT NULL
         AND cl_pf.latitude IS NOT NULL
@@ -300,7 +301,7 @@ export async function findNearestCollectorByCep(originCep: string): Promise<{
         ST_SetSRID(ST_MakePoint(cl_pj.longitude, cl_pj.latitude), 4326)::geography as geom,
         'PJ' as source
       FROM collectors c
-      JOIN cep_locations cl_pj ON cl_pj.cep = regexp_replace(c."pjCep", '\\D', '', 'g')
+      JOIN cep_locations cl_pj ON cl_pj.cep = regexp_replace(c."pjCep", '\D', '', 'g')
       WHERE c.status = 'ACTIVE'
         AND c."pjCep" IS NOT NULL
         AND cl_pj.latitude IS NOT NULL
@@ -308,7 +309,7 @@ export async function findNearestCollectorByCep(originCep: string): Promise<{
     ),
     origin AS (
       SELECT ST_SetSRID(ST_MakePoint(longitude, latitude), 4326)::geography as geom
-      FROM cep_locations WHERE cep = $1
+      FROM cep_locations WHERE cep = ${cep}
     )
     SELECT
       cl.id,
@@ -324,7 +325,7 @@ export async function findNearestCollectorByCep(originCep: string): Promise<{
     CROSS JOIN origin
     ORDER BY ST_Distance(origin.geom, cl.geom)
     LIMIT 1
-  `, cep);
+  `);
 
   if (!rows || rows.length === 0) {
     console.log(`[PostGIS] No active collectors found`);

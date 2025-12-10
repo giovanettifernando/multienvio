@@ -12,6 +12,7 @@ import { AdminPermission } from '@prisma/client';
 import type { FAQAudience } from '@prisma/client';
 import { withApiHandler } from '@/lib/api/handler';
 import { ApiError } from '@/lib/api/errors';
+import { faqCache } from '@/lib/cache';
 
 /**
  * Schema de validação para criar/editar FAQ
@@ -128,6 +129,9 @@ export const POST = withApiHandler(async ({ req }) => {
       createdBy: authResult.user.id,
     },
   });
+
+  // Invalidar cache de FAQ público (fire and forget)
+  faqCache.invalidateAll().catch(() => {});
 
   return {
     data: {

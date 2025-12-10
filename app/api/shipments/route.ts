@@ -88,26 +88,26 @@ export const GET = withApiHandler<ShipmentListResponse>(async (context) => {
   // Calcular skip para paginação
   const skip = (page - 1) * limit;
 
-  // Buscar total de registros (para paginação)
-  const total = await prisma.shipment.count({ where });
-
-  // Buscar shipments com paginação
-  const shipments = await prisma.shipment.findMany({
-    where,
-    include: {
-      label: true, // Incluir dados da etiqueta
-      pickupRequest: true, // Incluir dados da coleta
-      packages: {
-        select: {
-          id: true,
-          hasDivergence: true,
+  // Buscar total e shipments em paralelo para melhor performance
+  const [total, shipments] = await Promise.all([
+    prisma.shipment.count({ where }),
+    prisma.shipment.findMany({
+      where,
+      include: {
+        label: true, // Incluir dados da etiqueta
+        pickupRequest: true, // Incluir dados da coleta
+        packages: {
+          select: {
+            id: true,
+            hasDivergence: true,
+          },
         },
       },
-    },
-    orderBy: { createdAt: 'desc' },
-    skip,
-    take: limit,
-  });
+      orderBy: { createdAt: 'desc' },
+      skip,
+      take: limit,
+    }),
+  ]);
 
   // Mapear para o formato esperado pela UI
   const items = shipments.map((s) => {

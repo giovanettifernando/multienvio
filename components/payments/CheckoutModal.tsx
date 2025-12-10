@@ -31,7 +31,7 @@ export function CheckoutModal({
   const handleSuccess = async (result: { paymentId?: number; method: string }) => {
     try {
       // Marcar pagamento aprovado no shipment
-      await fetch(`/api/shipments/${shipmentId}/payment`, {
+      const response = await fetch(`/api/shipments/${shipmentId}/payment`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -44,11 +44,21 @@ export function CheckoutModal({
         }),
       });
 
+      if (!response.ok) {
+        console.error('[CHECKOUT] Erro ao atualizar pagamento:', await response.text());
+      }
+
       // Invalidar cache
       queryClient.invalidateQueries({ queryKey: ['shipments'] });
       queryClient.invalidateQueries({ queryKey: ['wallet'] });
+      // Pré-carregar cache do shipment específico para evitar "não encontrado"
+      queryClient.invalidateQueries({ queryKey: ['shipment', shipmentId] });
 
       message.success('Pagamento aprovado! Etiqueta sendo emitida...');
+
+      // Pequeno delay para garantir que o banco processou a transação
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
       router.push(`/shipments/${shipmentId}`);
     } catch (error) {
       console.error('[CHECKOUT] Erro ao finalizar:', error);

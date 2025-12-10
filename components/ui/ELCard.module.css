@@ -22,6 +22,7 @@
   margin: 0 !important;
   color: var(--color-primary, #003873);
   font-weight: 600 !important;
+  font-size: 1.1rem !important;
 }
 
 .headerDescription {

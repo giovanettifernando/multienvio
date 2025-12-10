@@ -69,48 +69,48 @@ export const GET = withApiHandler<Paged<OpsShipment>>(async (context) => {
     }
   }
 
-  // Get total count
-  const total = await prisma.shipment.count({ where });
-
-  // Fetch shipments with related data
-  const shipments = await prisma.shipment.findMany({
-    where,
-    include: {
-      sender: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
+  // Buscar total e shipments em paralelo para melhor performance
+  const [total, shipments] = await Promise.all([
+    prisma.shipment.count({ where }),
+    prisma.shipment.findMany({
+      where,
+      include: {
+        sender: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
         },
-      },
-      pickupRequest: {
-        include: {
-          collector: {
-            select: {
-              id: true,
-              pfNome: true,
+        pickupRequest: {
+          include: {
+            collector: {
+              select: {
+                id: true,
+                pfNome: true,
+              },
             },
           },
         },
-      },
-      label: {
-        select: {
-          status: true,
-          fileUrl: true,
-          isPrinted: true,
+        label: {
+          select: {
+            status: true,
+            fileUrl: true,
+            isPrinted: true,
+          },
+        },
+        packages: {
+          select: {
+            id: true,
+            hasDivergence: true,
+          },
         },
       },
-      packages: {
-        select: {
-          id: true,
-          hasDivergence: true,
-        },
-      },
-    },
-    orderBy: { createdAt: 'desc' },
-    skip: (page - 1) * pageSize,
-    take: pageSize,
-  });
+      orderBy: { createdAt: 'desc' },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+    }),
+  ]);
 
   // Transform to OpsShipment format
   const items: OpsShipment[] = shipments.map((s) => ({

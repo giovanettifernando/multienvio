@@ -102,29 +102,29 @@ export const GET = withApiHandler<WalletTransactionsResponse>(async ({ req }) =>
     ];
   }
 
-  // Count total
-  const total = await prisma.walletTransaction.count({ where });
-
-  // Fetch transactions with user info
-  const transactions = await prisma.walletTransaction.findMany({
-    where,
-    include: {
-      wallet: {
-        include: {
-          user: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
+  // Buscar total e transações em paralelo para melhor performance
+  const [total, transactions] = await Promise.all([
+    prisma.walletTransaction.count({ where }),
+    prisma.walletTransaction.findMany({
+      where,
+      include: {
+        wallet: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
             },
           },
         },
       },
-    },
-    orderBy: { confirmedAt: 'desc' },
-    skip: (page - 1) * pageSize,
-    take: pageSize,
-  });
+      orderBy: { confirmedAt: 'desc' },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+    }),
+  ]);
 
   // Map to DTO
   const items: AdminWalletTransaction[] = transactions.map((tx) => {

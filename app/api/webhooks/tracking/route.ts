@@ -1,7 +1,20 @@
 import { withApiHandler } from '@/lib/api/handler';
 import { ApiError } from '@/lib/api/errors';
 import { prisma } from "@/lib/db";
+import { z } from "zod";
 import type { TrackingEventType } from "@/types/tracking";
+
+/**
+ * Schema de validação para webhook de tracking
+ */
+const TrackingWebhookSchema = z.object({
+  shipmentId: z.string().uuid("shipmentId deve ser um UUID válido"),
+  code: z.string().min(1, "code é obrigatório").max(50),
+  description: z.string().min(1, "description é obrigatório").max(500),
+  city: z.string().max(100).optional(),
+  uf: z.string().length(2).toUpperCase().optional(),
+  occurredAt: z.string().datetime().optional(),
+});
 
 /**
  * Mapeia códigos de transportadoras para tipos de evento internos
@@ -38,23 +51,21 @@ const carrierCodeMap: Record<string, TrackingEventType> = {
  * Este endpoint deve ser protegido por autenticação de webhook em produção
  */
 export const POST = withApiHandler(async (context) => {
-  let payload: Record<string, unknown>;
+  let rawPayload: unknown;
   try {
-    payload = await context.req.json();
+    rawPayload = await context.req.json();
   } catch {
     throw ApiError.badRequest("JSON inválido no corpo da requisição");
   }
 
-  const shipmentId = payload?.shipmentId as string;
-  const carrierCode = payload?.code as string;
-  const description = payload?.description as string;
-  const city = payload?.city as string | undefined;
-  const uf = payload?.uf as string | undefined;
-  const occurredAt = payload?.occurredAt as string | undefined;
-
-  if (!shipmentId || !carrierCode || !description) {
-    throw ApiError.badRequest("shipmentId, code e description são obrigatórios");
+  // Validar payload com Zod
+  const parseResult = TrackingWebhookSchema.safeParse(rawPayload);
+  if (!parseResult.success) {
+    const errors = parseResult.error.issues.map((e) => `${e.path.join('.')}: ${e.message}`).join('; ');
+    throw ApiError.badRequest(`Dados inválidos: ${errors}`);
   }
+
+  const { shipmentId, code: carrierCode, description, city, uf, occurredAt } = parseResult.data;
 
   // Verificar se o shipment existe
   const shipment = await prisma.shipment.findUnique({

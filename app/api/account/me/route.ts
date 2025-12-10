@@ -4,6 +4,7 @@ import { getUserFromRequest } from '@/lib/auth/session';
 import { prisma } from '@/lib/db';
 import { UpdateProfileSchema } from '@/lib/validation/profile';
 import { logger } from '@/lib/logger';
+import { userCache } from '@/lib/cache';
 
 type UserDto = {
   id: string;
@@ -145,6 +146,9 @@ export const PUT = withApiHandler<UpdateMeResponse>(async (context) => {
   });
 
   logger.info({ event: 'account_me_updated', userId: session.userId }, 'Account updated successfully');
+
+  // Invalidar cache do usuário (fire and forget)
+  userCache.invalidate(session.userId).catch(() => {});
 
   return {
     data: {

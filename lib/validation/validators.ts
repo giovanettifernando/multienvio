@@ -1,6 +1,15 @@
+/**
+ * Validadores puros (client-safe)
+ *
+ * Este arquivo contém funções de validação que NÃO dependem de:
+ * - Prisma
+ * - ApiError
+ * - Qualquer módulo server-only
+ *
+ * Pode ser importado em Client Components sem problemas.
+ */
+
 import { onlyDigits } from "@/lib/masks";
-import { ApiError } from "@/lib/api/errors";
-import type { CompanyWizardData } from "./company";
 
 /**
  * Regex para validar UUID v4
@@ -34,49 +43,8 @@ export function isValidId(value: string): boolean {
 }
 
 /**
- * Valida um parâmetro de rota como ID e lança ApiError se inválido
- * @param id - O valor do parâmetro de rota
- * @param paramName - Nome do parâmetro para mensagem de erro (default: "id")
- * @returns O ID validado
- * @throws ApiError se o ID for inválido
+ * Valida CPF
  */
-export function validateIdParam(id: string | undefined, paramName = "id"): string {
-  if (!id || typeof id !== "string") {
-    throw new ApiError({
-      code: "validation_error",
-      message: `${paramName} é obrigatório`,
-      status: 400,
-    });
-  }
-
-  if (!isValidId(id)) {
-    throw new ApiError({
-      code: "validation_error",
-      message: `${paramName} inválido`,
-      status: 400,
-    });
-  }
-
-  return id;
-}
-
-/**
- * Valida múltiplos parâmetros de rota como IDs
- * @param params - Objeto com parâmetros de rota
- * @param paramNames - Lista de nomes de parâmetros para validar
- * @returns Objeto com IDs validados
- * @throws ApiError se algum ID for inválido
- */
-export function validateIdParams<T extends Record<string, string>>(
-  params: T,
-  paramNames: (keyof T)[]
-): T {
-  for (const name of paramNames) {
-    validateIdParam(params[name], String(name));
-  }
-  return params;
-}
-
 export function isValidCPF(value: string): boolean {
   const digits = onlyDigits(value);
   if (digits.length !== 11) return false;
@@ -97,6 +65,9 @@ export function isValidCPF(value: string): boolean {
   return digit1 === Number(digits[9]) && digit2 === Number(digits[10]);
 }
 
+/**
+ * Valida CNPJ
+ */
 export function isValidCNPJ(value: string): boolean {
   const digits = onlyDigits(value);
   if (digits.length !== 14) return false;
@@ -120,7 +91,25 @@ export function isValidCNPJ(value: string): boolean {
   return digit1 === Number(digits[12]) && digit2 === Number(digits[13]);
 }
 
-export function getCompanyDisplayName(company: CompanyWizardData): string {
+// ============================================================================
+// Company helpers (client-safe)
+// ============================================================================
+
+/**
+ * Tipo mínimo necessário para as funções de company
+ * Evita dependência circular com company.ts
+ */
+interface CompanyWizardDataMinimal {
+  tipoPessoa: "PF" | "PJ";
+  pessoa?: { nomeCompleto?: string; cpf?: string };
+  empresa?: { razao?: string; fantasia?: string; cnpj?: string };
+  preferencias: { remetente?: string };
+}
+
+/**
+ * Obtém nome de exibição da empresa/pessoa
+ */
+export function getCompanyDisplayName(company: CompanyWizardDataMinimal): string {
   const remetente = company.preferencias.remetente?.trim();
   if (remetente) return remetente;
 
@@ -135,7 +124,10 @@ export function getCompanyDisplayName(company: CompanyWizardData): string {
   );
 }
 
-export function getCompanyDocument(company: CompanyWizardData): string {
+/**
+ * Obtém documento da empresa/pessoa (CPF ou CNPJ)
+ */
+export function getCompanyDocument(company: CompanyWizardDataMinimal): string {
   if (company.tipoPessoa === "PF") {
     return onlyDigits(company.pessoa?.cpf ?? "");
   }
