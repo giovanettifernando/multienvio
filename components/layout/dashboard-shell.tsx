@@ -12,16 +12,31 @@ import type { MenuProps } from 'antd';
 
 const { Header, Content } = Layout;
 
-// Hook para detectar viewport mobile de forma reativa
-function useIsMobile(): boolean {
+// Tipos de viewport
+type ViewportType = 'mobile' | 'tablet' | 'desktop';
+
+// Hook para detectar viewport de forma reativa (3 níveis)
+function useViewport(): ViewportType {
   return useSyncExternalStore(
     (callback) => {
       window.addEventListener('resize', callback);
       return () => window.removeEventListener('resize', callback);
     },
-    () => (typeof window !== 'undefined' ? window.innerWidth < 768 : false),
-    () => false
+    () => {
+      if (typeof window === 'undefined') return 'desktop';
+      const width = window.innerWidth;
+      if (width < 768) return 'mobile';
+      if (width < 1024) return 'tablet';
+      return 'desktop';
+    },
+    () => 'desktop'
   );
+}
+
+// Hook legado para compatibilidade
+function useIsMobile(): boolean {
+  const viewport = useViewport();
+  return viewport === 'mobile';
 }
 
 // Ler collapse state do localStorage de forma síncrona
@@ -50,11 +65,17 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   const { token } = theme.useToken();
   const [collapsed, setCollapsed] = useState(getInitialCollapsed);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const isMobile = useIsMobile();
+  const viewport = useViewport();
+  const isMobile = viewport === 'mobile';
+  const isTablet = viewport === 'tablet';
+  const isDesktop = viewport === 'desktop';
   const pathname = usePathname();
   const router = useRouter();
 
   const selectedKey = useMemo(() => keyFromPath(pathname || '/'), [pathname]);
+
+  // Em tablet, sidebar sempre colapsada (modo compacto)
+  const effectiveCollapsed = isTablet ? true : collapsed;
 
   // Persistir collapse state
   useEffect(() => {
@@ -96,9 +117,12 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
   return (
     <Layout style={{ minHeight: '100dvh' }}>
-      {/* Desktop: mostrar sidebar fixa */}
-      {!isMobile && (
-        <Sidebar collapsed={collapsed} onCollapse={setCollapsed} />
+      {/* Desktop e Tablet: mostrar sidebar fixa (tablet = compacta) */}
+      {(isDesktop || isTablet) && (
+        <Sidebar
+          collapsed={effectiveCollapsed}
+          onCollapse={isTablet ? undefined : setCollapsed}
+        />
       )}
 
       {/* Mobile: drawer menu */}
@@ -116,7 +140,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
       <Layout
         style={{
-          marginLeft: isMobile ? 0 : collapsed ? 80 : 280,
+          marginLeft: isMobile ? 0 : effectiveCollapsed ? 80 : 280,
           transition: 'margin-left 0.2s',
         }}
       >

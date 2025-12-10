@@ -198,3 +198,104 @@
     display: none;
   }
 }
+
+/* ============================================
+   MIN-WIDTH INTELIGENTE PARA COLUNAS
+   Evita colunas espremidas em resoluções baixas
+   ============================================ */
+
+/* Tabela com scroll horizontal inteligente */
+.tableScrollable :global(.ant-table) {
+  min-width: 800px;
+}
+
+/* Variantes de min-width */
+.tableMinWidth600 :global(.ant-table) {
+  min-width: 600px;
+}
+
+.tableMinWidth800 :global(.ant-table) {
+  min-width: 800px;
+}
+
+.tableMinWidth1000 :global(.ant-table) {
+  min-width: 1000px;
+}
+
+.tableMinWidth1200 :global(.ant-table) {
+  min-width: 1200px;
+}
+
+/* Min-width padrão por tipo de coluna */
+.table :global(.col-id) {
+  min-width: 80px;
+}
+
+.table :global(.col-date) {
+  min-width: 100px;
+}
+
+.table :global(.col-name) {
+  min-width: 150px;
+}
+
+.table :global(.col-email) {
+  min-width: 180px;
+}
+
+.table :global(.col-status) {
+  min-width: 100px;
+}
+
+.table :global(.col-actions) {
+  min-width: 120px;
+  text-align: right;
+}
+
+.table :global(.col-money) {
+  min-width: 100px;
+  text-align: right;
+}
+
+/* Desktop pequeno (1366x768) - compactar levemente */
+@media (max-width: 1366px) {
+  .table :global(.ant-table-thead > tr > th),
+  .table :global(.ant-table-tbody > tr > td) {
+    padding: var(--el-spacing-sm, 8px) var(--el-spacing-md, 12px);
+  }
+}
+
+/* Tablet - garantir scroll horizontal quando necessário */
+@media (max-width: 1024px) {
+  .tableContainer {
+    position: relative;
+  }
+
+  /* Hint visual de scroll */
+  .tableContainer::before {
+    content: '← →';
+    position: absolute;
+    top: 50%;
+    right: 8px;
+    transform: translateY(-50%);
+    font-size: 10px;
+    color: var(--color-text-secondary, #4A6076);
+    opacity: 0.5;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .tableContainer::-webkit-scrollbar {
+    height: 6px;
+  }
+
+  .tableContainer::-webkit-scrollbar-track {
+    background: var(--color-background, #F7F8FA);
+    border-radius: 3px;
+  }
+
+  .tableContainer::-webkit-scrollbar-thumb {
+    background: var(--color-border, #CFD8E6);
+    border-radius: 3px;
+  }
+}

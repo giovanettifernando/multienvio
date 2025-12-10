@@ -71,14 +71,15 @@
   /* === Container Max-Width (Responsivo) === */
   --el-container-max-width: 100%;
 
-  /* === Breakpoints (referência) === */
-  /* --breakpoint-xs: 0px;        Mobile pequeno */
-  /* --breakpoint-sm: 576px;      Mobile grande */
-  /* --breakpoint-md: 768px;      Tablet */
-  /* --breakpoint-lg: 1024px;     Desktop pequeno */
-  /* --breakpoint-xl: 1280px;     Desktop comum */
-  /* --breakpoint-2xl: 1536px;    Desktop grande */
-  /* --breakpoint-3xl: 1920px;    Ultrawide */
+  /* === Breakpoints Oficiais (CSS Custom Properties) === */
+  /* Usados em media queries - valores de referência */
+  --el-breakpoint-mobile: 768px;      /* < 768px = Mobile */
+  --el-breakpoint-tablet: 1024px;     /* 768-1023px = Tablet */
+  --el-breakpoint-desktop-sm: 1280px; /* 1024-1279px = Desktop pequeno (1366x768) */
+  --el-breakpoint-desktop: 1440px;    /* 1280-1439px = Desktop comum */
+  --el-breakpoint-desktop-lg: 1600px; /* 1440-1599px = Desktop grande */
+  --el-breakpoint-desktop-xl: 1920px; /* 1600-1919px = Full HD */
+  --el-breakpoint-ultrawide: 2560px;  /* >= 1920px = Ultrawide */
 
   /* === Tipografia Responsiva (clamp) === */
   /* Tamanhos fluidos: clamp(min, preferido, max) */
@@ -214,26 +215,48 @@ a {
   padding-right: var(--el-spacing-lg);
 }
 
-/* Desktop pequeno: max-width 1200px */
-@media (min-width: 1024px) {
-  :root {
-    --el-container-max-width: 1200px;
-  }
+/* ============================================
+   BREAKPOINTS RESPONSIVOS
+   Mobile: < 768px
+   Tablet: 768px - 1023px
+   Desktop pequeno: 1024px - 1279px (1366x768)
+   Desktop comum: 1280px - 1439px
+   Desktop grande: 1440px - 1599px
+   Full HD: 1600px - 1919px
+   Ultrawide: >= 1920px
+   ============================================ */
+
+/* Tablet: padding mais confortável */
+@media (min-width: 768px) {
   .el-container {
     padding-left: var(--el-spacing-xl);
     padding-right: var(--el-spacing-xl);
   }
 }
 
-/* Desktop comum: max-width 1400px */
+/* Desktop pequeno (1366x768): max-width otimizado */
+@media (min-width: 1024px) {
+  :root {
+    --el-container-max-width: calc(100% - 48px); /* Usa quase toda a largura */
+  }
+}
+
+/* Desktop comum: max-width 1320px (otimizado para 1366-1440) */
 @media (min-width: 1280px) {
+  :root {
+    --el-container-max-width: 1320px;
+  }
+}
+
+/* Desktop grande: max-width 1400px */
+@media (min-width: 1440px) {
   :root {
     --el-container-max-width: 1400px;
   }
 }
 
-/* Desktop grande: max-width 1600px */
-@media (min-width: 1536px) {
+/* Full HD: max-width 1600px */
+@media (min-width: 1600px) {
   :root {
     --el-container-max-width: 1600px;
   }
@@ -243,6 +266,20 @@ a {
 @media (min-width: 1920px) {
   :root {
     --el-container-max-width: 1800px;
+  }
+}
+
+/* Super Ultrawide (2560px+): max-width 2200px */
+@media (min-width: 2560px) {
+  :root {
+    --el-container-max-width: 2200px;
+  }
+}
+
+/* Ultrawide 21:9 (3440px+): max-width 2800px */
+@media (min-width: 3440px) {
+  :root {
+    --el-container-max-width: 2800px;
   }
 }
 
@@ -347,6 +384,78 @@ a {
 :focus-visible {
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
+}
+
+/* ============================================
+   FORMULÁRIOS RESPONSIVOS
+   Ajustes para resoluções baixas
+   ============================================ */
+
+/* Desktop pequeno (1366px) - inputs menores */
+@media (max-width: 1366px) {
+  .ant-form-item {
+    margin-bottom: 16px;
+  }
+
+  .ant-input,
+  .ant-select-selector,
+  .ant-picker,
+  .ant-input-number {
+    font-size: 13px !important;
+  }
+
+  .ant-form-item-label > label {
+    font-size: 13px;
+  }
+}
+
+/* Tablet (1024px) */
+@media (max-width: 1024px) {
+  .ant-form-item {
+    margin-bottom: 12px;
+  }
+
+  /* Stack horizontal form items */
+  .ant-form-horizontal .ant-form-item-label {
+    flex: 0 0 auto;
+    width: 100%;
+    text-align: left;
+    padding: 0 0 4px;
+  }
+
+  .ant-form-horizontal .ant-form-item-control {
+    flex: 1 1 auto;
+    width: 100%;
+  }
+}
+
+/* Mobile (768px) */
+@media (max-width: 768px) {
+  .ant-form-item {
+    margin-bottom: 12px;
+  }
+
+  .ant-input,
+  .ant-select-selector,
+  .ant-picker,
+  .ant-input-number {
+    font-size: 16px !important; /* Prevent zoom on iOS */
+  }
+
+  .ant-form-item-label > label {
+    font-size: 14px;
+  }
+
+  /* Inputs full width */
+  .ant-form-item-control-input {
+    width: 100%;
+  }
+
+  .ant-select,
+  .ant-picker,
+  .ant-input-number {
+    width: 100% !important;
+  }
 }
 
 /* ============================================

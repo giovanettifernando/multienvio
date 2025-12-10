@@ -20,7 +20,7 @@ type MenuItem = Required<MenuProps>['items'][number];
 
 interface SidebarProps {
   collapsed: boolean;
-  onCollapse: (collapsed: boolean) => void;
+  onCollapse?: (collapsed: boolean) => void;
 }
 
 function keyFromPath(pathname: string): string {
@@ -100,7 +100,7 @@ export function Sidebar({ collapsed, onCollapse }: SidebarProps) {
       onCollapse={onCollapse}
       breakpoint="lg"
       onBreakpoint={(broken) => {
-        if (broken) {
+        if (broken && onCollapse) {
           onCollapse(true);
         }
       }}

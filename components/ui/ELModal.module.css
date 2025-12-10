@@ -89,7 +89,64 @@
   text-align: center;
 }
 
-/* Responsive */
+/* ============================================
+   RESPONSIVIDADE PARA MODAIS
+   Ajustes para resoluções baixas e alturas limitadas
+   ============================================ */
+
+/* Desktop pequeno (1366x768) - ajustar XL modal */
+@media (max-width: 1440px) {
+  :global(.el-modal-xl) .ant-modal {
+    max-width: 900px;
+  }
+}
+
+/* Desktop 1366px */
+@media (max-width: 1366px) {
+  :global(.el-modal-xl) .ant-modal {
+    max-width: 850px;
+  }
+
+  :global(.el-modal-lg) .ant-modal {
+    max-width: 720px;
+  }
+}
+
+/* Altura baixa (768px) - otimizar scroll */
+@media (max-height: 800px) {
+  :global(.el-modal) .ant-modal-body {
+    max-height: calc(100vh - 180px);
+  }
+
+  :global(.el-modal-fullscreen) .ant-modal-body {
+    max-height: calc(100vh - 160px);
+  }
+}
+
+@media (max-height: 700px) {
+  :global(.el-modal) .ant-modal-body {
+    max-height: calc(100vh - 160px);
+    padding: var(--el-spacing-lg, 16px);
+  }
+
+  :global(.el-modal) .ant-modal-header,
+  :global(.el-modal) .ant-modal-footer {
+    padding: var(--el-spacing-md, 12px) var(--el-spacing-lg, 16px);
+  }
+}
+
+/* Tablet */
+@media (max-width: 1024px) {
+  :global(.el-modal-xl) .ant-modal {
+    max-width: calc(100vw - 48px);
+  }
+
+  :global(.el-modal-lg) .ant-modal {
+    max-width: calc(100vw - 48px);
+  }
+}
+
+/* Mobile */
 @media (max-width: 768px) {
   :global(.el-modal) .ant-modal {
     max-width: calc(100vw - 32px) !important;
