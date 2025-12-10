@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Collapse, Space, Typography, Tag, Alert, Button, InputNumber, Row, Col } from "antd";
+import { Collapse, Space, Typography, Tag, Alert, InputNumber, Row, Col } from "antd";
+import { ELButton } from "@/components/ui/ELButton";
 import {
   LockOutlined,
   DeleteOutlined,
@@ -199,8 +200,8 @@ export function VolumeDeclarationTab({ volumeCount }: VolumeDeclarationTabProps)
               />
             </Col>
             <Col>
-              <Button
-                type="text"
+              <ELButton
+                variant="text"
                 danger
                 icon={<DeleteOutlined />}
                 onClick={() => removeItem(index, item.id)}
@@ -208,9 +209,9 @@ export function VolumeDeclarationTab({ volumeCount }: VolumeDeclarationTabProps)
             </Col>
           </Row>
         ))}
-        <Button type="dashed" icon={<PlusOutlined />} onClick={() => addItem(index)} block>
+        <ELButton variant="dashed" icon={<PlusOutlined />} onClick={() => addItem(index)} block>
           Adicionar item
-        </Button>
+        </ELButton>
       </Space>
     );
   };
@@ -238,9 +239,9 @@ export function VolumeDeclarationTab({ volumeCount }: VolumeDeclarationTabProps)
         {filled && (
           <Space>
             <Tag color="blue">Total: {currency.format(total)}</Tag>
-            <Button size="small" danger onClick={() => clearDeclaration(0)}>
+            <ELButton size="small" danger onClick={() => clearDeclaration(0)}>
               Limpar declaração
-            </Button>
+            </ELButton>
           </Space>
         )}
         {renderDeclarationForm(0)}
@@ -279,9 +280,9 @@ export function VolumeDeclarationTab({ volumeCount }: VolumeDeclarationTabProps)
       ) : (
         <Space orientation="vertical" style={{ width: "100%" }} size={12}>
           {filled && (
-            <Button size="small" danger onClick={() => clearDeclaration(index)}>
+            <ELButton size="small" danger onClick={() => clearDeclaration(index)}>
               Limpar declaração
-            </Button>
+            </ELButton>
           )}
           {renderDeclarationForm(index)}
         </Space>

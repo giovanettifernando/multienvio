@@ -4,8 +4,6 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   Alert,
-  Button,
-  Card,
   Empty,
   Modal,
   Space,
@@ -15,6 +13,8 @@ import {
   Input,
   App,
 } from "antd";
+import { ELButton } from "@/components/ui/ELButton";
+import { ELCard } from "@/components/ui/ELCard";
 import {
   ClockCircleOutlined,
 } from "@ant-design/icons";
@@ -289,8 +289,8 @@ export function QuoteResultsSection({
   // Estado inicial: sem resultados e sem loading
   if (!loading && !results && !error) {
     return (
-      <Card
-        title="Resultados da cotação"
+      <ELCard
+        header={{ title: "Resultados da cotação" }}
         style={{ height: "100%", minHeight: 400 }}
       >
         <div
@@ -307,23 +307,23 @@ export function QuoteResultsSection({
             description="Preencha os dados e clique em Calcular para ver as cotações"
             image={Empty.PRESENTED_IMAGE_SIMPLE}
           />
-          <Button
-            type="primary"
+          <ELButton
+            variant="primary"
             size="large"
             onClick={onCalculate}
             disabled={!canCalculate}
           >
             Calcular
-          </Button>
+          </ELButton>
         </div>
-      </Card>
+      </ELCard>
     );
   }
 
   // Estado de loading
   if (loading) {
     return (
-      <Card title="Resultados da cotação" style={{ height: "100%", minHeight: 400 }}>
+      <ELCard header={{ title: "Resultados da cotação" }} style={{ height: "100%", minHeight: 400 }}>
         <div
           style={{
             display: "flex",
@@ -339,14 +339,14 @@ export function QuoteResultsSection({
             Calculando cotações...
           </Typography.Text>
         </div>
-      </Card>
+      </ELCard>
     );
   }
 
   // Estado de erro
   if (error) {
     return (
-      <Card title="Resultados da cotação" style={{ height: "100%", minHeight: 400 }}>
+      <ELCard header={{ title: "Resultados da cotação" }} style={{ height: "100%", minHeight: 400 }}>
         <div
           style={{
             display: "flex",
@@ -364,18 +364,18 @@ export function QuoteResultsSection({
             showIcon
             style={{ width: "100%" }}
           />
-          <Button type="primary" onClick={onCalculate} disabled={!canCalculate}>
+          <ELButton variant="primary" onClick={onCalculate} disabled={!canCalculate}>
             Tentar novamente
-          </Button>
+          </ELButton>
         </div>
-      </Card>
+      </ELCard>
     );
   }
 
   // Estado de resultados vazios
   if (results && results.length === 0) {
     return (
-      <Card title="Resultados da cotação" style={{ height: "100%", minHeight: 400 }}>
+      <ELCard header={{ title: "Resultados da cotação" }} style={{ height: "100%", minHeight: 400 }}>
         <div
           style={{
             display: "flex",
@@ -390,11 +390,11 @@ export function QuoteResultsSection({
             description="Nenhuma cotação disponível para os parâmetros informados"
             image={Empty.PRESENTED_IMAGE_SIMPLE}
           />
-          <Button type="primary" onClick={onCalculate} disabled={!canCalculate}>
+          <ELButton variant="primary" onClick={onCalculate} disabled={!canCalculate}>
             Calcular novamente
-          </Button>
+          </ELButton>
         </div>
-      </Card>
+      </ELCard>
     );
   }
 
@@ -434,28 +434,30 @@ export function QuoteResultsSection({
       title: "Ação",
       key: "action",
       render: (_: unknown, record: QuoteResultItem) => (
-        <Button
-          type="primary"
+        <ELButton
+          variant="primary"
           onClick={() => handleSelectClick(record)}
           disabled={timeRemaining === "expirado"}
         >
           Escolher
-        </Button>
+        </ELButton>
       ),
     },
   ];
 
   return (
     <>
-      <Card
-        title="Resultados da cotação"
-        extra={
-          <Button onClick={onCalculate} disabled={!canCalculate}>
-            Recalcular
-          </Button>
-        }
+      <ELCard
+        header={{
+          title: "Resultados da cotação",
+          extra: (
+            <ELButton onClick={onCalculate} disabled={!canCalculate}>
+              Recalcular
+            </ELButton>
+          ),
+        }}
         style={{ height: "100%" }}
-        styles={{ body: { padding: "16px 12px" } }}
+        padding="md"
       >
         <Space orientation="vertical" size={16} style={{ width: "100%" }}>
           {/* Expiration warning - compact style */}
@@ -526,7 +528,7 @@ export function QuoteResultsSection({
             scroll={{ x: 700 }}
           />
         </Space>
-      </Card>
+      </ELCard>
 
       <Modal
         title="Informe o valor do seguro"

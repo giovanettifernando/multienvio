@@ -5,12 +5,11 @@ import { useParams, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import {
   Alert,
-  Card,
-  Col,
   Descriptions,
-  Row,
   Typography,
 } from "antd";
+import { ELCard } from "@/components/ui/ELCard";
+import { ELGrid } from "@/components/ui/ELGrid";
 import type { Shipment } from "@/types/shipment";
 import type { Tracking } from "@/types/tracking";
 import { TrackingTimeline } from "@/components/ui/TrackingTimeline";
@@ -71,12 +70,12 @@ export default function RastreamentoDetailClient() {
   return (
     <PageShell title="Rastreamento do envio" gap="md">
       {isLoading ? (
-        <Card variant="borderless">
+        <ELCard>
           <ELSkeleton lines={6} />
-        </Card>
+        </ELCard>
       ) : hasData ? (
         <>
-          <Card variant="borderless">
+          <ELCard>
             <Descriptions column={{ xs: 1, sm: 2 }} bordered size="small">
               <Descriptions.Item label="Envio">{shipment.id}</Descriptions.Item>
               <Descriptions.Item label="Serviço">
@@ -98,33 +97,29 @@ export default function RastreamentoDetailClient() {
                 {shipment.prazoEstimado}
               </Descriptions.Item>
             </Descriptions>
-          </Card>
+          </ELCard>
 
-          <Row gutter={[24, 24]}>
-            <Col xs={24} lg={16}>
-              <Card title="Linha do tempo" variant="borderless">
-                {tracking.events.length > 0 ? (
-                  <TrackingTimeline events={tracking.events} />
-                ) : (
-                  <Typography.Text type="secondary">
-                    Nenhum evento de rastreamento registrado ainda.
-                  </Typography.Text>
-                )}
-              </Card>
-            </Col>
+          <ELGrid variant="sidebar" gap="lg">
+            <ELCard header={{ title: "Linha do tempo" }}>
+              {tracking.events.length > 0 ? (
+                <TrackingTimeline events={tracking.events} />
+              ) : (
+                <Typography.Text type="secondary">
+                  Nenhum evento de rastreamento registrado ainda.
+                </Typography.Text>
+              )}
+            </ELCard>
 
-            <Col xs={24} lg={8}>
-              <Card title="Ações" variant="borderless">
-                <ELButton
-                  variant="default"
-                  onClick={() => router.push("/rastreamento")}
-                  block
-                >
-                  Voltar para lista
-                </ELButton>
-              </Card>
-            </Col>
-          </Row>
+            <ELCard header={{ title: "Ações" }}>
+              <ELButton
+                variant="default"
+                onClick={() => router.push("/rastreamento")}
+                block
+              >
+                Voltar para lista
+              </ELButton>
+            </ELCard>
+          </ELGrid>
         </>
       ) : (
         <Alert

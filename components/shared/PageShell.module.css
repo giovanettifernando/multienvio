@@ -13,9 +13,8 @@
   z-index: 100;
   background-color: var(--color-primary, #003873);
   padding: var(--el-spacing-lg, 16px) var(--el-spacing-xl, 24px);
-  margin-left: calc(-1 * var(--el-spacing-xl, 24px));
-  margin-right: calc(-1 * var(--el-spacing-xl, 24px));
   margin-bottom: var(--el-spacing-lg, 16px);
+  border-radius: var(--el-radius-sm, 8px);
 }
 
 .headerContent {
@@ -28,7 +27,7 @@
 
 .title {
   margin: 0 !important;
-  font-size: var(--el-font-size-xl, 20px) !important;
+  font-size: var(--el-font-size-page-title, clamp(22px, 2.5vw + 14px, 28px)) !important;
   font-weight: 600 !important;
   color: #ffffff !important;
   line-height: var(--el-line-height-tight, 1.25) !important;
@@ -67,11 +66,7 @@
 @media (max-width: 768px) {
   .header {
     padding: var(--el-spacing-md, 12px) var(--el-spacing-lg, 16px);
-    margin-left: calc(-1 * var(--el-spacing-lg, 16px));
-    margin-right: calc(-1 * var(--el-spacing-lg, 16px));
+    border-radius: var(--el-radius-sm, 8px);
   }
-
-  .title {
-    font-size: var(--el-font-size-lg, 18px) !important;
-  }
+  /* Título usa clamp() - ajuste automático de font-size */
 }

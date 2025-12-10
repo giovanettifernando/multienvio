@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { FileTextOutlined, SafetyOutlined } from "@ant-design/icons";
-import { Button, Checkbox, Modal, Space, Typography } from "antd";
+import { Checkbox, Modal, Space, Typography } from "antd";
+import { ELButton } from "@/components/ui/ELButton";
 
 type ContentDeclarationModalProps = {
   open: boolean;
@@ -50,21 +51,21 @@ export function ContentDeclarationModal({
         </Checkbox>
 
         <Space orientation="vertical" size={12} style={{ width: "100%" }}>
-          <Button
-            type="primary"
+          <ELButton
+            variant="primary"
             block
             onClick={() => onAgree({ remember })}
           >
             CONCORDAR
-          </Button>
-          <Button
-            type="default"
+          </ELButton>
+          <ELButton
+            variant="default"
             block
             icon={<FileTextOutlined />}
             onClick={() => onSendNfe({ remember })}
           >
             Enviar com nota fiscal
-          </Button>
+          </ELButton>
         </Space>
       </Space>
     </Modal>

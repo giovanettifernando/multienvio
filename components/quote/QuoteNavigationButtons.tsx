@@ -1,7 +1,8 @@
 "use client";
 
-import { Button, Flex, theme } from "antd";
+import { Flex, theme } from "antd";
 import { ArrowLeftOutlined, ArrowRightOutlined } from "@ant-design/icons";
+import { ELButton } from "@/components/ui/ELButton";
 import { CSSProperties, useEffect } from "react";
 import styles from "./QuoteNavigationButtons.module.css";
 
@@ -116,7 +117,7 @@ export function QuoteNavigationButtons({
       className={styles.quoteNavigationButtons}
     >
       {onBack ? (
-        <Button
+        <ELButton
           icon={<ArrowLeftOutlined />}
           onClick={onBack}
           disabled={disableBack || loadingNext}
@@ -125,14 +126,14 @@ export function QuoteNavigationButtons({
           style={{ minWidth: 120 }}
         >
           {backLabel}
-        </Button>
+        </ELButton>
       ) : (
         <div />
       )}
 
       {onNext ? (
-        <Button
-          type={nextType}
+        <ELButton
+          variant={nextType}
           icon={<ArrowRightOutlined />}
           iconPosition="end"
           onClick={onNext}
@@ -143,7 +144,7 @@ export function QuoteNavigationButtons({
           style={{ minWidth: 120 }}
         >
           {nextLabel}
-        </Button>
+        </ELButton>
       ) : null}
     </Flex>
   );

@@ -2,16 +2,15 @@
 
 import { DeleteOutlined, PlusOutlined } from "@ant-design/icons";
 import {
-  Button,
-  Card,
-  Col,
+  Flex,
   Form,
   Input,
   InputNumber,
-  Row,
   Space,
   Typography,
 } from "antd";
+import { ELButton } from "@/components/ui/ELButton";
+import { ELCard } from "@/components/ui/ELCard";
 import {
   Controller,
   useFieldArray,
@@ -53,32 +52,25 @@ export function DeclarationItems() {
   return (
     <Space orientation="vertical" size={16} style={{ width: "100%" }}>
       {fields.map((field, index) => (
-        <Card
+        <ELCard
           key={field.id}
-          size="small"
           className={styles.volumeCard}
           data-testid="declaration-items"
-          title={
-            <span className={styles.volumeHeader}>
-              Item {index + 1}
-            </span>
-          }
-          extra={
-            fields.length > 1 ? (
-              <Button
-                type="text"
+          header={{
+            title: <span className={styles.volumeHeader}>Item {index + 1}</span>,
+            extra: fields.length > 1 ? (
+              <ELButton
+                variant="ghost"
                 danger
                 icon={<DeleteOutlined />}
                 onClick={() => remove(index)}
               />
-            ) : null
-          }
-          styles={{
-            body: { padding: 12 },
+            ) : null,
           }}
+          padding="md"
         >
-          <Row gutter={12}>
-            <Col xs={24} md={12}>
+          <Flex gap={12} wrap="wrap">
+            <div style={{ flex: '2 1 200px', minWidth: 200 }}>
               <Controller
                 control={control}
                 name={`document.declarationItems.${index}.descricao`}
@@ -98,8 +90,8 @@ export function DeclarationItems() {
                   </Form.Item>
                 )}
               />
-            </Col>
-            <Col xs={12} md={6}>
+            </div>
+            <div style={{ flex: '1 1 120px', minWidth: 120 }}>
               <Controller
                 control={control}
                 name={`document.declarationItems.${index}.valorUnitario`}
@@ -125,8 +117,8 @@ export function DeclarationItems() {
                   </Form.Item>
                 )}
               />
-            </Col>
-            <Col xs={12} md={6}>
+            </div>
+            <div style={{ flex: '1 1 120px', minWidth: 120 }}>
               <Controller
                 control={control}
                 name={`document.declarationItems.${index}.quantidade`}
@@ -150,14 +142,14 @@ export function DeclarationItems() {
                   </Form.Item>
                 )}
               />
-            </Col>
-          </Row>
-        </Card>
+            </div>
+          </Flex>
+        </ELCard>
       ))}
 
-      <Button type="dashed" icon={<PlusOutlined />} onClick={handleAddItem}>
+      <ELButton variant="dashed" icon={<PlusOutlined />} onClick={handleAddItem}>
         Adicionar item
-      </Button>
+      </ELButton>
 
       <Typography.Text strong>
         Total da declaração: {currency.format(total)}

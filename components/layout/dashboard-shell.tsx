@@ -162,10 +162,13 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             overflowY: 'auto',
           }}
         >
+          {/* Container responsivo com max-width para telas grandes */}
           <div
+            className="el-container"
             style={{
               flex: 1,
-              padding: isMobile ? '16px' : '0 24px 24px',
+              paddingTop: isMobile ? '16px' : '24px',
+              paddingBottom: '24px',
             }}
           >
             {children}

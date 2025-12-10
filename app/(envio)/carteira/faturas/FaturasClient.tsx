@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Card, InputNumber, App } from "antd";
+import { InputNumber, App } from "antd";
+import { ELCard } from "@/components/ui/ELCard";
 import { PageShell } from "@/components/shared/PageShell";
 import type { Invoice } from "@/types/billing";
 import { ELButton } from "@/components/ui/ELButton";
@@ -126,7 +127,7 @@ export default function FaturasClient() {
         </ELButton>
 
         <div className={tableStyles.wrapper}>
-          <Card variant="borderless">
+          <ELCard padding="none">
             <DataTable<Invoice>
               rowKey="id"
               loading={isLoading}
@@ -142,7 +143,7 @@ export default function FaturasClient() {
                 showTotal: (total) => `Total: ${total} faturas`,
               }}
             />
-          </Card>
+          </ELCard>
         </div>
       </PageShell>
     </>

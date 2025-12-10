@@ -2,7 +2,8 @@
 
 import { ArrowLeftOutlined } from "@ant-design/icons";
 import { use } from "react";
-import { Button, Card } from "antd";
+import { ELCard } from "@/components/ui/ELCard";
+import { ELButton } from "@/components/ui/ELButton";
 import { useRouter, useSearchParams } from "next/navigation";
 import { TicketDetailsContent } from "@/components/support/TicketDetailsDrawer";
 import { PageShell } from "@/components/shared/PageShell";
@@ -26,18 +27,18 @@ export default function TicketDetailClient({
       title="Detalhes do ticket"
       gap="md"
       extra={
-        <Button
-          type="text"
+        <ELButton
+          variant="ghost"
           icon={<ArrowLeftOutlined />}
           onClick={() => router.push(backHref)}
         >
           Voltar
-        </Button>
+        </ELButton>
       }
     >
-      <Card variant="borderless" styles={{ body: { padding: 0 } }}>
+      <ELCard padding="sm">
         <TicketDetailsContent ticketId={ticketId} userRole="cliente" enableQuery />
-      </Card>
+      </ELCard>
     </PageShell>
   );
 }

@@ -5,14 +5,13 @@ import { useParams, useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Alert,
-  Card,
-  Col,
   Descriptions,
   Form,
-  Row,
   Space,
   Typography,
 } from "antd";
+import { ELCard } from "@/components/ui/ELCard";
+import { ELGrid } from "@/components/ui/ELGrid";
 import Link from "next/link";
 import type { PickupRequestDetail, PickupStatus, PickupAttemptNote } from "@/lib/types/pickup";
 import { PickupStatusTag } from "@/components/ui/PickupStatusTag";
@@ -95,9 +94,9 @@ export default function PickupDetailClient() {
 
   if (pickupQuery.isLoading) {
     return (
-      <Card variant="borderless">
+      <ELCard>
         <Typography.Text>Carregando dados…</Typography.Text>
-      </Card>
+      </ELCard>
     );
   }
 
@@ -127,7 +126,7 @@ export default function PickupDetailClient() {
       title={`Coleta #${pickup.id.slice(-8)}`}
       gap="md"
     >
-      <Card variant="borderless">
+      <ELCard>
         <Descriptions column={{ xs: 1, sm: 2 }} bordered size="small">
           <Descriptions.Item label="Status">
             <PickupStatusTag status={pickup.status} />
@@ -187,49 +186,45 @@ export default function PickupDetailClient() {
             {formatDateShort(pickup.updatedAt)}
           </Descriptions.Item>
         </Descriptions>
-      </Card>
+      </ELCard>
 
-      <Row gutter={[24, 24]}>
-        <Col xs={24} lg={14}>
-          <Card title="Histórico" variant="borderless">
-            <PickupTimeline
-              attempts={attempts}
-              createdAt={pickup.createdAt}
-              status={pickup.status}
-            />
-          </Card>
-        </Col>
+      <ELGrid variant="sidebar" gap="lg">
+        <ELCard header={{ title: "Histórico" }}>
+          <PickupTimeline
+            attempts={attempts}
+            createdAt={pickup.createdAt}
+            status={pickup.status}
+          />
+        </ELCard>
 
-        <Col xs={24} lg={10}>
-          <Card title="Atualizar Status" variant="borderless">
-            <Form
-              layout="vertical"
-              onFinish={(values: { status: PickupStatus; notes?: string }) =>
-                updateStatusMutation.mutate(values)
-              }
-            >
-              <Form.Item name="status" label="Novo Status" rules={[{ required: true, message: "Selecione um status" }]}>
-                <ELSelect options={STATUS_OPTIONS} placeholder="Selecione o status" />
-              </Form.Item>
-              <Form.Item name="notes" label="Observações">
-                <ELInput.TextArea rows={3} placeholder="Adicione uma observação (opcional)" />
-              </Form.Item>
-              <Space>
-                <ELButton
-                  variant="primary"
-                  htmlType="submit"
-                  loading={updateStatusMutation.isPending}
-                >
-                  Atualizar
-                </ELButton>
-                <ELButton variant="default" onClick={() => router.push("/coletas")}>
-                  Voltar
-                </ELButton>
-              </Space>
-            </Form>
-          </Card>
-        </Col>
-      </Row>
+        <ELCard header={{ title: "Atualizar Status" }}>
+          <Form
+            layout="vertical"
+            onFinish={(values: { status: PickupStatus; notes?: string }) =>
+              updateStatusMutation.mutate(values)
+            }
+          >
+            <Form.Item name="status" label="Novo Status" rules={[{ required: true, message: "Selecione um status" }]}>
+              <ELSelect options={STATUS_OPTIONS} placeholder="Selecione o status" />
+            </Form.Item>
+            <Form.Item name="notes" label="Observações">
+              <ELInput.TextArea rows={3} placeholder="Adicione uma observação (opcional)" />
+            </Form.Item>
+            <Space>
+              <ELButton
+                variant="primary"
+                htmlType="submit"
+                loading={updateStatusMutation.isPending}
+              >
+                Atualizar
+              </ELButton>
+              <ELButton variant="default" onClick={() => router.push("/coletas")}>
+                Voltar
+              </ELButton>
+            </Space>
+          </Form>
+        </ELCard>
+      </ELGrid>
     </PageShell>
   );
 }

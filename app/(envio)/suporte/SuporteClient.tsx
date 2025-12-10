@@ -2,15 +2,13 @@
 
 import { useState } from 'react';
 import { PlusOutlined } from '@ant-design/icons';
-import { Card, Typography } from 'antd';
+import { ELCard } from '@/components/ui/ELCard';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { NewTicketList } from '@/components/support/NewTicketList';
 import { TicketDetailsDrawer } from '@/components/support/TicketDetailsDrawer';
 import { SupportFAQ } from '@/components/support/SupportFAQ';
 import { PageShell } from '@/components/shared/PageShell';
 import { ELButton } from '@/components/ui/ELButton';
-
-const { Title } = Typography;
 
 export default function SuporteClient() {
   const router = useRouter();
@@ -43,17 +41,14 @@ export default function SuporteClient() {
       }
     >
       {/* Seção FAQ */}
-      <Card variant="borderless" styles={{ body: { padding: 24 } }}>
+      <ELCard padding="xl">
         <SupportFAQ audience="USER" />
-      </Card>
+      </ELCard>
 
       {/* Seção Meus Chamados */}
-      <Card variant="borderless" styles={{ body: { padding: 24 } }}>
-        <Title level={5} style={{ marginTop: 0, marginBottom: 16 }}>
-          Meus Chamados
-        </Title>
+      <ELCard padding="xl" header={{ title: 'Meus Chamados' }}>
         <NewTicketList onTicketClick={handleOpenTicket} isComposing={isComposing} />
-      </Card>
+      </ELCard>
 
       <TicketDetailsDrawer
         ticketId={selectedTicketId}

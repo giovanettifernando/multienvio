@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
-import { DatePicker, Card } from "antd";
+import { DatePicker } from "antd";
+import { ELCard } from "@/components/ui/ELCard";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import type { PickupRequestWithShipment, PickupStatus } from "@/lib/types/pickup";
@@ -140,7 +141,7 @@ export default function ColetasClient() {
   return (
     <PageShell title="Gerenciar Coletas" gap="md">
       <div className={tableStyles.wrapper}>
-        <Card>
+        <ELCard>
           <div className={tableStyles.filterBar}>
             <ELInput.Search
               allowClear
@@ -185,7 +186,7 @@ export default function ColetasClient() {
               showTotal: (total) => `Total: ${total} coletas`,
             }}
           />
-        </Card>
+        </ELCard>
       </div>
     </PageShell>
   );

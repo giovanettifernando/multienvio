@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQueries } from "@tanstack/react-query";
-import { Card } from "antd";
+import { ELCard } from "@/components/ui/ELCard";
 import type { Shipment } from "@/types/shipment";
 import type { Tracking } from "@/types/tracking";
 import { TrackingStatusTag } from "@/components/ui/TrackingStatusTag";
@@ -170,7 +170,7 @@ export default function RastreamentoClient() {
   return (
     <PageShell title="Rastreamento" gap="md">
       <div className={tableStyles.wrapper}>
-        <Card variant="borderless">
+        <ELCard padding="none">
           <div className={tableStyles.filterBar}>
             <ELInput.Search
               placeholder="Buscar por ID do envio"
@@ -188,9 +188,9 @@ export default function RastreamentoClient() {
               placeholder="Filtrar por status"
             />
           </div>
-        </Card>
+        </ELCard>
 
-        <Card variant="borderless" style={{ marginTop: 16 }}>
+        <ELCard padding="none" style={{ marginTop: 16 }}>
           <DataTable<TrackingRow>
             rowKey="id"
             data={dataSource}
@@ -206,7 +206,7 @@ export default function RastreamentoClient() {
               showTotal: (total) => `Total: ${total} envios`,
             }}
           />
-        </Card>
+        </ELCard>
       </div>
     </PageShell>
   );

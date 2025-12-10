@@ -3,18 +3,16 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  Button,
-  Col,
   Flex,
   Form,
   Input,
   InputNumber,
   Modal,
-  Row,
   Space,
   message,
 } from "antd";
 import { PageShell } from "@/components/shared/PageShell";
+import { ELButton } from "@/components/ui/ELButton";
 import AddFundsModal from "@/components/wallet/AddFundsModal";
 import type { CardMethod } from "@/types/billing";
 import { PaymentMethodCard } from "@/components/wallet/PaymentMethodCard";
@@ -140,32 +138,26 @@ export default function MetodosClient() {
           >
             <Input />
           </Form.Item>
-          <Row gutter={[12, 0]}>
-            <Col xs={8} sm={6}>
-              <Form.Item name="expMonth" label="Mês" rules={[{ required: true }]}>
-                <InputNumber min={1} max={12} style={{ width: '100%' }} />
-              </Form.Item>
-            </Col>
-            <Col xs={8} sm={6}>
-              <Form.Item name="expYear" label="Ano" rules={[{ required: true }]}>
-                <InputNumber min={new Date().getFullYear()} max={new Date().getFullYear() + 15} style={{ width: '100%' }} />
-              </Form.Item>
-            </Col>
-            <Col xs={8} sm={6}>
-              <Form.Item name="cvc" label="CVC" rules={[{ required: true }]}>
-                <Input />
-              </Form.Item>
-            </Col>
-          </Row>
+          <Flex gap={12} wrap="wrap">
+            <Form.Item name="expMonth" label="Mês" rules={[{ required: true }]} style={{ flex: '1 1 80px', minWidth: 80 }}>
+              <InputNumber min={1} max={12} style={{ width: '100%' }} />
+            </Form.Item>
+            <Form.Item name="expYear" label="Ano" rules={[{ required: true }]} style={{ flex: '1 1 100px', minWidth: 100 }}>
+              <InputNumber min={new Date().getFullYear()} max={new Date().getFullYear() + 15} style={{ width: '100%' }} />
+            </Form.Item>
+            <Form.Item name="cvc" label="CVC" rules={[{ required: true }]} style={{ flex: '1 1 80px', minWidth: 80 }}>
+              <Input />
+            </Form.Item>
+          </Flex>
         </Form>
       </Modal>
 
       <PageShell title="Métodos de pagamento" gap="md">
         <Space>
-          <Button type="primary" onClick={() => setModalOpen(true)}>
+          <ELButton variant="primary" onClick={() => setModalOpen(true)}>
             Adicionar cartão
-          </Button>
-          <Button onClick={() => setAddBalanceOpen(true)}>Adicionar saldo</Button>
+          </ELButton>
+          <ELButton onClick={() => setAddBalanceOpen(true)}>Adicionar saldo</ELButton>
         </Space>
 
         <Flex vertical gap={16}>

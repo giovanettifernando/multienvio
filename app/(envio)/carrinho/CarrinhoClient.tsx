@@ -1,7 +1,9 @@
 "use client";
 
 import { useMemo, useState, useCallback, useRef } from "react";
-import { Col, Row, Skeleton, App } from "antd";
+import { App } from "antd";
+import { ELGrid } from "@/components/ui/ELGrid";
+import { ELSkeleton } from "@/components/ui/ELSkeleton";
 import { EmptyCart } from "@/components/cart/EmptyCart";
 import { CartTable } from "@/components/cart/CartTable";
 import { CartSummary } from "@/components/cart/CartSummary";
@@ -107,7 +109,7 @@ export default function CarrinhoClient() {
   if (isLoading) {
     return (
       <PageShell title="Carrinho" gap="md">
-        <Skeleton active />
+        <ELSkeleton />
       </PageShell>
     );
   }
@@ -119,22 +121,18 @@ export default function CarrinhoClient() {
   return (
     <>
       <PageShell title="Carrinho" gap="md">
-        <Row gutter={[24, 24]}>
-        <Col xs={{ span: 24, order: 2 }} lg={{ span: 16, order: 1 }}>
+        <ELGrid variant="cart" gap="xl">
           <CartTable
             items={cart.items}
             onRemove={handleRemove}
           />
-        </Col>
-        <Col xs={{ span: 24, order: 1 }} lg={{ span: 8, order: 2 }}>
           <CartSummary
             cart={cart}
             isClearing={clearMutation.isPending}
             onClear={handleClearCart}
             onCheckout={handlePayCart}
           />
-        </Col>
-        </Row>
+        </ELGrid>
 
         <RemoveItemModal
         open={removeModalOpen}

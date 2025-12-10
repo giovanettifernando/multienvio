@@ -5,8 +5,6 @@ import { EnvironmentOutlined, SearchOutlined, ShopOutlined } from "@ant-design/i
 import {
   Alert,
   App,
-  Button,
-  Card,
   Input,
   Radio,
   Space,
@@ -16,6 +14,8 @@ import {
   Typography,
   theme,
 } from "antd";
+import { ELButton } from "@/components/ui/ELButton";
+import { ELCard } from "@/components/ui/ELCard";
 import { useFormContext } from "react-hook-form";
 import { useShallow } from "zustand/react/shallow";
 import { useQuoteStore } from "@/store/useQuoteStore";
@@ -389,7 +389,7 @@ export function PostingUnitPicker() {
 
   return (
     <>
-      <Card title="Unidade de postagem">
+      <ELCard header={{ title: "Unidade de postagem" }}>
         <Space orientation="vertical" size={16} style={{ width: "100%" }}>
           {/* Barra de pesquisa */}
           <Input
@@ -491,14 +491,14 @@ export function PostingUnitPicker() {
           </label>
 
           {/* Botão ver mapa */}
-          <Button
+          <ELButton
             icon={<EnvironmentOutlined />}
             disabled={totalPontosAtivos === 0}
             onClick={() => setMapModalOpen(true)}
             aria-label="Ver mapa de unidades"
           >
             Ver mapa de unidades
-          </Button>
+          </ELButton>
 
           {/* Erro de validação */}
           {errors.postingUnit?.selected ? (
@@ -508,18 +508,20 @@ export function PostingUnitPicker() {
             </Typography.Text>
           ) : null}
         </Space>
-      </Card>
+      </ELCard>
 
       {/* Card separado para Agências dos Correios (quando carrier é Correios) - apenas informativo */}
       {isCorreiosCarrier && (
-        <Card
-          title={
-            <Space>
+        <ELCard
+          header={{
+            title: (
+              <Space>
               <ShopOutlined />
               <span>Agências dos Correios próximas</span>
               <Tag color="blue">Informativo</Tag>
             </Space>
-          }
+            ),
+          }}
           style={{ marginTop: 16 }}
         >
           <Space orientation="vertical" size={16} style={{ width: "100%" }}>
@@ -594,14 +596,14 @@ export function PostingUnitPicker() {
                 )}
 
                 {/* Botão ver mapa */}
-                <Button
+                <ELButton
                   icon={<EnvironmentOutlined />}
                   disabled={filteredAgencies.length === 0}
                   onClick={() => setAgencyMapModalOpen(true)}
                   aria-label="Ver mapa de agências"
                 >
                   Ver mapa de agências
-                </Button>
+                </ELButton>
               </>
             ) : (
               <Alert
@@ -612,7 +614,7 @@ export function PostingUnitPicker() {
               />
             )}
           </Space>
-        </Card>
+        </ELCard>
       )}
 
       {/* Modal de mapa - Unidades de postagem */}

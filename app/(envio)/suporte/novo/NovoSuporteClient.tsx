@@ -1,6 +1,6 @@
 'use client';
 
-import { Card } from 'antd';
+import { ELCard } from '@/components/ui/ELCard';
 import { useRouter } from 'next/navigation';
 import { SupportForm } from '@/components/support/SupportForm';
 import { PageShell } from '@/components/shared/PageShell';
@@ -15,9 +15,9 @@ export default function NovoSuporteClient() {
   return (
     <div style={{ maxWidth: 800, margin: '0 auto' }}>
       <PageShell title="Abrir Novo Chamado" gap="md">
-        <Card>
+        <ELCard padding="xl">
           <SupportForm onSuccess={handleSuccess} />
-        </Card>
+        </ELCard>
       </PageShell>
     </div>
   );

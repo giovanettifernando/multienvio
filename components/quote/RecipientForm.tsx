@@ -9,14 +9,14 @@ import {
 } from "@ant-design/icons";
 import {
   Alert,
-  Card,
   Form,
   Input,
   Space,
   Typography,
   Checkbox,
-  Button,
 } from "antd";
+import { ELCard } from "@/components/ui/ELCard";
+import { ELButton } from "@/components/ui/ELButton";
 import {
   Controller,
   useFormContext,
@@ -73,12 +73,12 @@ export function RecipientForm() {
             <Typography.Text>
               Por favor, defina o destinatário na página de cotação.
             </Typography.Text>
-            <Button type="link" onClick={() => {
+            <ELButton variant="link" onClick={() => {
               sessionStorage.setItem("preserveQuoteState", "1");
               router.push("/cotacoes");
             }}>
               Voltar para Cotação
-            </Button>
+            </ELButton>
           </Space>
         }
         showIcon
@@ -87,7 +87,7 @@ export function RecipientForm() {
   }
 
   return (
-    <Card title="Destinatário">
+    <ELCard header={{ title: "Destinatário" }}>
       <Space orientation="vertical" size={12} style={{ width: "100%" }}>
         <Typography.Text type="secondary">
           Os dados de endereço foram pré-preenchidos com base na cotação.
@@ -334,6 +334,6 @@ export function RecipientForm() {
           )}
         />
       </Space>
-    </Card>
+    </ELCard>
   );
 }

@@ -9,8 +9,6 @@ import {
 } from "@ant-design/icons";
 import {
   Avatar,
-  Button,
-  Card,
   Empty,
   Flex,
   Segmented,
@@ -19,6 +17,8 @@ import {
   Typography,
   Alert,
 } from "antd";
+import { ELButton } from "@/components/ui/ELButton";
+import { ELCard } from "@/components/ui/ELCard";
 import type { ColumnsType } from "antd/es/table";
 import { useMemo } from "react";
 import type { QuoteResultItem } from "@/types/quote";
@@ -151,34 +151,36 @@ export function ResultsTable({
       title: "",
       key: "actions",
       render: (_value, record) => (
-        <Button
-          type="primary"
+        <ELButton
+          variant="primary"
           icon={<LogoutOutlined />}
           onClick={() => onSelect(record)}
         >
           Selecionar
-        </Button>
+        </ELButton>
       ),
     },
   ];
 
   return (
     <Flex vertical gap={16}>
-      <Card
-        title="Resultados"
-        extra={
-          <Flex align="center" gap={8}>
-            <Typography.Text type="secondary">Ordenar por</Typography.Text>
-            <Segmented<SortOrder>
-              value={sortOrder}
-              onChange={(value) => onSortChange(value as SortOrder)}
-              options={[
-                { label: "Mais barato", value: "price" },
-                { label: "Menor prazo", value: "prazo" },
-              ]}
-            />
-          </Flex>
-        }
+      <ELCard
+        header={{
+          title: "Resultados",
+          extra: (
+            <Flex align="center" gap={8}>
+              <Typography.Text type="secondary">Ordenar por</Typography.Text>
+              <Segmented<SortOrder>
+                value={sortOrder}
+                onChange={(value) => onSortChange(value as SortOrder)}
+                options={[
+                  { label: "Mais barato", value: "price" },
+                  { label: "Menor prazo", value: "prazo" },
+                ]}
+              />
+            </Flex>
+          ),
+        }}
       >
         <Table
           locale={{
@@ -192,7 +194,7 @@ export function ResultsTable({
           pagination={false}
           loading={loading}
         />
-      </Card>
+      </ELCard>
 
       {hasMockQuotes && (
         <Alert

@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Card, DatePicker, Space, App } from "antd";
+import { DatePicker, Space, App } from "antd";
+import { ELCard } from "@/components/ui/ELCard";
 import { PrinterOutlined } from "@ant-design/icons";
 import { useRouter } from "next/navigation";
 import dayjs, { Dayjs } from "dayjs";
@@ -72,7 +73,7 @@ export default function ExtratoClient() {
     >
       {/* Filtros */}
       <div className={tableStyles.wrapper}>
-        <Card>
+        <ELCard>
           <div className={tableStyles.filterBar}>
             <RangePicker
               value={dateRange}
@@ -110,7 +111,7 @@ export default function ExtratoClient() {
               className={tableStyles.searchInput}
             />
           </div>
-        </Card>
+        </ELCard>
       </div>
 
       {/* Grid: Resumo + Transações lado a lado */}
@@ -121,7 +122,7 @@ export default function ExtratoClient() {
         )}
 
         {/* Tabela de transações */}
-        <Card title="Transações">
+        <ELCard header={{ title: "Transações" }}>
           <StatementTable
             transactions={transactions}
             loading={isLoading}
@@ -138,7 +139,7 @@ export default function ExtratoClient() {
                 : undefined
             }
           />
-        </Card>
+        </ELCard>
       </div>
 
       {/* Modal de visualização de PDF */}

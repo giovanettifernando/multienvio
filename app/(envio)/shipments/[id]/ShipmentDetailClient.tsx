@@ -4,16 +4,15 @@ import { useParams, useRouter } from "next/navigation";
 import {
   Alert,
   App,
-  Button,
-  Card,
-  Col,
-  Row,
-  Skeleton,
   Space,
   Table,
   Tag,
   Typography,
 } from "antd";
+import { ELSkeleton } from "@/components/ui/ELSkeleton";
+import { ELCard } from "@/components/ui/ELCard";
+import { ELButton } from "@/components/ui/ELButton";
+import { ELGrid, ELGridSpanFull } from "@/components/ui/ELGrid";
 import { ShareAltOutlined, CopyOutlined } from "@ant-design/icons";
 import { useQuery } from "@tanstack/react-query";
 import { TrackingTimeline } from "@/components/track/TrackingTimeline";
@@ -151,22 +150,22 @@ export default function ShipmentDetailClient() {
       gap="md"
       extra={
         <Space wrap>
-          <Button onClick={() => router.push("/shipments")}>Voltar</Button>
+          <ELButton onClick={() => router.push("/shipments")}>Voltar</ELButton>
           {shipment?.publicTrackingId && (
             <>
-              <Button
+              <ELButton
                 icon={<CopyOutlined />}
                 onClick={handleCopyPublicLink}
               >
                 Copiar link
-              </Button>
-              <Button
-                type="primary"
+              </ELButton>
+              <ELButton
+                variant="primary"
                 icon={<ShareAltOutlined />}
                 onClick={handleOpenPublicLink}
               >
                 Abrir link
-              </Button>
+              </ELButton>
             </>
           )}
         </Space>
@@ -174,36 +173,36 @@ export default function ShipmentDetailClient() {
     >
 
       {isLoading ? (
-        <Skeleton active paragraph={{ rows: 6 }} />
+        <ELSkeleton lines={6} />
       ) : error || !shipment ? (
         <Alert
           type="error"
           message="Envio não encontrado"
           description="Verifique se o código está correto e tente novamente."
           action={
-            <Button onClick={() => router.push("/shipments")}>
+            <ELButton onClick={() => router.push("/shipments")}>
               Voltar para listagem
-            </Button>
+            </ELButton>
           }
         />
       ) : (
         <>
           {/* Seção 1: Informações Gerais */}
-          <Card title="Informações Gerais">
-            <Row gutter={[16, 16]}>
-              <Col xs={24} sm={12} lg={8}>
+          <ELCard header={{ title: "Informações Gerais" }}>
+            <ELGrid variant="3" gap="md">
+              <div>
                 <Text type="secondary">Status</Text>
                 <div style={{ marginTop: 4 }}>
                   <Tag color={shipment.status === 'delivered' ? 'green' : shipment.status === 'cancelled' ? 'red' : 'blue'}>
                     {STATUS_LABELS[shipment.status] ?? shipment.status}
                   </Tag>
                 </div>
-              </Col>
-              <Col xs={24} sm={12} lg={8}>
+              </div>
+              <div>
                 <Text type="secondary">Código de rastreio</Text>
                 <div style={{ marginTop: 4, fontWeight: 500 }}>{shipment.trackingCode}</div>
-              </Col>
-              <Col xs={24} sm={12} lg={8}>
+              </div>
+              <div>
                 <Text type="secondary">Método de pagamento</Text>
                 <div style={{ marginTop: 4 }}>
                   {shipment.paymentMethod ? (
@@ -213,65 +212,65 @@ export default function ShipmentDetailClient() {
                     shipment.paymentMethod
                   ) : 'Não informado'}
                 </div>
-              </Col>
-              <Col xs={24} sm={12} lg={8}>
+              </div>
+              <div>
                 <Text type="secondary">Destinatário</Text>
                 <div style={{ marginTop: 4 }}>{shipment.recipientName || 'Não informado'}</div>
-              </Col>
-              <Col xs={24} sm={12} lg={8}>
+              </div>
+              <div>
                 <Text type="secondary">Cidade destino</Text>
                 <div style={{ marginTop: 4 }}>
                   {shipment.destinationCity}, {shipment.destinationState}
                 </div>
-              </Col>
-              <Col xs={24} sm={12} lg={8}>
+              </div>
+              <div>
                 <Text type="secondary">CEP destino</Text>
                 <div style={{ marginTop: 4 }}>{shipment.destinationCep}</div>
-              </Col>
-              <Col xs={24} sm={12} lg={8}>
+              </div>
+              <div>
                 <Text type="secondary">Transportadora</Text>
                 <div style={{ marginTop: 4 }}>{shipment.carrier || 'Não informado'}</div>
-              </Col>
-              <Col xs={24} sm={12} lg={8}>
+              </div>
+              <div>
                 <Text type="secondary">Serviço</Text>
                 <div style={{ marginTop: 4 }}>{shipment.service || 'Não informado'}</div>
-              </Col>
-              <Col xs={24} sm={12} lg={8}>
+              </div>
+              <div>
                 <Text type="secondary">Prazo estimado</Text>
                 <div style={{ marginTop: 4 }}>
                   {shipment.estimatedDays ? `${shipment.estimatedDays} dias` : 'Não informado'}
                 </div>
-              </Col>
-              <Col xs={24} sm={12} lg={8}>
+              </div>
+              <div>
                 <Text type="secondary">Valor do frete</Text>
                 <div style={{ marginTop: 4 }}>
                   {shipment.freightCost ? `R$ ${shipment.freightCost.toFixed(2)}` : 'Não informado'}
                 </div>
-              </Col>
-              <Col xs={24} sm={12} lg={8}>
+              </div>
+              <div>
                 <Text type="secondary">Valor declarado</Text>
                 <div style={{ marginTop: 4 }}>
                   {shipment.declaredValue ? `R$ ${shipment.declaredValue.toFixed(2)}` : 'Não informado'}
                 </div>
-              </Col>
-              <Col xs={24} sm={12} lg={8}>
+              </div>
+              <div>
                 <Text type="secondary">Peso total</Text>
                 <div style={{ marginTop: 4 }}>
                   {shipment.weight ? `${shipment.weight.toFixed(1)} kg` : 'Não informado'}
                 </div>
-              </Col>
-              <Col xs={24}>
+              </div>
+              <ELGridSpanFull>
                 <Text type="secondary">Criado em</Text>
                 <div style={{ marginTop: 4 }}>
                   {new Date(shipment.createdAt).toLocaleString('pt-BR')}
                 </div>
-              </Col>
-            </Row>
-          </Card>
+              </ELGridSpanFull>
+            </ELGrid>
+          </ELCard>
 
           {/* Seção 2: Volumes */}
           {shipment.volumes && shipment.volumes.length > 0 && (
-            <Card title="Volumes do Envio">
+            <ELCard header={{ title: "Volumes do Envio" }}>
               <Table
                 dataSource={shipment.volumes}
                 rowKey="id"
@@ -377,7 +376,7 @@ export default function ShipmentDetailClient() {
                   },
                 ]}
               />
-            </Card>
+            </ELCard>
           )}
 
           {/* Seção 3: Itens (Declaração ou NF) */}
@@ -391,7 +390,7 @@ export default function ShipmentDetailClient() {
             // NF-e: sempre mostrar card separado (chaves + itens globais)
             if (shipment.documentType === 'NFE' && shipment.nfeKeys && shipment.nfeKeys.length > 0) {
               return (
-                <Card title="Notas Fiscais Eletrônicas">
+                <ELCard header={{ title: "Notas Fiscais Eletrônicas" }}>
                   <div style={{ marginBottom: 16 }}>
                     <Text type="secondary">Chaves de acesso:</Text>
                     {shipment.nfeKeys.map((key: string, idx: number) => (
@@ -452,7 +451,7 @@ export default function ShipmentDetailClient() {
                       />
                     </>
                   )}
-                </Card>
+                </ELCard>
               );
             }
 
@@ -464,7 +463,7 @@ export default function ShipmentDetailClient() {
               shipment.items.length > 0
             ) {
               return (
-                <Card title="Declaração de Conteúdo">
+                <ELCard header={{ title: "Declaração de Conteúdo" }}>
                   <Table
                     dataSource={shipment.items}
                     rowKey={(record, idx) => record.id || `item-${idx}`}
@@ -510,7 +509,7 @@ export default function ShipmentDetailClient() {
                       );
                     }}
                   />
-                </Card>
+                </ELCard>
               );
             }
 

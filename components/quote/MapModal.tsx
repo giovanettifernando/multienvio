@@ -6,12 +6,12 @@ import {
   Input,
   Typography,
   Space,
-  Button,
   Alert,
   Flex,
   Tag,
   theme,
 } from "antd";
+import { ELButton } from "@/components/ui/ELButton";
 import {
   EnvironmentOutlined,
   SearchOutlined,
@@ -271,8 +271,8 @@ export function MapModal({
                         </Typography.Text>
                       )}
                       {selectedPointId === point.id && (
-                        <Button
-                          type="primary"
+                        <ELButton
+                          variant="primary"
                           size="small"
                           block
                           style={{ marginTop: 8 }}
@@ -282,7 +282,7 @@ export function MapModal({
                           }}
                         >
                           Selecionar esta unidade
-                        </Button>
+                        </ELButton>
                       )}
                     </Space>
                   </div>

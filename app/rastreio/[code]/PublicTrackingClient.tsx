@@ -2,7 +2,8 @@
 
 import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { Card, Typography, App } from "antd";
+import { Typography, App } from "antd";
+import { ELCard } from "@/components/ui/ELCard";
 import { CopyOutlined } from "@ant-design/icons";
 import { TrackingTimeline, type TrackingEvent } from "@/components/track/TrackingTimeline";
 import { PublicShipmentItems, type PublicVolume } from "@/components/track/PublicShipmentItems";
@@ -108,13 +109,7 @@ export default function PublicTrackingClient() {
     <div style={{ maxWidth: 800, margin: "0 auto", padding: "16px" }}>
       <ELFlex direction="col" gap="md">
         {/* BLOCO 1: Status Atual + Código (compacto) */}
-        <Card
-          style={{
-            backgroundColor: "var(--el-color-bg-container, #fafafa)",
-            border: "1px solid var(--el-color-border, #d9d9d9)",
-          }}
-          styles={{ body: { padding: "12px 16px" } }}
-        >
+        <ELCard padding="md">
           <ELFlex direction="col" gap="sm">
             <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
               <Text strong style={{ fontSize: 14 }}>Status:</Text>
@@ -141,13 +136,13 @@ export default function PublicTrackingClient() {
               </ELButton>
             </div>
           </ELFlex>
-        </Card>
+        </ELCard>
 
         {/* BLOCO 2: Timeline de Eventos */}
         <TrackingTimeline events={data.events} title="Histórico de rastreamento" />
 
         {/* BLOCO 3: Detalhes Essenciais */}
-        <Card title="Detalhes do envio" styles={{ body: { padding: "16px" } }}>
+        <ELCard header={{ title: "Detalhes do envio" }} padding="lg">
           <ELGrid variant="2" gap="md">
             <div>
               <Text type="secondary" style={{ fontSize: 12 }}>Transportadora</Text>
@@ -190,7 +185,7 @@ export default function PublicTrackingClient() {
               </div>
             )}
           </ELGrid>
-        </Card>
+        </ELCard>
 
         {/* BLOCO 4: Itens do Envio */}
         <PublicShipmentItems

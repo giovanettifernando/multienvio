@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Modal, Descriptions, Space, Button, Tabs, Typography, App, Tag } from 'antd';
+import { Descriptions, Space, Button, Tabs, Typography, App, Tag } from 'antd';
+import { ELModal } from '@/components/ui/ELModal';
 import type { LabelItem } from '@/lib/types/label';
 import { createObjectUrlFromLabelFile, printPdfFromIframe, downloadPdf } from '@/lib/utils/pdf';
 import dayjs from 'dayjs';
@@ -30,8 +31,8 @@ export function LabelModal({ open, label, onClose }: LabelModalProps) {
   }, [open, label?.id]);
 
   return (
-    <Modal
-      width={960}
+    <ELModal
+      size="xl"
       open={open}
       onCancel={onClose}
       title={`Etiqueta ${label?.id ?? ''}`}
@@ -109,6 +110,6 @@ export function LabelModal({ open, label, onClose }: LabelModalProps) {
           },
         ]}
       />
-    </Modal>
+    </ELModal>
   );
 }

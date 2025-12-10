@@ -9,12 +9,15 @@ import React from "react";
 import styles from "./ELGrid.module.css";
 
 export type GridVariant =
-  | "2"      // 2 colunas iguais
-  | "3"      // 3 colunas iguais
-  | "4"      // 4 colunas iguais
-  | "auto"   // Auto-fill responsivo
+  | "2"          // 2 colunas iguais
+  | "3"          // 3 colunas iguais
+  | "4"          // 4 colunas iguais
+  | "auto"       // Auto-fill responsivo
   | "sidebar"    // Layout 1.1:1.4 para sidebar
-  | "dashboard"; // Layout 2:1 para dashboard
+  | "dashboard"  // Layout 2:1 para dashboard
+  | "cart"       // Layout 2:1 para carrinho (ordem reversa no mobile)
+  | "finalizar"  // Layout 10/8/6 para tela de finalizar (3 itens)
+  | "forms";     // Layout 14/10 para formulários lado a lado
 
 export type GapSize = "sm" | "md" | "lg" | "xl";
 
@@ -38,6 +41,9 @@ const variantClassMap: Record<GridVariant, string> = {
   "auto": styles.gridAuto,
   "sidebar": styles.gridSidebar,
   "dashboard": styles.gridDashboard,
+  "cart": styles.gridCart,
+  "finalizar": styles.gridFinalizar,
+  "forms": styles.gridForms,
 };
 
 const gapClassMap: Record<GapSize, string> = {

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import Card from "antd/es/card";
+import { ELCard } from "@/components/ui/ELCard";
 import Typography from "antd/es/typography";
 import { useRouter } from "next/navigation";
 import { ELButton } from "@/components/ui/ELButton";
@@ -51,16 +51,18 @@ export default function CarteiraClient() {
         )}
       </div>
 
-      <Card
-        title="Últimas transações"
-        extra={
-          <ELButton onClick={() => router.push("/carteira/extrato")}>
-            Ver extrato completo
-          </ELButton>
-        }
+      <ELCard
+        header={{
+          title: "Últimas transações",
+          extra: (
+            <ELButton onClick={() => router.push("/carteira/extrato")}>
+              Ver extrato completo
+            </ELButton>
+          ),
+        }}
       >
         <TransactionsTable />
-      </Card>
+      </ELCard>
 
       <AddFundsModal
         open={open}

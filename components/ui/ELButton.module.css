@@ -70,6 +70,20 @@
   color: var(--color-text, #182235) !important;
 }
 
+.buttonDashed {
+  background-color: #ffffff !important;
+  border-color: rgba(0, 56, 115, 0.25) !important;
+  border-style: dashed !important;
+  color: var(--color-text-secondary, #4A6076) !important;
+}
+
+.buttonDashed:hover,
+.buttonDashed:focus {
+  border-color: var(--color-primary, #003873) !important;
+  color: var(--color-primary, #003873) !important;
+  background-color: rgba(0, 56, 115, 0.04) !important;
+}
+
 .button:focus-visible {
   outline: 3px solid rgba(0, 56, 115, 0.35);
   outline-offset: 2px;

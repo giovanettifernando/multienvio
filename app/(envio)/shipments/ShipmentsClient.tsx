@@ -2,7 +2,6 @@
 
 import React, { useMemo, useState, useCallback } from "react";
 import {
-  Card,
   Space,
   Tooltip,
   App,
@@ -10,6 +9,7 @@ import {
   Image,
   Typography,
 } from "antd";
+import { ELCard } from "@/components/ui/ELCard";
 import {
   PrinterOutlined,
   EyeOutlined,
@@ -353,7 +353,7 @@ export default function ShipmentsClient() {
   return (
     <PageShell title="Gestão de envios" gap="md">
       <div className={tableStyles.wrapper}>
-        <Card>
+        <ELCard>
           <div className={tableStyles.filterBar}>
             <ELInput.Search
               allowClear
@@ -393,7 +393,7 @@ export default function ShipmentsClient() {
               onChange: handlePaginationChange,
             }}
           />
-        </Card>
+        </ELCard>
       </div>
 
       <ELModal

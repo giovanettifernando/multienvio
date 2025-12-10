@@ -8,11 +8,11 @@ import {
   Typography,
   Tag,
   Upload,
-  Button,
   Alert,
   Table,
   Descriptions,
 } from "antd";
+import { ELButton } from "@/components/ui/ELButton";
 import type { UploadProps } from "antd";
 import {
   InboxOutlined,
@@ -144,9 +144,9 @@ function NFeDetails({
           </Space>
         }
         action={
-          <Button size="small" danger icon={<DeleteOutlined />} onClick={onRemove}>
+          <ELButton size="small" variant="danger" icon={<DeleteOutlined />} onClick={onRemove}>
             Remover
-          </Button>
+          </ELButton>
         }
         showIcon
       />
@@ -162,15 +162,15 @@ function NFeDetails({
 
       {/* Botão para expandir/recolher itens */}
       {items.length > 0 && (
-        <Button
-          type="link"
+        <ELButton
+          variant="link"
           size="small"
           icon={expanded ? <UpOutlined /> : <DownOutlined />}
           onClick={() => setExpanded(!expanded)}
           style={{ padding: 0 }}
         >
           {expanded ? "Ocultar itens" : `Ver ${items.length} item(ns) da NF-e`}
-        </Button>
+        </ELButton>
       )}
 
       {/* Tabela de itens (colapsável) */}

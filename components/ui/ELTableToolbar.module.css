@@ -1,0 +1,24 @@
+/**
+ * ELTableToolbar - Estilos da toolbar de tabela
+ */
+
+.toolbar {
+  padding: var(--el-spacing-md, 12px) 0;
+  margin-bottom: var(--el-spacing-md, 12px);
+}
+
+.searchInput {
+  min-width: 200px;
+  max-width: 320px;
+}
+
+@media (max-width: 768px) {
+  .toolbar {
+    padding: var(--el-spacing-sm, 8px) 0;
+  }
+
+  .searchInput {
+    min-width: 100%;
+    max-width: 100%;
+  }
+}

@@ -1,7 +1,8 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { Skeleton, Typography } from "antd";
+import { Typography } from "antd";
+import { ELSkeleton } from "@/components/ui/ELSkeleton";
 import type { CompanyWizardData } from "@/lib/validation/company";
 import type { Shipment } from "@/types/shipment";
 import { PickupWizard } from "@/components/pickups/PickupWizard";
@@ -42,7 +43,7 @@ export default function NovaColetaClient() {
   return (
     <PageShell title="Solicitar coleta" gap="md">
       {companyQuery.isLoading || shipmentsQuery.isLoading ? (
-        <Skeleton active paragraph={{ rows: 6 }} />
+        <ELSkeleton lines={6} />
       ) : !company ? (
         <Typography.Text>
           Complete o cadastro de remetente antes de solicitar coletas.

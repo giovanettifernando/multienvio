@@ -1,7 +1,8 @@
 "use client";
 
 import { DeleteOutlined, DownloadOutlined, PlusOutlined, UploadOutlined } from "@ant-design/icons";
-import { App, Button, Card, Col, Form, InputNumber, Row, Space, Typography, Upload } from "antd";
+import { App, Card, Col, Form, InputNumber, Row, Space, Typography, Upload } from "antd";
+import { ELButton } from "@/components/ui/ELButton";
 import {
   Controller,
   type Control,
@@ -163,8 +164,8 @@ function VolumeItem({
       }
       size="small"
       extra={
-        <Button
-          type="text"
+        <ELButton
+          variant="text"
           danger
           icon={<DeleteOutlined />}
           disabled={!canRemove}
@@ -485,21 +486,21 @@ export function VolumesGrid({
     <Space orientation="vertical" size={16} style={{ width: "100%" }}>
       {/* Botões de importação */}
       <Space size={8}>
-        <Button
+        <ELButton
           size="small"
           icon={<DownloadOutlined />}
           onClick={handleDownloadTemplate}
         >
           Baixar modelo
-        </Button>
+        </ELButton>
         <Upload
           accept=".csv"
           showUploadList={false}
           beforeUpload={handleImportCSV}
         >
-          <Button size="small" icon={<UploadOutlined />}>
+          <ELButton size="small" icon={<UploadOutlined />}>
             Importar volumes
-          </Button>
+          </ELButton>
         </Upload>
       </Space>
 
@@ -520,14 +521,14 @@ export function VolumesGrid({
       })}
 
       <div style={{ display: "flex", justifyContent: "flex-end" }}>
-        <Button
-          type="dashed"
+        <ELButton
+          variant="dashed"
           icon={<PlusOutlined />}
           onClick={onAdd}
           disabled={addDisabled}
         >
           Adicionar volume
-        </Button>
+        </ELButton>
       </div>
       {addDisabled ? (
         <Typography.Text type="secondary">

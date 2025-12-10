@@ -1,7 +1,7 @@
 "use client";
 
 import { PageShell } from "@/components/shared/PageShell";
-import { Card } from "antd";
+import { ELCard } from "@/components/ui/ELCard";
 import PersonalForm from "@/components/account/PersonalForm";
 import AccountTabs from "@/components/account/AccountTabs";
 import gridStyles from "@/components/ui/ELGrid.module.css";
@@ -12,9 +12,9 @@ export default function MinhaContaClient() {
     <PageShell title="Minha Conta" gap="lg">
       <div className={cn(gridStyles.grid, gridStyles.gridSidebar, gridStyles.gapXl)}>
         {/* Coluna Esquerda: Dados Pessoais */}
-        <Card>
+        <ELCard>
           <PersonalForm />
-        </Card>
+        </ELCard>
 
         {/* Coluna Direita: Abas (Endereços, Cartões, Destinatários, Segurança) */}
         <AccountTabs />

@@ -1,4 +1,5 @@
-import { Modal, Typography } from "antd";
+import { Typography } from "antd";
+import { ELModal } from "@/components/ui/ELModal";
 import type { CartItem } from "@/types/cart";
 
 type RemoveItemModalProps = {
@@ -17,7 +18,8 @@ export function RemoveItemModal({
   onCancel,
 }: RemoveItemModalProps) {
   return (
-    <Modal
+    <ELModal
+      size="sm"
       open={open}
       onOk={onConfirm}
       onCancel={onCancel}
@@ -34,7 +36,7 @@ export function RemoveItemModal({
         </Typography.Text>{" "}
         do carrinho?
       </Typography.Paragraph>
-    </Modal>
+    </ELModal>
   );
 }
 

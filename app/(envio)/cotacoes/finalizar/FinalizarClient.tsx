@@ -4,13 +4,12 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   App,
-  Card,
-  Col,
-  Row,
-  Skeleton,
   Space,
   Tooltip,
 } from "antd";
+import { ELCard } from "@/components/ui/ELCard";
+import { ELGrid } from "@/components/ui/ELGrid";
+import { ELSkeleton } from "@/components/ui/ELSkeleton";
 import { PageShell } from "@/components/shared/PageShell";
 import { ELButton } from "@/components/ui/ELButton";
 import {
@@ -1142,7 +1141,7 @@ export default function FinalizarClient() {
   if (!results || !selection) {
     return (
       <PageShell title="Finalizar Envio" gap="md">
-        <Skeleton active />
+        <ELSkeleton />
       </PageShell>
     );
   }
@@ -1152,91 +1151,80 @@ export default function FinalizarClient() {
       <FormProvider {...formMethods}>
         <form>
           {/* Resumo do envio, serviço e pagamento lado a lado no topo */}
-          <Row gutter={[16, 16]}>
-            <Col xs={24} md={12} xl={10}>
-              <ResultsBanner summary={summary!} />
-            </Col>
-            <Col xs={24} md={12} xl={8}>
-              <LabelPreview
-                carrier={selectedService?.carrier ?? ""}
-                modalidade={selectedService?.modalidade ?? ""}
-                prazoDias={selectedService?.prazoDias ?? 0}
-                preco={selectedService?.preco ?? 0}
-                isLoadingPickupFee={pickupAtOrigin && isLoadingPickupFee}
-                pickupFee={
-                  pickupFeeData && pickupFeeData.success
-                    ? {
-                        collectorName: pickupFeeData.collector.pfNome || pickupFeeData.collector.pjRazaoSocial,
-                        distanceKm: pickupFeeData.distanceKm,
-                        feeAmount: pickupFeeData.feeAmount,
-                      }
-                    : null
-                }
-              />
-            </Col>
-            <Col xs={24} md={24} xl={6}>
-              <Card
-                size="small"
-                title="Pagamento"
-                styles={{ body: { padding: "12px 16px" } }}
-              >
-                <Space orientation="vertical" size={8} style={{ width: "100%" }}>
-                  <Tooltip title={disabledTooltip}>
-                    <ELButton
-                      htmlType="button"
-                      block
-                      size="small"
-                      loading={cartAdd.isPending}
-                      disabled={!selectedService || !preconditionsOk}
-                      onClick={onAddToCartClick}
-                    >
-                      Adicionar ao carrinho
-                    </ELButton>
-                  </Tooltip>
-                  <Tooltip title={disabledTooltip}>
-                    <ELButton
-                      variant="primary"
-                      htmlType="button"
-                      block
-                      size="small"
-                      loading={isSubmitting || isProcessingCheckout}
-                      disabled={isSubmitting || isProcessingCheckout || !preconditionsOk}
-                      onClick={(e) => {
-                        console.log('[BUTTON_CLICK]', {
-                          isSubmitting,
-                          isProcessingCheckout,
-                          preconditionsOk,
-                          disabled: isSubmitting || isProcessingCheckout || !preconditionsOk,
-                          formErrors: errors
-                        });
-                        handleSubmit(
-                          handlePayNow,
-                          (validationErrors) => {
-                            console.log('[FORM_VALIDATION_FAILED]', validationErrors);
-                            message.error('Por favor, preencha todos os campos obrigatórios.');
-                            setIsProcessingCheckout(false); // Liberar lock em caso de erro de validação
-                          }
-                        )(e);
-                      }}
-                    >
-                      Pagar agora
-                    </ELButton>
-                  </Tooltip>
-                </Space>
-              </Card>
-            </Col>
-          </Row>
+          <ELGrid variant="finalizar" gap="md">
+            <ResultsBanner summary={summary!} />
+            <LabelPreview
+              carrier={selectedService?.carrier ?? ""}
+              modalidade={selectedService?.modalidade ?? ""}
+              prazoDias={selectedService?.prazoDias ?? 0}
+              preco={selectedService?.preco ?? 0}
+              isLoadingPickupFee={pickupAtOrigin && isLoadingPickupFee}
+              pickupFee={
+                pickupFeeData && pickupFeeData.success
+                  ? {
+                      collectorName: pickupFeeData.collector.pfNome || pickupFeeData.collector.pjRazaoSocial,
+                      distanceKm: pickupFeeData.distanceKm,
+                      feeAmount: pickupFeeData.feeAmount,
+                    }
+                  : null
+              }
+            />
+            <ELCard
+              header={{ title: "Pagamento" }}
+              padding="md"
+            >
+              <Space orientation="vertical" size={8} style={{ width: "100%" }}>
+                <Tooltip title={disabledTooltip}>
+                  <ELButton
+                    htmlType="button"
+                    block
+                    size="small"
+                    loading={cartAdd.isPending}
+                    disabled={!selectedService || !preconditionsOk}
+                    onClick={onAddToCartClick}
+                  >
+                    Adicionar ao carrinho
+                  </ELButton>
+                </Tooltip>
+                <Tooltip title={disabledTooltip}>
+                  <ELButton
+                    variant="primary"
+                    htmlType="button"
+                    block
+                    size="small"
+                    loading={isSubmitting || isProcessingCheckout}
+                    disabled={isSubmitting || isProcessingCheckout || !preconditionsOk}
+                    onClick={(e) => {
+                      console.log('[BUTTON_CLICK]', {
+                        isSubmitting,
+                        isProcessingCheckout,
+                        preconditionsOk,
+                        disabled: isSubmitting || isProcessingCheckout || !preconditionsOk,
+                        formErrors: errors
+                      });
+                      handleSubmit(
+                        handlePayNow,
+                        (validationErrors) => {
+                          console.log('[FORM_VALIDATION_FAILED]', validationErrors);
+                          message.error('Por favor, preencha todos os campos obrigatórios.');
+                          setIsProcessingCheckout(false); // Liberar lock em caso de erro de validação
+                        }
+                      )(e);
+                    }}
+                  >
+                    Pagar agora
+                  </ELButton>
+                </Tooltip>
+              </Space>
+            </ELCard>
+          </ELGrid>
 
           {/* Formulários */}
           <Space orientation="vertical" size={24} style={{ width: "100%", marginTop: 24 }}>
-            <Row gutter={[24, 24]}>
-              <Col xs={24} lg={14}>
-                <DocumentChooser />
-              </Col>
-              <Col xs={24} lg={10}>
-                <PostingUnitPicker />
-              </Col>
-            </Row>
+            <ELGrid variant="forms" gap="xl">
+              <DocumentChooser />
+              <PostingUnitPicker />
+            </ELGrid>
             <RecipientForm />
           </Space>
 
