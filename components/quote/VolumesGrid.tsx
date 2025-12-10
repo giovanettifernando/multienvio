@@ -89,7 +89,6 @@ function VolumeItem({
 
   // Ref para dar foco no campo de peso após selecionar embalagem
   // InputNumber expõe ref com método focus()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const pesoInputRef = useRef<any>(null);
 
   // Observar mudanças nos campos de medida

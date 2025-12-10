@@ -111,6 +111,7 @@ export function EtiquetaGenerica({
         <div className={styles.trackingSection}>
           {trackingBarcode && (
             <div className={styles.trackingBarcode}>
+              {/* eslint-disable-next-line @next/next/no-img-element -- base64 barcode for print */}
               <img
                 src={trackingBarcode}
                 alt="Rastreamento"

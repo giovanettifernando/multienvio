@@ -703,7 +703,6 @@ export default function FinalizarClient() {
           // Novo formato NFE: packages (converter de volumeDocuments se disponível)
           packages: values.document.type === "NFE"
             ? (() => {
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 const volumeDocs = values.document.volumeDocuments as any[] | undefined;
                 const fromVolumeDocuments = (volumeDocs || [])
                   .filter((vol) => vol?.type === "NFE" && vol?.nfeKey && vol.nfeKey.length === 44)
@@ -743,7 +742,6 @@ export default function FinalizarClient() {
           // Converter volumeDocuments (formato do UI) para volumeDeclarations (formato da API)
           volumeDeclarations: values.document.type === "DECLARACAO"
             ? (() => {
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 const volumeDocs = values.document.volumeDocuments as any[] | undefined;
                 const fromVolumeDocuments = (volumeDocs || [])
                   .filter((vol) =>
@@ -991,7 +989,6 @@ export default function FinalizarClient() {
           // Novo formato NFE: packages (converter de volumeDocuments se disponível)
           packages: values.document.type === "NFE"
             ? (() => {
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 const volumeDocs = values.document.volumeDocuments as any[] | undefined;
                 const fromVolumeDocuments = (volumeDocs || [])
                   .filter((vol) => vol?.type === "NFE" && vol?.nfeKey && vol.nfeKey.length === 44)
@@ -1033,7 +1030,6 @@ export default function FinalizarClient() {
           volumeDeclarations: values.document.type === "DECLARACAO"
             ? (() => {
                 // Tentar extrair de volumeDocuments primeiro (formato novo do UI)
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 const volumeDocs = values.document.volumeDocuments as any[] | undefined;
                 const fromVolumeDocuments = (volumeDocs || [])
                   .filter((vol) =>

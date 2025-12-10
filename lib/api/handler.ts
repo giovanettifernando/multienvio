@@ -25,7 +25,6 @@ function extractUserAgent(req: NextRequest): string | null {
   return req.headers.get("user-agent");
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- P must accept catch-all routes with string[] values
 export function withApiHandler<T = unknown, P extends Record<string, any> = Record<string, string>>(
   handler: Handler<P, T>,
 ): (req: NextRequest, context: RouteContext<P>) => Promise<NextResponse> {
@@ -139,7 +138,6 @@ type ResponseHandler<P> = (context: RequestContext<P>) => Promise<NextResponse>;
  *   return response;
  * });
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- P must accept catch-all routes with string[] values
 export function withApiHandlerResponse<P extends Record<string, any> = Record<string, string>>(
   handler: ResponseHandler<P>,
 ): (req: NextRequest, context: RouteContext<P>) => Promise<NextResponse> {

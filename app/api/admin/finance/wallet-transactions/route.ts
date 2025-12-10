@@ -71,7 +71,6 @@ export const GET = withApiHandler<WalletTransactionsResponse>(async ({ req }) =>
   const dateEnd = searchParams.get('dateEnd');
 
   // Build where clause
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const where: any = {
     status: 'CONFIRMED', // Only show confirmed transactions
   };

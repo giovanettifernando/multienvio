@@ -115,6 +115,7 @@ export function EtiquetaCorreios({
           {loading ? (
             <div className={styles.loadingPlaceholder}>...</div>
           ) : barcodes.dataMatrix ? (
+            /* eslint-disable-next-line @next/next/no-img-element -- base64 barcode for print */
             <img
               src={barcodes.dataMatrix}
               alt="Data Matrix"
@@ -151,6 +152,7 @@ export function EtiquetaCorreios({
           {/* Linha 3: Barcode do rastreamento */}
           <div className={styles.trackingBarcodeContainer}>
             {barcodes.tracking ? (
+              /* eslint-disable-next-line @next/next/no-img-element -- base64 barcode for print */
               <img
                 src={barcodes.tracking}
                 alt="Código de barras"
@@ -246,6 +248,7 @@ export function EtiquetaCorreios({
             </div>
             <div className={styles.cepBarcodeContainer}>
               {barcodes.cep ? (
+                /* eslint-disable-next-line @next/next/no-img-element -- base64 barcode for print */
                 <img
                   src={barcodes.cep}
                   alt="CEP"
