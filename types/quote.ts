@@ -48,7 +48,7 @@ export type QuoteResultItem = {
   prazoDias: number;
   preco: number;
   exigeSeguro?: boolean;
-  source?: "real" | "mock"; // Indica se é cotação real ou mockada por falha de integração
+  source?: 'real' | 'error' | 'quote'; // 'real' = API, 'error' = falha, 'quote' = cotação selecionada
 };
 
 export type QuoteSummary = {

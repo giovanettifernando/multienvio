@@ -196,32 +196,3 @@ export const useSessionUser = () => useAuthStore(s => s.user);
 // Hook para verificar se o store foi hidratado do localStorage
 export const useAuthHydrated = () => useAuthStore(s => s._hasHydrated);
 
-/**
- * Mock login para desenvolvimento
- * @deprecated Use o método login() real da store
- */
-export function mockLogin(role?: AuthRole): User {
-  const now = new Date().toISOString();
-
-  const mockUser: User = {
-    id: generateUUID(),
-    name: role === AuthRole.ADMIN ? "Admin Sistema" : "João Silva",
-    email: role === AuthRole.ADMIN ? "admin@enviolegal.com" : "joao@example.com",
-    phone: "+5511999999999",
-    status: UserStatus.ACTIVE,
-    roles: role ? [role] : [], // Regular users have no admin roles
-    lastLoginAt: now,
-    createdAt: now,
-    updatedAt: now,
-  };
-
-  useAuthStore.getState().setUser(mockUser);
-  return mockUser;
-}
-
-/**
- * Mock logout para desenvolvimento
- */
-export function mockLogout() {
-  useAuthStore.getState().logout();
-}

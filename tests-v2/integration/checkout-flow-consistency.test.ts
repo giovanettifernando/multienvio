@@ -97,45 +97,60 @@ describe('Checkout Flow Consistency', () => {
   });
 
   describe('Consistência entre endpoints', () => {
-    it('ambos endpoints devem usar mesmo mock PDF base64', () => {
+    it('ambos endpoints NÃO devem usar mock PDF (PDF real é baixado on-demand)', () => {
       const walletPath = path.join(process.cwd(), 'app/api/wallet/debit/route.ts');
       const paymentPath = path.join(process.cwd(), 'app/api/shipments/[id]/payment/route.ts');
 
       const walletContent = fs.readFileSync(walletPath, 'utf-8');
       const paymentContent = fs.readFileSync(paymentPath, 'utf-8');
 
-      // Extrair o mockPdfBase64 de ambos os arquivos
-      const mockPdfPattern = /mockPdfBase64\s*=\s*'([^']+)'/;
-      const walletMatch = walletContent.match(mockPdfPattern);
-      const paymentMatch = paymentContent.match(mockPdfPattern);
+      // Verificar que NÃO contém mais mockPdfBase64 (removido por segurança)
+      assert.ok(
+        !walletContent.includes('mockPdfBase64'),
+        'wallet/debit NÃO deve ter mockPdfBase64 (PDF real via API Correios)'
+      );
+      assert.ok(
+        !paymentContent.includes('mockPdfBase64'),
+        'shipments/[id]/payment NÃO deve ter mockPdfBase64 (PDF real via API Correios)'
+      );
 
-      assert.ok(walletMatch, 'wallet/debit deve ter mockPdfBase64');
-      assert.ok(paymentMatch, 'shipments/[id]/payment deve ter mockPdfBase64');
-      assert.strictEqual(
-        walletMatch![1],
-        paymentMatch![1],
-        'Ambos devem usar o mesmo mock PDF para consistência'
+      // Verificar comentário indicando download on-demand
+      assert.ok(
+        walletContent.includes('/api/labels/[id]/pdf'),
+        'wallet/debit deve referenciar endpoint de download real'
+      );
+      assert.ok(
+        paymentContent.includes('/api/labels/[id]/pdf'),
+        'shipments/[id]/payment deve referenciar endpoint de download real'
       );
     });
 
-    it('ambos endpoints devem definir contentType e sizeBytes na label', () => {
+    it('ambos endpoints devem marcar label como issued sem fileBase64', () => {
       const walletPath = path.join(process.cwd(), 'app/api/wallet/debit/route.ts');
       const paymentPath = path.join(process.cwd(), 'app/api/shipments/[id]/payment/route.ts');
 
       const walletContent = fs.readFileSync(walletPath, 'utf-8');
       const paymentContent = fs.readFileSync(paymentPath, 'utf-8');
 
-      // Verificar campos obrigatórios na atualização da label
-      for (const [name, content] of [['wallet/debit', walletContent], ['shipments/[id]/payment', paymentContent]]) {
-        assert.ok(
-          content.includes("contentType: 'application/pdf'"),
-          `${name} deve definir contentType: 'application/pdf'`
-        );
-        assert.ok(
-          content.includes('sizeBytes:'),
-          `${name} deve definir sizeBytes`
-        );
-      }
+      // Verificar que ambos marcam status como issued
+      assert.ok(
+        walletContent.includes("status: 'issued'"),
+        'wallet/debit deve marcar status como issued'
+      );
+      assert.ok(
+        paymentContent.includes("status: 'issued'"),
+        'shipments/[id]/payment deve marcar status como issued'
+      );
+
+      // Verificar que NÃO definem fileBase64 inline
+      assert.ok(
+        !walletContent.includes('fileBase64:'),
+        'wallet/debit NÃO deve definir fileBase64 inline'
+      );
+      assert.ok(
+        !paymentContent.includes('fileBase64:'),
+        'shipments/[id]/payment NÃO deve definir fileBase64 inline'
+      );
     });
   });
 });

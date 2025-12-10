@@ -62,7 +62,7 @@ export type CartItemSnapshot = {
     serviceName: string;
     price: number;
     deadlineDays: number;
-    source?: 'real' | 'mock';
+    source?: 'real' | 'error' | 'quote';
   };
   totals: {
     subtotal?: number;

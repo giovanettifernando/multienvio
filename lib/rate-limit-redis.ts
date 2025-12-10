@@ -155,6 +155,7 @@ async function checkRedisRateLimit(
 /**
  * Verifica rate limit com estrategia fail-open
  * Se Redis falhar, usa fallback local
+ * NOTA: Para rotas sensíveis (login, reset, checkout), use checkRateLimitStrict
  */
 export async function checkRateLimit(
   key: string,
@@ -181,6 +182,45 @@ export async function checkRateLimit(
     }
 
     return checkLocalRateLimit(key, config);
+  }
+}
+
+/**
+ * Verifica rate limit com estrategia fail-close (SEGURO)
+ * Se Redis falhar, BLOQUEIA a requisição (não permite fallback local)
+ * Use para rotas sensíveis: login, reset-password, checkout
+ */
+export async function checkRateLimitStrict(
+  key: string,
+  config: RateLimitConfig
+): Promise<RateLimitResult & { redisUnavailable?: boolean }> {
+  // Se Redis nao esta disponivel, retorna como se estivesse bloqueado
+  if (!isRedisAvailable()) {
+    console.error(`[RateLimit][STRICT] Redis indisponivel - bloqueando requisição para: ${key}`);
+    return {
+      allowed: false,
+      remaining: 0,
+      resetTime: Date.now() + 60000, // Retry em 1 minuto
+      fromRedis: false,
+      redisUnavailable: true,
+    };
+  }
+
+  try {
+    return await checkRedisRateLimit(key, config);
+  } catch (error) {
+    // FAIL-CLOSE: Redis falhou, BLOQUEIA a requisição
+    openCircuitBreaker();
+    console.error(
+      `[RateLimit][STRICT] Redis falhou - bloqueando requisição. Erro: ${(error as Error).message}`
+    );
+    return {
+      allowed: false,
+      remaining: 0,
+      resetTime: Date.now() + 60000,
+      fromRedis: false,
+      redisUnavailable: true,
+    };
   }
 }
 
@@ -232,14 +272,12 @@ export async function rateLimitByIP(
   let ip: string | null = null;
 
   if (TRUSTED_PROXY_ENABLED) {
+    // Apenas confiar em headers de proxy se explicitamente habilitado
     const forwarded = request.headers.get('x-forwarded-for');
     const realIp = request.headers.get('x-real-ip');
     ip = forwarded ? forwarded.split(',')[0].trim() : realIp;
   }
-
-  if (!ip) {
-    ip = request.headers.get('x-real-ip');
-  }
+  // NOTA: NÃO usar x-real-ip se TRUST_PROXY não estiver habilitado (evita spoofing)
 
   // Se nao conseguir identificar IP, usar bucket global mais restritivo
   if (!ip) {
@@ -309,6 +347,41 @@ export async function enforceRateLimit({
 }
 
 /**
+ * Enforce rate limit STRICT para rotas sensíveis (throws ApiError se excedido ou Redis indisponível)
+ * FAIL-CLOSE: Se Redis falhar, BLOQUEIA a requisição
+ * Use para: login, reset-password, checkout, e outras operações sensíveis
+ */
+export async function enforceRateLimitStrict({
+  key,
+  limit,
+  windowMs,
+}: {
+  key: string;
+  limit: number;
+  windowMs: number;
+}): Promise<void> {
+  const result = await checkRateLimitStrict(key, { windowMs, maxRequests: limit });
+
+  if (result.redisUnavailable) {
+    throw new ApiError({
+      code: 'service_unavailable',
+      message: 'Serviço temporariamente indisponível. Tente novamente em instantes.',
+      status: 503,
+      details: { reason: 'rate_limit_backend_unavailable' },
+    });
+  }
+
+  if (!result.allowed) {
+    throw new ApiError({
+      code: 'rate_limit_exceeded',
+      message: 'Limite de requisicoes excedido. Tente novamente em instantes.',
+      status: 429,
+      details: { key, limit, windowMs, resetTime: result.resetTime },
+    });
+  }
+}
+
+/**
  * Enforce rate limit by IP (throws ApiError se excedido)
  * Compativel com withApiHandler - extrai IP da request e aplica rate limit
  */
@@ -321,14 +394,12 @@ export async function enforceRateLimitByIP(
   let ip: string | null = null;
 
   if (TRUSTED_PROXY_ENABLED) {
+    // Apenas confiar em headers de proxy se explicitamente habilitado
     const forwarded = request.headers.get('x-forwarded-for');
     const realIp = request.headers.get('x-real-ip');
     ip = forwarded ? forwarded.split(',')[0].trim() : realIp;
   }
-
-  if (!ip) {
-    ip = request.headers.get('x-real-ip');
-  }
+  // NOTA: NÃO usar x-real-ip se TRUST_PROXY não estiver habilitado (evita spoofing)
 
   // Se nao conseguir identificar IP, usar bucket global mais restritivo
   const key = ip ? `ip:${ip}:${action}` : `global:${action}`;

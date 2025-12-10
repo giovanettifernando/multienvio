@@ -101,13 +101,17 @@ export function useCartAdd() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (payload: unknown) => {
+      console.log("[CART_ADD] Payload enviado:", payload);
       const response = await fetch("/api/cart/items", {
         method: "POST",
         body: JSON.stringify(payload),
         headers: { "Content-Type": "application/json" },
       });
       if (!response.ok) {
-        throw new Error("Falha ao adicionar ao carrinho");
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData.error?.message || errorData.message || "Falha ao adicionar ao carrinho";
+        console.error("[CART_ADD] Erro da API:", errorData);
+        throw new Error(errorMessage);
       }
       const json = await response.json();
       // Handle standardized API response format { data: T, error, meta }

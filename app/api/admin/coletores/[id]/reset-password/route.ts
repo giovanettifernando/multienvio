@@ -12,9 +12,12 @@ import { prisma } from '@/lib/db';
 import { SignJWT } from 'jose';
 import nodemailer from 'nodemailer';
 
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || 'envio-legal-secret-key-change-in-production'
-);
+// JWT secret - OBRIGATÓRIO, sem fallback
+const JWT_SECRET_RAW = process.env.JWT_SECRET;
+if (!JWT_SECRET_RAW) {
+  throw new Error('[SECURITY] JWT_SECRET não configurado. Esta variável é obrigatória.');
+}
+const JWT_SECRET = new TextEncoder().encode(JWT_SECRET_RAW);
 
 interface PostResetPasswordResponse {
   message: string;

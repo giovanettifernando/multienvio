@@ -5,7 +5,6 @@ import {
   FieldTimeOutlined,
   LogoutOutlined,
   SafetyCertificateOutlined,
-  InfoCircleOutlined,
 } from "@ant-design/icons";
 import {
   Avatar,
@@ -15,7 +14,6 @@ import {
   Table,
   Tag,
   Typography,
-  Alert,
 } from "antd";
 import { ELButton } from "@/components/ui/ELButton";
 import { ELCard } from "@/components/ui/ELCard";
@@ -70,11 +68,6 @@ export function ResultsTable({
     [results, sortOrder],
   );
 
-  // Verifica se há cotações mockadas
-  const hasMockQuotes = useMemo(
-    () => results.some((r) => r.source === "mock"),
-    [results],
-  );
 
   const columns: ColumnsType<QuoteResultItem> = [
     {
@@ -99,15 +92,8 @@ export function ResultsTable({
       title: "Modalidade",
       dataIndex: "modalidade",
       key: "modalidade",
-      render: (value: string, record: QuoteResultItem) => (
-        <Flex align="center" gap={8}>
-          <Typography.Text>{value}</Typography.Text>
-          {record.source === "mock" && (
-            <Tag color="orange" bordered={false}>
-              Mock
-            </Tag>
-          )}
-        </Flex>
+      render: (value: string) => (
+        <Typography.Text>{value}</Typography.Text>
       ),
     },
     {
@@ -195,17 +181,6 @@ export function ResultsTable({
           loading={loading}
         />
       </ELCard>
-
-      {hasMockQuotes && (
-        <Alert
-          message="Algumas cotações estão em modo simulado"
-          description="Algumas opções foram geradas automaticamente por indisponibilidade de integração. Os valores e prazos podem variar ao confirmar o envio."
-          type="warning"
-          icon={<InfoCircleOutlined />}
-          showIcon
-          closable
-        />
-      )}
     </Flex>
   );
 }

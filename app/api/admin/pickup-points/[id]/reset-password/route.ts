@@ -14,9 +14,12 @@ import { withApiHandler } from '@/lib/api/handler';
 import { ApiError } from '@/lib/api/errors';
 import { logger } from '@/lib/logger';
 
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || 'envio-legal-secret-key-change-in-production'
-);
+// JWT secret - OBRIGATÓRIO, sem fallback
+const JWT_SECRET_RAW = process.env.JWT_SECRET;
+if (!JWT_SECRET_RAW) {
+  throw new Error('[SECURITY] JWT_SECRET não configurado. Esta variável é obrigatória.');
+}
+const JWT_SECRET = new TextEncoder().encode(JWT_SECRET_RAW);
 
 /**
  * POST /api/admin/pickup-points/[id]/reset-password

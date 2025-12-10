@@ -240,7 +240,7 @@ export async function isCorreiosAvailableAsync(): Promise<boolean> {
  */
 export async function quoteFromCorreios(
   request: QuoteRequest
-): Promise<{ results: QuoteResultItem[]; source: 'real' | 'mock'; error?: string }> {
+): Promise<{ results: QuoteResultItem[]; source: 'real' | 'error'; error?: string }> {
   const requestId = `correios_${Date.now()}`;
 
   console.log('[CORREIOS_ADAPTER] Starting quote:', {
@@ -256,7 +256,7 @@ export async function quoteFromCorreios(
     console.warn('[CORREIOS_ADAPTER] Integration not configured');
     return {
       results: [],
-      source: 'mock',
+      source: 'error',
       error: 'INTEGRATION_DISABLED',
     };
   }
@@ -291,7 +291,7 @@ export async function quoteFromCorreios(
 
     return {
       results: [],
-      source: 'mock',
+      source: 'error',
       error: error instanceof Error ? error.message : 'Erro desconhecido',
     };
   }

@@ -59,10 +59,12 @@ interface TokenVersionCache {
 const tokenVersionCache = new Map<string, TokenVersionCache>();
 const TOKEN_VERSION_CACHE_TTL = 30 * 1000; // 30 segundos
 
-// Collector JWT Secret (for pickup points) - Nunca usar fallbacks em produção
-const COLLECTOR_JWT_SECRET = process.env.COLLECTOR_JWT_SECRET
-  ? new TextEncoder().encode(process.env.COLLECTOR_JWT_SECRET)
-  : null;
+// Collector JWT Secret (for pickup points) - OBRIGATÓRIO, sem fallback
+const COLLECTOR_JWT_SECRET_RAW = process.env.COLLECTOR_JWT_SECRET;
+if (!COLLECTOR_JWT_SECRET_RAW) {
+  throw new Error('[SECURITY] COLLECTOR_JWT_SECRET não configurado. Esta variável é obrigatória.');
+}
+const COLLECTOR_JWT_SECRET = new TextEncoder().encode(COLLECTOR_JWT_SECRET_RAW);
 
 // Cookie names for collectors
 const COLLECTOR_AUTH_COOKIE_NAME = 'collector_auth'; // Pickup points
@@ -150,11 +152,6 @@ async function verifyAdminToken(token: string): Promise<{ payload: AdminJWTPaylo
  * Verify pickup point JWT token and return payload with error type
  */
 async function verifyCollectorToken(token: string): Promise<{ payload: CollectorJWTPayload | null; error: 'expired' | 'invalid' | null }> {
-  if (!COLLECTOR_JWT_SECRET) {
-    // Secret not configured - fail open (let route handle auth)
-    console.warn('[PROXY] COLLECTOR_JWT_SECRET not configured, skipping proxy-level auth');
-    return { payload: null, error: null };
-  }
   try {
     const { payload } = await jwtVerify(token, COLLECTOR_JWT_SECRET, {
       issuer: 'enviolegal-collector',
@@ -471,9 +468,8 @@ export async function proxy(request: NextRequest) {
       );
     }
 
-    // If COLLECTOR_JWT_SECRET not configured, fail-open (let route handle)
-    // Otherwise, if no valid token, return 401
-    if (COLLECTOR_JWT_SECRET && !pickupResult.payload) {
+    // No valid token - return 401 (fail-close, não fail-open)
+    if (!pickupResult.payload) {
       return NextResponse.json(
         { error: 'Unauthorized', message: 'Autenticação de ponto de coleta necessária' },
         { status: 401 }

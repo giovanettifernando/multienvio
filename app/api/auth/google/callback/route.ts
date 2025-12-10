@@ -19,10 +19,12 @@ import { sign, AUTH_COOKIE_NAME } from '@/lib/auth/session';
 import { getCachedRoleByName } from '@/lib/cache';
 import type { RequestLogger } from '@/lib/api/types';
 
-// JWT secret for collector tokens
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || 'your-secret-key-change-this-in-production'
-);
+// JWT secret for collector tokens - OBRIGATÓRIO, sem fallback
+const JWT_SECRET_RAW = process.env.JWT_SECRET;
+if (!JWT_SECRET_RAW) {
+  throw new Error('[SECURITY] JWT_SECRET não configurado. Esta variável é obrigatória.');
+}
+const JWT_SECRET = new TextEncoder().encode(JWT_SECRET_RAW);
 
 // Default redirect URLs
 const DEFAULT_REDIRECTS: Record<OAuthContext, string> = {

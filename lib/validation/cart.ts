@@ -41,7 +41,7 @@ export const selectedQuoteSnapshotSchema = z.object({
   serviceName: z.string(),
   price: z.number(),
   deadlineDays: z.number(),
-  source: z.string().optional(), // 'real', 'mock', ou outros valores
+  source: z.enum(['real', 'error', 'quote']).optional(), // 'real' = API, 'error' = falha, 'quote' = cotação selecionada
 });
 
 export const totalsSnapshotSchema = z.object({
