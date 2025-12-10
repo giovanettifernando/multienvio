@@ -2,6 +2,7 @@ import { withApiHandler } from '@/lib/api/handler';
 import { ApiError } from '@/lib/api/errors';
 import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
 import { AdminPermission } from '@prisma/client';
+import { logger } from '@/lib/logger';
 
 interface ReprocessResponse {
   ok: boolean;
@@ -20,7 +21,7 @@ export const POST = withApiHandler<ReprocessResponse, { id: string }>(async (con
   }
 
   const { id } = await params;
-  console.log('[Mock] Reprocessing shipment:', id);
+  logger.debug({ event: 'mock_reprocess_shipment', id }, 'Reprocessing shipment');
 
   return { data: { ok: true } };
 });

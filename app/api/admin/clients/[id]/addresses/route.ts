@@ -11,6 +11,7 @@ import { ApiError } from '@/lib/api/errors';
 import { prisma } from '@/lib/db';
 import { requireAdminUser } from '@/lib/auth/admin-helpers';
 import { AdminPermission } from '@prisma/client';
+import { logger } from '@/lib/logger';
 
 const addressSchema = z.object({
   label: z.string().optional(),
@@ -108,11 +109,12 @@ export const POST = withApiHandler<unknown, { id: string }>(async ({ req, params
     },
   });
 
-  console.log('[ADMIN_CREATE_ADDRESS]', {
+  logger.info({
+    event: 'admin_create_address',
     adminId: authResult.user.id,
     userId,
     addressId: address.id,
-  });
+  }, 'Admin created address');
 
   return {
     data: { message: 'Endereço criado com sucesso', address },

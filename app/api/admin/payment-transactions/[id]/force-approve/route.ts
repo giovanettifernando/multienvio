@@ -14,6 +14,7 @@ import * as walletService from '@/lib/wallet/wallet.service';
 import { withApiHandler } from '@/lib/api/handler';
 import { ApiError } from '@/lib/api/errors';
 import { z } from 'zod';
+import { logger } from '@/lib/logger';
 
 const ForceApproveSchema = z.object({
   reason: z.string().max(500).optional(),
@@ -136,12 +137,13 @@ export const POST = withApiHandler<unknown, { id: string }>(async ({ req, params
     return updated;
   });
 
-  console.log('[ADMIN_FORCE_APPROVE] Pagamento aprovado manualmente:', {
+  logger.info({
+    event: 'admin_force_approve_payment',
     paymentId: id,
     adminId: adminSession.staffId,
     adminEmail: adminSession.email,
     reason,
-  });
+  }, 'Payment manually approved');
 
   // Aplicar efeitos de domínio se for wallet_topup
   const metadata = result.metadata as Record<string, unknown> | null;
@@ -155,11 +157,12 @@ export const POST = withApiHandler<unknown, { id: string }>(async ({ req, params
       providerPaymentId: result.externalId || undefined,
     });
 
-    console.log('[ADMIN_FORCE_APPROVE] Carteira creditada:', {
+    logger.info({
+      event: 'admin_force_approve_wallet_credited',
       userId: result.userId,
       amount: result.amountCents / 100,
       approvedBy: adminSession.email,
-    });
+    }, 'Wallet credited after manual approval');
   }
 
   return {

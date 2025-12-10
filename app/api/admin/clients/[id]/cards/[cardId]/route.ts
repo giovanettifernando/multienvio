@@ -12,6 +12,7 @@ import { ApiError } from '@/lib/api/errors';
 import { prisma } from '@/lib/db';
 import { requireAdminUser } from '@/lib/auth/admin-helpers';
 import { AdminPermission } from '@prisma/client';
+import { logger } from '@/lib/logger';
 
 const updateCardSchema = z.object({
   isDefault: z.boolean(),
@@ -78,12 +79,13 @@ export const PUT = withApiHandler<unknown, { id: string; cardId: string }>(async
     },
   });
 
-  console.log('[ADMIN_UPDATE_CARD]', {
+  logger.info({
+    event: 'admin_update_card',
     adminId: authResult.user.id,
     userId,
     cardId,
     isDefault,
-  });
+  }, 'Admin updated card');
 
   return { data: { message: 'Cartão atualizado com sucesso', card } };
 });
@@ -118,11 +120,12 @@ export const DELETE = withApiHandler<unknown, { id: string; cardId: string }>(as
     where: { id: cardId },
   });
 
-  console.log('[ADMIN_DELETE_CARD]', {
+  logger.info({
+    event: 'admin_delete_card',
     adminId: authResult.user.id,
     userId,
     cardId,
-  });
+  }, 'Admin deleted card');
 
   return { data: { message: 'Cartão removido com sucesso' } };
 });

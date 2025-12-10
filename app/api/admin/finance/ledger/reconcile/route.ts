@@ -4,6 +4,7 @@ import { ApiError } from '@/lib/api/errors';
 import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
 import { AdminPermission } from '@prisma/client';
 import { rateLimitByUser, RATE_LIMITS } from '@/lib/rate-limit-redis';
+import { logger } from '@/lib/logger';
 
 const reconcileSchema = z.object({
   ids: z.array(z.string()).min(1, 'Pelo menos um ID deve ser fornecido'),
@@ -56,7 +57,7 @@ export const POST = withApiHandler<ReconcileResponse>(async ({ req }) => {
 
   // Mock: just return success
   // In real implementation, would update DB
-  console.log('[Mock] Reconciling ledger entries:', ids);
+  logger.debug({ event: 'mock_reconcile_ledger', ids }, 'Reconciling ledger entries');
 
   return { data: { ok: true } };
 });

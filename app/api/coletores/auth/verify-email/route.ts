@@ -3,10 +3,12 @@
  * POST /api/coletores/auth/verify-email - Verifica o token de confirmação
  */
 
+import { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { withApiHandler } from '@/lib/api/handler';
 import { ApiError } from '@/lib/api/errors';
 import { prisma } from '@/lib/db';
+import { enforceRateLimitByIP, RATE_LIMITS } from '@/lib/rate-limit-redis';
 
 const VerifyEmailSchema = z.object({
   token: z.string().min(1, 'Token é obrigatório'),
@@ -22,6 +24,9 @@ type CollectorVerifyEmailResponse = {
  */
 export const POST = withApiHandler<CollectorVerifyEmailResponse>(async (context) => {
   const { req, logger } = context;
+
+  // Rate limiting by IP - 10 attempts per minute (public API preset)
+  await enforceRateLimitByIP(req as NextRequest, 'collector_verify_email', RATE_LIMITS.PUBLIC_API);
 
   const body = await req.json();
   const parsed = VerifyEmailSchema.safeParse(body);

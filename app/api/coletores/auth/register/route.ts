@@ -3,6 +3,7 @@
  * POST /api/coletores/auth/register - Registra um novo coletor
  */
 
+import { NextRequest } from 'next/server';
 import { withApiHandler } from '@/lib/api/handler';
 import { ApiError } from '@/lib/api/errors';
 import { createCollector } from '@/lib/collectors/service';
@@ -11,6 +12,7 @@ import { prisma } from '@/lib/db';
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 import { sendEmail } from '@/lib/email/mailer';
+import { enforceRateLimitByIP, RATE_LIMITS } from '@/lib/rate-limit-redis';
 
 type CollectorRegisterResponse = {
   message: string;
@@ -28,6 +30,9 @@ type CollectorRegisterResponse = {
  */
 export const POST = withApiHandler<CollectorRegisterResponse>(async (context) => {
   const { req, logger } = context;
+
+  // Rate limiting by IP - 5 attempts per 5 minutes (same as login)
+  await enforceRateLimitByIP(req as NextRequest, 'collector_register', RATE_LIMITS.LOGIN);
 
   try {
     const body = await req.json();

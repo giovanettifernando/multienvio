@@ -1,3 +1,4 @@
+import { NextRequest } from 'next/server';
 import { withApiHandler } from '@/lib/api/handler';
 import { ApiError } from '@/lib/api/errors';
 import { z } from 'zod';
@@ -7,6 +8,7 @@ import {
   validateDocumentHasItems,
   type CheckoutInput,
 } from '@/lib/checkout';
+import { enforceRateLimitByIP, RATE_LIMITS } from '@/lib/rate-limit-redis';
 
 /**
  * Tipos de resposta do checkout - Union discriminada por 'source'
@@ -134,6 +136,9 @@ type CheckoutPayload = z.infer<typeof checkoutSchema>;
  * 5. Retorna URL de pagamento ou dados do envio criado
  */
 export const POST = withApiHandler<CheckoutResponse>(async ({ req }) => {
+  // Rate limiting by IP - 10 req/min (CHECKOUT preset - more permissive to not block sales)
+  await enforceRateLimitByIP(req as NextRequest, 'checkout', RATE_LIMITS.CHECKOUT);
+
   // Autenticar usuário
   const session = await getUserSessionFromRequest(req);
   if (!session) {

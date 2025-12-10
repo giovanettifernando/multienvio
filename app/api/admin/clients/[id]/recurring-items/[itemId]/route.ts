@@ -11,6 +11,7 @@ import { ApiError } from '@/lib/api/errors';
 import { prisma } from '@/lib/db';
 import { requireAdminUser } from '@/lib/auth/admin-helpers';
 import { AdminPermission } from '@prisma/client';
+import { logger } from '@/lib/logger';
 
 const itemSchema = z.object({
   descricao: z.string().min(1).optional(),
@@ -64,11 +65,12 @@ export const PUT = withApiHandler<unknown, { id: string; itemId: string }>(async
     },
   });
 
-  console.log('[ADMIN_UPDATE_RECURRING_ITEM]', {
+  logger.info({
+    event: 'admin_update_recurring_item',
     adminId: authResult.user.id,
     userId,
     itemId,
-  });
+  }, 'Admin updated recurring item');
 
   return { data: { message: 'Item atualizado com sucesso', item } };
 });
@@ -103,11 +105,12 @@ export const DELETE = withApiHandler<unknown, { id: string; itemId: string }>(as
     where: { id: itemId },
   });
 
-  console.log('[ADMIN_DELETE_RECURRING_ITEM]', {
+  logger.info({
+    event: 'admin_delete_recurring_item',
     adminId: authResult.user.id,
     userId,
     itemId,
-  });
+  }, 'Admin deleted recurring item');
 
   return { data: { message: 'Item removido com sucesso' } };
 });

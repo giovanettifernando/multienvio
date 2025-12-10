@@ -11,6 +11,7 @@ import { ApiError } from '@/lib/api/errors';
 import { prisma } from '@/lib/db';
 import { requireAdminUser } from '@/lib/auth/admin-helpers';
 import { AdminPermission } from '@prisma/client';
+import { logger } from '@/lib/logger';
 
 const recipientSchema = z.object({
   name: z.string().min(2),
@@ -117,11 +118,12 @@ export const POST = withApiHandler<unknown, { id: string }>(async ({ req, params
     },
   });
 
-  console.log('[ADMIN_CREATE_RECIPIENT]', {
+  logger.info({
+    event: 'admin_create_recipient',
     adminId: authResult.user.id,
     userId,
     recipientId: recipient.id,
-  });
+  }, 'Admin created recipient');
 
   return {
     data: { message: 'Destinatário criado com sucesso', recipient },

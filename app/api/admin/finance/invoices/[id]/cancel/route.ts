@@ -3,6 +3,7 @@ import { ApiError } from '@/lib/api/errors';
 import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
 import { AdminPermission } from '@prisma/client';
 import { rateLimitByUser, RATE_LIMITS } from '@/lib/rate-limit-redis';
+import { logger } from '@/lib/logger';
 
 interface CancelInvoiceResponse {
   ok: boolean;
@@ -36,7 +37,7 @@ export const POST = withApiHandler<CancelInvoiceResponse, { id: string }>(async 
   }
 
   const { id } = params;
-  console.log('[Mock] Canceling invoice:', id);
+  logger.debug({ event: 'mock_invoice_cancel', id }, 'Canceling invoice');
 
   return { data: { ok: true } };
 });

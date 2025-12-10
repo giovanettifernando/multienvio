@@ -1,7 +1,9 @@
+import { NextRequest } from 'next/server';
 import { withApiHandler } from '@/lib/api/handler';
 import { ApiError } from '@/lib/api/errors';
 import { prisma } from '@/lib/db';
 import { hashToken } from '@/lib/auth/tokens';
+import { enforceRateLimitByIP, RATE_LIMITS } from '@/lib/rate-limit-redis';
 
 type VerifyEmailResponse =
   | {
@@ -19,6 +21,9 @@ type VerifyEmailResponse =
 
 export const GET = withApiHandler<VerifyEmailResponse>(async (context) => {
   const { req, logger } = context;
+
+  // Rate limiting by IP - 10 attempts per minute (public API preset - more permissive as it's a GET)
+  await enforceRateLimitByIP(req as NextRequest, 'verify_email', RATE_LIMITS.PUBLIC_API);
 
   const { searchParams } = new URL(req.url);
   const token = searchParams.get('token');

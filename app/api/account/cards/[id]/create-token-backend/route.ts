@@ -132,7 +132,7 @@ export const POST = withApiHandler<CreateTokenBackendResponse>(async (context) =
     identificationNumber: cpf.replace(/\D/g, ""),
   };
 
-  console.log('[CREATE_TOKEN_BACKEND] Card data:', {
+  logger.debug('create_token_backend_card_data', {
     cardNumber: pan.substring(0, 6) + '****' + pan.substring(pan.length - 4),
     cardNumberLength: pan.length,
     cardholderName: card.holderName,
@@ -144,7 +144,7 @@ export const POST = withApiHandler<CreateTokenBackendResponse>(async (context) =
 
   // Criar token usando SDK backend
   const token = await createCardToken(cardData);
-  console.log('[CREATE_TOKEN_BACKEND] Token criado:', token.id);
+  logger.info('create_token_backend_success', { tokenId: token.id });
 
   // Retornar token criado
   return {

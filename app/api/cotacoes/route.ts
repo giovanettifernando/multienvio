@@ -1,3 +1,4 @@
+import { NextRequest } from 'next/server';
 import { withApiHandler } from '@/lib/api/handler';
 import { ApiError } from '@/lib/api/errors';
 import { getUserFromRequest } from '@/lib/auth/session';
@@ -9,6 +10,7 @@ import {
 } from '@/lib/validation/quote-backend';
 import { logger } from '@/lib/logger';
 import type { QuoteResultItem, QuoteSummary, PartnerPoint } from '@/types/quote';
+import { enforceRateLimitByIP, RATE_LIMITS } from '@/lib/rate-limit-redis';
 
 type PostCotacoesResponse = {
   quoteId: string;
@@ -23,6 +25,9 @@ type PostCotacoesResponse = {
  * Creates a new quote with shipping options
  */
 export const POST = withApiHandler<PostCotacoesResponse>(async (context) => {
+  // Rate limiting by IP - 20 req/min (QUOTES preset - users make multiple quotes)
+  await enforceRateLimitByIP(context.req as NextRequest, 'create_quote', RATE_LIMITS.QUOTES);
+
   const session = await getUserFromRequest(context.req);
   if (!session?.userId) {
     throw new ApiError({ code: 'unauthorized', message: 'Não autenticado', status: 401 });

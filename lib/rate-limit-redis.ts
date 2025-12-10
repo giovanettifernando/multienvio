@@ -308,6 +308,39 @@ export async function enforceRateLimit({
   }
 }
 
+/**
+ * Enforce rate limit by IP (throws ApiError se excedido)
+ * Compativel com withApiHandler - extrai IP da request e aplica rate limit
+ */
+export async function enforceRateLimitByIP(
+  request: NextRequest,
+  action: string,
+  config: RateLimitConfig = { windowMs: 60000, maxRequests: 5 }
+): Promise<void> {
+  const TRUSTED_PROXY_ENABLED = process.env.TRUST_PROXY === 'true';
+  let ip: string | null = null;
+
+  if (TRUSTED_PROXY_ENABLED) {
+    const forwarded = request.headers.get('x-forwarded-for');
+    const realIp = request.headers.get('x-real-ip');
+    ip = forwarded ? forwarded.split(',')[0].trim() : realIp;
+  }
+
+  if (!ip) {
+    ip = request.headers.get('x-real-ip');
+  }
+
+  // Se nao conseguir identificar IP, usar bucket global mais restritivo
+  const key = ip ? `ip:${ip}:${action}` : `global:${action}`;
+  const effectiveConfig = ip ? config : { ...config, maxRequests: Math.ceil(config.maxRequests / 2) };
+
+  await enforceRateLimit({
+    key,
+    limit: effectiveConfig.maxRequests,
+    windowMs: effectiveConfig.windowMs,
+  });
+}
+
 // ============================================================================
 // CONFIGURACOES PRE-DEFINIDAS
 // ============================================================================

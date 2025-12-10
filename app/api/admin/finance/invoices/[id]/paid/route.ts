@@ -3,6 +3,7 @@ import { ApiError } from '@/lib/api/errors';
 import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
 import { AdminPermission } from '@prisma/client';
 import { rateLimitByUser, RATE_LIMITS } from '@/lib/rate-limit-redis';
+import { logger } from '@/lib/logger';
 
 interface MarkInvoicePaidResponse {
   ok: boolean;
@@ -36,7 +37,7 @@ export const POST = withApiHandler<MarkInvoicePaidResponse, { id: string }>(asyn
   }
 
   const { id } = params;
-  console.log('[Mock] Marking invoice as paid:', id);
+  logger.debug({ event: 'mock_invoice_paid', id }, 'Marking invoice as paid');
 
   return { data: { ok: true } };
 });

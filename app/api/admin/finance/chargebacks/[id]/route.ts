@@ -4,6 +4,7 @@ import { ApiError } from '@/lib/api/errors';
 import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
 import { AdminPermission } from '@prisma/client';
 import { rateLimitByUser, RATE_LIMITS } from '@/lib/rate-limit-redis';
+import { logger } from '@/lib/logger';
 
 const updateChargebackSchema = z.object({
   status: z.enum(['pending', 'won', 'lost', 'cancelled']),
@@ -55,7 +56,7 @@ export const POST = withApiHandler<UpdateChargebackResponse, { id: string }>(asy
   }
 
   const { status, notes } = parsed.data;
-  console.log('[Mock] Updating chargeback:', id, 'to', status, { notes });
+  logger.debug({ event: 'mock_chargeback_update', id, status, notes }, 'Updating chargeback');
 
   return { data: { ok: true } };
 });

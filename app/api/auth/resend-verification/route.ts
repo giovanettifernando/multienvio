@@ -1,9 +1,11 @@
+import { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { withApiHandler } from '@/lib/api/handler';
 import { ApiError } from '@/lib/api/errors';
 import { prisma } from '@/lib/db';
 import { generateToken, hashToken } from '@/lib/auth/tokens';
 import { sendVerificationEmail } from '@/lib/email/mailer';
+import { enforceRateLimitByIP, RATE_LIMITS } from '@/lib/rate-limit-redis';
 
 const ResendSchema = z.object({
   email: z.string().email('Email inválido'),
@@ -31,6 +33,9 @@ type ResendVerificationResponse =
 
 export const POST = withApiHandler<ResendVerificationResponse>(async (context) => {
   const { req, logger } = context;
+
+  // Rate limiting by IP - 3 attempts per 10 minutes (same as password reset - sensitive operation)
+  await enforceRateLimitByIP(req as NextRequest, 'resend_verification', RATE_LIMITS.PASSWORD_RESET);
 
   try {
     const body = await req.json();

@@ -13,6 +13,7 @@ import { prisma } from '@/lib/db';
 import { requireAdminUser } from '@/lib/auth/admin-helpers';
 import { AdminPermission, WalletTxType, WalletTxStatus } from '@prisma/client';
 import { getOrCreateWallet } from '@/lib/wallet/wallet.service';
+import { logger } from '@/lib/logger';
 
 const adjustSchema = z.object({
   type: z.enum(['credit', 'debit']),
@@ -101,7 +102,8 @@ export const POST = withApiHandler<unknown, { id: string }>(async ({ req, params
   ]);
 
   // Log de auditoria
-  console.log('[ADMIN_WALLET_ADJUST]', {
+  logger.info({
+    event: 'admin_wallet_adjust',
     adminId: authResult.user.id,
     adminEmail: authResult.user.email,
     userId,
@@ -112,7 +114,7 @@ export const POST = withApiHandler<unknown, { id: string }>(async ({ req, params
     transactionId: transaction.id,
     previousBalance: wallet.availableCents,
     newBalance: updatedWallet.availableCents,
-  });
+  }, 'Admin adjusted wallet balance');
 
   return {
     data: {

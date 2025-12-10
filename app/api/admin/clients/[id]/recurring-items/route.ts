@@ -11,6 +11,7 @@ import { ApiError } from '@/lib/api/errors';
 import { prisma } from '@/lib/db';
 import { requireAdminUser } from '@/lib/auth/admin-helpers';
 import { AdminPermission } from '@prisma/client';
+import { logger } from '@/lib/logger';
 
 const itemSchema = z.object({
   descricao: z.string().min(1, 'Descrição é obrigatória'),
@@ -86,11 +87,12 @@ export const POST = withApiHandler<unknown, { id: string }>(async ({ req, params
     },
   });
 
-  console.log('[ADMIN_CREATE_RECURRING_ITEM]', {
+  logger.info({
+    event: 'admin_create_recurring_item',
     adminId: authResult.user.id,
     userId,
     itemId: item.id,
-  });
+  }, 'Admin created recurring item');
 
   return {
     data: { message: 'Item criado com sucesso', item },

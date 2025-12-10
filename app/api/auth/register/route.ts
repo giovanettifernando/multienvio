@@ -1,3 +1,4 @@
+import { NextRequest } from 'next/server';
 import { withApiHandler } from '@/lib/api/handler';
 import { ApiError } from '@/lib/api/errors';
 import { ZodError } from 'zod';
@@ -7,6 +8,7 @@ import { prisma } from '@/lib/db';
 import { generateToken, hashToken } from '@/lib/auth/tokens';
 import { sendVerificationEmail } from '@/lib/email/mailer';
 import { getCachedRoleByName } from '@/lib/cache';
+import { enforceRateLimitByIP, RATE_LIMITS } from '@/lib/rate-limit-redis';
 
 interface RegisterResponse {
   userId: string;
@@ -18,6 +20,9 @@ interface RegisterResponse {
 
 export const POST = withApiHandler<RegisterResponse>(async (context) => {
   const { req, logger } = context;
+
+  // Rate limiting by IP - 5 attempts per 5 minutes (same as login)
+  await enforceRateLimitByIP(req as NextRequest, 'client_register', RATE_LIMITS.LOGIN);
 
   try {
     const payload = await req.json();

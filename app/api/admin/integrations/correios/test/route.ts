@@ -18,6 +18,7 @@ import {
   testCorreiosAuth,
 } from '@/lib/integrations/correios';
 import { withApiHandler } from '@/lib/api/handler';
+import { logger } from '@/lib/logger';
 import { ApiError } from '@/lib/api/errors';
 
 /**
@@ -416,11 +417,12 @@ async function testPrePostagem(
 
     const configInfo = getCorreiosConfigInfo();
 
-    console.log('[CORREIOS_TEST] Executando pré-postagem real:', {
+    logger.info({
+      event: 'correios_test_prepostagem',
       ambiente: configInfo.environment,
       apiBase: configInfo.apiBase,
       codigoServico: data.codigoServico,
-    });
+    }, 'Executing real pre-posting');
 
     // Montar input para pré-postagem
     const input = {

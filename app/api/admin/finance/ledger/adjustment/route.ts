@@ -4,6 +4,7 @@ import { ApiError } from '@/lib/api/errors';
 import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
 import { AdminPermission } from '@prisma/client';
 import { rateLimitByUser, RATE_LIMITS } from '@/lib/rate-limit-redis';
+import { logger } from '@/lib/logger';
 
 const adjustmentSchema = z.object({
   type: z.enum(['credit', 'debit']),
@@ -61,7 +62,7 @@ export const POST = withApiHandler<AdjustmentResponse>(async ({ req }) => {
 
   // Mock: just return success with generated ID
   // In real implementation, would create entry in DB
-  console.log('[Mock] Creating adjustment:', { type, amountCents, reason, category, reference });
+  logger.debug({ event: 'mock_create_adjustment', type, amountCents, reason, category, reference }, 'Creating adjustment');
 
   const id = `ldg_adj_${Date.now()}`;
 

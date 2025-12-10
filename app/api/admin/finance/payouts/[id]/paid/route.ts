@@ -4,6 +4,7 @@ import { ApiError } from '@/lib/api/errors';
 import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
 import { AdminPermission } from '@prisma/client';
 import { rateLimitByUser, RATE_LIMITS } from '@/lib/rate-limit-redis';
+import { logger } from '@/lib/logger';
 
 const markPayoutPaidSchema = z.object({
   reference: z.string().min(1, 'Referência é obrigatória'),
@@ -55,7 +56,7 @@ export const POST = withApiHandler<MarkPayoutPaidResponse, { id: string }>(async
   }
 
   const { reference, proofUrl } = parsed.data;
-  console.log('[Mock] Marking payout as paid:', id, { reference, proofUrl });
+  logger.debug({ event: 'mock_payout_paid', id, reference, proofUrl }, 'Marking payout as paid');
 
   return { data: { ok: true } };
 });

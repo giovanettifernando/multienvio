@@ -3,6 +3,7 @@ import { ApiError } from '@/lib/api/errors';
 import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
 import { AdminPermission } from '@prisma/client';
 import { rateLimitByUser, RATE_LIMITS } from '@/lib/rate-limit-redis';
+import { logger } from '@/lib/logger';
 
 interface ApproveCommissionResponse {
   ok: boolean;
@@ -36,7 +37,7 @@ export const POST = withApiHandler<ApproveCommissionResponse, { id: string }>(as
   }
 
   const { id } = params;
-  console.log('[Mock] Approving commission:', id);
+  logger.debug({ event: 'mock_commission_approve', id }, 'Approving commission');
 
   return { data: { ok: true } };
 });

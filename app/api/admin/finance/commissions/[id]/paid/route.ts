@@ -3,6 +3,7 @@ import { ApiError } from '@/lib/api/errors';
 import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
 import { AdminPermission } from '@prisma/client';
 import { rateLimitByUser, RATE_LIMITS } from '@/lib/rate-limit-redis';
+import { logger } from '@/lib/logger';
 
 interface MarkCommissionPaidResponse {
   ok: boolean;
@@ -36,7 +37,7 @@ export const POST = withApiHandler<MarkCommissionPaidResponse, { id: string }>(a
   }
 
   const { id } = params;
-  console.log('[Mock] Marking commission as paid:', id);
+  logger.debug({ event: 'mock_commission_paid', id }, 'Marking commission as paid');
 
   return { data: { ok: true } };
 });

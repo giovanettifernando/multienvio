@@ -11,6 +11,7 @@ import { ApiError } from '@/lib/api/errors';
 import { prisma } from '@/lib/db';
 import { requireAdminUser } from '@/lib/auth/admin-helpers';
 import { AdminPermission } from '@prisma/client';
+import { logger } from '@/lib/logger';
 
 const updateProfileSchema = z.object({
   name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres').optional(),
@@ -113,11 +114,12 @@ export const PUT = withApiHandler<unknown, { id: string }>(async ({ req, params 
   });
 
   // Log de auditoria
-  console.log('[ADMIN_UPDATE_PROFILE]', {
+  logger.info({
+    event: 'admin_update_profile',
     adminId: authResult.user.id,
     userId: id,
     changes: data,
-  });
+  }, 'Admin updated user profile');
 
   return {
     data: {

@@ -12,6 +12,7 @@ import { SignJWT } from 'jose';
 import nodemailer from 'nodemailer';
 import { withApiHandler } from '@/lib/api/handler';
 import { ApiError } from '@/lib/api/errors';
+import { logger } from '@/lib/logger';
 
 const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || 'envio-legal-secret-key-change-in-production'
@@ -210,7 +211,7 @@ Data de envio: ${new Date().toLocaleString('pt-BR')}
     `,
   });
 
-  console.log('[PICKUP_POINT_RESET_PASSWORD] Email enviado para:', pickupPoint.email);
+  logger.info({ event: 'pickup_point_reset_password', pickupPointEmail: pickupPoint.email }, 'Reset password email sent');
 
   return { data: { message: 'Email de redefinição de senha enviado com sucesso' } };
 });

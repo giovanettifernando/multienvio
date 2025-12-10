@@ -45,3 +45,6 @@ _data/
 data/
 postgres-data/
 public/uploads/
+
+# Logs (pino-roll)
+logs/

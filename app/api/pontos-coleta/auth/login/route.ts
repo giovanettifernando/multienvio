@@ -1,9 +1,10 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { collectorSign, createCollectorCookieHeader } from '@/lib/auth/collector-session';
 import bcrypt from 'bcrypt';
 import { withApiHandlerResponse } from '@/lib/api/handler';
+import { rateLimitByIP, RATE_LIMITS } from '@/lib/rate-limit-redis';
 
 const loginSchema = z.object({
   cnpj: z.string().min(14).max(14), // CNPJ apenas números
@@ -26,6 +27,10 @@ type LoginErrorResponse = {
 
 export const POST = withApiHandlerResponse(async (context) => {
   const { req, logger } = context;
+
+  // Rate limiting by IP - 5 attempts per 5 minutes (same as login)
+  const rateLimitError = await rateLimitByIP(req as NextRequest, 'pickup_point_login', RATE_LIMITS.LOGIN);
+  if (rateLimitError) return rateLimitError;
 
   try {
     const body = await req.json();

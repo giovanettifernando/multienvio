@@ -11,6 +11,7 @@ import { ApiError } from '@/lib/api/errors';
 import { prisma } from '@/lib/db';
 import { requireAdminUser } from '@/lib/auth/admin-helpers';
 import { AdminPermission } from '@prisma/client';
+import { logger } from '@/lib/logger';
 
 const recipientSchema = z.object({
   name: z.string().min(2).optional(),
@@ -96,11 +97,12 @@ export const PUT = withApiHandler<unknown, { id: string; recipientId: string }>(
     },
   });
 
-  console.log('[ADMIN_UPDATE_RECIPIENT]', {
+  logger.info({
+    event: 'admin_update_recipient',
     adminId: authResult.user.id,
     userId,
     recipientId,
-  });
+  }, 'Admin updated recipient');
 
   return { data: { message: 'Destinatário atualizado com sucesso', recipient } };
 });
@@ -135,11 +137,12 @@ export const DELETE = withApiHandler<unknown, { id: string; recipientId: string 
     where: { id: recipientId },
   });
 
-  console.log('[ADMIN_DELETE_RECIPIENT]', {
+  logger.info({
+    event: 'admin_delete_recipient',
     adminId: authResult.user.id,
     userId,
     recipientId,
-  });
+  }, 'Admin deleted recipient');
 
   return { data: { message: 'Destinatário removido com sucesso' } };
 });

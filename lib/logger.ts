@@ -1,26 +1,22 @@
 // ============================================================================
-// LOGGER ESTRUTURADO
-// Configuracao por ambiente (dev/prod)
-// Usa JSON estruturado para compatibilidade com Next.js build
+// LOGGER ESTRUTURADO COM PINO
+// - Dev: pino-pretty no console para output legível
+// - Prod/Staging: JSON estruturado + arquivo com rotação de 2 dias
 // ============================================================================
+
+import pino from 'pino';
+import type { LoggerOptions, TransportSingleOptions, TransportMultiOptions } from 'pino';
+import * as path from 'path';
 
 const isDev = process.env.NODE_ENV !== 'production';
 const isTest = process.env.NODE_ENV === 'test';
 const logLevel = process.env.LOG_LEVEL || (isDev ? 'debug' : 'info');
 
-type LogLevel = 'debug' | 'info' | 'warn' | 'error';
+// Diretório de logs (pode ser customizado via env)
+const LOG_DIR = process.env.LOG_DIR || path.join(process.cwd(), 'logs');
 
-const LOG_LEVELS: Record<LogLevel, number> = {
-  debug: 0,
-  info: 1,
-  warn: 2,
-  error: 3,
-};
-
-const currentLevel = LOG_LEVELS[logLevel as LogLevel] ?? LOG_LEVELS.info;
-
-// Campos sensiveis para redact
-const SENSITIVE_FIELDS = [
+// Campos sensíveis para redact
+const redactPaths = [
   'password',
   'passwordHash',
   'token',
@@ -30,72 +26,92 @@ const SENSITIVE_FIELDS = [
   'apiKey',
   'authorization',
   'cookie',
+  '*.password',
+  '*.passwordHash',
+  '*.token',
+  '*.accessToken',
+  '*.refreshToken',
+  '*.secret',
+  '*.apiKey',
+  '*.authorization',
+  '*.cookie',
 ];
 
-function redactSensitive(obj: Record<string, unknown>): Record<string, unknown> {
-  const result: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(obj)) {
-    if (SENSITIVE_FIELDS.some(field => key.toLowerCase().includes(field.toLowerCase()))) {
-      result[key] = '[REDACTED]';
-    } else if (value && typeof value === 'object' && !Array.isArray(value)) {
-      result[key] = redactSensitive(value as Record<string, unknown>);
-    } else {
-      result[key] = value;
-    }
-  }
-  return result;
-}
-
-function formatLog(level: LogLevel, data: Record<string, unknown>, message: string): string {
-  const timestamp = new Date().toISOString();
-  const redacted = redactSensitive(data);
-  const entry = {
-    timestamp,
-    level,
-    msg: message,
-    env: process.env.NODE_ENV,
+// Configuração base do Pino
+const baseConfig: LoggerOptions = {
+  level: isTest ? 'silent' : logLevel,
+  redact: {
+    paths: redactPaths,
+    censor: '[REDACTED]',
+  },
+  base: {
     service: 'envio-legal',
-    ...redacted,
-  };
+    env: process.env.NODE_ENV,
+  },
+  timestamp: pino.stdTimeFunctions.isoTime,
+};
 
-  if (isDev && !isTest) {
-    // Em dev, formato mais legivel
-    const levelColors: Record<LogLevel, string> = {
-      debug: '\x1b[36m', // cyan
-      info: '\x1b[32m',  // green
-      warn: '\x1b[33m',  // yellow
-      error: '\x1b[31m', // red
-    };
-    const reset = '\x1b[0m';
-    const color = levelColors[level];
-    const dataStr = Object.keys(redacted).length > 0 ? ` ${JSON.stringify(redacted)}` : '';
-    return `${color}[${timestamp}] ${level.toUpperCase()}${reset}: ${message}${dataStr}`;
+// Transport para desenvolvimento: pino-pretty no console
+const devTransport: TransportSingleOptions = {
+  target: 'pino-pretty',
+  options: {
+    colorize: true,
+    translateTime: 'SYS:standard',
+    ignore: 'pid,hostname,service,env',
+    messageFormat: '{msg}',
+    singleLine: false,
+  },
+};
+
+// Transport para produção/staging: arquivo com rotação + console (JSON)
+const prodTransport: TransportMultiOptions = {
+  targets: [
+    // Arquivo com rotação diária, mantendo 2 dias
+    {
+      target: 'pino-roll',
+      options: {
+        file: path.join(LOG_DIR, 'app'),
+        frequency: 'daily',
+        limit: {
+          count: 2, // Mantém apenas 2 arquivos (2 dias)
+        },
+        mkdir: true,
+        extension: '.log',
+        dateFormat: 'yyyy-MM-dd',
+      },
+      level: logLevel,
+    },
+    // Console em JSON para docker logs / stdout
+    {
+      target: 'pino/file',
+      options: { destination: 1 }, // stdout
+      level: logLevel,
+    },
+  ],
+};
+
+// Criar logger baseado no ambiente
+function createPinoLogger(): pino.Logger {
+  if (isTest) {
+    return pino(baseConfig);
   }
 
-  // Em prod, JSON estruturado
-  return JSON.stringify(entry);
+  if (isDev) {
+    return pino(baseConfig, pino.transport(devTransport));
+  }
+
+  // Produção/Staging: arquivo + console
+  return pino(baseConfig, pino.transport(prodTransport));
 }
 
-function shouldLog(level: LogLevel): boolean {
-  if (isTest) return false;
-  return LOG_LEVELS[level] >= currentLevel;
-}
-
-function writeLog(level: LogLevel, data: Record<string, unknown>, message: string) {
-  if (!shouldLog(level)) return;
-
-  const formatted = formatLog(level, data, message);
-  const consoleMethod = level === 'error' ? console.error :
-                        level === 'warn' ? console.warn :
-                        console.log;
-  consoleMethod(formatted);
-}
+const pinoLogger = createPinoLogger();
 
 // ============================================================================
-// LOGGER PRINCIPAL
+// INTERFACE DE COMPATIBILIDADE
+// Mantém a mesma API do logger anterior para não quebrar imports existentes
 // ============================================================================
 
-interface LoggerInterface {
+export interface LoggerInterface {
   debug(data: Record<string, unknown>, message: string): void;
   info(data: Record<string, unknown>, message: string): void;
   warn(data: Record<string, unknown>, message: string): void;
@@ -103,27 +119,30 @@ interface LoggerInterface {
   child(context: Record<string, unknown>): LoggerInterface;
 }
 
-function createLogger(baseContext: Record<string, unknown> = {}): LoggerInterface {
+function wrapPinoLogger(pinoInstance: pino.Logger): LoggerInterface {
   return {
     debug(data: Record<string, unknown>, message: string) {
-      writeLog('debug', { ...baseContext, ...data }, message);
+      pinoInstance.debug(data, message);
     },
     info(data: Record<string, unknown>, message: string) {
-      writeLog('info', { ...baseContext, ...data }, message);
+      pinoInstance.info(data, message);
     },
     warn(data: Record<string, unknown>, message: string) {
-      writeLog('warn', { ...baseContext, ...data }, message);
+      pinoInstance.warn(data, message);
     },
     error(data: Record<string, unknown>, message: string) {
-      writeLog('error', { ...baseContext, ...data }, message);
+      pinoInstance.error(data, message);
     },
     child(context: Record<string, unknown>) {
-      return createLogger({ ...baseContext, ...context });
+      return wrapPinoLogger(pinoInstance.child(context));
     },
   };
 }
 
-export const logger = createLogger();
+export const logger = wrapPinoLogger(pinoLogger);
+
+// Export do logger pino nativo para casos que precisem de acesso direto
+export const pinoInstance = pinoLogger;
 
 // ============================================================================
 // LOGGER PARA REQUESTS (com correlation ID)
@@ -182,7 +201,7 @@ export function logError(
 }
 
 /**
- * Log de auditoria (acoes importantes)
+ * Log de auditoria (ações importantes)
  */
 export function logAudit(
   log: LoggerInterface,
@@ -196,7 +215,7 @@ export function logAudit(
 }
 
 /**
- * Log de integracao externa
+ * Log de integração externa
  */
 export function logExternalCall(
   log: LoggerInterface,
@@ -241,6 +260,3 @@ export const log = {
 
 // Export default
 export default logger;
-
-// Export type for use in other files
-export type { LoggerInterface };

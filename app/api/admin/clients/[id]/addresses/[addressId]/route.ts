@@ -11,6 +11,7 @@ import { ApiError } from '@/lib/api/errors';
 import { prisma } from '@/lib/db';
 import { requireAdminUser } from '@/lib/auth/admin-helpers';
 import { AdminPermission } from '@prisma/client';
+import { logger } from '@/lib/logger';
 
 const addressSchema = z.object({
   label: z.string().optional(),
@@ -86,11 +87,12 @@ export const PUT = withApiHandler<unknown, { id: string; addressId: string }>(as
     },
   });
 
-  console.log('[ADMIN_UPDATE_ADDRESS]', {
+  logger.info({
+    event: 'admin_update_address',
     adminId: authResult.user.id,
     userId,
     addressId,
-  });
+  }, 'Admin updated address');
 
   return { data: { message: 'Endereço atualizado com sucesso', address } };
 });
@@ -125,11 +127,12 @@ export const DELETE = withApiHandler<unknown, { id: string; addressId: string }>
     where: { id: addressId },
   });
 
-  console.log('[ADMIN_DELETE_ADDRESS]', {
+  logger.info({
+    event: 'admin_delete_address',
     adminId: authResult.user.id,
     userId,
     addressId,
-  });
+  }, 'Admin deleted address');
 
   return { data: { message: 'Endereço removido com sucesso' } };
 });

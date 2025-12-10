@@ -25,6 +25,14 @@ const eslintConfig = [
       "react-hooks/set-state-in-effect": "warn", // Era error, mudar para warn temporariamente
     },
   },
+  // Regra para prevenir uso de console.log em API routes
+  // Use o logger estruturado: import { logger } from '@/lib/logger'
+  {
+    files: ["app/api/**/*.ts"],
+    rules: {
+      "no-console": ["error", { allow: ["warn", "error"] }],
+    },
+  },
 ];
 
 export default eslintConfig;
