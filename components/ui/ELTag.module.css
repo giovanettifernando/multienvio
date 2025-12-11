@@ -1,33 +1,38 @@
+/**
+ * ELTag - Design System v2
+ * Tags com cores semânticas atualizadas
+ */
+
 .tag {
-  border-radius: calc(var(--el-radius-base, 12px) / 2) !important;
+  border-radius: var(--el-radius-sm, 8px) !important;
   border: none !important;
-  font-weight: 600;
+  font-weight: var(--el-font-weight-semibold, 600);
   padding-inline: 12px !important;
   padding-block: 6px !important;
   text-transform: none;
 }
 
 .tagDefault {
-  background: rgba(0, 56, 115, 0.08) !important;
-  color: var(--color-text, #182235) !important;
+  background: var(--el-color-surface-alt, #F2F4F7) !important;
+  color: var(--el-text-primary, #111827) !important;
 }
 
 .tagSuccess {
-  background: rgba(30, 142, 90, 0.12) !important;
-  color: #11693f !important;
+  background: var(--el-color-success-tint, #E6F5EC) !important;
+  color: var(--el-color-success, #11693F) !important;
 }
 
 .tagWarning {
-  background: rgba(228, 102, 12, 0.12) !important;
-  color: #9a4700 !important;
+  background: var(--el-color-warning-tint, #FEF3E6) !important;
+  color: var(--el-color-warning, #9A4700) !important;
 }
 
 .tagDanger {
-  background: rgba(214, 69, 69, 0.12) !important;
-  color: #a12020 !important;
+  background: var(--el-color-error-tint, #FDEAEA) !important;
+  color: var(--el-color-error, #A12020) !important;
 }
 
 .tagInfo {
-  background: rgba(0, 56, 115, 0.08) !important;
-  color: #003873 !important;
+  background: var(--el-color-primary-tint, #E6EEF7) !important;
+  color: var(--el-color-primary, #0B4EA3) !important;
 }

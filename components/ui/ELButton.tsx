@@ -3,7 +3,11 @@ import Button from "antd/es/button";
 import { cn } from "@/lib/utils/cn";
 import styles from "./ELButton.module.css";
 
-export type ELButtonVariant = "primary" | "default" | "link" | "danger" | "ghost" | "text" | "dashed";
+/**
+ * ELButton - Design System v2
+ * Variantes: primary, default, link, danger, ghost, text, dashed, tonal
+ */
+export type ELButtonVariant = "primary" | "default" | "link" | "danger" | "ghost" | "text" | "dashed" | "tonal";
 
 export interface ELButtonProps extends Omit<ButtonProps, "variant"> {
   variant?: ELButtonVariant;
@@ -20,7 +24,7 @@ export function ELButton({
       ? "primary"
       : variant === "link"
       ? "link"
-      : variant === "ghost" || variant === "text"
+      : variant === "ghost" || variant === "text" || variant === "tonal"
       ? "text"
       : variant === "dashed"
       ? "dashed"
@@ -35,6 +39,8 @@ export function ELButton({
       ? styles.buttonDanger
       : variant === "ghost" || variant === "text"
       ? styles.buttonGhost
+      : variant === "tonal"
+      ? styles.buttonTonal
       : variant === "dashed"
       ? styles.buttonDashed
       : styles.buttonDefault;

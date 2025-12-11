@@ -192,7 +192,6 @@ export default function RastreamentoClient() {
         columns={columns}
         enableMobileCards
         scrollX={900}
-        scrollY="calc(100vh - 340px)"
         emptyMessage="Nenhum rastreamento encontrado"
         emptyDescription="Tente ajustar os filtros de busca"
         pagination={{

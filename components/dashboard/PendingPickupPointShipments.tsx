@@ -1,10 +1,14 @@
 'use client';
 
-import { Card, Typography, Tag, Skeleton, Empty, Button, Flex, Badge, Divider } from 'antd';
-import { EnvironmentOutlined, RightOutlined, InboxOutlined, PrinterOutlined } from '@ant-design/icons';
+import { Typography, Tag, Skeleton, Badge, Divider } from 'antd';
+import { RightOutlined, MailOutlined } from '@ant-design/icons';
 import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/utils/api-fetch';
+import { ELButton } from '@/components/ui/ELButton';
+import { ELCard } from '@/components/ui/ELCard';
+import { ELFlex } from '@/components/ui/ELGrid';
+import { ELEmpty } from '@/components/ui/ELEmpty';
 
 const { Text } = Typography;
 
@@ -51,100 +55,78 @@ export function PendingPickupPointShipments() {
   const hasMore = data?.hasMore || false;
 
   const cardTitle = (
-    <Flex align="center" gap={8}>
-      <PrinterOutlined />
+    <ELFlex align="center" gap="sm">
+      <MailOutlined />
       <Text strong>Aguardando Postagem</Text>
       {total > 0 && <Badge count={total} />}
-    </Flex>
+    </ELFlex>
   );
 
   if (isLoading) {
     return (
-      <Card title={cardTitle} variant="outlined">
+      <ELCard header={{ title: cardTitle }}>
         <Skeleton active paragraph={{ rows: 4 }} />
-      </Card>
+      </ELCard>
     );
   }
 
   return (
-    <Card
-      title={cardTitle}
-      variant="outlined"
-      extra={
-        hasMore && (
-          <Button
-            type="link"
+    <ELCard
+      header={{
+        title: cardTitle,
+        extra: hasMore ? (
+          <ELButton
+            variant="link"
             size="small"
             icon={<RightOutlined />}
             onClick={() => router.push('/shipments?status=Aguardando%20postagem')}
           >
             Ver todos
-          </Button>
-        )
-      }
+          </ELButton>
+        ) : undefined,
+      }}
     >
       {total === 0 ? (
-        <Empty
-          image={Empty.PRESENTED_IMAGE_SIMPLE}
+        <ELEmpty
           description={
-            <Flex vertical gap={4}>
+            <ELFlex direction="col" gap="sm">
               <Text>Nenhum envio aguardando postagem.</Text>
               <Text type="secondary" style={{ fontSize: '12px' }}>
                 Quando você criar um envio para entregar em ponto de coleta, ele aparecerá aqui.
               </Text>
-            </Flex>
+            </ELFlex>
           }
         />
       ) : (
-        <>
-          <Text type="secondary" style={{ fontSize: '12px', display: 'block', marginBottom: 16 }}>
-            Leve os envios até o ponto de coleta indicado para postagem.
-          </Text>
-          <Flex vertical gap={0}>
-            {shipments.map((shipment, index) => (
-              <div
-                key={shipment.id}
-                style={{ cursor: 'pointer', padding: '12px 0' }}
-                onClick={() => router.push(`/shipments/${shipment.id}`)}
-              >
-                {index > 0 && <Divider style={{ margin: '0 0 12px 0' }} />}
-                <Flex vertical style={{ width: '100%' }} gap={8}>
-                  {/* Linha 1: Código + Tag */}
-                  <Flex justify="space-between" align="center" wrap gap={8}>
-                    <Flex align="center" gap={4} style={{ minWidth: 0 }}>
-                      <InboxOutlined style={{ fontSize: '12px', color: '#8c8c8c', flexShrink: 0 }} />
-                      <Text strong style={{ fontSize: '13px' }}>
-                        {shipment.trackingCode}
-                      </Text>
-                    </Flex>
-                    <Tag color="blue" style={{ fontSize: '10px', margin: 0 }}>
-                      Aguard. postagem
-                    </Tag>
-                  </Flex>
-
-                  {/* Linha 2: Ponto de coleta */}
-                  <Text type="secondary" style={{ fontSize: '12px' }} ellipsis>
+        <ELFlex direction="col" gap="sm">
+          {shipments.map((shipment, index) => (
+            <div
+              key={shipment.id}
+              style={{ cursor: 'pointer' }}
+              onClick={() => router.push(`/shipments/${shipment.id}`)}
+            >
+              {index > 0 && <Divider style={{ margin: '8px 0' }} />}
+              <ELFlex justify="between" align="center" style={{ width: '100%' }} gap="md">
+                <ELFlex direction="col" style={{ flex: 1, minWidth: 0 }}>
+                  <Text strong style={{ fontSize: '13px' }}>
+                    {shipment.trackingCode}
+                  </Text>
+                  <Text type="secondary" style={{ fontSize: '11px' }} ellipsis>
                     {shipment.pickupPointName}
                   </Text>
+                  <Text type="secondary" style={{ fontSize: '11px' }}>
+                    {shipment.pickupPointCity}/{shipment.pickupPointState} • {formatDate(shipment.createdAt)}
+                  </Text>
+                </ELFlex>
 
-                  {/* Linha 3: Localização + Data */}
-                  <Flex align="center" gap={8} wrap>
-                    <Flex align="center" gap={4}>
-                      <EnvironmentOutlined style={{ fontSize: '12px', color: '#8c8c8c', flexShrink: 0 }} />
-                      <Text type="secondary" style={{ fontSize: '11px' }}>
-                        {shipment.pickupPointCity}/{shipment.pickupPointState}
-                      </Text>
-                    </Flex>
-                    <Text type="secondary" style={{ fontSize: '11px' }}>
-                      • Criado em {formatDate(shipment.createdAt)}
-                    </Text>
-                  </Flex>
-                </Flex>
-              </div>
-            ))}
-          </Flex>
-        </>
+                <Tag color="blue" style={{ fontSize: '10px', flexShrink: 0, alignSelf: 'flex-start', marginTop: 2 }}>
+                  Aguard. postagem
+                </Tag>
+              </ELFlex>
+            </div>
+          ))}
+        </ELFlex>
       )}
-    </Card>
+    </ELCard>
   );
 }

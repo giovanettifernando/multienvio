@@ -135,7 +135,6 @@ export default function FaturasClient() {
               columns={columns}
               enableMobileCards
               scrollX={600}
-              scrollY="calc(100vh - 380px)"
               emptyMessage="Nenhuma fatura encontrada"
               emptyDescription="Gere uma nova fatura para começar"
               pagination={{

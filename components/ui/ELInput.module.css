@@ -1,6 +1,11 @@
+/**
+ * ELInput - Design System v2
+ * Altura 36px, bordas suaves, foco com anel
+ */
+
 .input {
   border-radius: var(--el-radius-base, 12px) !important;
-  border: 1px solid rgba(0, 56, 115, 0.18) !important;
+  border: 1px solid var(--el-border-medium, #D0D5DD) !important;
   padding-inline: 12px !important;
   height: 36px !important;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
@@ -9,17 +14,17 @@
 .input:hover,
 .input:focus,
 .input:focus-within {
-  border-color: rgba(0, 56, 115, 0.45) !important;
+  border-color: var(--el-color-primary, #0B4EA3) !important;
 }
 
 .input:focus,
 .input:focus-within {
-  box-shadow: 0 0 0 3px rgba(0, 56, 115, 0.16);
+  box-shadow: 0 0 0 3px var(--el-color-primary-tint, #E6EEF7);
 }
 
 .password :global(.ant-input) {
   border-radius: var(--el-radius-base, 12px) !important;
-  border: 1px solid rgba(0, 56, 115, 0.18) !important;
+  border: 1px solid var(--el-border-medium, #D0D5DD) !important;
   height: 36px !important;
   padding-inline: 12px !important;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
@@ -28,16 +33,16 @@
 .password :global(.ant-input:hover),
 .password :global(.ant-input:focus),
 .password :global(.ant-input:focus-within) {
-  border-color: rgba(0, 56, 115, 0.45) !important;
+  border-color: var(--el-color-primary, #0B4EA3) !important;
 }
 
 .password :global(.ant-input:focus),
 .password :global(.ant-input:focus-within) {
-  box-shadow: 0 0 0 3px rgba(0, 56, 115, 0.16);
+  box-shadow: 0 0 0 3px var(--el-color-primary-tint, #E6EEF7);
 }
 
 .password :global(.ant-input-password-icon) {
-  color: rgba(24, 34, 53, 0.8) !important;
+  color: var(--el-text-secondary, #475467) !important;
 }
 
 /* Search input with icon inside (suffix) - modern style */
@@ -48,45 +53,45 @@
 
 .search :global(.ant-input-affix-wrapper) {
   border-radius: var(--el-radius-base, 12px) !important;
-  border: 1px solid rgba(0, 56, 115, 0.18) !important;
+  border: 1px solid var(--el-border-medium, #D0D5DD) !important;
   height: 40px !important;
   padding: 0 12px !important;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
-  background: #fff;
+  background: var(--el-color-surface, #FFFFFF);
 }
 
 .search :global(.ant-input-affix-wrapper:hover) {
-  border-color: rgba(0, 56, 115, 0.35) !important;
+  border-color: var(--el-border-strong, #98A2B3) !important;
 }
 
 .search :global(.ant-input-affix-wrapper-focused),
 .search :global(.ant-input-affix-wrapper:focus) {
-  border-color: var(--el-color-primary, #003873) !important;
-  box-shadow: 0 0 0 3px rgba(0, 56, 115, 0.12) !important;
+  border-color: var(--el-color-primary, #0B4EA3) !important;
+  box-shadow: 0 0 0 3px var(--el-color-primary-tint, #E6EEF7) !important;
 }
 
 .search :global(.ant-input) {
   height: 100% !important;
-  font-size: 14px;
-  color: var(--el-text-primary, #182235);
+  font-size: var(--el-font-size-base, 14px);
+  color: var(--el-text-primary, #111827);
 }
 
 .search :global(.ant-input::placeholder) {
-  color: rgba(24, 34, 53, 0.45);
+  color: var(--el-text-muted, #98A2B3);
 }
 
 .search :global(.ant-input-suffix) {
-  color: rgba(24, 34, 53, 0.45);
+  color: var(--el-text-muted, #98A2B3);
   margin-inline-start: 8px;
 }
 
 .search :global(.ant-input-clear-icon) {
-  color: rgba(24, 34, 53, 0.35);
+  color: var(--el-text-muted, #98A2B3);
   font-size: 14px;
 }
 
 .search :global(.ant-input-clear-icon:hover) {
-  color: rgba(24, 34, 53, 0.65);
+  color: var(--el-text-secondary, #475467);
 }
 
 /* Responsive: full width on mobile */

@@ -1,66 +1,94 @@
 /**
- * ELStatusTag - Estilos para tags de status usando tokens CSS
+ * ELStatusTag - Design System v2
+ * Formato pill, altura 22-24px, padding 6-10px
+ * Texto 12-13px/500, sem caixa alta
  */
 
 .tag {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: var(--el-spacing-xs, 4px);
-  padding: 2px 10px;
-  border-radius: 100px;
-  font-size: var(--el-font-size-xs, 12px);
-  font-weight: 500;
-  line-height: 1.5;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 9999px;
+  font-size: var(--el-font-size-sm, 13px);
+  font-weight: var(--el-font-weight-medium, 500);
+  line-height: 1;
   border: none;
   white-space: nowrap;
 }
 
-/* Status variants */
+/* === Variantes de Status (fundos sólidos para destaque) === */
 .success {
-  background-color: var(--status-success-bg);
-  color: var(--status-success-text);
+  background-color: var(--el-color-success, #11693F);
+  color: #FFFFFF;
 }
 
 .warning {
-  background-color: var(--status-warning-bg);
-  color: var(--status-warning-text);
+  background-color: #D97706;
+  color: #FFFFFF;
 }
 
 .danger {
-  background-color: var(--status-danger-bg);
-  color: var(--status-danger-text);
+  background-color: var(--el-color-error, #D64545);
+  color: #FFFFFF;
 }
 
 .info {
-  background-color: var(--status-info-bg);
-  color: var(--status-info-text);
+  background-color: #2563EB;
+  color: #FFFFFF;
 }
 
 .processing {
-  background-color: var(--status-processing-bg);
-  color: var(--status-processing-text);
+  background-color: var(--el-color-primary, #0B4EA3);
+  color: #FFFFFF;
 }
 
 .default {
-  background-color: var(--status-default-bg);
-  color: var(--status-default-text);
+  background-color: #6B7280;
+  color: #FFFFFF;
 }
 
-/* Size variants */
+/* === Tamanhos === */
 .small {
-  padding: 1px 8px;
-  font-size: 11px;
+  height: 20px;
+  padding: 0 6px;
+  font-size: var(--el-font-size-xs, 12px);
 }
 
 .large {
-  padding: 4px 14px;
-  font-size: var(--el-font-size-sm, 13px);
+  height: 28px;
+  padding: 0 12px;
+  font-size: var(--el-font-size-base, 14px);
 }
 
-/* With dot indicator */
+/* === Dot indicator (para estados críticos) === */
 .dot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
   background-color: currentColor;
+  flex-shrink: 0;
+}
+
+/* === Responsividade === */
+@media (max-width: 1366px) {
+  .tag {
+    height: 22px;
+    padding: 0 8px;
+    font-size: var(--el-font-size-xs, 12px);
+  }
+
+  .small {
+    height: 18px;
+    padding: 0 6px;
+    font-size: 11px;
+  }
+
+  .large {
+    height: 24px;
+    padding: 0 10px;
+    font-size: var(--el-font-size-sm, 13px);
+  }
 }

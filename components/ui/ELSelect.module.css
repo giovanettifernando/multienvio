@@ -1,7 +1,12 @@
+/**
+ * ELSelect - Design System v2
+ * Altura 36px, bordas suaves, foco com anel
+ */
+
 .select :global(.ant-select-selector) {
   height: 36px !important;
   border-radius: var(--el-radius-base, 12px) !important;
-  border: 1px solid rgba(0, 56, 115, 0.18) !important;
+  border: 1px solid var(--el-border-medium, #D0D5DD) !important;
   padding-inline: 12px !important;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
@@ -9,18 +14,18 @@
 .select :global(.ant-select-selector:hover),
 .select :global(.ant-select-selector:focus),
 .select :global(.ant-select-selector:focus-within) {
-  border-color: rgba(0, 56, 115, 0.45) !important;
+  border-color: var(--el-color-primary, #0B4EA3) !important;
 }
 
 .select :global(.ant-select-selector:focus),
 .select :global(.ant-select-selector:focus-within) {
-  box-shadow: 0 0 0 3px rgba(0, 56, 115, 0.16);
+  box-shadow: 0 0 0 3px var(--el-color-primary-tint, #E6EEF7);
 }
 
 .select :global(.ant-select-selection-placeholder),
 .select :global(.ant-select-selection-item) {
   display: flex;
   align-items: center;
-  font-weight: 500;
-  color: var(--color-text, #182235) !important;
+  font-weight: var(--el-font-weight-medium, 500);
+  color: var(--el-text-primary, #111827) !important;
 }

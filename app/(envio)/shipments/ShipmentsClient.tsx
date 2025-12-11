@@ -2,7 +2,6 @@
 
 import React, { useMemo, useState, useCallback } from "react";
 import {
-  Space,
   Tooltip,
   App,
   Descriptions,
@@ -12,7 +11,6 @@ import {
 import { ELCard } from "@/components/ui/ELCard";
 import {
   PrinterOutlined,
-  EyeOutlined,
   StopOutlined,
   GlobalOutlined,
   CarOutlined,
@@ -179,59 +177,58 @@ export default function ShipmentsClient() {
     setSelectedShipmentForLabel(null);
   }, []);
 
+  // Função auxiliar para formatar datas
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  };
+
+  // Função auxiliar para calcular data prevista
+  const getExpectedDate = (row: Shipment) => {
+    const baseDate = row.expectedDeliveryDate
+      ? new Date(row.expectedDeliveryDate)
+      : new Date(new Date(row.createdAt).getTime() + row.etaDays * 86_400_000);
+    return baseDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+  };
+
   const columns: DataTableColumn<Shipment>[] = useMemo(
     () => [
+      // COLUNA 1: Envio (código + destinatário + cidade/UF)
       {
-        title: "Código de rastreio",
-        dataIndex: "trackingCode",
-        key: "trackingCode",
+        title: "Envio",
+        key: "shipment",
         showInCard: true,
-        cardLabel: "Rastreio",
+        cardLabel: "Envio",
         sorter: (a, b) => a.trackingCode.localeCompare(b.trackingCode),
         render: (_value, row: Shipment) => (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <Text style={{ fontSize: 14, fontWeight: 600 }}>{row.trackingCode}</Text>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, lineHeight: 1.4 }}>
+            <Link href={`/shipments/${row.id}`} style={{ color: 'var(--el-color-primary)', fontWeight: 700, fontSize: 15 }}>
+              {row.trackingCode}
+            </Link>
+            <Text type="secondary" style={{ fontSize: 12 }} ellipsis>
+              {row.recipientName || '—'}
+            </Text>
+            <Text type="secondary" style={{ fontSize: 11 }}>
+              {row.recipientCityUf || '—'}
+            </Text>
             {row.hasVolumeDivergence && (
               <ELButton
                 variant="danger"
                 size="small"
                 icon={<WarningOutlined />}
                 onClick={() => handleOpenDivergenceModal(row.id)}
-                style={{ width: 'fit-content' }}
+                style={{ width: 'fit-content', marginTop: 2 }}
               >
-                Divergência registrada
+                Divergência
               </ELButton>
             )}
           </div>
         ),
       },
+      // COLUNA 2: Status & Datas (status protagonista + datas neutras)
       {
-        title: "Destinatário",
-        key: "recipient",
-        showInCard: true,
-        cardLabel: "Destinatário",
-        sorter: (a, b) => (a.recipientName || '').localeCompare(b.recipientName || ''),
-        render: (_value, row) => {
-          const name = row.recipientName ?? "";
-          const locality = row.recipientCityUf ?? "";
-          if (name && locality) return <span>{name} · {locality}</span>;
-          if (name) return <span>{name}</span>;
-          if (locality) return <span>{locality}</span>;
-          return <span>—</span>;
-        },
-      },
-      {
-        title: "Transportadora",
-        key: "carrier",
-        showInCard: true,
-        cardLabel: "Transportadora",
-        sorter: (a, b) => (a.carrierName || a.serviceName || '').localeCompare(b.carrierName || b.serviceName || ''),
-        render: (_value, row) => row.carrierName ?? row.serviceName ?? "—",
-      },
-      {
-        title: "Status",
-        dataIndex: "status",
-        key: "status",
+        title: "Status & Datas",
+        key: "statusDates",
         showInCard: true,
         cardLabel: "Status",
         sorter: (a, b) => {
@@ -243,8 +240,8 @@ export default function ShipmentsClient() {
           return (statusOrder[a.status] || 0) - (statusOrder[b.status] || 0);
         },
         render: (_value, row: Shipment) => (
-          <Space orientation="vertical" size={4}>
-            <ELStatusTag variant={STATUS_VARIANTS[row.status] ?? "default"}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, lineHeight: 1.4 }}>
+            <ELStatusTag variant={STATUS_VARIANTS[row.status] ?? "default"} size="default">
               {row.status}
             </ELStatusTag>
             {row.pickupRequest && row.pickupRequest.status !== 'CANCELED' && row.pickupRequest.status !== 'COMPLETED' && (
@@ -255,74 +252,51 @@ export default function ShipmentsClient() {
                 Coleta: {row.pickupRequest.status === 'PENDING' ? 'Pendente' : row.pickupRequest.status === 'SCHEDULED' ? 'Agendada' : row.pickupRequest.status}
               </ELStatusTag>
             )}
-          </Space>
+            <Text type="secondary" style={{ fontSize: 11 }}>
+              Criado: {formatDate(row.createdAt)}
+            </Text>
+            <Text type="secondary" style={{ fontSize: 11 }}>
+              Previsto: {formatDate(row.expectedDeliveryDate || new Date(new Date(row.createdAt).getTime() + row.etaDays * 86_400_000).toISOString())}
+            </Text>
+          </div>
         ),
       },
+      // COLUNA 3: Frete (transportadora em tag + valor)
       {
-        title: "Data de criação",
-        dataIndex: "createdAt",
-        key: "createdAt",
-        showInCard: true,
-        cardLabel: "Criado em",
-        sorter: (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
-        render: (value) => {
-          const date = new Date(value as string);
-          return date.toLocaleDateString('pt-BR', {
-            day: '2-digit', month: '2-digit', year: 'numeric',
-            hour: '2-digit', minute: '2-digit',
-          });
-        },
-      },
-      {
-        title: "Data prevista",
-        key: "expectedDelivery",
-        showInCard: false,
-        sorter: (a, b) => {
-          const dateA = a.expectedDeliveryDate
-            ? new Date(a.expectedDeliveryDate)
-            : new Date(new Date(a.createdAt).getTime() + a.etaDays * 86_400_000);
-          const dateB = b.expectedDeliveryDate
-            ? new Date(b.expectedDeliveryDate)
-            : new Date(new Date(b.createdAt).getTime() + b.etaDays * 86_400_000);
-          return dateA.getTime() - dateB.getTime();
-        },
-        render: (_value, row) => {
-          const baseDate = row.expectedDeliveryDate
-            ? new Date(row.expectedDeliveryDate)
-            : new Date(new Date(row.createdAt).getTime() + row.etaDays * 86_400_000);
-          return baseDate.toLocaleDateString();
-        },
-      },
-      {
-        title: "Valor do frete",
-        dataIndex: "freightValue",
-        key: "freightValue",
+        title: "Frete",
+        key: "freight",
         showInCard: true,
         cardLabel: "Frete",
         sorter: (a, b) => (a.freightValue || 0) - (b.freightValue || 0),
-        render: (value) => {
-          const formatted = Number(value ?? 0).toLocaleString('pt-BR', {
+        render: (_value, row: Shipment) => {
+          const formatted = Number(row.freightValue ?? 0).toLocaleString('pt-BR', {
             style: 'currency', currency: 'BRL',
           });
-          return <span style={{ fontWeight: 500 }}>{formatted}</span>;
+          const carrierName = row.carrierName ?? row.serviceName ?? '—';
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, lineHeight: 1.4, alignItems: 'center' }}>
+              <ELStatusTag variant="processing" size="default">
+                {carrierName}
+              </ELStatusTag>
+              <Text strong style={{ fontSize: 15, color: 'var(--el-color-primary)' }}>
+                {formatted}
+              </Text>
+            </div>
+          );
         },
       },
+      // COLUNA 4: Ações (sem botão de ver detalhes, cancelar compacto)
       {
         title: "Ações",
         key: "actions",
         isActions: true,
+        width: 120,
         render: (_value, row) => {
           const finalStatuses: ShipmentStatus[] = ["Entregue", "Cancelado", "Devolvido"];
           const isFinalStatus = finalStatuses.includes(row.status);
 
           return (
-            <Space size={4}>
-              <Tooltip title="Ver detalhes">
-                <Link href={`/shipments/${row.id}`}>
-                  <ELButton variant="ghost" size="small" icon={<EyeOutlined />} />
-                </Link>
-              </Tooltip>
-
+            <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
               <Tooltip title="Imprimir etiqueta">
                 <ELButton
                   variant="ghost"
@@ -331,7 +305,6 @@ export default function ShipmentsClient() {
                   onClick={() => handleOpenLabelModal(row)}
                 />
               </Tooltip>
-
               <Tooltip title="Abrir rastreio">
                 <ELButton
                   variant="ghost"
@@ -341,7 +314,6 @@ export default function ShipmentsClient() {
                   onClick={() => row.trackingUrl && window.open(row.trackingUrl, "_blank")}
                 />
               </Tooltip>
-
               <Tooltip title={row.pickupRequest ? "Ver coleta" : "Coleta não disponível"}>
                 {row.pickupRequest ? (
                   <Link href={`/coletas?shipmentId=${row.id}`}>
@@ -351,17 +323,18 @@ export default function ShipmentsClient() {
                   <ELButton variant="ghost" size="small" icon={<CarOutlined />} disabled />
                 )}
               </Tooltip>
-
-              <Tooltip title={isFinalStatus ? "Não é possível cancelar" : "Cancelar envio"}>
-                <ELButton
-                  variant="danger"
-                  size="small"
-                  icon={<StopOutlined />}
-                  disabled={isFinalStatus || cancelMut.isPending}
-                  onClick={() => cancelMut.mutate(row.id)}
-                />
-              </Tooltip>
-            </Space>
+              {!isFinalStatus && (
+                <Tooltip title="Cancelar envio">
+                  <ELButton
+                    variant="ghost"
+                    size="small"
+                    icon={<StopOutlined style={{ color: 'var(--el-color-error)' }} />}
+                    disabled={cancelMut.isPending}
+                    onClick={() => cancelMut.mutate(row.id)}
+                  />
+                </Tooltip>
+              )}
+            </div>
           );
         },
       },
@@ -370,7 +343,7 @@ export default function ShipmentsClient() {
   );
 
   return (
-    <PageShell title="Gestão de envios" gap="md">
+    <PageShell title="Meus Envios" gap="md">
       <div className={tableStyles.wrapper}>
         <ELCard>
           <ActionBar
@@ -405,8 +378,7 @@ export default function ShipmentsClient() {
             data={items}
             columns={columns}
             enableMobileCards
-            scrollX={1200}
-            scrollY="calc(100vh - 340px)"
+            scrollX={700}
             emptyMessage="Nenhum envio encontrado"
             emptyDescription="Tente ajustar os filtros de busca"
             pagination={{
@@ -435,7 +407,7 @@ export default function ShipmentsClient() {
         {divergencesLoading ? (
           <ELSkeleton active paragraph={{ rows: 4 }} />
         ) : divergencesData?.divergences && divergencesData.divergences.length > 0 ? (
-          <Space orientation="vertical" size="large" style={{ width: '100%' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 24, width: '100%' }}>
             {divergencesData.divergences.map((divergence) => (
               <div key={divergence.id} style={{ borderBottom: '1px solid #f0f0f0', paddingBottom: 16 }}>
                 <Text strong style={{ fontSize: 16, marginBottom: 12, display: 'block' }}>
@@ -503,7 +475,7 @@ export default function ShipmentsClient() {
                 )}
               </div>
             ))}
-          </Space>
+          </div>
         ) : (
           <div style={{ textAlign: 'center', padding: 32 }}>
             <Text type="secondary">Nenhuma divergência encontrada</Text>

@@ -7,8 +7,11 @@ import {
   FileAddOutlined,
   SearchOutlined,
 } from "@ant-design/icons";
-import { Button, Card, Flex, Tooltip } from "antd";
+import { Tooltip } from "antd";
 import { useRouter } from "next/navigation";
+import { ELButton } from "@/components/ui/ELButton";
+import { ELCard } from "@/components/ui/ELCard";
+import { ELFlex } from "@/components/ui/ELGrid";
 
 const ACTIONS: Array<{
   label: string;
@@ -52,16 +55,15 @@ export function QuickActions() {
   const router = useRouter();
 
   return (
-    <Card
-      title="Ações rápidas"
+    <ELCard
+      header={{ title: "Ações rápidas" }}
       variant="borderless"
-      styles={{ body: { paddingTop: 16 } }}
     >
-      <Flex gap={12} wrap>
+      <ELFlex gap="md" wrap>
         {ACTIONS.map((action) => (
           <Tooltip key={action.label} title={action.description} placement="bottom">
-            <Button
-              type="default"
+            <ELButton
+              variant="default"
               size="large"
               icon={action.icon}
               onClick={() => router.push(action.href)}
@@ -71,10 +73,10 @@ export function QuickActions() {
               }}
             >
               {action.label}
-            </Button>
+            </ELButton>
           </Tooltip>
         ))}
-      </Flex>
-    </Card>
+      </ELFlex>
+    </ELCard>
   );
 }

@@ -164,6 +164,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                 icon={<MenuOutlined style={{ fontSize: 20 }} />}
                 onClick={() => setMobileMenuOpen(true)}
                 aria-label="Abrir menu"
+                data-testid="mobile-menu-button"
                 style={{ width: 44, height: 44 }}
               />
               {/* eslint-disable-next-line @next/next/no-img-element */}

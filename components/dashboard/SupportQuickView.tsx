@@ -1,11 +1,15 @@
 'use client';
 
-import { Card, Typography, Tag, Skeleton, Empty, Button, Flex, Divider } from 'antd';
+import { Typography, Tag, Skeleton, Divider } from 'antd';
 import { MessageOutlined, PlusOutlined, RightOutlined } from '@ant-design/icons';
 import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/utils/api-fetch';
 import type { Status } from '@/lib/validation/support';
+import { ELButton } from '@/components/ui/ELButton';
+import { ELCard } from '@/components/ui/ELCard';
+import { ELFlex } from '@/components/ui/ELGrid';
+import { ELEmpty } from '@/components/ui/ELEmpty';
 
 const { Text } = Typography;
 
@@ -61,64 +65,58 @@ export function SupportQuickView() {
   });
 
   const cardTitle = (
-    <Flex align="center" gap={8}>
+    <ELFlex align="center" gap="sm">
       <MessageOutlined />
       <Text strong>Tickets de Suporte</Text>
-    </Flex>
+    </ELFlex>
   );
 
   if (isLoading) {
     return (
-      <Card title={cardTitle} variant="outlined">
+      <ELCard header={{ title: cardTitle }}>
         <Skeleton active paragraph={{ rows: 4 }} />
-      </Card>
+      </ELCard>
     );
   }
 
   return (
-    <Card
-      title={cardTitle}
-      variant="outlined"
-      extra={
-        <Flex gap={4} wrap="wrap" justify="flex-end">
-          <Button
-            type="primary"
-            size="small"
-            icon={<PlusOutlined />}
-            onClick={() => router.push('/suporte/novo')}
-          >
-            Novo
-          </Button>
-          {tickets && tickets.length > 0 && (
-            <Button
-              type="link"
+    <ELCard
+      header={{
+        title: cardTitle,
+        extra: (
+          <ELFlex gap="sm" wrap justify="end">
+            <ELButton
+              variant="primary"
               size="small"
-              icon={<RightOutlined />}
-              onClick={() => router.push('/suporte')}
-              style={{ paddingInline: 4 }}
+              icon={<PlusOutlined />}
+              onClick={() => router.push('/suporte/novo')}
             >
-              Todos
-            </Button>
-          )}
-        </Flex>
-      }
-      styles={{ header: { flexWrap: 'wrap', gap: 8 } }}
+              Novo
+            </ELButton>
+            {tickets && tickets.length > 0 && (
+              <ELButton
+                variant="link"
+                size="small"
+                icon={<RightOutlined />}
+                onClick={() => router.push('/suporte')}
+              >
+                Todos
+              </ELButton>
+            )}
+          </ELFlex>
+        ),
+      }}
     >
       {!tickets || tickets.length === 0 ? (
-        <Empty
+        <ELEmpty
           description="Nenhum ticket aberto"
-          image={Empty.PRESENTED_IMAGE_SIMPLE}
-        >
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={() => router.push('/suporte/novo')}
-          >
-            Abrir primeiro ticket
-          </Button>
-        </Empty>
+          primaryAction={{
+            label: "Abrir primeiro ticket",
+            onClick: () => router.push('/suporte/novo'),
+          }}
+        />
       ) : (
-        <Flex vertical gap={0}>
+        <ELFlex direction="col" gap="sm">
           {tickets.map((ticket, index) => (
             <div
               key={ticket.id}
@@ -126,8 +124,8 @@ export function SupportQuickView() {
               onClick={() => router.push(`/suporte/${ticket.id}`)}
             >
               {index > 0 && <Divider style={{ margin: '8px 0' }} />}
-              <Flex justify="space-between" align="center" style={{ width: '100%' }} gap={12}>
-                <Flex vertical style={{ flex: 1, minWidth: 0 }}>
+              <ELFlex justify="between" align="center" style={{ width: '100%' }} gap="md">
+                <ELFlex direction="col" style={{ flex: 1, minWidth: 0 }}>
                   <Text strong style={{ fontSize: '13px' }} ellipsis>
                     {ticket.subject}
                   </Text>
@@ -138,16 +136,16 @@ export function SupportQuickView() {
                       month: 'short',
                     })}
                   </Text>
-                </Flex>
+                </ELFlex>
 
                 <Tag color={getStatusColor(ticket.status)} style={{ fontSize: '10px' }}>
                   {getStatusLabel(ticket.status)}
                 </Tag>
-              </Flex>
+              </ELFlex>
             </div>
           ))}
-        </Flex>
+        </ELFlex>
       )}
-    </Card>
+    </ELCard>
   );
 }

@@ -1,10 +1,15 @@
+/**
+ * Login - Design System v2
+ * Gradiente suave com cores atualizadas
+ */
+
 .container {
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: var(--el-spacing-xl, 24px) var(--el-spacing-lg, 16px);
-  background: linear-gradient(180deg, rgba(0, 56, 115, 0.08) 0%, rgba(0, 56, 115, 0.14) 100%);
+  background: linear-gradient(180deg, var(--el-color-primary-tint, #E6EEF7) 0%, var(--el-color-surface-alt, #F2F4F7) 100%);
 }
 
 .panel {
@@ -20,13 +25,13 @@
 
 .title {
   margin: 0 !important;
-  font-weight: 700 !important;
-  color: var(--color-primary, #003873) !important;
+  font-weight: var(--el-font-weight-bold, 700) !important;
+  color: var(--el-color-primary, #0B4EA3) !important;
 }
 
 .subtitle {
   margin: 0 !important;
-  color: rgba(24, 34, 53, 0.72) !important;
+  color: var(--el-text-secondary, #475467) !important;
 }
 
 .form {
@@ -52,25 +57,25 @@
 
 .footerText {
   margin: 0 !important;
-  color: rgba(24, 34, 53, 0.72) !important;
+  color: var(--el-text-secondary, #475467) !important;
   text-align: center;
 }
 
 .link {
-  color: var(--color-primary, #003873) !important;
-  font-weight: 600;
+  color: var(--el-color-primary, #0B4EA3) !important;
+  font-weight: var(--el-font-weight-semibold, 600);
 }
 
 .checkboxLabel {
-  color: var(--color-text, #182235);
+  color: var(--el-text-primary, #111827);
 }
 
 .divider {
   display: flex;
   align-items: center;
   gap: var(--el-spacing-md, 12px);
-  color: rgba(24, 34, 53, 0.56);
-  font-size: 14px;
+  color: var(--el-text-muted, #98A2B3);
+  font-size: var(--el-font-size-base, 14px);
 }
 
 .divider::before,
@@ -78,7 +83,7 @@
   content: '';
   flex: 1;
   height: 1px;
-  background: rgba(24, 34, 53, 0.12);
+  background: var(--el-border-weak, #EAECF0);
 }
 
 .googleButton {
@@ -86,15 +91,15 @@
   align-items: center;
   justify-content: center;
   gap: var(--el-spacing-sm, 8px);
-  border: 1px solid rgba(24, 34, 53, 0.16) !important;
-  background: #fff !important;
-  color: var(--color-text, #182235) !important;
+  border: 1px solid var(--el-border-medium, #D0D5DD) !important;
+  background: var(--el-color-surface, #FFFFFF) !important;
+  color: var(--el-text-primary, #111827) !important;
   transition: all 0.2s ease;
 }
 
 .googleButton:hover {
-  border-color: rgba(24, 34, 53, 0.24) !important;
-  background: rgba(24, 34, 53, 0.02) !important;
+  border-color: var(--el-border-strong, #98A2B3) !important;
+  background: var(--el-color-surface-alt, #F2F4F7) !important;
 }
 
 .googleIcon {

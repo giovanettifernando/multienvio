@@ -1,97 +1,126 @@
+/**
+ * ELButton - Design System v2
+ * Alturas: 40-44px padrão, 36px compacto
+ * Radius: 10-12px
+ * Variantes: primary, default, link, danger, ghost, dashed, tonal
+ */
+
 .button {
   height: 44px;
   border-radius: var(--el-radius-base, 12px) !important;
-  font-weight: 600;
+  font-weight: var(--el-font-weight-semibold, 600);
+  font-size: var(--el-font-size-base, 14px);
   padding-inline: 20px !important;
   transition: background-color 0.2s ease, border-color 0.2s ease,
     color 0.2s ease, box-shadow 0.2s ease;
 }
 
+/* === Default (secundário com stroke neutra) === */
 .buttonDefault {
-  background-color: #ffffff !important;
-  border-color: rgba(0, 56, 115, 0.18) !important;
-  color: var(--color-text, #1a1c1f) !important;
+  background-color: var(--el-color-surface, #ffffff) !important;
+  border-color: var(--el-border-color, #D0D5DD) !important;
+  color: var(--el-text-primary, #111827) !important;
 }
 
 .buttonDefault:hover,
 .buttonDefault:focus {
-  border-color: rgba(0, 56, 115, 0.32) !important;
-  color: #003873 !important;
-  box-shadow: 0 8px 20px rgba(0, 56, 115, 0.12);
+  border-color: var(--el-color-primary, #0B4EA3) !important;
+  color: var(--el-color-primary, #0B4EA3) !important;
+  box-shadow: 0 4px 12px rgba(11, 78, 163, 0.1);
 }
 
+/* === Primary (cheio) === */
 .buttonPrimary {
-  background-color: var(--color-primary, #003873) !important;
-  border-color: var(--color-primary, #003873) !important;
+  background-color: var(--el-color-primary, #0B4EA3) !important;
+  border-color: var(--el-color-primary, #0B4EA3) !important;
   color: #ffffff !important;
 }
 
 .buttonPrimary:hover,
 .buttonPrimary:focus {
-  background-color: #004a9b !important;
-  border-color: #004a9b !important;
-  box-shadow: 0 10px 24px rgba(0, 56, 115, 0.32);
+  background-color: var(--el-color-primary-hover, #0A3F82) !important;
+  border-color: var(--el-color-primary-hover, #0A3F82) !important;
+  box-shadow: 0 6px 16px rgba(11, 78, 163, 0.25);
 }
 
+/* === Link === */
 .buttonLink {
-  color: var(--color-primary, #003873) !important;
+  color: var(--el-color-primary, #0B4EA3) !important;
   padding-inline: 0 !important;
   height: auto !important;
 }
 
 .buttonLink:hover,
 .buttonLink:focus {
-  color: #004a9b !important;
+  color: var(--el-color-primary-hover, #0A3F82) !important;
 }
 
+/* === Danger (vermelho cheio) === */
 .buttonDanger {
-  background-color: var(--color-danger, #D64545) !important;
-  border-color: var(--color-danger, #D64545) !important;
+  background-color: var(--el-color-danger, #DC2626) !important;
+  border-color: var(--el-color-danger, #DC2626) !important;
   color: #ffffff !important;
 }
 
 .buttonDanger:hover,
 .buttonDanger:focus {
-  background-color: #c23030 !important;
-  border-color: #c23030 !important;
-  box-shadow: 0 10px 24px rgba(214, 69, 69, 0.32);
+  background-color: #B91C1C !important;
+  border-color: #B91C1C !important;
+  box-shadow: 0 6px 16px rgba(220, 38, 38, 0.25);
 }
 
+/* === Ghost/Text (sem borda) === */
 .buttonGhost {
   background-color: transparent !important;
   border-color: transparent !important;
-  color: var(--color-text-secondary, #4A6076) !important;
+  color: var(--el-text-secondary, #475467) !important;
   padding-inline: 12px !important;
 }
 
 .buttonGhost:hover,
 .buttonGhost:focus {
-  background-color: rgba(0, 56, 115, 0.06) !important;
-  color: var(--color-text, #182235) !important;
+  background-color: var(--el-color-surface-alt, #F2F4F7) !important;
+  color: var(--el-text-primary, #111827) !important;
 }
 
+/* === Tonal (fundo tint primário) === */
+.buttonTonal {
+  background-color: var(--el-color-primary-tint, #E6EEF7) !important;
+  border-color: transparent !important;
+  color: var(--el-color-primary, #0B4EA3) !important;
+}
+
+.buttonTonal:hover,
+.buttonTonal:focus {
+  background-color: #D6E4F2 !important;
+  color: var(--el-color-primary-hover, #0A3F82) !important;
+}
+
+/* === Dashed === */
 .buttonDashed {
-  background-color: #ffffff !important;
-  border-color: rgba(0, 56, 115, 0.25) !important;
+  background-color: var(--el-color-surface, #ffffff) !important;
+  border-color: var(--el-border-color, #D0D5DD) !important;
   border-style: dashed !important;
-  color: var(--color-text-secondary, #4A6076) !important;
+  color: var(--el-text-secondary, #475467) !important;
 }
 
 .buttonDashed:hover,
 .buttonDashed:focus {
-  border-color: var(--color-primary, #003873) !important;
-  color: var(--color-primary, #003873) !important;
-  background-color: rgba(0, 56, 115, 0.04) !important;
+  border-color: var(--el-color-primary, #0B4EA3) !important;
+  color: var(--el-color-primary, #0B4EA3) !important;
+  background-color: var(--el-color-primary-tint, #E6EEF7) !important;
 }
 
+/* === Focus visible === */
 .button:focus-visible {
-  outline: 3px solid rgba(0, 56, 115, 0.35);
+  outline: 2px solid var(--el-color-primary, #0B4EA3);
   outline-offset: 2px;
 }
 
+/* === Disabled === */
 .button:disabled {
   box-shadow: none !important;
-  opacity: 0.6;
+  opacity: 0.5;
   cursor: not-allowed;
 }
 

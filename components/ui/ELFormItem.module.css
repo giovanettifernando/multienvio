@@ -1,16 +1,21 @@
+/**
+ * ELFormItem - Design System v2
+ * Labels e erros com cores atualizadas
+ */
+
 .formItem :global(.ant-form-item-label > label) {
-  color: var(--color-text, #182235);
-  font-weight: 600;
+  color: var(--el-text-primary, #111827);
+  font-weight: var(--el-font-weight-semibold, 600);
 }
 
 .formItem :global(.ant-form-item-explain-error) {
   margin-top: var(--el-spacing-xs, 4px);
-  font-size: 13px;
+  font-size: var(--el-font-size-sm, 13px);
 }
 
 .formItem :global(.ant-form-item-extra) {
   margin-top: var(--el-spacing-xs, 4px);
-  color: rgba(24, 34, 53, 0.65);
+  color: var(--el-text-secondary, #475467);
 }
 
 .formItem :global(.ant-form-item-control-input-content) {

@@ -1,6 +1,8 @@
 /**
- * ELTableWrapper - Estilos consistentes para tabelas Ant Design existentes
- * Use como wrapper em torno de Table components existentes
+ * ELTableWrapper - Design System v2
+ * Wrapper consistente para tabelas Ant Design
+ * Cabeçalho Title Case 13px/500 (sem caixa alta)
+ * Linhas 52-56px, padding 12-16px, zebra/hover suave
  */
 
 .wrapper {
@@ -9,62 +11,71 @@
   overflow-x: auto;
 }
 
-/* Card container */
+/* === Card container === */
 .wrapper :global(.ant-card) {
   border-radius: var(--el-radius-lg, 16px);
-  border: 1px solid var(--color-border-secondary, #E5EBF4);
-  box-shadow: var(--el-shadow-sm, 0 1px 3px rgba(0, 0, 0, 0.04));
+  border: 1px solid var(--el-border-weak, #EAECF0);
+  box-shadow: var(--el-shadow-card, 0 1px 3px rgba(0, 0, 0, 0.06));
 }
 
 .wrapper :global(.ant-card-body) {
   padding: var(--el-spacing-lg, 16px);
 }
 
-/* Tabela base usando tokens */
+/* === Tabela base === */
 .wrapper :global(.ant-table) {
-  font-size: var(--el-font-size-sm, 13px);
+  font-size: var(--el-font-size-base, 14px);
 }
 
+/* === Cabeçalho: Title Case, 13px/500, sem uppercase === */
 .wrapper :global(.ant-table-thead > tr > th) {
-  background-color: var(--color-background, #F7F8FA);
-  font-weight: 600;
-  font-size: var(--el-font-size-xs, 12px);
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
-  color: var(--color-text-secondary, #4A6076);
+  background-color: var(--el-color-surface-alt, #F2F4F7);
+  font-weight: var(--el-font-weight-medium, 500);
+  font-size: var(--el-font-size-sm, 13px);
+  /* Removido text-transform: uppercase - usar Title Case nos títulos */
+  color: var(--el-text-secondary, #475467);
   padding: var(--el-spacing-md, 12px) var(--el-spacing-lg, 16px);
-  border-bottom: 1px solid var(--color-border, #CFD8E6);
+  border-bottom: 1px solid var(--el-border-weak, #EAECF0);
+  height: 48px;
 }
 
+/* === Linhas: 52-56px com zebra striping === */
 .wrapper :global(.ant-table-tbody > tr > td) {
   padding: var(--el-spacing-md, 12px) var(--el-spacing-lg, 16px);
-  border-bottom: 1px solid var(--color-border-secondary, #E5EBF4);
+  border-bottom: 1px solid var(--el-border-weak, #EAECF0);
   vertical-align: middle;
+  height: 56px;
 }
 
+/* Zebra striping */
+.wrapper :global(.ant-table-tbody > tr:nth-child(even) > td) {
+  background-color: var(--el-color-surface-alt, #F2F4F7);
+}
+
+/* Hover mais perceptível */
 .wrapper :global(.ant-table-tbody > tr:hover > td) {
-  background-color: rgba(0, 56, 115, 0.02);
+  background-color: var(--el-color-primary-tint, #E6EEF7) !important;
 }
 
 .wrapper :global(.ant-table-tbody > tr:last-child > td) {
   border-bottom: none;
 }
 
-/* Paginação */
+/* === Paginação === */
 .wrapper :global(.ant-pagination) {
   margin-top: var(--el-spacing-lg, 16px);
 }
 
 .wrapper :global(.ant-pagination-item-active) {
-  background-color: var(--color-primary, #003873);
-  border-color: var(--color-primary, #003873);
+  background-color: var(--el-color-primary, #0B4EA3);
+  border-color: var(--el-color-primary, #0B4EA3);
 }
 
 .wrapper :global(.ant-pagination-item-active a) {
   color: #ffffff;
 }
 
-/* Filter bar */
+/* === Filter bar === */
 .filterBar {
   display: flex;
   gap: var(--el-spacing-md, 12px);
@@ -84,19 +95,24 @@
 }
 
 /* ============================================
-   RESPONSIVIDADE PARA TABELAS
+   RESPONSIVIDADE - Design System v2
+   Mantém padding na escala (8, 12, 16px)
    ============================================ */
 
-/* Desktop pequeno (1366x768) - compactar células */
+/* Desktop (<=1440px) - compactação suave */
 @media (max-width: 1440px) {
   .wrapper :global(.ant-table-thead > tr > th),
   .wrapper :global(.ant-table-tbody > tr > td) {
     padding: var(--el-spacing-sm, 8px) var(--el-spacing-md, 12px);
-    font-size: 12px;
+    font-size: var(--el-font-size-sm, 13px);
   }
 
-  .wrapper :global(.ant-table) {
-    font-size: 12px;
+  .wrapper :global(.ant-table-thead > tr > th) {
+    height: 44px;
+  }
+
+  .wrapper :global(.ant-table-tbody > tr > td) {
+    height: 52px;
   }
 
   /* Garantir scroll horizontal */
@@ -105,17 +121,20 @@
   }
 }
 
-/* 1366px específico - tabela mais compacta */
+/* Desktop pequeno (<=1366px) - compactação moderada */
 @media (max-width: 1366px) {
   .wrapper :global(.ant-table-thead > tr > th),
   .wrapper :global(.ant-table-tbody > tr > td) {
-    padding: 6px 10px;
-    font-size: 11px;
+    padding: var(--el-spacing-sm, 8px) var(--el-spacing-md, 12px);
+    font-size: var(--el-font-size-xs, 12px);
   }
 
   .wrapper :global(.ant-table-thead > tr > th) {
-    font-size: 10px;
-    letter-spacing: 0.03em;
+    height: 40px;
+  }
+
+  .wrapper :global(.ant-table-tbody > tr > td) {
+    height: 48px;
   }
 
   /* Scrollbar mais visível */
@@ -124,17 +143,17 @@
   }
 
   .wrapper::-webkit-scrollbar-track {
-    background: var(--color-background, #F7F8FA);
+    background: var(--el-color-surface-alt, #F2F4F7);
     border-radius: 4px;
   }
 
   .wrapper::-webkit-scrollbar-thumb {
-    background: var(--color-border, #CFD8E6);
+    background: var(--el-border-color, #D0D5DD);
     border-radius: 4px;
   }
 
   .wrapper::-webkit-scrollbar-thumb:hover {
-    background: var(--color-text-secondary, #4A6076);
+    background: var(--el-text-secondary, #475467);
   }
 }
 

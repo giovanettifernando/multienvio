@@ -1,11 +1,14 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Button, Card, Skeleton, Flex, Typography, Statistic } from "antd";
+import { Skeleton, Typography, Statistic } from "antd";
 import { WalletOutlined, PlusOutlined, ArrowDownOutlined } from "@ant-design/icons";
 import AddFundsModal from "@/components/wallet/AddFundsModal";
 import { useWallet } from "@/hooks/useWallet";
 import { useWalletTransactions } from "@/hooks/useWalletTransactions";
+import { ELButton } from "@/components/ui/ELButton";
+import { ELCard } from "@/components/ui/ELCard";
+import { ELFlex } from "@/components/ui/ELGrid";
 
 const { Text } = Typography;
 
@@ -34,22 +37,23 @@ export function WalletCard() {
         open={modalOpen}
         onClose={() => setModalOpen(false)}
       />
-      <Card
-        title={
-          <Flex align="center" gap={8}>
-            <WalletOutlined />
-            <Text strong>Carteira</Text>
-          </Flex>
-        }
-        variant="outlined"
+      <ELCard
+        header={{
+          title: (
+            <ELFlex align="center" gap="sm">
+              <WalletOutlined />
+              <Text strong>Carteira</Text>
+            </ELFlex>
+          ),
+        }}
         size="small"
-        styles={{ body: { padding: '12px 16px' } }}
+        padding="md"
       >
         {isLoading ? (
           <Skeleton active paragraph={{ rows: 1 }} />
         ) : wallet ? (
-          <Flex vertical gap={12}>
-            <Flex justify="space-between" align="center" gap={12} wrap="wrap">
+          <ELFlex direction="col" gap="md">
+            <ELFlex justify="between" align="center" gap="md" wrap>
               <Statistic
                 title={<Text type="secondary" style={{ fontSize: 11 }}>Saldo disponível</Text>}
                 value={balance}
@@ -58,14 +62,14 @@ export function WalletCard() {
                 styles={{ content: {
                   fontSize: 22,
                   fontWeight: 600,
-                  color: isLowBalance ? '#ff4d4f' : '#003873',
+                  color: isLowBalance ? 'var(--el-color-error, #D64545)' : 'var(--el-color-primary, #0B4EA3)',
                 } }}
               />
-              <Flex vertical align="end" gap={2} style={{ minWidth: 0 }}>
-                <Flex align="center" gap={4}>
-                  <ArrowDownOutlined style={{ fontSize: 11, color: '#ff4d4f' }} />
+              <ELFlex direction="col" align="end" gap="sm" style={{ minWidth: 0 }}>
+                <ELFlex align="center" gap="sm">
+                  <ArrowDownOutlined style={{ fontSize: 11, color: 'var(--el-color-error, #D64545)' }} />
                   <Text type="secondary" style={{ fontSize: 11 }}>30 dias</Text>
-                </Flex>
+                </ELFlex>
                 <Text strong style={{ fontSize: 13 }}>
                   R$ {last30DaysSpend.toFixed(2)}
                 </Text>
@@ -74,24 +78,24 @@ export function WalletCard() {
                     Saldo baixo
                   </Text>
                 )}
-              </Flex>
-            </Flex>
-            <Button
-              type="primary"
+              </ELFlex>
+            </ELFlex>
+            <ELButton
+              variant="primary"
               size="small"
               icon={<PlusOutlined />}
               onClick={() => setModalOpen(true)}
               block
             >
               Adicionar créditos
-            </Button>
-          </Flex>
+            </ELButton>
+          </ELFlex>
         ) : (
           <Text type="secondary" style={{ fontSize: 13 }}>
             Não foi possível carregar o saldo.
           </Text>
         )}
-      </Card>
+      </ELCard>
     </>
   );
 }

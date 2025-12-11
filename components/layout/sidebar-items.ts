@@ -49,7 +49,7 @@ export const sidebarItems: SidebarItem[] = [
   {
     key: 'shipments',
     icon: ReconciliationOutlined,
-    label: 'Gestão de envios',
+    label: 'Meus Envios',
     href: '/shipments',
   },
   {

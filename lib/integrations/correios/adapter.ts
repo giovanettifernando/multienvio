@@ -12,6 +12,7 @@ import type { QuoteResultItem } from '@/types/quote';
 import type { QuoteRequest } from '@/lib/validation/quote-backend';
 import {
   cotarCorreiosDefault,
+  cotarMultiVolumeCorreios,
   criarPrePostagem,
   prePostagemCompleta,
   isCorreiosConfigured,
@@ -20,6 +21,8 @@ import {
   getCorreiosServicos,
   type CorreiosPrecoPrazoInput,
   type CorreiosCotacaoCompleta,
+  type CorreiosVolumeQuoteInput,
+  type CorreiosMultiVolumeQuoteResult,
   type CreatePrePostagemInput,
   type PrePostagemResult,
   type FullPrePostagemResult,
@@ -233,7 +236,29 @@ export async function isCorreiosAvailableAsync(): Promise<boolean> {
 }
 
 /**
+ * Converte resultado de multi-volume para QuoteResultItem
+ */
+function multiVolumeResultToQuoteResult(
+  result: CorreiosMultiVolumeQuoteResult
+): QuoteResultItem {
+  const id = `${CORREIOS_CARRIER_ID}-${result.serviceCode}`;
+
+  return {
+    id,
+    carrier: CORREIOS_CARRIER_NAME,
+    modalidade: result.serviceName,
+    prazoDias: result.deliveryDays,
+    preco: result.totalPrice,
+    exigeSeguro: false,
+    source: 'real',
+  };
+}
+
+/**
  * Obtém cotações dos Correios para uma requisição do Envio Legal
+ *
+ * IMPORTANTE: Cada volume é cotado individualmente e os preços são somados.
+ * Isso garante precificação correta quando cada volume gera uma etiqueta separada.
  *
  * @param request Requisição de cotação do Envio Legal
  * @returns Array de QuoteResultItem com as opções dos Correios
@@ -262,21 +287,34 @@ export async function quoteFromCorreios(
   }
 
   try {
-    // Converter para formato dos Correios
-    const correiosInput = quoteRequestToCorreiosInput(request);
+    // Converter volumes para formato CorreiosVolumeQuoteInput
+    const volumesInput: CorreiosVolumeQuoteInput[] = request.volumes.map((vol, index) => ({
+      packageNumber: index + 1,
+      weight: vol.pesoKg,
+      width: Math.max(vol.larguraCm, 11),    // Mínimo 11cm
+      height: Math.max(vol.alturaCm, 2),     // Mínimo 2cm
+      length: Math.max(vol.comprimentoCm, 16), // Mínimo 16cm
+    }));
 
-    // Chamar API dos Correios
-    const cotacoes = await cotarCorreiosDefault(correiosInput);
+    // Cotar cada volume individualmente e somar os preços
+    const multiVolumeResults = await cotarMultiVolumeCorreios(
+      request.origem.cep.replace(/\D/g, ''),
+      request.destino.cep.replace(/\D/g, ''),
+      volumesInput,
+      request.seguro ?? undefined
+    );
 
     // Converter para formato do Envio Legal
-    const results = cotacoes
-      .filter((c) => c.precoTotal > 0 && c.prazoDias > 0)
-      .map(correiosCotacaoToQuoteResult);
+    // Filtrar apenas resultados válidos (preço > 0 e sem erros em todos os volumes)
+    const results = multiVolumeResults
+      .filter((r) => r.totalPrice > 0 && !r.hasErrors)
+      .map(multiVolumeResultToQuoteResult);
 
-    console.log('[CORREIOS_ADAPTER] Quote completed:', {
+    console.log('[CORREIOS_ADAPTER] Quote completed (multi-volume):', {
       requestId,
       total: results.length,
-      servicos: results.map((r) => r.modalidade),
+      volumesCount: request.volumes.length,
+      servicos: results.map((r) => ({ modalidade: r.modalidade, preco: r.preco })),
     });
 
     return {

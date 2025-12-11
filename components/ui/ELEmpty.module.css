@@ -1,8 +1,13 @@
+/**
+ * ELEmpty - Design System v2
+ * Estado vazio com fundo sutil e cores atualizadas
+ */
+
 .empty {
   padding: var(--el-spacing-xl, 24px);
-  border: 1px dashed rgba(0, 56, 115, 0.18);
+  border: 1px dashed var(--el-border-medium, #D0D5DD);
   border-radius: var(--el-radius-base, 12px);
-  background: rgba(0, 56, 115, 0.04);
+  background: var(--el-color-surface-alt, #F2F4F7);
   text-align: center;
   display: flex;
   flex-direction: column;
@@ -13,13 +18,15 @@
 
 .title {
   margin: 0;
-  color: var(--color-primary, #003873);
-  font-weight: 600;
+  color: var(--el-color-primary, #0B4EA3);
+  font-weight: var(--el-font-weight-semibold, 600);
+  font-size: var(--el-font-size-lg, 16px);
 }
 
 .description {
-  color: rgba(24, 34, 53, 0.72);
+  color: var(--el-text-secondary, #475467);
   margin: 0;
+  font-size: var(--el-font-size-base, 14px);
 }
 
 .actions {

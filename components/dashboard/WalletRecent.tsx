@@ -1,11 +1,15 @@
 'use client';
 
-import { Card, Typography, Skeleton, Empty, Button, Flex, Divider } from 'antd';
+import { Typography, Skeleton, Divider } from 'antd';
 import { SwapOutlined, RightOutlined } from '@ant-design/icons';
 import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/utils/api-fetch';
 import type { WalletTx } from '@/types/wallet';
+import { ELButton } from '@/components/ui/ELButton';
+import { ELCard } from '@/components/ui/ELCard';
+import { ELFlex } from '@/components/ui/ELGrid';
+import { ELEmpty } from '@/components/ui/ELEmpty';
 
 const { Text } = Typography;
 
@@ -46,53 +50,52 @@ export function WalletRecent() {
   });
 
   const cardTitle = (
-    <Flex align="center" gap={8}>
+    <ELFlex align="center" gap="sm">
       <SwapOutlined />
       <Text strong>Transações</Text>
-    </Flex>
+    </ELFlex>
   );
 
   if (isLoading) {
     return (
-      <Card title={cardTitle} variant="outlined">
+      <ELCard header={{ title: cardTitle }}>
         <Skeleton active paragraph={{ rows: 4 }} />
-      </Card>
+      </ELCard>
     );
   }
 
   if (!transactions || transactions.length === 0) {
     return (
-      <Card title={cardTitle} variant="outlined">
-        <Empty description="Nenhuma transação encontrada" />
-      </Card>
+      <ELCard header={{ title: cardTitle }}>
+        <ELEmpty description="Nenhuma transação encontrada" />
+      </ELCard>
     );
   }
 
   return (
-    <Card
-      title={cardTitle}
-      variant="outlined"
-      styles={{ header: { flexWrap: 'wrap', gap: 8 } }}
-      extra={
-        <Button
-          type="link"
-          size="small"
-          icon={<RightOutlined />}
-          onClick={() => router.push('/carteira/historico')}
-          style={{ paddingInline: 4 }}
-        >
-          Todas
-        </Button>
-      }
+    <ELCard
+      header={{
+        title: cardTitle,
+        extra: (
+          <ELButton
+            variant="link"
+            size="small"
+            icon={<RightOutlined />}
+            onClick={() => router.push('/carteira/historico')}
+          >
+            Todas
+          </ELButton>
+        ),
+      }}
     >
-      <Flex vertical gap={0}>
+      <ELFlex direction="col" gap="sm">
         {transactions.map((tx, index) => {
           const credit = isCredit(tx.type);
           return (
             <div key={tx.id || index}>
               {index > 0 && <Divider style={{ margin: '8px 0' }} />}
-              <Flex justify="space-between" align="center" style={{ width: '100%' }} gap={12}>
-                <Flex vertical style={{ flex: 1, minWidth: 0 }}>
+              <ELFlex justify="between" align="center" style={{ width: '100%' }} gap="md">
+                <ELFlex direction="col" style={{ flex: 1, minWidth: 0 }}>
                   <Text strong style={{ fontSize: '13px' }}>
                     {getTxLabel(tx.type)}
                   </Text>
@@ -107,22 +110,22 @@ export function WalletRecent() {
                       minute: '2-digit',
                     })}
                   </Text>
-                </Flex>
+                </ELFlex>
 
                 <Text
                   strong
                   style={{
-                    color: credit ? '#52c41a' : '#ff4d4f',
+                    color: credit ? 'var(--el-color-success, #11693F)' : 'var(--el-color-error, #D64545)',
                     fontSize: '14px',
                   }}
                 >
                   {credit ? '+' : '-'}R$ {Math.abs(tx.amountReais).toFixed(2)}
                 </Text>
-              </Flex>
+              </ELFlex>
             </div>
           );
         })}
-      </Flex>
-    </Card>
+      </ELFlex>
+    </ELCard>
   );
 }

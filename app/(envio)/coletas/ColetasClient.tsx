@@ -183,7 +183,6 @@ export default function ColetasClient() {
             columns={columns}
             enableMobileCards
             scrollX={900}
-            scrollY="calc(100vh - 340px)"
             emptyMessage="Nenhuma coleta encontrada"
             emptyDescription="Tente ajustar os filtros de busca"
             pagination={{

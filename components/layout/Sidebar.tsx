@@ -111,6 +111,7 @@ export function Sidebar({ collapsed, onCollapse }: SidebarProps) {
         </div>
       }
       className={styles.sidebar}
+      data-testid="sidebar"
     >
       {sidebarContent}
       <style jsx global>{`

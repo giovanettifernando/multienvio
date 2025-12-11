@@ -1,10 +1,14 @@
 'use client';
 
-import { Card, Typography, Tag, Skeleton, Empty, Button, Flex, Divider } from 'antd';
+import { Typography, Tag, Skeleton, Divider } from 'antd';
 import { CalendarOutlined, EnvironmentOutlined, RightOutlined } from '@ant-design/icons';
 import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/utils/api-fetch';
+import { ELButton } from '@/components/ui/ELButton';
+import { ELCard } from '@/components/ui/ELCard';
+import { ELFlex } from '@/components/ui/ELGrid';
+import { ELEmpty } from '@/components/ui/ELEmpty';
 
 const { Text } = Typography;
 
@@ -60,44 +64,40 @@ export function PickupSchedule() {
   const total = data?.total || 0;
 
   const cardTitle = (
-    <Flex align="center" gap={8}>
+    <ELFlex align="center" gap="sm">
       <CalendarOutlined />
       <Text strong>Coletas Agendadas</Text>
-    </Flex>
+    </ELFlex>
   );
 
   if (isLoading) {
     return (
-      <Card title={cardTitle} variant="outlined">
+      <ELCard header={{ title: cardTitle }}>
         <Skeleton active paragraph={{ rows: 4 }} />
-      </Card>
+      </ELCard>
     );
   }
 
   return (
-    <Card
-      title={cardTitle}
-      variant="outlined"
-      extra={
-        total > 0 && (
-          <Button
-            type="link"
+    <ELCard
+      header={{
+        title: cardTitle,
+        extra: total > 0 ? (
+          <ELButton
+            variant="link"
             size="small"
             icon={<RightOutlined />}
             onClick={() => router.push('/coletas?status=SCHEDULED')}
           >
             Ver todas
-          </Button>
-        )
-      }
+          </ELButton>
+        ) : undefined,
+      }}
     >
       {pickups.length === 0 ? (
-        <Empty
-          description="Nenhuma coleta agendada"
-          image={Empty.PRESENTED_IMAGE_SIMPLE}
-        />
+        <ELEmpty description="Nenhuma coleta agendada" />
       ) : (
-        <Flex vertical gap={0}>
+        <ELFlex direction="col" gap="sm">
           {pickups.map((pickup, index) => (
             <div
               key={pickup.id}
@@ -105,16 +105,16 @@ export function PickupSchedule() {
               onClick={() => router.push(`/coletas/${pickup.id}`)}
             >
               {index > 0 && <Divider style={{ margin: '8px 0' }} />}
-              <Flex justify="space-between" align="center" style={{ width: '100%' }} gap={12}>
-                <Flex vertical style={{ flex: 1, minWidth: 0 }}>
-                  <Flex align="center" gap={4}>
-                    <CalendarOutlined style={{ fontSize: '12px', color: '#8c8c8c' }} />
+              <ELFlex justify="between" align="center" style={{ width: '100%' }} gap="md">
+                <ELFlex direction="col" style={{ flex: 1, minWidth: 0 }}>
+                  <ELFlex align="center" gap="sm">
+                    <CalendarOutlined style={{ fontSize: '12px', color: 'var(--el-text-muted, #98A2B3)' }} />
                     <Text strong style={{ fontSize: '13px' }}>
                       {formatScheduleDate(pickup.scheduleAt)}
                     </Text>
-                  </Flex>
-                  <Flex align="center" gap={4}>
-                    <EnvironmentOutlined style={{ fontSize: '12px', color: '#8c8c8c' }} />
+                  </ELFlex>
+                  <ELFlex align="center" gap="sm">
+                    <EnvironmentOutlined style={{ fontSize: '12px', color: 'var(--el-text-muted, #98A2B3)' }} />
                     <Text type="secondary" style={{ fontSize: '11px' }} ellipsis>
                       {pickup.originCity && pickup.originUf
                         ? `${pickup.originCity}/${pickup.originUf}`
@@ -125,21 +125,21 @@ export function PickupSchedule() {
                         • {pickup.collector.name}
                       </Text>
                     )}
-                  </Flex>
+                  </ELFlex>
                   <Text type="secondary" style={{ fontSize: '11px' }} ellipsis>
                     {pickup.shipment.trackingCode}
                     {pickup.shipment.carrier && ` • ${pickup.shipment.carrier}`}
                   </Text>
-                </Flex>
+                </ELFlex>
 
                 <Tag color="blue" style={{ fontSize: '10px' }}>
                   Agendada
                 </Tag>
-              </Flex>
+              </ELFlex>
             </div>
           ))}
-        </Flex>
+        </ELFlex>
       )}
-    </Card>
+    </ELCard>
   );
 }

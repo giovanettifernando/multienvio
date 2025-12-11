@@ -419,7 +419,6 @@ export function LabelsTable({ onOpenLabel, onOpenPackage }: LabelsTableProps) {
           data={data?.items ?? []}
           columns={columns}
           scrollX={800}
-          scrollY="calc(100vh - 340px)"
           enableMobileCards
           expandable={{
             expandedRowRender,

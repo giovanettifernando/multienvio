@@ -1,8 +1,16 @@
+/**
+ * ELCard - Design System v2
+ * Sombra suave: 0 10px 30px rgba(12, 27, 49, 0.08)
+ * Borda fina: border-fraca (#EAECF0)
+ * Radius: 12px
+ */
+
 .card {
-  border: 1px solid rgba(0, 56, 115, 0.1) !important;
+  border: 1px solid var(--el-border-weak, #EAECF0) !important;
   border-radius: var(--el-radius-base, 12px) !important;
-  box-shadow: var(--el-shadow-soft, 0 20px 48px rgba(0, 56, 115, 0.12));
-  background: var(--color-surface, #ffffff) !important;
+  /* Design System v2: sombra mais suave */
+  box-shadow: var(--el-shadow-soft, 0 10px 30px rgba(12, 27, 49, 0.08));
+  background: var(--el-color-surface, #ffffff) !important;
 }
 
 .header {
@@ -20,13 +28,15 @@
 
 .headerTitle {
   margin: 0 !important;
-  color: var(--color-primary, #003873);
-  font-weight: 600 !important;
-  font-size: 1.1rem !important;
+  /* Design System v2: usar primária 700 */
+  color: var(--el-color-primary, #0B4EA3) !important;
+  font-weight: var(--el-font-weight-semibold, 600) !important;
+  font-size: var(--el-font-size-xl, 17px) !important;
 }
 
 .headerDescription {
-  color: rgba(24, 34, 53, 0.72) !important;
+  color: var(--el-text-secondary, #475467) !important;
+  font-size: var(--el-font-size-base, 14px) !important;
   margin: 0 !important;
 }
 

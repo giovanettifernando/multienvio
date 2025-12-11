@@ -1,5 +1,7 @@
 /**
- * ActionBar - Estilos para barra de filtros e ações responsiva
+ * ActionBar - Design System v2
+ * Barra destacada com fundo surface-alt
+ * Gap 12-16px, padding 8-12
  */
 
 .actionBar {
@@ -8,6 +10,10 @@
   align-items: center;
   justify-content: space-between;
   width: 100%;
+  /* Design System v2: fundo destacado */
+  background-color: var(--el-color-surface-alt, #F2F4F7);
+  border-radius: var(--el-radius-sm, 8px);
+  margin-bottom: var(--el-spacing-lg, 16px);
 }
 
 /* Gaps */
@@ -25,15 +31,18 @@
 
 /* Variantes */
 .variant-default {
-  padding: var(--el-spacing-md, 12px) 0;
+  padding: var(--el-spacing-md, 12px) var(--el-spacing-lg, 16px);
 }
 
 .variant-compact {
-  padding: var(--el-spacing-sm, 8px) 0;
+  padding: var(--el-spacing-sm, 8px) var(--el-spacing-md, 12px);
 }
 
 .variant-inline {
   padding: 0;
+  background-color: transparent;
+  border-radius: 0;
+  margin-bottom: 0;
 }
 
 /* Conteúdo principal (filtros) */

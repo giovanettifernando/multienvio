@@ -1,19 +1,20 @@
 /**
- * LayoutLoader styles - usando tokens CSS
+ * LayoutLoader - Design System v2
+ * Spinner com cores atualizadas
  */
 
 .container {
   min-height: 100vh;
   display: grid;
   place-items: center;
-  background: var(--el-color-bg-layout, #f5f5f5);
+  background: var(--el-color-background, #F7F8FA);
 }
 
 .spinner {
   width: 40px;
   height: 40px;
-  border: 3px solid var(--el-color-border, #d9d9d9);
-  border-top-color: var(--el-color-primary, #003873);
+  border: 3px solid var(--el-border-weak, #EAECF0);
+  border-top-color: var(--el-color-primary, #0B4EA3);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }

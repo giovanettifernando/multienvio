@@ -2,17 +2,12 @@
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  Flex,
-  Form,
-  Input,
-  InputNumber,
-  App,
-} from "antd";
+import { Form, Input, InputNumber, App } from "antd";
 import { PageShell } from "@/components/shared/PageShell";
 import { ELButton } from "@/components/ui/ELButton";
 import { ELModal } from "@/components/ui/ELModal";
 import { ActionBar } from "@/components/ui/ActionBar";
+import { ELFlex } from "@/components/ui/ELGrid";
 import AddFundsModal from "@/components/wallet/AddFundsModal";
 import type { CardMethod } from "@/types/billing";
 import { PaymentMethodCard } from "@/components/wallet/PaymentMethodCard";
@@ -132,7 +127,7 @@ export default function MetodosClient() {
           <Form.Item name="number" label="Número" rules={[{ required: true }]}>
             <Input />
           </Form.Item>
-          <Flex gap={12} wrap="wrap">
+          <ELFlex gap="md" wrap>
             <Form.Item name="expMonth" label="Mês" rules={[{ required: true }]} style={{ flex: '1 1 80px', minWidth: 80 }}>
               <InputNumber min={1} max={12} style={{ width: '100%' }} />
             </Form.Item>
@@ -142,7 +137,7 @@ export default function MetodosClient() {
             <Form.Item name="cvc" label="CVC" rules={[{ required: true }]} style={{ flex: '1 1 80px', minWidth: 80 }}>
               <Input />
             </Form.Item>
-          </Flex>
+          </ELFlex>
         </Form>
       </ELModal>
 
@@ -154,7 +149,7 @@ export default function MetodosClient() {
           <ELButton onClick={() => setAddBalanceOpen(true)}>Adicionar saldo</ELButton>
         </ActionBar>
 
-        <Flex vertical gap={16}>
+        <ELFlex direction="col" gap="lg">
           {cards.map((card) => (
             <PaymentMethodCard
               key={card.id}
@@ -163,7 +158,7 @@ export default function MetodosClient() {
               onRemove={(id) => removeMutation.mutate(id)}
             />
           ))}
-        </Flex>
+        </ELFlex>
       </PageShell>
 
       <AddFundsModal

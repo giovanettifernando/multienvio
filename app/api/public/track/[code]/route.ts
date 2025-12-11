@@ -313,9 +313,11 @@ export const GET = withApiHandler<unknown, { code: string }>(async ({ params, lo
       // Declaração de conteúdo
       // Novo formato: volumeDeclarations
       if (extDoc.volumeDeclarations && Array.isArray(extDoc.volumeDeclarations)) {
-        extDoc.volumeDeclarations.forEach((volDecl: VolumeDeclaration) => {
+        extDoc.volumeDeclarations.forEach((volDecl: VolumeDeclaration, idx: number) => {
           const items = volDecl.items || [];
-          const volumeIndex = volDecl.volumeIndex || 1;
+          // volumeIndex pode ser 0 (zero-indexed), então usar ?? para preservar 0
+          // Converter para 1-indexed para exibição (Volume 1, Volume 2, etc.)
+          const volumeIndex = (volDecl.volumeIndex ?? idx) + 1;
           const pkg = packageByNumber.get(volumeIndex);
           volumes.push({
             index: volumeIndex,
@@ -379,6 +381,16 @@ export const GET = withApiHandler<unknown, { code: string }>(async ({ params, lo
     });
   }
 
+  // Deduplicar volumes por index (mantém o primeiro de cada index)
+  const seenIndexes = new Set<number>();
+  const uniqueVolumes = volumes.filter(vol => {
+    if (seenIndexes.has(vol.index)) {
+      return false;
+    }
+    seenIndexes.add(vol.index);
+    return true;
+  });
+
   // Mapear status interno para status público
   const publicStatus = mapToPublicTrackingStatus(shipment.status as ShipmentStatus);
   const publicStatusInfo = PublicStatusMessages[publicStatus];
@@ -410,8 +422,8 @@ export const GET = withApiHandler<unknown, { code: string }>(async ({ params, lo
       createdAt: shipment.createdAt.toISOString(),
       // Eventos de rastreamento (garantido ao menos 1)
       events,
-      // Volumes e itens
-      volumes,
+      // Volumes e itens (deduplicados)
+      volumes: uniqueVolumes,
     },
   };
 });
