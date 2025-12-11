@@ -78,7 +78,7 @@ export function SessionIdleModal({
   // Refs para timers (evitar memory leaks)
   const idleTimerRef = useRef<NodeJS.Timeout | null>(null);
   const heartbeatIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const lastActivityRef = useRef<number>(Date.now());
+  const lastActivityRef = useRef<number>(0);
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
 
   // Ref para evitar double-mount em Strict Mode
@@ -137,11 +137,29 @@ export function SessionIdleModal({
       if (response.status === 401) {
         console.warn("[SessionIdleModal] Heartbeat retornou 401 - sessão expirada");
         handleLogout();
+        return;
+      }
+
+      // Se heartbeat retornou que precisa de refresh, fazer proativamente
+      if (response.ok) {
+        try {
+          const data = await response.json();
+          if (data.needsTokenRefresh) {
+            // Access token expirou, fazer refresh proativo
+            await fetch(refreshEndpoint, {
+              method: "POST",
+              credentials: "include",
+              headers: { "Content-Type": "application/json" },
+            });
+          }
+        } catch {
+          // Ignorar erros de parse - não é crítico
+        }
       }
     } catch {
       // Silencioso - erro de rede não deve interromper
     }
-  }, [heartbeatEndpoint, handleLogout]);
+  }, [heartbeatEndpoint, refreshEndpoint, handleLogout]);
 
   // Mostrar modal de inatividade (com refresh preventivo)
   const showIdleModal = useCallback(async () => {
@@ -285,6 +303,9 @@ export function SessionIdleModal({
     // Evitar double-mount em Strict Mode
     if (mountedRef.current) return;
     mountedRef.current = true;
+
+    // Inicializar timestamp de última atividade
+    lastActivityRef.current = Date.now();
 
     // Adicionar listeners de atividade
     ACTIVITY_EVENTS.forEach((event) => {

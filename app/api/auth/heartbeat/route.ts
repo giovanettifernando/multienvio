@@ -8,49 +8,69 @@
  * está ativo (mouse/teclado), garantindo que a atividade no cliente
  * seja refletida no servidor.
  *
+ * IMPORTANTE: Usa REFRESH token (7 dias) ao invés de access token (15 min)
+ * para evitar falsos positivos quando o access token expira mas a sessão
+ * ainda é válida.
+ *
  * Fluxo:
- * 1. Verifica se usuário está autenticado (access token válido)
- * 2. Se autenticado, atualiza cookie last_activity
- * 3. Retorna 200 OK
+ * 1. Verifica se usuário tem refresh token válido
+ * 2. Se sim, atualiza cookie last_activity
+ * 3. Retorna 200 OK (com flag indicando se access token precisa refresh)
  * 4. Se não autenticado, retorna 401 (cliente deve tratar como sessão expirada)
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import {
+  verifyRefreshToken,
   verifyAccessToken,
   ACCESS_TOKEN_COOKIE,
+  REFRESH_TOKEN_COOKIE,
 } from '@/lib/auth/jwt-tokens';
 
 const LAST_ACTIVITY_COOKIE_NAME = 'last_activity';
 
 export async function POST(request: NextRequest) {
   try {
-    // Obter access token do cookie
     const cookieStore = await cookies();
+
+    // Verificar REFRESH token (7 dias) - mais confiável que access token (15 min)
+    const refreshTokenCookie = cookieStore.get(REFRESH_TOKEN_COOKIE);
+
+    if (!refreshTokenCookie?.value) {
+      return NextResponse.json(
+        { error: 'not_authenticated', reason: 'no_refresh_token' },
+        { status: 401 }
+      );
+    }
+
+    // Verificar se refresh token é válido (sem validar tokenVersion para performance)
+    const { payload: refreshPayload, error: refreshError } = await verifyRefreshToken(
+      refreshTokenCookie.value,
+      false // skipTokenVersionCheck para performance
+    );
+
+    if (refreshError || !refreshPayload) {
+      return NextResponse.json(
+        { error: refreshError || 'invalid_token', reason: 'refresh_invalid' },
+        { status: 401 }
+      );
+    }
+
+    // Verificar se access token precisa de refresh (para informar o cliente)
     const accessTokenCookie = cookieStore.get(ACCESS_TOKEN_COOKIE);
+    let needsTokenRefresh = true;
 
-    if (!accessTokenCookie?.value) {
-      return NextResponse.json(
-        { error: 'not_authenticated' },
-        { status: 401 }
-      );
+    if (accessTokenCookie?.value) {
+      const { error: accessError } = await verifyAccessToken(accessTokenCookie.value, false);
+      needsTokenRefresh = !!accessError;
     }
 
-    // Verificar se access token é válido (sem validar tokenVersion para performance)
-    const { payload, error } = await verifyAccessToken(accessTokenCookie.value, false);
-
-    if (error || !payload) {
-      return NextResponse.json(
-        { error: error || 'invalid_token' },
-        { status: 401 }
-      );
-    }
-
-    // Usuário autenticado - atualizar cookie de atividade
+    // Sessão válida - atualizar cookie de atividade
     const response = NextResponse.json({
       ok: true,
       timestamp: Date.now(),
+      needsTokenRefresh, // Cliente pode usar isso para decidir se faz refresh
     });
 
     // Setar cookie last_activity com timestamp atual
