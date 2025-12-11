@@ -2,14 +2,24 @@ import type {
   InputProps,
   PasswordProps,
   TextAreaProps,
-  SearchProps,
   InputRef,
 } from "antd/es/input";
 import Input from "antd/es/input";
-import type { ForwardRefExoticComponent, RefAttributes } from "react";
-import { forwardRef } from "react";
+import { SearchOutlined } from "@ant-design/icons";
+import type { ForwardRefExoticComponent, RefAttributes, KeyboardEvent } from "react";
+import { forwardRef, useCallback } from "react";
 import { cn } from "@/lib/utils/cn";
 import styles from "./ELInput.module.css";
+
+/**
+ * Props for ELInput.Search component
+ * Uses standard Input with search icon suffix instead of Input.Search
+ * for a modern, clean appearance without the separate button
+ */
+export interface ELSearchProps extends Omit<InputProps, 'suffix'> {
+  /** Callback when search is triggered (Enter key) */
+  onSearch?: (value: string) => void;
+}
 
 type ComposedELInput = ForwardRefExoticComponent<
   InputProps & RefAttributes<HTMLInputElement>
@@ -21,7 +31,7 @@ type ComposedELInput = ForwardRefExoticComponent<
     TextAreaProps & RefAttributes<HTMLTextAreaElement>
   >;
   Search: ForwardRefExoticComponent<
-    SearchProps & RefAttributes<InputRef>
+    ELSearchProps & RefAttributes<InputRef>
   >;
 };
 
@@ -67,14 +77,29 @@ const TextAreaInput = forwardRef<HTMLTextAreaElement, TextAreaProps>(
 );
 TextAreaInput.displayName = "ELInput.TextArea";
 
-const SearchInput = forwardRef<InputRef, SearchProps>(
-  ({ className, size, ...props }, ref) => {
+/**
+ * Modern search input with icon inside (suffix)
+ * - Clean, single border design (no separate button)
+ * - Responsive: max-width on desktop, 100% on mobile
+ * - allowClear enabled by default
+ */
+const SearchInput = forwardRef<InputRef, ELSearchProps>(
+  ({ className, onSearch, onKeyDown, ...props }, ref) => {
+    const handleKeyDown = useCallback((e: KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === 'Enter' && onSearch) {
+        onSearch((e.target as HTMLInputElement).value);
+      }
+      onKeyDown?.(e);
+    }, [onSearch, onKeyDown]);
+
     return (
-      <Input.Search
+      <Input
         {...props}
         ref={ref}
         className={cn(styles.search, className)}
-        size={size ?? "middle"}
+        suffix={<SearchOutlined />}
+        allowClear={props.allowClear ?? true}
+        onKeyDown={handleKeyDown}
       />
     );
   },

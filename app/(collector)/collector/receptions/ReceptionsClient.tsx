@@ -16,6 +16,7 @@ import {
   Descriptions,
 } from 'antd';
 import { ELModal } from '@/components/ui/ELModal';
+import { ELInput } from '@/components/ui/ELInput';
 import {
   InboxOutlined,
   CameraOutlined,
@@ -464,11 +465,10 @@ export default function ReceptionsClient() {
     <PageShell title="Recepção de Envios" gap="md">
       <Card>
         <Space orientation="vertical" style={{ width: '100%' }} size="middle">
-          <Input.Search
+          <ELInput.Search
             placeholder="Buscar por código, remetente ou destinatário..."
             allowClear
             onSearch={setSearch}
-            style={{ maxWidth: 400 }}
           />
 
           <Table

@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { Table, Flex, Input, Select, Button, Tag, Card, Statistic, Row, Col, DatePicker, Descriptions } from 'antd';
+import { Table, Flex, Select, Button, Tag, Card, Statistic, Row, Col, DatePicker, Descriptions } from 'antd';
 import { ELModal } from '@/components/ui/ELModal';
+import { ELInput } from '@/components/ui/ELInput';
 import type { ColumnsType } from 'antd/es/table';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
@@ -269,14 +270,13 @@ export function WalletTransactionsTable() {
             { label: 'Mês atual', value: [dayjs().startOf('month'), dayjs().endOf('day')] },
           ]}
         />
-        <Input.Search
+        <ELInput.Search
           placeholder="Buscar cliente, título, referência..."
           value={q}
           onChange={(e) => {
             setPage(1);
             setQ(e.target.value);
           }}
-          style={{ maxWidth: 280 }}
         />
         <Select
           value={type}

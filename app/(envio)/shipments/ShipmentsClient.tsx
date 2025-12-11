@@ -385,7 +385,6 @@ export default function ShipmentsClient() {
           >
             <ELInput.Search
               allowClear
-              style={{ flex: 1, minWidth: 200, maxWidth: 400 }}
               placeholder="Buscar por rastreio, destinatário, cidade ou transportadora"
               value={query}
               onChange={(event) => handleQueryChange(event.target.value)}

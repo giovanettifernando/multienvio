@@ -5,7 +5,6 @@ import {
   App,
   Button,
   Card,
-  Input,
   Select,
   Space,
   Statistic,
@@ -21,6 +20,7 @@ import {
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { ColumnsType } from 'antd/es/table';
+import { ELInput } from '@/components/ui/ELInput';
 
 const { Title, Text } = Typography;
 
@@ -300,9 +300,8 @@ export default function CorreiosAgenciesClient() {
               }}
               allowClear
             />
-            <Input.Search
+            <ELInput.Search
               placeholder="Buscar por nome, município..."
-              style={{ width: 300 }}
               onSearch={handleSearch}
               allowClear
             />

@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { App, Button, Flex, Input, Popconfirm, Select, Space, Table, Tag } from 'antd';
+import { App, Button, Flex, Popconfirm, Select, Space, Table, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import type { TableRowSelection } from 'antd/lib/table/interface';
 import { useMutation } from '@tanstack/react-query';
@@ -10,6 +10,7 @@ import dayjs from 'dayjs';
 import { DeleteOutlined, EyeOutlined, KeyOutlined, LockOutlined, UnlockOutlined } from '@ant-design/icons';
 import type { AccountStatus, AdminClient, ClientType } from '@/lib/admin/types';
 import { blockAccounts, deleteAccount, resetPassword, unblockAccounts } from '@/lib/admin/api/clients';
+import { ELInput } from '@/components/ui/ELInput';
 
 interface ClientsTableProps {
   clients: AdminClient[];
@@ -261,7 +262,7 @@ export function ClientsTable({ clients, onViewClient, onStatusChange, onDelete }
   return (
     <Flex vertical gap={12}>
       <Flex wrap="wrap" gap={8} align="center">
-        <Input.Search
+        <ELInput.Search
           value={searchValue}
           onChange={(event) => {
             const value = event.target.value;
@@ -278,7 +279,6 @@ export function ClientsTable({ clients, onViewClient, onStatusChange, onDelete }
             setQ(v);
             setSearchValue(v);
           }}
-          style={{ maxWidth: 360 }}
         />
         <Select
           value={type}

@@ -4,12 +4,12 @@ import { useState, useMemo } from 'react';
 import {
   Table,
   Flex,
-  Input,
   Button,
   Popconfirm,
   App,
   Typography,
 } from 'antd';
+import { ELInput } from '@/components/ui/ELInput';
 import type { ColumnsType } from 'antd/es/table';
 import type { TableRowSelection } from 'antd/lib/table/interface';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -154,14 +154,13 @@ export function ReconciliationTable({ period }: ReconciliationTableProps) {
   return (
     <Flex vertical gap={16}>
       <Flex gap={8} wrap="wrap" justify="space-between">
-        <Input.Search
+        <ELInput.Search
           placeholder="Buscar cliente, descrição..."
           value={q}
           onChange={(e) => {
             setPage(1);
             setQ(e.target.value);
           }}
-          style={{ maxWidth: 300 }}
         />
         <Text strong>
           Diferença Total:{' '}

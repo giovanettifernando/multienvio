@@ -27,6 +27,7 @@ import {
   TreeSelect,
 } from 'antd';
 import { ELModal } from '@/components/ui/ELModal';
+import { ELInput } from '@/components/ui/ELInput';
 import { inputNumberFormatterBRL, inputNumberParserBRL } from '@/lib/utils/format';
 import type { ColumnsType } from 'antd/es/table';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -614,10 +615,9 @@ export function ExpensesTable() {
             { label: 'Cancelado', value: 'CANCELED' },
           ]}
         />
-        <Input.Search
+        <ELInput.Search
           placeholder="Buscar..."
           allowClear
-          style={{ width: 200 }}
           onSearch={setSearchQuery}
         />
       </Space>

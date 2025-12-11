@@ -155,7 +155,6 @@ export default function ColetasClient() {
           >
             <ELInput.Search
               allowClear
-              style={{ flex: 1, minWidth: 180, maxWidth: 300 }}
               placeholder="Buscar por código de rastreio"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}

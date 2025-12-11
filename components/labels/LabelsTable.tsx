@@ -396,7 +396,6 @@ export function LabelsTable({ onOpenLabel, onOpenPackage }: LabelsTableProps) {
           allowClear
           placeholder="Buscar por código do envio..."
           onSearch={(v) => { setPage(1); setQ(v); }}
-          style={{ flex: 1, minWidth: 200, maxWidth: 300 }}
         />
         <ELSelect
           value={printStatus}

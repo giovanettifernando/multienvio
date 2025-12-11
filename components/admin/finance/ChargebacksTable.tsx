@@ -4,7 +4,6 @@ import { useState, useMemo } from 'react';
 import {
   Table,
   Flex,
-  Input,
   Select,
   Button,
   Tag,
@@ -12,6 +11,7 @@ import {
   Popconfirm,
   App,
 } from 'antd';
+import { ELInput } from '@/components/ui/ELInput';
 import type { ColumnsType } from 'antd/es/table';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
@@ -181,14 +181,13 @@ export function ChargebacksTable({ period }: ChargebacksTableProps) {
   return (
     <Flex vertical gap={16}>
       <Flex gap={8} wrap="wrap">
-        <Input.Search
+        <ELInput.Search
           placeholder="Buscar cliente, motivo..."
           value={q}
           onChange={(e) => {
             setPage(1);
             setQ(e.target.value);
           }}
-          style={{ maxWidth: 300 }}
         />
         <Select
           value={status}

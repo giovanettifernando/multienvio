@@ -175,7 +175,6 @@ export default function RastreamentoClient() {
           value={search}
           onChange={(event) => setSearch(event.target.value)}
           onSearch={(value) => setSearch(value)}
-          style={{ flex: 1, minWidth: 200, maxWidth: 300 }}
         />
         <ELSelect
           style={{ minWidth: 160 }}

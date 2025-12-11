@@ -109,7 +109,6 @@ export default function ExtratoClient() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               onSearch={() => setPage(1)} // Reset para primeira página
-              style={{ flex: 1, minWidth: 200, maxWidth: 400 }}
             />
           </ActionBar>
         </ELCard>

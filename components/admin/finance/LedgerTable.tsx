@@ -14,6 +14,7 @@ import {
   App,
 } from 'antd';
 import { ELModal } from '@/components/ui/ELModal';
+import { ELInput } from '@/components/ui/ELInput';
 import { inputNumberFormatterBRL, inputNumberParserBRL } from '@/lib/utils/format';
 import type { ColumnsType } from 'antd/es/table';
 import type { TableRowSelection } from 'antd/lib/table/interface';
@@ -280,14 +281,13 @@ export function LedgerTable({ period }: LedgerTableProps) {
   return (
     <Flex vertical gap={16}>
       <Flex gap={8} wrap="wrap">
-        <Input.Search
+        <ELInput.Search
           placeholder="Buscar cliente, descrição..."
           value={q}
           onChange={(e) => {
             setPage(1);
             setQ(e.target.value);
           }}
-          style={{ maxWidth: 300 }}
         />
         <Select
           value={kind}
