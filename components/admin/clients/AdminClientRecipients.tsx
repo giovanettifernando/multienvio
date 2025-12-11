@@ -6,7 +6,6 @@ import {
   Button,
   Space,
   Tag,
-  Modal,
   Form,
   Input,
   Switch,
@@ -15,6 +14,7 @@ import {
   Row,
   Col,
 } from "antd";
+import { ELModal } from '@/components/ui/ELModal';
 import {
   PlusOutlined,
   EditOutlined,
@@ -211,12 +211,12 @@ export default function AdminClientRecipients({
         locale={{ emptyText: "Nenhum destinatário cadastrado" }}
       />
 
-      <Modal
+      <ELModal
         title={editingRecipient ? "Editar destinatário" : "Novo destinatário"}
         open={modalOpen}
         onCancel={closeModal}
         footer={null}
-        width={800}
+        size="lg"
       >
         <Form form={form} layout="vertical" onFinish={handleSubmit}>
           <Row gutter={16}>
@@ -352,7 +352,7 @@ export default function AdminClientRecipients({
             </Space>
           </Form.Item>
         </Form>
-      </Modal>
+      </ELModal>
     </>
   );
 }

@@ -7,12 +7,12 @@ import {
   Form,
   Input,
   InputNumber,
-  Modal,
-  Space,
-  message,
+  App,
 } from "antd";
 import { PageShell } from "@/components/shared/PageShell";
 import { ELButton } from "@/components/ui/ELButton";
+import { ELModal } from "@/components/ui/ELModal";
+import { ActionBar } from "@/components/ui/ActionBar";
 import AddFundsModal from "@/components/wallet/AddFundsModal";
 import type { CardMethod } from "@/types/billing";
 import { PaymentMethodCard } from "@/components/wallet/PaymentMethodCard";
@@ -39,8 +39,8 @@ async function fetchCards(): Promise<CardMethod[]> {
 }
 
 export default function MetodosClient() {
+  const { message: messageApi } = App.useApp();
   const queryClient = useQueryClient();
-  const [messageApi, contextHolder] = message.useMessage();
   const [form] = Form.useForm();
   const [modalOpen, setModalOpen] = useState(false);
   const [addBalanceOpen, setAddBalanceOpen] = useState(false);
@@ -118,8 +118,7 @@ export default function MetodosClient() {
 
   return (
     <>
-      {contextHolder}
-      <Modal
+      <ELModal
         title="Adicionar cartão"
         open={modalOpen}
         onCancel={() => setModalOpen(false)}
@@ -127,12 +126,10 @@ export default function MetodosClient() {
         confirmLoading={addCardMutation.isPending}
       >
         <Form form={form} layout="vertical" onFinish={(values) => addCardMutation.mutate(values)}>
-          <Form.Item name="holder" label="Titular" rules={[{ required: true }]}
-          >
+          <Form.Item name="holder" label="Titular" rules={[{ required: true }]}>
             <Input />
           </Form.Item>
-          <Form.Item name="number" label="Número" rules={[{ required: true }]}
-          >
+          <Form.Item name="number" label="Número" rules={[{ required: true }]}>
             <Input />
           </Form.Item>
           <Flex gap={12} wrap="wrap">
@@ -147,15 +144,15 @@ export default function MetodosClient() {
             </Form.Item>
           </Flex>
         </Form>
-      </Modal>
+      </ELModal>
 
       <PageShell title="Métodos de pagamento" gap="md">
-        <Space>
+        <ActionBar>
           <ELButton variant="primary" onClick={() => setModalOpen(true)}>
             Adicionar cartão
           </ELButton>
           <ELButton onClick={() => setAddBalanceOpen(true)}>Adicionar saldo</ELButton>
-        </Space>
+        </ActionBar>
 
         <Flex vertical gap={16}>
           {cards.map((card) => (

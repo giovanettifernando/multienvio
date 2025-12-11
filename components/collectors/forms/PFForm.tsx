@@ -48,7 +48,9 @@ export default function PFForm({ showPassword = false }: PFFormProps) {
       try {
         const response = await fetch(`/api/cep/${digits}`);
         if (response.ok) {
-          const data = await response.json();
+          const json = await response.json();
+          // A API retorna { data: {...}, error: null, meta: {...} }
+          const data = json.data || json;
           setValue('pf.endereco.logradouro', data.logradouro || null, { shouldValidate: false });
           setValue('pf.endereco.bairro', data.bairro || null, { shouldValidate: false });
           setValue('pf.endereco.cidade', data.cidade || null, { shouldValidate: false });

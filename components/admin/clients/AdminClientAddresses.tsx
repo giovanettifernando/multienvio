@@ -6,7 +6,6 @@ import {
   Button,
   Space,
   Tag,
-  Modal,
   Form,
   Input,
   Switch,
@@ -15,6 +14,7 @@ import {
   Row,
   Col,
 } from "antd";
+import { ELModal } from '@/components/ui/ELModal';
 import {
   PlusOutlined,
   EditOutlined,
@@ -202,12 +202,12 @@ export default function AdminClientAddresses({
         locale={{ emptyText: "Nenhum endereço cadastrado" }}
       />
 
-      <Modal
+      <ELModal
         title={editingAddress ? "Editar endereço" : "Novo endereço"}
         open={modalOpen}
         onCancel={closeModal}
         footer={null}
-        width={700}
+        size="md"
       >
         <Form form={form} layout="vertical" onFinish={handleSubmit}>
           <Row gutter={16}>
@@ -304,7 +304,7 @@ export default function AdminClientAddresses({
             </Space>
           </Form.Item>
         </Form>
-      </Modal>
+      </ELModal>
     </>
   );
 }

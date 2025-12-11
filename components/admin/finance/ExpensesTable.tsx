@@ -16,7 +16,6 @@ import {
   Empty,
   Spin,
   DatePicker,
-  Modal,
   Form,
   Input,
   InputNumber,
@@ -27,6 +26,7 @@ import {
   Tooltip,
   TreeSelect,
 } from 'antd';
+import { ELModal } from '@/components/ui/ELModal';
 import { inputNumberFormatterBRL, inputNumberParserBRL } from '@/lib/utils/format';
 import type { ColumnsType } from 'antd/es/table';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -646,8 +646,9 @@ export function ExpensesTable() {
     return (
       <Flex vertical gap={24}>
         {renderFilters()}
-        <Flex justify="center" align="center" style={{ minHeight: 300 }}>
-          <Spin size="large" tip="Carregando despesas..." />
+        <Flex vertical justify="center" align="center" gap={12} style={{ minHeight: 300 }}>
+          <Spin size="large" />
+          <span style={{ color: '#666' }}>Carregando despesas...</span>
         </Flex>
       </Flex>
     );
@@ -738,18 +739,18 @@ export function ExpensesTable() {
             setPageSize(ps);
           },
         }}
-        scroll={{ x: 1200 }}
+        scroll={{ x: 1200, y: 'calc(100vh - 480px)' }}
         size="middle"
       />
 
       {/* Modal Create/Edit */}
-      <Modal
+      <ELModal
         title={editingExpense ? 'Editar Despesa' : 'Nova Despesa'}
         open={isModalOpen}
         onCancel={handleCloseModal}
         footer={null}
-        width={700}
-        destroyOnClose
+        size="lg"
+        destroyOnHidden
       >
         <Form<ExpenseFormValues>
           form={form}
@@ -916,7 +917,7 @@ export function ExpensesTable() {
             </Button>
           </Flex>
         </Form>
-      </Modal>
+      </ELModal>
     </Flex>
   );
 }

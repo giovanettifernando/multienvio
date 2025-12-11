@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { Layout, Menu, Button, Dropdown, Spin, App as AntdApp, Drawer } from 'antd';
 import {
@@ -10,10 +10,35 @@ import {
   LogoutOutlined,
   UserOutlined,
   MenuOutlined,
+  CloseOutlined,
 } from '@ant-design/icons';
 import { useColetorSession } from '@/stores/useColetorSession';
 
 const { Header, Sider, Content } = Layout;
+
+// Hook para detectar viewport mobile de forma reativa
+function useIsMobile(): boolean {
+  return useSyncExternalStore(
+    (callback) => {
+      window.addEventListener('resize', callback);
+      return () => window.removeEventListener('resize', callback);
+    },
+    () => (typeof window !== 'undefined' ? window.innerWidth < 768 : false),
+    () => false
+  );
+}
+
+// Hook para detectar tela pequena (1366x768)
+function useIsSmallDesktop(): boolean {
+  return useSyncExternalStore(
+    (callback) => {
+      window.addEventListener('resize', callback);
+      return () => window.removeEventListener('resize', callback);
+    },
+    () => (typeof window !== 'undefined' ? window.innerWidth >= 768 && window.innerWidth <= 1366 : false),
+    () => false
+  );
+}
 
 const publicPaths = ['/coletores/login', '/coletores/cadastro'];
 
@@ -24,19 +49,11 @@ export default function ColetoresLayoutClient({ children }: { children: React.Re
   const { coletor, setColetor, clearColetor } = useColetorSession();
   const [loading, setLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
+  const isMobile = useIsMobile();
+  const isSmallDesktop = useIsSmallDesktop();
 
-  // Detectar tamanho da tela
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 1024);
-    };
-
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
+  // Largura do sidebar ajustada para desktop pequeno
+  const sidebarWidth = isSmallDesktop ? 200 : 240;
 
   useEffect(() => {
     const isPublicPath = publicPaths.includes(pathname);
@@ -165,71 +182,115 @@ export default function ColetoresLayoutClient({ children }: { children: React.Re
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: '0 16px',
+          padding: isMobile ? '0 16px' : '0 24px',
           background: '#001529',
-          position: 'sticky',
+          position: 'fixed',
           top: 0,
-          zIndex: 10,
+          left: 0,
+          right: 0,
+          zIndex: 1001,
+          height: 56,
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          {/* Botão hambúrguer em mobile */}
-          {isMobile && (
-            <Button
-              type="text"
-              icon={<MenuOutlined />}
-              onClick={() => setMobileMenuOpen(true)}
-              style={{ color: 'white', fontSize: 20 }}
-            />
-          )}
-          <div style={{ color: 'white', fontSize: isMobile ? 14 : 18, fontWeight: 'bold' }}>
-            {isMobile ? 'Envio Legal' : 'Envio Legal • Coletor Autônomo'}
-          </div>
-        </div>
-        <Dropdown menu={{ items: userMenuItems }} placement="bottomRight">
+        {isMobile ? (
           <Button
             type="text"
-            icon={<UserOutlined />}
-            style={{ color: 'white', fontSize: isMobile ? 12 : 14 }}
-          >
-            {isMobile ? '' : coletor.pfNome}
+            icon={<MenuOutlined style={{ fontSize: 20, color: 'white' }} />}
+            onClick={() => setMobileMenuOpen(true)}
+            aria-label="Abrir menu"
+          />
+        ) : (
+          <div style={{ color: 'white', fontSize: 18, fontWeight: 'bold' }}>
+            Envio Legal • Coletor Autônomo
+          </div>
+        )}
+        {isMobile && (
+          <div style={{ color: 'white', fontSize: 15, fontWeight: 'bold' }}>
+            Coletor
+          </div>
+        )}
+        <Dropdown menu={{ items: userMenuItems }} placement="bottomRight">
+          <Button type="text" icon={<UserOutlined />} style={{ color: 'white' }}>
+            {!isMobile && coletor.pfNome}
           </Button>
         </Dropdown>
       </Header>
 
-      <Layout>
-        {/* Sidebar Desktop */}
+      {/* Mobile: Drawer menu */}
+      {isMobile && (
+        <Drawer
+          open={mobileMenuOpen}
+          onClose={() => setMobileMenuOpen(false)}
+          placement="left"
+          closeIcon={null}
+          styles={{
+            header: { display: 'none' },
+            body: { padding: 0, display: 'flex', flexDirection: 'column' },
+            wrapper: { width: 280 },
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              height: 56,
+              padding: '0 16px',
+              background: '#001529',
+              color: 'white',
+            }}
+          >
+            <span style={{ fontWeight: 'bold' }}>Coletor Autônomo</span>
+            <Button
+              type="text"
+              icon={<CloseOutlined style={{ color: 'white' }} />}
+              onClick={() => setMobileMenuOpen(false)}
+              aria-label="Fechar menu"
+            />
+          </div>
+          {menuComponent}
+        </Drawer>
+      )}
+
+      <Layout style={{ marginTop: 56 }}>
+        {/* Desktop: Sidebar fixa */}
         {!isMobile && (
-          <Sider width={240} style={{ background: '#fff' }}>
+          <Sider
+            width={sidebarWidth}
+            style={{
+              background: '#fff',
+              position: 'fixed',
+              left: 0,
+              top: 56,
+              bottom: 0,
+              height: 'calc(100vh - 56px)',
+              zIndex: 1000,
+              overflow: 'auto',
+              transition: 'width 0.2s ease',
+            }}
+          >
             {menuComponent}
           </Sider>
         )}
-
-        {/* Drawer Mobile */}
-        {isMobile && (
-          <Drawer
-            title="Menu"
-            placement="left"
-            onClose={() => setMobileMenuOpen(false)}
-            open={mobileMenuOpen}
-            width={280}
-            styles={{ body: { padding: 0 } }}
-          >
-            {menuComponent}
-          </Drawer>
-        )}
-
-        {/* Conteúdo */}
-        <Layout style={{ padding: isMobile ? '12px' : '24px' }}>
+        <Layout style={{ marginLeft: isMobile ? 0 : sidebarWidth, transition: 'margin-left 0.2s' }}>
           <Content
             style={{
+              display: 'flex',
+              flexDirection: 'column',
               background: '#fff',
-              padding: isMobile ? 16 : 24,
-              margin: 0,
-              minHeight: 280,
+              height: 'calc(100vh - 56px)',
+              overflow: 'hidden',
             }}
           >
-            {children}
+            <div
+              style={{
+                flex: 1,
+                overflowY: 'auto',
+                padding: isMobile ? 16 : 24,
+              }}
+            >
+              {children}
+            </div>
           </Content>
         </Layout>
       </Layout>

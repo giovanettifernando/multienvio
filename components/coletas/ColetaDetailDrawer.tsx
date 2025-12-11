@@ -1,6 +1,7 @@
 "use client";
 
-import { Drawer, Descriptions, Timeline, Tag, Button, Space, Input, App } from "antd";
+import { Descriptions, Timeline, Tag, Button, Space, Input, App } from "antd";
+import { ELDrawer } from "@/components/ui/ELDrawer";
 import {
   ClockCircleOutlined,
   CheckCircleOutlined,
@@ -111,10 +112,10 @@ export function ColetaDetailDrawer({
   }
 
   return (
-    <Drawer
+    <ELDrawer
       title="Detalhes da Coleta"
       placement="right"
-      width={600}
+      drawerSize="lg"
       onClose={onClose}
       open={open}
       extra={
@@ -250,6 +251,6 @@ export function ColetaDetailDrawer({
           </Descriptions.Item>
         </Descriptions>
       </Space>
-    </Drawer>
+    </ELDrawer>
   );
 }

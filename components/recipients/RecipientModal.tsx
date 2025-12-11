@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect } from "react";
-import { App, Col, Form, Input, Modal, Row } from "antd";
+import { App, Col, Form, Input, Row } from "antd";
+import { ELModal } from "@/components/ui/ELModal";
 import { Controller, FormProvider, useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -118,14 +119,14 @@ export function RecipientModal({
   });
 
   return (
-    <Modal
+    <ELModal
       open={open}
       onCancel={onCancel}
       onOk={handleSubmit}
       okText={initialValues ? "Salvar" : "Adicionar"}
       confirmLoading={loading}
       title={initialValues ? "Editar destinatário" : "Adicionar destinatário"}
-      width={640}
+      size="md"
     >
       <FormProvider {...form}>
         <div style={{ paddingTop: 16 }}>
@@ -340,6 +341,6 @@ export function RecipientModal({
           </div>
         </div>
       </FormProvider>
-    </Modal>
+    </ELModal>
   );
 }

@@ -5,13 +5,13 @@ import {
   Table,
   Button,
   Space,
-  Modal,
   Form,
   Input,
   InputNumber,
   message,
   Popconfirm,
 } from "antd";
+import { ELModal } from '@/components/ui/ELModal';
 import {
   PlusOutlined,
   EditOutlined,
@@ -160,12 +160,12 @@ export default function AdminClientRecurringItems({
         locale={{ emptyText: "Nenhum item recorrente cadastrado" }}
       />
 
-      <Modal
+      <ELModal
         title={editingItem ? "Editar item recorrente" : "Novo item recorrente"}
         open={modalOpen}
         onCancel={closeModal}
         footer={null}
-        width={500}
+        size="md"
       >
         <Form form={form} layout="vertical" onFinish={handleSubmit}>
           <Form.Item
@@ -202,7 +202,7 @@ export default function AdminClientRecurringItems({
             </Space>
           </Form.Item>
         </Form>
-      </Modal>
+      </ELModal>
     </>
   );
 }

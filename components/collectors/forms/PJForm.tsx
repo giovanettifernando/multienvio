@@ -55,7 +55,9 @@ export default function PJForm() {
       try {
         const response = await fetch(`/api/cep/${digits}`);
         if (response.ok) {
-          const data = await response.json();
+          const json = await response.json();
+          // A API retorna { data: {...}, error: null, meta: {...} }
+          const data = json.data || json;
           setValue('pj.endereco.logradouro', data.logradouro || null, { shouldValidate: false });
           setValue('pj.endereco.bairro', data.bairro || null, { shouldValidate: false });
           setValue('pj.endereco.cidade', data.cidade || null, { shouldValidate: false });

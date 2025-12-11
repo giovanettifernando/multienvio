@@ -1,8 +1,8 @@
 .select :global(.ant-select-selector) {
-  height: 44px !important;
+  height: 36px !important;
   border-radius: var(--el-radius-base, 12px) !important;
   border: 1px solid rgba(0, 56, 115, 0.18) !important;
-  padding-inline: 14px !important;
+  padding-inline: 12px !important;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 

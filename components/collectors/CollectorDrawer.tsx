@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Drawer, Tabs, Button, Space, Spin, Modal, App } from 'antd';
+import { Tabs, Button, Space, Spin, App } from 'antd';
+import { ELDrawer } from '@/components/ui/ELDrawer';
 import { MailOutlined } from '@ant-design/icons';
 import type { UploadFile } from 'antd/es/upload/interface';
 import { useForm, FormProvider } from 'react-hook-form';
@@ -90,7 +91,7 @@ export default function CollectorDrawer({
   loading = false,
   editCollector = null,
 }: CollectorDrawerProps) {
-  const { message } = App.useApp();
+  const { message, modal } = App.useApp();
   const upload = useUpload();
   const [cnhFiles, setCnhFiles] = useState<UploadFile[]>([]);
   const [crlvFiles, setCrlvFiles] = useState<UploadFile[]>([]);
@@ -255,7 +256,7 @@ export default function CollectorDrawer({
   const handlePasswordReset = async () => {
     if (!editCollector) return;
 
-    Modal.confirm({
+    modal.confirm({
       title: 'Redefinir senha do coletor',
       content: `Será enviado um email para ${editCollector.pf.email} com instruções para redefinição de senha. Deseja continuar?`,
       okText: 'Enviar email',
@@ -324,10 +325,10 @@ export default function CollectorDrawer({
   );
 
   return (
-    <Drawer
+    <ELDrawer
       title={editCollector ? 'Editar coletor' : 'Adicionar coletor'}
       placement="right"
-      width={760}
+      drawerSize="xl"
       onClose={onClose}
       open={open}
       destroyOnHidden={false}
@@ -359,6 +360,6 @@ export default function CollectorDrawer({
           <Tabs items={tabItems} tabPosition="top" />
         </Spin>
       </FormProvider>
-    </Drawer>
+    </ELDrawer>
   );
 }

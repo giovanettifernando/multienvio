@@ -1,6 +1,7 @@
 "use client";
 
-import { App, Form, Input, InputNumber, Modal, Space } from 'antd';
+import { App, Form, Input, InputNumber, Space } from 'antd';
+import { ELModal } from '@/components/ui/ELModal';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { packagingCreateSchema, type PackagingCreateInput } from '@/lib/validation/packaging';
@@ -73,7 +74,7 @@ export function ModalNovaEmbalagem({ open, onClose, onSuccess }: ModalNovaEmbala
   };
 
   return (
-    <Modal
+    <ELModal
       title="Nova embalagem"
       open={open}
       onCancel={onClose}
@@ -179,6 +180,6 @@ export function ModalNovaEmbalagem({ open, onClose, onSuccess }: ModalNovaEmbala
           />
         </Form.Item>
       </Form>
-    </Modal>
+    </ELModal>
   );
 }

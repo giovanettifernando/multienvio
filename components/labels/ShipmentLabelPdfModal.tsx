@@ -236,7 +236,10 @@ export function ShipmentLabelPdfModal({
         }}
       >
         {loading ? (
-          <Spin indicator={<LoadingOutlined spin style={{ fontSize: 32 }} />} tip="Carregando etiqueta..." />
+          <div style={{ textAlign: "center" }}>
+            <Spin indicator={<LoadingOutlined spin style={{ fontSize: 32 }} />} />
+            <div style={{ marginTop: 12, color: "#666" }}>Carregando etiqueta...</div>
+          </div>
         ) : error ? (
           <div style={{ textAlign: "center", padding: 24 }}>
             <Typography.Text type="danger">{error}</Typography.Text>

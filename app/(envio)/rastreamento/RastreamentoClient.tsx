@@ -12,7 +12,7 @@ import { ELButton } from "@/components/ui/ELButton";
 import { ELInput } from "@/components/ui/ELInput";
 import { ELSelect } from "@/components/ui/ELSelect";
 import { DataTable, type DataTableColumn } from "@/components/ui/DataTable";
-import tableStyles from "@/components/ui/ELTableWrapper.module.css";
+import { ActionBar } from "@/components/ui/ActionBar";
 
 async function fetchShipments(): Promise<{ dados: Shipment[] }> {
   const response = await fetch("/api/shipments");
@@ -169,45 +169,39 @@ export default function RastreamentoClient() {
 
   return (
     <PageShell title="Rastreamento" gap="md">
-      <div className={tableStyles.wrapper}>
-        <ELCard padding="none">
-          <div className={tableStyles.filterBar}>
-            <ELInput.Search
-              placeholder="Buscar por ID do envio"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              onSearch={(value) => setSearch(value)}
-              className={tableStyles.searchInput}
-              style={{ maxWidth: 300 }}
-            />
-            <ELSelect
-              style={{ minWidth: 160 }}
-              value={statusFilter}
-              onChange={(value) => setStatusFilter(value)}
-              options={STATUS_FILTERS}
-              placeholder="Filtrar por status"
-            />
-          </div>
-        </ELCard>
+      <ActionBar variant="compact">
+        <ELInput.Search
+          placeholder="Buscar por ID do envio"
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          onSearch={(value) => setSearch(value)}
+          style={{ flex: 1, minWidth: 200, maxWidth: 300 }}
+        />
+        <ELSelect
+          style={{ minWidth: 160 }}
+          value={statusFilter}
+          onChange={(value) => setStatusFilter(value)}
+          options={STATUS_FILTERS}
+          placeholder="Filtrar por status"
+        />
+      </ActionBar>
 
-        <ELCard padding="none" style={{ marginTop: 16 }}>
-          <DataTable<TrackingRow>
-            rowKey="id"
-            data={dataSource}
-            loading={shipmentsResult.isLoading}
-            columns={columns}
-            enableMobileCards
-            scrollX={900}
-            emptyMessage="Nenhum rastreamento encontrado"
-            emptyDescription="Tente ajustar os filtros de busca"
-            pagination={{
-              pageSize: 10,
-              showSizeChanger: true,
-              showTotal: (total) => `Total: ${total} envios`,
-            }}
-          />
-        </ELCard>
-      </div>
+      <DataTable<TrackingRow>
+        rowKey="id"
+        data={dataSource}
+        loading={shipmentsResult.isLoading}
+        columns={columns}
+        enableMobileCards
+        scrollX={900}
+        scrollY="calc(100vh - 340px)"
+        emptyMessage="Nenhum rastreamento encontrado"
+        emptyDescription="Tente ajustar os filtros de busca"
+        pagination={{
+          pageSize: 10,
+          showSizeChanger: true,
+          showTotal: (total) => `Total: ${total} envios`,
+        }}
+      />
     </PageShell>
   );
 }

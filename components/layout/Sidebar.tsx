@@ -252,6 +252,52 @@ export function Sidebar({ collapsed, onCollapse }: SidebarProps) {
             display: none !important;
           }
         }
+
+        /* ============================================
+           RESPONSIVIDADE SIDEBAR - 1366x768
+           ============================================ */
+
+        /* Desktop pequeno (1366px) - menu items compactos */
+        @media (max-width: 1366px) {
+          .ant-menu-dark .ant-menu-item,
+          .ant-menu-dark .ant-menu-submenu-title {
+            font-size: 13px;
+            padding-inline: 10px !important;
+            margin: 3px 6px;
+            height: 40px;
+            line-height: 40px;
+          }
+
+          .ant-menu-dark .ant-menu-item .anticon,
+          .ant-menu-dark .ant-menu-submenu-title .anticon {
+            font-size: 16px;
+          }
+        }
+
+        /* Altura baixa (768px) - espaçamento reduzido */
+        @media (max-height: 800px) {
+          .ant-menu-dark .ant-menu-item,
+          .ant-menu-dark .ant-menu-submenu-title {
+            margin: 2px 6px;
+            height: 38px;
+            line-height: 38px;
+          }
+        }
+
+        @media (max-height: 700px) {
+          .ant-menu-dark .ant-menu-item,
+          .ant-menu-dark .ant-menu-submenu-title {
+            margin: 1px 6px;
+            height: 36px;
+            line-height: 36px;
+            font-size: 12px;
+          }
+
+          .ant-menu-dark .ant-menu-item .anticon,
+          .ant-menu-dark .ant-menu-submenu-title .anticon {
+            font-size: 15px;
+          }
+        }
       `}</style>
     </Sider>
   );

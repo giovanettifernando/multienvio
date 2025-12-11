@@ -61,6 +61,8 @@ export interface DataTableProps<T extends object> {
   } | false;
   /** Scroll horizontal */
   scrollX?: number | string;
+  /** Scroll vertical (altura máxima) - útil para 1366x768 */
+  scrollY?: number | string;
   /** Mensagem de empty state */
   emptyMessage?: string;
   /** Descrição do empty state */
@@ -71,6 +73,8 @@ export interface DataTableProps<T extends object> {
   className?: string;
   /** Locale customizado */
   locale?: TableProps<T>['locale'];
+  /** Aplicar ellipsis em todas as colunas textuais por padrão */
+  defaultEllipsis?: boolean;
 }
 
 /**
@@ -93,15 +97,17 @@ export function DataTable<T extends object>({
   enableMobileCards = true,
   pagination,
   scrollX = 'max-content',
+  scrollY,
   emptyMessage = 'Nenhum registro encontrado',
   emptyDescription,
   expandable,
   className,
   locale,
+  defaultEllipsis = true,
 }: DataTableProps<T>) {
   // Estado para cards expandidos no mobile
   const [expandedCardKeys, setExpandedCardKeys] = useState<string[]>([]);
-  // Converter colunas para formato Ant Design
+  // Converter colunas para formato Ant Design com ellipsis padrão
   const antColumns: ColumnsType<T> = useMemo(
     () =>
       columns.map((col) => ({
@@ -112,9 +118,10 @@ export function DataTable<T extends object>({
         render: col.render,
         fixed: col.fixed,
         sorter: col.sorter,
-        ellipsis: col.ellipsis,
+        // Aplica ellipsis por padrão em colunas não-ação, a menos que explicitamente desabilitado
+        ellipsis: col.ellipsis ?? (defaultEllipsis && !col.isActions),
       })),
-    [columns]
+    [columns, defaultEllipsis]
   );
 
   // Colunas para card mode (excluindo ações)
@@ -193,7 +200,7 @@ export function DataTable<T extends object>({
                   showTotal: pagination?.showTotal,
                 }
           }
-          scroll={{ x: scrollX }}
+          scroll={{ x: scrollX, y: scrollY }}
           expandable={expandable}
           locale={
             locale ?? {

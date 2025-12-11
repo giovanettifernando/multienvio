@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Flex, Avatar, Button, Typography, Skeleton, Tooltip } from 'antd';
 import { LogoutOutlined, UserOutlined } from '@ant-design/icons';
 import { useAuthStore } from '@/stores/auth';
+import styles from './UserPanel.module.css';
 
 interface UserPanelProps {
   collapsed: boolean;
@@ -61,14 +62,7 @@ export function UserPanel({ collapsed }: UserPanelProps) {
   // Collapsed view - just avatar with tooltip
   if (collapsed) {
     return (
-      <div
-        style={{
-          padding: '12px 16px',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
-          display: 'flex',
-          justifyContent: 'center',
-        }}
-      >
+      <div className={styles.panelCollapsed}>
         <Tooltip
           title={
             <Flex vertical gap={4}>
@@ -116,13 +110,7 @@ export function UserPanel({ collapsed }: UserPanelProps) {
 
   // Expanded view - full info
   return (
-    <div
-      style={{
-        padding: '12px 24px',
-        borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
-        background: 'rgba(0, 0, 0, 0.1)',
-      }}
-    >
+    <div className={styles.panel}>
       <Flex align="center" gap={12}>
         <Avatar
           size={40}
@@ -139,29 +127,12 @@ export function UserPanel({ collapsed }: UserPanelProps) {
         </Avatar>
         <Flex vertical style={{ flex: 1, minWidth: 0 }}>
           <Tooltip title={fullName} placement="right">
-            <div
-              style={{
-                fontSize: 14,
-                fontWeight: 600,
-                color: '#E6EEF7',
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-              }}
-            >
+            <div className={styles.userName}>
               {displayName}
             </div>
           </Tooltip>
           {usuario.email && (
-            <Typography.Text
-              style={{
-                fontSize: 12,
-                color: 'rgba(255, 255, 255, 0.65)',
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-              }}
-            >
+            <Typography.Text className={styles.userEmail}>
               {usuario.email}
             </Typography.Text>
           )}
@@ -178,17 +149,7 @@ export function UserPanel({ collapsed }: UserPanelProps) {
                 handleLogout();
               }
             }}
-            className="user-panel-logout"
-            style={{
-              padding: 0,
-              height: 'auto',
-              fontSize: 12,
-              marginTop: 6,
-              color: '#ff4d4f',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'flex-start',
-            }}
+            className={`user-panel-logout ${styles.logoutButton}`}
           >
             Sair
           </Button>

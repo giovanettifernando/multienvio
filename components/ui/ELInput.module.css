@@ -1,8 +1,8 @@
 .input {
   border-radius: var(--el-radius-base, 12px) !important;
   border: 1px solid rgba(0, 56, 115, 0.18) !important;
-  padding-inline: 14px !important;
-  height: 44px !important;
+  padding-inline: 12px !important;
+  height: 36px !important;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
@@ -20,8 +20,8 @@
 .password :global(.ant-input) {
   border-radius: var(--el-radius-base, 12px) !important;
   border: 1px solid rgba(0, 56, 115, 0.18) !important;
-  height: 44px !important;
-  padding-inline: 14px !important;
+  height: 36px !important;
+  padding-inline: 12px !important;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
@@ -38,4 +38,27 @@
 
 .password :global(.ant-input-password-icon) {
   color: rgba(24, 34, 53, 0.8) !important;
+}
+
+.search {
+  border-radius: var(--el-radius-base, 12px) !important;
+}
+
+.search :global(.ant-input-wrapper) {
+  border-radius: var(--el-radius-base, 12px) !important;
+}
+
+.search :global(.ant-input) {
+  height: 36px !important;
+  border-radius: var(--el-radius-base, 12px) 0 0 var(--el-radius-base, 12px) !important;
+  border: 1px solid rgba(0, 56, 115, 0.18) !important;
+  border-right: none !important;
+  padding-inline: 12px !important;
+}
+
+.search :global(.ant-input-search-button) {
+  height: 36px !important;
+  border-radius: 0 var(--el-radius-base, 12px) var(--el-radius-base, 12px) 0 !important;
+  border: 1px solid rgba(0, 56, 115, 0.18) !important;
+  border-left: none !important;
 }

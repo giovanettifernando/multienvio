@@ -1,10 +1,11 @@
 "use client";
 
 import React from "react";
-import { Button, Card, Space, Typography, Row, Col } from "antd";
+import { Card, Space, Typography, Row, Col, Button } from "antd";
 import { PlusOutlined, WarningOutlined } from "@ant-design/icons";
 import { useWallet } from "@/hooks/useWallet";
 import { formatNumberBR } from "@/lib/format";
+import { ELButton } from "@/components/ui/ELButton";
 
 interface BalanceCardProps {
   onAddFunds: () => void;
@@ -22,7 +23,7 @@ export default function BalanceCard({ onAddFunds, onResolveDebt }: BalanceCardPr
   return (
     <Card loading={isLoading}>
       <Row gutter={[16, 16]}>
-        <Col xs={24} lg={16}>
+        <Col xs={24} md={12} lg={16}>
           <Space orientation="vertical" size="small" style={{ width: "100%" }}>
             {/* Saldo disponível - destaque forte */}
             <Typography.Text type="secondary" style={{ fontSize: 14 }}>
@@ -32,7 +33,7 @@ export default function BalanceCard({ onAddFunds, onResolveDebt }: BalanceCardPr
               level={1}
               style={{
                 margin: 0,
-                fontSize: 42,
+                fontSize: "clamp(28px, 4vw, 42px)",
                 fontWeight: 700,
                 color: hasNegativeBalance ? "#ff4d4f" : "#1890ff",
                 lineHeight: 1.2
@@ -50,19 +51,17 @@ export default function BalanceCard({ onAddFunds, onResolveDebt }: BalanceCardPr
           </Space>
         </Col>
 
-        <Col xs={24} lg={8} style={{ display: 'flex', alignItems: 'center' }}>
+        <Col xs={24} md={12} lg={8} style={{ display: 'flex', alignItems: 'center' }}>
           {/* Botão de adicionar saldo */}
-          <Button
-            type="primary"
-            size="large"
+          <ELButton
+            variant="primary"
             icon={<PlusOutlined />}
             onClick={onAddFunds}
             block
             loading={isLoading}
-            style={{ height: 48 }}
           >
             Adicionar saldo
-          </Button>
+          </ELButton>
         </Col>
       </Row>
 

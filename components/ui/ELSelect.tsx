@@ -12,7 +12,7 @@ export function ELSelect<ValueType = unknown>({
     <Select
       {...props}
       className={cn(styles.select, className)}
-      size={size ?? "large"}
+      size={size ?? "middle"}
       showSearch={props.showSearch ?? false}
     />
   );

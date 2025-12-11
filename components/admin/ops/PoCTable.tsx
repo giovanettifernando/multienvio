@@ -137,7 +137,7 @@ export default function PoCTable() {
         dataSource={filteredPoCs || []}
         rowKey="id"
         loading={isLoading}
-        scroll={{ x: 1400 }}
+        scroll={{ x: 1400, y: 'calc(100vh - 340px)' }}
         pagination={{
           pageSize: 20,
           showTotal: (total) => `Total: ${total} PoCs`,

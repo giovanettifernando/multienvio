@@ -8,6 +8,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 import { withApiHandlerResponse } from '@/lib/api/handler';
 import { prisma } from '@/lib/db';
 import {
@@ -30,35 +31,19 @@ export const POST = withApiHandlerResponse(async (context) => {
   });
   if (rateLimitError) return rateLimitError;
 
-  // Obter refresh token do cookie
-  const cookieHeader = req.headers.get('cookie');
-  if (!cookieHeader) {
-    logger.debug('refresh_no_cookie', {});
-    return NextResponse.json(
-      { message: 'Sess�o expirada' },
-      { status: 401 }
-    );
-  }
+  // Obter refresh token do cookie usando a API de cookies do Next.js
+  const cookieStore = await cookies();
+  const refreshTokenCookie = cookieStore.get(REFRESH_TOKEN_COOKIE);
 
-  // Parsear cookies
-  const cookies = cookieHeader.split(';').reduce((acc, cookie) => {
-    const trimmed = cookie.trim();
-    const eqIndex = trimmed.indexOf('=');
-    if (eqIndex === -1) return acc;
-    const key = trimmed.substring(0, eqIndex);
-    const value = trimmed.substring(eqIndex + 1);
-    acc[key] = value;
-    return acc;
-  }, {} as Record<string, string>);
-
-  const refreshToken = cookies[REFRESH_TOKEN_COOKIE];
-  if (!refreshToken) {
+  if (!refreshTokenCookie?.value) {
     logger.debug('refresh_no_token', {});
     return NextResponse.json(
-      { message: 'Sess�o expirada' },
+      { message: 'Sessão expirada' },
       { status: 401 }
     );
   }
+
+  const refreshToken = refreshTokenCookie.value;
 
   // Verificar refresh token
   const { payload, error } = await verifyRefreshToken(refreshToken, true);

@@ -1,6 +1,7 @@
 'use client';
 
-import { Drawer, Tabs, Button, Space, Spin } from 'antd';
+import { Tabs, Button, Space, Spin } from 'antd';
+import { ELDrawer } from '@/components/ui/ELDrawer';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useEffect } from 'react';
@@ -158,10 +159,10 @@ export default function PointDrawer({
   ];
 
   return (
-    <Drawer
+    <ELDrawer
       title={isEditMode ? 'Editar Ponto de Coleta' : 'Novo Ponto de Coleta'}
       placement="right"
-      width={720}
+      drawerSize="xl"
       onClose={onClose}
       open={open}
       footer={
@@ -182,6 +183,6 @@ export default function PointDrawer({
       <Spin spinning={loading}>
         <Tabs items={tabItems} />
       </Spin>
-    </Drawer>
+    </ELDrawer>
   );
 }

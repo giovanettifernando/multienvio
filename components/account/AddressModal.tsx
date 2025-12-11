@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect } from "react";
-import { App, Input, Modal } from "antd";
+import { App, Input } from "antd";
+import { ELModal } from "@/components/ui/ELModal";
 import { Controller, FormProvider, useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -98,14 +99,14 @@ export function AddressModal({
   });
 
   return (
-    <Modal
+    <ELModal
       open={open}
       onCancel={onCancel}
       onOk={handleSubmit}
       okText={initialValues ? "Salvar" : "Adicionar"}
       confirmLoading={loading}
       title={initialValues ? "Editar endereço" : "Adicionar endereço"}
-      width={640}
+      size="md"
     >
       <FormProvider {...form}>
         <div style={{ paddingTop: 16 }}>
@@ -241,7 +242,7 @@ export function AddressModal({
           </div>
         </div>
       </FormProvider>
-    </Modal>
+    </ELModal>
   );
 }
 

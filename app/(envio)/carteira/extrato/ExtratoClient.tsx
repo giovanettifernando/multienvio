@@ -13,6 +13,7 @@ import StatementPDFModal from "@/components/wallet/StatementPDFModal";
 import { PageShell } from "@/components/shared/PageShell";
 import { ELButton } from "@/components/ui/ELButton";
 import { ELInput } from "@/components/ui/ELInput";
+import { ActionBar } from "@/components/ui/ActionBar";
 import tableStyles from "@/components/ui/ELTableWrapper.module.css";
 import gridStyles from "@/components/ui/ELGrid.module.css";
 import { cn } from "@/lib/utils/cn";
@@ -74,7 +75,7 @@ export default function ExtratoClient() {
       {/* Filtros */}
       <div className={tableStyles.wrapper}>
         <ELCard>
-          <div className={tableStyles.filterBar}>
+          <ActionBar variant="compact">
             <RangePicker
               value={dateRange}
               onChange={(dates) => {
@@ -99,7 +100,7 @@ export default function ExtratoClient() {
                 }
               }}
               format="DD/MM/YYYY"
-              style={{ minWidth: 240 }}
+              style={{ minWidth: 220 }}
               placeholder={['Data inicial', 'Data final']}
             />
             <ELInput.Search
@@ -108,9 +109,9 @@ export default function ExtratoClient() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               onSearch={() => setPage(1)} // Reset para primeira página
-              className={tableStyles.searchInput}
+              style={{ flex: 1, minWidth: 200, maxWidth: 400 }}
             />
-          </div>
+          </ActionBar>
         </ELCard>
       </div>
 

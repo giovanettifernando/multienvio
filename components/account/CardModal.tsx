@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { App, Form, Input, Modal, Row, Col } from "antd";
+import { App, Form, Input, Row, Col } from "antd";
+import { ELModal } from "@/components/ui/ELModal";
 import {
   CreditCardOutlined,
   SafetyOutlined,
@@ -279,17 +280,14 @@ export function CardModal({ open, loading, onSubmit, onCancel }: CardModalProps)
   };
 
   return (
-    <Modal
+    <ELModal
       open={open}
       title="Adicionar cartão"
       okText="Adicionar"
       confirmLoading={loading || processing}
       onOk={handleSubmit}
       onCancel={onCancel}
-      width={600}
-      styles={{
-        body: { padding: "24px 24px 8px" },
-      }}
+      size="md"
     >
       <Form form={form} layout="vertical" disabled={loadingKey || loading || processing}>
         {/* Nome no cartão - Full width */}
@@ -399,7 +397,7 @@ export function CardModal({ open, loading, onSubmit, onCancel }: CardModalProps)
           <Input />
         </Form.Item>
       </Form>
-    </Modal>
+    </ELModal>
   );
 }
 

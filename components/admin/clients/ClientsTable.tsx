@@ -350,7 +350,7 @@ export function ClientsTable({ clients, onViewClient, onStatusChange, onDelete }
         columns={columns}
         loading={blockMutation.isPending || unblockMutation.isPending || deleteMutation.isPending}
         rowSelection={rowSelection}
-        scroll={{ x: 980 }}
+        scroll={{ x: 980, y: 'calc(100vh - 400px)' }}
         pagination={{
           current: validPage,
           pageSize,

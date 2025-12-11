@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Card, Tabs, Space, Button, Modal, Form, Input, Select, App, Table, Tag, Typography } from 'antd';
+import { Card, Tabs, Space, Button, Form, Input, Select, App, Table, Tag, Typography } from 'antd';
+import { ELModal } from '@/components/ui/ELModal';
 import { PlusOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons';
 import { PageShell } from '@/components/shared/PageShell';
 import { useTickets, useCreateTicket } from '@/hooks/useSupport';
@@ -259,13 +260,12 @@ export default function SuporteClient() {
       </Card>
 
       {/* Modal de Novo Chamado */}
-      <Modal
+      <ELModal
         title="Abrir Novo Chamado"
         open={modalOpen}
         onCancel={handleCloseModal}
         footer={null}
-        width={600}
-        style={{ maxWidth: '95vw' }}
+        size="md"
       >
         <Form
           form={form}
@@ -351,7 +351,7 @@ export default function SuporteClient() {
             </Space>
           </Form.Item>
         </Form>
-      </Modal>
+      </ELModal>
     </PageShell>
   );
 }

@@ -205,7 +205,7 @@ export function ColetasTable({ data, loading }: ColetasTableProps) {
           showSizeChanger: true,
         showTotal: (total) => `Total: ${total} coletas`,
       }}
-      scroll={{ x: 1200 }}
+      scroll={{ x: 1200, y: 'calc(100vh - 400px)' }}
     />
 
       <ColetaDetailDrawer

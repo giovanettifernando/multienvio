@@ -7,11 +7,11 @@ import {
   Select,
   Button,
   Tag,
-  Modal,
   Form,
   Input,
   App,
 } from 'antd';
+import { ELModal } from '@/components/ui/ELModal';
 import type { ColumnsType } from 'antd/es/table';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
@@ -235,11 +235,11 @@ export function PayoutsTable({ period }: PayoutsTableProps) {
               setPageSize(ps);
             },
           }}
-          scroll={{ x: 1100 }}
+          scroll={{ x: 1100, y: 'calc(100vh - 480px)' }}
         />
       </Flex>
 
-      <Modal
+      <ELModal
         title="Marcar Repasse como Pago"
         open={markPaidModalOpen}
         onOk={handleMarkPaid}
@@ -249,6 +249,7 @@ export function PayoutsTable({ period }: PayoutsTableProps) {
           markPaidForm.resetFields();
         }}
         confirmLoading={markPaidMutation.isPending}
+        size="sm"
       >
         <Form form={markPaidForm} layout="vertical">
           <Form.Item name="reference" label="Referência (opcional)">
@@ -258,7 +259,7 @@ export function PayoutsTable({ period }: PayoutsTableProps) {
             <Input placeholder="https://exemplo.com/comprovante.pdf" />
           </Form.Item>
         </Form>
-      </Modal>
+      </ELModal>
     </>
   );
 }

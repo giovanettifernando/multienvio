@@ -237,7 +237,7 @@ export function ChargebacksTable({ period }: ChargebacksTableProps) {
             setPageSize(ps);
           },
         }}
-        scroll={{ x: 1200 }}
+        scroll={{ x: 1200, y: 'calc(100vh - 480px)' }}
       />
     </Flex>
   );

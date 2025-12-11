@@ -408,8 +408,9 @@ export function CarrierPayoutsTable() {
     return (
       <Flex vertical gap={24}>
         {renderFilters()}
-        <Flex justify="center" align="center" style={{ minHeight: 300 }}>
-          <Spin size="large" tip="Calculando repasses..." />
+        <Flex vertical justify="center" align="center" gap={12} style={{ minHeight: 300 }}>
+          <Spin size="large" />
+          <span style={{ color: '#666' }}>Calculando repasses...</span>
         </Flex>
       </Flex>
     );
@@ -549,7 +550,7 @@ export function CarrierPayoutsTable() {
             </Table.Summary.Row>
           </Table.Summary>
         )}
-        scroll={{ x: 900 }}
+        scroll={{ x: 900, y: 'calc(100vh - 500px)' }}
       />
     </Flex>
   );

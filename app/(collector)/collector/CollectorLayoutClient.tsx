@@ -1,18 +1,44 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { Layout, Menu, Button, Dropdown, Spin, App as AntdApp } from 'antd';
+import { Layout, Menu, Button, Dropdown, Spin, App as AntdApp, Drawer } from 'antd';
 import {
   DashboardOutlined,
   InboxOutlined,
   CustomerServiceOutlined,
   LogoutOutlined,
   UserOutlined,
+  MenuOutlined,
+  CloseOutlined,
 } from '@ant-design/icons';
 import { useCollectorSession } from '@/stores/useCollectorSession';
 
 const { Header, Sider, Content } = Layout;
+
+// Hook para detectar viewport mobile de forma reativa
+function useIsMobile(): boolean {
+  return useSyncExternalStore(
+    (callback) => {
+      window.addEventListener('resize', callback);
+      return () => window.removeEventListener('resize', callback);
+    },
+    () => (typeof window !== 'undefined' ? window.innerWidth < 768 : false),
+    () => false
+  );
+}
+
+// Hook para detectar tela pequena (1366x768)
+function useIsSmallDesktop(): boolean {
+  return useSyncExternalStore(
+    (callback) => {
+      window.addEventListener('resize', callback);
+      return () => window.removeEventListener('resize', callback);
+    },
+    () => (typeof window !== 'undefined' ? window.innerWidth >= 768 && window.innerWidth <= 1366 : false),
+    () => false
+  );
+}
 
 const publicPaths = ['/collector/login'];
 
@@ -22,6 +48,12 @@ export default function CollectorLayoutClient({ children }: { children: React.Re
   const router = useRouter();
   const { collector, setCollector, clearCollector } = useCollectorSession();
   const [loading, setLoading] = useState(true);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const isMobile = useIsMobile();
+  const isSmallDesktop = useIsSmallDesktop();
+
+  // Largura do sidebar ajustada para desktop pequeno
+  const sidebarWidth = isSmallDesktop ? 200 : 240;
 
   useEffect(() => {
     const isPublicPath = publicPaths.includes(pathname);
@@ -120,6 +152,20 @@ export default function CollectorLayoutClient({ children }: { children: React.Re
     },
   ];
 
+  // Menu para sidebar
+  const sidebarMenu = (
+    <Menu
+      mode="inline"
+      selectedKeys={[pathname]}
+      items={menuItems}
+      onClick={({ key }) => {
+        router.push(key);
+        setMobileMenuOpen(false);
+      }}
+      style={{ height: '100%', borderRight: 0 }}
+    />
+  );
+
   return (
     <Layout style={{ minHeight: '100vh' }}>
       <Header
@@ -127,53 +173,103 @@ export default function CollectorLayoutClient({ children }: { children: React.Re
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: '0 24px',
+          padding: isMobile ? '0 16px' : '0 24px',
           background: '#001529',
           position: 'fixed',
           top: 0,
           left: 0,
           right: 0,
           zIndex: 1001,
+          height: 56,
         }}
       >
-        <div style={{ color: 'white', fontSize: 18, fontWeight: 'bold' }}>
-          Envio Legal • Ponto de Coleta
-        </div>
+        {isMobile ? (
+          <Button
+            type="text"
+            icon={<MenuOutlined style={{ fontSize: 20, color: 'white' }} />}
+            onClick={() => setMobileMenuOpen(true)}
+            aria-label="Abrir menu"
+          />
+        ) : (
+          <div style={{ color: 'white', fontSize: 18, fontWeight: 'bold' }}>
+            Envio Legal • Ponto de Coleta
+          </div>
+        )}
+        {isMobile && (
+          <div style={{ color: 'white', fontSize: 15, fontWeight: 'bold' }}>
+            Ponto de Coleta
+          </div>
+        )}
         <Dropdown menu={{ items: userMenuItems }} placement="bottomRight">
           <Button type="text" icon={<UserOutlined />} style={{ color: 'white' }}>
-            {collector.nomeFantasia}
+            {!isMobile && collector.nomeFantasia}
           </Button>
         </Dropdown>
       </Header>
-      <Layout style={{ marginTop: 64 }}>
-        <Sider
-          width={240}
-          style={{
-            background: '#fff',
-            position: 'fixed',
-            left: 0,
-            top: 64,
-            bottom: 0,
-            height: 'calc(100vh - 64px)',
-            zIndex: 1000,
-            overflow: 'auto',
+
+      {/* Mobile: Drawer menu */}
+      {isMobile && (
+        <Drawer
+          open={mobileMenuOpen}
+          onClose={() => setMobileMenuOpen(false)}
+          placement="left"
+          closeIcon={null}
+          styles={{
+            header: { display: 'none' },
+            body: { padding: 0, display: 'flex', flexDirection: 'column' },
+            wrapper: { width: 280 },
           }}
         >
-          <Menu
-            mode="inline"
-            selectedKeys={[pathname]}
-            items={menuItems}
-            onClick={({ key }) => router.push(key)}
-            style={{ height: '100%', borderRight: 0 }}
-          />
-        </Sider>
-        <Layout style={{ marginLeft: 240, transition: 'margin-left 0.2s' }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              height: 56,
+              padding: '0 16px',
+              background: '#001529',
+              color: 'white',
+            }}
+          >
+            <span style={{ fontWeight: 'bold' }}>Ponto de Coleta</span>
+            <Button
+              type="text"
+              icon={<CloseOutlined style={{ color: 'white' }} />}
+              onClick={() => setMobileMenuOpen(false)}
+              aria-label="Fechar menu"
+            />
+          </div>
+          {sidebarMenu}
+        </Drawer>
+      )}
+
+      <Layout style={{ marginTop: 56 }}>
+        {/* Desktop: Sidebar fixa */}
+        {!isMobile && (
+          <Sider
+            width={sidebarWidth}
+            style={{
+              background: '#fff',
+              position: 'fixed',
+              left: 0,
+              top: 56,
+              bottom: 0,
+              height: 'calc(100vh - 56px)',
+              zIndex: 1000,
+              overflow: 'auto',
+              transition: 'width 0.2s ease',
+            }}
+          >
+            {sidebarMenu}
+          </Sider>
+        )}
+        <Layout style={{ marginLeft: isMobile ? 0 : sidebarWidth, transition: 'margin-left 0.2s' }}>
           <Content
             style={{
               display: 'flex',
               flexDirection: 'column',
               background: '#fff',
-              height: 'calc(100vh - 64px)',
+              height: 'calc(100vh - 56px)',
               overflow: 'hidden',
             }}
           >
@@ -181,7 +277,7 @@ export default function CollectorLayoutClient({ children }: { children: React.Re
               style={{
                 flex: 1,
                 overflowY: 'auto',
-                padding: 24,
+                padding: isMobile ? 16 : 24,
               }}
             >
               {children}
@@ -189,37 +285,6 @@ export default function CollectorLayoutClient({ children }: { children: React.Re
           </Content>
         </Layout>
       </Layout>
-      <style jsx global>{`
-        /* Responsive adjustments for collector layout */
-        @media (max-width: 767px) {
-          /* Remove fixed positioning on mobile */
-          .ant-layout-header {
-            position: relative !important;
-          }
-          .ant-layout-sider {
-            position: relative !important;
-            top: 0 !important;
-            height: auto !important;
-          }
-          /* Remove margins on mobile */
-          .ant-layout {
-            margin-top: 0 !important;
-            margin-left: 0 !important;
-          }
-        }
-
-        @media (min-width: 768px) {
-          /* Fixed positioning on desktop */
-          .ant-layout-sider {
-            position: fixed !important;
-            left: 0 !important;
-            top: 64px !important;
-            bottom: 0 !important;
-            height: calc(100vh - 64px) !important;
-            z-index: 1000 !important;
-          }
-        }
-      `}</style>
     </Layout>
   );
 }

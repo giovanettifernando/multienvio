@@ -241,45 +241,24 @@ a {
   }
 }
 
-/* Desktop comum: max-width 1320px (otimizado para 1366-1440) */
+/* Desktop comum (1280-1439px): max-width 1280px */
 @media (min-width: 1280px) {
   :root {
-    --el-container-max-width: 1320px;
+    --el-container-max-width: 1280px;
   }
 }
 
-/* Desktop grande: max-width 1400px */
+/* Desktop grande (1440-1919px): max-width 1400px */
 @media (min-width: 1440px) {
   :root {
     --el-container-max-width: 1400px;
   }
 }
 
-/* Full HD: max-width 1600px */
-@media (min-width: 1600px) {
-  :root {
-    --el-container-max-width: 1600px;
-  }
-}
-
-/* Ultrawide: max-width 1800px */
+/* Full HD+ (>=1920px): max-width 1600px - PARA DE ESCALAR */
 @media (min-width: 1920px) {
   :root {
-    --el-container-max-width: 1800px;
-  }
-}
-
-/* Super Ultrawide (2560px+): max-width 2200px */
-@media (min-width: 2560px) {
-  :root {
-    --el-container-max-width: 2200px;
-  }
-}
-
-/* Ultrawide 21:9 (3440px+): max-width 2800px */
-@media (min-width: 3440px) {
-  :root {
-    --el-container-max-width: 2800px;
+    --el-container-max-width: 1600px;
   }
 }
 
@@ -509,4 +488,162 @@ a {
 
 .ant-input-status-warning {
   border-color: var(--color-warning) !important;
+}
+
+/* ============================================
+   MODO COMPACT (altura <=800px)
+   Ativado automaticamente em viewports baixas
+   como 1366x768
+   ============================================ */
+
+@media (max-height: 800px) {
+  :root {
+    /* Reduz espaçamentos para aumentar área útil */
+    --el-compact-spacing-factor: 0.75;
+    --el-compact-gap: var(--el-spacing-sm);
+    --el-compact-padding: var(--el-spacing-md);
+  }
+
+  /* Headers de página mais compactos */
+  .el-page-header,
+  .page-shell-header {
+    padding-top: var(--el-spacing-sm) !important;
+    padding-bottom: var(--el-spacing-sm) !important;
+  }
+
+  /* Botões mais compactos */
+  .ant-btn {
+    height: 36px !important;
+    padding: 4px 12px !important;
+    font-size: 13px !important;
+  }
+
+  .ant-btn-sm {
+    height: 28px !important;
+    padding: 2px 8px !important;
+    font-size: 12px !important;
+  }
+
+  .ant-btn-lg {
+    height: 40px !important;
+    padding: 6px 16px !important;
+    font-size: 14px !important;
+  }
+
+  /* Inputs mais compactos */
+  .ant-input,
+  .ant-select-selector,
+  .ant-picker,
+  .ant-input-number {
+    height: 36px !important;
+    font-size: 13px !important;
+  }
+
+  .ant-input-lg,
+  .ant-select-lg .ant-select-selector,
+  .ant-picker-large,
+  .ant-input-number-lg {
+    height: 36px !important;
+  }
+
+  /* Tabelas mais compactas */
+  .ant-table-cell {
+    padding: 8px 12px !important;
+    font-size: 12px !important;
+  }
+
+  .ant-table-thead > tr > th {
+    padding: 10px 12px !important;
+    font-size: 12px !important;
+  }
+
+  /* Cards mais compactos */
+  .ant-card-body {
+    padding: 12px !important;
+  }
+
+  .ant-card-head {
+    padding: 0 12px !important;
+    min-height: 40px !important;
+  }
+
+  .ant-card-head-title {
+    font-size: 14px !important;
+    padding: 10px 0 !important;
+  }
+
+  /* Modals com max-height */
+  .ant-modal-content {
+    max-height: calc(100vh - 80px) !important;
+    overflow: hidden !important;
+  }
+
+  .ant-modal-body {
+    max-height: calc(100vh - 200px) !important;
+    overflow-y: auto !important;
+  }
+
+  /* Forms mais compactos */
+  .ant-form-item {
+    margin-bottom: 12px !important;
+  }
+
+  .ant-form-item-label > label {
+    font-size: 12px !important;
+    height: auto !important;
+  }
+
+  /* Tabs mais compactos */
+  .ant-tabs-tab {
+    padding: 8px 12px !important;
+    font-size: 13px !important;
+  }
+
+  /* Descriptions mais compactas */
+  .ant-descriptions-item-label,
+  .ant-descriptions-item-content {
+    padding: 8px 12px !important;
+    font-size: 12px !important;
+  }
+
+  /* Pagination mais compacta */
+  .ant-pagination-item,
+  .ant-pagination-prev,
+  .ant-pagination-next {
+    min-width: 28px !important;
+    height: 28px !important;
+    line-height: 28px !important;
+    font-size: 12px !important;
+  }
+
+  /* Tag mais compacta */
+  .ant-tag {
+    font-size: 11px !important;
+    padding: 0 6px !important;
+    line-height: 20px !important;
+  }
+}
+
+/* ============================================
+   CLASSES UTILITÁRIAS PARA MODO COMPACT
+   Usar quando precisar forçar modo compact
+   ============================================ */
+
+.el-compact {
+  --el-spacing-base: var(--el-spacing-sm);
+}
+
+.el-compact .ant-btn {
+  height: 36px;
+  padding: 4px 12px;
+  font-size: 13px;
+}
+
+.el-compact .ant-table-cell {
+  padding: 8px 12px;
+  font-size: 12px;
+}
+
+.el-compact .ant-card-body {
+  padding: 12px;
 }

@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Card as AntCard, Spin, Alert, Modal } from "antd";
+import { Card as AntCard, Spin, Alert } from "antd";
+import { ELModal } from "@/components/ui/ELModal";
 import { LoadingOutlined } from "@ant-design/icons";
 import { initMercadoPago, CardPayment } from "@mercadopago/sdk-react";
 
@@ -194,14 +195,14 @@ export function CardPaymentForm({
   return (
     <>
       {/* Modal bloqueante durante processamento */}
-      <Modal
+      <ELModal
         open={processing}
         closable={false}
         maskClosable={false}
         keyboard={false}
         footer={null}
         centered
-        width={400}
+        size="sm"
       >
         <div style={{ textAlign: "center", padding: "40px 20px" }}>
           <LoadingOutlined style={{ fontSize: 48, color: "#1890ff", marginBottom: 24 }} spin />
@@ -212,7 +213,7 @@ export function CardPaymentForm({
             Por favor, aguarde...
           </div>
         </div>
-      </Modal>
+      </ELModal>
 
       <div style={{ maxWidth: 600, margin: "0 auto" }}>
         <CardPayment

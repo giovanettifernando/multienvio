@@ -318,10 +318,10 @@ export default function EtiquetasClient() {
           open={pdfModalOpen}
           onCancel={handleClosePdfModal}
           title="Etiqueta de Envio"
-          width={650}
+          size="md"
           centered
           footer={
-            <Space>
+            <Space wrap>
               <ELButton icon={<CloseOutlined />} onClick={handleClosePdfModal}>
                 Fechar
               </ELButton>
@@ -336,7 +336,7 @@ export default function EtiquetasClient() {
           styles={{
             body: {
               padding: 0,
-              height: '70vh',
+              height: 'min(70vh, 600px)',
               overflow: 'hidden',
             },
           }}

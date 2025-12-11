@@ -1,0 +1,155 @@
+/**
+ * AppContainer - Estilos do container responsivo centralizado
+ *
+ * Segue as especificações do documento de responsividade:
+ * - Max-width limitado para evitar esticamento em ultrawide
+ * - Paddings responsivos por breakpoint
+ * - Margem automática para centralização
+ */
+
+.container {
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+  box-sizing: border-box;
+}
+
+/* Altura total opcional */
+.fullHeight {
+  min-height: 100dvh;
+}
+
+/* ============================================
+   PADDINGS RESPONSIVOS
+   ============================================ */
+
+.padding-none {
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.padding-sm {
+  padding-left: var(--el-spacing-sm);
+  padding-right: var(--el-spacing-sm);
+}
+
+.padding-md {
+  padding-left: var(--el-spacing-lg);
+  padding-right: var(--el-spacing-lg);
+}
+
+.padding-lg {
+  padding-left: var(--el-spacing-xl);
+  padding-right: var(--el-spacing-xl);
+}
+
+.padding-xl {
+  padding-left: var(--el-spacing-xxl);
+  padding-right: var(--el-spacing-xxl);
+}
+
+/* ============================================
+   MAX-WIDTH POR BREAKPOINT
+   ============================================ */
+
+/* Mobile (<=768px): 100% */
+@media (max-width: 768px) {
+  .container {
+    max-width: 100%;
+  }
+
+  .padding-sm {
+    padding-left: var(--el-spacing-sm);
+    padding-right: var(--el-spacing-sm);
+  }
+
+  .padding-md {
+    padding-left: var(--el-spacing-lg);
+    padding-right: var(--el-spacing-lg);
+  }
+
+  .padding-lg {
+    padding-left: var(--el-spacing-lg);
+    padding-right: var(--el-spacing-lg);
+  }
+
+  .padding-xl {
+    padding-left: var(--el-spacing-xl);
+    padding-right: var(--el-spacing-xl);
+  }
+}
+
+/* Tablet (769-1023px): calc(100% - 32px) */
+@media (min-width: 769px) and (max-width: 1023px) {
+  .container {
+    max-width: calc(100% - 32px);
+  }
+
+  .padding-md {
+    padding-left: var(--el-spacing-xl);
+    padding-right: var(--el-spacing-xl);
+  }
+
+  .padding-lg {
+    padding-left: var(--el-spacing-xl);
+    padding-right: var(--el-spacing-xl);
+  }
+
+  .padding-xl {
+    padding-left: var(--el-spacing-xxl);
+    padding-right: var(--el-spacing-xxl);
+  }
+}
+
+/* Desktop pequeno (1024-1279px): calc(100% - 48px) - otimizado para 1366x768 */
+@media (min-width: 1024px) and (max-width: 1279px) {
+  .container {
+    max-width: calc(100% - 48px);
+  }
+
+  .padding-md {
+    padding-left: var(--el-spacing-xl);
+    padding-right: var(--el-spacing-xl);
+  }
+
+  .padding-lg {
+    padding-left: var(--el-spacing-xxl);
+    padding-right: var(--el-spacing-xxl);
+  }
+}
+
+/* Desktop comum (1280-1439px): 1280px */
+@media (min-width: 1280px) and (max-width: 1439px) {
+  .container {
+    max-width: 1280px;
+  }
+
+  .padding-md {
+    padding-left: var(--el-spacing-xxl);
+    padding-right: var(--el-spacing-xxl);
+  }
+}
+
+/* Desktop grande (1440-1919px): 1400px */
+@media (min-width: 1440px) and (max-width: 1919px) {
+  .container {
+    max-width: 1400px;
+  }
+
+  .padding-md {
+    padding-left: var(--el-spacing-xxl);
+    padding-right: var(--el-spacing-xxl);
+  }
+}
+
+/* Full HD+ (>=1920px): 1600px - PARA DE ESCALAR */
+@media (min-width: 1920px) {
+  .container {
+    max-width: 1600px;
+  }
+
+  .padding-md {
+    padding-left: var(--el-spacing-xxl);
+    padding-right: var(--el-spacing-xxl);
+  }
+}

@@ -407,7 +407,7 @@ export default function ShipmentsTable({ dateStart, dateEnd }: ShipmentsTablePro
           dataSource={data?.items || []}
           rowKey="id"
           loading={isLoading}
-          scroll={{ x: 2000 }}
+          scroll={{ x: 2000, y: 'calc(100vh - 480px)' }}
           pagination={{
             current: page,
             pageSize,

@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { Table, Button, Space, Switch, Modal, Tooltip, Typography, Tag } from 'antd';
+import { Table, Button, Space, Switch, Tooltip, Typography, Tag, App } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { EyeOutlined, DeleteOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import { maskCNPJ } from '@/lib/collectors/masks';
@@ -10,7 +10,6 @@ import DocsStatusBadge from './DocsStatusBadge';
 import type { Collector, CollectorListResponse } from '@/lib/collectors/types';
 
 const { Text } = Typography;
-const { confirm } = Modal;
 
 interface CollectorsTableProps {
   data?: CollectorListResponse;
@@ -28,9 +27,10 @@ export default function CollectorsTable({
   onPageChange,
 }: CollectorsTableProps) {
   const router = useRouter();
+  const { modal } = App.useApp();
 
   const handleDelete = (collector: Collector) => {
-    confirm({
+    modal.confirm({
       title: 'Confirmar exclusão',
       icon: <ExclamationCircleOutlined />,
       content: `Deseja realmente excluir o coletor "${collector.pf.nome}"? Esta ação não pode ser desfeita.`,
@@ -43,7 +43,7 @@ export default function CollectorsTable({
 
   const handleStatusToggle = (collector: Collector, checked: boolean) => {
     const newStatus = checked ? 'active' : 'blocked';
-    confirm({
+    modal.confirm({
       title: newStatus === 'active' ? 'Confirmar ativação' : 'Confirmar bloqueio',
       icon: <ExclamationCircleOutlined />,
       content: `Deseja realmente ${newStatus === 'active' ? 'ativar' : 'bloquear'} o coletor "${collector.pf.nome}"?`,
@@ -170,6 +170,7 @@ export default function CollectorsTable({
       columns={columns}
       dataSource={data?.items || []}
       loading={loading}
+      scroll={{ x: 1000, y: 'calc(100vh - 340px)' }}
       pagination={{
         current: data?.page || 1,
         pageSize: data?.pageSize || 10,

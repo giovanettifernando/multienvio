@@ -7,7 +7,6 @@ import {
   Table,
   Button,
   Input,
-  Modal,
   Form,
   App,
   Tag,
@@ -16,6 +15,7 @@ import {
   InputNumber,
   Descriptions,
 } from 'antd';
+import { ELModal } from '@/components/ui/ELModal';
 import {
   InboxOutlined,
   CameraOutlined,
@@ -476,6 +476,7 @@ export default function ReceptionsClient() {
             dataSource={shipments}
             rowKey="id"
             loading={loading}
+            scroll={{ x: 900, y: 'calc(100vh - 340px)' }}
             expandable={{
               expandedRowRender: (record) => (
                 <div style={{
@@ -520,7 +521,7 @@ export default function ReceptionsClient() {
       </Card>
 
       {/* Modal Registrar Entrada */}
-      <Modal
+      <ELModal
         title="Registrar Entrada do Envio"
         open={entryModalOpen}
         onCancel={() => {
@@ -529,7 +530,7 @@ export default function ReceptionsClient() {
           setSelectedShipment(null);
         }}
         footer={null}
-        width={600}
+        size="md"
       >
         {selectedShipment && (
           <>
@@ -577,10 +578,10 @@ export default function ReceptionsClient() {
             </Form>
           </>
         )}
-      </Modal>
+      </ELModal>
 
       {/* Modal Registrar Divergência */}
-      <Modal
+      <ELModal
         title="Registrar Divergência do Volume"
         open={divergenceModalOpen}
         onCancel={() => {
@@ -591,7 +592,7 @@ export default function ReceptionsClient() {
           setPhotoBase64(null);
         }}
         footer={null}
-        width={600}
+        size="md"
       >
         {selectedPackage && (
           <>
@@ -737,7 +738,7 @@ export default function ReceptionsClient() {
             </Form>
           </>
         )}
-      </Modal>
+      </ELModal>
     </PageShell>
   );
 }

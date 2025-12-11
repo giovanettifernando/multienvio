@@ -202,7 +202,7 @@ export function ReconciliationTable({ period }: ReconciliationTableProps) {
             setPageSize(ps);
           },
         }}
-        scroll={{ x: 1000 }}
+        scroll={{ x: 1000, y: 'calc(100vh - 480px)' }}
       />
     </Flex>
   );

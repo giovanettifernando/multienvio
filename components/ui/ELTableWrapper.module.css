@@ -83,7 +83,69 @@
   max-width: 100%;
 }
 
-/* Responsive */
+/* ============================================
+   RESPONSIVIDADE PARA TABELAS
+   ============================================ */
+
+/* Desktop pequeno (1366x768) - compactar células */
+@media (max-width: 1440px) {
+  .wrapper :global(.ant-table-thead > tr > th),
+  .wrapper :global(.ant-table-tbody > tr > td) {
+    padding: var(--el-spacing-sm, 8px) var(--el-spacing-md, 12px);
+    font-size: 12px;
+  }
+
+  .wrapper :global(.ant-table) {
+    font-size: 12px;
+  }
+
+  /* Garantir scroll horizontal */
+  .wrapper :global(.ant-table-container) {
+    overflow-x: auto;
+  }
+}
+
+/* 1366px específico - tabela mais compacta */
+@media (max-width: 1366px) {
+  .wrapper :global(.ant-table-thead > tr > th),
+  .wrapper :global(.ant-table-tbody > tr > td) {
+    padding: 6px 10px;
+    font-size: 11px;
+  }
+
+  .wrapper :global(.ant-table-thead > tr > th) {
+    font-size: 10px;
+    letter-spacing: 0.03em;
+  }
+
+  /* Scrollbar mais visível */
+  .wrapper::-webkit-scrollbar {
+    height: 8px;
+  }
+
+  .wrapper::-webkit-scrollbar-track {
+    background: var(--color-background, #F7F8FA);
+    border-radius: 4px;
+  }
+
+  .wrapper::-webkit-scrollbar-thumb {
+    background: var(--color-border, #CFD8E6);
+    border-radius: 4px;
+  }
+
+  .wrapper::-webkit-scrollbar-thumb:hover {
+    background: var(--color-text-secondary, #4A6076);
+  }
+}
+
+/* Tablet */
+@media (max-width: 1024px) {
+  .wrapper :global(.ant-card-body) {
+    padding: var(--el-spacing-md, 12px);
+  }
+}
+
+/* Mobile */
 @media (max-width: 768px) {
   .wrapper :global(.ant-card-body) {
     padding: var(--el-spacing-md, 12px);

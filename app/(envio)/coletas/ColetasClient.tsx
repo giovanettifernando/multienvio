@@ -13,6 +13,7 @@ import { ELInput } from "@/components/ui/ELInput";
 import { ELSelect } from "@/components/ui/ELSelect";
 import { ELStatusTag, type StatusVariant } from "@/components/ui/ELStatusTag";
 import { DataTable, type DataTableColumn } from "@/components/ui/DataTable";
+import { ActionBar } from "@/components/ui/ActionBar";
 import tableStyles from "@/components/ui/ELTableWrapper.module.css";
 
 const { RangePicker } = DatePicker;
@@ -142,11 +143,19 @@ export default function ColetasClient() {
     <PageShell title="Gerenciar Coletas" gap="md">
       <div className={tableStyles.wrapper}>
         <ELCard>
-          <div className={tableStyles.filterBar}>
+          <ActionBar
+            extraActions={[
+              {
+                key: "refresh",
+                label: "Atualizar",
+                onClick: () => refetch(),
+                disabled: isLoading,
+              },
+            ]}
+          >
             <ELInput.Search
               allowClear
-              className={tableStyles.searchInput}
-              style={{ maxWidth: 300 }}
+              style={{ flex: 1, minWidth: 180, maxWidth: 300 }}
               placeholder="Buscar por código de rastreio"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -164,12 +173,9 @@ export default function ColetasClient() {
               placeholder={["Data início", "Data fim"]}
               value={dateRange}
               onChange={(dates) => setDateRange(dates as [Dayjs | null, Dayjs | null])}
-              style={{ minWidth: 240 }}
+              style={{ minWidth: 220 }}
             />
-            <ELButton onClick={() => refetch()} disabled={isLoading}>
-              Atualizar
-            </ELButton>
-          </div>
+          </ActionBar>
 
           <DataTable<PickupRequestWithShipment>
             rowKey="id"
@@ -178,6 +184,7 @@ export default function ColetasClient() {
             columns={columns}
             enableMobileCards
             scrollX={900}
+            scrollY="calc(100vh - 340px)"
             emptyMessage="Nenhuma coleta encontrada"
             emptyDescription="Tente ajustar os filtros de busca"
             pagination={{

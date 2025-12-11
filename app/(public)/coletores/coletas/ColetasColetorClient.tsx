@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Card, Table, Tag, Button, Space, Spin, App, Modal, Form, Input, DatePicker } from 'antd';
+import { Card, Table, Tag, Button, Space, Spin, App, Form, Input, DatePicker } from 'antd';
+import { ELModal } from '@/components/ui/ELModal';
 import { ELEmpty } from '@/components/ui/ELEmpty';
 import { EnvironmentOutlined, InboxOutlined, CameraOutlined, CheckCircleOutlined, PhoneOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import dayjs, { Dayjs } from 'dayjs';
@@ -291,19 +292,12 @@ function RegisterCollectionModal({ pickup, open, onClose, onSuccess }: RegisterC
   const addressInfo = pickup ? buildPickupAddress(pickup) : null;
 
   return (
-    <Modal
+    <ELModal
       title="Registrar Coleta"
       open={open}
       onCancel={onClose}
       footer={null}
-      width={600}
-      style={{ maxWidth: '95vw' }}
-      styles={{
-        body: {
-          maxHeight: 'calc(100vh - 200px)',
-          overflowY: 'auto',
-        },
-      }}
+      size="md"
     >
       {pickup && (
         <div style={{ marginBottom: 24 }}>
@@ -381,7 +375,7 @@ function RegisterCollectionModal({ pickup, open, onClose, onSuccess }: RegisterC
           </Space>
         </Form.Item>
       </Form>
-    </Modal>
+    </ELModal>
   );
 }
 
@@ -428,16 +422,12 @@ function RegisterAttemptModal({ pickup, open, onClose, onSuccess }: RegisterAtte
   const addressInfo = buildPickupAddress(pickup);
 
   return (
-    <Modal
+    <ELModal
       title="Registrar Tentativa de Coleta"
       open={open}
       onCancel={handleCancel}
       footer={null}
-      width={600}
-      style={{ maxWidth: '95vw' }}
-      styles={{
-        body: { maxHeight: 'calc(100vh - 200px)', overflowY: 'auto' },
-      }}
+      size="md"
     >
       {/* Card de resumo */}
       <Card
@@ -498,7 +488,7 @@ function RegisterAttemptModal({ pickup, open, onClose, onSuccess }: RegisterAtte
           </Space>
         </Form.Item>
       </Form>
-    </Modal>
+    </ELModal>
   );
 }
 
@@ -925,7 +915,7 @@ export default function ColetasColetorClient() {
                   responsive: true,
                   showSizeChanger: false,
                 }}
-                scroll={{ x: 1200 }}
+                scroll={{ x: 1200, y: 'calc(100vh - 400px)' }}
                 size="middle"
               />
             </Card>

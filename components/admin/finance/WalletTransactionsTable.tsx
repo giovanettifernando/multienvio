@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { Table, Flex, Input, Select, Button, Tag, Card, Statistic, Row, Col, DatePicker, Modal, Descriptions } from 'antd';
+import { Table, Flex, Input, Select, Button, Tag, Card, Statistic, Row, Col, DatePicker, Descriptions } from 'antd';
+import { ELModal } from '@/components/ui/ELModal';
 import type { ColumnsType } from 'antd/es/table';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
@@ -326,11 +327,11 @@ export function WalletTransactionsTable() {
             setPageSize(ps);
           },
         }}
-        scroll={{ x: 'max-content' }}
+        scroll={{ x: 'max-content', y: 'calc(100vh - 480px)' }}
       />
 
       {/* Details Modal */}
-      <Modal
+      <ELModal
         title="Detalhes da Transação"
         open={!!detailsModal}
         onCancel={() => setDetailsModal(null)}
@@ -339,7 +340,7 @@ export function WalletTransactionsTable() {
             Fechar
           </Button>,
         ]}
-        width={600}
+        size="md"
       >
         {detailsModal && (
           <Descriptions column={1} bordered size="small">
@@ -381,7 +382,7 @@ export function WalletTransactionsTable() {
             </Descriptions.Item>
           </Descriptions>
         )}
-      </Modal>
+      </ELModal>
     </Flex>
   );
 }

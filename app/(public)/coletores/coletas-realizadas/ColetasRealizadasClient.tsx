@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Card, Table, Tag, Space, Spin, App, DatePicker, Input, Row, Col, Typography, Button, Modal, Form } from 'antd';
+import { Card, Table, Tag, Space, Spin, App, DatePicker, Input, Row, Col, Typography, Button, Form } from 'antd';
+import { ELModal } from '@/components/ui/ELModal';
 import { ELEmpty } from '@/components/ui/ELEmpty';
 import { EnvironmentOutlined, InboxOutlined, PhoneOutlined, SearchOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import type { TableRowSelection } from 'antd/es/table/interface';
@@ -618,7 +619,7 @@ export default function ColetasRealizadasClient() {
                   responsive: true,
                   showSizeChanger: false,
                 }}
-                scroll={{ x: 1300 }}
+                scroll={{ x: 1300, y: 'calc(100vh - 480px)' }}
                 size="middle"
               />
             </Card>
@@ -627,12 +628,12 @@ export default function ColetasRealizadasClient() {
       )}
 
       {/* Modal de Registro de Entrega */}
-      <Modal
+      <ELModal
         title="Registrar entrega na transportadora"
         open={isModalOpen}
         onCancel={handleCloseModal}
         footer={null}
-        width={500}
+        size="sm"
       >
         <Form
           form={form}
@@ -670,7 +671,7 @@ export default function ColetasRealizadasClient() {
             </Space>
           </Form.Item>
         </Form>
-      </Modal>
+      </ELModal>
     </PageShell>
   );
 }

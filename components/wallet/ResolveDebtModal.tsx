@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react';
 import {
-  Modal,
   Typography,
   Space,
   Button,
@@ -13,6 +12,7 @@ import {
   message,
   Spin,
 } from 'antd';
+import { ELModal } from '@/components/ui/ELModal';
 import {
   WarningOutlined,
   CreditCardOutlined,
@@ -105,12 +105,12 @@ export default function ResolveDebtModal({ open, onClose }: ResolveDebtModalProp
   const isLoading = walletLoading || cardsLoading;
 
   return (
-    <Modal
+    <ELModal
       open={open}
       onCancel={onClose}
       title={null}
       footer={null}
-      width={500}
+      size="md"
       destroyOnHidden
     >
       <Spin spinning={isLoading}>
@@ -266,6 +266,6 @@ export default function ResolveDebtModal({ open, onClose }: ResolveDebtModalProp
           </Space>
         </Space>
       </Spin>
-    </Modal>
+    </ELModal>
   );
 }

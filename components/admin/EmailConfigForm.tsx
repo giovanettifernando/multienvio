@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { Card, Form, Input, InputNumber, Switch, Button, Space, App, Spin, Alert, Modal } from 'antd';
+import { Card, Form, Input, InputNumber, Switch, Button, Space, App, Spin, Alert } from 'antd';
+import { ELModal } from '@/components/ui/ELModal';
 import { SaveOutlined, SendOutlined, ThunderboltOutlined } from '@ant-design/icons';
 
 interface EmailConfigFormData {
@@ -333,7 +334,7 @@ export default function EmailConfigForm() {
         </Spin>
       </Card>
 
-      <Modal
+      <ELModal
         title="Enviar Email de Teste"
         open={testEmailModalVisible}
         onOk={handleSendTestEmail}
@@ -344,6 +345,7 @@ export default function EmailConfigForm() {
         confirmLoading={sendingTest}
         okText="Enviar"
         cancelText="Cancelar"
+        size="sm"
       >
         <Space orientation="vertical" style={{ width: '100%' }}>
           <Alert
@@ -360,7 +362,7 @@ export default function EmailConfigForm() {
             style={{ marginTop: 16 }}
           />
         </Space>
-      </Modal>
+      </ELModal>
     </>
   );
 }

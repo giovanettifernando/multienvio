@@ -128,8 +128,8 @@ export async function consultarCepCorreios(cep: string): Promise<CepResult> {
       logradouro: data.logradouro || '',
       complemento: data.complemento || '',
       bairro: data.bairro || '',
-      cidade: data.localidade,
-      uf: data.uf,
+      cidade: data.localidade || '',
+      uf: data.uf || '',
       source: 'correios',
     };
   } catch (error) {
@@ -192,8 +192,8 @@ export async function consultarCepBrasilApi(cep: string): Promise<CepResult | nu
       logradouro: data.street || '',
       complemento: '',
       bairro: data.neighborhood || '',
-      cidade: data.city,
-      uf: data.state,
+      cidade: data.city || '',
+      uf: data.state || '',
       source: 'brasilapi',
     };
   } catch {

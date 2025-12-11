@@ -32,7 +32,7 @@ const BaseInput = forwardRef<InputRef, InputProps>(
         {...props}
         ref={ref}
         className={cn(styles.input, className)}
-        size={size ?? "large"}
+        size={size ?? "middle"}
       />
     );
   },
@@ -46,7 +46,7 @@ const PasswordInput = forwardRef<InputRef, PasswordProps>(
         {...props}
         ref={ref}
         className={cn(styles.password, className)}
-        size={size ?? "large"}
+        size={size ?? "middle"}
       />
     );
   },
@@ -74,7 +74,7 @@ const SearchInput = forwardRef<InputRef, SearchProps>(
         {...props}
         ref={ref}
         className={cn(styles.search, className)}
-        size={size ?? "large"}
+        size={size ?? "middle"}
       />
     );
   },

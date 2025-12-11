@@ -373,8 +373,9 @@ export function AccountsPayableTable() {
       <Flex vertical gap={12}>
         {renderFilters()}
         <Card>
-          <Flex justify="center" align="center" style={{ minHeight: 300 }}>
-            <Spin size="large" tip="Carregando contas a pagar..." />
+          <Flex vertical justify="center" align="center" gap={12} style={{ minHeight: 300 }}>
+            <Spin size="large" />
+            <span style={{ color: '#666' }}>Carregando contas a pagar...</span>
           </Flex>
         </Card>
       </Flex>
@@ -417,7 +418,7 @@ export function AccountsPayableTable() {
             pageSizeOptions: ['20', '50', '100'],
             showTotal: (total) => `Total: ${total} itens`,
           }}
-          scroll={{ x: 'max-content' }}
+          scroll={{ x: 'max-content', y: 'calc(100vh - 520px)' }}
           size="small"
         />
       </Card>

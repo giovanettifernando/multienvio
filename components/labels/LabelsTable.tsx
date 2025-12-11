@@ -20,6 +20,7 @@ import { ELSkeleton } from '@/components/ui/ELSkeleton';
 import { ELEmpty } from '@/components/ui/ELEmpty';
 import { ELFlex } from '@/components/ui/ELGrid';
 import { DataTable, type DataTableColumn } from '@/components/ui/DataTable';
+import { ActionBar } from '@/components/ui/ActionBar';
 import { fetchLabels } from '@/lib/api/labels';
 import type { LabelItem, PrintStatus, PackageItem, PackageLabelStatus } from '@/lib/types/label';
 
@@ -390,24 +391,24 @@ export function LabelsTable({ onOpenLabel, onOpenPackage }: LabelsTableProps) {
 
   return (
     <ELFlex direction="col" gap="md">
-      <ELFlex gap="sm">
+      <ActionBar variant="compact">
         <ELInput.Search
           allowClear
           placeholder="Buscar por código do envio..."
           onSearch={(v) => { setPage(1); setQ(v); }}
-          style={{ maxWidth: 300 }}
+          style={{ flex: 1, minWidth: 200, maxWidth: 300 }}
         />
         <ELSelect
           value={printStatus}
           onChange={(v) => { setPage(1); setPrintStatus(v as PrintStatus | 'all'); }}
-          style={{ width: 200 }}
+          style={{ minWidth: 160 }}
           options={[
             { label: 'Todos os status', value: 'all' },
             { label: 'Faltam imprimir', value: 'not_printed' },
             { label: 'Já impressas', value: 'printed' },
           ]}
         />
-      </ELFlex>
+      </ActionBar>
 
       {isLoading ? (
         <ELSkeleton />
@@ -419,6 +420,7 @@ export function LabelsTable({ onOpenLabel, onOpenPackage }: LabelsTableProps) {
           data={data?.items ?? []}
           columns={columns}
           scrollX={800}
+          scrollY="calc(100vh - 340px)"
           enableMobileCards
           expandable={{
             expandedRowRender,

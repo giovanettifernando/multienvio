@@ -8,7 +8,6 @@ import {
   Statistic,
   Button,
   Space,
-  Modal,
   Form,
   Input,
   InputNumber,
@@ -21,6 +20,7 @@ import {
   Empty,
   DatePicker,
 } from "antd";
+import { ELModal } from '@/components/ui/ELModal';
 import { inputNumberFormatterBRL, inputNumberParserBRL } from "@/lib/utils/format";
 import {
   PlusOutlined,
@@ -272,11 +272,12 @@ export default function AdminClientWallet({
           Criar carteira e adicionar saldo
         </Button>
 
-        <Modal
+        <ELModal
           title="Ajustar saldo da carteira"
           open={adjustModalOpen}
           onCancel={() => setAdjustModalOpen(false)}
           footer={null}
+          size="sm"
         >
           <Form form={form} layout="vertical" onFinish={handleAdjust}>
             <Form.Item
@@ -335,7 +336,7 @@ export default function AdminClientWallet({
               </Space>
             </Form.Item>
           </Form>
-        </Modal>
+        </ELModal>
       </Empty>
     );
   }
@@ -485,7 +486,7 @@ export default function AdminClientWallet({
       </Card>
 
       {/* Modal de ajuste */}
-      <Modal
+      <ELModal
         title="Ajustar saldo da carteira"
         open={adjustModalOpen}
         onCancel={() => {
@@ -493,6 +494,7 @@ export default function AdminClientWallet({
           form.resetFields();
         }}
         footer={null}
+        size="sm"
       >
         <Form form={form} layout="vertical" onFinish={handleAdjust}>
           <Form.Item
@@ -573,7 +575,7 @@ export default function AdminClientWallet({
             </Space>
           </Form.Item>
         </Form>
-      </Modal>
+      </ELModal>
     </>
   );
 }

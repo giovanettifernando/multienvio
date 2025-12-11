@@ -477,7 +477,7 @@ export default function ReceptionsTable({ dateStart, dateEnd }: ReceptionsTableP
           pageSizeOptions: ['10', '20', '50', '100'],
           showTotal: (total) => `Total: ${total} envios`,
         }}
-        scroll={{ x: 'max-content' }}
+        scroll={{ x: 'max-content', y: 'calc(100vh - 480px)' }}
         size="small"
       />
     </Flex>

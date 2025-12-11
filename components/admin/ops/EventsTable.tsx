@@ -236,7 +236,7 @@ export default function EventsTable() {
         dataSource={data?.items || []}
         rowKey="id"
         loading={isLoading}
-        scroll={{ x: 1400 }}
+        scroll={{ x: 1400, y: 'calc(100vh - 480px)' }}
         pagination={{
           current: page,
           pageSize,

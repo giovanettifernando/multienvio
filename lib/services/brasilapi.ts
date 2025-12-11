@@ -115,13 +115,15 @@ export async function fetchCepV2(
       } as CepError;
     }
 
-    const data = await response.json();
+    const json = await response.json();
+    // A API retorna { data: {...}, error: null, meta: {...} }
+    const data = json.data || json;
 
     // Normaliza resposta para o formato esperado
     return {
-      cep: data.cep,
-      state: data.uf,
-      city: data.cidade,
+      cep: data.cep || '',
+      state: data.uf || '',
+      city: data.cidade || '',
       neighborhood: data.bairro || undefined,
       street: data.logradouro || undefined,
       source: data.source,

@@ -15,11 +15,11 @@ import {
   Statistic,
   Typography,
   DatePicker,
-  Modal,
   Descriptions,
   Image,
   Badge,
 } from 'antd';
+import { ELModal } from '@/components/ui/ELModal';
 import type { ColumnsType } from 'antd/es/table';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -351,7 +351,7 @@ export default function ExceptionsTable({ dateStart, dateEnd }: ExceptionsTableP
     const photos = detailsModal.issuePhotos as string[] | null;
 
     return (
-      <Modal
+      <ELModal
         title={
           <Space>
             {isPocIssue ? <WarningOutlined style={{ color: '#f5222d' }} /> : <RetweetOutlined style={{ color: '#fa8c16' }} />}
@@ -365,7 +365,7 @@ export default function ExceptionsTable({ dateStart, dateEnd }: ExceptionsTableP
             Fechar
           </Button>,
         ]}
-        width={700}
+        size="md"
       >
         <Descriptions bordered column={1} size="small">
           <Descriptions.Item label="Código de Rastreio">
@@ -484,7 +484,7 @@ export default function ExceptionsTable({ dateStart, dateEnd }: ExceptionsTableP
             </div>
           </div>
         )}
-      </Modal>
+      </ELModal>
     );
   };
 
@@ -563,7 +563,7 @@ export default function ExceptionsTable({ dateStart, dateEnd }: ExceptionsTableP
           pageSizeOptions: ['10', '20', '50', '100'],
           showTotal: (total) => `Total: ${total} exceções`,
         }}
-        scroll={{ x: 'max-content' }}
+        scroll={{ x: 'max-content', y: 'calc(100vh - 480px)' }}
         size="small"
       />
 

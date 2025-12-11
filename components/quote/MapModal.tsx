@@ -2,7 +2,6 @@
 
 import { useState, useMemo } from "react";
 import {
-  Modal,
   Input,
   Typography,
   Space,
@@ -11,6 +10,7 @@ import {
   Tag,
   theme,
 } from "antd";
+import { ELModal } from '@/components/ui/ELModal';
 import { ELButton } from "@/components/ui/ELButton";
 import {
   EnvironmentOutlined,
@@ -128,11 +128,11 @@ export function MapModal({
   };
 
   return (
-    <Modal
+    <ELModal
       open={open}
       onCancel={onClose}
       title="Mapa de unidades"
-      width={900}
+      size="lg"
       footer={null}
       styles={{ body: { maxHeight: '70vh', overflow: 'hidden' } }}
       afterOpenChange={(visible) => {
@@ -297,6 +297,6 @@ export function MapModal({
           Clique em um marcador ou item da lista para selecionar a unidade.
         </Typography.Text>
       </Space>
-    </Modal>
+    </ELModal>
   );
 }

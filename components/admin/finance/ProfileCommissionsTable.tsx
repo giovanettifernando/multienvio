@@ -377,8 +377,9 @@ export function ProfileCommissionsTable() {
     return (
       <Flex vertical gap={24}>
         {renderFilters()}
-        <Flex justify="center" align="center" style={{ minHeight: 300 }}>
-          <Spin size="large" tip="Calculando comissões..." />
+        <Flex vertical justify="center" align="center" gap={12} style={{ minHeight: 300 }}>
+          <Spin size="large" />
+          <span style={{ color: '#666' }}>Calculando comissões...</span>
         </Flex>
       </Flex>
     );
@@ -494,7 +495,7 @@ export function ProfileCommissionsTable() {
                   showTotal: (total) => `${total} itens`,
                 }}
                 size="small"
-                scroll={{ x: 1000 }}
+                scroll={{ x: 1000, y: 'calc(100vh - 600px)' }}
               />
             </div>
           ),
@@ -536,7 +537,7 @@ export function ProfileCommissionsTable() {
             </Table.Summary.Row>
           </Table.Summary>
         )}
-        scroll={{ x: 1000 }}
+        scroll={{ x: 1000, y: 'calc(100vh - 480px)' }}
       />
     </Flex>
   );

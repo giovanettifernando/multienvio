@@ -1,6 +1,6 @@
 "use client";
 
-import { Table, Tag, Switch, Tooltip, Button, Flex, Typography, Modal } from "antd";
+import { Table, Tag, Switch, Tooltip, Button, Flex, Typography, App } from "antd";
 import { EditOutlined, DeleteOutlined, KeyOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import type { AdminUser } from "@/lib/auth/types";
@@ -30,6 +30,7 @@ export function UsersTable({
   onEdit,
   pagination,
 }: UsersTableProps) {
+  const { modal } = App.useApp();
   const toggleStatusMutation = useToggleUserStatus();
   const deleteMutation = useDeleteUser();
   const resetPasswordMutation = useResetPassword();
@@ -50,7 +51,7 @@ export function UsersTable({
   const handleStatusToggle = (user: AdminUser, checked: boolean) => {
     const newStatus = checked ? "active" : "blocked";
 
-    Modal.confirm({
+    modal.confirm({
       title: `${checked ? "Ativar" : "Bloquear"} usuário`,
       content: `Tem certeza que deseja ${checked ? "ativar" : "bloquear"} ${user.name}?`,
       okText: "Sim",
@@ -62,7 +63,7 @@ export function UsersTable({
   };
 
   const handleDelete = (user: AdminUser) => {
-    Modal.confirm({
+    modal.confirm({
       title: "Excluir usuário",
       content: `Tem certeza que deseja excluir ${user.name}? Esta ação não pode ser desfeita.`,
       okText: "Excluir",
@@ -75,7 +76,7 @@ export function UsersTable({
   };
 
   const handleResetPassword = (user: AdminUser) => {
-    Modal.confirm({
+    modal.confirm({
       title: "Resetar senha",
       content: `Enviar instruções de redefinição de senha para ${user.email}?`,
       okText: "Enviar",
@@ -255,7 +256,7 @@ export function UsersTable({
             }
           : false
       }
-      scroll={{ x: 1200 }}
+      scroll={{ x: 1200, y: 'calc(100vh - 340px)' }}
     />
   );
 }

@@ -1,0 +1,191 @@
+/**
+ * ActionBar - Estilos para barra de filtros e ações responsiva
+ */
+
+.actionBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+/* Gaps */
+.gap-sm {
+  gap: var(--el-spacing-sm, 8px);
+}
+
+.gap-md {
+  gap: var(--el-spacing-md, 12px);
+}
+
+.gap-lg {
+  gap: var(--el-spacing-lg, 16px);
+}
+
+/* Variantes */
+.variant-default {
+  padding: var(--el-spacing-md, 12px) 0;
+}
+
+.variant-compact {
+  padding: var(--el-spacing-sm, 8px) 0;
+}
+
+.variant-inline {
+  padding: 0;
+}
+
+/* Conteúdo principal (filtros) */
+.content {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--el-spacing-md, 12px);
+  flex: 1;
+  min-width: 0;
+}
+
+/* Ações extras - Desktop */
+.extraActionsDesktop {
+  display: flex;
+  align-items: center;
+  gap: var(--el-spacing-sm, 8px);
+}
+
+/* Ações extras - Mobile */
+.extraActionsMobile {
+  display: none;
+}
+
+/* FilterGroup */
+.filterGroup {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--el-spacing-md, 12px);
+}
+
+/* Collapsible */
+.collapseToggle {
+  display: none;
+}
+
+.collapseContent {
+  display: none;
+}
+
+.desktopContent {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--el-spacing-md, 12px);
+}
+
+/* ============================================
+   RESPONSIVIDADE
+   ============================================ */
+
+/* Desktop pequeno (1366x768) - mais compacto */
+@media (max-width: 1366px) {
+  .actionBar {
+    gap: var(--el-spacing-sm, 8px);
+  }
+
+  .content {
+    gap: var(--el-spacing-sm, 8px);
+  }
+
+  .filterGroup {
+    gap: var(--el-spacing-sm, 8px);
+  }
+}
+
+/* Tablet (1024px) - começar a colapsar */
+@media (max-width: 1024px) {
+  .extraActionsDesktop {
+    display: none;
+  }
+
+  .extraActionsMobile {
+    display: flex;
+  }
+}
+
+/* Mobile (768px) - colapso total */
+@media (max-width: 768px) {
+  .actionBar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .content {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+  }
+
+  /* Inputs full width no mobile */
+  .content :global(.ant-input),
+  .content :global(.ant-select),
+  .content :global(.ant-picker),
+  .content :global(.ant-input-search) {
+    width: 100% !important;
+  }
+
+  .extraActionsMobile {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: var(--el-spacing-sm, 8px);
+  }
+
+  /* FilterGroup collapsible */
+  .collapsible .collapseToggle {
+    display: flex;
+    width: 100%;
+  }
+
+  .collapsible .collapseContent {
+    display: flex;
+    flex-direction: column;
+    gap: var(--el-spacing-sm, 8px);
+    width: 100%;
+    padding-top: var(--el-spacing-sm, 8px);
+  }
+
+  .collapsible .collapseContent.collapsed {
+    display: none;
+  }
+
+  .collapsible .desktopContent {
+    display: none;
+  }
+
+  .filterGroup {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+  }
+}
+
+/* ============================================
+   MODO COMPACT (altura <=800px)
+   ============================================ */
+
+@media (max-height: 800px) {
+  .actionBar {
+    padding: var(--el-spacing-xs, 4px) 0;
+  }
+
+  .variant-default {
+    padding: var(--el-spacing-sm, 8px) 0;
+  }
+
+  .content {
+    gap: var(--el-spacing-sm, 8px);
+  }
+
+  .filterGroup {
+    gap: var(--el-spacing-sm, 8px);
+  }
+}

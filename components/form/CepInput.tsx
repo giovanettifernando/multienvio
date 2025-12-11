@@ -55,8 +55,12 @@ export function CepInput({ name, label = "CEP", required, targets }: Props) {
       const data = await fetchCepV2(cepDigits);
 
       // Preenche apenas derivados (nunca reescreve o próprio CEP)
-      if (targets?.state) setValue(targets.state, data.state.toUpperCase(), { shouldDirty: true, shouldValidate: true });
-      if (targets?.city) setValue(targets.city, data.city, { shouldDirty: true, shouldValidate: true });
+      if (targets?.state && data.state) {
+        setValue(targets.state, data.state.toUpperCase(), { shouldDirty: true, shouldValidate: true });
+      }
+      if (targets?.city && data.city) {
+        setValue(targets.city, data.city, { shouldDirty: true, shouldValidate: true });
+      }
       if (targets?.street && data.street) {
         setValue(targets.street, data.street, { shouldDirty: true, shouldValidate: true });
       }

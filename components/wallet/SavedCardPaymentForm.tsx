@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Card as AntCard, Input, Button, Radio, Space, Typography, Alert, Form, App, Modal } from "antd";
+import { Card as AntCard, Input, Button, Radio, Space, Typography, Alert, Form, App } from "antd";
+import { ELModal } from "@/components/ui/ELModal";
 import { CreditCardOutlined, LockOutlined, LoadingOutlined } from "@ant-design/icons";
 
 // Timeout para aguardar confirmação da operadora (15 segundos)
@@ -351,14 +352,14 @@ export function SavedCardPaymentForm({
   return (
     <>
       {/* Modal bloqueante durante processamento */}
-      <Modal
+      <ELModal
         open={processing}
         closable={false}
         maskClosable={false}
         keyboard={false}
         footer={null}
         centered
-        width={400}
+        size="sm"
       >
         <div style={{ textAlign: "center", padding: "40px 20px" }}>
           <LoadingOutlined style={{ fontSize: 48, color: "#1890ff", marginBottom: 24 }} spin />
@@ -369,7 +370,7 @@ export function SavedCardPaymentForm({
             Por favor, aguarde...
           </div>
         </div>
-      </Modal>
+      </ELModal>
 
       <AntCard>
         <Space orientation="vertical" size="large" style={{ width: "100%" }}>

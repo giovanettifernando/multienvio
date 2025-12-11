@@ -140,22 +140,32 @@ export function SessionIdleModal({
 
   // Botão "Permanecer aqui" - renovar sessão
   const handleStayHere = useCallback(async () => {
-    // Fechar modal (isso para o countdown via useEffect)
+    // Fechar modal primeiro (para parar o countdown)
     setModalOpen(false);
 
-    // Chamar refresh para renovar sessão (também atualiza last_activity no servidor via proxy)
+    // Chamar refresh para renovar sessão
     try {
-      await fetch(refreshEndpoint, {
+      const response = await fetch(refreshEndpoint, {
         method: "POST",
         credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
       });
+
+      // Se refresh falhou (401), a sessão já expirou no servidor - fazer logout
+      if (!response.ok) {
+        handleLogout();
+        return;
+      }
     } catch {
-      // Ignorar erros - o importante é resetar o timer local
+      // Em caso de erro de rede, tentar manter a sessão local
+      // O próximo request autenticado vai lidar com qualquer problema real
     }
 
     // Resetar timer de inatividade
     resetIdleTimer();
-  }, [refreshEndpoint, resetIdleTimer]);
+  }, [refreshEndpoint, resetIdleTimer, handleLogout]);
 
   // Botão "Sair agora" - logout imediato
   const handleLogoutNow = useCallback(() => {
@@ -249,7 +259,7 @@ export function SessionIdleModal({
       }
       size="sm"
     >
-      <Space direction="vertical" size={16} style={{ width: "100%" }}>
+      <Space orientation="vertical" size={16} style={{ width: "100%" }}>
         <Paragraph style={{ margin: 0 }}>
           Por segurança, sua sessão será encerrada automaticamente em{" "}
           <Text strong style={{ color: "var(--color-error)", fontSize: 18 }}>

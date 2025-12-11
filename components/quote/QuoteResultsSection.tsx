@@ -5,16 +5,16 @@ import { useRouter } from "next/navigation";
 import {
   Alert,
   Empty,
-  Modal,
   Space,
   Spin,
-  Table,
   Typography,
   Input,
   App,
 } from "antd";
 import { ELButton } from "@/components/ui/ELButton";
 import { ELCard } from "@/components/ui/ELCard";
+import { ELModal } from "@/components/ui/ELModal";
+import { DataTable, type DataTableColumn } from "@/components/ui/DataTable";
 import {
   ClockCircleOutlined,
 } from "@ant-design/icons";
@@ -78,7 +78,7 @@ export function QuoteResultsSection({
   canCalculate,
 }: QuoteResultsSectionProps) {
   const router = useRouter();
-  const { message } = App.useApp();
+  const { message, modal } = App.useApp();
   const selectMutation = useQuoteSelection();
 
   const { results: storeResults, setSelection, clearResults } = useQuoteStore(
@@ -213,7 +213,7 @@ export function QuoteResultsSection({
       // Check if it's an expiration error
       const errorMessage = error instanceof Error ? error.message : String(error);
       if (errorMessage.includes("expirada") || errorMessage.includes("não pode mais ser selecionada")) {
-        Modal.warning({
+        modal.warning({
           title: "Cotação Expirada",
           content: (
             <div>
@@ -399,43 +399,56 @@ export function QuoteResultsSection({
   }
 
   // Estado com resultados
-  const columns = [
+  const columns: DataTableColumn<QuoteResultItem>[] = [
     {
       title: "Transportadora",
       dataIndex: "carrier",
       key: "carrier",
-      render: (text: string) => <Typography.Text strong>{text}</Typography.Text>,
+      width: 150,
+      render: (text: unknown) => <Typography.Text strong>{text as string}</Typography.Text>,
+      showInCard: true,
     },
     {
       title: "Serviço",
       dataIndex: "modalidade",
       key: "modalidade",
+      width: 120,
+      showInCard: true,
     },
     {
       title: "Preço",
       dataIndex: "preco",
       key: "preco",
-      render: (value: number) => (
+      width: 100,
+      render: (value: unknown) => (
         <Typography.Text strong style={{ color: "#52c41a" }}>
-          R$ {value.toFixed(2)}
+          R$ {(value as number).toFixed(2)}
         </Typography.Text>
       ),
       sorter: (a: QuoteResultItem, b: QuoteResultItem) => a.preco - b.preco,
+      showInCard: true,
+      cardLabel: "Valor",
     },
     {
       title: "Prazo",
       dataIndex: "prazoDias",
       key: "prazoDias",
-      render: (days: number) => `${days} ${days === 1 ? "dia útil" : "dias úteis"}`,
+      width: 120,
+      render: (days: unknown) => `${days as number} ${(days as number) === 1 ? "dia útil" : "dias úteis"}`,
       sorter: (a: QuoteResultItem, b: QuoteResultItem) =>
         a.prazoDias - b.prazoDias,
+      showInCard: true,
     },
     {
       title: "Ação",
       key: "action",
+      width: 100,
+      fixed: "right",
+      isActions: true,
       render: (_: unknown, record: QuoteResultItem) => (
         <ELButton
           variant="primary"
+          size="small"
           onClick={() => handleSelectClick(record)}
           disabled={timeRemaining === "expirado"}
         >
@@ -519,20 +532,22 @@ export function QuoteResultsSection({
             showIcon
           />
 
-          <Table
-            dataSource={results || []}
+          <DataTable
+            data={results || []}
             columns={columns}
             rowKey="id"
             pagination={false}
-            size="small"
-            scroll={{ x: 700 }}
+            compact
+            scrollX={700}
+            enableMobileCards
           />
         </Space>
       </ELCard>
 
-      <Modal
+      <ELModal
         title="Informe o valor do seguro"
         open={insuranceModalOpen}
+        size="sm"
         onCancel={() => {
           setInsuranceModalOpen(false);
         }}
@@ -564,7 +579,7 @@ export function QuoteResultsSection({
             prefix="R$"
           />
         </Space>
-      </Modal>
+      </ELModal>
 
       <ContentDeclarationModal
         open={declarationModalOpen}

@@ -1,0 +1,113 @@
+/**
+ * UserPanel - Estilos responsivos para o painel do usuário na sidebar
+ */
+
+.panel {
+  padding: 12px 24px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.panelCollapsed {
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  justify-content: center;
+}
+
+.avatar {
+  flex-shrink: 0;
+  background-color: #1677ff;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  object-fit: cover;
+}
+
+.avatarCollapsed {
+  cursor: pointer;
+}
+
+.userName {
+  font-size: 14px;
+  font-weight: 600;
+  color: #E6EEF7;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.userEmail {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.65);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.logoutButton {
+  padding: 0;
+  height: auto;
+  font-size: 12px;
+  margin-top: 6px;
+  color: #ff4d4f;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+/* ============================================
+   RESPONSIVIDADE PARA 1366x768
+   ============================================ */
+
+/* Desktop pequeno (1366px) */
+@media (max-width: 1366px) {
+  .panel {
+    padding: 10px 16px;
+  }
+
+  .userName {
+    font-size: 13px;
+  }
+
+  .userEmail {
+    font-size: 11px;
+  }
+
+  .logoutButton {
+    font-size: 11px;
+    margin-top: 4px;
+  }
+}
+
+/* Altura baixa (768px) */
+@media (max-height: 800px) {
+  .panel {
+    padding: 8px 16px;
+  }
+
+  .panelCollapsed {
+    padding: 8px 12px;
+  }
+}
+
+@media (max-height: 700px) {
+  .panel {
+    padding: 6px 12px;
+  }
+
+  .panelCollapsed {
+    padding: 6px 10px;
+  }
+
+  .userName {
+    font-size: 12px;
+  }
+
+  .userEmail {
+    font-size: 10px;
+  }
+
+  .logoutButton {
+    font-size: 10px;
+    margin-top: 2px;
+  }
+}

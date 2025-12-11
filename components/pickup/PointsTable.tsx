@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { Table, Button, Space, Switch, Modal, Typography, Tag } from 'antd';
+import { Table, Button, Space, Switch, Typography, Tag, App } from 'antd';
 import { EyeOutlined, DeleteOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { maskCNPJ } from '@/lib/pickup/masks';
@@ -9,7 +9,6 @@ import { formatBRL } from '@/lib/utils/format';
 import type { PickupPoint, PickupPointListResponse } from '@/lib/pickup/types';
 
 const { Text } = Typography;
-const { confirm } = Modal;
 
 interface PointsTableProps {
   data?: PickupPointListResponse;
@@ -27,11 +26,12 @@ export default function PointsTable({
   onPageChange,
 }: PointsTableProps) {
   const router = useRouter();
+  const { modal } = App.useApp();
 
   const handleStatusToggle = (point: PickupPoint, checked: boolean) => {
     const action = checked ? 'ativar' : 'bloquear';
 
-    confirm({
+    modal.confirm({
       title: `Confirmar ${action}`,
       icon: <ExclamationCircleOutlined />,
       content: `Deseja realmente ${action} o ponto de coleta "${point.nomeFantasia}"?`,
@@ -44,7 +44,7 @@ export default function PointsTable({
   };
 
   const handleDelete = (point: PickupPoint) => {
-    confirm({
+    modal.confirm({
       title: 'Confirmar exclusão',
       icon: <ExclamationCircleOutlined />,
       content: `Deseja realmente excluir o ponto de coleta "${point.nomeFantasia}"? Esta ação não pode ser desfeita.`,
@@ -179,6 +179,7 @@ export default function PointsTable({
       dataSource={data?.items || []}
       loading={loading}
       rowKey="id"
+      scroll={{ x: 1000, y: 'calc(100vh - 340px)' }}
       pagination={{
         current: data?.page || 1,
         pageSize: data?.pageSize || 10,

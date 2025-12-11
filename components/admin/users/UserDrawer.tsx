@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect } from "react";
-import { Drawer, Form, Input, Select, Button, Flex } from "antd";
+import { Form, Input, Select, Button, Flex } from "antd";
+import { ELDrawer } from "@/components/ui/ELDrawer";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { adminUserSchema } from "@/lib/auth/schemas";
@@ -99,11 +100,11 @@ export function UserDrawer({ open, user, onClose }: UserDrawerProps) {
   };
 
   return (
-    <Drawer
+    <ELDrawer
       title={isEdit ? "Editar Usuário" : "Adicionar Usuário"}
       open={open}
       onClose={handleClose}
-      width={600}
+      drawerSize="lg"
       footer={
         <Flex justify="flex-end" gap={spacing.md}>
           <Button onClick={handleClose}>Cancelar</Button>
@@ -196,6 +197,6 @@ export function UserDrawer({ open, user, onClose }: UserDrawerProps) {
           />
         </Form.Item>
       </Form>
-    </Drawer>
+    </ELDrawer>
   );
 }

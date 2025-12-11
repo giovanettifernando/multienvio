@@ -469,7 +469,7 @@ export default function PickupsTable({ dateStart, dateEnd }: PickupsTableProps) 
           pageSizeOptions: ['10', '20', '50', '100'],
           showTotal: (total) => `Total: ${total} coletas`,
         }}
-        scroll={{ x: 'max-content' }}
+        scroll={{ x: 'max-content', y: 'calc(100vh - 480px)' }}
         size="small"
       />
     </Flex>

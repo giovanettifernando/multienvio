@@ -25,6 +25,18 @@ function useIsMobile(): boolean {
   );
 }
 
+// Hook para detectar tela pequena (1366x768)
+function useIsSmallDesktop(): boolean {
+  return useSyncExternalStore(
+    (callback) => {
+      window.addEventListener('resize', callback);
+      return () => window.removeEventListener('resize', callback);
+    },
+    () => (typeof window !== 'undefined' ? window.innerWidth >= 768 && window.innerWidth <= 1366 : false),
+    () => false
+  );
+}
+
 export default function AdminLayout({
   children,
 }: {
@@ -37,7 +49,11 @@ export default function AdminLayout({
   const clearAdmin = useAdminSession((state) => state.clearAdmin);
   const hasVerified = useRef(false);
   const isMobile = useIsMobile();
+  const isSmallDesktop = useIsSmallDesktop();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Largura do sidebar ajustada para desktop pequeno
+  const sidebarWidth = isSmallDesktop ? 200 : 240;
 
   // Logout handler para o SessionIdleModal
   const handleAdminLogout = useCallback(async () => {
@@ -314,7 +330,7 @@ export default function AdminLayout({
       {/* Desktop: Sidebar fixa */}
       {!isMobile && (
         <Layout.Sider
-          width={240}
+          width={sidebarWidth}
           style={{
             background: "#FFFFFF",
             borderRight: "1px solid var(--color-border)",
@@ -325,6 +341,7 @@ export default function AdminLayout({
             height: "100vh",
             zIndex: 1000,
             overflow: "auto",
+            transition: "width 0.2s ease",
           }}
         >
           {sidebarContent}
@@ -379,7 +396,7 @@ export default function AdminLayout({
         </Drawer>
       )}
 
-      <Layout style={{ marginLeft: isMobile ? 0 : 240, transition: "margin-left 0.2s" }}>
+      <Layout style={{ marginLeft: isMobile ? 0 : sidebarWidth, transition: "margin-left 0.2s" }}>
         {/* Mobile Header */}
         {isMobile && (
           <Header

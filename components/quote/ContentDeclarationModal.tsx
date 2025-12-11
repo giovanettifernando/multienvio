@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { FileTextOutlined, SafetyOutlined } from "@ant-design/icons";
-import { Checkbox, Modal, Space, Typography } from "antd";
+import { Checkbox, Space, Typography } from "antd";
+import { ELModal } from "@/components/ui/ELModal";
 import { ELButton } from "@/components/ui/ELButton";
 
 type ContentDeclarationModalProps = {
@@ -29,11 +30,12 @@ export function ContentDeclarationModal({
   }, [open]);
 
   return (
-    <Modal
+    <ELModal
       open={open}
       onCancel={onClose}
       footer={null}
       title="Declaração de conteúdo"
+      size="sm"
     >
       <Space orientation="vertical" size={16} style={{ width: "100%" }}>
         <Typography.Paragraph>
@@ -68,6 +70,6 @@ export function ContentDeclarationModal({
           </ELButton>
         </Space>
       </Space>
-    </Modal>
+    </ELModal>
   );
 }

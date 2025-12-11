@@ -31,6 +31,7 @@ import { ELModal } from "@/components/ui/ELModal";
 import { ELTag } from "@/components/ui/ELTag";
 import { ELSkeleton } from "@/components/ui/ELSkeleton";
 import { DataTable, type DataTableColumn } from "@/components/ui/DataTable";
+import { ActionBar } from "@/components/ui/ActionBar";
 import tableStyles from "@/components/ui/ELTableWrapper.module.css";
 import { ShipmentLabelPdfModal } from "@/components/labels";
 
@@ -372,10 +373,19 @@ export default function ShipmentsClient() {
     <PageShell title="Gestão de envios" gap="md">
       <div className={tableStyles.wrapper}>
         <ELCard>
-          <div className={tableStyles.filterBar}>
+          <ActionBar
+            extraActions={[
+              {
+                key: "refresh",
+                label: "Atualizar",
+                onClick: () => refetch(),
+                disabled: isLoading,
+              },
+            ]}
+          >
             <ELInput.Search
               allowClear
-              className={tableStyles.searchInput}
+              style={{ flex: 1, minWidth: 200, maxWidth: 400 }}
               placeholder="Buscar por rastreio, destinatário, cidade ou transportadora"
               value={query}
               onChange={(event) => handleQueryChange(event.target.value)}
@@ -388,10 +398,7 @@ export default function ShipmentsClient() {
               onChange={handleStatusChange}
               options={STATUS_OPTIONS.map((opt) => ({ label: opt, value: opt }))}
             />
-            <ELButton onClick={() => refetch()} disabled={isLoading}>
-              Atualizar
-            </ELButton>
-          </div>
+          </ActionBar>
 
           <DataTable<Shipment>
             rowKey="id"
@@ -400,6 +407,7 @@ export default function ShipmentsClient() {
             columns={columns}
             enableMobileCards
             scrollX={1200}
+            scrollY="calc(100vh - 340px)"
             emptyMessage="Nenhum envio encontrado"
             emptyDescription="Tente ajustar os filtros de busca"
             pagination={{

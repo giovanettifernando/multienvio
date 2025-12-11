@@ -89,6 +89,7 @@ export default function StatementTable({
       columns={columns}
       enableMobileCards
       scrollX={600}
+      scrollY="calc(100vh - 400px)"
       emptyMessage="Nenhuma transação encontrada"
       emptyDescription="Ajuste os filtros para ver suas transações"
       pagination={

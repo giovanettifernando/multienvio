@@ -188,7 +188,7 @@ function VolumeItem({
         </Form.Item>
 
               <Row gutter={[16, 12]}>
-              <Col xs={12} md={6}>
+              <Col xs={24} sm={12} md={6}>
                 <Controller
                   control={control}
                   name={`volumes.${index}.comprimentoCm`}
@@ -228,7 +228,7 @@ function VolumeItem({
                   }}
                 />
               </Col>
-              <Col xs={12} md={6}>
+              <Col xs={24} sm={12} md={6}>
                 <Controller
                   control={control}
                   name={`volumes.${index}.larguraCm`}
@@ -268,7 +268,7 @@ function VolumeItem({
                   }}
                 />
               </Col>
-              <Col xs={12} md={6}>
+              <Col xs={24} sm={12} md={6}>
                 <Controller
                   control={control}
                   name={`volumes.${index}.alturaCm`}
@@ -308,7 +308,7 @@ function VolumeItem({
                   }}
                 />
               </Col>
-              <Col xs={12} md={6}>
+              <Col xs={24} sm={12} md={6}>
                 <Controller
                   control={control}
                   name={`volumes.${index}.pesoKg`}

@@ -71,3 +71,94 @@
     position: relative !important;
   }
 }
+
+/* ============================================
+   RESPONSIVIDADE PARA 1366x768
+   ============================================ */
+
+/* Desktop médio - ajustar logo */
+@media (max-width: 1440px) {
+  .logo {
+    height: 80px;
+    padding: var(--el-spacing-lg);
+  }
+
+  .logoImage {
+    width: 180px;
+    max-height: 56px;
+  }
+}
+
+/* Desktop pequeno (1366px) - sidebar mais compacta */
+@media (max-width: 1366px) {
+  .logo {
+    height: 72px;
+    padding: var(--el-spacing-md);
+  }
+
+  .logoImage {
+    width: 160px;
+    max-height: 48px;
+  }
+
+  .logoText {
+    font-size: 16px;
+  }
+
+  .menuWrapper {
+    /* Garantir scroll visível no menu */
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+  }
+
+  .menuWrapper::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  .menuWrapper::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .menuWrapper::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 2px;
+  }
+}
+
+/* Altura baixa (768px) - otimizar espaço vertical */
+@media (max-height: 800px) {
+  .logo {
+    height: 64px;
+    padding: var(--el-spacing-sm) var(--el-spacing-md);
+  }
+
+  .logoImage {
+    width: 140px;
+    max-height: 44px;
+  }
+
+  .trigger {
+    height: 40px;
+  }
+}
+
+/* Altura muito baixa (700px) */
+@media (max-height: 700px) {
+  .logo {
+    height: 56px;
+    padding: var(--el-spacing-xs) var(--el-spacing-md);
+  }
+
+  .logoImage {
+    width: 120px;
+    max-height: 40px;
+  }
+
+  .logoText {
+    font-size: 14px;
+  }
+
+  .trigger {
+    height: 36px;
+  }
+}

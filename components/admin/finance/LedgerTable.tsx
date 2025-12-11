@@ -9,11 +9,11 @@ import {
   Button,
   Tag,
   Popconfirm,
-  Modal,
   Form,
   InputNumber,
   App,
 } from 'antd';
+import { ELModal } from '@/components/ui/ELModal';
 import { inputNumberFormatterBRL, inputNumberParserBRL } from '@/lib/utils/format';
 import type { ColumnsType } from 'antd/es/table';
 import type { TableRowSelection } from 'antd/lib/table/interface';
@@ -376,10 +376,10 @@ export function LedgerTable({ period }: LedgerTableProps) {
             setPageSize(ps);
           },
         }}
-        scroll={{ x: 1500 }}
+        scroll={{ x: 1500, y: 'calc(100vh - 480px)' }}
       />
 
-      <Modal
+      <ELModal
         title="Novo Ajuste Manual"
         open={adjustmentModalOpen}
         onOk={handleCreateAdjustment}
@@ -388,6 +388,7 @@ export function LedgerTable({ period }: LedgerTableProps) {
           adjustmentForm.resetFields();
         }}
         confirmLoading={adjustmentMutation.isPending}
+        size="sm"
       >
         <Form form={adjustmentForm} layout="vertical">
           <Form.Item name="customerId" label="ID do Cliente" rules={[{ required: true }]}>
@@ -420,7 +421,7 @@ export function LedgerTable({ period }: LedgerTableProps) {
             <Input.TextArea rows={3} placeholder="Motivo do ajuste..." />
           </Form.Item>
         </Form>
-      </Modal>
+      </ELModal>
     </Flex>
   );
 }
