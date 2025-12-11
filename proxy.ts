@@ -14,6 +14,7 @@ import type { NextRequest } from 'next/server';
 import { jwtVerify, errors as joseErrors } from 'jose';
 import { getRouteProtection } from './lib/auth/route-protection';
 import { prisma } from './lib/db';
+import { sessionCache } from './lib/cache';
 
 // Validar JWT secrets em produção
 if (process.env.NODE_ENV === 'production') {
@@ -56,9 +57,8 @@ interface TokenVersionCache {
   status: string;
   cachedAt: number;
 }
-// Caches separados por tipo de usuário
+// Caches separados por tipo de usuário (User agora usa Redis via sessionCache)
 const staffTokenVersionCache = new Map<string, TokenVersionCache>();
-const userTokenVersionCache = new Map<string, TokenVersionCache>();
 const collectorTokenVersionCache = new Map<string, TokenVersionCache>();
 const pickupPointTokenVersionCache = new Map<string, TokenVersionCache>();
 const TOKEN_VERSION_CACHE_TTL = 30 * 1000; // 30 segundos
@@ -235,7 +235,7 @@ function isInactiveSession(lastActivityValue: string | undefined): boolean {
 }
 
 /**
- * Validate user tokenVersion and status against database
+ * Validate user tokenVersion and status against Redis (fail-closed)
  * Returns true if valid, false if token should be rejected
  */
 async function validateUserTokenVersion(
@@ -248,51 +248,36 @@ async function validateUserTokenVersion(
     return { valid: true };
   }
 
-  const now = Date.now();
-  const cached = userTokenVersionCache.get(userId);
+  try {
+    // Verificar tokenVersion no Redis (fail-closed)
+    const redisTokenVersion = await sessionCache.getTokenVersion(userId);
 
-  let user: { tokenVersion: number; status: string } | null = null;
-
-  if (cached && (now - cached.cachedAt) < TOKEN_VERSION_CACHE_TTL) {
-    user = { tokenVersion: cached.tokenVersion, status: cached.status };
-  } else {
-    try {
-      const dbUser = await prisma.user.findUnique({
-        where: { id: userId },
-        select: { tokenVersion: true, status: true },
-      });
-
-      if (dbUser) {
-        user = dbUser;
-        userTokenVersionCache.set(userId, {
-          tokenVersion: dbUser.tokenVersion,
-          status: dbUser.status,
-          cachedAt: now,
-        });
-      }
-    } catch (error) {
-      console.error('[PROXY] Database error validating user tokenVersion:', error);
-      // On database error, reject for security
-      return { valid: false, reason: 'database_error' };
+    // Cache miss = sessão não existe → 401
+    if (redisTokenVersion === null) {
+      return { valid: false, reason: 'session_not_found' };
     }
-  }
 
-  if (!user) {
-    userTokenVersionCache.delete(userId);
-    return { valid: false, reason: 'user_not_found' };
-  }
+    // Mismatch = logout foi feito ou sessão inválida → 401
+    if (redisTokenVersion !== tokenVersion) {
+      return { valid: false, reason: 'token_revoked' };
+    }
 
-  if (user.tokenVersion !== tokenVersion) {
-    userTokenVersionCache.delete(userId);
-    return { valid: false, reason: 'token_revoked' };
-  }
+    // Verificar status na sessão Redis
+    const session = await sessionCache.get(userId);
+    if (!session) {
+      return { valid: false, reason: 'session_not_found' };
+    }
 
-  if (user.status !== 'active') {
-    userTokenVersionCache.delete(userId);
-    return { valid: false, reason: 'user_blocked' };
-  }
+    if (session.status !== 'active') {
+      return { valid: false, reason: 'user_blocked' };
+    }
 
-  return { valid: true };
+    return { valid: true };
+  } catch (error) {
+    console.error('[PROXY] Redis error validating user tokenVersion:', error);
+    // On Redis error, reject for security (fail-closed)
+    return { valid: false, reason: 'redis_error' };
+  }
 }
 
 /**

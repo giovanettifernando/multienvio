@@ -18,6 +18,7 @@ import {
   validatePasswordPolicy,
   type ChangePasswordInput,
 } from "../validation/password-policy";
+import { sessionCache } from "../cache";
 
 /**
  * Tipos de eventos de segurança
@@ -89,7 +90,6 @@ export class AccountSecurityService {
         name: true,
         passwordHash: true,
         passwordHistory: true,
-        tokenVersion: true,
       },
     });
 
@@ -174,9 +174,8 @@ export class AccountSecurityService {
     // 7. Atualizar histórico de senhas
     const updatedHistory = updatePasswordHistory(user.passwordHash, passwordHistory);
 
-    // 8. Atualizar senha e incrementar tokenVersion no banco de dados
+    // 8. Atualizar senha no banco de dados
     const passwordUpdatedAt = new Date();
-    const newTokenVersion = user.tokenVersion + 1;
 
     await this.prisma.user.update({
       where: { id: userId },
@@ -184,24 +183,24 @@ export class AccountSecurityService {
         passwordHash: newPasswordHash,
         passwordUpdatedAt,
         passwordHistory: updatedHistory,
-        tokenVersion: newTokenVersion, // Incrementa para invalidar todas as sessões
         updatedAt: passwordUpdatedAt,
       },
     });
+
+    // 9. Invalidar todas as sessões via Redis (incrementa tokenVersion)
+    await sessionCache.incrementTokenVersion(userId);
 
     this.logger?.info?.(
       "Senha alterada com sucesso",
       { userId, email: user.email, ...context }
     );
 
-    // 9. Registrar evento de segurança
+    // 10. Registrar evento de segurança
     await this.logSecurityEvent(userId, SecurityEventType.PASSWORD_CHANGED, context, {
       previousPasswordUpdatedAt: user.passwordHistory ? "exists" : "none",
     });
 
-    // 10. Invalidar sessões (será implementado quando houver gerenciamento de sessão)
-    // Por enquanto, apenas retornamos que a sessão foi invalidada
-    // O frontend deverá tratar isso e fazer logout
+    // Sessões invalidadas via Redis (tokenVersion incrementado)
     const sessionInvalidated = true;
 
     return {

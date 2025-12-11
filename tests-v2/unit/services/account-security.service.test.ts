@@ -4,6 +4,7 @@ import bcrypt from 'bcrypt';
 import { ApiError } from '../../../lib/api/errors.ts';
 import { AccountSecurityService, SecurityEventType } from '../../../lib/services/account-security.service.ts';
 import * as policyModule from '../../../lib/validation/password-policy.ts';
+import * as cacheModule from '../../../lib/cache.ts';
 
 function makeService(overrides: any = {}) {
   const prisma: any = {
@@ -53,7 +54,7 @@ test.describe('services/account-security', () => {
     const service = makeService({
       prisma: {
         user: {
-          findUnique: async () => ({ id: 'u1', email: 'a@b.com', passwordHash: 'hash', passwordHistory: null, tokenVersion: 1 }),
+          findUnique: async () => ({ id: 'u1', email: 'a@b.com', passwordHash: 'hash', passwordHistory: null }),
         },
       },
     });
@@ -69,7 +70,7 @@ test.describe('services/account-security', () => {
     const service = makeService({
       prisma: {
         user: {
-          findUnique: async () => ({ id: 'u1', email: 'a@b.com', passwordHash: 'hash', passwordHistory: null, tokenVersion: 1 }),
+          findUnique: async () => ({ id: 'u1', email: 'a@b.com', passwordHash: 'hash', passwordHistory: null }),
         },
       },
     });
@@ -86,7 +87,7 @@ test.describe('services/account-security', () => {
     const service = makeService({
       prisma: {
         user: {
-          findUnique: async () => ({ id: 'u1', email: 'a@b.com', passwordHash: 'hash', passwordHistory: ['h1'], tokenVersion: 1 }),
+          findUnique: async () => ({ id: 'u1', email: 'a@b.com', passwordHash: 'hash', passwordHistory: ['h1'] }),
         },
       },
     });
@@ -106,6 +107,8 @@ test.describe('services/account-security', () => {
     test.mock.method(policyModule, 'isPasswordReused', async () => false);
     test.mock.method(policyModule, 'updatePasswordHistory', () => ['hist']);
     test.mock.method(bcrypt, 'hash', async () => 'newHash');
+    // Mock sessionCache.incrementTokenVersion
+    test.mock.method(cacheModule.sessionCache, 'incrementTokenVersion', async () => 2);
     const createCalls: any[] = [];
     let updatedPayload: any;
     const service = makeService({
@@ -116,7 +119,6 @@ test.describe('services/account-security', () => {
             email: 'a@b.com',
             passwordHash: 'oldHash',
             passwordHistory: [],
-            tokenVersion: 1,
           }),
           update: async (args: any) => {
             updatedPayload = args.data;
