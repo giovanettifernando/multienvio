@@ -7,6 +7,7 @@ import { ResetPasswordSchema } from '@/lib/validation/auth';
 import prisma from '@/lib/db';
 import crypto from 'crypto';
 import { enforceRateLimitByIPStrict, RATE_LIMITS } from '@/lib/rate-limit-redis';
+import { sessionCache } from '@/lib/cache';
 
 interface ResetPasswordResponse {
   message: string;
@@ -39,7 +40,6 @@ export const POST = withApiHandler<ResetPasswordResponse>(async (context) => {
           select: {
             id: true,
             email: true,
-            tokenVersion: true,
           },
         },
       },
@@ -80,15 +80,14 @@ export const POST = withApiHandler<ResetPasswordResponse>(async (context) => {
 
     const now = new Date();
 
-    // Update user's password, increment tokenVersion, and mark token as used
+    // Update user's password and mark token as used
     await prisma.$transaction([
-      // Update user password and invalidate all sessions
+      // Update user password
       prisma.user.update({
         where: { id: resetToken.userId },
         data: {
           passwordHash,
           passwordUpdatedAt: now,
-          tokenVersion: resetToken.user.tokenVersion + 1, // Invalidate all existing sessions
           updatedAt: now,
         },
       }),
@@ -100,6 +99,9 @@ export const POST = withApiHandler<ResetPasswordResponse>(async (context) => {
         },
       }),
     ]);
+
+    // Invalidate all existing sessions via Redis INCR
+    await sessionCache.incrementTokenVersion(resetToken.userId);
 
     logger.info('reset_password_success', { userId: resetToken.userId });
 

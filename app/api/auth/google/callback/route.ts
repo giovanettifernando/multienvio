@@ -16,7 +16,7 @@ import {
   type OAuthContext,
 } from '@/lib/auth/google-oauth';
 import { sign, AUTH_COOKIE_NAME } from '@/lib/auth/session';
-import { getCachedRoleByName } from '@/lib/cache';
+import { getCachedRoleByName, sessionCache } from '@/lib/cache';
 import type { RequestLogger } from '@/lib/api/types';
 
 // JWT secret for collector tokens - OBRIGATÓRIO, sem fallback
@@ -351,12 +351,24 @@ export const GET = withApiHandlerResponse(async (context) => {
         );
       }
 
+      // Get tokenVersion from Redis (or init with 1)
+      const tokenVersion = await sessionCache.getOrInitTokenVersion(user.id);
+
       // Create JWT token for session
       const token = await sign({
         userId: user.id,
         email: user.email,
         role: user.role?.name || 'user',
-        tokenVersion: user.tokenVersion,
+        tokenVersion,
+      });
+
+      // Save session to Redis
+      await sessionCache.set(user.id, {
+        userId: user.id,
+        email: user.email,
+        role: user.role?.name || 'user',
+        status: user.status,
+        tokenVersion,
       });
 
       logger.info('google_oauth_user_session', { userId: user.id });

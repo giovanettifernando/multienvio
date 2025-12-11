@@ -214,24 +214,126 @@ export type SessionCacheData = {
   tokenVersion: number;
 };
 
+// TTL para sessão: 7 dias (mesmo que refresh token)
+const SESSION_TTL_SECONDS = 604800;
+
 /**
  * Cache de sessão do usuário
  * TTL de 7 dias (mesmo que o refresh token)
+ *
+ * Estrutura no Redis:
+ * - session:{userId} → SessionCacheData (JSON)
+ * - session:{userId}:tokenVersion → número inteiro (para INCR atômico)
  */
 export const sessionCache = {
   key: (userId: string) => `${CachePrefix.SESSION}${userId}`,
+  tokenVersionKey: (userId: string) => `${CachePrefix.SESSION}${userId}:tokenVersion`,
 
   async get(userId: string): Promise<SessionCacheData | null> {
     return cacheGet<SessionCacheData>(this.key(userId));
   },
 
   async set(userId: string, data: SessionCacheData): Promise<boolean> {
-    // TTL de 7 dias (604800 segundos) - mesmo que o refresh token
-    return cacheSet(this.key(userId), data, 604800);
+    if (!isRedisAvailable()) return false;
+
+    try {
+      const redis = getRedisClient();
+      // Salvar dados da sessão e tokenVersion separadamente (para permitir INCR)
+      await Promise.all([
+        redis.setex(this.key(userId), SESSION_TTL_SECONDS, JSON.stringify(data)),
+        redis.setex(this.tokenVersionKey(userId), SESSION_TTL_SECONDS, data.tokenVersion.toString()),
+      ]);
+      return true;
+    } catch (error) {
+      openCircuitBreaker();
+      logger.warn({ event: 'session_cache_set_error', userId, err: error }, 'Failed to set session cache');
+      return false;
+    }
+  },
+
+  /**
+   * Obtém o tokenVersion atual do Redis
+   * Retorna null se não existir (usuário precisa fazer login)
+   */
+  async getTokenVersion(userId: string): Promise<number | null> {
+    if (!isRedisAvailable()) return null;
+
+    try {
+      const redis = getRedisClient();
+      const value = await redis.get(this.tokenVersionKey(userId));
+      if (value === null) return null;
+      return parseInt(value, 10);
+    } catch (error) {
+      openCircuitBreaker();
+      logger.warn({ event: 'session_cache_get_token_version_error', userId, err: error }, 'Failed to get tokenVersion');
+      return null;
+    }
+  },
+
+  /**
+   * Obtém tokenVersion existente ou inicializa com 1
+   * Usado no login para manter sessões existentes ou criar nova
+   */
+  async getOrInitTokenVersion(userId: string): Promise<number> {
+    if (!isRedisAvailable()) {
+      // Se Redis indisponível, retorna 1 (nova sessão)
+      return 1;
+    }
+
+    try {
+      const redis = getRedisClient();
+      const existing = await redis.get(this.tokenVersionKey(userId));
+
+      if (existing !== null) {
+        return parseInt(existing, 10);
+      }
+
+      // Não existe, inicializa com 1
+      await redis.setex(this.tokenVersionKey(userId), SESSION_TTL_SECONDS, '1');
+      return 1;
+    } catch (error) {
+      openCircuitBreaker();
+      logger.warn({ event: 'session_cache_init_token_version_error', userId, err: error }, 'Failed to init tokenVersion');
+      return 1;
+    }
+  },
+
+  /**
+   * Incrementa tokenVersion (usado no logout)
+   * Invalida todos os tokens existentes do usuário
+   * Retorna o novo valor ou null se falhar
+   */
+  async incrementTokenVersion(userId: string): Promise<number | null> {
+    if (!isRedisAvailable()) return null;
+
+    try {
+      const redis = getRedisClient();
+      // INCR atômico - cria com valor 1 se não existir
+      const newVersion = await redis.incr(this.tokenVersionKey(userId));
+      // Renovar TTL após INCR
+      await redis.expire(this.tokenVersionKey(userId), SESSION_TTL_SECONDS);
+      // Deletar dados da sessão (força re-fetch no próximo login)
+      await redis.del(this.key(userId));
+      return newVersion;
+    } catch (error) {
+      openCircuitBreaker();
+      logger.warn({ event: 'session_cache_incr_error', userId, err: error }, 'Failed to increment tokenVersion');
+      return null;
+    }
   },
 
   async invalidate(userId: string): Promise<boolean> {
-    return cacheDelete(this.key(userId));
+    if (!isRedisAvailable()) return false;
+
+    try {
+      const redis = getRedisClient();
+      // Deletar ambas as chaves
+      await redis.del(this.key(userId), this.tokenVersionKey(userId));
+      return true;
+    } catch (error) {
+      openCircuitBreaker();
+      return false;
+    }
   },
 
   async invalidateAll(): Promise<number> {

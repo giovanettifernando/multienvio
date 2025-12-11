@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { withApiHandlerResponse } from '@/lib/api/handler';
 import { destroySession, getSession } from '@/lib/auth/session';
-import { prisma } from '@/lib/db';
 import { sessionCache, userCache } from '@/lib/cache';
 
 export const POST = withApiHandlerResponse(async (context) => {
@@ -11,27 +10,19 @@ export const POST = withApiHandlerResponse(async (context) => {
     // Obter sessão atual para invalidar tokens
     const session = await getSession();
 
-    // Incrementar tokenVersion para invalidar todos os tokens existentes
     if (session?.userId) {
-      await prisma.user.update({
-        where: { id: session.userId },
-        data: { tokenVersion: { increment: 1 } },
-      });
+      // INCR tokenVersion no Redis - invalida todos os tokens existentes
+      const newVersion = await sessionCache.incrementTokenVersion(session.userId);
 
-      // Invalidar caches Redis (session e user data)
-      await Promise.all([
-        sessionCache.invalidate(session.userId),
-        userCache.invalidate(session.userId),
-      ]).catch(() => {
-        // Fire and forget - não bloqueia logout se Redis falhar
-      });
+      // Invalidar cache de dados do usuário
+      userCache.invalidate(session.userId).catch(() => {});
 
-      logger.info('logout_success', { userId: session.userId });
+      logger.info('logout_success', { userId: session.userId, newTokenVersion: newVersion });
     } else {
       logger.info('logout_no_session');
     }
 
-    // Remover cookie de autenticação
+    // Remover cookies de autenticação
     await destroySession();
 
     return NextResponse.json({

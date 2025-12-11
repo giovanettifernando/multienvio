@@ -84,23 +84,24 @@ export const POST = withApiHandlerResponse(async (context) => {
       data: { lastLoginAt: new Date() },
     });
 
+    // Obter tokenVersion do Redis (existente ou inicializa com 1)
+    const tokenVersion = await sessionCache.getOrInitTokenVersion(dbUser.id);
+
     // Criar par de tokens JWT (access + refresh)
     const { accessToken, refreshToken } = await signTokenPair({
       userId: dbUser.id,
       email: dbUser.email,
       role: dbUser.role?.name || 'user',
-      tokenVersion: dbUser.tokenVersion,
+      tokenVersion,
     });
 
-    // Salvar sessão no Redis para validação rápida no refresh
-    sessionCache.set(dbUser.id, {
+    // Salvar sessão completa no Redis
+    await sessionCache.set(dbUser.id, {
       userId: dbUser.id,
       email: dbUser.email,
       role: dbUser.role?.name || 'user',
       status: dbUser.status,
-      tokenVersion: dbUser.tokenVersion,
-    }).catch(() => {
-      // Fire and forget - não bloqueia login se Redis falhar
+      tokenVersion,
     });
 
     // Mapear para o tipo User global (sem expor passwordHash)

@@ -40,7 +40,6 @@ model User {
   razaoSocial            String?
   passwordUpdatedAt      DateTime?
   passwordHistory        Json?
-  tokenVersion           Int                  @default(0)
   defaultPostingUnitId   String?
   addresses              Address[]
   cards                  Card[]

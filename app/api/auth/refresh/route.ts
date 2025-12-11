@@ -3,14 +3,13 @@
  *
  * Renova o access token usando o refresh token
  * - Valida refresh token do cookie
- * - Verifica tokenVersion no banco
+ * - Verifica tokenVersion no Redis (fail-closed)
  * - Gera novo par de tokens
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { withApiHandlerResponse } from '@/lib/api/handler';
-import { prisma } from '@/lib/db';
 import {
   verifyRefreshToken,
   signTokenPair,
@@ -20,7 +19,7 @@ import {
   REFRESH_TOKEN_MAX_AGE_SECONDS,
 } from '@/lib/auth/jwt-tokens';
 import { rateLimitByIP, RATE_LIMITS } from '@/lib/rate-limit-redis';
-import { sessionCache, type SessionCacheData } from '@/lib/cache';
+import { sessionCache } from '@/lib/cache';
 
 export const POST = withApiHandlerResponse(async (context) => {
   const { req, logger } = context;
@@ -64,50 +63,27 @@ export const POST = withApiHandlerResponse(async (context) => {
     return response;
   }
 
-  // Tentar obter sessão do Redis primeiro (evita hit no banco)
-  let sessionData: SessionCacheData | null = await sessionCache.get(payload.userId);
-  let needsCacheUpdate = false;
+  // Obter sessão do Redis (fail-closed - sem fallback para DB)
+  const sessionData = await sessionCache.get(payload.userId);
 
-  // Se não encontrou no cache, buscar do banco
+  // Cache miss = sessão não existe → 401 (força login)
   if (!sessionData) {
-    logger.debug('refresh_cache_miss', { userId: payload.userId });
+    logger.warn('refresh_no_session', { userId: payload.userId });
 
-    const user = await prisma.user.findUnique({
-      where: { id: payload.userId },
-      include: { role: true },
-    });
+    const response = NextResponse.json(
+      { message: 'Sessão expirada. Faça login novamente.' },
+      { status: 401 }
+    );
 
-    if (!user) {
-      logger.warn('refresh_user_not_found', { userId: payload.userId });
+    response.cookies.set(ACCESS_TOKEN_COOKIE, '', { maxAge: 0, path: '/' });
+    response.cookies.set(REFRESH_TOKEN_COOKIE, '', { maxAge: 0, path: '/' });
 
-      const response = NextResponse.json(
-        { message: 'Conta não encontrada' },
-        { status: 401 }
-      );
-
-      response.cookies.set(ACCESS_TOKEN_COOKIE, '', { maxAge: 0, path: '/' });
-      response.cookies.set(REFRESH_TOKEN_COOKIE, '', { maxAge: 0, path: '/' });
-
-      return response;
-    }
-
-    // Mapear dados do banco para cache
-    sessionData = {
-      userId: user.id,
-      email: user.email,
-      role: user.role?.name || 'user',
-      status: user.status,
-      tokenVersion: user.tokenVersion,
-    };
-    needsCacheUpdate = true;
+    return response;
   }
 
   // Verificar status do usuário
   if (sessionData.status !== 'active') {
     logger.warn('refresh_user_inactive', { userId: payload.userId, status: sessionData.status });
-
-    // Invalidar cache se usuário ficou inativo
-    sessionCache.invalidate(payload.userId).catch(() => {});
 
     const response = NextResponse.json(
       { message: 'Conta inativa ou bloqueada' },
@@ -120,19 +96,18 @@ export const POST = withApiHandlerResponse(async (context) => {
     return response;
   }
 
-  // Verificar tokenVersion (proteção contra logout em outros dispositivos)
-  if (payload.tokenVersion !== undefined && sessionData.tokenVersion !== payload.tokenVersion) {
+  // Verificar tokenVersion (proteção contra logout)
+  const redisTokenVersion = await sessionCache.getTokenVersion(payload.userId);
+
+  if (redisTokenVersion === null || redisTokenVersion !== payload.tokenVersion) {
     logger.warn('refresh_token_version_mismatch', {
       userId: payload.userId,
-      expected: sessionData.tokenVersion,
+      expected: redisTokenVersion,
       received: payload.tokenVersion,
     });
 
-    // Invalidar cache - versão do token mudou
-    sessionCache.invalidate(payload.userId).catch(() => {});
-
     const response = NextResponse.json(
-      { message: 'Sessão invalidada' },
+      { message: 'Sessão invalidada. Faça login novamente.' },
       { status: 401 }
     );
 
@@ -142,17 +117,12 @@ export const POST = withApiHandlerResponse(async (context) => {
     return response;
   }
 
-  // Atualizar cache se veio do banco
-  if (needsCacheUpdate) {
-    sessionCache.set(payload.userId, sessionData).catch(() => {});
-  }
-
-  // Gerar novo par de tokens
+  // Gerar novo par de tokens (mantendo o mesmo tokenVersion)
   const { accessToken, refreshToken: newRefreshToken } = await signTokenPair({
     userId: sessionData.userId,
     email: sessionData.email,
     role: sessionData.role,
-    tokenVersion: sessionData.tokenVersion,
+    tokenVersion: redisTokenVersion,
   });
 
   logger.info('refresh_success', { userId: sessionData.userId });

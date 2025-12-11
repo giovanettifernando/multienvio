@@ -124,43 +124,30 @@ export async function verifyToken(
       return { payload: null, error: 'wrong_type' };
     }
 
-    // Validar tokenVersion - Redis primeiro, fallback para banco
+    // Validar tokenVersion - Redis only (fail-closed)
+    // Se cache miss ou mismatch → sessão inválida
     if (validateTokenVersion && tokenPayload.userId) {
-      // Tentar obter do Redis primeiro (rápido)
-      const cachedSession = await sessionCache.get(tokenPayload.userId);
+      const redisTokenVersion = await sessionCache.getTokenVersion(tokenPayload.userId);
 
-      if (cachedSession) {
-        // Cache hit - validar tokenVersion do cache
-        if (cachedSession.tokenVersion !== tokenPayload.tokenVersion) {
-          logger.warn({
-            event: 'token_version_mismatch',
-            userId: tokenPayload.userId,
-            tokenVersion: tokenPayload.tokenVersion,
-            currentVersion: cachedSession.tokenVersion,
-            source: 'cache',
-          }, 'Token version mismatch - session invalidated');
-          return { payload: null, error: 'token_version_mismatch' };
-        }
-      } else {
-        // Cache miss - buscar do banco
-        logger.debug({ event: 'token_version_cache_miss', userId: tokenPayload.userId }, 'Session cache miss - checking database');
+      // Cache miss = sessão não existe no Redis → 401
+      if (redisTokenVersion === null) {
+        logger.warn({
+          event: 'token_version_cache_miss',
+          userId: tokenPayload.userId,
+          tokenVersion: tokenPayload.tokenVersion,
+        }, 'No session in Redis - user must login');
+        return { payload: null, error: 'token_version_mismatch' };
+      }
 
-        const { prisma } = await import('../db');
-        const user = await prisma.user.findUnique({
-          where: { id: tokenPayload.userId },
-          select: { tokenVersion: true },
-        });
-
-        if (!user || user.tokenVersion !== tokenPayload.tokenVersion) {
-          logger.warn({
-            event: 'token_version_mismatch',
-            userId: tokenPayload.userId,
-            tokenVersion: tokenPayload.tokenVersion,
-            currentVersion: user?.tokenVersion,
-            source: 'database',
-          }, 'Token version mismatch - session invalidated');
-          return { payload: null, error: 'token_version_mismatch' };
-        }
+      // Mismatch = logout foi feito ou sessão inválida → 401
+      if (redisTokenVersion !== tokenPayload.tokenVersion) {
+        logger.warn({
+          event: 'token_version_mismatch',
+          userId: tokenPayload.userId,
+          tokenVersion: tokenPayload.tokenVersion,
+          currentVersion: redisTokenVersion,
+        }, 'Token version mismatch - session invalidated');
+        return { payload: null, error: 'token_version_mismatch' };
       }
     }
 
