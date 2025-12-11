@@ -204,6 +204,42 @@ export const userCache = {
 };
 
 /**
+ * Dados de sessão armazenados no Redis
+ */
+export type SessionCacheData = {
+  userId: string;
+  email: string;
+  role: string;
+  status: string;
+  tokenVersion: number;
+};
+
+/**
+ * Cache de sessão do usuário
+ * TTL de 7 dias (mesmo que o refresh token)
+ */
+export const sessionCache = {
+  key: (userId: string) => `${CachePrefix.SESSION}${userId}`,
+
+  async get(userId: string): Promise<SessionCacheData | null> {
+    return cacheGet<SessionCacheData>(this.key(userId));
+  },
+
+  async set(userId: string, data: SessionCacheData): Promise<boolean> {
+    // TTL de 7 dias (604800 segundos) - mesmo que o refresh token
+    return cacheSet(this.key(userId), data, 604800);
+  },
+
+  async invalidate(userId: string): Promise<boolean> {
+    return cacheDelete(this.key(userId));
+  },
+
+  async invalidateAll(): Promise<number> {
+    return cacheDeletePattern(`${CachePrefix.SESSION}*`);
+  },
+};
+
+/**
  * Cache de roles (raramente mudam)
  */
 export const roleCache = {

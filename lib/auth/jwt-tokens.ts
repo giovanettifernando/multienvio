@@ -13,6 +13,7 @@
 
 import { SignJWT, jwtVerify, errors as joseErrors } from 'jose';
 import { logger } from '@/lib/logger';
+import { sessionCache } from '@/lib/cache';
 
 // Validar JWT_SECRET em produção
 if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
@@ -123,22 +124,43 @@ export async function verifyToken(
       return { payload: null, error: 'wrong_type' };
     }
 
-    // Validar tokenVersion contra o banco de dados
+    // Validar tokenVersion - Redis primeiro, fallback para banco
     if (validateTokenVersion && tokenPayload.userId) {
-      const { prisma } = await import('../db');
-      const user = await prisma.user.findUnique({
-        where: { id: tokenPayload.userId },
-        select: { tokenVersion: true },
-      });
+      // Tentar obter do Redis primeiro (rápido)
+      const cachedSession = await sessionCache.get(tokenPayload.userId);
 
-      if (!user || user.tokenVersion !== tokenPayload.tokenVersion) {
-        logger.warn({
-          event: 'token_version_mismatch',
-          userId: tokenPayload.userId,
-          tokenVersion: tokenPayload.tokenVersion,
-          currentVersion: user?.tokenVersion,
-        }, 'Token version mismatch - session invalidated');
-        return { payload: null, error: 'token_version_mismatch' };
+      if (cachedSession) {
+        // Cache hit - validar tokenVersion do cache
+        if (cachedSession.tokenVersion !== tokenPayload.tokenVersion) {
+          logger.warn({
+            event: 'token_version_mismatch',
+            userId: tokenPayload.userId,
+            tokenVersion: tokenPayload.tokenVersion,
+            currentVersion: cachedSession.tokenVersion,
+            source: 'cache',
+          }, 'Token version mismatch - session invalidated');
+          return { payload: null, error: 'token_version_mismatch' };
+        }
+      } else {
+        // Cache miss - buscar do banco
+        logger.debug({ event: 'token_version_cache_miss', userId: tokenPayload.userId }, 'Session cache miss - checking database');
+
+        const { prisma } = await import('../db');
+        const user = await prisma.user.findUnique({
+          where: { id: tokenPayload.userId },
+          select: { tokenVersion: true },
+        });
+
+        if (!user || user.tokenVersion !== tokenPayload.tokenVersion) {
+          logger.warn({
+            event: 'token_version_mismatch',
+            userId: tokenPayload.userId,
+            tokenVersion: tokenPayload.tokenVersion,
+            currentVersion: user?.tokenVersion,
+            source: 'database',
+          }, 'Token version mismatch - session invalidated');
+          return { payload: null, error: 'token_version_mismatch' };
+        }
       }
     }
 

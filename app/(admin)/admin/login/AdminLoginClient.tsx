@@ -85,7 +85,8 @@ function AdminLoginForm() {
 
       setAdmin(admin);
       message.success(`Bem-vindo, ${data.staff.name}`);
-      router.replace(next);
+      // Use full page navigation to ensure cookies are properly processed
+      window.location.href = next;
     } catch (error) {
       console.error("Login error:", error);
       message.error("Erro ao fazer login");

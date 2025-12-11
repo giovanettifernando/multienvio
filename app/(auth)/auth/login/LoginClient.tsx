@@ -96,11 +96,13 @@ export default function LoginClient() {
 
         message.success("Login realizado com sucesso!");
 
-        // Redirect based on role
+        // Use full page navigation instead of client-side routing
+        // This ensures cookies are properly processed by the browser
+        // before any subsequent API calls are made
         if (isAdmin()) {
-          router.replace("/admin");
+          window.location.href = "/admin";
         } else {
-          router.replace("/");
+          window.location.href = "/";
         }
       } catch (error) {
         console.error("Login error:", error);

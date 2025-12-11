@@ -90,6 +90,7 @@ export function SessionIdleModal({
   const lastActivityRef = useRef<number>(0);
   const lastRefreshRef = useRef<number>(0);
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
+  const isInitializedRef = useRef<boolean>(false);
 
   // Formatar countdown para MM:SS
   const formatCountdown = useCallback((seconds: number): string => {
@@ -174,9 +175,15 @@ export function SessionIdleModal({
       });
 
       // Se heartbeat falhou com 401, sessão já expirou no servidor
+      // MAS só fazer logout se já passou do período inicial (evita loop no login)
       if (response.status === 401) {
         console.warn("[Session] Heartbeat 401 - session expired on server");
-        handleLogout();
+        // Só faz logout se já está inicializado há mais de 5 segundos
+        if (isInitializedRef.current) {
+          handleLogout();
+        } else {
+          console.debug("[Session] Ignoring 401 during initialization");
+        }
         return;
       }
 
@@ -373,17 +380,27 @@ export function SessionIdleModal({
     // Iniciar refresh periódico do token
     startTokenRefresh();
 
-    // Usar setTimeout para chamar funções assíncronas (evita warning ESLint)
+    // Fazer refresh inicial após um delay mais longo (garante token válido)
+    // NÃO chamar sendHeartbeat no início - pode causar logout prematuro
+    // O heartbeat interval cuidará disso após 1 minuto
+    // NOTA: Delay de 2s para garantir que cookies foram processados após login
     const initTimeoutId = setTimeout(() => {
-      // Enviar heartbeat inicial
-      sendHeartbeat();
-      // Fazer refresh inicial (garante token válido desde o início)
-      refreshToken();
-    }, 100);
+      // Apenas refresh silencioso - não faz logout se falhar
+      refreshToken().catch(() => {
+        // Silently ignore - proxy will handle auth on next request
+      });
+    }, 2000);
+
+    // Marcar como inicializado após 5 segundos (evita logout durante startup)
+    const initFlagTimeoutId = setTimeout(() => {
+      isInitializedRef.current = true;
+    }, 5000);
 
     // Cleanup
     return () => {
       clearTimeout(initTimeoutId);
+      clearTimeout(initFlagTimeoutId);
+      isInitializedRef.current = false;
       ACTIVITY_EVENTS.forEach((event) => {
         window.removeEventListener(event, handleActivity);
       });

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { withApiHandlerResponse } from '@/lib/api/handler';
 import { destroySession, getSession } from '@/lib/auth/session';
 import { prisma } from '@/lib/db';
+import { sessionCache, userCache } from '@/lib/cache';
 
 export const POST = withApiHandlerResponse(async (context) => {
   const { logger } = context;
@@ -16,6 +17,15 @@ export const POST = withApiHandlerResponse(async (context) => {
         where: { id: session.userId },
         data: { tokenVersion: { increment: 1 } },
       });
+
+      // Invalidar caches Redis (session e user data)
+      await Promise.all([
+        sessionCache.invalidate(session.userId),
+        userCache.invalidate(session.userId),
+      ]).catch(() => {
+        // Fire and forget - não bloqueia logout se Redis falhar
+      });
+
       logger.info('logout_success', { userId: session.userId });
     } else {
       logger.info('logout_no_session');

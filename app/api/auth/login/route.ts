@@ -13,6 +13,7 @@ import {
 } from '@/lib/auth/jwt-tokens';
 import { UserStatus, AuthRole, type User } from '@/types/contracts';
 import { rateLimitByIPStrict, RATE_LIMITS } from '@/lib/rate-limit-redis';
+import { sessionCache } from '@/lib/cache';
 
 export const POST = withApiHandlerResponse(async (context) => {
   const { req, logger } = context;
@@ -89,6 +90,17 @@ export const POST = withApiHandlerResponse(async (context) => {
       email: dbUser.email,
       role: dbUser.role?.name || 'user',
       tokenVersion: dbUser.tokenVersion,
+    });
+
+    // Salvar sessão no Redis para validação rápida no refresh
+    sessionCache.set(dbUser.id, {
+      userId: dbUser.id,
+      email: dbUser.email,
+      role: dbUser.role?.name || 'user',
+      status: dbUser.status,
+      tokenVersion: dbUser.tokenVersion,
+    }).catch(() => {
+      // Fire and forget - não bloqueia login se Redis falhar
     });
 
     // Mapear para o tipo User global (sem expor passwordHash)
