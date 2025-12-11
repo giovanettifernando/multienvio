@@ -11,6 +11,22 @@
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
+/* TextArea - altura automática, não fixa */
+textarea.input,
+.input:global(.ant-input-textarea-show-count) textarea,
+.input:global(textarea.ant-input) {
+  height: auto !important;
+  min-height: 120px !important;
+  padding: 8px 12px !important;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+/* Container do TextArea com contador */
+.input:global(.ant-input-textarea-show-count) {
+  height: auto !important;
+}
+
 .input:hover,
 .input:focus,
 .input:focus-within {
@@ -48,7 +64,7 @@
 /* Search input with icon inside (suffix) - modern style */
 .search {
   width: 100%;
-  max-width: 320px;
+  max-width: 400px;
 }
 
 .search :global(.ant-input-affix-wrapper) {

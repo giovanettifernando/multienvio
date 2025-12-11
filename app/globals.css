@@ -372,6 +372,24 @@ a {
     box-shadow var(--el-transition-fast) var(--el-ease-out) !important;
 }
 
+/* TextArea - altura automática, não fixa */
+textarea.ant-input {
+  height: auto !important;
+  min-height: 120px !important;
+  padding: 8px 12px !important;
+  resize: vertical !important;
+  line-height: 1.5 !important;
+}
+
+.ant-input-textarea-show-count {
+  height: auto !important;
+}
+
+.ant-input-textarea-show-count > textarea {
+  height: auto !important;
+  min-height: 120px !important;
+}
+
 /* Table rows com hover */
 .ant-table-row {
   transition: background-color var(--el-transition-fast) var(--el-ease-out);

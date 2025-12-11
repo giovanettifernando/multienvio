@@ -204,10 +204,10 @@ export function SupportForm({ onSuccess, audience = 'user', defaultValues }: Sup
         rules={[{ required: true, message: 'Descrição é obrigatória', min: 3 }]}
       >
         <ELInput.TextArea
-          rows={4}
           placeholder="Descreva o problema em detalhes"
           showCount
           maxLength={1000}
+          autoSize={{ minRows: 6, maxRows: 12 }}
         />
       </Form.Item>
 

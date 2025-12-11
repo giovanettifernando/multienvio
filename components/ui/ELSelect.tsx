@@ -6,6 +6,7 @@ import styles from "./ELSelect.module.css";
 export function ELSelect<ValueType = unknown>({
   className,
   size,
+  popupMatchSelectWidth,
   ...props
 }: SelectProps<ValueType>) {
   return (
@@ -14,6 +15,7 @@ export function ELSelect<ValueType = unknown>({
       className={cn(styles.select, className)}
       size={size ?? "middle"}
       showSearch={props.showSearch ?? false}
+      popupMatchSelectWidth={popupMatchSelectWidth ?? false}
     />
   );
 }

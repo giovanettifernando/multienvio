@@ -1,7 +1,7 @@
 /**
  * DataTable - Design System v2
  * Cabeçalho Title Case 13px/500 (sem caixa alta)
- * Linhas 52-56px com zebra e hover suave
+ * Linhas 52-56px com hover suave (sem zebra)
  */
 
 .tableContainer {
@@ -16,9 +16,9 @@
   font-size: var(--el-font-size-base, 14px);
 }
 
-/* === Cabeçalho: Title Case, 13px/500, sem uppercase === */
+/* === Cabeçalho: Title Case, 13px/500, sem uppercase, centralizado === */
 .table :global(.ant-table-thead > tr > th) {
-  background-color: var(--el-color-surface-alt, #F2F4F7);
+  background-color: var(--el-color-surface-alt, #F2F4F7) !important;
   font-weight: var(--el-font-weight-medium, 500);
   font-size: var(--el-font-size-sm, 13px);
   /* Removido text-transform: uppercase - usar Title Case nos títulos */
@@ -26,19 +26,22 @@
   padding: var(--el-spacing-md, 12px) var(--el-spacing-lg, 16px);
   border-bottom: 1px solid var(--el-border-weak, #EAECF0);
   height: 48px;
+  text-align: center;
 }
 
-/* === Linhas: 52-56px com zebra striping === */
+/* === Linhas: 52-56px (sem zebra) === */
 .table :global(.ant-table-tbody > tr > td) {
   padding: var(--el-spacing-md, 12px) var(--el-spacing-lg, 16px);
   border-bottom: 1px solid var(--el-border-weak, #EAECF0);
   vertical-align: middle;
   height: 56px;
+  background-color: #FFFFFF !important;
 }
 
-/* Zebra striping */
+/* Forçar remoção do zebra em todas as linhas */
+.table :global(.ant-table-tbody > tr:nth-child(odd) > td),
 .table :global(.ant-table-tbody > tr:nth-child(even) > td) {
-  background-color: var(--el-color-surface-alt, #F2F4F7);
+  background-color: #FFFFFF !important;
 }
 
 /* Hover mais perceptível */

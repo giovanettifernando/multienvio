@@ -1,6 +1,7 @@
 import { withApiHandler } from '@/lib/api/handler';
 import { ApiError } from '@/lib/api/errors';
 import { prisma } from '@/lib/db';
+import { Prisma } from '@prisma/client';
 import { getUserFromRequest } from '@/lib/auth/session';
 import { ShipmentStatus, FINAL_STATUSES } from '@/lib/shipments/shipment-status';
 import { canBeCancelled, getNextCancellationStatus } from '@/lib/shipments/status-migration';
@@ -26,9 +27,31 @@ type ShipmentCancelResponseWithoutRefund = {
 
 type ShipmentCancelResponse = ShipmentCancelResponseWithRefund | ShipmentCancelResponseWithoutRefund;
 
+// Tipo para resultado de cancelamento de pré-postagem
+interface CorreiosCancelResult {
+  packageId: string;
+  packageNumber: number;
+  prePostageId: string;
+  success: boolean;
+  message?: string;
+  attemptedAt: string;
+}
+
 /**
  * POST /api/shipments/[id]/cancel
  * Cancela um shipment seguindo as regras do novo modelo de status
+ *
+ * FLUXO CORRIGIDO (DB-First para garantir consistência):
+ * 1. Validações (auth, ownership, status)
+ * 2. TRANSAÇÃO DB: Marca cancelamento + guarda dados para cleanup
+ * 3. CORREIOS API: Cancela pré-postagens (fora da transação)
+ * 4. CLEANUP DB: Remove label e limpa IDs dos packages
+ * 5. REEMBOLSO: Credita carteira se aplicável
+ *
+ * Vantagens:
+ * - Se DB falhar na fase 2, Correios não é afetado
+ * - Se Correios falhar na fase 3, DB já está marcado como cancelado
+ * - Cleanup na fase 4 é idempotente e pode ser retentado
  */
 export const POST = withApiHandler<ShipmentCancelResponse, { id: string }>(async (context) => {
   const session = await getUserFromRequest(context.req);
@@ -38,7 +61,10 @@ export const POST = withApiHandler<ShipmentCancelResponse, { id: string }>(async
 
   const id = context.params.id;
 
-  // Verificar se o shipment pertence ao usuário
+  // ============================================================================
+  // FASE 1: Validações
+  // ============================================================================
+
   const shipment = await prisma.shipment.findUnique({
     where: { id },
     include: {
@@ -87,111 +113,51 @@ export const POST = withApiHandler<ShipmentCancelResponse, { id: string }>(async
     });
   }
 
-  // Verificar se houve pagamento via carteira para reembolso
-  let refundIssued = false;
-  let refundAmount = 0;
-
-  // Salvar dados da etiqueta ANTES de deletar
+  // Guardar dados da etiqueta ANTES de qualquer modificação
   const labelPriceCents = shipment.label?.priceCents || 0;
   const labelTrackingCode = shipment.label?.trackingCode || null;
+  const labelId = shipment.label?.id || null;
 
-  // Cancelar pré-postagens nos Correios
-  const correiosCancelResults: Array<{
-    packageId: string;
-    packageNumber: number;
-    prePostageId: string;
-    success: boolean;
-    message?: string;
-  }> = [];
+  // IDs das pré-postagens para cancelar depois
+  const packagesToCancel = shipment.packages
+    ?.filter(pkg => pkg.carrierPrePostageId)
+    .map(pkg => ({
+      packageId: pkg.id,
+      packageNumber: pkg.packageNumber,
+      prePostageId: pkg.carrierPrePostageId!,
+    })) || [];
 
-  if (shipment.packages && shipment.packages.length > 0) {
-    logger.info({
-      event: 'shipment_cancel_prepostagem_start',
-      shipmentId: id,
-      packagesCount: shipment.packages.length,
-    }, 'Canceling pre-postagens for packages');
+  // ============================================================================
+  // FASE 2: Transação DB - Marca cancelamento (SEM deletar label ainda)
+  // ============================================================================
 
-    for (const pkg of shipment.packages) {
-      if (pkg.carrierPrePostageId) {
-        try {
-          const result = await cancelarPrePostagem(pkg.carrierPrePostageId);
-          correiosCancelResults.push({
-            packageId: pkg.id,
-            packageNumber: pkg.packageNumber,
-            prePostageId: pkg.carrierPrePostageId,
-            success: result.success,
-            message: result.success ? result.message : result.erro,
-          });
+  logger.info({
+    event: 'shipment_cancel_phase2_start',
+    shipmentId: id,
+    currentStatus,
+    nextStatus: nextCancellationStatus,
+    packagesToCancel: packagesToCancel.length,
+  }, 'Starting cancellation - Phase 2: DB transaction');
 
-          logger.info({
-            event: 'shipment_cancel_prepostagem_result',
-            packageId: pkg.id,
-            packageNumber: pkg.packageNumber,
-            prePostageId: pkg.carrierPrePostageId,
-            success: result.success,
-          }, result.success ? 'Pre-postagem canceled' : 'Pre-postagem cancel failed');
-        } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
-          correiosCancelResults.push({
-            packageId: pkg.id,
-            packageNumber: pkg.packageNumber,
-            prePostageId: pkg.carrierPrePostageId,
-            success: false,
-            message: errorMessage,
-          });
-
-          logger.error({
-            event: 'shipment_cancel_prepostagem_error',
-            packageId: pkg.id,
-            prePostageId: pkg.carrierPrePostageId,
-            err: error,
-          }, 'Unexpected error canceling pre-postagem');
-        }
-      }
-    }
-
-    logger.info({
-      event: 'shipment_cancel_prepostagem_summary',
-      shipmentId: id,
-      total: correiosCancelResults.length,
-      successful: correiosCancelResults.filter(r => r.success).length,
-      failed: correiosCancelResults.filter(r => !r.success).length,
-    }, 'Pre-postagem cancellation summary');
-  }
-
-  // Cancelar shipment, label, packages e pickup em transação
   await prisma.$transaction(async (tx) => {
+    // Atualizar status do shipment para cancelamento
     await tx.shipment.update({
       where: { id },
-      data: { status: nextCancellationStatus },
+      data: {
+        status: nextCancellationStatus,
+        // Guardar metadados do cancelamento no document
+        document: {
+          ...(shipment.document as Record<string, unknown> || {}),
+          cancellation: {
+            requestedAt: new Date().toISOString(),
+            previousStatus: currentStatus,
+            packagesToCancel: packagesToCancel.map(p => p.prePostageId),
+          },
+        } as Prisma.InputJsonValue,
+      },
     });
 
-    if (shipment.label) {
-      await tx.label.delete({
-        where: { id: shipment.label.id },
-      });
-    }
-
-    if (shipment.packages && shipment.packages.length > 0) {
-      for (const pkg of shipment.packages) {
-        if (pkg.carrierPrePostageId || pkg.carrierTrackingCode) {
-          await tx.package.update({
-            where: { id: pkg.id },
-            data: {
-              carrierPrePostageId: null,
-              carrierTrackingCode: null,
-              carrierQuotePrice: null,
-            },
-          });
-        }
-      }
-
-      await tx.shipment.update({
-        where: { id },
-        data: { carrierTrackingCode: null },
-      });
-    }
-
+    // Cancelar pickup request se pendente/agendado
     if (shipment.pickupRequest) {
       const pickupStatus = shipment.pickupRequest.status;
       if (pickupStatus === 'PENDING' || pickupStatus === 'SCHEDULED') {
@@ -203,7 +169,145 @@ export const POST = withApiHandler<ShipmentCancelResponse, { id: string }>(async
     }
   });
 
-  // REEMBOLSO se pagamento via carteira
+  logger.info({
+    event: 'shipment_cancel_phase2_complete',
+    shipmentId: id,
+  }, 'Phase 2 complete: Shipment marked as cancelled');
+
+  // ============================================================================
+  // FASE 3: Cancelar pré-postagens nos Correios (fora da transação DB)
+  // ============================================================================
+
+  const correiosCancelResults: CorreiosCancelResult[] = [];
+
+  if (packagesToCancel.length > 0) {
+    logger.info({
+      event: 'shipment_cancel_phase3_start',
+      shipmentId: id,
+      packagesCount: packagesToCancel.length,
+    }, 'Starting cancellation - Phase 3: Correios API');
+
+    for (const pkg of packagesToCancel) {
+      try {
+        const result = await cancelarPrePostagem(pkg.prePostageId);
+        correiosCancelResults.push({
+          packageId: pkg.packageId,
+          packageNumber: pkg.packageNumber,
+          prePostageId: pkg.prePostageId,
+          success: result.success,
+          message: result.success ? result.message : result.erro,
+          attemptedAt: new Date().toISOString(),
+        });
+
+        logger.info({
+          event: 'shipment_cancel_correios_result',
+          packageId: pkg.packageId,
+          packageNumber: pkg.packageNumber,
+          prePostageId: pkg.prePostageId,
+          success: result.success,
+        }, result.success ? 'Pre-postagem canceled in Correios' : 'Pre-postagem cancel failed in Correios');
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+        correiosCancelResults.push({
+          packageId: pkg.packageId,
+          packageNumber: pkg.packageNumber,
+          prePostageId: pkg.prePostageId,
+          success: false,
+          message: errorMessage,
+          attemptedAt: new Date().toISOString(),
+        });
+
+        logger.error({
+          event: 'shipment_cancel_correios_error',
+          packageId: pkg.packageId,
+          prePostageId: pkg.prePostageId,
+          err: error,
+        }, 'Unexpected error canceling pre-postagem in Correios');
+      }
+    }
+
+    logger.info({
+      event: 'shipment_cancel_phase3_complete',
+      shipmentId: id,
+      total: correiosCancelResults.length,
+      successful: correiosCancelResults.filter(r => r.success).length,
+      failed: correiosCancelResults.filter(r => !r.success).length,
+    }, 'Phase 3 complete: Correios API calls finished');
+  }
+
+  // ============================================================================
+  // FASE 4: Cleanup - Deletar label e limpar IDs dos packages
+  // ============================================================================
+
+  logger.info({
+    event: 'shipment_cancel_phase4_start',
+    shipmentId: id,
+  }, 'Starting cancellation - Phase 4: Cleanup');
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      // Deletar label
+      if (labelId) {
+        await tx.label.delete({
+          where: { id: labelId },
+        });
+      }
+
+      // Limpar dados de carrier dos packages
+      if (shipment.packages && shipment.packages.length > 0) {
+        for (const pkg of shipment.packages) {
+          if (pkg.carrierPrePostageId || pkg.carrierTrackingCode) {
+            await tx.package.update({
+              where: { id: pkg.id },
+              data: {
+                carrierPrePostageId: null,
+                carrierTrackingCode: null,
+                carrierQuotePrice: null,
+              },
+            });
+          }
+        }
+      }
+
+      // Limpar código de rastreio e atualizar document com resultados
+      await tx.shipment.update({
+        where: { id },
+        data: {
+          carrierTrackingCode: null,
+          document: {
+            ...(shipment.document as Record<string, unknown> || {}),
+            cancellation: {
+              requestedAt: new Date().toISOString(),
+              completedAt: new Date().toISOString(),
+              previousStatus: currentStatus,
+              correiosResults: correiosCancelResults as unknown as Prisma.JsonArray,
+            },
+          } as Prisma.InputJsonValue,
+        },
+      });
+    });
+
+    logger.info({
+      event: 'shipment_cancel_phase4_complete',
+      shipmentId: id,
+    }, 'Phase 4 complete: Cleanup finished');
+  } catch (cleanupError) {
+    // Cleanup falhou, mas o cancelamento principal já foi feito
+    // Logar erro mas não falhar a requisição
+    logger.error({
+      event: 'shipment_cancel_cleanup_error',
+      shipmentId: id,
+      err: cleanupError,
+    }, 'Cleanup failed but cancellation was successful - may need manual cleanup');
+  }
+
+  // ============================================================================
+  // FASE 5: Reembolso (se aplicável)
+  // ============================================================================
+
+  let refundIssued = false;
+  let refundAmount = 0;
+
   if (
     shipment.paymentMethod === 'WALLET' &&
     nextCancellationStatus === ShipmentStatus.CANCELLATION_REQUESTED_BEFORE_HANDOFF
@@ -235,9 +339,17 @@ export const POST = withApiHandler<ShipmentCancelResponse, { id: string }>(async
         }, 'Refund issued');
       }
     } catch (refundError) {
-      logger.error({ event: 'shipment_cancel_refund_error', shipmentId: shipment.id, err: refundError }, 'Error issuing refund');
+      logger.error({
+        event: 'shipment_cancel_refund_error',
+        shipmentId: shipment.id,
+        err: refundError,
+      }, 'Error issuing refund - may need manual intervention');
     }
   }
+
+  // ============================================================================
+  // Resposta
+  // ============================================================================
 
   let message = nextCancellationStatus === ShipmentStatus.CANCELLATION_REQUESTED_BEFORE_HANDOFF
     ? 'Envio cancelado com sucesso'
@@ -245,6 +357,17 @@ export const POST = withApiHandler<ShipmentCancelResponse, { id: string }>(async
 
   if (refundIssued) {
     message += `. Reembolso de R$ ${refundAmount.toFixed(2)} creditado na carteira.`;
+  }
+
+  // Adicionar aviso se algum cancelamento no Correios falhou
+  const failedCorreios = correiosCancelResults.filter(r => !r.success);
+  if (failedCorreios.length > 0) {
+    logger.warn({
+      event: 'shipment_cancel_correios_partial_failure',
+      shipmentId: id,
+      failedCount: failedCorreios.length,
+      failed: failedCorreios,
+    }, 'Some Correios cancellations failed');
   }
 
   return {

@@ -364,7 +364,7 @@ export default function ShipmentsClient() {
               onSearch={(value) => handleQueryChange(value)}
             />
             <ELSelect
-              style={{ minWidth: 160 }}
+              style={{ minWidth: 180 }}
               placeholder="Filtrar por status"
               value={status}
               onChange={handleStatusChange}
