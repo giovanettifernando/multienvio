@@ -15,6 +15,7 @@ import {
   GlobalOutlined,
   CarOutlined,
   WarningOutlined,
+  ExclamationCircleOutlined,
 } from "@ant-design/icons";
 import Link from "next/link";
 import { useShipments, useShipmentCancel } from "@/hooks/useShipments";
@@ -91,6 +92,8 @@ export default function ShipmentsClient() {
   const [divergenceModalOpen, setDivergenceModalOpen] = useState(false);
   const [labelModalOpen, setLabelModalOpen] = useState(false);
   const [selectedShipmentForLabel, setSelectedShipmentForLabel] = useState<Shipment | null>(null);
+  const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
+  const [shipmentToCancel, setShipmentToCancel] = useState<Shipment | null>(null);
 
   const { data, isLoading, refetch } = useShipments({ q: query, status, page, limit: pageSize });
   const cancelMut = useShipmentCancel();
@@ -177,6 +180,30 @@ export default function ShipmentsClient() {
     setSelectedShipmentForLabel(null);
   }, []);
 
+  // Handlers para confirmação de cancelamento
+  const handleOpenCancelConfirm = useCallback((shipment: Shipment) => {
+    setShipmentToCancel(shipment);
+    setCancelConfirmOpen(true);
+  }, []);
+
+  const handleCloseCancelConfirm = useCallback(() => {
+    setCancelConfirmOpen(false);
+    setShipmentToCancel(null);
+  }, []);
+
+  const handleConfirmCancel = useCallback(async () => {
+    if (!shipmentToCancel) return;
+
+    try {
+      await cancelMut.mutateAsync(shipmentToCancel.id);
+      message.success('Envio cancelado com sucesso');
+    } catch {
+      message.error('Erro ao cancelar envio');
+    } finally {
+      handleCloseCancelConfirm();
+    }
+  }, [shipmentToCancel, cancelMut, message, handleCloseCancelConfirm]);
+
   // Função auxiliar para formatar datas
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -240,7 +267,7 @@ export default function ShipmentsClient() {
           return (statusOrder[a.status] || 0) - (statusOrder[b.status] || 0);
         },
         render: (_value, row: Shipment) => (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, lineHeight: 1.4 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, lineHeight: 1.4, alignItems: 'center' }}>
             <ELStatusTag variant={STATUS_VARIANTS[row.status] ?? "default"} size="default">
               {row.status}
             </ELStatusTag>
@@ -295,6 +322,11 @@ export default function ShipmentsClient() {
           const finalStatuses: ShipmentStatus[] = ["Entregue", "Cancelado", "Devolvido"];
           const isFinalStatus = finalStatuses.includes(row.status);
 
+          // Envios cancelados não mostram nenhuma ação
+          if (row.status === "Cancelado") {
+            return <Text type="secondary" style={{ fontSize: 12 }}>—</Text>;
+          }
+
           return (
             <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
               <Tooltip title="Imprimir etiqueta">
@@ -328,9 +360,9 @@ export default function ShipmentsClient() {
                   <ELButton
                     variant="ghost"
                     size="small"
-                    icon={<StopOutlined style={{ color: 'var(--el-color-error)' }} />}
+                    icon={<StopOutlined style={{ color: 'var(--el-color-danger)' }} />}
                     disabled={cancelMut.isPending}
-                    onClick={() => cancelMut.mutate(row.id)}
+                    onClick={() => handleOpenCancelConfirm(row)}
                   />
                 </Tooltip>
               )}
@@ -339,7 +371,7 @@ export default function ShipmentsClient() {
         },
       },
     ],
-    [cancelMut, handleOpenLabelModal, handleOpenDivergenceModal],
+    [cancelMut, handleOpenLabelModal, handleOpenDivergenceModal, handleOpenCancelConfirm],
   );
 
   return (
@@ -494,6 +526,48 @@ export default function ShipmentsClient() {
           labelId={shipmentDetailForLabel?.label?.id}
         />
       )}
+
+      {/* Modal de confirmação de cancelamento */}
+      <ELModal
+        title={
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <ExclamationCircleOutlined style={{ color: 'var(--el-color-danger)', fontSize: 20 }} />
+            <span>Confirmar Cancelamento</span>
+          </div>
+        }
+        open={cancelConfirmOpen}
+        onCancel={handleCloseCancelConfirm}
+        footer={
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+            <ELButton onClick={handleCloseCancelConfirm}>
+              Voltar
+            </ELButton>
+            <ELButton
+              variant="danger"
+              onClick={handleConfirmCancel}
+              loading={cancelMut.isPending}
+            >
+              Confirmar Cancelamento
+            </ELButton>
+          </div>
+        }
+        size="sm"
+      >
+        <div style={{ padding: '8px 0' }}>
+          <Text>
+            Tem certeza que deseja cancelar o envio{' '}
+            <Text strong style={{ color: 'var(--el-color-primary)' }}>
+              {shipmentToCancel?.trackingCode}
+            </Text>
+            ?
+          </Text>
+          <div style={{ marginTop: 12 }}>
+            <Text type="secondary" style={{ fontSize: 13 }}>
+              Esta acao nao pode ser desfeita. O valor do frete sera estornado para sua carteira.
+            </Text>
+          </div>
+        </div>
+      </ELModal>
     </PageShell>
   );
 }

@@ -29,6 +29,12 @@ export const sidebarItems: SidebarItem[] = [
     href: '/',
   },
   {
+    key: 'shipments',
+    icon: ReconciliationOutlined,
+    label: 'Meus Envios',
+    href: '/shipments',
+  },
+  {
     key: 'quote',
     icon: SearchOutlined,
     label: 'Cotar envio',
@@ -45,12 +51,6 @@ export const sidebarItems: SidebarItem[] = [
     icon: FileAddOutlined,
     label: 'Etiquetas',
     href: '/etiquetas',
-  },
-  {
-    key: 'shipments',
-    icon: ReconciliationOutlined,
-    label: 'Meus Envios',
-    href: '/shipments',
   },
   {
     key: 'pickups',

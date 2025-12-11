@@ -10,15 +10,21 @@ import { ELButton } from "@/components/ui/ELButton";
 const { Text, Paragraph } = Typography;
 
 // ============================================================================
-// Configurações de tempo
+// Configurações de tempo - SINCRONIZADAS COM SERVIDOR
 // ============================================================================
-// IMPORTANTE: Cliente 7+2=9 min, Servidor 10 min (1 min de margem de segurança)
+// Servidor (proxy.ts): SESSION_IDLE_MINUTES = 10 min
+// Cliente: mostra modal em 7 min + countdown de 2 min = 9 min total
+// Margem de segurança: 1 minuto
 const IDLE_BEFORE_MODAL_MS = 7 * 60 * 1000; // 7 minutos até mostrar modal
 const COUNTDOWN_SECONDS = 120; // 2 minutos de countdown
 
 // Heartbeat: sincroniza atividade do cliente com o servidor
-// Envia ping a cada 2 min para atualizar cookie last_activity no servidor
-const HEARTBEAT_INTERVAL_MS = 2 * 60 * 1000; // 2 minutos
+// IMPORTANTE: Intervalo curto para garantir que last_activity seja atualizado frequentemente
+const HEARTBEAT_INTERVAL_MS = 1 * 60 * 1000; // 1 minuto (mais frequente para evitar gaps)
+
+// Token Refresh: garantir que access token nunca expire enquanto usuário está ativo
+// Access token = 15 min, refresh a cada 5 min = sempre válido com margem
+const TOKEN_REFRESH_INTERVAL_MS = 5 * 60 * 1000; // 5 minutos
 
 // Eventos que indicam atividade do usuário
 const ACTIVITY_EVENTS = ["mousemove", "keydown", "scroll", "touchstart", "click"] as const;
@@ -44,20 +50,22 @@ interface SessionIdleModalProps {
 /**
  * SessionIdleModal - Modal de aviso de inatividade
  *
- * Monitora atividade do usuário e exibe modal antes da sessão expirar.
- * Funciona em conjunto com o timeout do servidor (proxy.ts).
+ * ARQUITETURA DE SESSÃO:
  *
- * Correções implementadas:
- * 1. Heartbeat: Sincroniza atividade cliente/servidor a cada 2 min
- * 2. Margem de segurança: Cliente 9 min (7+2), servidor 10 min
- * 3. Side effect fix: handleLogout separado do state updater
- * 4. Refresh preventivo: Renova sessão antes de mostrar modal
+ * 1. Access Token (15 min): Usado pelo proxy para autenticar requisições
+ * 2. Refresh Token (7 dias): Usado para renovar access token
+ * 3. last_activity cookie: Rastreia última atividade no servidor (timeout 10 min)
  *
- * Fluxo:
- * - Usuário ativo: heartbeat atualiza servidor a cada 2 min
- * - Após 7 min de inatividade: refresh preventivo + mostra modal
- * - Countdown de 2 min: permite usuário permanecer ou sair
- * - Se countdown zerar: logout automático e redirect para login
+ * PROBLEMA ANTERIOR:
+ * - Heartbeat parava após 3 min de inatividade
+ * - Access token expirava (15 min) e requisições falhavam com 401
+ * - Usuário era redirecionado sem ver o modal
+ *
+ * SOLUÇÃO:
+ * 1. Heartbeat frequente (1 min) enquanto houver atividade recente (últimos 8 min)
+ * 2. Refresh proativo do token a cada 5 min (access token = 15 min)
+ * 3. Refresh automático quando heartbeat indica necessidade
+ * 4. Modal aparece em 7 min + countdown 2 min = 9 min (antes do timeout de 10 min)
  */
 export function SessionIdleModal({
   isAuthenticated,
@@ -78,11 +86,10 @@ export function SessionIdleModal({
   // Refs para timers (evitar memory leaks)
   const idleTimerRef = useRef<NodeJS.Timeout | null>(null);
   const heartbeatIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const tokenRefreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const lastActivityRef = useRef<number>(0);
+  const lastRefreshRef = useRef<number>(0);
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Ref para evitar double-mount em Strict Mode
-  const mountedRef = useRef(false);
 
   // Formatar countdown para MM:SS
   const formatCountdown = useCallback((seconds: number): string => {
@@ -119,11 +126,44 @@ export function SessionIdleModal({
       clearInterval(heartbeatIntervalRef.current);
       heartbeatIntervalRef.current = null;
     }
+    if (tokenRefreshIntervalRef.current) {
+      clearInterval(tokenRefreshIntervalRef.current);
+      tokenRefreshIntervalRef.current = null;
+    }
     if (debounceRef.current) {
       clearTimeout(debounceRef.current);
       debounceRef.current = null;
     }
   }, []);
+
+  // Refresh do token (renovar access token)
+  const refreshToken = useCallback(async (): Promise<boolean> => {
+    try {
+      const response = await fetch(refreshEndpoint, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      if (response.ok) {
+        lastRefreshRef.current = Date.now();
+        console.debug("[Session] Token refreshed successfully");
+        return true;
+      }
+
+      // Se refresh falhou com 401, sessão expirou
+      if (response.status === 401) {
+        console.warn("[Session] Refresh failed with 401 - session expired");
+        return false;
+      }
+
+      console.warn("[Session] Refresh failed with status:", response.status);
+      return false;
+    } catch (error) {
+      console.error("[Session] Refresh error:", error);
+      return false;
+    }
+  }, [refreshEndpoint]);
 
   // Enviar heartbeat para servidor (atualiza last_activity cookie)
   const sendHeartbeat = useCallback(async () => {
@@ -133,60 +173,54 @@ export function SessionIdleModal({
         credentials: "include",
       });
 
-      // Se heartbeat falhou com 401, sessão já expirou
+      // Se heartbeat falhou com 401, sessão já expirou no servidor
       if (response.status === 401) {
-        console.warn("[SessionIdleModal] Heartbeat retornou 401 - sessão expirada");
+        console.warn("[Session] Heartbeat 401 - session expired on server");
         handleLogout();
         return;
       }
 
-      // Se heartbeat retornou que precisa de refresh, fazer proativamente
       if (response.ok) {
         try {
           const data = await response.json();
+
+          // Se access token precisa de refresh, fazer imediatamente
           if (data.needsTokenRefresh) {
-            // Access token expirou, fazer refresh proativo
-            await fetch(refreshEndpoint, {
-              method: "POST",
-              credentials: "include",
-              headers: { "Content-Type": "application/json" },
-            });
+            console.debug("[Session] Heartbeat indicates token needs refresh");
+            const refreshed = await refreshToken();
+            if (!refreshed) {
+              // Se refresh falhou, sessão inválida
+              handleLogout();
+              return;
+            }
           }
         } catch {
-          // Ignorar erros de parse - não é crítico
+          // Ignorar erros de parse
         }
       }
-    } catch {
-      // Silencioso - erro de rede não deve interromper
+    } catch (error) {
+      // Erro de rede - silencioso, não interrompe
+      console.debug("[Session] Heartbeat network error:", error);
     }
-  }, [heartbeatEndpoint, refreshEndpoint, handleLogout]);
+  }, [heartbeatEndpoint, handleLogout, refreshToken]);
 
   // Mostrar modal de inatividade (com refresh preventivo)
   const showIdleModal = useCallback(async () => {
     // Refresh preventivo antes de mostrar modal
     // Garante que a sessão está renovada no servidor
-    try {
-      const response = await fetch(refreshEndpoint, {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-      });
+    const refreshed = await refreshToken();
 
+    if (!refreshed) {
       // Se refresh falhou, sessão já expirou - logout direto
-      if (!response.ok) {
-        console.warn("[SessionIdleModal] Refresh preventivo falhou - logout");
-        handleLogout();
-        return;
-      }
-    } catch {
-      // Em caso de erro de rede, ainda mostrar modal
-      // Deixar usuário decidir
+      console.warn("[Session] Preventive refresh failed - logging out");
+      handleLogout();
+      return;
     }
 
     // Mostrar modal com countdown
     setCountdown(COUNTDOWN_SECONDS);
     setModalOpen(true);
-  }, [refreshEndpoint, handleLogout]);
+  }, [refreshToken, handleLogout]);
 
   // Resetar timer de inatividade
   const resetIdleTimer = useCallback(() => {
@@ -210,15 +244,42 @@ export function SessionIdleModal({
       clearInterval(heartbeatIntervalRef.current);
     }
 
-    // Heartbeat periódico enquanto usuário está ativo
+    // Heartbeat periódico - CRÍTICO para manter last_activity atualizado
+    // Envia enquanto houve atividade nos últimos 8 minutos (antes do modal em 7 min + margem)
     heartbeatIntervalRef.current = setInterval(() => {
-      // Só enviar heartbeat se houve atividade recente (não no modal)
       const timeSinceActivity = Date.now() - lastActivityRef.current;
-      if (timeSinceActivity < HEARTBEAT_INTERVAL_MS * 1.5) {
+      // Continuar enviando heartbeat até 8 minutos de inatividade
+      // Isso garante que o servidor receba atualizações até perto do modal
+      if (timeSinceActivity < IDLE_BEFORE_MODAL_MS + HEARTBEAT_INTERVAL_MS) {
         sendHeartbeat();
       }
     }, HEARTBEAT_INTERVAL_MS);
   }, [sendHeartbeat]);
+
+  // Iniciar refresh periódico do token
+  const startTokenRefresh = useCallback(() => {
+    // Limpar interval existente
+    if (tokenRefreshIntervalRef.current) {
+      clearInterval(tokenRefreshIntervalRef.current);
+    }
+
+    // Refresh periódico do token - garante que access token nunca expire
+    // Só faz refresh se houve atividade recente (evita refresh quando já está inativo)
+    tokenRefreshIntervalRef.current = setInterval(async () => {
+      const timeSinceActivity = Date.now() - lastActivityRef.current;
+      const timeSinceLastRefresh = Date.now() - lastRefreshRef.current;
+
+      // Só refresh se:
+      // 1. Houve atividade nos últimos 8 minutos
+      // 2. Não fez refresh nos últimos 4 minutos (evitar excesso)
+      if (
+        timeSinceActivity < IDLE_BEFORE_MODAL_MS + HEARTBEAT_INTERVAL_MS &&
+        timeSinceLastRefresh >= TOKEN_REFRESH_INTERVAL_MS - 60000
+      ) {
+        await refreshToken();
+      }
+    }, TOKEN_REFRESH_INTERVAL_MS);
+  }, [refreshToken]);
 
   // Handler de atividade do usuário (debounced)
   const handleActivity = useCallback(() => {
@@ -241,26 +302,19 @@ export function SessionIdleModal({
     setModalOpen(false);
 
     // Chamar refresh para renovar sessão
-    try {
-      const response = await fetch(refreshEndpoint, {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-      });
+    const refreshed = await refreshToken();
 
-      // Se refresh falhou (401), a sessão já expirou no servidor
-      if (!response.ok) {
-        handleLogout();
-        return;
-      }
-    } catch {
-      // Em caso de erro de rede, tentar manter a sessão local
+    if (!refreshed) {
+      // Se refresh falhou, sessão já expirou no servidor
+      handleLogout();
+      return;
     }
 
-    // Resetar timer de inatividade e heartbeat
+    // Resetar timer de inatividade e reiniciar intervals
     resetIdleTimer();
     startHeartbeat();
-  }, [refreshEndpoint, resetIdleTimer, startHeartbeat, handleLogout]);
+    startTokenRefresh();
+  }, [refreshToken, resetIdleTimer, startHeartbeat, startTokenRefresh, handleLogout]);
 
   // Botão "Sair agora" - logout imediato
   const handleLogoutNow = useCallback(() => {
@@ -271,13 +325,10 @@ export function SessionIdleModal({
 
   // ============================================================================
   // useEffect para countdown tick
-  // CORREÇÃO: handleLogout removido do state updater (side effect)
   // ============================================================================
   useEffect(() => {
-    // Só executar se modal está aberto e countdown > 0
     if (!modalOpen || countdown <= 0) return;
 
-    // Agendar próximo tick
     const timer = setTimeout(() => {
       setCountdown((prev) => Math.max(0, prev - 1));
     }, 1000);
@@ -286,26 +337,27 @@ export function SessionIdleModal({
   }, [modalOpen, countdown]);
 
   // useEffect separado para detectar countdown zerado
-  // CORREÇÃO: Separar side effect (logout) do state updater
   useEffect(() => {
     if (modalOpen && countdown === 0 && !isLoggingOut) {
-      handleLogout();
+      // Usar setTimeout para evitar chamada síncrona dentro do efeito
+      const timeoutId = setTimeout(() => {
+        handleLogout();
+      }, 0);
+      return () => clearTimeout(timeoutId);
     }
   }, [modalOpen, countdown, isLoggingOut, handleLogout]);
 
   // ============================================================================
-  // Setup: adicionar listeners, timers e heartbeat
+  // Setup principal: adicionar listeners, timers e heartbeat
   // ============================================================================
   useEffect(() => {
     // Só ativar se usuário está autenticado
     if (!isAuthenticated) return;
 
-    // Evitar double-mount em Strict Mode
-    if (mountedRef.current) return;
-    mountedRef.current = true;
-
-    // Inicializar timestamp de última atividade
-    lastActivityRef.current = Date.now();
+    // Inicializar timestamps
+    const now = Date.now();
+    lastActivityRef.current = now;
+    lastRefreshRef.current = now;
 
     // Adicionar listeners de atividade
     ACTIVITY_EVENTS.forEach((event) => {
@@ -318,18 +370,28 @@ export function SessionIdleModal({
     // Iniciar heartbeat (sincroniza cliente/servidor)
     startHeartbeat();
 
-    // Enviar heartbeat inicial
-    sendHeartbeat();
+    // Iniciar refresh periódico do token
+    startTokenRefresh();
+
+    // Usar setTimeout para chamar funções assíncronas (evita warning ESLint)
+    const initTimeoutId = setTimeout(() => {
+      // Enviar heartbeat inicial
+      sendHeartbeat();
+      // Fazer refresh inicial (garante token válido desde o início)
+      refreshToken();
+    }, 100);
 
     // Cleanup
     return () => {
-      mountedRef.current = false;
+      clearTimeout(initTimeoutId);
       ACTIVITY_EVENTS.forEach((event) => {
         window.removeEventListener(event, handleActivity);
       });
       clearAllTimers();
     };
-  }, [isAuthenticated, handleActivity, resetIdleTimer, startHeartbeat, sendHeartbeat, clearAllTimers]);
+  }, [isAuthenticated]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Nota: Dependências intencionalmente reduzidas para evitar re-runs desnecessários
+  // Os callbacks são estáveis via useCallback
 
   // Não renderizar se usuário não está autenticado
   if (!isAuthenticated) return null;

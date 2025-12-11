@@ -233,13 +233,21 @@ export default function LoginClient() {
   return (
     <div className={styles.container}>
       <div className={styles.panel}>
-        <ELCard
-          header={{
-            title: "Bem-vindo de volta",
-            description: "Acesse o painel e gerencie seus envios com mais agilidade.",
-          }}
-          bodyGap="lg"
-        >
+        <ELCard bodyGap="lg">
+          <div className={styles.cardHeader}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/logo-azul.png"
+              alt="Envio Legal"
+              className={styles.logo}
+            />
+            <Typography.Title level={3} className={styles.title}>
+              Bem-vindo de volta
+            </Typography.Title>
+            <Typography.Paragraph className={styles.subtitle}>
+              Acesse o painel e gerencie seus envios com mais agilidade.
+            </Typography.Paragraph>
+          </div>
           {formContent}
           <Typography.Paragraph className={styles.footerText}>
             Ainda não tem conta? {" "}

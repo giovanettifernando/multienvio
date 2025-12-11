@@ -17,6 +17,21 @@
   max-width: 440px;
 }
 
+.cardHeader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--el-spacing-sm, 8px);
+  text-align: center;
+}
+
+.logo {
+  height: 80px;
+  width: auto;
+  object-fit: contain;
+  margin-bottom: var(--el-spacing-md, 12px);
+}
+
 .header {
   display: flex;
   flex-direction: column;
@@ -27,11 +42,13 @@
   margin: 0 !important;
   font-weight: var(--el-font-weight-bold, 700) !important;
   color: var(--el-color-primary, #0B4EA3) !important;
+  text-align: center;
 }
 
 .subtitle {
   margin: 0 !important;
   color: var(--el-text-secondary, #475467) !important;
+  text-align: center;
 }
 
 .form {
