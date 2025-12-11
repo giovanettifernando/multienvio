@@ -201,20 +201,21 @@ export function CarrierPayoutsTable() {
   });
 
   // Lista de transportadoras disponíveis
+  const carriers = data?.carriers;
   const carrierOptions = useMemo(() => {
-    if (!data?.carriers) return [];
-    return data.carriers.map((c) => ({
+    if (!carriers) return [];
+    return carriers.map((c) => ({
       label: c.carrier,
       value: c.carrier,
     }));
-  }, [data?.carriers]);
+  }, [carriers]);
 
   // Dados filtrados
   const filteredCarriers = useMemo(() => {
-    if (!data?.carriers) return [];
-    if (selectedCarrier === 'all') return data.carriers;
-    return data.carriers.filter((c) => c.carrier === selectedCarrier);
-  }, [data?.carriers, selectedCarrier]);
+    if (!carriers) return [];
+    if (selectedCarrier === 'all') return carriers;
+    return carriers.filter((c) => c.carrier === selectedCarrier);
+  }, [carriers, selectedCarrier]);
 
   // Exportar CSV
   const handleExportCSV = () => {

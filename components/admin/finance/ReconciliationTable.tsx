@@ -142,13 +142,14 @@ export function ReconciliationTable({ period }: ReconciliationTableProps) {
   const selectedIds = selectedRowKeys as string[];
 
   // Calculate total difference
+  const items = data?.items;
   const totalDifference = useMemo(() => {
-    if (!data?.items) return 0;
-    return data.items.reduce((sum, entry) => {
+    if (!items) return 0;
+    return items.reduce((sum, entry) => {
       const amount = entry.nature === 'credit' ? entry.amount : -entry.amount;
       return sum + amount;
     }, 0);
-  }, [data?.items]);
+  }, [items]);
 
   return (
     <Flex vertical gap={16}>
