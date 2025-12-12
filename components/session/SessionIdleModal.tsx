@@ -446,7 +446,7 @@ export function SessionIdleModal({
       }
       size="sm"
     >
-      <Space direction="vertical" size={16} style={{ width: "100%" }}>
+      <Space orientation="vertical" size={16} style={{ width: "100%" }}>
         <Paragraph style={{ margin: 0 }}>
           Por segurança, sua sessão será encerrada automaticamente em{" "}
           <Text strong style={{ color: "var(--color-error)", fontSize: 18 }}>
