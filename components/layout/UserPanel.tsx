@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { Flex, Avatar, Button, Skeleton, Tooltip } from 'antd';
+import { Flex, Avatar, Skeleton, Tooltip } from 'antd';
 import { LogoutOutlined, UserOutlined } from '@ant-design/icons';
 import { useAuthStore } from '@/stores/auth';
 import styles from './UserPanel.module.css';
@@ -70,21 +70,14 @@ export function UserPanel({ collapsed }: UserPanelProps) {
               {usuario.email && (
                 <div style={{ fontSize: 12, opacity: 0.85 }}>{usuario.email}</div>
               )}
-              <Button
-                type="text"
-                size="small"
-                danger
-                icon={<LogoutOutlined />}
+              <button
+                type="button"
                 onClick={handleLogout}
-                style={{
-                  width: '100%',
-                  marginTop: 4,
-                  justifyContent: 'flex-start',
-                  padding: '4px 8px',
-                }}
+                className={styles.logoutButtonTooltip}
               >
+                <LogoutOutlined />
                 Sair
-              </Button>
+              </button>
             </Flex>
           }
           placement="right"
@@ -136,23 +129,14 @@ export function UserPanel({ collapsed }: UserPanelProps) {
               {usuario.email}
             </div>
           )}
-          <Button
-            type="text"
-            size="small"
-            icon={<LogoutOutlined />}
+          <button
+            type="button"
             onClick={handleLogout}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                handleLogout();
-              }
-            }}
-            className={`user-panel-logout ${styles.logoutButton}`}
+            className={styles.logoutButton}
           >
+            <LogoutOutlined />
             Sair
-          </Button>
+          </button>
         </Flex>
       </Flex>
     </div>
