@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { Flex, Avatar, Button, Typography, Skeleton, Tooltip } from 'antd';
+import { Flex, Avatar, Button, Skeleton, Tooltip } from 'antd';
 import { LogoutOutlined, UserOutlined } from '@ant-design/icons';
 import { useAuthStore } from '@/stores/auth';
 import styles from './UserPanel.module.css';
@@ -132,9 +132,9 @@ export function UserPanel({ collapsed }: UserPanelProps) {
             </div>
           </Tooltip>
           {usuario.email && (
-            <Typography.Text className={styles.userEmail}>
+            <div className={styles.userEmail}>
               {usuario.email}
-            </Typography.Text>
+            </div>
           )}
           <Button
             type="text"
