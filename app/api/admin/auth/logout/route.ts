@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { withApiHandlerResponse } from '@/lib/api/handler';
 import { getAdminSessionFromRequest, createAdminCookieRemovalHeader } from '@/lib/auth/admin-session';
-import { prisma } from '@/lib/db';
+import { staffSessionCache } from '@/lib/cache';
 
 type AdminLogoutResponse = {
   message: string;
@@ -16,15 +16,10 @@ export const POST = withApiHandlerResponse<Record<string, never>>(async (context
   }
 
   try {
-    // Increment tokenVersion to invalidate all existing tokens for this user
-    await prisma.staffUser.update({
-      where: { id: session.staffId },
-      data: {
-        tokenVersion: { increment: 1 },
-      },
-    });
+    // INCR tokenVersion no Redis - invalida todos os tokens existentes
+    const newVersion = await staffSessionCache.incrementTokenVersion(session.staffId);
 
-    logger.info('admin_logout_success', { staffId: session.staffId });
+    logger.info('admin_logout_success', { staffId: session.staffId, newTokenVersion: newVersion });
 
     // Create response with cookie removal header
     const response = NextResponse.json({

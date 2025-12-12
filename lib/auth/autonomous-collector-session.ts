@@ -9,7 +9,7 @@
 
 import { cookies } from 'next/headers';
 import { jwtVerify, errors as joseErrors } from 'jose';
-import { prisma } from '@/lib/db';
+import { collectorSessionCache } from '@/lib/cache';
 
 // Validar JWT_SECRET em produção
 if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
@@ -67,24 +67,25 @@ export async function getAutonomousCollectorSession(): Promise<AutonomousCollect
       tokenVersion: (payload.tokenVersion as number) ?? 0,
     };
 
-    // Validar tokenVersion contra o banco de dados
-    const collector = await prisma.collector.findUnique({
-      where: { id: session.coletorId },
-      select: { tokenVersion: true, status: true },
-    });
+    // Verificar tokenVersion no Redis (fail-closed)
+    const redisTokenVersion = await collectorSessionCache.getTokenVersion(session.coletorId);
 
-    if (!collector) {
-      console.log('[AUTONOMOUS_COLLECTOR_SESSION] Collector not found:', session.coletorId);
+    // Cache miss = sessão não existe → null
+    if (redisTokenVersion === null) {
+      console.log('[AUTONOMOUS_COLLECTOR_SESSION] Session not found in Redis:', session.coletorId);
       return null;
     }
 
-    if (collector.tokenVersion !== session.tokenVersion) {
-      console.log('[AUTONOMOUS_COLLECTOR_SESSION] Token version mismatch. Expected:', collector.tokenVersion, 'Got:', session.tokenVersion);
+    // Mismatch = logout foi feito ou sessão inválida → null
+    if (redisTokenVersion !== session.tokenVersion) {
+      console.log('[AUTONOMOUS_COLLECTOR_SESSION] Token version mismatch. Expected:', redisTokenVersion, 'Got:', session.tokenVersion);
       return null;
     }
 
-    if (collector.status !== 'ACTIVE') {
-      console.log('[AUTONOMOUS_COLLECTOR_SESSION] Collector is not active:', collector.status);
+    // Verificar status na sessão Redis
+    const cachedSession = await collectorSessionCache.get(session.coletorId);
+    if (!cachedSession || cachedSession.status !== 'ACTIVE') {
+      console.log('[AUTONOMOUS_COLLECTOR_SESSION] Collector is not active:', cachedSession?.status);
       return null;
     }
 

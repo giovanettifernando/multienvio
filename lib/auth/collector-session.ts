@@ -7,7 +7,7 @@
  */
 
 import { SignJWT, jwtVerify, errors as joseErrors } from 'jose';
-import { prisma } from '@/lib/db';
+import { pickupPointSessionCache } from '@/lib/cache';
 
 // Validar COLLECTOR_JWT_SECRET em produção
 if (process.env.NODE_ENV === 'production' && !process.env.COLLECTOR_JWT_SECRET) {
@@ -127,7 +127,7 @@ export function getCollectorTokenFromRequest(request: Request): string | null {
 
 /**
  * Obtém a sessão collector a partir de uma Request
- * Valida tokenVersion contra o banco de dados
+ * Valida tokenVersion contra o Redis (fail-closed)
  */
 export async function getCollectorSessionFromRequest(request: Request): Promise<CollectorJWTPayload | null> {
   const token = getCollectorTokenFromRequest(request);
@@ -142,24 +142,25 @@ export async function getCollectorSessionFromRequest(request: Request): Promise<
     return null;
   }
 
-  // Validar tokenVersion contra o banco de dados
-  const point = await prisma.pickupPoint.findUnique({
-    where: { id: jwtPayload.pointId },
-    select: { tokenVersion: true, status: true },
-  });
+  // Verificar tokenVersion no Redis (fail-closed)
+  const redisTokenVersion = await pickupPointSessionCache.getTokenVersion(jwtPayload.pointId);
 
-  if (!point) {
-    console.log('[COLLECTOR_SESSION] Pickup point not found:', jwtPayload.pointId);
+  // Cache miss = sessão não existe → null
+  if (redisTokenVersion === null) {
+    console.log('[COLLECTOR_SESSION] Session not found in Redis:', jwtPayload.pointId);
     return null;
   }
 
-  if (point.tokenVersion !== jwtPayload.tokenVersion) {
-    console.log('[COLLECTOR_SESSION] Token version mismatch. Expected:', point.tokenVersion, 'Got:', jwtPayload.tokenVersion);
+  // Mismatch = logout foi feito ou sessão inválida → null
+  if (redisTokenVersion !== jwtPayload.tokenVersion) {
+    console.log('[COLLECTOR_SESSION] Token version mismatch. Expected:', redisTokenVersion, 'Got:', jwtPayload.tokenVersion);
     return null;
   }
 
-  if (point.status !== 'ACTIVE') {
-    console.log('[COLLECTOR_SESSION] Pickup point is not active:', point.status);
+  // Verificar status na sessão Redis
+  const session = await pickupPointSessionCache.get(jwtPayload.pointId);
+  if (!session || session.status !== 'ACTIVE') {
+    console.log('[COLLECTOR_SESSION] Pickup point is not active:', session?.status);
     return null;
   }
 

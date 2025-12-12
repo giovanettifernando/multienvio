@@ -8,6 +8,7 @@ import { adminSign, createAdminCookieHeader } from '@/lib/auth/admin-session';
 import { logAdminLogin } from '@/lib/audit-admin';
 import { AdminPermission, StaffStatus } from '@prisma/client';
 import { rateLimitByIPStrict, RATE_LIMITS } from '@/lib/rate-limit-redis';
+import { staffSessionCache } from '@/lib/cache';
 
 type AdminLoginResponse = {
   staff: {
@@ -99,6 +100,9 @@ export const POST = withApiHandlerResponse<Record<string, never>>(async (context
       },
     });
 
+    // Obter tokenVersion do Redis (existente ou inicializa com 1)
+    const tokenVersion = await staffSessionCache.getOrInitTokenVersion(staffUser.id);
+
     // Create JWT token
     // SuperAdmin gets all permissions
     const jwtPermissions = staffUser.isSuperAdmin
@@ -111,7 +115,16 @@ export const POST = withApiHandlerResponse<Record<string, never>>(async (context
       role: staffUser.role?.name || 'operator',
       isSuperAdmin: staffUser.isSuperAdmin,
       permissions: jwtPermissions,
-      tokenVersion: staffUser.tokenVersion,
+      tokenVersion,
+    });
+
+    // Salvar sessão no Redis
+    await staffSessionCache.set(staffUser.id, {
+      staffId: staffUser.id,
+      email: staffUser.email,
+      role: staffUser.role?.name || 'operator',
+      status: staffUser.status,
+      tokenVersion,
     });
 
     // Log admin login for audit

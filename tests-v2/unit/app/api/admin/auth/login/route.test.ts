@@ -21,6 +21,7 @@ test.describe('app/api/admin/auth/login', () => {
   let rateLimitModule: any;
   let adminSessionModule: any;
   let auditModule: any;
+  let cacheModule: any;
 
   test.before(async () => {
     // Evita timers pendurados do rate-limit
@@ -33,6 +34,7 @@ test.describe('app/api/admin/auth/login', () => {
     rateLimitModule = await import('../../../../../../../lib/rate-limit.ts');
     adminSessionModule = await import('../../../../../../../lib/auth/admin-session.ts');
     auditModule = await import('../../../../../../../lib/audit-admin.ts');
+    cacheModule = await import('../../../../../../../lib/cache.ts');
     prisma.staffUser = { findUnique: async () => null, update: async () => ({}) } as any;
     ({ POST } = await import('../../../../../../../app/api/admin/auth/login/route.ts'));
   });
@@ -72,7 +74,6 @@ test.describe('app/api/admin/auth/login', () => {
         status: 'BLOCKED',
         isSuperAdmin: false,
         permissions: [],
-        tokenVersion: 0,
         createdAt: new Date(),
         updatedAt: new Date(),
         lastLoginAt: null,
@@ -91,6 +92,9 @@ test.describe('app/api/admin/auth/login', () => {
     test.mock.method(adminSessionModule, 'adminSign', async () => 'token');
     test.mock.method(adminSessionModule, 'createAdminCookieHeader', () => 'admin=token; Path=/');
     test.mock.method(auditModule, 'logAdminLogin', async () => {});
+    // Mock Redis cache for tokenVersion
+    test.mock.method(cacheModule.staffSessionCache, 'getOrInitTokenVersion', async () => 1);
+    test.mock.method(cacheModule.staffSessionCache, 'set', async () => true);
     prisma.staffUser = {
       findUnique: async () => ({
         id: 's1',
@@ -99,7 +103,6 @@ test.describe('app/api/admin/auth/login', () => {
         status: 'ACTIVE',
         isSuperAdmin: false,
         permissions: [],
-        tokenVersion: 1,
         createdAt: new Date(),
         updatedAt: new Date(),
         lastLoginAt: null,

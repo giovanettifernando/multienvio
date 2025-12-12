@@ -11,6 +11,7 @@ import { cookies } from 'next/headers';
 import { rateLimitByIP } from '@/lib/rate-limit-redis';
 import { withApiHandlerResponse } from '@/lib/api/handler';
 import { CollectorLoginSchema } from '@/lib/validation/auth';
+import { collectorSessionCache } from '@/lib/cache';
 
 // Validar JWT_SECRET em produção
 if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
@@ -160,6 +161,9 @@ export const POST = withApiHandlerResponse(async (context) => {
 
     logger.info('collector_login_success', { collectorId: collector.id });
 
+    // Obter tokenVersion do Redis (existente ou inicializa com 1)
+    const tokenVersion = await collectorSessionCache.getOrInitTokenVersion(collector.id);
+
     // Create JWT token with tokenVersion for logout invalidation
     const token = await new SignJWT({
       coletorId: collector.id,
@@ -167,12 +171,21 @@ export const POST = withApiHandlerResponse(async (context) => {
       pfNome: collector.pfNome,
       pjRazaoSocial: collector.pjRazaoSocial,
       status: collector.status,
-      tokenVersion: collector.tokenVersion,
+      tokenVersion,
     })
       .setProtectedHeader({ alg: 'HS256' })
       .setIssuedAt()
       .setExpirationTime('7d')
       .sign(JWT_SECRET);
+
+    // Salvar sessão no Redis
+    await collectorSessionCache.set(collector.id, {
+      collectorId: collector.id,
+      email: collector.pfEmail,
+      name: collector.pfNome || collector.pjRazaoSocial || '',
+      status: collector.status,
+      tokenVersion,
+    });
 
     // Set cookie
     const cookieStore = await cookies();

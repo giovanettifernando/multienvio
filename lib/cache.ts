@@ -341,6 +341,337 @@ export const sessionCache = {
   },
 };
 
+// ============================================================================
+// STAFF USER SESSION CACHE (Admin)
+// ============================================================================
+
+/**
+ * Dados de sessão do StaffUser (admin) armazenados no Redis
+ */
+export type StaffSessionCacheData = {
+  staffId: string;
+  email: string;
+  role: string;
+  status: string;
+  tokenVersion: number;
+};
+
+/**
+ * Cache de sessão do StaffUser (admin)
+ * Mesma estratégia do sessionCache para clientes
+ */
+export const staffSessionCache = {
+  key: (staffId: string) => `staff_session:${staffId}`,
+  tokenVersionKey: (staffId: string) => `staff_session:${staffId}:tokenVersion`,
+
+  async get(staffId: string): Promise<StaffSessionCacheData | null> {
+    return cacheGet<StaffSessionCacheData>(this.key(staffId));
+  },
+
+  async set(staffId: string, data: StaffSessionCacheData): Promise<boolean> {
+    if (!isRedisAvailable()) return false;
+
+    try {
+      const redis = getRedisClient();
+      await Promise.all([
+        redis.setex(this.key(staffId), SESSION_TTL_SECONDS, JSON.stringify(data)),
+        redis.setex(this.tokenVersionKey(staffId), SESSION_TTL_SECONDS, data.tokenVersion.toString()),
+      ]);
+      return true;
+    } catch (error) {
+      openCircuitBreaker();
+      logger.warn({ event: 'staff_session_cache_set_error', staffId, err: error }, 'Failed to set staff session cache');
+      return false;
+    }
+  },
+
+  async getTokenVersion(staffId: string): Promise<number | null> {
+    if (!isRedisAvailable()) return null;
+
+    try {
+      const redis = getRedisClient();
+      const value = await redis.get(this.tokenVersionKey(staffId));
+      if (value === null) return null;
+      return parseInt(value, 10);
+    } catch (error) {
+      openCircuitBreaker();
+      logger.warn({ event: 'staff_session_get_token_version_error', staffId, err: error }, 'Failed to get staff tokenVersion');
+      return null;
+    }
+  },
+
+  async getOrInitTokenVersion(staffId: string): Promise<number> {
+    if (!isRedisAvailable()) return 1;
+
+    try {
+      const redis = getRedisClient();
+      const existing = await redis.get(this.tokenVersionKey(staffId));
+
+      if (existing !== null) {
+        return parseInt(existing, 10);
+      }
+
+      await redis.setex(this.tokenVersionKey(staffId), SESSION_TTL_SECONDS, '1');
+      return 1;
+    } catch (error) {
+      openCircuitBreaker();
+      logger.warn({ event: 'staff_session_init_token_version_error', staffId, err: error }, 'Failed to init staff tokenVersion');
+      return 1;
+    }
+  },
+
+  async incrementTokenVersion(staffId: string): Promise<number | null> {
+    if (!isRedisAvailable()) return null;
+
+    try {
+      const redis = getRedisClient();
+      const newVersion = await redis.incr(this.tokenVersionKey(staffId));
+      await redis.expire(this.tokenVersionKey(staffId), SESSION_TTL_SECONDS);
+      await redis.del(this.key(staffId));
+      return newVersion;
+    } catch (error) {
+      openCircuitBreaker();
+      logger.warn({ event: 'staff_session_incr_error', staffId, err: error }, 'Failed to increment staff tokenVersion');
+      return null;
+    }
+  },
+
+  async invalidate(staffId: string): Promise<boolean> {
+    if (!isRedisAvailable()) return false;
+
+    try {
+      const redis = getRedisClient();
+      await redis.del(this.key(staffId), this.tokenVersionKey(staffId));
+      return true;
+    } catch (error) {
+      openCircuitBreaker();
+      return false;
+    }
+  },
+};
+
+// ============================================================================
+// COLLECTOR SESSION CACHE (Coletor Autônomo)
+// ============================================================================
+
+/**
+ * Dados de sessão do Collector (coletor autônomo) armazenados no Redis
+ */
+export type CollectorSessionCacheData = {
+  collectorId: string;
+  email: string | null;
+  name: string;
+  status: string;
+  tokenVersion: number;
+};
+
+/**
+ * Cache de sessão do Collector (coletor autônomo)
+ * Mesma estratégia do sessionCache para clientes
+ */
+export const collectorSessionCache = {
+  key: (collectorId: string) => `collector_session:${collectorId}`,
+  tokenVersionKey: (collectorId: string) => `collector_session:${collectorId}:tokenVersion`,
+
+  async get(collectorId: string): Promise<CollectorSessionCacheData | null> {
+    return cacheGet<CollectorSessionCacheData>(this.key(collectorId));
+  },
+
+  async set(collectorId: string, data: CollectorSessionCacheData): Promise<boolean> {
+    if (!isRedisAvailable()) return false;
+
+    try {
+      const redis = getRedisClient();
+      await Promise.all([
+        redis.setex(this.key(collectorId), SESSION_TTL_SECONDS, JSON.stringify(data)),
+        redis.setex(this.tokenVersionKey(collectorId), SESSION_TTL_SECONDS, data.tokenVersion.toString()),
+      ]);
+      return true;
+    } catch (error) {
+      openCircuitBreaker();
+      logger.warn({ event: 'collector_session_cache_set_error', collectorId, err: error }, 'Failed to set collector session cache');
+      return false;
+    }
+  },
+
+  async getTokenVersion(collectorId: string): Promise<number | null> {
+    if (!isRedisAvailable()) return null;
+
+    try {
+      const redis = getRedisClient();
+      const value = await redis.get(this.tokenVersionKey(collectorId));
+      if (value === null) return null;
+      return parseInt(value, 10);
+    } catch (error) {
+      openCircuitBreaker();
+      logger.warn({ event: 'collector_session_get_token_version_error', collectorId, err: error }, 'Failed to get collector tokenVersion');
+      return null;
+    }
+  },
+
+  async getOrInitTokenVersion(collectorId: string): Promise<number> {
+    if (!isRedisAvailable()) return 1;
+
+    try {
+      const redis = getRedisClient();
+      const existing = await redis.get(this.tokenVersionKey(collectorId));
+
+      if (existing !== null) {
+        return parseInt(existing, 10);
+      }
+
+      await redis.setex(this.tokenVersionKey(collectorId), SESSION_TTL_SECONDS, '1');
+      return 1;
+    } catch (error) {
+      openCircuitBreaker();
+      logger.warn({ event: 'collector_session_init_token_version_error', collectorId, err: error }, 'Failed to init collector tokenVersion');
+      return 1;
+    }
+  },
+
+  async incrementTokenVersion(collectorId: string): Promise<number | null> {
+    if (!isRedisAvailable()) return null;
+
+    try {
+      const redis = getRedisClient();
+      const newVersion = await redis.incr(this.tokenVersionKey(collectorId));
+      await redis.expire(this.tokenVersionKey(collectorId), SESSION_TTL_SECONDS);
+      await redis.del(this.key(collectorId));
+      return newVersion;
+    } catch (error) {
+      openCircuitBreaker();
+      logger.warn({ event: 'collector_session_incr_error', collectorId, err: error }, 'Failed to increment collector tokenVersion');
+      return null;
+    }
+  },
+
+  async invalidate(collectorId: string): Promise<boolean> {
+    if (!isRedisAvailable()) return false;
+
+    try {
+      const redis = getRedisClient();
+      await redis.del(this.key(collectorId), this.tokenVersionKey(collectorId));
+      return true;
+    } catch (error) {
+      openCircuitBreaker();
+      return false;
+    }
+  },
+};
+
+// ============================================================================
+// PICKUP POINT SESSION CACHE (Ponto de Coleta)
+// ============================================================================
+
+/**
+ * Dados de sessão do PickupPoint (ponto de coleta) armazenados no Redis
+ */
+export type PickupPointSessionCacheData = {
+  pointId: string;
+  cnpj: string;
+  nomeFantasia: string;
+  status: string;
+  tokenVersion: number;
+};
+
+/**
+ * Cache de sessão do PickupPoint (ponto de coleta)
+ * Mesma estratégia do sessionCache para clientes
+ */
+export const pickupPointSessionCache = {
+  key: (pointId: string) => `pickup_point_session:${pointId}`,
+  tokenVersionKey: (pointId: string) => `pickup_point_session:${pointId}:tokenVersion`,
+
+  async get(pointId: string): Promise<PickupPointSessionCacheData | null> {
+    return cacheGet<PickupPointSessionCacheData>(this.key(pointId));
+  },
+
+  async set(pointId: string, data: PickupPointSessionCacheData): Promise<boolean> {
+    if (!isRedisAvailable()) return false;
+
+    try {
+      const redis = getRedisClient();
+      await Promise.all([
+        redis.setex(this.key(pointId), SESSION_TTL_SECONDS, JSON.stringify(data)),
+        redis.setex(this.tokenVersionKey(pointId), SESSION_TTL_SECONDS, data.tokenVersion.toString()),
+      ]);
+      return true;
+    } catch (error) {
+      openCircuitBreaker();
+      logger.warn({ event: 'pickup_point_session_cache_set_error', pointId, err: error }, 'Failed to set pickup point session cache');
+      return false;
+    }
+  },
+
+  async getTokenVersion(pointId: string): Promise<number | null> {
+    if (!isRedisAvailable()) return null;
+
+    try {
+      const redis = getRedisClient();
+      const value = await redis.get(this.tokenVersionKey(pointId));
+      if (value === null) return null;
+      return parseInt(value, 10);
+    } catch (error) {
+      openCircuitBreaker();
+      logger.warn({ event: 'pickup_point_session_get_token_version_error', pointId, err: error }, 'Failed to get pickup point tokenVersion');
+      return null;
+    }
+  },
+
+  async getOrInitTokenVersion(pointId: string): Promise<number> {
+    if (!isRedisAvailable()) return 1;
+
+    try {
+      const redis = getRedisClient();
+      const existing = await redis.get(this.tokenVersionKey(pointId));
+
+      if (existing !== null) {
+        return parseInt(existing, 10);
+      }
+
+      await redis.setex(this.tokenVersionKey(pointId), SESSION_TTL_SECONDS, '1');
+      return 1;
+    } catch (error) {
+      openCircuitBreaker();
+      logger.warn({ event: 'pickup_point_session_init_token_version_error', pointId, err: error }, 'Failed to init pickup point tokenVersion');
+      return 1;
+    }
+  },
+
+  async incrementTokenVersion(pointId: string): Promise<number | null> {
+    if (!isRedisAvailable()) return null;
+
+    try {
+      const redis = getRedisClient();
+      const newVersion = await redis.incr(this.tokenVersionKey(pointId));
+      await redis.expire(this.tokenVersionKey(pointId), SESSION_TTL_SECONDS);
+      await redis.del(this.key(pointId));
+      return newVersion;
+    } catch (error) {
+      openCircuitBreaker();
+      logger.warn({ event: 'pickup_point_session_incr_error', pointId, err: error }, 'Failed to increment pickup point tokenVersion');
+      return null;
+    }
+  },
+
+  async invalidate(pointId: string): Promise<boolean> {
+    if (!isRedisAvailable()) return false;
+
+    try {
+      const redis = getRedisClient();
+      await redis.del(this.key(pointId), this.tokenVersionKey(pointId));
+      return true;
+    } catch (error) {
+      openCircuitBreaker();
+      return false;
+    }
+  },
+};
+
+// ============================================================================
+// ROLE CACHE
+// ============================================================================
+
 /**
  * Cache de roles (raramente mudam)
  */

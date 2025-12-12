@@ -5,6 +5,7 @@ import { collectorSign, createCollectorCookieHeader } from '@/lib/auth/collector
 import bcrypt from 'bcrypt';
 import { withApiHandlerResponse } from '@/lib/api/handler';
 import { rateLimitByIP, RATE_LIMITS } from '@/lib/rate-limit-redis';
+import { pickupPointSessionCache } from '@/lib/cache';
 
 const loginSchema = z.object({
   cnpj: z.string().min(14).max(14), // CNPJ apenas números
@@ -47,7 +48,6 @@ export const POST = withApiHandlerResponse(async (context) => {
         cnpj: true,
         nomeFantasia: true,
         passwordHash: true,
-        tokenVersion: true,
       },
     });
 
@@ -87,12 +87,24 @@ export const POST = withApiHandlerResponse(async (context) => {
       );
     }
 
+    // Obter tokenVersion do Redis (existente ou inicializa com 1)
+    const tokenVersion = await pickupPointSessionCache.getOrInitTokenVersion(point.id);
+
     // Gerar JWT token com tokenVersion para invalidação via logout
     const token = await collectorSign({
       pointId: point.id,
       cnpj: point.cnpj,
       nomeFantasia: point.nomeFantasia,
-      tokenVersion: point.tokenVersion,
+      tokenVersion,
+    });
+
+    // Salvar sessão no Redis
+    await pickupPointSessionCache.set(point.id, {
+      pointId: point.id,
+      cnpj: point.cnpj,
+      nomeFantasia: point.nomeFantasia,
+      status: point.status,
+      tokenVersion,
     });
 
     logger.info('collector_login_success', { pointId: point.id });

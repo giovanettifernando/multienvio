@@ -13,8 +13,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { jwtVerify, errors as joseErrors } from 'jose';
 import { getRouteProtection } from './lib/auth/route-protection';
-import { prisma } from './lib/db';
-import { sessionCache } from './lib/cache';
+import { sessionCache, staffSessionCache, collectorSessionCache, pickupPointSessionCache } from './lib/cache';
 
 // Validar JWT secrets em produção
 if (process.env.NODE_ENV === 'production') {
@@ -51,20 +50,8 @@ const INACTIVITY_LIMIT_MS = SESSION_IDLE_MINUTES * 60 * 1000;
 // Tipos de erro de verificação JWT
 type JWTVerifyResult = { payload: AdminJWTPayload | JWTPayload | null; error: 'expired' | 'invalid' | null };
 
-// Cache de tokenVersion (30 segundos) para reduzir DB lookups
-interface TokenVersionCache {
-  tokenVersion: number;
-  status: string;
-  cachedAt: number;
-}
-// Caches separados por tipo de usuário (User agora usa Redis via sessionCache)
-const staffTokenVersionCache = new Map<string, TokenVersionCache>();
-const collectorTokenVersionCache = new Map<string, TokenVersionCache>();
-const pickupPointTokenVersionCache = new Map<string, TokenVersionCache>();
-const TOKEN_VERSION_CACHE_TTL = 30 * 1000; // 30 segundos
-
-// Alias para compatibilidade (admin usa o mesmo cache de antes)
-const tokenVersionCache = staffTokenVersionCache;
+// All user types (User, StaffUser, Collector, PickupPoint) now use Redis session caches
+// No in-memory caches needed - Redis is the source of truth
 
 // Collector JWT Secret (for pickup points) - OBRIGATÓRIO, sem fallback
 const COLLECTOR_JWT_SECRET_RAW = process.env.COLLECTOR_JWT_SECRET;
@@ -281,109 +268,81 @@ async function validateUserTokenVersion(
 }
 
 /**
- * Validate autonomous collector tokenVersion and status against database
+ * Validate autonomous collector tokenVersion and status against Redis (fail-closed)
  */
 async function validateCollectorTokenVersion(
   collectorId: string,
   tokenVersion: number
 ): Promise<{ valid: boolean; reason?: string }> {
-  const now = Date.now();
-  const cached = collectorTokenVersionCache.get(collectorId);
+  try {
+    // Verificar tokenVersion no Redis (fail-closed)
+    const redisTokenVersion = await collectorSessionCache.getTokenVersion(collectorId);
 
-  let collector: { tokenVersion: number; status: string } | null = null;
-
-  if (cached && (now - cached.cachedAt) < TOKEN_VERSION_CACHE_TTL) {
-    collector = { tokenVersion: cached.tokenVersion, status: cached.status };
-  } else {
-    try {
-      const dbCollector = await prisma.collector.findUnique({
-        where: { id: collectorId },
-        select: { tokenVersion: true, status: true },
-      });
-
-      if (dbCollector) {
-        collector = dbCollector;
-        collectorTokenVersionCache.set(collectorId, {
-          tokenVersion: dbCollector.tokenVersion,
-          status: dbCollector.status,
-          cachedAt: now,
-        });
-      }
-    } catch (error) {
-      console.error('[PROXY] Database error validating collector tokenVersion:', error);
-      return { valid: false, reason: 'database_error' };
+    // Cache miss = sessão não existe → 401
+    if (redisTokenVersion === null) {
+      return { valid: false, reason: 'session_not_found' };
     }
-  }
 
-  if (!collector) {
-    collectorTokenVersionCache.delete(collectorId);
-    return { valid: false, reason: 'collector_not_found' };
-  }
+    // Mismatch = logout foi feito ou sessão inválida → 401
+    if (redisTokenVersion !== tokenVersion) {
+      return { valid: false, reason: 'token_revoked' };
+    }
 
-  if (collector.tokenVersion !== tokenVersion) {
-    collectorTokenVersionCache.delete(collectorId);
-    return { valid: false, reason: 'token_revoked' };
-  }
+    // Verificar status na sessão Redis
+    const session = await collectorSessionCache.get(collectorId);
+    if (!session) {
+      return { valid: false, reason: 'session_not_found' };
+    }
 
-  if (collector.status !== 'ACTIVE') {
-    collectorTokenVersionCache.delete(collectorId);
-    return { valid: false, reason: 'collector_blocked' };
-  }
+    if (session.status !== 'ACTIVE') {
+      return { valid: false, reason: 'collector_blocked' };
+    }
 
-  return { valid: true };
+    return { valid: true };
+  } catch (error) {
+    console.error('[PROXY] Redis error validating collector tokenVersion:', error);
+    // On Redis error, reject for security (fail-closed)
+    return { valid: false, reason: 'redis_error' };
+  }
 }
 
 /**
- * Validate pickup point tokenVersion and status against database
+ * Validate pickup point tokenVersion and status against Redis (fail-closed)
  */
 async function validatePickupPointTokenVersion(
   pointId: string,
   tokenVersion: number
 ): Promise<{ valid: boolean; reason?: string }> {
-  const now = Date.now();
-  const cached = pickupPointTokenVersionCache.get(pointId);
+  try {
+    // Verificar tokenVersion no Redis (fail-closed)
+    const redisTokenVersion = await pickupPointSessionCache.getTokenVersion(pointId);
 
-  let point: { tokenVersion: number; status: string } | null = null;
-
-  if (cached && (now - cached.cachedAt) < TOKEN_VERSION_CACHE_TTL) {
-    point = { tokenVersion: cached.tokenVersion, status: cached.status };
-  } else {
-    try {
-      const dbPoint = await prisma.pickupPoint.findUnique({
-        where: { id: pointId },
-        select: { tokenVersion: true, status: true },
-      });
-
-      if (dbPoint) {
-        point = dbPoint;
-        pickupPointTokenVersionCache.set(pointId, {
-          tokenVersion: dbPoint.tokenVersion,
-          status: dbPoint.status,
-          cachedAt: now,
-        });
-      }
-    } catch (error) {
-      console.error('[PROXY] Database error validating pickup point tokenVersion:', error);
-      return { valid: false, reason: 'database_error' };
+    // Cache miss = sessão não existe → 401
+    if (redisTokenVersion === null) {
+      return { valid: false, reason: 'session_not_found' };
     }
-  }
 
-  if (!point) {
-    pickupPointTokenVersionCache.delete(pointId);
-    return { valid: false, reason: 'point_not_found' };
-  }
+    // Mismatch = logout foi feito ou sessão inválida → 401
+    if (redisTokenVersion !== tokenVersion) {
+      return { valid: false, reason: 'token_revoked' };
+    }
 
-  if (point.tokenVersion !== tokenVersion) {
-    pickupPointTokenVersionCache.delete(pointId);
-    return { valid: false, reason: 'token_revoked' };
-  }
+    // Verificar status na sessão Redis
+    const session = await pickupPointSessionCache.get(pointId);
+    if (!session) {
+      return { valid: false, reason: 'session_not_found' };
+    }
 
-  if (point.status !== 'ACTIVE') {
-    pickupPointTokenVersionCache.delete(pointId);
-    return { valid: false, reason: 'point_blocked' };
-  }
+    if (session.status !== 'ACTIVE') {
+      return { valid: false, reason: 'point_blocked' };
+    }
 
-  return { valid: true };
+    return { valid: true };
+  } catch (error) {
+    console.error('[PROXY] Redis error validating pickup point tokenVersion:', error);
+    // On Redis error, reject for security (fail-closed)
+    return { valid: false, reason: 'redis_error' };
+  }
 }
 
 /**
@@ -484,51 +443,37 @@ export async function proxy(request: NextRequest) {
 
     const adminPayload = adminResult.payload!;
 
-    // Validate tokenVersion against database (with cache)
+    // Validate tokenVersion against Redis (fail-closed)
     try {
       const staffId = adminPayload.staffId;
-      const now = Date.now();
 
-      // Verificar cache primeiro
-      const cached = tokenVersionCache.get(staffId);
-      let staffUser: { tokenVersion: number; status: string } | null = null;
+      // Verificar tokenVersion no Redis (fail-closed)
+      const redisTokenVersion = await staffSessionCache.getTokenVersion(staffId);
 
-      if (cached && (now - cached.cachedAt) < TOKEN_VERSION_CACHE_TTL) {
-        // Usar cache
-        staffUser = { tokenVersion: cached.tokenVersion, status: cached.status };
-      } else {
-        // Buscar no banco de dados
-        const dbStaffUser = await prisma.staffUser.findUnique({
-          where: { id: staffId },
-          select: { tokenVersion: true, status: true },
-        });
-
-        if (dbStaffUser) {
-          staffUser = dbStaffUser;
-          // Atualizar cache
-          tokenVersionCache.set(staffId, {
-            tokenVersion: dbStaffUser.tokenVersion,
-            status: dbStaffUser.status,
-            cachedAt: now,
-          });
-        }
+      // Cache miss = sessão não existe → redirect to login
+      if (redisTokenVersion === null) {
+        const loginUrl = new URL('/admin/login', request.url);
+        loginUrl.searchParams.set('next', pathname);
+        return NextResponse.redirect(loginUrl);
       }
 
-      // If user not found, tokenVersion mismatch, or user is not active, redirect to login
-      if (
-        !staffUser ||
-        staffUser.tokenVersion !== adminPayload.tokenVersion ||
-        staffUser.status !== 'ACTIVE'
-      ) {
-        // Invalidar cache em caso de erro de autenticação
-        tokenVersionCache.delete(staffId);
+      // Mismatch = logout foi feito ou sessão inválida → redirect to login
+      if (redisTokenVersion !== adminPayload.tokenVersion) {
+        const loginUrl = new URL('/admin/login', request.url);
+        loginUrl.searchParams.set('next', pathname);
+        return NextResponse.redirect(loginUrl);
+      }
+
+      // Verificar status na sessão Redis
+      const session = await staffSessionCache.get(staffId);
+      if (!session || session.status !== 'ACTIVE') {
         const loginUrl = new URL('/admin/login', request.url);
         loginUrl.searchParams.set('next', pathname);
         return NextResponse.redirect(loginUrl);
       }
     } catch (error) {
-      console.error('[PROXY] Database error validating tokenVersion:', error);
-      // On database error, redirect to login for security
+      console.error('[PROXY] Redis error validating staff tokenVersion:', error);
+      // On Redis error, redirect to login for security (fail-closed)
       const loginUrl = new URL('/admin/login', request.url);
       loginUrl.searchParams.set('next', pathname);
       return NextResponse.redirect(loginUrl);

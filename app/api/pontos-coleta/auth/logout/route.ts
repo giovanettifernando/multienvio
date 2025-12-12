@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/db';
 import { withApiHandlerResponse } from '@/lib/api/handler';
 import {
   createCollectorCookieRemovalHeader,
   getCollectorTokenFromRequest,
   collectorVerifySimple,
 } from '@/lib/auth/collector-session';
+import { pickupPointSessionCache } from '@/lib/cache';
 
 type LogoutResponse = {
   message: string;
@@ -20,12 +20,9 @@ export const POST = withApiHandlerResponse(async (context) => {
     if (token) {
       const payload = await collectorVerifySimple(token);
       if (payload?.pointId) {
-        // Incrementar tokenVersion para invalidar todos os tokens existentes
-        await prisma.pickupPoint.update({
-          where: { id: payload.pointId },
-          data: { tokenVersion: { increment: 1 } },
-        });
-        logger.info('collector_logout_success', { pointId: payload.pointId });
+        // INCR tokenVersion no Redis - invalida todos os tokens existentes
+        const newVersion = await pickupPointSessionCache.incrementTokenVersion(payload.pointId);
+        logger.info('collector_logout_success', { pointId: payload.pointId, newTokenVersion: newVersion });
       }
     } else {
       logger.info('collector_logout_no_session');

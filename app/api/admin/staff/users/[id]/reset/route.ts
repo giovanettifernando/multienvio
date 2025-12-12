@@ -7,6 +7,7 @@ import { prisma } from '@/lib/db';
 import { AdminPermission } from '@prisma/client';
 import { logPasswordReset } from '@/lib/audit-admin';
 import { rateLimitByUser, RATE_LIMITS } from '@/lib/rate-limit-redis';
+import { staffSessionCache } from '@/lib/cache';
 
 type PasswordResetResponse = {
   message: string;
@@ -49,9 +50,11 @@ export const POST = withApiHandler<PasswordResetResponse, { id: string }>(async 
     where: { id },
     data: {
       passwordHash,
-      tokenVersion: { increment: 1 }, // Invalidate all existing sessions
     },
   });
+
+  // Invalidate all existing sessions via Redis
+  await staffSessionCache.incrementTokenVersion(id);
 
   // Audit log
   await logPasswordReset(session.staffId, id, 'StaffUser');

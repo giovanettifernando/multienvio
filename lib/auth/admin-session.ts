@@ -8,7 +8,7 @@
 
 import { SignJWT, jwtVerify, errors as joseErrors } from 'jose';
 import type { AdminPermission } from '@prisma/client';
-import { prisma } from '@/lib/db';
+import { staffSessionCache } from '@/lib/cache';
 
 // Validar ADMIN_JWT_SECRET em produção
 if (process.env.NODE_ENV === 'production' && !process.env.ADMIN_JWT_SECRET) {
@@ -146,7 +146,7 @@ export function getAdminTokenFromRequest(request: Request): string | null {
 
 /**
  * Obtém a sessão admin a partir de uma Request
- * Valida o tokenVersion contra o banco de dados
+ * Valida o tokenVersion contra o Redis (fail-closed)
  */
 export async function getAdminSessionFromRequest(request: Request): Promise<AdminJWTPayload | null> {
   const token = getAdminTokenFromRequest(request);
@@ -155,21 +155,22 @@ export async function getAdminSessionFromRequest(request: Request): Promise<Admi
   const jwtPayload = await adminVerifySimple(token);
   if (!jwtPayload) return null;
 
-  // Validate tokenVersion against database
-  const staffUser = await prisma.staffUser.findUnique({
-    where: { id: jwtPayload.staffId },
-    select: { tokenVersion: true, status: true },
-  });
+  // Verificar tokenVersion no Redis (fail-closed)
+  const redisTokenVersion = await staffSessionCache.getTokenVersion(jwtPayload.staffId);
 
-  if (!staffUser) {
+  // Cache miss = sessão não existe → null
+  if (redisTokenVersion === null) {
     return null;
   }
 
-  if (staffUser.tokenVersion !== jwtPayload.tokenVersion) {
+  // Mismatch = logout foi feito ou sessão inválida → null
+  if (redisTokenVersion !== jwtPayload.tokenVersion) {
     return null;
   }
 
-  if (staffUser.status !== 'ACTIVE') {
+  // Verificar status na sessão Redis
+  const session = await staffSessionCache.get(jwtPayload.staffId);
+  if (!session || session.status !== 'ACTIVE') {
     return null;
   }
 

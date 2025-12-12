@@ -4,25 +4,45 @@ import Redis from 'ioredis';
 const REDIS_URL = process.env.REDIS_URL || 'redis://127.0.0.1:6379';
 const REDIS_MAX_RETRIES = 3;
 const REDIS_RETRY_DELAY = 100; // ms
-
-// Singleton do cliente Redis
-let redisClient: Redis | null = null;
-let isConnected = false;
-let connectionError: Error | null = null;
-let connectionPromise: Promise<void> | null = null;
-
-// Circuit breaker state
-let circuitOpen = false;
-let circuitOpenTime = 0;
 const CIRCUIT_RESET_MS = 30000; // 30 segundos para resetar circuit breaker
+
+// Use globalThis to persist state across hot reloads in development
+// This prevents module-level state from being reset when Next.js recompiles
+type RedisGlobalState = {
+  redisClient: Redis | null;
+  isConnected: boolean;
+  connectionError: Error | null;
+  connectionPromise: Promise<void> | null;
+  circuitOpen: boolean;
+  circuitOpenTime: number;
+};
+
+const globalForRedis = globalThis as typeof globalThis & {
+  __redisState?: RedisGlobalState;
+};
+
+// Initialize global state if not exists
+if (!globalForRedis.__redisState) {
+  globalForRedis.__redisState = {
+    redisClient: null,
+    isConnected: false,
+    connectionError: null,
+    connectionPromise: null,
+    circuitOpen: false,
+    circuitOpenTime: 0,
+  };
+}
+
+// Use references to global state
+const state = globalForRedis.__redisState;
 
 /**
  * Retorna o cliente Redis singleton
  * Cria uma nova conexao se nao existir
  */
 export function getRedisClient(): Redis {
-  if (!redisClient) {
-    redisClient = new Redis(REDIS_URL, {
+  if (!state.redisClient) {
+    state.redisClient = new Redis(REDIS_URL, {
       maxRetriesPerRequest: REDIS_MAX_RETRIES,
       retryStrategy(times) {
         if (times > REDIS_MAX_RETRIES) {
@@ -35,58 +55,58 @@ export function getRedisClient(): Redis {
     });
 
     // Criar promise que resolve quando conectar ou rejeita após timeout
-    connectionPromise = new Promise<void>((resolve) => {
+    state.connectionPromise = new Promise<void>((resolve) => {
       const timeout = setTimeout(() => {
         // Timeout de 2 segundos para conexão inicial
-        if (!isConnected) {
+        if (!state.isConnected) {
           console.warn('[Redis] Timeout na conexão inicial');
         }
         resolve();
       }, 2000);
 
-      redisClient!.once('ready', () => {
+      state.redisClient!.once('ready', () => {
         clearTimeout(timeout);
-        isConnected = true;
-        connectionError = null;
-        circuitOpen = false;
+        state.isConnected = true;
+        state.connectionError = null;
+        state.circuitOpen = false;
         if (process.env.NODE_ENV !== 'test') {
           console.log('[Redis] Conectado com sucesso');
         }
         resolve();
       });
 
-      redisClient!.once('error', () => {
+      state.redisClient!.once('error', () => {
         clearTimeout(timeout);
         resolve(); // Resolve mesmo com erro para não bloquear
       });
     });
 
-    redisClient.on('connect', () => {
-      isConnected = true;
-      connectionError = null;
-      circuitOpen = false;
+    state.redisClient.on('connect', () => {
+      state.isConnected = true;
+      state.connectionError = null;
+      state.circuitOpen = false;
     });
 
-    redisClient.on('error', (err) => {
-      connectionError = err;
-      isConnected = false;
+    state.redisClient.on('error', (err) => {
+      state.connectionError = err;
+      state.isConnected = false;
       if (process.env.NODE_ENV !== 'test') {
         console.error('[Redis] Erro de conexao:', err.message);
       }
     });
 
-    redisClient.on('close', () => {
-      isConnected = false;
+    state.redisClient.on('close', () => {
+      state.isConnected = false;
     });
 
-    redisClient.on('reconnecting', () => {
+    state.redisClient.on('reconnecting', () => {
       if (process.env.NODE_ENV !== 'test') {
         console.log('[Redis] Reconectando...');
       }
     });
   }
 
-  return redisClient;
+  return state.redisClient;
 }
 
 /**
@@ -95,10 +115,10 @@ export function getRedisClient(): Redis {
  */
 export async function waitForRedisConnection(): Promise<boolean> {
   getRedisClient(); // Garante que o cliente foi criado
-  if (connectionPromise) {
-    await connectionPromise;
+  if (state.connectionPromise) {
+    await state.connectionPromise;
   }
-  return isConnected;
+  return state.isConnected;
 }
 
 /**
@@ -106,23 +126,23 @@ export async function waitForRedisConnection(): Promise<boolean> {
  */
 export function isRedisAvailable(): boolean {
   // Se circuit breaker esta aberto, verifica se deve resetar
-  if (circuitOpen) {
-    if (Date.now() - circuitOpenTime > CIRCUIT_RESET_MS) {
-      circuitOpen = false;
+  if (state.circuitOpen) {
+    if (Date.now() - state.circuitOpenTime > CIRCUIT_RESET_MS) {
+      state.circuitOpen = false;
     } else {
       return false;
     }
   }
 
-  return isConnected && !connectionError;
+  return state.isConnected && !state.connectionError;
 }
 
 /**
  * Abre o circuit breaker (chamado quando Redis falha)
  */
 export function openCircuitBreaker(): void {
-  circuitOpen = true;
-  circuitOpenTime = Date.now();
+  state.circuitOpen = true;
+  state.circuitOpenTime = Date.now();
 }
 
 /**
@@ -153,11 +173,11 @@ export async function safeRedisCommand<T>(
  * Fecha a conexao Redis (para testes e shutdown)
  */
 export async function closeRedis(): Promise<void> {
-  if (redisClient) {
-    await redisClient.quit();
-    redisClient = null;
-    isConnected = false;
-    connectionError = null;
+  if (state.redisClient) {
+    await state.redisClient.quit();
+    state.redisClient = null;
+    state.isConnected = false;
+    state.connectionError = null;
   }
 }
 
@@ -172,7 +192,7 @@ export async function redisHealthCheck(): Promise<{
   if (!isRedisAvailable()) {
     return {
       status: 'unhealthy',
-      error: connectionError?.message || 'Redis nao conectado',
+      error: state.connectionError?.message || 'Redis nao conectado',
     };
   }
 
