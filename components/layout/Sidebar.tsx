@@ -8,9 +8,11 @@ import Flex from 'antd/es/flex';
 import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
+  LockOutlined,
 } from '@ant-design/icons';
 import { sidebarItems } from './sidebar-items';
 import { UserPanel } from './UserPanel';
+import { useAddresses } from '@/hooks/useAccount';
 import type { MenuProps } from 'antd';
 import styles from './Sidebar.module.css';
 
@@ -43,14 +45,44 @@ export function Sidebar({ collapsed, onCollapse }: SidebarProps) {
   const pathname = usePathname();
   const selectedKey = useMemo(() => keyFromPath(pathname || '/'), [pathname]);
 
+  // Verificar se usuário tem endereços cadastrados
+  const addressesQuery = useAddresses();
+  const hasNoAddresses = !addressesQuery.isLoading && (addressesQuery.data?.length ?? 0) === 0;
+
+  // Handler para interceptar navegação em itens bloqueados
+  const handleMenuClick = (key: string, href: string) => {
+    // Bloquear "Cotar envio" se não tiver endereços
+    if (key === 'quote' && hasNoAddresses) {
+      router.push('/minha-conta?showOnboarding=true#addresses');
+      return;
+    }
+    router.push(href);
+  };
+
   // Build menu items with proper icon support for collapsed state
   const menuItems: MenuItem[] = sidebarItems.map((item) => {
     const IconComponent = item.icon;
+    const isQuoteLocked = item.key === 'quote' && hasNoAddresses;
+
     return {
       key: item.key,
-      icon: <IconComponent />,
+      icon: isQuoteLocked ? (
+        <span style={{ position: 'relative' }}>
+          <IconComponent />
+          <LockOutlined style={{
+            position: 'absolute',
+            right: -8,
+            top: -4,
+            fontSize: 10,
+            color: 'var(--color-warning)',
+          }} />
+        </span>
+      ) : (
+        <IconComponent />
+      ),
       label: item.label,
-      onClick: () => router.push(item.href),
+      onClick: () => handleMenuClick(item.key, item.href),
+      style: isQuoteLocked ? { opacity: 0.7 } : undefined,
     };
   });
 

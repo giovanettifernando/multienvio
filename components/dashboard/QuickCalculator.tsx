@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
 import { Card, Form, Typography, Space, Flex, Row, Col } from 'antd';
 import { CalculatorOutlined, ArrowRightOutlined } from '@ant-design/icons';
 import { useRouter } from 'next/navigation';
@@ -15,6 +15,18 @@ import { ELTag } from '@/components/ui/ELTag';
 import type { QuoteResultItem, QuoteCalculateResponse } from '@/types/quote';
 
 const { Text } = Typography;
+
+// Máscara de CEP: 00000-000
+function maskCep(v: string) {
+  const d = (v || '').replace(/\D/g, '').slice(0, 8);
+  return d.replace(/(\d{5})(\d{0,3})/, (_, a, b) => (b ? `${a}-${b}` : a));
+}
+
+// Validação de CEP: deve ter exatamente 8 dígitos
+function isValidCep(cep: string): boolean {
+  const digits = (cep || '').replace(/\D/g, '');
+  return digits.length === 8;
+}
 
 interface QuoteResult {
   carrier: string;
@@ -108,7 +120,12 @@ export function QuickCalculator() {
 
   const handleGoToQuote = () => {
     quoteMutation.reset();
-    router.push('/cotacoes');
+    // Aplicar mesma regra do menu: bloquear se não tiver endereços
+    if (hasNoAddresses) {
+      router.push('/minha-conta?showOnboarding=true#addresses');
+    } else {
+      router.push('/cotacoes');
+    }
   };
 
   return (
@@ -127,8 +144,8 @@ export function QuickCalculator() {
       >
         {hasNoAddresses ? (
           <ELAlert
-            variant="warning"
-            title="Nenhum endereço cadastrado"
+            variant="info"
+            title="Cadastre endereços para realizar cotações"
             description={
               <ELButton
                 variant="link"
@@ -154,18 +171,37 @@ export function QuickCalculator() {
               <Form.Item
                 label={<Text style={{ fontSize: '12px' }}>CEP Origem</Text>}
                 name="originCep"
-                rules={[{ required: true, message: 'Selecione o endereço' }]}
+                rules={[
+                  { required: true, message: hasNoAddresses ? 'Informe o CEP' : 'Selecione o endereço' },
+                  ...(hasNoAddresses ? [{
+                    validator: (_: unknown, value: string) => {
+                      if (!value || isValidCep(value)) return Promise.resolve();
+                      return Promise.reject(new Error('CEP inválido'));
+                    }
+                  }] : [])
+                ]}
                 style={{ marginBottom: 0 }}
               >
-                <ELSelect
-                  placeholder="Selecione o endereço"
-                  options={addressOptions}
-                  loading={addressesQuery.isLoading}
-                  disabled={hasNoAddresses}
-                  size="small"
-                  showSearch
-                  optionFilterProp="label"
-                />
+                {hasNoAddresses ? (
+                  <ELInput
+                    placeholder="00000-000"
+                    size="small"
+                    maxLength={9}
+                    onChange={(e) => {
+                      const masked = maskCep(e.target.value);
+                      form.setFieldsValue({ originCep: masked });
+                    }}
+                  />
+                ) : (
+                  <ELSelect
+                    placeholder="Selecione o endereço"
+                    options={addressOptions}
+                    loading={addressesQuery.isLoading}
+                    size="small"
+                    showSearch
+                    optionFilterProp="label"
+                  />
+                )}
               </Form.Item>
             </Col>
             <Col xs={24} sm={12}>
@@ -224,7 +260,6 @@ export function QuickCalculator() {
             variant="primary"
             htmlType="submit"
             loading={quoteMutation.isPending}
-            disabled={hasNoAddresses}
             icon={<CalculatorOutlined />}
             block
             size="small"
