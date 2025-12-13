@@ -28,7 +28,7 @@ export default function EmailConfigForm() {
   const loadConfig = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/admin/email-config', {
+      const res = await fetch('/api/admin/email-config?reveal=true', {
         credentials: 'include',
       });
       if (!res.ok) throw new Error('Erro ao carregar configuração');
@@ -42,7 +42,7 @@ export default function EmailConfigForm() {
           port: data.config.port || 587,
           secure: data.config.secure || false,
           user: data.config.user || '',
-          password: '', // Não retornamos a senha por segurança
+          password: data.config.password || '',
           fromAddress: data.config.fromAddress || '',
           fromName: data.config.fromName || '',
         });
@@ -88,11 +88,6 @@ export default function EmailConfigForm() {
       }
 
       message.success('Configuração salva com sucesso!');
-
-      // Limpar campo de senha após salvar
-      form.setFieldsValue({
-        password: '',
-      });
     } catch (error) {
       message.error(error instanceof Error ? error.message : 'Erro ao salvar configuração');
     } finally {
@@ -206,7 +201,7 @@ export default function EmailConfigForm() {
         <Spin spinning={loading}>
           <Alert
             message="Servidor SMTP"
-            description="Configure o servidor SMTP para envio de emails. As credenciais são criptografadas antes de serem salvas no banco de dados. Para sua segurança, o campo de senha fica vazio após salvar."
+            description="Configure o servidor SMTP para envio de emails. As credenciais são criptografadas antes de serem salvas no banco de dados."
             type="info"
             showIcon
             style={{ marginBottom: 24 }}
@@ -274,10 +269,10 @@ export default function EmailConfigForm() {
             <Form.Item
               label="Senha"
               name="password"
-              tooltip="Senha do email ou App Password. Deixe vazio para não alterar."
+              tooltip="Senha do email ou App Password"
             >
-              <Input.Password
-                placeholder="Deixe vazio para não alterar"
+              <Input
+                placeholder="Senha ou App Password"
                 style={{ fontFamily: 'monospace' }}
                 autoComplete="new-password"
               />

@@ -24,6 +24,8 @@ const googleOAuthConfigSchema = z.object({
 
 /**
  * GET - Retorna a configuração atual
+ * Query params:
+ *   - reveal=true: Retorna clientSecret descriptografado
  */
 export const GET = withApiHandler(async ({ req }) => {
   const authResult = await requireAdminUser(req, AdminPermission.CONFIGURACOES);
@@ -34,6 +36,9 @@ export const GET = withApiHandler(async ({ req }) => {
       status: 401,
     });
   }
+
+  const url = new URL(req.url);
+  const shouldReveal = url.searchParams.get('reveal') === 'true';
 
   // Buscar configuração ativa
   const config = await prisma.googleOAuthConfig.findFirst({
@@ -53,20 +58,20 @@ export const GET = withApiHandler(async ({ req }) => {
     };
   }
 
-  // Descriptografar clientSecret para exibição mascarada
-  let clientSecretMasked = '';
+  // Descriptografar clientSecret
+  let clientSecretValue = '';
   try {
     const decrypted = decrypt(config.clientSecret);
-    clientSecretMasked = decrypted.length > 0 ? '***configurado***' : '';
+    clientSecretValue = shouldReveal ? decrypted : (decrypted.length > 0 ? '***configurado***' : '');
   } catch {
-    clientSecretMasked = '***';
+    clientSecretValue = shouldReveal ? '' : '***';
   }
 
   return {
     data: {
       configured: true,
       clientId: config.clientId,
-      clientSecret: clientSecretMasked,
+      clientSecret: clientSecretValue,
       isActive: config.isActive,
       updatedAt: config.updatedAt as Date | null,
     },

@@ -10,7 +10,7 @@
 import { requireAdminUser } from '@/lib/auth/admin-helpers';
 import { AdminPermission } from '@prisma/client';
 import { prisma } from '@/lib/db';
-import { encrypt } from '@/lib/integrations/shared/encryption.service';
+import { encrypt, decrypt } from '@/lib/integrations/shared/encryption.service';
 import { withApiHandler } from '@/lib/api/handler';
 import { ApiError } from '@/lib/api/errors';
 import { z } from 'zod';
@@ -32,6 +32,8 @@ interface PaymentGatewayPostResponse {
 
 /**
  * GET - Buscar configuração atual
+ * Query params:
+ *   - reveal=true: Retorna accessToken e webhookSecret descriptografados
  */
 export const GET = withApiHandler<PaymentGatewayGetResponse>(async ({ req }) => {
   const authResult = await requireAdminUser(req, AdminPermission.FINANCEIRO);
@@ -42,6 +44,9 @@ export const GET = withApiHandler<PaymentGatewayGetResponse>(async ({ req }) => 
       status: 401,
     });
   }
+
+  const url = new URL(req.url);
+  const shouldReveal = url.searchParams.get('reveal') === 'true';
 
   // Buscar gateway e credenciais
   const gateway = await prisma.paymentGateway.findFirst({
@@ -61,12 +66,33 @@ export const GET = withApiHandler<PaymentGatewayGetResponse>(async ({ req }) => 
 
   const credential = gateway.credentials[0];
 
-  // SECURITY: Não expor credenciais sensíveis - apenas indicar se estão configuradas
+  // Descriptografar valores se reveal=true
+  let accessTokenValue = '';
+  if (credential.accessToken) {
+    try {
+      const decrypted = decrypt(credential.accessToken);
+      accessTokenValue = shouldReveal ? decrypted : (decrypted.length > 0 ? '***configurado***' : '');
+    } catch {
+      accessTokenValue = shouldReveal ? '' : '***';
+    }
+  }
+
+  let webhookSecretValue = '';
+  if (credential.secretKey) {
+    try {
+      const decrypted = decrypt(credential.secretKey);
+      webhookSecretValue = shouldReveal ? decrypted : (decrypted.length > 0 ? '***configurado***' : '');
+    } catch {
+      webhookSecretValue = shouldReveal ? '' : '***';
+    }
+  }
+
   const config: Record<string, string | boolean> = {
     environment: gateway.environment,
     publicKey: credential.publicKey || '',
     applicationId: credential.applicationId || '',
-    // Indicar que credenciais sensíveis estão configuradas (sem expor valores)
+    accessToken: accessTokenValue,
+    webhookSecret: webhookSecretValue,
     hasAccessToken: Boolean(credential.accessToken),
     hasWebhookSecret: Boolean(credential.secretKey),
   };

@@ -9,7 +9,7 @@ import { ApiError } from '@/lib/api/errors';
 import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
 import { AdminPermission, EmailConfigStatus } from '@prisma/client';
 import { prisma } from '@/lib/db';
-import { encrypt } from '@/lib/integrations/shared/encryption.service';
+import { encrypt, decrypt } from '@/lib/integrations/shared/encryption.service';
 import { z } from 'zod';
 
 type EmailConfigData = {
@@ -18,6 +18,7 @@ type EmailConfigData = {
   port: number;
   secure: boolean;
   user: string;
+  password: string;
   fromAddress: string;
   fromName: string;
   status: EmailConfigStatus;
@@ -46,6 +47,8 @@ const EmailConfigSchema = z.object({
 
 /**
  * GET - Buscar configuração de email ativa
+ * Query params:
+ *   - reveal=true: Retorna password descriptografado
  */
 export const GET = withApiHandler<EmailConfigGetResponse>(async (context) => {
   const { req } = context;
@@ -59,6 +62,9 @@ export const GET = withApiHandler<EmailConfigGetResponse>(async (context) => {
     throw new ApiError({ code: 'forbidden', message: 'Permissão negada', status: 403 });
   }
 
+  const url = new URL(req.url);
+  const shouldReveal = url.searchParams.get('reveal') === 'true';
+
   // Buscar configuração ativa
   const config = await prisma.emailConfig.findFirst({
     where: { status: 'ACTIVE' },
@@ -69,7 +75,17 @@ export const GET = withApiHandler<EmailConfigGetResponse>(async (context) => {
     return { data: { config: null } };
   }
 
-  // Retornar config sem a senha (segurança)
+  // Descriptografar password se reveal=true
+  let passwordValue = '';
+  if (config.password) {
+    try {
+      const decrypted = decrypt(config.password);
+      passwordValue = shouldReveal ? decrypted : (decrypted.length > 0 ? '***configurado***' : '');
+    } catch {
+      passwordValue = shouldReveal ? '' : '***';
+    }
+  }
+
   return {
     data: {
       config: {
@@ -78,12 +94,12 @@ export const GET = withApiHandler<EmailConfigGetResponse>(async (context) => {
         port: config.port,
         secure: config.secure,
         user: config.user,
+        password: passwordValue,
         fromAddress: config.fromAddress,
         fromName: config.fromName,
         status: config.status,
         createdAt: config.createdAt,
         updatedAt: config.updatedAt,
-        // NÃO retornar password
       },
     },
   };

@@ -4,9 +4,33 @@
  *
  * Session/Inactivity Timeout Rules:
  * - ADMIN (admin_auth): Has idle timeout (SESSION_IDLE_MINUTES, default 10min)
+ *   Cookie: last_activity_admin
  * - CLIENT (auth_token): Has idle timeout (SESSION_IDLE_MINUTES, default 10min)
- * - PICKUP POINT (collector_auth): NO idle timeout (only fixed JWT expiration)
- * - AUTONOMOUS COLLECTOR (coletor-token): NO idle timeout (only fixed JWT expiration)
+ *   Cookie: last_activity_user
+ * - PICKUP POINT (collector_auth): NO idle timeout - EXCEÇÃO DOCUMENTADA
+ * - AUTONOMOUS COLLECTOR (coletor-token): NO idle timeout - EXCEÇÃO DOCUMENTADA
+ *
+ * EXCEÇÃO DOCUMENTADA - Coletores/Pontos de Coleta sem idle timeout:
+ * ----------------------------------------------------------------
+ * Decisão consciente de NÃO implementar idle timeout para esses perfis.
+ *
+ * Justificativa:
+ * - Coletores autônomos operam em dispositivos móveis dedicados (tablets/celulares)
+ * - Pontos de coleta usam terminais fixos em estabelecimentos
+ * - Fluxo de trabalho envolve períodos de espera entre coletas
+ * - Idle timeout frequente causaria UX ruim e interrupções no fluxo de trabalho
+ *
+ * Mitigações de segurança:
+ * 1. JWT com TTL reduzido: Coletores 7 dias, Pontos de coleta 12 horas
+ * 2. TokenVersion no Redis permite revogação imediata de sessões comprometidas
+ * 3. Validação de status (ativo/bloqueado) em cada requisição
+ * 4. Monitoramento de atividade suspeita via logs
+ * 5. Dispositivos devem usar PIN/biometria do próprio dispositivo
+ *
+ * Se necessário implementar idle no futuro:
+ * - Definir COLLECTOR_IDLE_MINUTES (sugestão: 15-20 min)
+ * - Criar heartbeat simples ou usar eventos de navegação
+ * - Adicionar cookies last_activity_collector e last_activity_pickup
  */
 
 import { NextResponse } from 'next/server';
@@ -40,7 +64,9 @@ const ADMIN_JWT_SECRET = new TextEncoder().encode(process.env.ADMIN_JWT_SECRET!)
 // Cookie names
 const AUTH_COOKIE_NAME = 'auth_token'; // Customer auth
 const ADMIN_AUTH_COOKIE_NAME = 'admin_auth'; // Staff/Admin auth
-const LAST_ACTIVITY_COOKIE_NAME = 'last_activity'; // Inactivity tracking
+// Inactivity tracking - separados por contexto para evitar resets cruzados
+const LAST_ACTIVITY_ADMIN_COOKIE = 'last_activity_admin';
+const LAST_ACTIVITY_USER_COOKIE = 'last_activity_user';
 
 // Idle timeout configurável via env (default: 10 minutos)
 // Aplicado APENAS para admin e clientes, NÃO para pontos de coleta e coletores autônomos
@@ -347,9 +373,13 @@ async function validatePickupPointTokenVersion(
 
 /**
  * Create response with updated last_activity cookie
+ * @param activityCookieName - The activity cookie to update (admin or user)
  */
-function createResponseWithActivityCookie(response: NextResponse): NextResponse {
-  response.cookies.set(LAST_ACTIVITY_COOKIE_NAME, Date.now().toString(), {
+function createResponseWithActivityCookie(
+  response: NextResponse,
+  activityCookieName: string
+): NextResponse {
+  response.cookies.set(activityCookieName, Date.now().toString(), {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
@@ -362,13 +392,15 @@ function createResponseWithActivityCookie(response: NextResponse): NextResponse 
 /**
  * Create redirect response that clears auth cookies (for inactivity timeout)
  * @param authCookieName - The auth cookie to clear (admin_auth or auth_token)
+ * @param activityCookieName - The activity cookie to clear (admin or user)
  */
 function createTimeoutRedirect(
   request: NextRequest,
   loginPath: string,
   returnParam: string,
   pathname: string,
-  authCookieName: string
+  authCookieName: string,
+  activityCookieName: string
 ): NextResponse {
   const loginUrl = new URL(loginPath, request.url);
   loginUrl.searchParams.set(returnParam, pathname);
@@ -378,8 +410,8 @@ function createTimeoutRedirect(
   // Clear the auth cookie to force re-login
   response.cookies.delete(authCookieName);
 
-  // Clear the last_activity cookie
-  response.cookies.delete(LAST_ACTIVITY_COOKIE_NAME);
+  // Clear the last_activity cookie for this context
+  response.cookies.delete(activityCookieName);
 
   return response;
 }
@@ -388,13 +420,15 @@ function createTimeoutRedirect(
  * Create redirect response that clears auth cookies (for session/JWT expiration)
  * Different from inactivity - this is when the fixed JWT TTL expires
  * @param authCookieName - The auth cookie to clear (admin_auth or auth_token)
+ * @param activityCookieName - The activity cookie to clear (admin or user)
  */
 function createSessionExpiredRedirect(
   request: NextRequest,
   loginPath: string,
   returnParam: string,
   pathname: string,
-  authCookieName: string
+  authCookieName: string,
+  activityCookieName: string
 ): NextResponse {
   const loginUrl = new URL(loginPath, request.url);
   loginUrl.searchParams.set(returnParam, pathname);
@@ -404,8 +438,8 @@ function createSessionExpiredRedirect(
   // Clear the auth cookie to force re-login
   response.cookies.delete(authCookieName);
 
-  // Clear the last_activity cookie (if exists)
-  response.cookies.delete(LAST_ACTIVITY_COOKIE_NAME);
+  // Clear the last_activity cookie for this context
+  response.cookies.delete(activityCookieName);
 
   return response;
 }
@@ -431,7 +465,7 @@ export async function proxy(request: NextRequest) {
 
     // If JWT expired, redirect with session-expired reason and clear cookies
     if (adminResult.error === 'expired') {
-      return createSessionExpiredRedirect(request, '/admin/login', 'next', pathname, ADMIN_AUTH_COOKIE_NAME);
+      return createSessionExpiredRedirect(request, '/admin/login', 'next', pathname, ADMIN_AUTH_COOKIE_NAME, LAST_ACTIVITY_ADMIN_COOKIE);
     }
 
     if (!isStaffAuthenticated(adminResult.payload)) {
@@ -480,14 +514,14 @@ export async function proxy(request: NextRequest) {
     }
 
     // Check inactivity timeout for admin
-    const adminLastActivity = request.cookies.get(LAST_ACTIVITY_COOKIE_NAME)?.value;
+    const adminLastActivity = request.cookies.get(LAST_ACTIVITY_ADMIN_COOKIE)?.value;
     if (isInactiveSession(adminLastActivity)) {
       // Session expired due to inactivity - redirect to admin login
-      return createTimeoutRedirect(request, '/admin/login', 'next', pathname, ADMIN_AUTH_COOKIE_NAME);
+      return createTimeoutRedirect(request, '/admin/login', 'next', pathname, ADMIN_AUTH_COOKIE_NAME, LAST_ACTIVITY_ADMIN_COOKIE);
     }
 
     // Is authenticated as staff with valid tokenVersion - update activity and allow access
-    return createResponseWithActivityCookie(NextResponse.next());
+    return createResponseWithActivityCookie(NextResponse.next(), LAST_ACTIVITY_ADMIN_COOKIE);
   }
 
   // Get route protection level for customer routes
@@ -513,7 +547,7 @@ export async function proxy(request: NextRequest) {
         { status: 401 }
       );
     }
-    return createSessionExpiredRedirect(request, '/auth/login', 'returnUrl', pathname, AUTH_COOKIE_NAME);
+    return createSessionExpiredRedirect(request, '/auth/login', 'returnUrl', pathname, AUTH_COOKIE_NAME, LAST_ACTIVITY_USER_COOKIE);
   }
 
   const payload = tokenResult.payload;
@@ -671,11 +705,11 @@ export async function proxy(request: NextRequest) {
           { status: 401 }
         );
       }
-      return createSessionExpiredRedirect(request, '/auth/login', 'returnUrl', pathname, AUTH_COOKIE_NAME);
+      return createSessionExpiredRedirect(request, '/auth/login', 'returnUrl', pathname, AUTH_COOKIE_NAME, LAST_ACTIVITY_USER_COOKIE);
     }
 
     // Check inactivity timeout for customer admin
-    const customerAdminLastActivity = request.cookies.get(LAST_ACTIVITY_COOKIE_NAME)?.value;
+    const customerAdminLastActivity = request.cookies.get(LAST_ACTIVITY_USER_COOKIE)?.value;
     if (isInactiveSession(customerAdminLastActivity)) {
       if (isApiRoute) {
         return NextResponse.json(
@@ -683,11 +717,11 @@ export async function proxy(request: NextRequest) {
           { status: 401 }
         );
       }
-      return createTimeoutRedirect(request, '/auth/login', 'returnUrl', pathname, AUTH_COOKIE_NAME);
+      return createTimeoutRedirect(request, '/auth/login', 'returnUrl', pathname, AUTH_COOKIE_NAME, LAST_ACTIVITY_USER_COOKIE);
     }
 
     // Is admin - update activity and allow access
-    return createResponseWithActivityCookie(NextResponse.next());
+    return createResponseWithActivityCookie(NextResponse.next(), LAST_ACTIVITY_USER_COOKIE);
   }
 
   // Handle authenticated routes (any logged-in user)
@@ -725,11 +759,11 @@ export async function proxy(request: NextRequest) {
           { status: 401 }
         );
       }
-      return createSessionExpiredRedirect(request, '/auth/login', 'returnUrl', pathname, AUTH_COOKIE_NAME);
+      return createSessionExpiredRedirect(request, '/auth/login', 'returnUrl', pathname, AUTH_COOKIE_NAME, LAST_ACTIVITY_USER_COOKIE);
     }
 
     // Check inactivity timeout for authenticated users (cliente)
-    const clienteLastActivity = request.cookies.get(LAST_ACTIVITY_COOKIE_NAME)?.value;
+    const clienteLastActivity = request.cookies.get(LAST_ACTIVITY_USER_COOKIE)?.value;
     if (isInactiveSession(clienteLastActivity)) {
       if (isApiRoute) {
         return NextResponse.json(
@@ -737,11 +771,11 @@ export async function proxy(request: NextRequest) {
           { status: 401 }
         );
       }
-      return createTimeoutRedirect(request, '/auth/login', 'returnUrl', pathname, AUTH_COOKIE_NAME);
+      return createTimeoutRedirect(request, '/auth/login', 'returnUrl', pathname, AUTH_COOKIE_NAME, LAST_ACTIVITY_USER_COOKIE);
     }
 
     // Is authenticated - update activity and allow access
-    return createResponseWithActivityCookie(NextResponse.next());
+    return createResponseWithActivityCookie(NextResponse.next(), LAST_ACTIVITY_USER_COOKIE);
   }
 
   // Default: allow access

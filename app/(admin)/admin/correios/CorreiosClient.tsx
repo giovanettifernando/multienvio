@@ -79,13 +79,6 @@ interface TestResult {
 // ============================================================================
 
 async function fetchConfig(): Promise<CorreiosConfig> {
-  const res = await fetch('/api/admin/integrations/correios');
-  if (!res.ok) throw new Error('Erro ao carregar configuração');
-  const json = await res.json();
-  return json.data ?? json;
-}
-
-async function fetchConfigRevealed(): Promise<CorreiosConfig> {
   const res = await fetch('/api/admin/integrations/correios?reveal=true');
   if (!res.ok) throw new Error('Erro ao carregar configuração');
   const json = await res.json();
@@ -140,17 +133,9 @@ function EnvironmentBadge({ environment, configured }: { environment: 'sandbox' 
 function CredentialsForm({
   prefix,
   environment,
-  onReveal,
-  loadingReveal,
-  passwordVisible,
-  onPasswordVisibleChange,
 }: {
   prefix: string;
   environment: 'sandbox' | 'production';
-  onReveal: (env: 'sandbox' | 'production') => void;
-  loadingReveal: boolean;
-  passwordVisible: boolean;
-  onPasswordVisibleChange: (visible: boolean) => void;
 }) {
   const isSandbox = environment === 'sandbox';
   const cwsUrl = isSandbox ? 'https://cwshom.correios.com.br' : 'https://cws.correios.com.br';
@@ -185,23 +170,13 @@ function CredentialsForm({
         name={[prefix, 'password']}
         label="Código de Acesso"
         rules={[{ required: false }]}
-        extra="Código gerado no portal CWS. Clique no ícone para revelar."
+        extra="Código gerado no portal CWS."
       >
-        <Input.Password
-          placeholder="••••••••"
-          visibilityToggle={{
-            visible: passwordVisible,
-            onVisibleChange: (visible) => {
-              if (visible && !passwordVisible) {
-                onReveal(environment);
-              } else {
-                onPasswordVisibleChange(visible);
-              }
-            },
-          }}
+        <Input
+          placeholder="Código de acesso"
+          style={{ fontFamily: 'monospace' }}
         />
       </Form.Item>
-      {loadingReveal && <Spin size="small" style={{ marginLeft: 8 }} />}
 
       <Form.Item
         name={[prefix, 'cartaoPostagem']}
@@ -243,9 +218,6 @@ function ConfigTab() {
   const [form] = Form.useForm();
   const queryClient = useQueryClient();
   const initializedRef = useRef(false);
-  const [productionPasswordVisible, setProductionPasswordVisible] = useState(false);
-  const [sandboxPasswordVisible, setSandboxPasswordVisible] = useState(false);
-  const [loadingReveal, setLoadingReveal] = useState(false);
 
   const { data: config, isLoading } = useQuery({
     queryKey: ['admin', 'correios', 'config'],
@@ -257,8 +229,6 @@ function ConfigTab() {
     onSuccess: () => {
       message.success('Configuração salva com sucesso!');
       queryClient.invalidateQueries({ queryKey: ['admin', 'correios', 'config'] });
-      setProductionPasswordVisible(false);
-      setSandboxPasswordVisible(false);
     },
     onError: (err: Error) => {
       message.error(err.message);
@@ -288,32 +258,6 @@ function ConfigTab() {
       initializedRef.current = true;
     }
   }, [config, form]);
-
-  const handleRevealCredentials = async (environment: 'sandbox' | 'production') => {
-    setLoadingReveal(true);
-    try {
-      const revealed = await fetchConfigRevealed();
-      const envData = environment === 'production' ? revealed.production : revealed.sandbox;
-
-      if (envData?.password) {
-        form.setFieldsValue({
-          [environment]: {
-            ...form.getFieldValue(environment),
-            password: envData.password,
-          },
-        });
-        if (environment === 'production') {
-          setProductionPasswordVisible(true);
-        } else {
-          setSandboxPasswordVisible(true);
-        }
-      }
-    } catch {
-      message.error('Erro ao revelar credenciais');
-    } finally {
-      setLoadingReveal(false);
-    }
-  };
 
   const handleSubmit = (values: Record<string, unknown>) => {
     const payload = {
@@ -406,10 +350,6 @@ function ConfigTab() {
         <CredentialsForm
           prefix="production"
           environment="production"
-          onReveal={handleRevealCredentials}
-          loadingReveal={loadingReveal}
-          passwordVisible={productionPasswordVisible}
-          onPasswordVisibleChange={setProductionPasswordVisible}
         />
       </Card>
 
@@ -429,10 +369,6 @@ function ConfigTab() {
         <CredentialsForm
           prefix="sandbox"
           environment="sandbox"
-          onReveal={handleRevealCredentials}
-          loadingReveal={loadingReveal}
-          passwordVisible={sandboxPasswordVisible}
-          onPasswordVisibleChange={setSandboxPasswordVisible}
         />
       </Card>
 

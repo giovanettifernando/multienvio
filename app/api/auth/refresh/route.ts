@@ -20,9 +20,14 @@ import {
 } from '@/lib/auth/jwt-tokens';
 import { rateLimitByIP, RATE_LIMITS } from '@/lib/rate-limit-redis';
 import { sessionCache } from '@/lib/cache';
+import { requireValidOrigin } from '@/lib/api/csrf';
 
 export const POST = withApiHandlerResponse(async (context) => {
   const { req, logger } = context;
+
+  // CSRF Protection - validar Origin header
+  const csrfError = requireValidOrigin(req as NextRequest);
+  if (csrfError) return csrfError;
 
   // Rate limiting - mais permissivo que login (refresh acontece automaticamente)
   const rateLimitError = await rateLimitByIP(req as NextRequest, 'auth_refresh', {
@@ -122,6 +127,16 @@ export const POST = withApiHandlerResponse(async (context) => {
     userId: sessionData.userId,
     email: sessionData.email,
     role: sessionData.role,
+    tokenVersion: redisTokenVersion,
+  });
+
+  // Renovar TTL da sessão no Redis (janela deslizante)
+  // Isso garante que usuários ativos não sejam deslogados após 7 dias fixos
+  await sessionCache.set(sessionData.userId, {
+    userId: sessionData.userId,
+    email: sessionData.email,
+    role: sessionData.role,
+    status: sessionData.status,
     tokenVersion: redisTokenVersion,
   });
 

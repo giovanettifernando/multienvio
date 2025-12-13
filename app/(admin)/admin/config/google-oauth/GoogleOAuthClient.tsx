@@ -51,7 +51,7 @@ interface TestResult {
 // ============================================================================
 
 async function fetchConfig(): Promise<GoogleOAuthConfig> {
-  const res = await fetch('/api/admin/config/google-oauth');
+  const res = await fetch('/api/admin/config/google-oauth?reveal=true');
   if (!res.ok) throw new Error('Erro ao carregar configuração');
   const json = await res.json();
   return json.data ?? json;
@@ -113,8 +113,7 @@ export default function GoogleOAuthClient() {
     if (config && !initializedRef.current) {
       form.setFieldsValue({
         clientId: config.clientId || '',
-        // Não preencher clientSecret pois está mascarado
-        clientSecret: '',
+        clientSecret: config.clientSecret || '',
       });
       initializedRef.current = true;
     }
@@ -247,15 +246,12 @@ export default function GoogleOAuthClient() {
                   message: 'Client Secret é obrigatório',
                 },
               ]}
-              extra={
-                config?.configured
-                  ? 'Deixe em branco para manter o valor atual. Preencha para atualizar.'
-                  : 'Chave secreta do cliente OAuth (começa com GOCSPX-)'
-              }
+              extra="Chave secreta do cliente OAuth (começa com GOCSPX-)"
             >
-              <Input.Password
-                placeholder={config?.configured ? '***configurado***' : 'GOCSPX-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'}
+              <Input
+                placeholder="GOCSPX-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
                 size="large"
+                style={{ fontFamily: 'monospace' }}
               />
             </Form.Item>
 

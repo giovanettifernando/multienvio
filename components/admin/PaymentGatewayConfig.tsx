@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { Card, Form, Input, Select, Button, Space, App, Spin, Alert, Tooltip } from 'antd';
-import { SaveOutlined, ReloadOutlined, EyeOutlined, EyeInvisibleOutlined } from '@ant-design/icons';
+import { Card, Form, Input, Select, Button, Space, App, Spin, Alert } from 'antd';
+import { SaveOutlined, ReloadOutlined } from '@ant-design/icons';
 
 interface GatewayConfig {
   environment: 'SANDBOX' | 'PRODUCTION';
@@ -12,57 +12,16 @@ interface GatewayConfig {
   webhookSecret?: string;
 }
 
-interface RevealedFields {
-  accessToken: string | null;
-  webhookSecret: string | null;
-}
-
 export default function PaymentGatewayConfig() {
   const { message } = App.useApp();
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [revealLoading, setRevealLoading] = useState<string | null>(null);
-  const [revealed, setRevealed] = useState<RevealedFields>({
-    accessToken: null,
-    webhookSecret: null,
-  });
-
-  const revealField = useCallback(async (field: 'accessToken' | 'webhookSecret') => {
-    // Se já está revelado, esconder
-    if (revealed[field] !== null) {
-      setRevealed(prev => ({ ...prev, [field]: null }));
-      return;
-    }
-
-    setRevealLoading(field);
-    try {
-      const res = await fetch(`/api/admin/payment-gateway/config?reveal=${field}`, {
-        credentials: 'include',
-      });
-      if (!res.ok) throw new Error('Erro ao revelar');
-
-      const json = await res.json();
-      const data = json.data ?? json;
-      const value = data.config?.[field] || '';
-
-      if (value) {
-        setRevealed(prev => ({ ...prev, [field]: value }));
-      } else {
-        message.warning('Nenhum valor salvo para este campo');
-      }
-    } catch {
-      message.error('Erro ao revelar campo');
-    } finally {
-      setRevealLoading(null);
-    }
-  }, [revealed, message]);
 
   const loadConfig = useCallback(async () => {
     setLoading(true);
-    setRevealed({ accessToken: null, webhookSecret: null });
     try {
-      const res = await fetch('/api/admin/payment-gateway/config', {
+      const res = await fetch('/api/admin/payment-gateway/config?reveal=true', {
         credentials: 'include',
       });
       if (!res.ok) throw new Error('Erro ao carregar configuração');
@@ -75,8 +34,8 @@ export default function PaymentGatewayConfig() {
           environment: data.config.environment || 'SANDBOX',
           publicKey: data.config.publicKey || '',
           applicationId: data.config.applicationId || '',
-          accessToken: '', // Não retornamos o token por segurança
-          webhookSecret: '', // Não retornamos o secret por segurança
+          accessToken: data.config.accessToken || '',
+          webhookSecret: data.config.webhookSecret || '',
         });
       }
     } catch {
@@ -84,7 +43,7 @@ export default function PaymentGatewayConfig() {
     } finally {
       setLoading(false);
     }
-  }, [form]);
+  }, [form, message]);
 
   // Carregar configuração atual
   useEffect(() => {
@@ -125,12 +84,6 @@ export default function PaymentGatewayConfig() {
       }
 
       message.success('Configuração salva com sucesso!');
-
-      // Limpar campos de senha após salvar
-      form.setFieldsValue({
-        accessToken: '',
-        webhookSecret: '',
-      });
     } catch (error) {
       message.error(error instanceof Error ? error.message : 'Erro ao salvar configuração');
     } finally {
@@ -163,8 +116,8 @@ export default function PaymentGatewayConfig() {
     >
       <Spin spinning={loading}>
         <Alert
-          title="Credenciais do Mercado Pago"
-          description="Configure as credenciais para processar pagamentos. As credenciais são criptografadas antes de serem salvas no banco de dados. Para sua segurança, os campos de senha ficam vazios após salvar."
+          message="Credenciais do Mercado Pago"
+          description="Configure as credenciais para processar pagamentos. As credenciais são criptografadas antes de serem salvas no banco de dados."
           type="info"
           showIcon
           style={{ marginBottom: 24 }}
@@ -206,32 +159,14 @@ export default function PaymentGatewayConfig() {
 
           <Form.Item
             label="Access Token"
-            tooltip="Token de acesso para autenticação no backend. Deixe vazio para não alterar."
+            name="accessToken"
+            tooltip="Token de acesso para autenticação no backend"
           >
-            <Space.Compact style={{ width: '100%' }}>
-              {revealed.accessToken ? (
-                <Input
-                  value={revealed.accessToken}
-                  readOnly
-                  style={{ fontFamily: 'monospace', backgroundColor: '#f5f5f5' }}
-                />
-              ) : (
-                <Form.Item name="accessToken" noStyle>
-                  <Input.Password
-                    placeholder="Deixe vazio para não alterar"
-                    style={{ fontFamily: 'monospace' }}
-                    autoComplete="new-password"
-                  />
-                </Form.Item>
-              )}
-              <Tooltip title={revealed.accessToken ? 'Ocultar' : 'Revelar valor salvo'}>
-                <Button
-                  icon={revealLoading === 'accessToken' ? <Spin size="small" /> : (revealed.accessToken ? <EyeInvisibleOutlined /> : <EyeOutlined />)}
-                  onClick={() => revealField('accessToken')}
-                  disabled={revealLoading === 'accessToken'}
-                />
-              </Tooltip>
-            </Space.Compact>
+            <Input
+              placeholder="APP_USR-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+              style={{ fontFamily: 'monospace' }}
+              autoComplete="new-password"
+            />
           </Form.Item>
 
           <Form.Item
@@ -247,36 +182,18 @@ export default function PaymentGatewayConfig() {
 
           <Form.Item
             label="Webhook Secret (Opcional)"
-            tooltip="Secret para validar assinatura dos webhooks. Deixe vazio para não alterar."
+            name="webhookSecret"
+            tooltip="Secret para validar assinatura dos webhooks"
           >
-            <Space.Compact style={{ width: '100%' }}>
-              {revealed.webhookSecret ? (
-                <Input
-                  value={revealed.webhookSecret}
-                  readOnly
-                  style={{ fontFamily: 'monospace', backgroundColor: '#f5f5f5' }}
-                />
-              ) : (
-                <Form.Item name="webhookSecret" noStyle>
-                  <Input.Password
-                    placeholder="Deixe vazio para não alterar"
-                    style={{ fontFamily: 'monospace' }}
-                    autoComplete="new-password"
-                  />
-                </Form.Item>
-              )}
-              <Tooltip title={revealed.webhookSecret ? 'Ocultar' : 'Revelar valor salvo'}>
-                <Button
-                  icon={revealLoading === 'webhookSecret' ? <Spin size="small" /> : (revealed.webhookSecret ? <EyeInvisibleOutlined /> : <EyeOutlined />)}
-                  onClick={() => revealField('webhookSecret')}
-                  disabled={revealLoading === 'webhookSecret'}
-                />
-              </Tooltip>
-            </Space.Compact>
+            <Input
+              placeholder="Secret do webhook"
+              style={{ fontFamily: 'monospace' }}
+              autoComplete="new-password"
+            />
           </Form.Item>
 
           <Alert
-            title="Configuração do Webhook"
+            message="Configuração do Webhook"
             description={
               <div>
                 <p style={{ marginBottom: 8 }}>Configure o webhook no painel do Mercado Pago:</p>

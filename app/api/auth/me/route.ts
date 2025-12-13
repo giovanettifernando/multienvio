@@ -24,8 +24,8 @@ export const GET = withApiHandler<MeResponse>(async (context) => {
   }
 
   // Verificar cache primeiro (TTL 5 minutos)
-  const cacheKey = `me:${session.userId}`;
-  const cached = await userCache.get<User>(cacheKey);
+  // Usa userCache.get(userId) para garantir consistência com userCache.invalidate(userId)
+  const cached = await userCache.get<User>(session.userId);
   if (cached) {
     // Verificar se usuário ainda está ativo no cache
     if (cached.status !== UserStatus.ACTIVE) {
@@ -80,7 +80,8 @@ export const GET = withApiHandler<MeResponse>(async (context) => {
   };
 
   // Salvar no cache (fire and forget)
-  userCache.set(cacheKey, user).catch(() => {});
+  // Usa userCache.set(userId, data) para garantir consistência com userCache.invalidate(userId)
+  userCache.set(session.userId, user).catch(() => {});
 
   return { data: { user } };
 });

@@ -15,7 +15,13 @@ import {
   getUserInfo,
   type OAuthContext,
 } from '@/lib/auth/google-oauth';
-import { sign, AUTH_COOKIE_NAME } from '@/lib/auth/session';
+import {
+  signTokenPair,
+  ACCESS_TOKEN_COOKIE,
+  REFRESH_TOKEN_COOKIE,
+  ACCESS_TOKEN_MAX_AGE_SECONDS,
+  REFRESH_TOKEN_MAX_AGE_SECONDS,
+} from '@/lib/auth/jwt-tokens';
 import { getCachedRoleByName, sessionCache } from '@/lib/cache';
 import type { RequestLogger } from '@/lib/api/types';
 
@@ -268,10 +274,6 @@ async function createCollectorToken(collector: {
     .sign(JWT_SECRET);
 }
 
-// Cookie config
-const SESSION_TTL_DAYS = parseInt(process.env.CLIENT_SESSION_TTL_DAYS || '7', 10);
-const COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * SESSION_TTL_DAYS;
-
 export const GET = withApiHandlerResponse(async (context) => {
   const { req, logger } = context;
 
@@ -354,8 +356,8 @@ export const GET = withApiHandlerResponse(async (context) => {
       // Get tokenVersion from Redis (or init with 1)
       const tokenVersion = await sessionCache.getOrInitTokenVersion(user.id);
 
-      // Create JWT token for session
-      const token = await sign({
+      // Create JWT token pair for session (access + refresh)
+      const { accessToken, refreshToken } = await signTokenPair({
         userId: user.id,
         email: user.email,
         role: user.role?.name || 'user',
@@ -373,22 +375,37 @@ export const GET = withApiHandlerResponse(async (context) => {
 
       logger.info('google_oauth_user_session', { userId: user.id });
 
-      // Create redirect response and set auth cookie directly on it
+      // Create redirect response and set auth cookies
       const response = NextResponse.redirect(new URL(successRedirect, req.url));
-      response.cookies.set(AUTH_COOKIE_NAME, token, {
+      const isProduction = process.env.NODE_ENV === 'production';
+
+      // Set access token cookie (15 min)
+      response.cookies.set(ACCESS_TOKEN_COOKIE, accessToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
+        secure: isProduction,
         sameSite: 'lax',
         path: '/',
-        maxAge: COOKIE_MAX_AGE_SECONDS,
+        maxAge: ACCESS_TOKEN_MAX_AGE_SECONDS,
       });
-      response.cookies.set('last_activity', Date.now().toString(), {
+
+      // Set refresh token cookie (7 days)
+      response.cookies.set(REFRESH_TOKEN_COOKIE, refreshToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
+        secure: isProduction,
+        sameSite: 'lax',
+        path: '/',
+        maxAge: REFRESH_TOKEN_MAX_AGE_SECONDS,
+      });
+
+      // Set last activity cookie
+      response.cookies.set('last_activity_user', Date.now().toString(), {
+        httpOnly: true,
+        secure: isProduction,
         sameSite: 'lax',
         path: '/',
         maxAge: 60 * 60 * 24,
       });
+
       return response;
     } else {
       // Handle Collector authentication

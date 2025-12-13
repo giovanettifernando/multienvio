@@ -457,7 +457,8 @@ export default function AdminLayout({
       onLogout={handleAdminLogout}
       loginPath="/admin/login"
       returnParam="next"
-      refreshEndpoint="/api/admin/auth/me"
+      refreshEndpoint="/api/admin/auth/refresh"
+      heartbeatEndpoint="/api/admin/auth/heartbeat"
     />
     </>
   );

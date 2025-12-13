@@ -14,9 +14,14 @@ import {
 import { UserStatus, AuthRole, type User } from '@/types/contracts';
 import { rateLimitByIPStrict, RATE_LIMITS } from '@/lib/rate-limit-redis';
 import { sessionCache } from '@/lib/cache';
+import { requireValidOrigin } from '@/lib/api/csrf';
 
 export const POST = withApiHandlerResponse(async (context) => {
   const { req, logger } = context;
+
+  // CSRF Protection - validar Origin header
+  const csrfError = requireValidOrigin(req as NextRequest);
+  if (csrfError) return csrfError;
 
   // Rate limiting by IP - STRICT (fail-close) - 5 attempts per 5 minutes
   // Se Redis indisponível, retorna 503 ao invés de permitir acesso
@@ -149,7 +154,7 @@ export const POST = withApiHandlerResponse(async (context) => {
     });
 
     // Reset last_activity cookie para evitar timeout de inatividade logo após login
-    response.cookies.set('last_activity', Date.now().toString(), {
+    response.cookies.set('last_activity_user', Date.now().toString(), {
       httpOnly: true,
       secure: isProduction,
       sameSite: 'lax',

@@ -9,6 +9,7 @@ import { logAdminLogin } from '@/lib/audit-admin';
 import { AdminPermission, StaffStatus } from '@prisma/client';
 import { rateLimitByIPStrict, RATE_LIMITS } from '@/lib/rate-limit-redis';
 import { staffSessionCache } from '@/lib/cache';
+import { requireValidOrigin } from '@/lib/api/csrf';
 
 type AdminLoginResponse = {
   staff: {
@@ -29,6 +30,10 @@ type AdminLoginResponse = {
 
 export const POST = withApiHandlerResponse<Record<string, never>>(async (context) => {
   const { req, logger } = context;
+
+  // CSRF Protection - validar Origin header
+  const csrfError = requireValidOrigin(req as NextRequest);
+  if (csrfError) return csrfError;
 
   // Rate limiting por IP - STRICT (fail-close) para prevenir brute force
   // Se Redis indisponível, retorna 503 ao invés de permitir acesso
