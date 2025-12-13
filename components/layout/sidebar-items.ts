@@ -2,7 +2,7 @@ import {
   HomeOutlined,
   SearchOutlined,
   ShoppingCartOutlined,
-  FileAddOutlined,
+  // FileAddOutlined, // TODO: Descomentar quando reativar menu Etiquetas
   ReconciliationOutlined,
   CalendarOutlined,
   WalletOutlined,
@@ -46,12 +46,13 @@ export const sidebarItems: SidebarItem[] = [
     label: 'Carrinho',
     href: '/carrinho',
   },
-  {
-    key: 'labels',
-    icon: FileAddOutlined,
-    label: 'Etiquetas',
-    href: '/etiquetas',
-  },
+  // TODO: Avaliar se mantém ou exclui menu Etiquetas
+  // {
+  //   key: 'labels',
+  //   icon: FileAddOutlined,
+  //   label: 'Etiquetas',
+  //   href: '/etiquetas',
+  // },
   {
     key: 'pickups',
     icon: CalendarOutlined,
