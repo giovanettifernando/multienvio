@@ -351,6 +351,7 @@ export async function rateLimitByIPStrict(
   config: RateLimitConfig = { windowMs: 60000, maxRequests: 5 }
 ): Promise<NextResponse | null> {
   const TRUSTED_PROXY_ENABLED = process.env.TRUST_PROXY === 'true';
+  const isProduction = process.env.NODE_ENV === 'production';
   let ip: string | null = null;
 
   if (TRUSTED_PROXY_ENABLED) {
@@ -359,9 +360,13 @@ export async function rateLimitByIPStrict(
     ip = forwarded ? forwarded.split(',')[0].trim() : realIp;
   }
 
-  // Se nao conseguir identificar IP, usar bucket global mais restritivo
+  // Se nao conseguir identificar IP, usar bucket global
+  // Em producao: limite mais restritivo (metade) para prevenir abuso
+  // Em desenvolvimento: manter limite normal para facilitar testes
   const key = ip ? `ip:${ip}:${action}` : `global:${action}`;
-  const effectiveConfig = ip ? config : { ...config, maxRequests: Math.ceil(config.maxRequests / 2) };
+  const effectiveConfig = ip || !isProduction
+    ? config
+    : { ...config, maxRequests: Math.ceil(config.maxRequests / 2) };
 
   const result = await checkRateLimitStrict(key, effectiveConfig);
 

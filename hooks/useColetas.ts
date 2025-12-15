@@ -86,16 +86,7 @@ export function useColetas(filters?: UseColetasFilters) {
       pageSize,
       totalPages: Math.ceil(filtered.length / pageSize),
     };
-  }, [
-    coletas,
-    filters?.status,
-    filters?.q,
-    filters?.cidade,
-    filters?.uf,
-    filters?.shipmentId,
-    filters?.page,
-    filters?.pageSize,
-  ]);
+  }, [coletas, filters]);
 }
 
 /**

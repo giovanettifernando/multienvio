@@ -10,7 +10,6 @@ import {
   Typography,
   Alert,
   Spin,
-  Tag,
   Switch,
   Divider,
   Statistic,
@@ -21,15 +20,13 @@ import {
 import {
   SaveOutlined,
   PercentageOutlined,
-  DollarOutlined,
-  TruckOutlined,
   InboxOutlined,
   CalculatorOutlined,
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { inputNumberFormatterBRL, inputNumberParserBRL } from '@/lib/utils/format';
 
-const { Title, Text, Paragraph } = Typography;
+const { Title, Text } = Typography;
 
 // ============================================================================
 // Types
@@ -38,7 +35,6 @@ const { Title, Text, Paragraph } = Typography;
 interface CommissionConfig {
   configured: boolean;
   id?: string;
-  shippingCommissionPercent: number;
   pickupFeeCommissionPercent: number;
   isActive: boolean;
   updatedAt?: string;
@@ -57,7 +53,6 @@ async function fetchConfig(): Promise<CommissionConfig> {
 }
 
 async function saveConfig(data: {
-  shippingCommissionPercent: number;
   pickupFeeCommissionPercent: number;
   isActive: boolean;
 }): Promise<{ success: boolean; message: string }> {
@@ -79,24 +74,14 @@ async function saveConfig(data: {
 // ============================================================================
 
 function CommissionSimulator({
-  shippingPercent,
   pickupPercent,
 }: {
-  shippingPercent: number;
   pickupPercent: number;
 }) {
-  const [baseShipping, setBaseShipping] = useState(50);
   const [basePickup, setBasePickup] = useState(15);
-
-  const shippingWithCommission = baseShipping * (1 + shippingPercent / 100);
-  const shippingCommission = shippingWithCommission - baseShipping;
 
   const pickupWithCommission = basePickup * (1 + pickupPercent / 100);
   const pickupCommission = pickupWithCommission - basePickup;
-
-  const totalBase = baseShipping + basePickup;
-  const totalWithCommission = shippingWithCommission + pickupWithCommission;
-  const totalCommission = shippingCommission + pickupCommission;
 
   return (
     <Card
@@ -104,26 +89,12 @@ function CommissionSimulator({
       title={
         <Space>
           <CalculatorOutlined />
-          <span>Simulador de Comissão</span>
+          <span>Simulador de Comissão sobre Coleta</span>
         </Space>
       }
     >
       <Space orientation="vertical" style={{ width: '100%' }} size="middle">
         <Row gutter={16}>
-          <Col span={12}>
-            <Text type="secondary">Valor base do frete:</Text>
-            <InputNumber
-              value={baseShipping}
-              onChange={(v) => setBaseShipping(v || 0)}
-              prefix="R$"
-              min={0}
-              precision={2}
-              decimalSeparator=","
-              formatter={inputNumberFormatterBRL}
-              parser={inputNumberParserBRL}
-              style={{ width: '100%', marginTop: 4 }}
-            />
-          </Col>
           <Col span={12}>
             <Text type="secondary">Taxa base de coleta:</Text>
             <InputNumber
@@ -138,45 +109,16 @@ function CommissionSimulator({
               style={{ width: '100%', marginTop: 4 }}
             />
           </Col>
-        </Row>
-
-        <Divider style={{ margin: '12px 0' }} />
-
-        <Row gutter={16}>
-          <Col span={8}>
+          <Col span={12}>
             <Statistic
-              title="Frete com comissão"
-              value={shippingWithCommission}
-              precision={2}
-              prefix="R$"
-              styles={{ content: { color: '#1890ff' } }}
-            />
-            <Text type="secondary" style={{ fontSize: 12 }}>
-              +R$ {shippingCommission.toFixed(2)} ({shippingPercent}%)
-            </Text>
-          </Col>
-          <Col span={8}>
-            <Statistic
-              title="Coleta com comissão"
+              title="Valor para cliente"
               value={pickupWithCommission}
               precision={2}
               prefix="R$"
               styles={{ content: { color: '#52c41a' } }}
             />
             <Text type="secondary" style={{ fontSize: 12 }}>
-              +R$ {pickupCommission.toFixed(2)} ({pickupPercent}%)
-            </Text>
-          </Col>
-          <Col span={8}>
-            <Statistic
-              title="Total para cliente"
-              value={totalWithCommission}
-              precision={2}
-              prefix="R$"
-              styles={{ content: { color: '#722ed1', fontWeight: 'bold' } }}
-            />
-            <Text type="secondary" style={{ fontSize: 12 }}>
-              Comissão: R$ {totalCommission.toFixed(2)}
+              +R$ {pickupCommission.toFixed(2)} de comissão ({pickupPercent}%)
             </Text>
           </Col>
         </Row>
@@ -193,7 +135,6 @@ export default function ComissoesClient() {
   const [form] = Form.useForm();
   const queryClient = useQueryClient();
   const initializedRef = useRef(false);
-  const [liveShippingPercent, setLiveShippingPercent] = useState(0);
   const [livePickupPercent, setLivePickupPercent] = useState(0);
 
   const { data: config, isLoading } = useQuery({
@@ -216,18 +157,15 @@ export default function ComissoesClient() {
   useEffect(() => {
     if (config && !initializedRef.current) {
       form.setFieldsValue({
-        shippingCommissionPercent: config.shippingCommissionPercent,
         pickupFeeCommissionPercent: config.pickupFeeCommissionPercent,
         isActive: config.isActive,
       });
-      setLiveShippingPercent(config.shippingCommissionPercent);
       setLivePickupPercent(config.pickupFeeCommissionPercent);
       initializedRef.current = true;
     }
   }, [config, form]);
 
   const handleSubmit = (values: {
-    shippingCommissionPercent: number;
     pickupFeeCommissionPercent: number;
     isActive: boolean;
   }) => {
@@ -235,12 +173,8 @@ export default function ComissoesClient() {
   };
 
   const handleValuesChange = (changedValues: Partial<{
-    shippingCommissionPercent: number;
     pickupFeeCommissionPercent: number;
   }>) => {
-    if (changedValues.shippingCommissionPercent !== undefined) {
-      setLiveShippingPercent(changedValues.shippingCommissionPercent);
-    }
     if (changedValues.pickupFeeCommissionPercent !== undefined) {
       setLivePickupPercent(changedValues.pickupFeeCommissionPercent);
     }
@@ -261,11 +195,11 @@ export default function ComissoesClient() {
         <div>
           <Title level={3} style={{ margin: 0 }}>
             <PercentageOutlined style={{ marginRight: 8, color: '#722ed1' }} />
-            Comissões da Plataforma
+            Comissão sobre Coleta
           </Title>
           <Text type="secondary">
-            Configure as comissões que serão aplicadas sobre os valores de frete e taxa de coleta.
-            As comissões são transparentes para o usuário final.
+            Configure a comissão que será aplicada sobre a taxa de coleta.
+            A comissão sobre frete é configurada individualmente por transportadora.
           </Text>
         </div>
 
@@ -277,9 +211,7 @@ export default function ComissoesClient() {
             description={
               <Space orientation="vertical" size="small">
                 <Space>
-                  <TruckOutlined />
-                  <Text>Frete: {config.shippingCommissionPercent}%</Text>
-                  <InboxOutlined style={{ marginLeft: 16 }} />
+                  <InboxOutlined />
                   <Text>Coleta: {config.pickupFeeCommissionPercent}%</Text>
                 </Space>
                 {config.updatedAt && (
@@ -296,13 +228,9 @@ export default function ComissoesClient() {
         {/* Info */}
         <Alert
           type="info"
-          title="Como funcionam as comissões"
+          title="Como funciona a comissão sobre coleta"
           description={
             <ul style={{ margin: '8px 0 0 0', paddingLeft: 20 }}>
-              <li>
-                <strong>Comissão sobre frete:</strong> Aplicada automaticamente ao valor retornado
-                pelas APIs das transportadoras em /cotacoes
-              </li>
               <li>
                 <strong>Comissão sobre coleta:</strong> Aplicada à taxa do coletor quando o
                 cliente solicita &quot;Coleta na origem&quot;
@@ -314,81 +242,53 @@ export default function ComissoesClient() {
               <li>
                 O cliente visualiza apenas o valor final (já com comissão inclusa)
               </li>
+              <li>
+                <strong>Nota:</strong> A comissão sobre frete é configurada individualmente por
+                transportadora (ex: em Admin &gt; Correios)
+              </li>
             </ul>
           }
           showIcon
         />
 
         {/* Formulário */}
-        <Card title="Configuração de Comissões">
+        <Card title="Configuração de Comissão sobre Coleta">
           <Form
             form={form}
             layout="vertical"
             onFinish={handleSubmit}
             onValuesChange={handleValuesChange}
             initialValues={{
-              shippingCommissionPercent: 0,
               pickupFeeCommissionPercent: 0,
               isActive: true,
             }}
           >
-            <Row gutter={24}>
-              <Col span={12}>
-                <Form.Item
-                  name="shippingCommissionPercent"
-                  label={
-                    <Space>
-                      <TruckOutlined />
-                      <span>Comissão sobre Frete</span>
-                    </Space>
-                  }
-                  rules={[
-                    { required: true, message: 'Informe a comissão' },
-                    { type: 'number', min: 0, max: 100, message: 'Deve ser entre 0 e 100%' },
-                  ]}
-                  extra="Percentual aplicado sobre o valor base do frete"
-                >
-                  <InputNumber
-                    min={0}
-                    max={100}
-                    precision={2}
-                    step={0.5}
-                    suffix="%"
-                    size="large"
-                    style={{ width: '100%' }}
-                    placeholder="Ex: 10"
-                  />
-                </Form.Item>
-              </Col>
-
-              <Col span={12}>
-                <Form.Item
-                  name="pickupFeeCommissionPercent"
-                  label={
-                    <Space>
-                      <InboxOutlined />
-                      <span>Comissão sobre Taxa de Coleta</span>
-                    </Space>
-                  }
-                  rules={[
-                    { required: true, message: 'Informe a comissão' },
-                    { type: 'number', min: 0, max: 100, message: 'Deve ser entre 0 e 100%' },
-                  ]}
-                  extra="Percentual aplicado sobre a taxa de coleta do coletor"
-                >
-                  <InputNumber
-                    min={0}
-                    max={100}
-                    precision={2}
-                    step={0.5}
-                    suffix="%"
-                    size="large"
-                    style={{ width: '100%' }}
-                    placeholder="Ex: 5"
-                  />
-                </Form.Item>
-              </Col>
-            </Row>
+            <Form.Item
+              name="pickupFeeCommissionPercent"
+              label={
+                <Space>
+                  <InboxOutlined />
+                  <span>Comissão sobre Taxa de Coleta</span>
+                </Space>
+              }
+              rules={[
+                { required: true, message: 'Informe a comissão' },
+                { type: 'number', min: 0, max: 100, message: 'Deve ser entre 0 e 100%' },
+              ]}
+              extra="Percentual aplicado sobre a taxa de coleta do coletor"
+              style={{ maxWidth: 400 }}
+            >
+              <InputNumber
+                min={0}
+                max={100}
+                precision={2}
+                step={0.5}
+                suffix="%"
+                size="large"
+                style={{ width: '100%' }}
+                placeholder="Ex: 5"
+              />
+            </Form.Item>
 
             <Form.Item
               name="isActive"
@@ -420,7 +320,6 @@ export default function ComissoesClient() {
 
         {/* Simulador */}
         <CommissionSimulator
-          shippingPercent={liveShippingPercent}
           pickupPercent={livePickupPercent}
         />
       </Space>

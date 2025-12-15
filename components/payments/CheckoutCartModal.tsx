@@ -94,6 +94,7 @@ export function CheckoutCartModal({
     }
 
     reserveTrackingCodes();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reserveTrackingCodes é estável (só usa setState)
   }, [open, itemCount]);
 
   // Limpar estado ao fechar modal

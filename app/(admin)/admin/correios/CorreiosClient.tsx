@@ -61,6 +61,7 @@ interface CorreiosConfig {
     habilitado: boolean;
     ordemExibicao?: number;
   }>;
+  shippingCommissionPercent?: number | null;
   status?: string;
   lastUpdated?: string;
 }
@@ -235,10 +236,14 @@ function ConfigTab() {
     },
   });
 
+  // Estado local para simulador de comissao
+  const [simulatorBasePrice, setSimulatorBasePrice] = useState<number>(50);
+
   // Inicializar formulário quando dados carregam
   useEffect(() => {
     if (config && !initializedRef.current) {
       form.setFieldsValue({
+        shippingCommissionPercent: config.shippingCommissionPercent ?? 0,
         activeEnvironment: config.activeEnvironment || 'sandbox',
         production: {
           username: config.production?.username || '',
@@ -261,12 +266,18 @@ function ConfigTab() {
 
   const handleSubmit = (values: Record<string, unknown>) => {
     const payload = {
+      shippingCommissionPercent: values.shippingCommissionPercent as number | null,
       activeEnvironment: values.activeEnvironment,
       production: values.production,
       sandbox: values.sandbox,
     };
     mutation.mutate(payload);
   };
+
+  // Calcular valores do simulador
+  const commissionPercent = Form.useWatch('shippingCommissionPercent', form) ?? 0;
+  const finalPrice = simulatorBasePrice * (1 + commissionPercent / 100);
+  const commissionAmount = finalPrice - simulatorBasePrice;
 
   if (isLoading) {
     return (
@@ -310,24 +321,72 @@ function ConfigTab() {
         />
       )}
 
+      {/* Comissao sobre Frete */}
+      <Card
+        title="Comissao sobre Frete"
+        size="small"
+        style={{ marginBottom: 16, borderColor: '#1890ff33' }}
+        headStyle={{ background: '#e6f7ff' }}
+      >
+        <Form.Item
+          name="shippingCommissionPercent"
+          label="Percentual de comissao (%)"
+          extra="Percentual aplicado sobre o valor do frete nas cotacoes dos Correios"
+          rules={[
+            { type: 'number', min: 0, message: 'Comissao nao pode ser negativa' },
+            { type: 'number', max: 100, message: 'Comissao nao pode exceder 100%' },
+          ]}
+        >
+          <InputNumber
+            min={0}
+            max={100}
+            precision={2}
+            step={0.5}
+            style={{ width: 150 }}
+            addonAfter="%"
+          />
+        </Form.Item>
+
+        {/* Simulador */}
+        <Divider style={{ margin: '12px 0' }} />
+        <Text strong style={{ display: 'block', marginBottom: 8 }}>Simulador</Text>
+        <Space wrap>
+          <span>Frete base:</span>
+          <InputNumber
+            value={simulatorBasePrice}
+            onChange={(v) => setSimulatorBasePrice(v ?? 50)}
+            min={0}
+            precision={2}
+            prefix="R$"
+            style={{ width: 120 }}
+          />
+          <span style={{ color: '#999' }}>&rarr;</span>
+          <span>Final:</span>
+          <Text strong style={{ color: '#52c41a' }}>
+            R$ {finalPrice.toFixed(2)}
+          </Text>
+          <Tag color="blue">+R$ {commissionAmount.toFixed(2)}</Tag>
+        </Space>
+      </Card>
+
       {/* Ambiente Ativo */}
       <Card title="Ambiente Ativo" size="small" style={{ marginBottom: 16 }}>
         <Form.Item
           name="activeEnvironment"
-          label="Selecione o ambiente que será usado para operações"
-          extra="O sistema usará as credenciais do ambiente selecionado para todas as chamadas de API"
+          label="Selecione o ambiente que sera usado para operacoes"
+          extra="O sistema usara as credenciais do ambiente selecionado para todas as chamadas de API"
         >
           <Radio.Group optionType="button" buttonStyle="solid">
             <Radio.Button value="sandbox">
               <Space>
                 <ExperimentOutlined />
-                Homologação (Sandbox)
+                Homologacao (Sandbox)
               </Space>
             </Radio.Button>
             <Radio.Button value="production">
               <Space>
                 <CloudOutlined />
-                Produção
+                Producao
               </Space>
             </Radio.Button>
           </Radio.Group>

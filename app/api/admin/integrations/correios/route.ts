@@ -12,6 +12,7 @@ import { requireAdminUser } from '@/lib/auth/admin-helpers';
 import { AdminPermission, Prisma } from '@prisma/client';
 import { encrypt, decrypt } from '@/lib/integrations/shared/encryption.service';
 import { invalidateCorreiosConfigCache, clearTokenCache } from '@/lib/integrations/correios';
+import { invalidateCarrierCommissionCache } from '@/lib/quotes/commission';
 import { withApiHandler } from '@/lib/api/handler';
 import { ApiError } from '@/lib/api/errors';
 
@@ -51,6 +52,13 @@ const correiosConfigSchema = z.object({
       })
     )
     .optional(),
+  // Comissao sobre frete (%)
+  shippingCommissionPercent: z
+    .number()
+    .min(0, 'Comissao nao pode ser negativa')
+    .max(100, 'Comissao nao pode exceder 100%')
+    .optional()
+    .nullable(),
 });
 
 type CorreiosConfigInput = z.infer<typeof correiosConfigSchema>;
@@ -138,6 +146,7 @@ export const GET = withApiHandler(async ({ req }) => {
         production: { configured: false, username: '', password: '', cartaoPostagem: '', contrato: '', dr: '' },
         sandbox: { configured: false, username: '', password: '', cartaoPostagem: '', contrato: '', dr: '' },
         servicos: [] as unknown[],
+        shippingCommissionPercent: null as number | null,
         status: null as string | null,
         lastUpdated: null as Date | null,
       },
@@ -177,6 +186,9 @@ export const GET = withApiHandler(async ({ req }) => {
       production: productionData,
       sandbox: sandboxData,
       servicos: (customData.servicos || []) as unknown[],
+      shippingCommissionPercent: carrier.shippingCommissionPercent
+        ? Number(carrier.shippingCommissionPercent)
+        : null,
       status: carrier.status as string | null,
       lastUpdated: (productionCred?.updatedAt || sandboxCred?.updatedAt || carrier.updatedAt) as Date | null,
     },
@@ -247,6 +259,7 @@ export const POST = withApiHandler(async ({ req }) => {
           maxRetries: 3,
           logoUrl: 'https://www.correios.com.br/++resource++correios/img/logo-correios-blue.svg',
           description: 'Integração com APIs dos Correios (CWS)',
+          shippingCommissionPercent: data.shippingCommissionPercent ?? null,
         },
       });
     } else {
@@ -256,6 +269,7 @@ export const POST = withApiHandler(async ({ req }) => {
           status: 'ACTIVE',
           environment: data.activeEnvironment === 'sandbox' ? 'SANDBOX' : 'PRODUCTION',
           baseUrl: baseUrls[data.activeEnvironment],
+          shippingCommissionPercent: data.shippingCommissionPercent ?? null,
           updatedAt: new Date(),
         },
       });
@@ -320,6 +334,7 @@ export const POST = withApiHandler(async ({ req }) => {
   // Invalidar caches
   invalidateCorreiosConfigCache();
   clearTokenCache();
+  invalidateCarrierCommissionCache(CORREIOS_CARRIER_SLUG);
 
   if (!carrier) {
     throw new ApiError({

@@ -657,24 +657,26 @@ model QuoteSelection {
 }
 
 model Carrier {
-  id           String                 @id @default(cuid())
-  name         String
-  slug         String                 @unique
-  status       IntegrationStatus      @default(ACTIVE)
-  environment  IntegrationEnvironment @default(PRODUCTION)
-  baseUrl      String?
-  timeout      Int                    @default(30000)
-  maxRetries   Int                    @default(3)
-  logoUrl      String?
-  description  String?
-  createdAt    DateTime               @default(now())
-  updatedAt    DateTime               @updatedAt
-  apiCalls     CarrierApiCall[]
-  credentials  CarrierCredential[]
-  endpoints    CarrierEndpoint[]
-  pricingRules CarrierPricingRule[]
-  services     CarrierService[]
-  webhooks     CarrierWebhook[]
+  id                        String                 @id @default(cuid())
+  name                      String
+  slug                      String                 @unique
+  status                    IntegrationStatus      @default(ACTIVE)
+  environment               IntegrationEnvironment @default(PRODUCTION)
+  baseUrl                   String?
+  timeout                   Int                    @default(30000)
+  maxRetries                Int                    @default(3)
+  logoUrl                   String?
+  description               String?
+  /// Comissao sobre frete (%) - aplicada nas cotacoes desta transportadora
+  shippingCommissionPercent Decimal?               @db.Decimal(5, 2) @map("shipping_commission_percent")
+  createdAt                 DateTime               @default(now())
+  updatedAt                 DateTime               @updatedAt
+  apiCalls                  CarrierApiCall[]
+  credentials               CarrierCredential[]
+  endpoints                 CarrierEndpoint[]
+  pricingRules              CarrierPricingRule[]
+  services                  CarrierService[]
+  webhooks                  CarrierWebhook[]
 
   @@index([slug])
   @@index([status])

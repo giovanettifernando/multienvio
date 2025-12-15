@@ -162,14 +162,17 @@ export async function createQuote(
   // Calculate shipping options
   const shippingOptions = await calculateShippingOptions(request);
 
-  // Apply platform commission to all shipping options
+  // Apply carrier commission to all shipping options
+  // Por enquanto, apenas Correios esta integrado (slug: "correios")
   const optionsWithCommission = await Promise.all(
     shippingOptions.map(async (option) => {
-      const { finalPrice, commissionAmount } = await applyShippingCommission(option.preco);
+      // Determinar o carrierSlug baseado no nome da transportadora
+      const carrierSlug = option.carrier.toLowerCase().includes('correio') ? 'correios' : 'correios';
+      const { finalPrice, commissionAmount } = await applyShippingCommission(option.preco, carrierSlug);
       return {
         ...option,
-        precoBase: option.preco, // Preço original da transportadora
-        preco: finalPrice, // Preço final com comissão
+        precoBase: option.preco, // Preco original da transportadora
+        preco: finalPrice, // Preco final com comissao
         comissaoCentavos: Math.round(commissionAmount * 100),
       };
     })

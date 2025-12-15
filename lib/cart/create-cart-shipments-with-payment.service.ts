@@ -511,13 +511,16 @@ async function createShipmentFromCartItem(
   const hasPickupRequest = preferences?.pickupRequested === true;
   const initialStatus = determineInitialStatus(hasPickupRequest, pickupPointId);
 
-  // Calcular comissões
+  // Calcular comissoes
   const pickupFeeAmount = pickupFeeData?.feeAmount ?? 0;
   const freightCostCents = Math.round(selectedQuote.price * 100);
   const pickupFeeCents = Math.round(pickupFeeAmount * 100);
+  // Determinar carrierSlug baseado no nome da transportadora
+  const carrierSlug = selectedQuote.carrier.toLowerCase().includes('correio') ? 'correios' : 'correios';
   const { shippingCommissionCents, pickupCommissionCents } = await calculateCommissionsInCents(
     freightCostCents,
-    pickupFeeCents
+    pickupFeeCents,
+    carrierSlug
   );
 
   // Construir documento do shipment

@@ -45,7 +45,7 @@ export function usePontos(filter?: {
 
     // Ordenar por updatedAt desc
     return filtered.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
-  }, [points, filter?.status, filter?.uf, filter?.cidade, filter?.query]);
+  }, [points, filter]);
 }
 
 export function usePonto(id: string | null) {

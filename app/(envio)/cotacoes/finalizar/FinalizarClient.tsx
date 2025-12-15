@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Alert,
@@ -165,6 +165,7 @@ export default function FinalizarClient() {
     }
 
     reserveTrackingCode();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reserveTrackingCode é estável (só usa setState)
   }, [results, selection, reservedTrackingCode, isReservingCode, reservationError]);
 
   const summary = results?.resumo ?? null;

@@ -19,6 +19,18 @@ export function usePixPayment({ onPaymentConfirmed }: UsePixPaymentOptions) {
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Clear intervals helper (defined before checkPixStatus to avoid TDZ)
+  const clearIntervals = useCallback(() => {
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current);
+      pollingIntervalRef.current = null;
+    }
+    if (countdownIntervalRef.current) {
+      clearInterval(countdownIntervalRef.current);
+      countdownIntervalRef.current = null;
+    }
+  }, []);
+
   // Check PIX payment status
   const checkPixStatus = useCallback(async () => {
     if (!pixData?.transaction?.id) return;
@@ -51,18 +63,7 @@ export function usePixPayment({ onPaymentConfirmed }: UsePixPaymentOptions) {
     } catch (error) {
       console.error('[PIX_POLL] Erro ao verificar status:', error);
     }
-  }, [pixData?.transaction?.id, onPaymentConfirmed]);
-
-  const clearIntervals = useCallback(() => {
-    if (pollingIntervalRef.current) {
-      clearInterval(pollingIntervalRef.current);
-      pollingIntervalRef.current = null;
-    }
-    if (countdownIntervalRef.current) {
-      clearInterval(countdownIntervalRef.current);
-      countdownIntervalRef.current = null;
-    }
-  }, []);
+  }, [pixData, onPaymentConfirmed, clearIntervals]);
 
   // Generate PIX QR Code
   const generatePix = async (totalAmount: number, itemCount: number, email: string) => {

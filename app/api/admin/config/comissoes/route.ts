@@ -16,12 +16,9 @@ import { AdminPermission } from '@prisma/client';
 
 /**
  * Schema de validação para configuração de comissões
+ * Nota: shippingCommissionPercent foi movido para configuração por transportadora (Carrier)
  */
 const commissionConfigSchema = z.object({
-  shippingCommissionPercent: z
-    .number()
-    .min(0, 'Comissão não pode ser negativa')
-    .max(100, 'Comissão não pode exceder 100%'),
   pickupFeeCommissionPercent: z
     .number()
     .min(0, 'Comissão não pode ser negativa')
@@ -31,10 +28,10 @@ const commissionConfigSchema = z.object({
 
 /**
  * Tipo de resposta da configuração de comissões
+ * Nota: shippingCommissionPercent foi movido para configuração por transportadora
  */
 interface CommissionConfigResponse {
   configured: boolean;
-  shippingCommissionPercent: number;
   pickupFeeCommissionPercent: number;
   isActive: boolean;
   id: string | null;
@@ -65,7 +62,6 @@ export const GET = withApiHandler<CommissionConfigResponse>(async ({ req }) => {
     return {
       data: {
         configured: false,
-        shippingCommissionPercent: 0,
         pickupFeeCommissionPercent: 0,
         isActive: true,
         id: null,
@@ -79,7 +75,6 @@ export const GET = withApiHandler<CommissionConfigResponse>(async ({ req }) => {
     data: {
       configured: true,
       id: config.id,
-      shippingCommissionPercent: Number(config.shippingCommissionPercent),
       pickupFeeCommissionPercent: Number(config.pickupFeeCommissionPercent),
       isActive: config.isActive,
       updatedAt: config.updatedAt,
@@ -113,7 +108,7 @@ export const POST = withApiHandler(async ({ req }) => {
     });
   }
 
-  const { shippingCommissionPercent, pickupFeeCommissionPercent, isActive } = parsed.data;
+  const { pickupFeeCommissionPercent, isActive } = parsed.data;
 
   // Buscar configuração existente
   const existingConfig = await prisma.platformCommission.findFirst({
@@ -127,7 +122,6 @@ export const POST = withApiHandler(async ({ req }) => {
     config = await prisma.platformCommission.update({
       where: { id: existingConfig.id },
       data: {
-        shippingCommissionPercent,
         pickupFeeCommissionPercent,
         isActive,
         updatedById: authResult.user.id,
@@ -137,7 +131,6 @@ export const POST = withApiHandler(async ({ req }) => {
     // Criar nova configuração
     config = await prisma.platformCommission.create({
       data: {
-        shippingCommissionPercent,
         pickupFeeCommissionPercent,
         isActive,
         updatedById: authResult.user.id,
@@ -158,7 +151,6 @@ export const POST = withApiHandler(async ({ req }) => {
       success: true,
       message: 'Configuração de comissões salva com sucesso',
       id: config.id,
-      shippingCommissionPercent: Number(config.shippingCommissionPercent),
       pickupFeeCommissionPercent: Number(config.pickupFeeCommissionPercent),
       isActive: config.isActive,
     },
