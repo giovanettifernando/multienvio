@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { App, Spin, Space } from 'antd';
 import { CheckCircleOutlined, LoadingOutlined } from '@ant-design/icons';
 import { useRouter } from 'next/navigation';
@@ -29,10 +29,80 @@ export function CheckoutCartModal({
   const [useSavedCard, setUseSavedCard] = useState(true);
   const [checkoutInProgress, setCheckoutInProgress] = useState(false);
 
+  // Estado para códigos de rastreamento reservados (NOVO FLUXO)
+  const [reservedTrackingCodes, setReservedTrackingCodes] = useState<string[]>([]);
+  const [isReservingCodes, setIsReservingCodes] = useState(false);
+  const [reservationError, setReservationError] = useState<string | null>(null);
+  const reservationAttemptedRef = useRef(false);
+
   const totalAmount = cart.total;
   const itemCount = cart.items.length;
+  const itemIds = cart.items.map(item => item.id);
 
   console.debug('[CHECKOUT_CART] cart items=', itemCount, 'total=', totalAmount);
+
+  // Função para reservar códigos com retry automático
+  const reserveTrackingCodes = async (retryCount = 0) => {
+    const MAX_RETRIES = 3;
+    reservationAttemptedRef.current = true;
+    setIsReservingCodes(true);
+    setReservationError(null);
+
+    try {
+      console.log('[CHECKOUT_CART] Reservando', itemCount, 'códigos de rastreamento...');
+      const res = await fetch('/api/tracking-codes/reserve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ count: itemCount }),
+      });
+
+      if (!res.ok) {
+        throw new Error('Erro ao reservar códigos de rastreamento');
+      }
+
+      const json = await res.json();
+      const data = json.data ?? json;
+
+      // Se count > 1, retorna { codes: string[] }, senão { code: string }
+      const codes = data.codes ?? [data.code];
+      setReservedTrackingCodes(codes);
+      setReservationError(null);
+      console.log('[CHECKOUT_CART] Códigos reservados:', codes);
+    } catch (error) {
+      console.error('[CHECKOUT_CART] Erro ao reservar códigos (tentativa', retryCount + 1, '):', error);
+
+      // Retry automático
+      if (retryCount < MAX_RETRIES) {
+        console.log('[CHECKOUT_CART] Tentando novamente em 1s...');
+        setTimeout(() => reserveTrackingCodes(retryCount + 1), 1000);
+        return;
+      }
+
+      // Após todas as tentativas, marcar erro (botão fica desabilitado)
+      setReservationError('Erro ao preparar checkout');
+      setIsReservingCodes(false);
+      return;
+    }
+
+    setIsReservingCodes(false);
+  };
+
+  // NOVO FLUXO: Reservar códigos de rastreamento ao abrir o modal
+  useEffect(() => {
+    if (!open || reservationAttemptedRef.current || itemCount === 0) {
+      return;
+    }
+
+    reserveTrackingCodes();
+  }, [open, itemCount]);
+
+  // Limpar estado ao fechar modal
+  useEffect(() => {
+    if (!open) {
+      reservationAttemptedRef.current = false;
+      setReservedTrackingCodes([]);
+    }
+  }, [open]);
 
   // Fetch wallet balance
   const { data: walletData, isLoading: isLoadingWallet } = useQuery<WalletData>({
@@ -67,39 +137,11 @@ export function CheckoutCartModal({
 
   const balance = walletData?.balance?.availableReais ?? 0;
   const hasInsufficientBalance = balance < totalAmount;
-  const isConfirmDisabled = !selectedMethod;
-  const isLoading = isLoadingWallet || isLoadingCards;
+  // Desabilitar se: não selecionou método, está reservando códigos, ou códigos não foram reservados
+  const isConfirmDisabled = !selectedMethod || isReservingCodes || reservedTrackingCodes.length !== itemCount || !!reservationError;
+  const isLoading = isLoadingWallet || isLoadingCards || isReservingCodes;
 
-  // Finalize checkout after payment confirmed
-  const finalizeCheckout = useCallback(async (
-    paymentMethod: 'pix' | 'card' | 'wallet',
-    paymentMeta: Record<string, unknown>
-  ) => {
-    const checkoutRes = await fetch('/api/cart/checkout', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        paymentMethod,
-        paymentConfirmed: true,
-        paymentMeta,
-      }),
-    });
-
-    if (!checkoutRes.ok) {
-      const error = await checkoutRes.json();
-      throw new Error(error.message || 'Erro ao criar envios');
-    }
-
-    // Clear cart
-    await fetch('/api/cart', { method: 'DELETE' });
-
-    // Invalidate cache
-    queryClient.invalidateQueries({ queryKey: ['cart'] });
-    queryClient.invalidateQueries({ queryKey: ['shipments'] });
-    queryClient.invalidateQueries({ queryKey: ['wallet'] });
-  }, [queryClient]);
-
-  // PIX payment hook
+  // PIX payment hook - NOVO FLUXO com códigos reservados
   const {
     pixData,
     pixPolling,
@@ -113,11 +155,31 @@ export function CheckoutCartModal({
     onPaymentConfirmed: async () => {
       try {
         message.success('Pagamento PIX confirmado! Criando envios...');
-        await finalizeCheckout('pix', {
-          mercadoPagoPaymentId: pixData?.payment?.id,
-          transactionId: pixData?.transaction?.id,
-          amount: totalAmount,
+
+        // NOVO FLUXO: Usar /api/cart/checkout-paid com códigos reservados
+        console.log('[CHECKOUT_CART] PIX confirmado. Criando shipments com códigos:', reservedTrackingCodes);
+
+        const response = await fetch('/api/cart/checkout-paid', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            reservedTrackingCodes,
+            itemIds,
+            paymentMethod: 'MERCADO_PAGO',
+            mercadoPagoPaymentId: pixData?.payment?.id?.toString(),
+          }),
         });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error?.message || errorData.message || 'Erro ao criar envios');
+        }
+
+        // Invalidar cache
+        queryClient.invalidateQueries({ queryKey: ['cart'] });
+        queryClient.invalidateQueries({ queryKey: ['shipments'] });
+        queryClient.invalidateQueries({ queryKey: ['wallet'] });
+
         handleClose();
         router.push('/shipments');
       } catch (error) {
@@ -127,15 +189,36 @@ export function CheckoutCartModal({
     },
   });
 
-  // Card payment handlers
+  // Card payment handlers - NOVO FLUXO com códigos reservados
   const handleCardSuccess = async (paymentId: number) => {
     console.log('[CHECKOUT_CART] Pagamento com cartão aprovado:', paymentId);
     try {
       message.success('Pagamento aprovado! Criando envios...');
-      await finalizeCheckout('card', {
-        mercadoPagoPaymentId: paymentId,
-        amount: totalAmount,
+
+      // NOVO FLUXO: Usar /api/cart/checkout-paid com códigos reservados
+      console.log('[CHECKOUT_CART] Cartão aprovado. Criando shipments com códigos:', reservedTrackingCodes);
+
+      const response = await fetch('/api/cart/checkout-paid', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reservedTrackingCodes,
+          itemIds,
+          paymentMethod: 'MERCADO_PAGO',
+          mercadoPagoPaymentId: paymentId.toString(),
+        }),
       });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error?.message || errorData.message || 'Erro ao criar envios');
+      }
+
+      // Invalidar cache
+      queryClient.invalidateQueries({ queryKey: ['cart'] });
+      queryClient.invalidateQueries({ queryKey: ['shipments'] });
+      queryClient.invalidateQueries({ queryKey: ['wallet'] });
+
       handleClose();
       router.push('/shipments');
     } catch (error) {
@@ -154,43 +237,63 @@ export function CheckoutCartModal({
   const handleConfirm = async () => {
     if (!selectedMethod) return;
 
+    // Verificar se códigos foram reservados
+    if (reservedTrackingCodes.length !== itemCount) {
+      message.error('Erro: códigos de rastreamento não foram reservados. Reabra o modal.');
+      return;
+    }
+
     setLoading(true);
 
     try {
       if (selectedMethod === 'wallet') {
-        console.log('[CHECKOUT_CART] Processando pagamento com carteira...');
+        console.log('[CHECKOUT_CART] Processando pagamento com carteira (NOVO FLUXO)...');
+        console.log('[CHECKOUT_CART] Códigos reservados:', reservedTrackingCodes);
+        console.log('[CHECKOUT_CART] Item IDs:', itemIds);
 
-        const cartItemIds = cart.items.map(item => item.id).join(',');
-        const debitReferenceId = `cart:${Date.now()}:${cartItemIds.slice(0, 50)}`;
-
-        // Debit from wallet
-        await fetch('/api/wallet/debit', {
+        // NOVO FLUXO: Usar /api/cart/checkout-paid que cria shipments + debita carteira atomicamente
+        const response = await fetch('/api/cart/checkout-paid', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            referenceId: debitReferenceId,
-            amount: totalAmount,
-            reason: 'cart_payment',
-            metadata: { itemCount },
+            reservedTrackingCodes,
+            itemIds,
+            paymentMethod: 'WALLET',
           }),
         });
 
-        await finalizeCheckout('wallet', {
-          walletDebitReference: debitReferenceId,
-          amount: totalAmount,
-        });
+        if (!response.ok) {
+          const errorData = await response.json();
+          const errorMessage = errorData.error?.message || errorData.message || 'Erro ao processar pagamento';
+
+          if (errorData.error?.code === 'insufficient_funds') {
+            throw new Error('Saldo insuficiente na carteira');
+          }
+
+          throw new Error(errorMessage);
+        }
+
+        const result = await response.json();
+        console.log('[CHECKOUT_CART] Shipments criados com sucesso:', result);
+
+        // Invalidar cache
+        queryClient.invalidateQueries({ queryKey: ['cart'] });
+        queryClient.invalidateQueries({ queryKey: ['shipments'] });
+        queryClient.invalidateQueries({ queryKey: ['wallet'] });
 
         message.success('Pagamento aprovado! Envios criados.');
         handleClose();
         router.push('/shipments');
 
       } else if (selectedMethod === 'pix') {
+        // PIX: códigos reservados serão usados no callback onPaymentConfirmed
         await generatePix(totalAmount, itemCount, user?.email || '');
         setCheckoutInProgress(true);
         setLoading(false);
         return;
 
       } else if (selectedMethod === 'card') {
+        // Cartão: códigos reservados serão usados no handleCardSuccess
         console.log('[CHECKOUT_CART] Abrindo formulário de cartão...');
         setCheckoutInProgress(true);
         setShowCardForm(true);

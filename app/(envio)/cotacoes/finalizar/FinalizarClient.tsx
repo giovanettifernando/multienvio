@@ -40,6 +40,7 @@ import type { DocumentType } from "@/types/quote";
 import { useQuoteDraft } from "@/lib/state/quoteDraft";
 import { useCheckoutStore } from "@/stores/checkout";
 import { CheckoutModal } from "@/components/payments/CheckoutModal";
+import { PaidCheckoutModal, type CheckoutData } from "@/components/payments/PaidCheckoutModal";
 import { usePickupFee } from "@/hooks/usePickupFee";
 import { generateUUID } from "@/lib/utils/uuid";
 import { useAddressStore } from "@/lib/state/addresses";
@@ -93,6 +94,15 @@ export default function FinalizarClient() {
     totalAmount: number;
   } | null>(null);
 
+  // Estado para código de rastreamento reservado (garantia de unicidade)
+  const [reservedTrackingCode, setReservedTrackingCode] = useState<string | null>(null);
+  const [isReservingCode, setIsReservingCode] = useState(false);
+  const [reservationError, setReservationError] = useState<string | null>(null);
+
+  // Estado para os dados do checkout (novo fluxo)
+  const [paidCheckoutData, setPaidCheckoutData] = useState<CheckoutData | null>(null);
+  const [paidCheckoutModalOpen, setPaidCheckoutModalOpen] = useState(false);
+
   // Estado adicional para evitar múltiplos cliques
   const [isProcessingCheckout, setIsProcessingCheckout] = useState(false);
 
@@ -100,6 +110,62 @@ export default function FinalizarClient() {
   const [isRecipientModalOpen, setIsRecipientModalOpen] = useState(false);
   // Flag para controlar se o modal já foi aberto automaticamente nesta sessão
   const [hasAutoOpenedRecipientModal, setHasAutoOpenedRecipientModal] = useState(false);
+
+  // Função para reservar código de rastreamento com retry automático
+  const reserveTrackingCode = async (retryCount = 0) => {
+    const MAX_RETRIES = 3;
+    setIsReservingCode(true);
+    setReservationError(null);
+
+    try {
+      console.log('[TRACKING_CODE] Reservando código de rastreamento...');
+      const response = await fetch('/api/tracking-codes/reserve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      const result = await response.json();
+      const code = result.data?.code;
+
+      if (code) {
+        console.log('[TRACKING_CODE] Código reservado:', code);
+        setReservedTrackingCode(code);
+        setReservationError(null);
+      } else {
+        throw new Error('Código não retornado');
+      }
+    } catch (error) {
+      console.error('[TRACKING_CODE] Erro ao reservar código (tentativa', retryCount + 1, '):', error);
+
+      // Retry automático
+      if (retryCount < MAX_RETRIES) {
+        console.log('[TRACKING_CODE] Tentando novamente em 1s...');
+        setTimeout(() => reserveTrackingCode(retryCount + 1), 1000);
+        return;
+      }
+
+      // Após todas as tentativas, marcar erro (botão fica desabilitado)
+      setReservationError('Erro ao preparar checkout');
+      setIsReservingCode(false);
+      return;
+    }
+
+    setIsReservingCode(false);
+  };
+
+  // Reservar código de rastreamento único ao montar (se houver cotação válida)
+  useEffect(() => {
+    // Só reservar se tiver cotação válida e ainda não tiver código reservado
+    if (!results || !selection || reservedTrackingCode || isReservingCode || reservationError) {
+      return;
+    }
+
+    reserveTrackingCode();
+  }, [results, selection, reservedTrackingCode, isReservingCode, reservationError]);
 
   const summary = results?.resumo ?? null;
   const selectedService = selection?.result ?? null;
@@ -468,6 +534,9 @@ export default function FinalizarClient() {
     if (!checks.documentItems) return false;
     if (!canProceed) return false;
 
+    // P2: Bloquear se código não foi reservado ou houve erro
+    if (!reservedTrackingCode || reservationError) return false;
+
     return true;
   }, [
     selection,
@@ -483,6 +552,8 @@ export default function FinalizarClient() {
     recipientDocumento,
     recipientNumero,
     recipientCep,
+    reservedTrackingCode,
+    reservationError,
     recipientLogradouro,
     recipientBairro,
     recipientCidade,
@@ -493,6 +564,11 @@ export default function FinalizarClient() {
   // Mensagem de tooltip para botões desabilitados
   const disabledTooltip = useMemo(() => {
     if (preconditionsOk) return "";
+
+    // Aguardando preparação do checkout
+    if (isReservingCode || !reservedTrackingCode) {
+      return "Preparando...";
+    }
 
     if (!hasAtLeastOneDocumentItem) {
       return "Informe ao menos um item no documento do envio (Declaração de conteúdo ou Nota Fiscal).";
@@ -542,6 +618,8 @@ export default function FinalizarClient() {
     return "Preencha todos os campos obrigatórios para continuar.";
   }, [
     preconditionsOk,
+    isReservingCode,
+    reservedTrackingCode,
     hasAtLeastOneDocumentItem,
     pickupAtOrigin,
     pickupPointId,
@@ -1139,37 +1217,93 @@ export default function FinalizarClient() {
         freightCost: selectedService.preco,
         totalCost: totalAmount,
         solicitarColeta: pickupAtOrigin, // Usar pickupAtOrigin do quoteDraft
+        // Código de rastreamento reservado (garante unicidade)
+        reservedTrackingCode: reservedTrackingCode || undefined,
       };
 
       console.log('[CHECKOUT_FRONTEND] Payload completo sendo enviado:', JSON.stringify(payload, null, 2));
       console.log('[CHECKOUT_FRONTEND] payload.recipient.salvarRecorrente:', payload.recipient.salvarRecorrente);
 
-      // Criar shipment via API
-      const res = await fetch("/api/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+      // NOVO FLUXO: Se tiver código reservado, usar PaidCheckoutModal
+      // O shipment será criado APÓS confirmação do pagamento
+      if (reservedTrackingCode) {
+        console.log('[CHECKOUT_FRONTEND] Usando NOVO FLUXO com código reservado:', reservedTrackingCode);
 
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.message || "Erro ao processar checkout");
+        // Preparar dados para o novo modal (sem criar shipment ainda)
+        const checkoutData: CheckoutData = {
+          recipient: {
+            nome: recipientData.nome || "",
+            telefone: recipientData.telefone,
+            email: recipientData.email,
+            documento: recipientData.documento,
+            cep: recipientData.cep,
+            logradouro: recipientData.logradouro,
+            numero: recipientData.numero,
+            complemento: recipientData.complemento,
+            bairro: recipientData.bairro,
+            cidade: recipientData.cidade,
+            uf: recipientData.uf,
+            observacoes: recipientData.observacoes,
+            salvarRecorrente: recipientData.salvarRecorrente || false,
+          },
+          document: payload.document,
+          volumes: payload.volumes,
+          insuranceValue: payload.insuranceValue,
+          freightCost: payload.freightCost,
+          totalCost: totalAmount,
+          pickupPointId: payload.pickupPointId,
+          solicitarColeta: payload.solicitarColeta,
+          pickupFee: payload.pickupFee,
+          carrier: payload.carrier,
+          service: payload.service,
+          originCep: payload.originCep,
+          originCidade: payload.originCidade,
+          originUf: payload.originUf,
+          originAddress: payload.originAddress,
+          destinationCep: payload.destinationCep,
+          estimatedDays: payload.estimatedDays,
+        };
+
+        setPaidCheckoutData(checkoutData);
+        setPaidCheckoutModalOpen(true);
+
+        dispatchTelemetry("checkout_modal_opened", {
+          selectionId: selection.selectionId,
+          trackingCode: reservedTrackingCode,
+          flow: "new_paid_checkout",
+        });
+      } else {
+        // FLUXO LEGADO: Criar shipment primeiro, pagar depois
+        console.log('[CHECKOUT_FRONTEND] Usando FLUXO LEGADO (sem código reservado)');
+
+        // Criar shipment via API
+        const res = await fetch("/api/checkout", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+
+        if (!res.ok) {
+          const error = await res.json();
+          throw new Error(error.message || "Erro ao processar checkout");
+        }
+
+        const out = await res.json();
+
+        // Guardar informações do shipment e abrir modal de pagamento
+        setCreatedShipment({
+          id: out.shipmentId,
+          trackingCode: out.trackingCode,
+          totalAmount: totalAmount,
+        });
+        setCheckoutModalOpen(true);
+
+        dispatchTelemetry("checkout_created", {
+          selectionId: selection.selectionId,
+          shipmentId: out.shipmentId,
+          flow: "legacy_checkout",
+        });
       }
-
-      const out = await res.json();
-
-      // Guardar informações do shipment e abrir modal de pagamento
-      setCreatedShipment({
-        id: out.shipmentId,
-        trackingCode: out.trackingCode,
-        totalAmount: totalAmount,
-      });
-      setCheckoutModalOpen(true);
-
-      dispatchTelemetry("checkout_created", {
-        selectionId: selection.selectionId,
-        shipmentId: out.shipmentId,
-      });
     } catch (error: unknown) {
       console.error("Erro ao processar pagamento", error);
       const errorMessage = error instanceof Error ? error.message : "Não foi possível iniciar o pagamento.";
@@ -1335,7 +1469,7 @@ export default function FinalizarClient() {
           onClose={() => setIsRecipientModalOpen(false)}
         />
 
-        {/* Modal de escolha de pagamento */}
+        {/* Modal de escolha de pagamento (FLUXO LEGADO) */}
         {createdShipment && (
           <CheckoutModal
             open={checkoutModalOpen}
@@ -1343,6 +1477,20 @@ export default function FinalizarClient() {
             shipmentId={createdShipment.id}
             totalAmount={createdShipment.totalAmount}
             trackingCode={createdShipment.trackingCode}
+          />
+        )}
+
+        {/* Modal de pagamento integrado (NOVO FLUXO - shipment criado após pagamento) */}
+        {paidCheckoutData && reservedTrackingCode && (
+          <PaidCheckoutModal
+            open={paidCheckoutModalOpen}
+            onClose={() => {
+              setPaidCheckoutModalOpen(false);
+              setIsProcessingCheckout(false);
+            }}
+            checkoutData={paidCheckoutData}
+            trackingCode={reservedTrackingCode}
+            totalAmount={paidCheckoutData.totalCost}
           />
         )}
       </FormProvider>

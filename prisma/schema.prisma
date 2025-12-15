@@ -56,7 +56,8 @@ model User {
   recurringItems         RecurringItem[]
   role                   Role?                @relation(fields: [roleId], references: [id])
   wallet                 Wallet?
-  pickupRequests         PickupRequest[]
+  pickupRequests              PickupRequest[]
+  trackingCodeReservations    TrackingCodeReservation[]
 
   // Removidos índices redundantes: email, emailVerificationToken, googleId já são @unique
   @@map("users")
@@ -1571,4 +1572,27 @@ model FAQItem {
   @@index([audience, isActive, sortOrder])
   @@index([category, isActive])
   @@map("faq_items")
+}
+
+// =====================================================
+// RESERVA DE CÓDIGOS DE RASTREAMENTO
+// =====================================================
+
+/// Reserva de códigos de rastreamento para garantir unicidade
+/// Códigos são reservados antes do pagamento e usados após confirmação
+model TrackingCodeReservation {
+  id         String    @id @default(cuid())
+  code       String    @unique                    // EL1734567890ABCDE - código único reservado
+  userId     String    @map("user_id")
+  shipmentId String?   @unique @map("shipment_id") // Preenchido quando shipment é criado
+  usedAt     DateTime? @map("used_at")            // null = não usado, preenchido quando shipment criado
+  expiresAt  DateTime  @map("expires_at")         // Expira em 24h se não usado
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@index([usedAt])
+  @@map("tracking_code_reservations")
 }
