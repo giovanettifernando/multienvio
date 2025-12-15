@@ -443,6 +443,9 @@ export async function processCheckout(input: CheckoutInput): Promise<CheckoutRes
   // Salvar destinatário recorrente (fora da transação)
   await saveRecipientIfRequested(input.userId, input.recipient);
 
+  // NOTA: E-mail de rastreamento é enviado após confirmação do pagamento
+  // em /api/wallet/debit (não aqui, pois o shipment ainda não foi pago)
+
   return result;
 }
 

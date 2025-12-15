@@ -62,7 +62,7 @@ export const ADMIN_NAV: AdminNavItem[] = [
         key: "gateway-pagamento",
         label: "Gateway de Pagamento",
         href: "/admin/gateway-pagamento",
-        permissions: ["FINANCEIRO"],
+        permissions: ["INTEGRACOES"],
       },
       {
         key: "correios",

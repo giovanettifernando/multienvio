@@ -3,6 +3,7 @@ import { ApiError } from '@/lib/api/errors';
 import { getUserFromRequest } from '@/lib/auth/session';
 import { prisma } from '@/lib/db';
 import { WalletDebitApiSchema } from '@/lib/validation/wallet';
+import { sendShipmentTrackingEmail } from '@/lib/email/mailer';
 import { logger } from '@/lib/logger';
 
 /**
@@ -255,8 +256,17 @@ export const POST = withApiHandler<WalletDebitResponse>(async (context) => {
         idempotent: false,
         balance: updatedWallet.availableCents / 100,
         transactionId: transaction.id,
+        shipmentIds: shipmentIdsToUpdate,
       };
     });
+
+    // Enviar e-mail de rastreamento para destinatários (após pagamento confirmado)
+    // Executado de forma assíncrona para não bloquear a resposta
+    if (!result.idempotent && result.shipmentIds && result.shipmentIds.length > 0) {
+      sendTrackingEmailsForShipments(session.userId, result.shipmentIds).catch((err) => {
+        logger.error({ event: 'tracking_emails_error', err }, 'Failed to send tracking emails after payment');
+      });
+    }
 
     return {
       data: {
@@ -312,3 +322,83 @@ export const POST = withApiHandler<WalletDebitResponse>(async (context) => {
     });
   }
 });
+
+/**
+ * Envia e-mails de rastreamento para os destinatários dos shipments pagos
+ */
+async function sendTrackingEmailsForShipments(
+  userId: string,
+  shipmentIds: string[]
+): Promise<void> {
+  if (!shipmentIds || shipmentIds.length === 0) return;
+
+  try {
+    // Buscar dados do remetente
+    const sender = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { name: true, razaoSocial: true },
+    });
+    const senderName = sender?.razaoSocial || sender?.name || 'Remetente';
+
+    // Buscar shipments com dados do destinatário
+    const shipments = await prisma.shipment.findMany({
+      where: { id: { in: shipmentIds } },
+      select: {
+        platformTrackingCode: true,
+        recipientName: true,
+        recipientEmail: true,
+        destinationCity: true,
+        destinationState: true,
+      },
+    });
+
+    // Enviar e-mail para cada shipment que tem e-mail do destinatário
+    for (const shipment of shipments) {
+      if (!shipment.recipientEmail || shipment.recipientEmail.trim() === '') {
+        logger.info({
+          event: 'tracking_email_skip',
+          trackingCode: shipment.platformTrackingCode,
+          reason: 'no_email',
+        }, 'Skipping tracking email - no recipient email');
+        continue;
+      }
+
+      try {
+        const sent = await sendShipmentTrackingEmail(
+          shipment.recipientEmail,
+          shipment.recipientName || 'Destinatário',
+          shipment.platformTrackingCode,
+          senderName,
+          shipment.destinationCity,
+          shipment.destinationState
+        );
+
+        if (sent) {
+          logger.info({
+            event: 'tracking_email_sent',
+            trackingCode: shipment.platformTrackingCode,
+            recipientEmail: shipment.recipientEmail,
+          }, 'Tracking email sent to recipient');
+        } else {
+          logger.warn({
+            event: 'tracking_email_failed',
+            trackingCode: shipment.platformTrackingCode,
+            recipientEmail: shipment.recipientEmail,
+          }, 'Failed to send tracking email');
+        }
+      } catch (emailError) {
+        logger.error({
+          event: 'tracking_email_error',
+          trackingCode: shipment.platformTrackingCode,
+          err: emailError,
+        }, 'Error sending tracking email');
+      }
+    }
+  } catch (error) {
+    logger.error({
+      event: 'tracking_emails_batch_error',
+      shipmentIds,
+      err: error,
+    }, 'Error fetching data for tracking emails');
+  }
+}

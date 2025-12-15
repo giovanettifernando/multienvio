@@ -161,3 +161,22 @@ export interface TimelineEvent {
   description: string;
   location?: string;
 }
+
+export interface OpsKpis {
+  /** Aguardando coleta/postagem (PICKUP_REQUESTED, AWAITING_DROP_OFF_AT_POINT, etc.) */
+  backlog: number;
+  /** Em coleta (COLLECTED_FROM_SENDER, IN_TRANSIT_TO_CARRIER_HUB) */
+  inPickup: number;
+  /** No ponto de coleta (DROPPED_OFF_AT_POINT, AWAITING_CARRIER_PICKUP_AT_POINT) */
+  atPoC: number;
+  /** Em trânsito (RECEIVED_AT_ORIGIN_HUB, IN_TRANSFER, IN_TRANSIT_TO_DESTINATION, etc.) */
+  inTransit: number;
+  /** Em rota de entrega (OUT_FOR_DELIVERY, AWAITING_PICKUP_AT_DESTINATION_HUB) */
+  outForDelivery: number;
+  /** Exceções/problemas (DELIVERY_ATTEMPT_FAILED, DELIVERY_PROBLEM, PICKUP_FAILED) */
+  exceptions: number;
+  /** Entregues (DELIVERED, DELIVERED_AT_DESTINATION_HUB) */
+  delivered: number;
+  /** Cancelados/devolvidos (todos da fase D) */
+  cancelled: number;
+}

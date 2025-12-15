@@ -11,7 +11,7 @@ import { withApiHandler } from '@/lib/api/handler';
 import { ApiError } from '@/lib/api/errors';
 
 export const POST = withApiHandler(async ({ req }) => {
-  const authResult = await requireAdminUser(req, AdminPermission.FINANCEIRO);
+  const authResult = await requireAdminUser(req, AdminPermission.INTEGRACOES);
   if (authResult instanceof Response) {
     throw new ApiError({
       code: 'UNAUTHORIZED',

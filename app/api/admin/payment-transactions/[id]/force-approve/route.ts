@@ -21,7 +21,7 @@ const ForceApproveSchema = z.object({
 });
 
 export const POST = withApiHandler<unknown, { id: string }>(async ({ req, params }) => {
-  const authResult = await requireAdminUser(req, AdminPermission.FINANCEIRO);
+  const authResult = await requireAdminUser(req, AdminPermission.INTEGRACOES);
   if (authResult instanceof Response) {
     throw new ApiError({
       code: 'UNAUTHORIZED',

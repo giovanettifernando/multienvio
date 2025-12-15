@@ -36,7 +36,7 @@ interface PaymentGatewayPostResponse {
  *   - reveal=true: Retorna accessToken e webhookSecret descriptografados
  */
 export const GET = withApiHandler<PaymentGatewayGetResponse>(async ({ req }) => {
-  const authResult = await requireAdminUser(req, AdminPermission.FINANCEIRO);
+  const authResult = await requireAdminUser(req, AdminPermission.INTEGRACOES);
   if (authResult instanceof Response) {
     throw new ApiError({
       code: 'UNAUTHORIZED',
@@ -112,7 +112,7 @@ const PaymentGatewayConfigSchema = z.object({
  * POST - Salvar configuração
  */
 export const POST = withApiHandler<PaymentGatewayPostResponse>(async ({ req }) => {
-  const authResult = await requireAdminUser(req, AdminPermission.FINANCEIRO);
+  const authResult = await requireAdminUser(req, AdminPermission.INTEGRACOES);
   if (authResult instanceof Response) {
     throw new ApiError({
       code: 'UNAUTHORIZED',

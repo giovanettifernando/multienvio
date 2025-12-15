@@ -154,44 +154,69 @@ export const GET = withApiHandler<WalletTransactionsResponse>(async ({ req }) =>
     };
   });
 
-  // Calculate period summary
+  // Calculate period summary (respeitando os filtros de data e tipo aplicados)
   const summaryWhere = { ...where };
-  delete summaryWhere.OR; // Remove search filter from summary
+  delete summaryWhere.OR; // Remove search filter from summary (summary é do período, não da pesquisa)
 
-  const creditsAgg = await prisma.walletTransaction.aggregate({
-    where: {
-      ...summaryWhere,
-      OR: [
-        { type: 'TOPUP' },
-        { type: 'REFUND' },
-        { type: 'ADJUSTMENT', amountCents: { gte: 0 } },
-      ],
-    },
-    _sum: { amountCents: true },
-    _count: true,
-  });
+  // Se um tipo específico foi filtrado, o summary reflete apenas esse tipo
+  // Se não, calcula créditos e débitos separadamente
+  let totalCreditsCents = 0;
+  let totalDebitsCents = 0;
+  let transactionCount = 0;
 
-  const debitsAgg = await prisma.walletTransaction.aggregate({
-    where: {
-      ...summaryWhere,
-      OR: [
-        { type: 'PURCHASE' },
-        { type: 'WITHDRAW' },
-        { type: 'ADJUSTMENT', amountCents: { lt: 0 } },
-      ],
-    },
-    _sum: { amountCents: true },
-    _count: true,
-  });
+  if (type) {
+    // Tipo específico filtrado - calcula apenas esse tipo
+    const agg = await prisma.walletTransaction.aggregate({
+      where: summaryWhere,
+      _sum: { amountCents: true },
+      _count: true,
+    });
+    const amount = agg._sum.amountCents || 0;
+    transactionCount = agg._count;
+    if (amount >= 0) {
+      totalCreditsCents = amount;
+    } else {
+      totalDebitsCents = Math.abs(amount);
+    }
+  } else {
+    // Sem filtro de tipo - calcula créditos e débitos separadamente
+    const [creditsAgg, debitsAgg] = await Promise.all([
+      prisma.walletTransaction.aggregate({
+        where: {
+          ...summaryWhere,
+          OR: [
+            { type: 'TOPUP' },
+            { type: 'REFUND' },
+            { type: 'ADJUSTMENT', amountCents: { gte: 0 } },
+          ],
+        },
+        _sum: { amountCents: true },
+        _count: true,
+      }),
+      prisma.walletTransaction.aggregate({
+        where: {
+          ...summaryWhere,
+          OR: [
+            { type: 'PURCHASE' },
+            { type: 'WITHDRAW' },
+            { type: 'ADJUSTMENT', amountCents: { lt: 0 } },
+          ],
+        },
+        _sum: { amountCents: true },
+        _count: true,
+      }),
+    ]);
 
-  const totalCreditsCents = creditsAgg._sum.amountCents || 0;
-  const totalDebitsCents = Math.abs(debitsAgg._sum.amountCents || 0);
+    totalCreditsCents = creditsAgg._sum.amountCents || 0;
+    totalDebitsCents = Math.abs(debitsAgg._sum.amountCents || 0);
+    transactionCount = creditsAgg._count + debitsAgg._count;
+  }
 
   const summary = {
     totalCredits: totalCreditsCents / 100,
     totalDebits: totalDebitsCents / 100,
     netAmount: (totalCreditsCents - totalDebitsCents) / 100,
-    transactionCount: creditsAgg._count + debitsAgg._count,
+    transactionCount,
   };
 
   const response: Paged<AdminWalletTransaction> & { summary: typeof summary } = {

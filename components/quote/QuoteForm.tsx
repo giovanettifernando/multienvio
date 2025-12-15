@@ -1192,13 +1192,20 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
             const clientStatus = isReverse
               ? cepStatus.origem
               : cepStatus.destino;
-            const suffix = clientCepLoading ? (
-              <Spin size="small" />
-            ) : clientStatus ? (
-              <CheckCircleTwoTone twoToneColor="#389e0d" />
-            ) : clientCepError ? (
-              <CloseCircleTwoTone twoToneColor="#ff4d4f" />
-            ) : null;
+            // Sempre manter suffix presente para evitar perda de foco (warning Ant Design)
+            const suffix = (
+              <span style={{ visibility: clientCepLoading || clientStatus || clientCepError ? 'visible' : 'hidden', width: 14, display: 'inline-block' }}>
+                {clientCepLoading ? (
+                  <Spin size="small" />
+                ) : clientStatus ? (
+                  <CheckCircleTwoTone twoToneColor="#389e0d" />
+                ) : clientCepError ? (
+                  <CloseCircleTwoTone twoToneColor="#ff4d4f" />
+                ) : (
+                  <span />
+                )}
+              </span>
+            );
 
             return (
               <Form.Item

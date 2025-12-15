@@ -3,10 +3,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
+  Alert,
   App,
   Space,
   Tooltip,
 } from "antd";
+import { EditOutlined } from "@ant-design/icons";
 import { ELCard } from "@/components/ui/ELCard";
 import { ELGrid } from "@/components/ui/ELGrid";
 import { ELSkeleton } from "@/components/ui/ELSkeleton";
@@ -22,7 +24,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useShallow } from "zustand/react/shallow";
 import { DocumentChooser } from "@/components/quote/DocumentChooser";
 import { PostingUnitPicker } from "@/components/quote/PostingUnitPicker";
-import { RecipientForm } from "@/components/quote/RecipientForm";
+import { RecipientModal } from "@/components/quote/RecipientModal";
 import { LabelPreview } from "@/components/quote/LabelPreview";
 import { ResultsBanner } from "@/components/quote/ResultsBanner";
 import { QuoteNavigationButtons } from "@/components/quote/QuoteNavigationButtons";
@@ -93,6 +95,11 @@ export default function FinalizarClient() {
 
   // Estado adicional para evitar múltiplos cliques
   const [isProcessingCheckout, setIsProcessingCheckout] = useState(false);
+
+  // Estado para o modal de destinatário
+  const [isRecipientModalOpen, setIsRecipientModalOpen] = useState(false);
+  // Flag para controlar se o modal já foi aberto automaticamente nesta sessão
+  const [hasAutoOpenedRecipientModal, setHasAutoOpenedRecipientModal] = useState(false);
 
   const summary = results?.resumo ?? null;
   const selectedService = selection?.result ?? null;
@@ -271,6 +278,37 @@ export default function FinalizarClient() {
   const recipientCidade = watch("recipient.manual.cidade");
   const recipientUf = watch("recipient.manual.uf");
 
+  // Helper: verificar se dados manuais do destinatário estão completos
+  // Campos obrigatórios: Nome, CPF/CNPJ e Número
+  const isRecipientDataComplete = useMemo(() => {
+    // Se há destinatário recorrente selecionado, dados estão completos
+    if (destino?.mode === "recipient" && !!destino.recipientId) {
+      return true;
+    }
+    // Se modo manual, verificar apenas campos obrigatórios (Nome, CPF, Número)
+    return (
+      !!recipientNome && recipientNome.trim().length > 0 &&
+      !!recipientDocumento && recipientDocumento.trim().length > 0 &&
+      !!recipientNumero && recipientNumero.trim().length > 0
+    );
+  }, [destino, recipientNome, recipientDocumento, recipientNumero]);
+
+  // Abrir modal de destinatário automaticamente se modo manual e dados incompletos
+  useEffect(() => {
+    // Só abrir uma vez por sessão
+    if (hasAutoOpenedRecipientModal) return;
+    // Só abrir se modo manual
+    if (destino?.mode !== "manual") return;
+    // Só abrir se dados incompletos
+    if (isRecipientDataComplete) return;
+    // Aguardar hidratação e dados básicos
+    if (!summary) return;
+
+    // Abrir modal automaticamente
+    setIsRecipientModalOpen(true);
+    setHasAutoOpenedRecipientModal(true);
+  }, [destino, isRecipientDataComplete, hasAutoOpenedRecipientModal, summary]);
+
   // Watch document fields to validate items
   // Using useWatch for better reactivity with nested fields
   const documentType = useWatch({ control, name: "document.type" });
@@ -389,12 +427,11 @@ export default function FinalizarClient() {
     // Check if recipient is valid
     const hasRecurringRecipient = destino?.mode === "recipient" && !!destino.recipientId;
 
-    // Check manual recipient validity
+    // Check manual recipient validity (apenas campos obrigatórios: Nome, CPF, Número)
+    // Campos de endereço são preenchidos automaticamente
     const isRecipientFormValid =
       recipientMode === "manual" &&
       !!recipientNome && recipientNome.trim().length > 0 &&
-      !!recipientTelefone && recipientTelefone.trim().length > 0 &&
-      !!recipientEmail && recipientEmail.trim().length > 0 &&
       !!recipientDocumento && recipientDocumento.trim().length > 0 &&
       !!recipientNumero && recipientNumero.trim().length > 0 &&
       !!recipientCep && recipientCep.trim().length > 0 &&
@@ -472,12 +509,10 @@ export default function FinalizarClient() {
     const hasRecurringRecipient = destino?.mode === "recipient" && !!destino.recipientId;
     const hasManualDestination = !!summary?.destinoCep && summary.destinoCep.length > 0;
 
-    // Para finalizar, além do CEP, precisamos dos dados completos do destinatário
+    // Para finalizar, campos obrigatórios: Nome, CPF, Número + endereço preenchido automaticamente
     const isRecipientFormValid =
       recipientMode === "manual" &&
       !!recipientNome && recipientNome.trim().length > 0 &&
-      !!recipientTelefone && recipientTelefone.trim().length > 0 &&
-      !!recipientEmail && recipientEmail.trim().length > 0 &&
       !!recipientDocumento && recipientDocumento.trim().length > 0 &&
       !!recipientNumero && recipientNumero.trim().length > 0 &&
       !!recipientCep && recipientCep.trim().length > 0 &&
@@ -540,6 +575,12 @@ export default function FinalizarClient() {
 
     if (!selection || !results || !summary || !selectedService) {
       message.warning("Informações da cotação incompletas.");
+      return;
+    }
+
+    // Se dados do destinatário incompletos (modo manual), abrir modal
+    if (destino?.mode === "manual" && !isRecipientDataComplete) {
+      setIsRecipientModalOpen(true);
       return;
     }
 
@@ -794,6 +835,12 @@ export default function FinalizarClient() {
     // Proteção contra múltiplos cliques
     if (isProcessingCheckout) {
       console.log('[HANDLE_PAY_NOW] ⚠️ Checkout já está em progresso, ignorando clique duplicado');
+      return;
+    }
+
+    // Se dados do destinatário incompletos (modo manual), abrir modal
+    if (destino?.mode === "manual" && !isRecipientDataComplete) {
+      setIsRecipientModalOpen(true);
       return;
     }
 
@@ -1215,13 +1262,61 @@ export default function FinalizarClient() {
             </ELCard>
           </ELGrid>
 
+          {/* Indicador visual de destinatário pendente (modo manual) */}
+          {destino?.mode === "manual" && !isRecipientDataComplete && (
+            <Alert
+              type="warning"
+              showIcon
+              title={
+                <Space size={8} align="center">
+                  <span style={{ fontSize: 13 }}>
+                    <strong>Destinatário pendente</strong> - Complete os dados para finalizar.
+                  </span>
+                  <ELButton
+                    size="small"
+                    icon={<EditOutlined />}
+                    onClick={() => setIsRecipientModalOpen(true)}
+                    style={{ fontSize: 12 }}
+                  >
+                    Preencher
+                  </ELButton>
+                </Space>
+              }
+              style={{ marginTop: 12, padding: "8px 12px" }}
+            />
+          )}
+
+          {/* Indicador quando destinatário preenchido (modo manual) */}
+          {destino?.mode === "manual" && isRecipientDataComplete && (
+            <Alert
+              type="success"
+              showIcon
+              title={
+                <Space size={8} align="center">
+                  <span style={{ fontSize: 13 }}>
+                    <strong>Destinatário:</strong> {recipientNome} - {recipientCidade}/{recipientUf}
+                  </span>
+                  <ELButton
+                    size="small"
+                    variant="link"
+                    icon={<EditOutlined />}
+                    onClick={() => setIsRecipientModalOpen(true)}
+                    style={{ fontSize: 12 }}
+                  >
+                    Editar
+                  </ELButton>
+                </Space>
+              }
+              style={{ marginTop: 12, padding: "8px 12px" }}
+            />
+          )}
+
           {/* Formulários */}
           <Space orientation="vertical" size={24} style={{ width: "100%", marginTop: 24 }}>
             <ELGrid variant="forms" gap="xl">
               <DocumentChooser />
               <PostingUnitPicker />
             </ELGrid>
-            <RecipientForm />
           </Space>
 
           <QuoteNavigationButtons
@@ -1233,6 +1328,12 @@ export default function FinalizarClient() {
             backLabel="Voltar"
           />
         </form>
+
+        {/* Modal de dados do destinatário */}
+        <RecipientModal
+          open={isRecipientModalOpen}
+          onClose={() => setIsRecipientModalOpen(false)}
+        />
 
         {/* Modal de escolha de pagamento */}
         {createdShipment && (

@@ -15,6 +15,7 @@ import { AdminPermission, Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import { withApiHandler } from '@/lib/api/handler';
 import { ApiError } from '@/lib/api/errors';
+import { startOfDayBrasilia, endOfDayBrasilia } from '@/lib/utils/date';
 
 export type PayableType = 'collector_commission' | 'pickup_point_commission' | 'carrier_cost' | 'expense';
 export type PayableStatus = 'pending' | 'paid';
@@ -88,10 +89,9 @@ export const GET = withApiHandler<AccountsPayableResponse>(async ({ req }) => {
     });
   }
 
-  const startDate = new Date(dateStart);
-  const endDate = new Date(dateEnd);
-  // Ajustar para fim do dia
-  endDate.setHours(23, 59, 59, 999);
+  // Usar UTC-3 (Brasília) para filtros de data
+  const startDate = startOfDayBrasilia(dateStart);
+  const endDate = endOfDayBrasilia(dateEnd);
 
   // PERFORMANCE: Executar todas as queries em paralelo (independentes)
   const [collectorCommissions, pickupPointCommissions, carrierCosts, expenses] = await Promise.all([
@@ -267,6 +267,7 @@ async function getCarrierCosts(
     whereStatus.push('issued', 'paid', 'pending');
   }
 
+  // Buscar labels com seus packages para obter o custo real da transportadora
   const labels = await prisma.label.findMany({
     where: {
       status: { in: whereStatus },
@@ -281,6 +282,11 @@ async function getCarrierCosts(
           platformTrackingCode: true,
           destinationCity: true,
           destinationState: true,
+          packages: {
+            select: {
+              carrierQuotePrice: true,
+            },
+          },
         },
       },
     },
@@ -288,8 +294,14 @@ async function getCarrierCosts(
 
   return labels.map((label): PayableItem => {
     const isPaid = ['issued', 'paid'].includes(label.status);
-    const amountCents = label.priceCents;
-    const amountReais = amountCents / 100;
+    // Usar carrierQuotePrice (custo real da transportadora) em vez de priceCents (valor cobrado do cliente)
+    // carrierQuotePrice está em reais (Float), converter para centavos
+    const totalCarrierCostReais = label.shipment.packages.reduce(
+      (sum, pkg) => sum + (pkg.carrierQuotePrice || 0),
+      0
+    );
+    const amountCents = Math.round(totalCarrierCostReais * 100);
+    const amountReais = totalCarrierCostReais;
 
     return {
       id: `carrier_${label.id}`,

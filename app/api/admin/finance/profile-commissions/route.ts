@@ -17,6 +17,7 @@ import { ApiError } from '@/lib/api/errors';
 import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
 import { AdminPermission } from '@prisma/client';
 import { prisma } from '@/lib/db';
+import { startOfDayBrasilia, endOfDayBrasilia } from '@/lib/utils/date';
 
 
 // Tipos para a resposta
@@ -115,8 +116,9 @@ export const GET = withApiHandler<ProfileCommissionsResponse>(async ({ req }) =>
     });
   }
 
-  const startDate = new Date(dateStart);
-  const endDate = new Date(dateEnd);
+  // Usar UTC-3 (Brasília) para filtros de data
+  const startDate = startOfDayBrasilia(dateStart);
+  const endDate = endOfDayBrasilia(dateEnd);
 
   let response: ProfileCommissionsResponse;
 
@@ -183,9 +185,12 @@ async function getCollectorCommissions(
   for (const pickup of pickupRequests) {
     if (!pickup.collector || !pickup.collectorId) continue;
 
+    // Ignorar coletas sem comissão definida (pickupFee é o valor líquido da comissão)
+    const pickupFee = pickup.shipment.pickupFee;
+    if (!pickupFee || pickupFee <= 0) continue;
+
     const collectorId = pickup.collectorId;
     const collectorName = pickup.collector.pjRazaoSocial || pickup.collector.pfNome || 'Sem nome';
-    const pickupFee = pickup.shipment.pickupFee || 0;
     const isCompleted = COMPLETED_PICKUP_STATUSES.includes(pickup.status);
 
     const item: CommissionItem = {

@@ -56,7 +56,7 @@ export function DocumentChooser() {
       <Typography.Paragraph type="secondary">
         {volumeCount > 1
           ? "Selecione o tipo de documento para cada volume. Você pode usar NF-e para alguns volumes e Declaração para outros."
-          : "Informe se você enviará com Nota Fiscal modelo 55 ou Declaração de conteúdo."}
+          : "Cada Volume deve ter NF ou Declaração de Conteúdo."}
       </Typography.Paragraph>
       <Tabs
         activeKey={activeKey}

@@ -16,6 +16,7 @@ import { ApiError } from '@/lib/api/errors';
 import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
 import { AdminPermission } from '@prisma/client';
 import { prisma } from '@/lib/db';
+import { startOfDayBrasilia, endOfDayBrasilia } from '@/lib/utils/date';
 
 
 // Tipos para a resposta
@@ -26,10 +27,12 @@ export interface CarrierPayoutShipment {
   carrier: string;
   service: string | null;
   labelStatus: string;
-  labelPriceCents: number;
-  freightCostReais: number;
+  /** Custo real da transportadora (soma dos carrierQuotePrice dos pacotes) em centavos */
+  carrierCostCents: number;
+  /** Custo real da transportadora em reais */
+  carrierCostReais: number;
   platformCommissionCents: number;
-  netPayoutReais: number;
+  /** Data de postagem (competência) */
   postedAt: string | null;
   createdAt: string;
   destinationCity: string;
@@ -39,12 +42,10 @@ export interface CarrierPayoutShipment {
 export interface CarrierPayoutSummary {
   carrier: string;
   shipmentCount: number;
-  grossAmountCents: number;
-  grossAmountReais: number;
-  platformCommissionCents: number;
-  platformCommissionReais: number;
-  netPayoutCents: number;
-  netPayoutReais: number;
+  /** Total do custo real da transportadora (soma dos carrierQuotePrice) em centavos */
+  carrierCostCents: number;
+  /** Total do custo real da transportadora em reais */
+  carrierCostReais: number;
   shipments: CarrierPayoutShipment[];
 }
 
@@ -55,9 +56,8 @@ export interface CarrierPayoutsResponse {
   };
   summary: {
     totalShipments: number;
-    totalGrossReais: number;
-    totalPlatformCommissionReais: number;
-    totalNetPayoutReais: number;
+    /** Total do custo real das transportadoras em reais */
+    totalCarrierCostReais: number;
   };
   carriers: CarrierPayoutSummary[];
 }
@@ -82,27 +82,30 @@ export const GET = withApiHandler<CarrierPayoutsResponse>(async ({ req }) => {
     throw new ApiError({ code: 'BAD_REQUEST', message: 'Período obrigatório (dateStart e dateEnd)', status: 400 });
   }
 
-  const startDate = new Date(dateStart);
-  const endDate = new Date(dateEnd);
+  // Usar UTC-3 (Brasília) para filtros de data
+  const startDate = startOfDayBrasilia(dateStart);
+  const endDate = endOfDayBrasilia(dateEnd);
 
-  // Buscar shipments com labels pagas/emitidas no período
-  // Usamos a data de criação da Label como referência para o período
+  // Buscar shipments postados no período (usando postedAt como data de competência)
+  // Apenas shipments que foram efetivamente postados geram repasse à transportadora
   const shipments = await prisma.shipment.findMany({
     where: {
-      label: {
-        status: { in: ['paid', 'issued'] },
-        createdAt: {
-          gte: startDate,
-          lte: endDate,
-        },
+      postedAt: {
+        gte: startDate,
+        lte: endDate,
       },
       carrier: carrierFilter ? carrierFilter : { not: null },
     },
     include: {
       label: true,
+      packages: {
+        select: {
+          carrierQuotePrice: true,
+        },
+      },
     },
     orderBy: {
-      createdAt: 'desc',
+      postedAt: 'desc',
     },
   });
 
@@ -113,13 +116,15 @@ export const GET = withApiHandler<CarrierPayoutsResponse>(async ({ req }) => {
     if (!shipment.carrier || !shipment.label) continue;
 
     const carrier = shipment.carrier;
-    const labelPriceCents = shipment.label.priceCents;
     const platformCommissionCents = shipment.platformShippingCommissionCents || 0;
 
-    // O valor líquido a repassar é o preço da etiqueta menos a comissão da plataforma
-    // Nota: Se platformShippingCommissionCents não estiver preenchido, assumimos que
-    // o valor da etiqueta já é o valor que devemos à transportadora
-    const netPayoutCents = labelPriceCents - platformCommissionCents;
+    // Usar carrierQuotePrice (custo real da transportadora) em vez de priceCents
+    // carrierQuotePrice está em reais (Float), converter para centavos
+    const carrierCostReais = shipment.packages.reduce(
+      (sum, pkg) => sum + (pkg.carrierQuotePrice || 0),
+      0
+    );
+    const carrierCostCents = Math.round(carrierCostReais * 100);
 
     const shipmentData: CarrierPayoutShipment = {
       id: shipment.id,
@@ -128,12 +133,11 @@ export const GET = withApiHandler<CarrierPayoutsResponse>(async ({ req }) => {
       carrier: shipment.carrier,
       service: shipment.service,
       labelStatus: shipment.label.status,
-      labelPriceCents: labelPriceCents,
-      freightCostReais: labelPriceCents / 100,
-      platformCommissionCents: platformCommissionCents,
-      netPayoutReais: netPayoutCents / 100,
+      carrierCostCents,
+      carrierCostReais,
+      platformCommissionCents,
       postedAt: shipment.postedAt?.toISOString() || null,
-      createdAt: shipment.label.createdAt.toISOString(),
+      createdAt: shipment.createdAt.toISOString(),
       destinationCity: shipment.destinationCity,
       destinationState: shipment.destinationState,
     };
@@ -142,51 +146,41 @@ export const GET = withApiHandler<CarrierPayoutsResponse>(async ({ req }) => {
       carrierMap.set(carrier, {
         carrier,
         shipmentCount: 0,
-        grossAmountCents: 0,
-        grossAmountReais: 0,
-        platformCommissionCents: 0,
-        platformCommissionReais: 0,
-        netPayoutCents: 0,
-        netPayoutReais: 0,
+        carrierCostCents: 0,
+        carrierCostReais: 0,
         shipments: [],
       });
     }
 
     const carrierSummary = carrierMap.get(carrier)!;
     carrierSummary.shipmentCount++;
-    carrierSummary.grossAmountCents += labelPriceCents;
-    carrierSummary.platformCommissionCents += platformCommissionCents;
-    carrierSummary.netPayoutCents += netPayoutCents;
+    carrierSummary.carrierCostCents += carrierCostCents;
     carrierSummary.shipments.push(shipmentData);
   }
 
   // Calcular valores em reais e ordenar shipments por data
   const carriers: CarrierPayoutSummary[] = [];
   let totalShipments = 0;
-  let totalGrossCents = 0;
-  let totalCommissionCents = 0;
-  let totalNetCents = 0;
+  let totalCarrierCostCents = 0;
 
   for (const [, summary] of carrierMap) {
-    summary.grossAmountReais = summary.grossAmountCents / 100;
-    summary.platformCommissionReais = summary.platformCommissionCents / 100;
-    summary.netPayoutReais = summary.netPayoutCents / 100;
+    summary.carrierCostReais = summary.carrierCostCents / 100;
 
-    // Ordenar shipments por data de criação (mais recente primeiro)
-    summary.shipments.sort(
-      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
+    // Ordenar shipments por data de postagem (mais recente primeiro)
+    summary.shipments.sort((a, b) => {
+      const dateA = a.postedAt || a.createdAt;
+      const dateB = b.postedAt || b.createdAt;
+      return new Date(dateB).getTime() - new Date(dateA).getTime();
+    });
 
     carriers.push(summary);
 
     totalShipments += summary.shipmentCount;
-    totalGrossCents += summary.grossAmountCents;
-    totalCommissionCents += summary.platformCommissionCents;
-    totalNetCents += summary.netPayoutCents;
+    totalCarrierCostCents += summary.carrierCostCents;
   }
 
-  // Ordenar transportadoras por valor bruto (maior primeiro)
-  carriers.sort((a, b) => b.grossAmountCents - a.grossAmountCents);
+  // Ordenar transportadoras por custo total (maior primeiro)
+  carriers.sort((a, b) => b.carrierCostCents - a.carrierCostCents);
 
   const response: CarrierPayoutsResponse = {
     period: {
@@ -195,9 +189,7 @@ export const GET = withApiHandler<CarrierPayoutsResponse>(async ({ req }) => {
     },
     summary: {
       totalShipments,
-      totalGrossReais: totalGrossCents / 100,
-      totalPlatformCommissionReais: totalCommissionCents / 100,
-      totalNetPayoutReais: totalNetCents / 100,
+      totalCarrierCostReais: totalCarrierCostCents / 100,
     },
     carriers,
   };

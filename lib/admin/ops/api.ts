@@ -5,6 +5,7 @@ import type {
   OpsException,
   OpsSLA,
   OpsEvent,
+  OpsKpis,
   ListParams,
   Paged,
   TimelineEvent,
@@ -208,4 +209,13 @@ export async function markEventProcessed(id: string): Promise<{ ok: true }> {
   });
   if (!res.ok) throw new Error('Failed to mark event');
   return extractData<{ ok: true }>(res);
+}
+
+// KPIs
+export async function getOpsKpis(): Promise<OpsKpis> {
+  const res = await fetch('/api/admin/ops/kpis', {
+    credentials: 'include',
+  });
+  if (!res.ok) throw new Error('Failed to fetch KPIs');
+  return extractData<OpsKpis>(res);
 }

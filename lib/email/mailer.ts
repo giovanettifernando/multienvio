@@ -411,6 +411,105 @@ export async function sendStaffTempPasswordEmail(
 }
 
 /**
+ * Send shipment tracking email to recipient
+ */
+export async function sendShipmentTrackingEmail(
+  to: string,
+  recipientName: string,
+  trackingCode: string,
+  senderName: string,
+  destinationCity: string,
+  destinationState: string
+): Promise<boolean> {
+  const baseUrl = getEmailBaseUrl();
+  const trackingUrl = `${baseUrl}/rastreio/${trackingCode}`;
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Seu envio foi criado - Envio Legal</title>
+    </head>
+    <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f5f5f5;">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f5f5f5; padding: 20px 0;">
+        <tr>
+          <td align="center">
+            <table width="600" cellpadding="0" cellspacing="0" border="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+              <!-- Header -->
+              <tr>
+                <td style="background-color: #1890ff; padding: 30px; text-align: center;">
+                  <h1 style="margin: 0; color: #ffffff; font-size: 28px;">Envio Legal</h1>
+                </td>
+              </tr>
+
+              <!-- Content -->
+              <tr>
+                <td style="padding: 40px 30px;">
+                  <h2 style="margin: 0 0 20px 0; color: #333333; font-size: 24px;">Olá, ${recipientName}!</h2>
+                  <p style="margin: 0 0 20px 0; color: #666666; font-size: 16px; line-height: 1.6;">
+                    Um envio foi criado para você por <strong>${senderName}</strong>.
+                  </p>
+                  <p style="margin: 0 0 20px 0; color: #666666; font-size: 16px; line-height: 1.6;">
+                    Destino: <strong>${destinationCity}/${destinationState}</strong>
+                  </p>
+
+                  <!-- Tracking Code Box -->
+                  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #e6f7ff; border-radius: 8px; border: 2px solid #1890ff; margin: 25px 0;">
+                    <tr>
+                      <td style="padding: 25px; text-align: center;">
+                        <p style="margin: 0 0 10px 0; color: #666666; font-size: 14px;">
+                          Código de Rastreamento
+                        </p>
+                        <p style="margin: 0; color: #1890ff; font-size: 28px; font-weight: bold; font-family: monospace; letter-spacing: 2px;">
+                          ${trackingCode}
+                        </p>
+                      </td>
+                    </tr>
+                  </table>
+
+                  <!-- Button -->
+                  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 30px 0;">
+                    <tr>
+                      <td align="center">
+                        <a href="${trackingUrl}" style="display: inline-block; background-color: #1890ff; color: #ffffff; text-decoration: none; padding: 16px 50px; border-radius: 4px; font-size: 18px; font-weight: bold;">
+                          Rastrear Envio
+                        </a>
+                      </td>
+                    </tr>
+                  </table>
+
+                  <p style="margin: 20px 0 0 0; color: #999999; font-size: 14px; line-height: 1.6; text-align: center;">
+                    Ou acesse: <a href="${trackingUrl}" style="color: #1890ff;">${trackingUrl}</a>
+                  </p>
+                </td>
+              </tr>
+
+              <!-- Footer -->
+              <tr>
+                <td style="background-color: #f5f5f5; padding: 20px 30px; text-align: center; border-top: 1px solid #e8e8e8;">
+                  <p style="margin: 0; color: #999999; font-size: 12px;">
+                    © ${new Date().getFullYear()} Envio Legal. Todos os direitos reservados.
+                  </p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </body>
+    </html>
+  `;
+
+  return sendEmail({
+    to,
+    subject: `Seu envio ${trackingCode} foi criado - Envio Legal`,
+    html,
+  });
+}
+
+/**
  * Send password reset email
  */
 export async function sendPasswordResetEmail(

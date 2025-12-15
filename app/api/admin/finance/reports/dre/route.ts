@@ -86,41 +86,57 @@ export const GET = withApiHandler<DREResponse>(async ({ req }) => {
   // OTIMIZAÇÃO: Criar Map para lookup O(1) por mês
   const monthsMap = new Map(monthsData.map(m => [m.month, m]));
 
-  // 1. Buscar receitas de comissões de envios (shipments)
+  // 1. Buscar receitas de comissões de envios postados (usando postedAt como competência)
   const startDate = new Date(year, startMonth - 1, 1);
   const endDate = new Date(year, endMonth, 0, 23, 59, 59, 999);
 
-  const shipmentCommissions = await prisma.shipment.groupBy({
-    by: ['createdAt'],
+  // Status que indicam que o shipment foi efetivamente processado
+  const validStatuses = [
+    'POSTED',
+    'IN_TRANSIT',
+    'IN_TRANSIT_TO_CARRIER_HUB',
+    'IN_TRANSIT_TO_DESTINATION',
+    'IN_TRANSFER',
+    'AT_DESTINATION_HUB',
+    'OUT_FOR_DELIVERY',
+    'DELIVERED',
+    'DELIVERED_AT_DESTINATION_HUB',
+    'RECEIVED_AT_ORIGIN_HUB',
+    'COLLECTED_FROM_SENDER',
+    'COLLECTED_FROM_POINT',
+  ];
+
+  // Buscar shipments postados no período (competência = postedAt)
+  const shipments = await prisma.shipment.findMany({
     where: {
-      createdAt: {
+      postedAt: {
         gte: startDate,
         lte: endDate,
       },
       status: {
-        notIn: ['CANCELED', 'REFUNDED'],
+        in: validStatuses,
       },
     },
-    _sum: {
+    select: {
+      postedAt: true,
       platformShippingCommissionCents: true,
       platformPickupCommissionCents: true,
-      pickupFee: true,
     },
   });
 
-  // Agrupar receitas por mês - OTIMIZADO com Map (O(1) lookup)
-  for (const row of shipmentCommissions) {
-    const rowDate = new Date(row.createdAt);
-    const month = rowDate.getMonth() + 1;
+  // Agrupar receitas por mês usando postedAt como competência
+  for (const shipment of shipments) {
+    if (!shipment.postedAt) continue;
+    const month = shipment.postedAt.getMonth() + 1;
     const monthData = monthsMap.get(month);
     if (monthData) {
       // 1.1.01 - Comissão sobre frete por envio
       monthData.values['1.1.01'] = (monthData.values['1.1.01'] || 0) +
-        (row._sum.platformShippingCommissionCents || 0);
+        (shipment.platformShippingCommissionCents || 0);
 
       // 1.2.01 - Comissão por coleta na origem
       monthData.values['1.2.01'] = (monthData.values['1.2.01'] || 0) +
-        (row._sum.platformPickupCommissionCents || 0);
+        (shipment.platformPickupCommissionCents || 0);
     }
   }
 
