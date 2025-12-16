@@ -6,7 +6,7 @@ import {
   DollarOutlined,
   TruckOutlined,
 } from "@ant-design/icons";
-import { Card, Space, Spin, Typography } from "antd";
+import { Card, Space, Spin, Switch, Typography } from "antd";
 
 type PickupFeeInfo = {
   collectorName: string;
@@ -21,6 +21,12 @@ type LabelPreviewProps = {
   preco: number;
   pickupFee?: PickupFeeInfo | null;
   isLoadingPickupFee?: boolean;
+  /** Se true, mostra o toggle de pagamento pelo destinatario */
+  showRecipientPaysToggle?: boolean;
+  /** Valor do toggle */
+  recipientPays?: boolean;
+  /** Handler para mudanca do toggle */
+  onRecipientPaysChange?: (checked: boolean) => void;
 };
 
 const currency = new Intl.NumberFormat("pt-BR", {
@@ -35,14 +41,33 @@ export function LabelPreview({
   preco,
   pickupFee,
   isLoadingPickupFee = false,
+  showRecipientPaysToggle = false,
+  recipientPays = false,
+  onRecipientPaysChange,
 }: LabelPreviewProps) {
   const hasPickupFee = pickupFee && pickupFee.feeAmount > 0;
   const total = hasPickupFee ? preco + pickupFee.feeAmount : preco;
 
+  const cardTitle = showRecipientPaysToggle ? (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" }}>
+      <span>Resumo do servico</span>
+      <Space size={8}>
+        <Switch
+          size="small"
+          checked={recipientPays}
+          onChange={onRecipientPaysChange}
+        />
+        <Typography.Text style={{ fontSize: 12, fontWeight: 400 }}>
+          Destinatario paga o frete
+        </Typography.Text>
+      </Space>
+    </div>
+  ) : "Resumo do servico";
+
   return (
     <Card
       size="small"
-      title="Resumo do serviço"
+      title={cardTitle}
       style={{
         background: "#f6ffed",
         borderColor: "#b7eb8f",

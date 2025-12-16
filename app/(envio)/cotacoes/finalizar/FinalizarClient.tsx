@@ -5,8 +5,11 @@ import { useRouter, useSearchParams } from "next/navigation";
 import {
   Alert,
   App,
+  Divider,
+  Modal,
   Space,
   Tooltip,
+  Typography,
 } from "antd";
 import { EditOutlined } from "@ant-design/icons";
 import { ELCard } from "@/components/ui/ELCard";
@@ -65,6 +68,8 @@ export default function FinalizarClient() {
   const pickupAtOrigin = useQuoteDraft((s) => s.pickupAtOrigin);
   const destino = useQuoteDraft((s) => s.destination);
   const setDestination = useQuoteDraft((s) => s.setDestination);
+  const recipientPays = useQuoteDraft((s) => s.recipientPays);
+  const setRecipientPays = useQuoteDraft((s) => s.setRecipientPays);
   const pickupPointId = useCheckoutStore((s) => s.pickupPointId);
   const cartAdd = useCartAdd();
   const recipientSave = useRecipientSave();
@@ -110,6 +115,22 @@ export default function FinalizarClient() {
   const [isRecipientModalOpen, setIsRecipientModalOpen] = useState(false);
   // Flag para controlar se o modal já foi aberto automaticamente nesta sessão
   const [hasAutoOpenedRecipientModal, setHasAutoOpenedRecipientModal] = useState(false);
+
+  // Estado para o fluxo de pagamento pelo destinatário
+  const [isCreatingRecipientPayment, setIsCreatingRecipientPayment] = useState(false);
+  const [recipientPaymentSuccess, setRecipientPaymentSuccess] = useState<{
+    paymentUrl: string;
+    recipientEmail: string;
+    expiresAt: string;
+  } | null>(null);
+
+  // Estado para modal de email (destinatário recorrente sem email)
+  const [emailModalOpen, setEmailModalOpen] = useState(false);
+  const [emailModalValue, setEmailModalValue] = useState("");
+  const [emailModalRecipientId, setEmailModalRecipientId] = useState<string | null>(null);
+  const [isUpdatingRecipientEmail, setIsUpdatingRecipientEmail] = useState(false);
+  // Flag para indicar que estamos esperando confirmação de email (para reverter toggle se cancelar)
+  const [pendingRecipientPaysToggle, setPendingRecipientPaysToggle] = useState(false);
 
   // Função para reservar código de rastreamento com retry automático
   const reserveTrackingCode = async (retryCount = 0) => {
@@ -1316,6 +1337,371 @@ export default function FinalizarClient() {
     }
   };
 
+  /**
+   * Handler para criar solicitacao de pagamento pelo destinatario
+   * Em vez de criar shipment + pagar, cria RecipientPaymentRequest e envia link
+   */
+  const handleRecipientPayment: SubmitHandler<FinalizeFormValues> = async (values) => {
+    if (isCreatingRecipientPayment) {
+      console.log('[RECIPIENT_PAYMENT] ⚠️ Ja esta criando, ignorando clique duplicado');
+      return;
+    }
+
+    // Se dados do destinatario incompletos (modo manual), abrir modal
+    if (destino?.mode === "manual" && !isRecipientDataComplete) {
+      setIsRecipientModalOpen(true);
+      return;
+    }
+
+    // Verificar se a cotacao expirou
+    const wasExpired = clearIfExpired();
+    if (wasExpired) {
+      message.warning("Sua cotacao expirou. Por favor, faca uma nova cotacao.");
+      router.push("/cotacoes");
+      return;
+    }
+
+    setIsCreatingRecipientPayment(true);
+    console.log('[RECIPIENT_PAYMENT] 🔒 Iniciando criacao de solicitacao');
+
+    try {
+      // Validar volumeDocuments se estiver usando o novo formato
+      const volumeDocsValidation = validateVolumeDocumentsOnSubmit(values);
+      if (!volumeDocsValidation.isValid) {
+        console.log('[RECIPIENT_PAYMENT] ❌ Validacao de volumeDocuments falhou:', volumeDocsValidation.errors);
+        const firstError = volumeDocsValidation.errors[0];
+        message.error(firstError?.message || 'Preencha os dados do documento fiscal para cada volume.');
+        return;
+      }
+
+      if (!selection || !results || !summary || !selectedService) {
+        message.error("Nenhuma selecao de servico ativa.");
+        return;
+      }
+
+      // Determinar dados do destinatario
+      let recipientData: FinalizeFormValues['recipient']['manual'] | undefined;
+
+      if (values.recipient.mode === "manual") {
+        recipientData = values.recipient.manual;
+
+        if (!recipientData?.cidade || !recipientData?.uf || !recipientData?.cep) {
+          message.error("Dados do destinatario incompletos. Informe ao menos CEP, cidade e UF.");
+          return;
+        }
+      } else if (values.recipient.mode === "saved" && values.recipient.savedId) {
+        try {
+          const response = await fetch(`/api/account/recipients/${values.recipient.savedId}`);
+          if (!response.ok) {
+            message.error("Erro ao buscar dados do destinatario selecionado.");
+            return;
+          }
+          const result = await response.json();
+          const recipient = result.data;
+          recipientData = {
+            nome: recipient.name,
+            telefone: recipient.phone || '',
+            email: recipient.email || undefined,
+            documento: recipient.document || '',
+            cep: recipient.cep,
+            logradouro: recipient.logradouro,
+            numero: recipient.numero,
+            complemento: recipient.complemento || '',
+            bairro: recipient.bairro,
+            cidade: recipient.cidade,
+            uf: recipient.uf,
+            observacoes: recipient.notes || undefined,
+            salvarRecorrente: false,
+          };
+
+          if (!recipientData.cidade || !recipientData.uf || !recipientData.cep) {
+            message.error("Destinatario selecionado possui dados incompletos.");
+            return;
+          }
+        } catch (error) {
+          console.error('[RECIPIENT_PAYMENT] Erro ao buscar destinatario:', error);
+          message.error("Erro ao buscar dados do destinatario.");
+          return;
+        }
+      } else {
+        message.error("Selecione ou preencha os dados do destinatario.");
+        return;
+      }
+
+      // Validar que o destinatario tem email (obrigatorio para pagamento pelo destinatario)
+      if (!recipientData?.email) {
+        message.error("E-mail do destinatario e obrigatorio para pagamento pelo destinatario.");
+        return;
+      }
+
+      // Calcular total incluindo taxa de coleta se aplicavel
+      const pickupFeeAmount = pickupFeeData && pickupFeeData.success ? pickupFeeData.feeAmount : 0;
+      const totalAmount = selectedService.preco + pickupFeeAmount;
+
+      // Montar payload para criar RecipientPaymentRequest
+      const payload = {
+        // Origem
+        origin: {
+          addressId: selectedOriginId || undefined,
+          cep: selectedOriginAddress?.cep || summary.origemCep || "",
+          city: selectedOriginAddress?.cidade || summary.origemCidade || "",
+          state: selectedOriginAddress?.uf || summary.origemUf || "",
+          address: selectedOriginAddress?.logradouro || undefined,
+          neighborhood: selectedOriginAddress?.bairro || undefined,
+          number: selectedOriginAddress?.numero || undefined,
+          complement: selectedOriginAddress?.complemento || undefined,
+        },
+        // Destino
+        destination: {
+          cep: recipientData.cep || summary.destinoCep || "",
+          city: recipientData.cidade || summary.destinoCidade || "",
+          state: recipientData.uf || summary.destinoUf || "",
+          address: recipientData.logradouro || undefined,
+          neighborhood: recipientData.bairro || undefined,
+          number: recipientData.numero || undefined,
+          complement: recipientData.complemento || undefined,
+        },
+        // Destinatario
+        recipient: {
+          name: recipientData.nome || "",
+          email: recipientData.email,
+          phone: recipientData.telefone || undefined,
+          document: recipientData.documento || undefined,
+        },
+        // Volumes
+        packages: summary.volumes.map((v, idx) => ({
+          packageNumber: idx + 1,
+          width: v.larguraCm,
+          height: v.alturaCm,
+          length: v.comprimentoCm,
+          weight: v.pesoKg,
+        })),
+        // Cotacao
+        quote: {
+          carrier: selectedService.carrier,
+          service: selectedService.modalidade,
+          serviceCode: selectedService.modalidade,
+          estimatedDays: selectedService.prazoDias,
+          freightCostCents: Math.round(selectedService.preco * 100),
+          pickupFeeCents: pickupFeeAmount > 0 ? Math.round(pickupFeeAmount * 100) : undefined,
+          totalCents: Math.round(totalAmount * 100),
+          shippingCommissionCents: undefined, // Calculado no backend
+          pickupCommissionCents: undefined,
+        },
+        // Outros
+        totalWeight: summary.volumes.reduce((acc, v) => acc + v.pesoKg, 0),
+        declaredValue: summary.seguroValor || 0,
+        pickupAtOrigin: pickupAtOrigin,
+        document: {
+          type: values.document.type,
+          volumeDocuments: values.document.volumeDocuments,
+        },
+      };
+
+      console.log('[RECIPIENT_PAYMENT] Enviando payload:', JSON.stringify(payload, null, 2));
+
+      // Criar RecipientPaymentRequest via API
+      const res = await fetch("/api/recipient-payment/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Erro ao criar solicitacao de pagamento");
+      }
+
+      const result = await res.json();
+
+      // Mostrar modal de sucesso
+      setRecipientPaymentSuccess({
+        paymentUrl: result.data.paymentUrl,
+        recipientEmail: recipientData.email,
+        expiresAt: new Date(result.data.request.expiresAt).toLocaleString('pt-BR'),
+      });
+
+      dispatchTelemetry("recipient_payment_created", {
+        selectionId: selection.selectionId,
+        requestId: result.data.request.id,
+      });
+
+      message.success("Link de pagamento enviado para o destinatario!");
+    } catch (error: unknown) {
+      console.error("[RECIPIENT_PAYMENT] Erro:", error);
+      const errorMessage = error instanceof Error ? error.message : "Nao foi possivel criar a solicitacao.";
+      message.error(errorMessage);
+    } finally {
+      setIsCreatingRecipientPayment(false);
+      console.log('[RECIPIENT_PAYMENT] 🔓 Criacao finalizada');
+    }
+  };
+
+  /**
+   * Handler para mudança do toggle "Destinatário paga o frete"
+   * Verifica se o destinatário tem email e solicita se necessário
+   */
+  const handleRecipientPaysToggle = async (checked: boolean) => {
+    // Se está desativando, apenas desativar
+    if (!checked) {
+      setRecipientPays(false);
+      setPendingRecipientPaysToggle(false);
+      return;
+    }
+
+    // Se está ativando, verificar se tem email do destinatário
+    console.log('[RECIPIENT_PAYS_TOGGLE] Verificando email do destinatário', {
+      mode: destino?.mode,
+      recipientId: destino?.recipientId,
+      recipientEmail,
+    });
+
+    // Caso 1: Destinatário recorrente (salvo)
+    if (destino?.mode === "recipient" && destino.recipientId) {
+      try {
+        // Buscar dados do destinatário para verificar email
+        const response = await fetch(`/api/account/recipients/${destino.recipientId}`);
+        if (!response.ok) {
+          message.error("Erro ao verificar dados do destinatário.");
+          return;
+        }
+
+        const result = await response.json();
+        const recipient = result.data;
+
+        console.log('[RECIPIENT_PAYS_TOGGLE] Destinatário recorrente:', {
+          name: recipient.name,
+          email: recipient.email,
+        });
+
+        if (recipient.email) {
+          // Tem email, ativar normalmente
+          setRecipientPays(true);
+          // Atualizar o form com o email do destinatário
+          formMethods.setValue("recipient.manual.email", recipient.email);
+        } else {
+          // Não tem email, abrir modal para solicitar
+          setPendingRecipientPaysToggle(true);
+          setEmailModalRecipientId(destino.recipientId);
+          setEmailModalValue("");
+          setEmailModalOpen(true);
+        }
+      } catch (error) {
+        console.error('[RECIPIENT_PAYS_TOGGLE] Erro ao buscar destinatário:', error);
+        message.error("Erro ao verificar dados do destinatário.");
+      }
+      return;
+    }
+
+    // Caso 2: Destinatário manual (não recorrente)
+    if (destino?.mode === "manual") {
+      // Verificar se já tem email preenchido
+      const currentEmail = formMethods.getValues("recipient.manual.email");
+
+      console.log('[RECIPIENT_PAYS_TOGGLE] Destinatário manual:', {
+        currentEmail,
+        isRecipientDataComplete,
+      });
+
+      if (currentEmail && currentEmail.trim().length > 0) {
+        // Tem email, ativar normalmente
+        setRecipientPays(true);
+      } else {
+        // Não tem email, abrir modal do destinatário para preencher
+        setPendingRecipientPaysToggle(true);
+        setIsRecipientModalOpen(true);
+        message.info("Informe o e-mail do destinatário para continuar.");
+      }
+      return;
+    }
+
+    // Caso 3: Nenhum destinatário selecionado ainda
+    message.warning("Selecione ou preencha os dados do destinatário primeiro.");
+  };
+
+  /**
+   * Handler para confirmar email no modal (destinatário recorrente)
+   */
+  const handleEmailModalConfirm = async () => {
+    if (!emailModalValue || !emailModalValue.includes("@")) {
+      message.error("Informe um e-mail válido.");
+      return;
+    }
+
+    if (!emailModalRecipientId) {
+      message.error("ID do destinatário não encontrado.");
+      return;
+    }
+
+    setIsUpdatingRecipientEmail(true);
+
+    try {
+      // Atualizar email do destinatário no banco
+      const response = await fetch(`/api/account/recipients/${emailModalRecipientId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: emailModalValue }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Erro ao atualizar email");
+      }
+
+      // Sucesso - atualizar form e ativar toggle
+      formMethods.setValue("recipient.manual.email", emailModalValue);
+      setRecipientPays(true);
+      setPendingRecipientPaysToggle(false);
+      setEmailModalOpen(false);
+      setEmailModalValue("");
+      setEmailModalRecipientId(null);
+      message.success("E-mail do destinatário atualizado!");
+    } catch (error) {
+      console.error('[EMAIL_MODAL] Erro ao atualizar email:', error);
+      const errorMessage = error instanceof Error ? error.message : "Erro ao atualizar email.";
+      message.error(errorMessage);
+    } finally {
+      setIsUpdatingRecipientEmail(false);
+    }
+  };
+
+  /**
+   * Handler para cancelar modal de email
+   */
+  const handleEmailModalCancel = () => {
+    setEmailModalOpen(false);
+    setEmailModalValue("");
+    setEmailModalRecipientId(null);
+
+    // Se estava esperando confirmação, reverter toggle
+    if (pendingRecipientPaysToggle) {
+      setRecipientPays(false);
+      setPendingRecipientPaysToggle(false);
+    }
+  };
+
+  /**
+   * Handler para quando o RecipientModal é fechado
+   * Verificar se email foi preenchido para manter ou reverter o toggle
+   */
+  const handleRecipientModalClose = () => {
+    setIsRecipientModalOpen(false);
+
+    // Se estava esperando confirmação de email
+    if (pendingRecipientPaysToggle) {
+      const currentEmail = formMethods.getValues("recipient.manual.email");
+
+      if (currentEmail && currentEmail.trim().length > 0 && currentEmail.includes("@")) {
+        // Email preenchido, ativar toggle
+        setRecipientPays(true);
+      } else {
+        // Email não preenchido, reverter toggle
+        setRecipientPays(false);
+      }
+      setPendingRecipientPaysToggle(false);
+    }
+  };
+
   if (!results || !selection) {
     return (
       <PageShell title="Finalizar Envio" gap="md">
@@ -1346,53 +1732,89 @@ export default function FinalizarClient() {
                     }
                   : null
               }
+              showRecipientPaysToggle
+              recipientPays={recipientPays}
+              onRecipientPaysChange={handleRecipientPaysToggle}
             />
             <ELCard
               header={{ title: "Pagamento" }}
               padding="md"
             >
-              <Space orientation="vertical" size={8} style={{ width: "100%" }}>
-                <Tooltip title={disabledTooltip}>
-                  <ELButton
-                    htmlType="button"
-                    block
-                    size="small"
-                    loading={cartAdd.isPending}
-                    disabled={!selectedService || !preconditionsOk}
-                    onClick={onAddToCartClick}
-                  >
-                    Adicionar ao carrinho
-                  </ELButton>
-                </Tooltip>
-                <Tooltip title={disabledTooltip}>
-                  <ELButton
-                    variant="primary"
-                    htmlType="button"
-                    block
-                    size="small"
-                    loading={isSubmitting || isProcessingCheckout}
-                    disabled={isSubmitting || isProcessingCheckout || !preconditionsOk}
-                    onClick={(e) => {
-                      console.log('[BUTTON_CLICK]', {
-                        isSubmitting,
-                        isProcessingCheckout,
-                        preconditionsOk,
-                        disabled: isSubmitting || isProcessingCheckout || !preconditionsOk,
-                        formErrors: errors
-                      });
-                      handleSubmit(
-                        handlePayNow,
-                        (validationErrors) => {
-                          console.log('[FORM_VALIDATION_FAILED]', validationErrors);
-                          message.error('Por favor, preencha todos os campos obrigatórios.');
-                          setIsProcessingCheckout(false); // Liberar lock em caso de erro de validação
-                        }
-                      )(e);
-                    }}
-                  >
-                    Pagar agora
-                  </ELButton>
-                </Tooltip>
+              <Space orientation="vertical" size={12} style={{ width: "100%" }}>
+                {/* Botoes condicionais */}
+                {!recipientPays ? (
+                  <>
+                    <Tooltip title={disabledTooltip}>
+                      <ELButton
+                        htmlType="button"
+                        block
+                        size="small"
+                        loading={cartAdd.isPending}
+                        disabled={!selectedService || !preconditionsOk}
+                        onClick={onAddToCartClick}
+                      >
+                        Adicionar ao carrinho
+                      </ELButton>
+                    </Tooltip>
+                    <Tooltip title={disabledTooltip}>
+                      <ELButton
+                        variant="primary"
+                        htmlType="button"
+                        block
+                        size="small"
+                        loading={isSubmitting || isProcessingCheckout}
+                        disabled={isSubmitting || isProcessingCheckout || !preconditionsOk}
+                        onClick={(e) => {
+                          console.log('[BUTTON_CLICK]', {
+                            isSubmitting,
+                            isProcessingCheckout,
+                            preconditionsOk,
+                            disabled: isSubmitting || isProcessingCheckout || !preconditionsOk,
+                            formErrors: errors
+                          });
+                          handleSubmit(
+                            handlePayNow,
+                            (validationErrors) => {
+                              console.log('[FORM_VALIDATION_FAILED]', validationErrors);
+                              message.error('Por favor, preencha todos os campos obrigatorios.');
+                              setIsProcessingCheckout(false);
+                            }
+                          )(e);
+                        }}
+                      >
+                        Pagar agora
+                      </ELButton>
+                    </Tooltip>
+                  </>
+                ) : (
+                  <Tooltip title={!recipientEmail ? "Informe o e-mail do destinatario" : disabledTooltip}>
+                    <ELButton
+                      variant="primary"
+                      htmlType="button"
+                      block
+                      size="small"
+                      loading={isCreatingRecipientPayment}
+                      disabled={isCreatingRecipientPayment || !preconditionsOk || !recipientEmail}
+                      onClick={(e) => {
+                        console.log('[RECIPIENT_PAY_CLICK]', {
+                          isCreatingRecipientPayment,
+                          preconditionsOk,
+                          recipientEmail,
+                        });
+                        handleSubmit(
+                          handleRecipientPayment,
+                          (validationErrors) => {
+                            console.log('[FORM_VALIDATION_FAILED]', validationErrors);
+                            message.error('Por favor, preencha todos os campos obrigatorios.');
+                            setIsCreatingRecipientPayment(false);
+                          }
+                        )(e);
+                      }}
+                    >
+                      Enviar link de pagamento
+                    </ELButton>
+                  </Tooltip>
+                )}
               </Space>
             </ELCard>
           </ELGrid>
@@ -1467,8 +1889,57 @@ export default function FinalizarClient() {
         {/* Modal de dados do destinatário */}
         <RecipientModal
           open={isRecipientModalOpen}
-          onClose={() => setIsRecipientModalOpen(false)}
+          onClose={handleRecipientModalClose}
         />
+
+        {/* Modal simples para captura de email (destinatário recorrente sem email) */}
+        <Modal
+          title="E-mail do destinatário"
+          open={emailModalOpen}
+          onCancel={handleEmailModalCancel}
+          footer={[
+            <ELButton
+              key="cancel"
+              onClick={handleEmailModalCancel}
+            >
+              Cancelar
+            </ELButton>,
+            <ELButton
+              key="confirm"
+              variant="primary"
+              loading={isUpdatingRecipientEmail}
+              onClick={handleEmailModalConfirm}
+            >
+              Confirmar
+            </ELButton>,
+          ]}
+        >
+          <Space orientation="vertical" size={16} style={{ width: "100%" }}>
+            <Typography.Text>
+              Para enviar o link de pagamento, informe o e-mail do destinatário.
+              Este e-mail será salvo no cadastro do destinatário.
+            </Typography.Text>
+            <div>
+              <Typography.Text strong style={{ display: "block", marginBottom: 8 }}>
+                E-mail
+              </Typography.Text>
+              <input
+                type="email"
+                placeholder="email@exemplo.com"
+                value={emailModalValue}
+                onChange={(e) => setEmailModalValue(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "8px 12px",
+                  border: "1px solid #d9d9d9",
+                  borderRadius: 6,
+                  fontSize: 14,
+                }}
+                autoFocus
+              />
+            </div>
+          </Space>
+        </Modal>
 
         {/* Modal de escolha de pagamento (FLUXO LEGADO) */}
         {createdShipment && (
@@ -1494,6 +1965,76 @@ export default function FinalizarClient() {
             totalAmount={paidCheckoutData.totalCost}
           />
         )}
+
+        {/* Modal de sucesso - Pagamento pelo destinatario */}
+        <Modal
+          title="Link de pagamento enviado!"
+          open={!!recipientPaymentSuccess}
+          onCancel={() => {
+            setRecipientPaymentSuccess(null);
+            router.push("/shipments");
+          }}
+          footer={[
+            <ELButton
+              key="new"
+              onClick={() => {
+                setRecipientPaymentSuccess(null);
+                // Limpar estado da cotacao
+                useQuoteDraft.getState().clear();
+                router.push("/cotacoes");
+              }}
+            >
+              Nova cotacao
+            </ELButton>,
+            <ELButton
+              key="list"
+              variant="primary"
+              onClick={() => {
+                setRecipientPaymentSuccess(null);
+                router.push("/pagamentos-pendentes");
+              }}
+            >
+              Ver solicitacoes
+            </ELButton>,
+          ]}
+        >
+          {recipientPaymentSuccess && (
+            <Space orientation="vertical" size={16} style={{ width: "100%" }}>
+              <Alert
+                type="success"
+                showIcon
+                title="E-mail enviado com sucesso"
+                description={`Um link de pagamento foi enviado para ${recipientPaymentSuccess.recipientEmail}`}
+              />
+
+              <div style={{ background: "#f5f5f5", padding: 16, borderRadius: 8 }}>
+                <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                  Detalhes da solicitacao
+                </Typography.Text>
+
+                <div style={{ marginTop: 8 }}>
+                  <Typography.Text strong>Valido ate:</Typography.Text>{" "}
+                  <Typography.Text>{recipientPaymentSuccess.expiresAt}</Typography.Text>
+                </div>
+
+                <div style={{ marginTop: 4 }}>
+                  <Typography.Text strong>Link:</Typography.Text>{" "}
+                  <Typography.Text
+                    copyable
+                    style={{ fontSize: 12, wordBreak: "break-all" }}
+                  >
+                    {recipientPaymentSuccess.paymentUrl}
+                  </Typography.Text>
+                </div>
+              </div>
+
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                O destinatario tem 72 horas para efetuar o pagamento.
+                Voce pode acompanhar o status na area de solicitacoes pendentes.
+              </Typography.Text>
+            </Space>
+          )}
+        </Modal>
       </FormProvider>
     </PageShell>
   );

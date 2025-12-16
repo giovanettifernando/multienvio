@@ -1,0 +1,131 @@
+/**
+ * POST /api/recipient-payment/pay
+ *
+ * Processa o pagamento pelo destinatario
+ * Endpoint publico - nao requer autenticacao
+ *
+ * Apos o pagamento ser confirmado (via MercadoPago):
+ * 1. Cria o Shipment real na tabela shipments
+ * 2. Marca o RecipientPaymentRequest como PAID
+ * 3. Envia e-mails de confirmacao
+ */
+
+import { withApiHandler } from '@/lib/api/handler';
+import { ApiError } from '@/lib/api/errors';
+import { z } from 'zod';
+import { processRecipientPayment, getRequestByToken } from '@/lib/recipient-payment/service';
+import {
+  sendRecipientPaymentConfirmedEmail,
+  sendSenderPaymentReceivedEmail,
+} from '@/lib/email/recipient-payment';
+import { prisma } from '@/lib/db';
+
+const paymentSchema = z.object({
+  paymentToken: z.string().min(1, 'Token de pagamento e obrigatorio'),
+  paymentMethod: z.enum(['PIX', 'CREDIT_CARD']),
+  // Campos para integracao com MercadoPago (se necessario)
+  mercadoPagoPaymentId: z.number().optional(),
+  mercadoPagoStatus: z.string().optional(),
+});
+
+type PayResponse = {
+  success: boolean;
+  shipmentId?: string;
+  trackingCode?: string;
+  error?: string;
+};
+
+export const POST = withApiHandler<PayResponse>(async (context) => {
+  // Validar payload
+  const body = await context.req.json();
+  const parsed = paymentSchema.safeParse(body);
+
+  if (!parsed.success) {
+    throw ApiError.validation('Dados invalidos', parsed.error.flatten());
+  }
+
+  const { paymentToken, paymentMethod } = parsed.data;
+
+  // Buscar request para validacao
+  const request = await getRequestByToken(paymentToken);
+  if (!request) {
+    throw ApiError.notFound('Solicitacao nao encontrada');
+  }
+
+  // Verificar status
+  if (request.status === 'PAID') {
+    return {
+      data: {
+        success: true,
+        shipmentId: undefined, // Ja foi processado
+        trackingCode: undefined,
+      },
+    };
+  }
+
+  if (request.status === 'CANCELLED') {
+    throw ApiError.badRequest('Esta solicitacao foi cancelada');
+  }
+
+  if (request.status === 'EXPIRED' || new Date() > request.expiresAt) {
+    throw ApiError.badRequest('Esta solicitacao expirou');
+  }
+
+  // Processar pagamento e criar shipment
+  const result = await processRecipientPayment(paymentToken, paymentMethod);
+
+  if (!result.success) {
+    throw ApiError.badRequest(result.error || 'Erro ao processar pagamento');
+  }
+
+  // Buscar dados completos do request para os e-mails
+  const fullRequest = await prisma.recipientPaymentRequest.findUnique({
+    where: { paymentToken },
+    include: {
+      sender: {
+        select: {
+          name: true,
+          razaoSocial: true,
+          email: true,
+        },
+      },
+    },
+  });
+
+  if (fullRequest && result.platformTrackingCode) {
+    // Enviar e-mail de confirmacao para o destinatario
+    await sendRecipientPaymentConfirmedEmail({
+      recipientName: fullRequest.recipientName,
+      recipientEmail: fullRequest.recipientEmail,
+      senderName: fullRequest.sender.razaoSocial || fullRequest.sender.name,
+      trackingCode: result.platformTrackingCode,
+      totalCents: fullRequest.totalCents,
+      originCity: fullRequest.originCity,
+      originState: fullRequest.originState,
+      destinationCity: fullRequest.destinationCity,
+      destinationState: fullRequest.destinationState,
+      carrier: fullRequest.carrier,
+      service: fullRequest.service,
+      estimatedDays: fullRequest.estimatedDays,
+    });
+
+    // Enviar e-mail para o remetente notificando do pagamento
+    await sendSenderPaymentReceivedEmail({
+      senderEmail: fullRequest.sender.email,
+      senderName: fullRequest.sender.razaoSocial || fullRequest.sender.name,
+      recipientName: fullRequest.recipientName,
+      trackingCode: result.platformTrackingCode,
+      totalCents: fullRequest.totalCents,
+      destinationCity: fullRequest.destinationCity,
+      destinationState: fullRequest.destinationState,
+    });
+  }
+
+  return {
+    data: {
+      success: true,
+      shipmentId: result.shipmentId,
+      trackingCode: result.platformTrackingCode,
+    },
+  };
+});

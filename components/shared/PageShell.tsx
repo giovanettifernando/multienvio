@@ -9,7 +9,6 @@
  * - Ocupa toda a largura do container de conteúdo
  */
 import React from "react";
-import Typography from "antd/es/typography";
 import { cn } from "@/lib/utils/cn";
 import styles from "./PageShell.module.css";
 
@@ -49,9 +48,9 @@ export function PageShell({
         <div className={styles.header}>
           <div className={styles.headerContent}>
             {title && (
-              <Typography.Title level={3} className={styles.title}>
+              <h3 className={styles.title}>
                 {title}
-              </Typography.Title>
+              </h3>
             )}
             {extra && <div className={styles.extra}>{extra}</div>}
           </div>

@@ -58,6 +58,7 @@ model User {
   wallet                 Wallet?
   pickupRequests              PickupRequest[]
   trackingCodeReservations    TrackingCodeReservation[]
+  recipientPaymentRequests    RecipientPaymentRequest[]
 
   // Removidos índices redundantes: email, emailVerificationToken, googleId já são @unique
   @@map("users")
@@ -218,6 +219,7 @@ model Shipment {
   label                   Label?
   pickupRequest           PickupRequest?
   packages                Package[]
+  recipientPaymentRequest RecipientPaymentRequest?
 
   @@index([platformTrackingCode])
   @@index([carrierTrackingCode])
@@ -1290,6 +1292,15 @@ enum EmailConfigStatus {
   INACTIVE
 }
 
+enum RecipientPaymentStatus {
+  PENDING    // Aguardando pagamento do destinatário
+  PAID       // Pago - shipment criado
+  EXPIRED    // Expirou sem pagamento
+  CANCELLED  // Cancelado pelo remetente
+
+  @@map("recipient_payment_status")
+}
+
 // Cache de coordenadas geocodificadas por CEP usando PostGIS
 model CepLocation {
   cep                   String   @id
@@ -1597,4 +1608,113 @@ model TrackingCodeReservation {
   @@index([expiresAt])
   @@index([usedAt])
   @@map("tracking_code_reservations")
+}
+
+// =====================================================
+// FRETE PAGO PELO DESTINATÁRIO
+// =====================================================
+
+/// Solicitação de pagamento de frete pelo destinatário
+/// Armazena todos os dados necessários para criar o Shipment após pagamento
+model RecipientPaymentRequest {
+  id                      String                   @id @default(uuid())
+
+  // Remetente
+  senderId                String                   @map("sender_id")
+  sender                  User                     @relation(fields: [senderId], references: [id])
+
+  // Origem
+  originAddressId         String?                  @map("origin_address_id")
+  originCep               String                   @map("origin_cep") @db.VarChar(8)
+  originCity              String                   @map("origin_city")
+  originState             String                   @map("origin_state") @db.VarChar(2)
+  originAddress           String?                  @map("origin_address")
+  originNeighborhood      String?                  @map("origin_neighborhood")
+  originNumber            String?                  @map("origin_number")
+  originComplement        String?                  @map("origin_complement")
+
+  // Destinatário (quem vai pagar)
+  recipientName           String                   @map("recipient_name")
+  recipientEmail          String                   @map("recipient_email")
+  recipientPhone          String?                  @map("recipient_phone")
+  recipientDocument       String?                  @map("recipient_document")
+
+  // Destino
+  destinationCep          String                   @map("destination_cep") @db.VarChar(8)
+  destinationCity         String                   @map("destination_city")
+  destinationState        String                   @map("destination_state") @db.VarChar(2)
+  destinationAddress      String?                  @map("destination_address")
+  destinationNeighborhood String?                  @map("destination_neighborhood")
+  destinationNumber       String?                  @map("destination_number")
+  destinationComplement   String?                  @map("destination_complement")
+
+  // Totais do envio (consolidado)
+  totalWeight             Float                    @map("total_weight")
+  declaredValue           Float                    @map("declared_value")
+
+  // Cotação selecionada
+  carrier                 String
+  service                 String
+  serviceCode             String?                  @map("service_code")
+  estimatedDays           Int?                     @map("estimated_days")
+
+  // Valores (em centavos para precisão)
+  freightCostCents        Int                      @map("freight_cost_cents")
+  pickupFeeCents          Int?                     @map("pickup_fee_cents")
+  totalCents              Int                      @map("total_cents")
+
+  // Comissões registradas (para reconciliação)
+  shippingCommissionCents Int?                     @map("shipping_commission_cents")
+  pickupCommissionCents   Int?                     @map("pickup_commission_cents")
+
+  // Opções
+  pickupAtOrigin          Boolean                  @default(false) @map("pickup_at_origin")
+
+  // Documento fiscal
+  document                Json?
+
+  // Link de pagamento
+  paymentToken            String                   @unique @default(cuid()) @map("payment_token")
+
+  // Status e datas
+  status                  RecipientPaymentStatus   @default(PENDING)
+  expiresAt               DateTime                 @map("expires_at")
+  paidAt                  DateTime?                @map("paid_at")
+  cancelledAt             DateTime?                @map("cancelled_at")
+
+  // Referência ao shipment criado (após pagamento)
+  shipmentId              String?                  @unique @map("shipment_id")
+  shipment                Shipment?                @relation(fields: [shipmentId], references: [id])
+
+  // Volumes do envio
+  packages                RecipientPaymentPackage[]
+
+  // Metadata
+  createdAt               DateTime                 @default(now()) @map("created_at")
+  updatedAt               DateTime                 @updatedAt @map("updated_at")
+
+  @@index([senderId])
+  @@index([paymentToken])
+  @@index([status])
+  @@index([expiresAt])
+  @@index([senderId, status])
+  @@map("recipient_payment_requests")
+}
+
+/// Volumes de uma solicitação de pagamento pelo destinatário
+/// Clone simplificado da tabela Package (sem campos de divergência/tracking)
+model RecipientPaymentPackage {
+  id            String                    @id @default(uuid())
+  requestId     String                    @map("request_id")
+  packageNumber Int                       @map("package_number")
+  width         Float                     // Largura em cm
+  height        Float                     // Altura em cm
+  length        Float                     // Comprimento em cm
+  weight        Float                     // Peso em kg
+
+  request       RecipientPaymentRequest   @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  @@unique([requestId, packageNumber])
+  @@index([requestId])
+  @@map("recipient_payment_packages")
 }

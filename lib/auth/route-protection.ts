@@ -64,6 +64,12 @@ const PUBLIC_ROUTES = [
   /^\/api\/health.*/,              // Health check endpoints
   /^\/api\/cep.*/,                 // CEP lookup (public)
   /^\/api\/system\/status$/,       // System status (public)
+  /^\/api\/recipient-payment\/[^/]+$/, // Recipient payment by token (public - destinatário paga frete)
+  /^\/api\/recipient-payment\/pay$/,   // Process recipient payment (public)
+  /^\/api\/recipient-payment\/create-payment$/, // Create MercadoPago payment for recipient (public)
+  /^\/api\/recipient-payment\/refresh-status$/, // Refresh PIX status for recipient payment (public)
+  /^\/api\/payments\/mercadopago\/public-key$/, // MercadoPago public key (public - safe to expose)
+  /^\/pagar\/.*/,                  // Payment page for recipients (public)
 ];
 
 /**

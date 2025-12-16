@@ -8,6 +8,7 @@ import {
   WalletOutlined,
   CustomerServiceOutlined,
   SettingOutlined,
+  SendOutlined,
 } from '@ant-design/icons';
 import type { ForwardRefExoticComponent, RefAttributes } from 'react';
 import type { AntdIconProps } from '@ant-design/icons/lib/components/AntdIcon';
@@ -58,6 +59,12 @@ export const sidebarItems: SidebarItem[] = [
     icon: CalendarOutlined,
     label: 'Coletas',
     href: '/coletas',
+  },
+  {
+    key: 'recipient-payments',
+    icon: SendOutlined,
+    label: 'Frete Destinatario',
+    href: '/pagamentos-pendentes',
   },
   {
     key: 'wallet',
