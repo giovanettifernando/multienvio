@@ -3,13 +3,9 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  Alert,
   App,
-  Button,
-  Card,
   Divider,
   Result,
-  Skeleton,
   Space,
   Typography,
 } from "antd";
@@ -20,6 +16,10 @@ import {
   EnvironmentOutlined,
   SendOutlined,
 } from "@ant-design/icons";
+import { ELAlert } from "@/components/ui/ELAlert";
+import { ELButton } from "@/components/ui/ELButton";
+import { ELCard } from "@/components/ui/ELCard";
+import { ELSkeleton } from "@/components/ui/ELSkeleton";
 import type { PublicPaymentData } from "@/lib/recipient-payment/types";
 import { RecipientPaymentModal } from "@/components/payments/RecipientPaymentModal";
 
@@ -118,9 +118,9 @@ export default function PaymentPageClient({ token }: PaymentPageClientProps) {
         }}
       >
         <div style={{ maxWidth: 600, margin: "0 auto" }}>
-          <Card>
-            <Skeleton active paragraph={{ rows: 8 }} />
-          </Card>
+          <ELCard>
+            <ELSkeleton lines={8} />
+          </ELCard>
         </div>
       </div>
     );
@@ -144,9 +144,9 @@ export default function PaymentPageClient({ token }: PaymentPageClientProps) {
           title="Link nao encontrado"
           subTitle={error || "Este link de pagamento nao existe ou ja expirou."}
           extra={
-            <Button type="primary" onClick={() => router.push("/")}>
+            <ELButton variant="primary" onClick={() => router.push("/")}>
               Ir para pagina inicial
-            </Button>
+            </ELButton>
           }
         />
       </div>
@@ -242,19 +242,21 @@ export default function PaymentPageClient({ token }: PaymentPageClientProps) {
           extra={
             <Space direction="vertical" size={16} style={{ width: "100%" }}>
               {paymentSuccess.trackingCode && (
-                <Card style={{ textAlign: "center" }}>
-                  <Text type="secondary">Codigo de Rastreamento</Text>
-                  <Title
-                    level={3}
-                    copyable
-                    style={{ margin: "8px 0", color: "#1890ff" }}
-                  >
-                    {paymentSuccess.trackingCode}
-                  </Title>
-                  <Text type="secondary" style={{ fontSize: 12 }}>
-                    Use este codigo para acompanhar seu envio
-                  </Text>
-                </Card>
+                <ELCard>
+                  <div style={{ textAlign: "center" }}>
+                    <Text type="secondary">Codigo de Rastreamento</Text>
+                    <Title
+                      level={3}
+                      copyable
+                      style={{ margin: "8px 0", color: "#1890ff" }}
+                    >
+                      {paymentSuccess.trackingCode}
+                    </Title>
+                    <Text type="secondary" style={{ fontSize: 12 }}>
+                      Use este codigo para acompanhar seu envio
+                    </Text>
+                  </div>
+                </ELCard>
               )}
               <Text type="secondary" style={{ display: "block", textAlign: "center" }}>
                 Voce recebera um e-mail com os detalhes do envio.
@@ -285,7 +287,7 @@ export default function PaymentPageClient({ token }: PaymentPageClientProps) {
         </div>
 
         {/* Main Card */}
-        <Card>
+        <ELCard>
           {/* Greeting */}
           <div style={{ marginBottom: 24 }}>
             <Title level={4} style={{ marginBottom: 8 }}>
@@ -298,8 +300,8 @@ export default function PaymentPageClient({ token }: PaymentPageClientProps) {
           </div>
 
           {/* Shipping Info */}
-          <Card
-            size="small"
+          <ELCard
+            padding="sm"
             style={{ background: "#fafafa", marginBottom: 20 }}
           >
             <Space direction="vertical" size={12} style={{ width: "100%" }}>
@@ -376,11 +378,11 @@ export default function PaymentPageClient({ token }: PaymentPageClientProps) {
                 </Text>
               </div>
             </Space>
-          </Card>
+          </ELCard>
 
           {/* Price */}
-          <Card
-            size="small"
+          <ELCard
+            padding="sm"
             style={{
               background: "#e6f7ff",
               border: "2px solid #1890ff",
@@ -398,37 +400,37 @@ export default function PaymentPageClient({ token }: PaymentPageClientProps) {
                 {formatCurrency(paymentData.pickupFeeCents)})
               </Text>
             )}
-          </Card>
+          </ELCard>
 
           {/* Expiration Warning */}
-          <Alert
-            type="warning"
+          <ELAlert
+            variant="warning"
             showIcon
             icon={<ClockCircleOutlined />}
-            message={`Prazo para pagamento: ${getTimeRemaining()}`}
+            title={`Prazo para pagamento: ${getTimeRemaining()}`}
             description="Apos este prazo, o link sera invalidado automaticamente."
             style={{ marginBottom: 24 }}
           />
 
           {/* Payment Button */}
-          <Button
-            type="primary"
+          <ELButton
+            variant="primary"
             size="large"
             block
             onClick={handlePayment}
             style={{ height: 50, fontSize: 16 }}
           >
             Pagar {formatCurrency(paymentData.totalCents)}
-          </Button>
+          </ELButton>
 
           <Paragraph
             type="secondary"
             style={{ fontSize: 12, marginTop: 16, textAlign: "center" }}
           >
-            Ao clicar em "Pagar", voce sera direcionado para a pagina de pagamento
+            Ao clicar em &quot;Pagar&quot;, voce sera direcionado para a pagina de pagamento
             seguro. Aceitamos PIX e cartao de credito.
           </Paragraph>
-        </Card>
+        </ELCard>
 
         {/* Footer */}
         <div style={{ textAlign: "center", marginTop: 24 }}>

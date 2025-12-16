@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Card as AntCard, Spin, Alert } from "antd";
+import { Spin } from "antd";
+import { ELCard } from "@/components/ui/ELCard";
+import { ELAlert } from "@/components/ui/ELAlert";
 import { ELModal } from "@/components/ui/ELModal";
 import { LoadingOutlined } from "@ant-design/icons";
 import { initMercadoPago, CardPayment } from "@mercadopago/sdk-react";
@@ -166,22 +168,22 @@ export function RecipientCardPaymentForm({
 
   if (loading) {
     return (
-      <AntCard>
+      <ELCard>
         <div style={{ textAlign: "center", padding: "40px 0" }}>
           <Spin tip="Carregando formulario de pagamento...">
             <div style={{ minHeight: 100 }} />
           </Spin>
         </div>
-      </AntCard>
+      </ELCard>
     );
   }
 
   if (error || !publicKey) {
     return (
-      <Alert
-        message="Erro ao carregar formulario"
+      <ELAlert
+        title="Erro ao carregar formulario"
         description={error || "Mercado Pago nao configurado"}
-        type="error"
+        variant="danger"
         showIcon
       />
     );

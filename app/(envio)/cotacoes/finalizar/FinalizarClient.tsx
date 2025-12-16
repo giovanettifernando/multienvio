@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
-  Alert,
   App,
   Divider,
   Modal,
@@ -12,6 +11,7 @@ import {
   Typography,
 } from "antd";
 import { EditOutlined } from "@ant-design/icons";
+import { ELAlert } from "@/components/ui/ELAlert";
 import { ELCard } from "@/components/ui/ELCard";
 import { ELGrid } from "@/components/ui/ELGrid";
 import { ELSkeleton } from "@/components/ui/ELSkeleton";
@@ -1821,7 +1821,7 @@ export default function FinalizarClient() {
 
           {/* Indicador visual de destinatário pendente (modo manual) */}
           {destino?.mode === "manual" && !isRecipientDataComplete && (
-            <Alert
+            <ELAlert
               type="warning"
               showIcon
               title={
@@ -1845,7 +1845,7 @@ export default function FinalizarClient() {
 
           {/* Indicador quando destinatário preenchido (modo manual) */}
           {destino?.mode === "manual" && isRecipientDataComplete && (
-            <Alert
+            <ELAlert
               type="success"
               showIcon
               title={
@@ -2000,7 +2000,7 @@ export default function FinalizarClient() {
         >
           {recipientPaymentSuccess && (
             <Space orientation="vertical" size={16} style={{ width: "100%" }}>
-              <Alert
+              <ELAlert
                 type="success"
                 showIcon
                 title="E-mail enviado com sucesso"
