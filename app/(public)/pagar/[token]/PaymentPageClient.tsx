@@ -240,7 +240,7 @@ export default function PaymentPageClient({ token }: PaymentPageClientProps) {
           title="Pagamento confirmado!"
           subTitle="Seu pagamento foi processado com sucesso."
           extra={
-            <Space direction="vertical" size={16} style={{ width: "100%" }}>
+            <Space orientation="vertical" size={16} style={{ width: "100%" }}>
               {paymentSuccess.trackingCode && (
                 <ELCard>
                   <div style={{ textAlign: "center" }}>
@@ -304,7 +304,7 @@ export default function PaymentPageClient({ token }: PaymentPageClientProps) {
             padding="sm"
             style={{ background: "#fafafa", marginBottom: 20 }}
           >
-            <Space direction="vertical" size={12} style={{ width: "100%" }}>
+            <Space orientation="vertical" size={12} style={{ width: "100%" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <SendOutlined style={{ color: "#1890ff" }} />
                 <div>
