@@ -1,0 +1,414 @@
+/**
+ * AssistantChat - Estilos do botão flutuante e painel de chat
+ * Usa tokens CSS do design system (--el-*)
+ */
+
+/* Container global - garante z-index sobre tudo */
+.container {
+  position: fixed;
+  bottom: 0;
+  right: 0;
+  z-index: 10000;
+  pointer-events: none;
+}
+
+/* ========================================
+   LAUNCHER (Botão flutuante)
+   ======================================== */
+
+.launcher {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  pointer-events: auto;
+  background: var(--el-color-primary);
+  box-shadow:
+    0 4px 12px rgba(11, 78, 163, 0.3),
+    0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 10001;
+}
+
+.launcher:hover {
+  background: var(--el-color-primary-hover);
+  transform: scale(1.05);
+  box-shadow:
+    0 6px 16px rgba(11, 78, 163, 0.4),
+    0 3px 6px rgba(0, 0, 0, 0.15);
+}
+
+.launcher:active {
+  transform: scale(0.98);
+}
+
+.launcher:focus {
+  outline: 2px solid var(--el-color-primary);
+  outline-offset: 2px;
+}
+
+.launcher:focus:not(:focus-visible) {
+  outline: none;
+}
+
+.launcherOpen {
+  background: var(--el-color-danger);
+}
+
+.launcherOpen:hover {
+  background: #b91c1c;
+}
+
+.launcherInner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.launcherIcon {
+  font-size: 24px;
+  color: #fff;
+  transition: transform 0.3s ease;
+}
+
+.launcherOpen .launcherIcon {
+  transform: rotate(90deg);
+}
+
+/* ========================================
+   PANEL (Painel de chat)
+   ======================================== */
+
+.panel {
+  position: fixed;
+  bottom: 96px;
+  right: 24px;
+  width: 380px;
+  height: 520px;
+  max-height: calc(100vh - 140px);
+  background: #fff;
+  border-radius: 16px;
+  box-shadow:
+    0 12px 28px rgba(0, 0, 0, 0.12),
+    0 4px 10px rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  pointer-events: auto;
+  z-index: 10000;
+
+  /* Animação */
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(20px) scale(0.95);
+  transform-origin: bottom right;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.panelOpen {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0) scale(1);
+}
+
+/* ========================================
+   HEADER
+   ======================================== */
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  background: var(--el-color-primary);
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.headerInfo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.avatar {
+  background: rgba(255, 255, 255, 0.2) !important;
+  color: #fff !important;
+}
+
+.headerText {
+  display: flex;
+  flex-direction: column;
+}
+
+.headerTitle {
+  font-weight: 600;
+  font-size: 15px;
+  line-height: 1.3;
+}
+
+.headerStatus {
+  font-size: 12px;
+  opacity: 0.85;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.headerStatus::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  background: #4ade80;
+  border-radius: 50%;
+}
+
+.closeButton {
+  color: #fff !important;
+  opacity: 0.8;
+}
+
+.closeButton:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* ========================================
+   MESSAGES
+   ======================================== */
+
+.messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: #f9fafb;
+}
+
+.message {
+  display: flex;
+  gap: 8px;
+  max-width: 85%;
+  animation: messageIn 0.2s ease-out;
+}
+
+@keyframes messageIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.messageUser {
+  align-self: flex-end;
+  flex-direction: row-reverse;
+}
+
+.messageAssistant {
+  align-self: flex-start;
+}
+
+.messageAvatar {
+  flex-shrink: 0;
+  background: var(--el-color-primary-tint) !important;
+  color: var(--el-color-primary) !important;
+}
+
+.messageBubble {
+  padding: 10px 14px;
+  border-radius: 16px;
+  line-height: 1.5;
+}
+
+.messageUser .messageBubble {
+  background: var(--el-color-primary);
+  color: #fff;
+  border-bottom-right-radius: 4px;
+}
+
+.messageAssistant .messageBubble {
+  background: #fff;
+  color: var(--el-color-text);
+  border: 1px solid var(--el-color-border, #e5e7eb);
+  border-bottom-left-radius: 4px;
+}
+
+.messageContent {
+  margin: 0;
+  font-size: 14px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Typing Indicator */
+.typingIndicator {
+  display: flex;
+  gap: 4px;
+  padding: 4px 0;
+}
+
+.typingIndicator span {
+  width: 8px;
+  height: 8px;
+  background: var(--el-color-primary);
+  border-radius: 50%;
+  opacity: 0.4;
+  animation: typing 1.4s infinite ease-in-out;
+}
+
+.typingIndicator span:nth-child(1) {
+  animation-delay: 0s;
+}
+
+.typingIndicator span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.typingIndicator span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes typing {
+  0%,
+  60%,
+  100% {
+    opacity: 0.4;
+    transform: scale(1);
+  }
+  30% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+}
+
+/* ========================================
+   INPUT AREA
+   ======================================== */
+
+.inputArea {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  padding: 12px 16px;
+  background: #fff;
+  border-top: 1px solid var(--el-color-border, #e5e7eb);
+  flex-shrink: 0;
+}
+
+.input {
+  flex: 1;
+  resize: none !important;
+  border-radius: 20px !important;
+  padding: 8px 16px !important;
+  font-size: 14px !important;
+  max-height: 100px !important;
+}
+
+.input:focus {
+  border-color: var(--el-color-primary) !important;
+  box-shadow: 0 0 0 2px rgba(11, 78, 163, 0.1) !important;
+}
+
+.sendButton {
+  flex-shrink: 0;
+  width: 40px !important;
+  height: 40px !important;
+  border-radius: 50% !important;
+  padding: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+/* ========================================
+   RESPONSIVE (Mobile)
+   ======================================== */
+
+@media (max-width: 767px) {
+  .launcher {
+    bottom: 16px;
+    right: 16px;
+    width: 52px;
+    height: 52px;
+  }
+
+  .launcherIcon {
+    font-size: 22px;
+  }
+
+  .panel {
+    position: fixed;
+    bottom: 0;
+    right: 0;
+    left: 0;
+    width: 100%;
+    height: calc(100vh - 60px);
+    max-height: none;
+    border-radius: 20px 20px 0 0;
+    transform: translateY(100%);
+  }
+
+  .panelOpen {
+    transform: translateY(0);
+  }
+
+  /* Backdrop em mobile */
+  .container::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.25s ease;
+    pointer-events: none;
+  }
+
+  .container:has(.panelOpen)::before {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+  }
+
+  .messages {
+    padding: 16px;
+  }
+
+  .inputArea {
+    padding: 12px 16px;
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+  }
+}
+
+/* ========================================
+   SCROLLBAR
+   ======================================== */
+
+.messages::-webkit-scrollbar {
+  width: 6px;
+}
+
+.messages::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.messages::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 3px;
+}
+
+.messages::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}

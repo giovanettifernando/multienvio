@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, startTransition } from 'react';
 import { Controller, useFormContext } from 'react-hook-form';
 import { Form, Input, Select, Row, Col, Typography, Spin } from 'antd';
 import { CarOutlined } from '@ant-design/icons';
@@ -62,7 +62,9 @@ export default function VehicleForm() {
         (b) => b.id === currentBrand || b.name === currentBrand
       );
       if (foundBrand && foundBrand.id !== selectedBrandId) {
-        setSelectedBrandId(foundBrand.id);
+        startTransition(() => {
+          setSelectedBrandId(foundBrand.id);
+        });
       }
     }
   }, [currentBrand, brands, selectedBrandId]);

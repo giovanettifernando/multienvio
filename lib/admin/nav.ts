@@ -125,6 +125,18 @@ export const ADMIN_NAV: AdminNavItem[] = [
         permissions: ["CONFIGURACOES"],
       },
       {
+        key: "openrouter",
+        label: "OpenRouter (IA)",
+        href: "/admin/config/openrouter",
+        permissions: ["CONFIGURACOES"],
+      },
+      {
+        key: "knowledge-base",
+        label: "Base de Conhecimento",
+        href: "/admin/config/knowledge-base",
+        permissions: ["CONFIGURACOES"],
+      },
+      {
         key: "comissoes",
         label: "Comissões da plataforma",
         href: "/admin/config/comissoes",

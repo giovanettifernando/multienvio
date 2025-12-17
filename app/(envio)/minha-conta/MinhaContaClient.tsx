@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, startTransition } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { PageShell } from "@/components/shared/PageShell";
 import { ELCard } from "@/components/ui/ELCard";
@@ -24,7 +24,9 @@ export default function MinhaContaClient() {
   // Detectar parâmetro showOnboarding na URL
   useEffect(() => {
     if (searchParams.get("showOnboarding") === "true") {
-      setShowOnboardingModal(true);
+      startTransition(() => {
+        setShowOnboardingModal(true);
+      });
       // Limpar parâmetro da URL mantendo o hash
       const hash = window.location.hash;
       router.replace(`/minha-conta${hash}`, { scroll: false });

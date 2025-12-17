@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, startTransition } from "react";
 import { CheckCircleTwoTone, CloseCircleTwoTone, LoadingOutlined } from "@ant-design/icons";
 import { Form, Input, Typography } from "antd";
 import {
@@ -54,7 +54,9 @@ export function CepField({
     const signature = `${initialResolved?.cidade ?? ""}|${initialResolved?.uf ?? ""}`;
     if (signature !== prevInitialResolved.current) {
       prevInitialResolved.current = signature;
-      setResolved(initialResolved ?? null);
+      startTransition(() => {
+        setResolved(initialResolved ?? null);
+      });
       lastNotifiedResolved.current = signature;
     }
   }, [initialResolved]);
@@ -116,13 +118,17 @@ export function CepField({
         onResolvedChange?.(null);
       }
       if (status !== "idle" && !error) {
-        setStatus("idle");
+        startTransition(() => {
+          setStatus("idle");
+        });
       }
     }
 
     // Atualiza status de loading
     if (isFetching && status !== "validating") {
-      setStatus("validating");
+      startTransition(() => {
+        setStatus("validating");
+      });
     }
   }, [data, resolved, isFetching, error, status, onResolvedChange]);
 

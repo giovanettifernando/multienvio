@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, startTransition } from 'react';
 import {
   Card,
   Form,
@@ -160,7 +160,9 @@ export default function ComissoesClient() {
         pickupFeeCommissionPercent: config.pickupFeeCommissionPercent,
         isActive: config.isActive,
       });
-      setLivePickupPercent(config.pickupFeeCommissionPercent);
+      startTransition(() => {
+        setLivePickupPercent(config.pickupFeeCommissionPercent);
+      });
       initializedRef.current = true;
     }
   }, [config, form]);

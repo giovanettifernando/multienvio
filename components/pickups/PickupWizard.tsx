@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Controller, useForm } from "react-hook-form";
+import { Controller, useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import type { Resolver } from "react-hook-form";
@@ -62,7 +62,6 @@ export function PickupWizard({ sender, shipments }: PickupWizardProps) {
     control,
     handleSubmit,
     setValue,
-    watch,
     trigger,
     formState: { errors },
   } = useForm<WizardForm>({
@@ -75,7 +74,8 @@ export function PickupWizard({ sender, shipments }: PickupWizardProps) {
     },
   });
 
-  const shipmentsIds = watch("shipmentsIds");
+  const shipmentsIds = useWatch({ control, name: "shipmentsIds" });
+  const schedule = useWatch({ control, name: "schedule" });
 
   const selectedShipments = useMemo(
     () => shipments.filter((shipment) => shipmentsIds.includes(shipment.id)),
@@ -210,7 +210,7 @@ export function PickupWizard({ sender, shipments }: PickupWizardProps) {
           <Card title="Selecione os envios" variant="borderless" style={{ marginBottom: 24 }}>
             <PickupShipmentsTable
               shipments={shipments}
-              selectedRowKeys={watch("shipmentsIds")}
+              selectedRowKeys={shipmentsIds}
               onSelectionChange={(keys) => setValue("shipmentsIds", keys)}
             />
           </Card>
@@ -323,7 +323,7 @@ export function PickupWizard({ sender, shipments }: PickupWizardProps) {
         </Space>
       </form>
 
-      <PickupSummary sender={sender} totals={totals} schedule={watch("schedule")} />
+      <PickupSummary sender={sender} totals={totals} schedule={schedule} />
     </>
   );
 }

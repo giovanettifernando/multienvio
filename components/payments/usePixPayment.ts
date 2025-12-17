@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect, startTransition } from 'react';
 import { App } from 'antd';
 import type { MercadoPagoPaymentResult, PixPaymentStatus } from './checkoutTypes';
 
@@ -101,7 +101,9 @@ export function usePixPayment({ onPaymentConfirmed }: UsePixPaymentOptions) {
     }
 
     console.log('[PIX_POLL] Iniciando polling...');
-    setPixPolling(true);
+    startTransition(() => {
+      setPixPolling(true);
+    });
 
     // Check status every 5 seconds
     pollingIntervalRef.current = setInterval(() => {
@@ -122,7 +124,9 @@ export function usePixPayment({ onPaymentConfirmed }: UsePixPaymentOptions) {
     }, 1000);
 
     // Initial check
-    checkPixStatus();
+    startTransition(() => {
+      checkPixStatus();
+    });
 
     return () => clearIntervals();
   }, [pixData, pixStatus, checkPixStatus, clearIntervals]);

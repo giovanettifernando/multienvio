@@ -59,6 +59,8 @@ const correiosConfigSchema = z.object({
     .max(100, 'Comissao nao pode exceder 100%')
     .optional()
     .nullable(),
+  // Caminho do ícone da transportadora
+  carrierIconPath: z.string().optional().nullable(),
 });
 
 type CorreiosConfigInput = z.infer<typeof correiosConfigSchema>;
@@ -147,6 +149,7 @@ export const GET = withApiHandler(async ({ req }) => {
         sandbox: { configured: false, username: '', password: '', cartaoPostagem: '', contrato: '', dr: '' },
         servicos: [] as unknown[],
         shippingCommissionPercent: null as number | null,
+        carrierIconPath: null as string | null,
         status: null as string | null,
         lastUpdated: null as Date | null,
       },
@@ -189,6 +192,7 @@ export const GET = withApiHandler(async ({ req }) => {
       shippingCommissionPercent: carrier.shippingCommissionPercent
         ? Number(carrier.shippingCommissionPercent)
         : null,
+      carrierIconPath: carrier.logoUrl || null,
       status: carrier.status as string | null,
       lastUpdated: (productionCred?.updatedAt || sandboxCred?.updatedAt || carrier.updatedAt) as Date | null,
     },
@@ -257,7 +261,7 @@ export const POST = withApiHandler(async ({ req }) => {
           baseUrl: baseUrls[data.activeEnvironment],
           timeout: 30000,
           maxRetries: 3,
-          logoUrl: 'https://www.correios.com.br/++resource++correios/img/logo-correios-blue.svg',
+          logoUrl: data.carrierIconPath || 'https://www.correios.com.br/++resource++correios/img/logo-correios-blue.svg',
           description: 'Integração com APIs dos Correios (CWS)',
           shippingCommissionPercent: data.shippingCommissionPercent ?? null,
         },
@@ -269,6 +273,7 @@ export const POST = withApiHandler(async ({ req }) => {
           status: 'ACTIVE',
           environment: data.activeEnvironment === 'sandbox' ? 'SANDBOX' : 'PRODUCTION',
           baseUrl: baseUrls[data.activeEnvironment],
+          logoUrl: data.carrierIconPath ?? carrier.logoUrl,
           shippingCommissionPercent: data.shippingCommissionPercent ?? null,
           updatedAt: new Date(),
         },

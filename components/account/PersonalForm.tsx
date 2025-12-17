@@ -19,7 +19,7 @@ import {
 } from "antd";
 import { DeleteOutlined } from "@ant-design/icons";
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Controller, useForm, type FieldErrors } from "react-hook-form";
+import { Controller, useForm, useWatch, type FieldErrors } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 
@@ -161,8 +161,8 @@ export default function PersonalForm() {
   const [avatarUploading, setAvatarUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const hasCompany = form.watch("hasCompany");
-  const fullNameValue = form.watch("fullName");
+  const hasCompany = useWatch({ control: form.control, name: "hasCompany" });
+  const fullNameValue = useWatch({ control: form.control, name: "fullName" });
 
   useEffect(() => {
     if (profileQuery.data) {

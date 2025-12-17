@@ -195,6 +195,30 @@ export function PaymentModal({
     return mode === "topup" ? "Confirmar recarga" : "Confirmar pagamento";
   };
 
+  const handleClose = useCallback(() => {
+    // Limpar intervals de polling
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current);
+      pollingIntervalRef.current = null;
+    }
+    if (countdownIntervalRef.current) {
+      clearInterval(countdownIntervalRef.current);
+      countdownIntervalRef.current = null;
+    }
+
+    setPixData(null);
+    setPixPolling(false);
+    setPixStatus("pending");
+    setPixExpireSeconds(30 * 60);
+    setTopUpAmount(0);
+    setSelectedMethod(null);
+    setShowCardForm(false);
+    setUseSavedCard(true);
+    setAmountTouched(false);
+    setLoading(false);
+    onClose();
+  }, [onClose]);
+
   // Função para verificar status do pagamento PIX
   const checkPixStatus = useCallback(async () => {
     if (!pixData?.transaction?.id) return;
@@ -255,7 +279,7 @@ export function PaymentModal({
     } catch (error) {
       console.error("[PIX_POLL] Erro ao verificar status:", error);
     }
-  }, [pixData?.transaction?.id, pixData?.payment?.id, mode, messageApi, queryClient, onSuccess]);
+  }, [pixData?.transaction?.id, pixData?.payment?.id, mode, messageApi, queryClient, onSuccess, handleClose]);
 
   // Effect para polling do status PIX
   useEffect(() => {
@@ -375,30 +399,6 @@ export function PaymentModal({
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleClose = () => {
-    // Limpar intervals de polling
-    if (pollingIntervalRef.current) {
-      clearInterval(pollingIntervalRef.current);
-      pollingIntervalRef.current = null;
-    }
-    if (countdownIntervalRef.current) {
-      clearInterval(countdownIntervalRef.current);
-      countdownIntervalRef.current = null;
-    }
-
-    setPixData(null);
-    setPixPolling(false);
-    setPixStatus("pending");
-    setPixExpireSeconds(30 * 60);
-    setTopUpAmount(0);
-    setSelectedMethod(null);
-    setShowCardForm(false);
-    setUseSavedCard(true);
-    setAmountTouched(false);
-    setLoading(false);
-    onClose();
   };
 
   const handlePixCancel = () => {

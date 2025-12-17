@@ -110,7 +110,7 @@ export default function LoginClient() {
         setIsLoading(false);
       }
     },
-    [loginStore, isAdmin, router, message, setError],
+    [loginStore, isAdmin, message, setError],
   );
 
   const formContent = useMemo(

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useSyncExternalStore } from 'react';
+import { useState, useEffect, useMemo, useSyncExternalStore, startTransition } from 'react';
 import { Layout, theme, Button, Flex } from 'antd';
 import { MenuOutlined } from '@ant-design/icons';
 import { usePathname, useRouter } from 'next/navigation';
@@ -86,7 +86,9 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
   // Fechar menu mobile ao navegar
   useEffect(() => {
-    setMobileMenuOpen(false);
+    startTransition(() => {
+      setMobileMenuOpen(false);
+    });
   }, [pathname]);
 
   // Build menu items for mobile drawer

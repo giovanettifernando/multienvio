@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Card, Table, Tag, Button, Tooltip, Space, App } from 'antd';
 import { ReloadOutlined, CheckOutlined, ThunderboltOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
@@ -27,11 +27,7 @@ export default function PendingPaymentsGrid() {
   const [payments, setPayments] = useState<PendingPayment[]>([]);
   const [refreshing, setRefreshing] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadPayments();
-  }, []);
-
-  const loadPayments = async () => {
+  const loadPayments = useCallback(async () => {
     setLoading(true);
     try {
       const res = await fetch('/api/admin/payment-transactions/pending', {
@@ -47,7 +43,11 @@ export default function PendingPaymentsGrid() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [message]);
+
+  useEffect(() => {
+    loadPayments();
+  }, [loadPayments]);
 
   const handleSync = async (externalId: string) => {
     setRefreshing(externalId);

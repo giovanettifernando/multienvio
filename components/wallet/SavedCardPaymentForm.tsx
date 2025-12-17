@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { Card as AntCard, Input, Button, Radio, Space, Typography, Alert, Form, App } from "antd";
 import { ELModal } from "@/components/ui/ELModal";
 import { CreditCardOutlined, LockOutlined, LoadingOutlined } from "@ant-design/icons";
@@ -68,7 +68,10 @@ export function SavedCardPaymentForm({
   const abortControllerRef = useRef<AbortController | null>(null);
 
   // Filtrar cartões válidos (com brand e last4)
-  const availableCards = cards?.filter((card) => card.brand && card.last4) || [];
+  const availableCards = useMemo(
+    () => cards?.filter((card) => card.brand && card.last4) || [],
+    [cards]
+  );
 
   // Auto-selecionar o primeiro cartão quando carregar
   useEffect(() => {

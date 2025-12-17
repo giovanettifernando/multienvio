@@ -8,6 +8,7 @@ import {
   QueryCache,
   MutationCache,
 } from "@tanstack/react-query";
+import { AssistantChat } from "@/components/assistant";
 
 // Flag para evitar múltiplos redirects simultâneos
 let isRedirecting = false;
@@ -84,6 +85,7 @@ export function AppProviders({ children }: PropsWithChildren) {
   return (
     <QueryClientProvider client={queryClient}>
       <App>{children}</App>
+      <AssistantChat />
       {/* ReactQueryDevtools disabled due to Next.js 15 compatibility issue */}
       {/* {process.env.NODE_ENV === "development" ? (
         <ReactQueryDevtools initialIsOpen={false} />

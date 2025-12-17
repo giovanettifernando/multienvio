@@ -648,8 +648,6 @@ export default function FinalizarClient() {
     destino,
     recipientMode,
     recipientNome,
-    recipientTelefone,
-    recipientEmail,
     recipientDocumento,
     recipientNumero,
     recipientCep,

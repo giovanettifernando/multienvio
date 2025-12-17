@@ -52,7 +52,7 @@ export default function EmailConfigForm() {
     } finally {
       setLoading(false);
     }
-  }, [form]);
+  }, [form, message]);
 
   useEffect(() => {
     loadConfig();

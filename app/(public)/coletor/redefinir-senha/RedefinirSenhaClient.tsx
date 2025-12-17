@@ -20,7 +20,7 @@ function ResetPasswordContent() {
     if (!token) {
       message.error('Token de redefinição não encontrado na URL');
     }
-  }, [token]);
+  }, [token, message]);
 
   const handleSubmit = async (values: { newPassword: string; confirmPassword: string }) => {
     if (!token) {

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
-import { Controller, useForm, type Resolver } from "react-hook-form";
+import { Controller, useForm, useWatch, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 
@@ -45,7 +45,6 @@ export default function CadastroClient() {
     control,
     handleSubmit,
     setError,
-    watch,
     formState: { errors },
   } = useForm<CadastroFormValues>({
     resolver: zodResolver(cadastroSchema) as Resolver<CadastroFormValues>,
@@ -58,7 +57,7 @@ export default function CadastroClient() {
     },
   });
 
-  const senhaAtual = watch("senha") ?? "";
+  const senhaAtual = useWatch({ control, name: "senha" }) ?? "";
 
   const onSubmit = useCallback(
     async (values: CadastroFormValues) => {

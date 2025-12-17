@@ -4,7 +4,9 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   Alert,
+  Avatar,
   Empty,
+  Flex,
   Space,
   Spin,
   Typography,
@@ -23,6 +25,32 @@ import { ContentDeclarationModal } from "./ContentDeclarationModal";
 import { useQuoteSelection } from "@/hooks/useQuotes";
 import { useQuoteStore } from "@/store/useQuoteStore";
 import { useShallow } from "zustand/react/shallow";
+import { useCarrierIcons } from "@/hooks/useCarrierIcons";
+
+/**
+ * Deriva o slug da transportadora a partir do nome.
+ */
+const deriveCarrierSlug = (carrierName: string): string => {
+  return carrierName
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+};
+
+/**
+ * Gera as iniciais do nome da transportadora.
+ */
+const buildAvatarLabel = (carrier: string) => {
+  const initials = carrier
+    .split(" ")
+    .map((word) => word.charAt(0))
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+  return initials || "T";
+};
 
 type QuoteResultsSectionProps = {
   results: QuoteResultItem[] | null;
@@ -96,6 +124,13 @@ export function QuoteResultsSection({
   const [declarationModalOpen, setDeclarationModalOpen] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState<string | null>(null);
   const [isExpiringSoon, setIsExpiringSoon] = useState(false);
+  const [iconErrors, setIconErrors] = useState<Record<string, boolean>>({});
+
+  const { carrierIcons } = useCarrierIcons();
+
+  const handleIconError = (slug: string) => {
+    setIconErrors((prev) => ({ ...prev, [slug]: true }));
+  };
 
   // Calculate time remaining and update every second
   useEffect(() => {
@@ -404,8 +439,42 @@ export function QuoteResultsSection({
       title: "Transportadora",
       dataIndex: "carrier",
       key: "carrier",
-      width: 150,
-      render: (text: unknown) => <Typography.Text strong>{text as string}</Typography.Text>,
+      width: 180,
+      render: (text: unknown) => {
+        const carrierName = text as string;
+        const slug = deriveCarrierSlug(carrierName);
+        const iconUrl = carrierIcons[slug];
+        const hasError = iconErrors[slug];
+        const showIcon = iconUrl && !hasError;
+
+        return (
+          <Flex align="center" gap={8}>
+            {showIcon ? (
+              <Avatar
+                shape="square"
+                size={28}
+                src={iconUrl}
+                style={{ backgroundColor: "#fff", border: "1px solid #e5e7eb", flexShrink: 0 }}
+                onError={() => {
+                  handleIconError(slug);
+                  return false;
+                }}
+              >
+                {buildAvatarLabel(carrierName)}
+              </Avatar>
+            ) : (
+              <Avatar
+                shape="square"
+                size={28}
+                style={{ backgroundColor: "#1d39c4", color: "#fff", flexShrink: 0 }}
+              >
+                {buildAvatarLabel(carrierName)}
+              </Avatar>
+            )}
+            <Typography.Text strong>{carrierName}</Typography.Text>
+          </Flex>
+        );
+      },
       showInCard: true,
     },
     {

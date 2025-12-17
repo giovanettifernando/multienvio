@@ -31,6 +31,7 @@ import {
   ExperimentOutlined,
   CloudOutlined,
   DownloadOutlined,
+  PictureOutlined,
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
@@ -62,6 +63,7 @@ interface CorreiosConfig {
     ordemExibicao?: number;
   }>;
   shippingCommissionPercent?: number | null;
+  carrierIconPath?: string | null;
   status?: string;
   lastUpdated?: string;
 }
@@ -244,6 +246,7 @@ function ConfigTab() {
     if (config && !initializedRef.current) {
       form.setFieldsValue({
         shippingCommissionPercent: config.shippingCommissionPercent ?? 0,
+        carrierIconPath: config.carrierIconPath || '',
         activeEnvironment: config.activeEnvironment || 'sandbox',
         production: {
           username: config.production?.username || '',
@@ -267,12 +270,22 @@ function ConfigTab() {
   const handleSubmit = (values: Record<string, unknown>) => {
     const payload = {
       shippingCommissionPercent: values.shippingCommissionPercent as number | null,
+      carrierIconPath: (values.carrierIconPath as string) || null,
       activeEnvironment: values.activeEnvironment,
       production: values.production,
       sandbox: values.sandbox,
     };
     mutation.mutate(payload);
   };
+
+  // Watch do campo de ícone para preview
+  const iconPath = Form.useWatch('carrierIconPath', form);
+  const [iconError, setIconError] = useState(false);
+
+  // Reset error quando path muda
+  useEffect(() => {
+    setIconError(false);
+  }, [iconPath]);
 
   // Calcular valores do simulador
   const commissionPercent = Form.useWatch('shippingCommissionPercent', form) ?? 0;
@@ -320,6 +333,87 @@ function ConfigTab() {
           style={{ marginBottom: 16 }}
         />
       )}
+
+      {/* Icone da Transportadora */}
+      <Card
+        title={
+          <Space>
+            <PictureOutlined />
+            <span>Ícone da Transportadora</span>
+          </Space>
+        }
+        size="small"
+        style={{ marginBottom: 16, borderColor: '#faad1433' }}
+        headStyle={{ background: '#fffbe6' }}
+      >
+        <Form.Item
+          name="carrierIconPath"
+          label="Caminho do Ícone"
+          extra="Path relativo (ex: /images/carriers/correios.svg) ou URL externa"
+        >
+          <Input
+            placeholder="/images/carriers/correios.svg"
+            style={{ maxWidth: 400 }}
+            allowClear
+          />
+        </Form.Item>
+
+        {/* Preview do Ícone */}
+        {iconPath && typeof iconPath === 'string' && iconPath.trim() !== '' && (
+          <>
+            <Divider style={{ margin: '12px 0' }} />
+            <Text strong style={{ display: 'block', marginBottom: 8 }}>Preview</Text>
+            <div style={{
+              padding: 16,
+              background: '#f5f5f5',
+              borderRadius: 8,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 16,
+            }}>
+              {!iconError ? (
+                <img
+                  src={iconPath}
+                  alt="Ícone Correios"
+                  width={48}
+                  height={48}
+                  style={{
+                    objectFit: 'contain',
+                    border: '1px solid #d9d9d9',
+                    borderRadius: 4,
+                    background: '#fff',
+                  }}
+                  onError={() => setIconError(true)}
+                />
+              ) : (
+                <div style={{
+                  width: 48,
+                  height: 48,
+                  border: '1px dashed #ff4d4f',
+                  borderRadius: 4,
+                  background: '#fff2f0',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}>
+                  <PictureOutlined style={{ color: '#ff4d4f', fontSize: 20 }} />
+                </div>
+              )}
+              <div>
+                <Text type="secondary" style={{ fontSize: 12 }}>48x48px</Text>
+                <br />
+                <Text code style={{ fontSize: 11 }}>{iconPath}</Text>
+                {iconError && (
+                  <>
+                    <br />
+                    <Text type="danger" style={{ fontSize: 11 }}>Erro ao carregar imagem</Text>
+                  </>
+                )}
+              </div>
+            </div>
+          </>
+        )}
+      </Card>
 
       {/* Comissao sobre Frete */}
       <Card

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect, useCallback } from "react";
 import { App, Space, Spin, Result } from "antd";
 import { PrinterOutlined, DownloadOutlined, ReloadOutlined } from "@ant-design/icons";
 import { ELModal } from "@/components/ui/ELModal";
@@ -28,18 +28,7 @@ export default function StatementPDFModal({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Carregar conteúdo HTML quando o modal abrir
-  useEffect(() => {
-    if (open) {
-      loadContent();
-    } else {
-      // Limpar estado quando fechar
-      setHtmlContent(null);
-      setError(null);
-    }
-  }, [open, dateFrom, dateTo, search]);
-
-  const loadContent = async () => {
+  const loadContent = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     setHtmlContent(null);
@@ -67,7 +56,18 @@ export default function StatementPDFModal({
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [dateFrom, dateTo, search]);
+
+  // Carregar conteúdo HTML quando o modal abrir
+  useEffect(() => {
+    if (open) {
+      loadContent();
+    } else {
+      // Limpar estado quando fechar
+      setHtmlContent(null);
+      setError(null);
+    }
+  }, [open, loadContent]);
 
   const handlePrint = () => {
     if (iframeRef.current && iframeRef.current.contentWindow) {

@@ -59,6 +59,7 @@ model User {
   pickupRequests              PickupRequest[]
   trackingCodeReservations    TrackingCodeReservation[]
   recipientPaymentRequests    RecipientPaymentRequest[]
+  assistantChatSessions       AssistantChatSession[]
 
   // Removidos índices redundantes: email, emailVerificationToken, googleId já são @unique
   @@map("users")
@@ -1717,4 +1718,88 @@ model RecipientPaymentPackage {
   @@unique([requestId, packageNumber])
   @@index([requestId])
   @@map("recipient_payment_packages")
+}
+
+// ============================================================================
+// OpenRouter / Assistant AI Configuration
+// ============================================================================
+
+/// Configuração da integração com OpenRouter para o Assistente AI
+model OpenRouterConfig {
+  id               String   @id @default(cuid())
+  apiKey           String   // Criptografada com AES-256-GCM
+  baseUrl          String   @default("https://openrouter.ai/api/v1") @map("base_url")
+  defaultModel     String   @default("anthropic/claude-3-haiku") @map("default_model")
+  temperature      Float    @default(0.7)
+  maxTokens        Int      @default(2048) @map("max_tokens")
+  streamingEnabled Boolean  @default(true) @map("streaming_enabled")
+  httpReferer      String?  @map("http_referer")
+  xTitle           String?  @map("x_title")
+  isActive         Boolean  @default(true) @map("is_active")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  @@map("openrouter_configs")
+}
+
+/// Sessão de chat do assistente - agrupa mensagens de uma conversa
+model AssistantChatSession {
+  id        String                 @id @default(cuid())
+  userId    String                 @map("user_id")
+  title     String?                // Título opcional gerado automaticamente
+  createdAt DateTime               @default(now()) @map("created_at")
+  updatedAt DateTime               @updatedAt @map("updated_at")
+
+  user      User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages  AssistantChatMessage[]
+
+  @@index([userId])
+  @@index([userId, updatedAt])
+  @@map("assistant_chat_sessions")
+}
+
+/// Mensagem individual de uma sessão do assistente
+model AssistantChatMessage {
+  id         String               @id @default(cuid())
+  sessionId  String               @map("session_id")
+  author     AssistantMessageAuthor
+  content    String               @db.Text
+  toolName   String?              @map("tool_name")
+  toolArgs   Json?                @map("tool_args")
+  toolResult Json?                @map("tool_result")
+  createdAt  DateTime             @default(now()) @map("created_at")
+
+  session    AssistantChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@index([sessionId, createdAt])
+  @@map("assistant_chat_messages")
+}
+
+/// Autor da mensagem no chat do assistente
+enum AssistantMessageAuthor {
+  USER
+  ASSISTANT
+  TOOL
+}
+
+// ============================================================================
+// Knowledge Base (Base de Conhecimento)
+// ============================================================================
+
+/// Artigo da base de conhecimento para consulta pelo assistente
+model KnowledgeBaseArticle {
+  id              String   @id @default(cuid())
+  slug            String   @unique
+  title           String
+  contentMarkdown String   @db.Text @map("content_markdown")
+  tags            String[] // PostgreSQL array para tags
+  category        String?
+  isPublished     Boolean  @default(false) @map("is_published")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@index([isPublished])
+  @@index([category])
+  @@map("knowledge_base_articles")
 }

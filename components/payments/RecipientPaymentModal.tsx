@@ -100,6 +100,60 @@ export function RecipientPaymentModal({
     return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   };
 
+  // handleClose precisa ser definido antes de processPaymentAndCreateShipment
+  const handleClose = useCallback(() => {
+    // Limpar intervals de polling
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current);
+      pollingIntervalRef.current = null;
+    }
+    if (countdownIntervalRef.current) {
+      clearInterval(countdownIntervalRef.current);
+      countdownIntervalRef.current = null;
+    }
+
+    setPixData(null);
+    setPixPolling(false);
+    setPixStatus("pending");
+    setPixExpireSeconds(30 * 60);
+    setSelectedMethod(null);
+    setShowCardForm(false);
+    setLoading(false);
+    onClose();
+  }, [onClose]);
+
+  // Processar pagamento apos confirmacao
+  const processPaymentAndCreateShipment = useCallback(async (mercadoPagoPaymentId: number, method: PaymentMethod) => {
+    try {
+      const response = await fetch("/api/recipient-payment/pay", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          paymentToken,
+          paymentMethod: method === "pix" ? "PIX" : "CREDIT_CARD",
+          mercadoPagoPaymentId,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error?.message || "Erro ao processar pagamento");
+      }
+
+      messageApi.success("Pagamento confirmado!");
+      onSuccess?.({
+        paymentId: mercadoPagoPaymentId,
+        method,
+        trackingCode: result.data?.trackingCode,
+      });
+      handleClose();
+    } catch (error) {
+      console.error("[PAYMENT_PROCESS] Erro:", error);
+      messageApi.error(error instanceof Error ? error.message : "Erro ao processar pagamento");
+    }
+  }, [paymentToken, messageApi, onSuccess, handleClose]);
+
   // Funcao para verificar status do pagamento PIX
   const checkPixStatus = useCallback(async () => {
     if (!pixData?.transaction?.id) return;
@@ -155,39 +209,7 @@ export function RecipientPaymentModal({
     } catch (error) {
       console.error("[PIX_POLL] Erro ao verificar status:", error);
     }
-  }, [pixData?.transaction?.id, pixData?.payment?.id, paymentToken]);
-
-  // Processar pagamento apos confirmacao
-  const processPaymentAndCreateShipment = async (mercadoPagoPaymentId: number, method: PaymentMethod) => {
-    try {
-      const response = await fetch("/api/recipient-payment/pay", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          paymentToken,
-          paymentMethod: method === "pix" ? "PIX" : "CREDIT_CARD",
-          mercadoPagoPaymentId,
-        }),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error?.message || "Erro ao processar pagamento");
-      }
-
-      messageApi.success("Pagamento confirmado!");
-      onSuccess?.({
-        paymentId: mercadoPagoPaymentId,
-        method,
-        trackingCode: result.data?.trackingCode,
-      });
-      handleClose();
-    } catch (error) {
-      console.error("[PAYMENT_PROCESS] Erro:", error);
-      messageApi.error(error instanceof Error ? error.message : "Erro ao processar pagamento");
-    }
-  };
+  }, [pixData?.transaction?.id, pixData?.payment?.id, paymentToken, processPaymentAndCreateShipment]);
 
   // Effect para polling do status PIX
   useEffect(() => {
@@ -281,27 +303,6 @@ export function RecipientPaymentModal({
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleClose = () => {
-    // Limpar intervals de polling
-    if (pollingIntervalRef.current) {
-      clearInterval(pollingIntervalRef.current);
-      pollingIntervalRef.current = null;
-    }
-    if (countdownIntervalRef.current) {
-      clearInterval(countdownIntervalRef.current);
-      countdownIntervalRef.current = null;
-    }
-
-    setPixData(null);
-    setPixPolling(false);
-    setPixStatus("pending");
-    setPixExpireSeconds(30 * 60);
-    setSelectedMethod(null);
-    setShowCardForm(false);
-    setLoading(false);
-    onClose();
   };
 
   const handlePixCancel = () => {

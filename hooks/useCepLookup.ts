@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, startTransition } from "react";
 import { fetchCepV2, normalizeCep, isValidCep, type CepResponse, type CepError } from "@/lib/services/brasilapi";
 
 export type CepLookupState = {
@@ -90,10 +90,12 @@ export function useCepLookup(
 
     // Limpa estado se CEP estiver vazio
     if (!cep) {
-      setState({
-        isLoading: false,
-        data: null,
-        error: null,
+      startTransition(() => {
+        setState({
+          isLoading: false,
+          data: null,
+          error: null,
+        });
       });
       return;
     }
@@ -107,10 +109,12 @@ export function useCepLookup(
       }, debounceMs);
     } else {
       // Menos de 8 dígitos - limpa estado
-      setState({
-        isLoading: false,
-        data: null,
-        error: null,
+      startTransition(() => {
+        setState({
+          isLoading: false,
+          data: null,
+          error: null,
+        });
       });
     }
 

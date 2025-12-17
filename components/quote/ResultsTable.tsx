@@ -18,8 +18,9 @@ import {
 import { ELButton } from "@/components/ui/ELButton";
 import { ELCard } from "@/components/ui/ELCard";
 import type { ColumnsType } from "antd/es/table";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import type { QuoteResultItem } from "@/types/quote";
+import { useCarrierIcons } from "@/hooks/useCarrierIcons";
 
 type SortOrder = "price" | "prazo";
 
@@ -56,6 +57,19 @@ const buildAvatarLabel = (carrier: string) => {
   return initials || "T";
 };
 
+/**
+ * Deriva o slug da transportadora a partir do nome.
+ * Ex: "Correios" -> "correios", "JadLog" -> "jadlog"
+ */
+const deriveCarrierSlug = (carrierName: string): string => {
+  return carrierName
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "") // Remove acentos
+    .replace(/[^a-z0-9]+/g, "-") // Substitui caracteres especiais por hífen
+    .replace(/^-|-$/g, ""); // Remove hífens no início/fim
+};
+
 export function ResultsTable({
   results,
   sortOrder,
@@ -68,25 +82,52 @@ export function ResultsTable({
     [results, sortOrder],
   );
 
+  const { carrierIcons } = useCarrierIcons();
+  const [iconErrors, setIconErrors] = useState<Record<string, boolean>>({});
+
+  const handleIconError = (slug: string) => {
+    setIconErrors((prev) => ({ ...prev, [slug]: true }));
+  };
 
   const columns: ColumnsType<QuoteResultItem> = [
     {
       title: "Transportadora",
       dataIndex: "carrier",
       key: "carrier",
-      render: (value: string) => (
-        <Flex align="center" gap={12}>
-          <Avatar
-            shape="square"
-            style={{ backgroundColor: "#1d39c4", color: "#fff" }}
-          >
-            {buildAvatarLabel(value)}
-          </Avatar>
-          <div>
-            <Typography.Text strong>{value}</Typography.Text>
-          </div>
-        </Flex>
-      ),
+      render: (value: string) => {
+        const slug = deriveCarrierSlug(value);
+        const iconUrl = carrierIcons[slug];
+        const hasError = iconErrors[slug];
+        const showIcon = iconUrl && !hasError;
+
+        return (
+          <Flex align="center" gap={12}>
+            {showIcon ? (
+              <Avatar
+                shape="square"
+                src={iconUrl}
+                style={{ backgroundColor: "#fff", border: "1px solid #e5e7eb" }}
+                onError={() => {
+                  handleIconError(slug);
+                  return false;
+                }}
+              >
+                {buildAvatarLabel(value)}
+              </Avatar>
+            ) : (
+              <Avatar
+                shape="square"
+                style={{ backgroundColor: "#1d39c4", color: "#fff" }}
+              >
+                {buildAvatarLabel(value)}
+              </Avatar>
+            )}
+            <div>
+              <Typography.Text strong>{value}</Typography.Text>
+            </div>
+          </Flex>
+        );
+      },
     },
     {
       title: "Modalidade",

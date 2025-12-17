@@ -10,7 +10,7 @@ import {
   useFormContext,
   useWatch,
 } from "react-hook-form";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, startTransition } from "react";
 import type { QuoteFormValues } from "./QuoteForm";
 import { MinhasEmbalagensSelect } from "@/components/cotacoes/MinhasEmbalagensSelect";
 import type { PackagingTemplate } from "@/hooks/usePackaging";
@@ -120,8 +120,10 @@ function VolumeItem({
       currentWidth !== snapshotWidth ||
       currentHeight !== snapshotHeight
     ) {
-      setSelectedPackagingId(undefined);
-      setPackagingSnapshot(null);
+      startTransition(() => {
+        setSelectedPackagingId(undefined);
+        setPackagingSnapshot(null);
+      });
     }
   }, [comprimentoCm, larguraCm, alturaCm, packagingSnapshot, selectedPackagingId]);
 

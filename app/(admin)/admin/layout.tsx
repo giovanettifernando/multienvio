@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore, useCallback } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore, useCallback, startTransition } from "react";
 import Link from "next/link";
 import { Layout, Menu, Typography, Flex, Spin, Button, Drawer } from "antd";
 import { MenuOutlined, CloseOutlined } from "@ant-design/icons";
@@ -115,7 +115,9 @@ export default function AdminLayout({
     if (hasVerified.current) {
       // Se já verificou e tem admin no store, apenas marca como não-checking
       if (admin) {
-        setIsChecking(false);
+        startTransition(() => {
+          setIsChecking(false);
+        });
       }
       // Se já verificou e não tem admin, o redirect já foi disparado
       return;
@@ -271,7 +273,9 @@ export default function AdminLayout({
 
   // Fechar menu mobile ao navegar
   useEffect(() => {
-    setMobileMenuOpen(false);
+    startTransition(() => {
+      setMobileMenuOpen(false);
+    });
   }, [pathname]);
 
   if (isLoginPage) {

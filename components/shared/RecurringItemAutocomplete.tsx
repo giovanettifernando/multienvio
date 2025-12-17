@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, startTransition } from "react";
 import { AutoComplete, Input, Typography } from "antd";
 import { useRecurringItemsAutocomplete } from "@/hooks/useRecurringItemsAutocomplete";
 
@@ -25,7 +25,9 @@ export default function RecurringItemAutocomplete({
   const { suggestions, loading, searchItems } = useRecurringItemsAutocomplete();
 
   useEffect(() => {
-    setSearchValue(value || "");
+    startTransition(() => {
+      setSearchValue(value || "");
+    });
   }, [value]);
 
   const handleSearch = (searchText: string) => {

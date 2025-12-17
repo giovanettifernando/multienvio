@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, startTransition } from "react";
 import { FileTextOutlined, SafetyOutlined } from "@ant-design/icons";
 import { Checkbox, Space, Typography } from "antd";
 import { ELModal } from "@/components/ui/ELModal";
@@ -25,7 +25,9 @@ export function ContentDeclarationModal({
 
   useEffect(() => {
     if (!open) {
-      setRemember(false);
+      startTransition(() => {
+        setRemember(false);
+      });
     }
   }, [open]);
 

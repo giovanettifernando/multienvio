@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, startTransition } from "react";
 import { Input, Spin, Typography } from "antd";
 import type { InputRef } from "antd";
 import { useRecurringItemsAutocomplete } from "@/hooks/useRecurringItemsAutocomplete";
@@ -34,7 +34,9 @@ export function RecurringItemAutocompleteInput({
   // Sincronizar com valor externo APENAS quando não estiver digitando
   useEffect(() => {
     if (!isUserTypingRef.current) {
-      setInternalValue(value);
+      startTransition(() => {
+        setInternalValue(value);
+      });
     }
   }, [value]);
 
