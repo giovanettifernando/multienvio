@@ -100,7 +100,7 @@ export default function AdminSqlPage() {
           header={{ title: 'Query SQL' }}
           padding="md"
         >
-          <Space direction="vertical" size={16} style={{ width: '100%' }}>
+          <Space orientation="vertical" size={16} style={{ width: '100%' }}>
             <TextArea
               value={query}
               onChange={(e) => setQuery(e.target.value)}

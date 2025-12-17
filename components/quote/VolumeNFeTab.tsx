@@ -238,6 +238,8 @@ export function VolumeNFeTab({ volumeCount }: VolumeNFeTabProps) {
       });
 
       const result = await response.json();
+      // Estrutura da resposta: { data: { success: true, data: invoiceData } }
+      const parseResult = result.data;
 
       const docs = [...volumeDocuments];
       if (!docs[targetIndex]) {
@@ -247,9 +249,9 @@ export function VolumeNFeTab({ volumeCount }: VolumeNFeTabProps) {
         ...docs[targetIndex],
         type: "NFE",
         nfeKey: chave,
-        nfeItems: result.success ? result.data?.items : undefined,
+        nfeItems: parseResult?.success ? parseResult.data?.items : undefined,
         // Armazenar dados completos da NF-e para espelho
-        nfeData: result.success ? result.data : undefined,
+        nfeData: parseResult?.success ? parseResult.data : undefined,
       };
       setValue("document.volumeDocuments", docs, { shouldDirty: true });
       return true;
@@ -331,6 +333,8 @@ export function VolumeNFeTab({ volumeCount }: VolumeNFeTabProps) {
           });
 
           const result = await response.json();
+          // Estrutura da resposta: { data: { success: true, data: invoiceData } }
+          const parseResult = result.data;
 
           if (!docs[targetIndex]) {
             docs[targetIndex] = { volumeIndex: targetIndex, type: null };
@@ -339,9 +343,9 @@ export function VolumeNFeTab({ volumeCount }: VolumeNFeTabProps) {
             ...docs[targetIndex],
             type: "NFE",
             nfeKey: chave,
-            nfeItems: result.success ? result.data?.items : undefined,
+            nfeItems: parseResult?.success ? parseResult.data?.items : undefined,
             // Armazenar dados completos da NF-e para espelho
-            nfeData: result.success ? result.data : undefined,
+            nfeData: parseResult?.success ? parseResult.data : undefined,
           };
 
           successCount++;

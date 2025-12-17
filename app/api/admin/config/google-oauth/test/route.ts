@@ -9,6 +9,7 @@ import { requireAdminUser } from '@/lib/auth/admin-helpers';
 import { AdminPermission } from '@prisma/client';
 import { withApiHandler } from '@/lib/api/handler';
 import { ApiError } from '@/lib/api/errors';
+import { getRedirectUri } from '@/lib/auth/google-oauth';
 
 const testSchema = z.object({
   clientId: z.string().min(1, 'Client ID é obrigatório'),
@@ -91,7 +92,7 @@ export const POST = withApiHandler<GoogleOAuthTestResponse>(async ({ req }) => {
         client_id: clientId,
         client_secret: clientSecret,
         code: 'test_invalid_code',
-        redirect_uri: 'http://localhost:3000/api/auth/google/callback',
+        redirect_uri: getRedirectUri(),
         grant_type: 'authorization_code',
       }),
     });
@@ -130,15 +131,17 @@ export const POST = withApiHandler<GoogleOAuthTestResponse>(async ({ req }) => {
 
     // Se o erro for "unauthorized_client", o redirect_uri não está configurado
     if (responseData.error === 'unauthorized_client') {
+      const currentRedirectUri = getRedirectUri();
       return {
         data: {
           success: true,
           message: 'Credenciais válidas, mas o URI de redirecionamento não está autorizado.',
-          warning: 'Configure o redirect_uri no Google Cloud Console',
+          warning: `Configure este redirect_uri no Google Cloud Console: ${currentRedirectUri}`,
           details: {
             clientIdValid: true,
             clientSecretValid: true,
             redirectUriConfigured: false,
+            requiredRedirectUri: currentRedirectUri,
           },
           latencyMs: latency,
         },

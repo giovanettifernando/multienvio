@@ -375,7 +375,7 @@ export default function OpenRouterClient() {
 
   return (
     <div style={{ padding: 24, maxWidth: 900 }}>
-      <Space direction="vertical" style={{ width: '100%' }} size="large">
+      <Space orientation="vertical" style={{ width: '100%' }} size="large">
         {/* Header */}
         <div>
           <Title level={3} style={{ margin: 0 }}>
@@ -490,7 +490,7 @@ export default function OpenRouterClient() {
                   modelsLoading ? (
                     <Spin size="small" />
                   ) : modelsError ? (
-                    <Space direction="vertical" align="center" style={{ padding: 16 }}>
+                    <Space orientation="vertical" align="center" style={{ padding: 16 }}>
                       <Text type="danger">{modelsError}</Text>
                       <Button
                         size="small"
@@ -653,7 +653,7 @@ export default function OpenRouterClient() {
             {testResult.keyInfo && (
               <Collapse size="small">
                 <Collapse.Panel header="Informações da Chave" key="keyInfo">
-                  <Space direction="vertical" style={{ width: '100%' }}>
+                  <Space orientation="vertical" style={{ width: '100%' }}>
                     {testResult.keyInfo.label && (
                       <div>
                         <Text type="secondary">Label: </Text>
@@ -702,7 +702,7 @@ export default function OpenRouterClient() {
               </Space>
             }
           >
-            <Space direction="vertical" style={{ width: '100%' }} size="middle">
+            <Space orientation="vertical" style={{ width: '100%' }} size="middle">
               <Input.TextArea
                 placeholder="Digite sua mensagem para testar o modelo..."
                 value={playgroundMessage}
@@ -751,7 +751,7 @@ export default function OpenRouterClient() {
 
                   {/* Debug Info */}
                   <Card size="small" title="Debug Info" style={{ marginBottom: 16 }}>
-                    <Space direction="vertical" size="small" style={{ width: '100%' }}>
+                    <Space orientation="vertical" size="small" style={{ width: '100%' }}>
                       <div>
                         <Text type="secondary">URL: </Text>
                         <Text code>{playgroundResult.debug?.url || 'N/A'}</Text>

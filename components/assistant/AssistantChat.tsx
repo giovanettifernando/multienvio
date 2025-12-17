@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback, type KeyboardEvent } from "react";
+import { useState, useRef, useEffect, useCallback, Suspense, type KeyboardEvent } from "react";
 import { createPortal } from "react-dom";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import Avatar from "antd/es/avatar";
 import Badge from "antd/es/badge";
 import Button from "antd/es/button";
@@ -38,6 +38,26 @@ interface ChatResponse {
   sessionId: string;
   messageId: string;
   toolsUsed: string[];
+  debugSummary?: DebugSummary;
+  debugEvents?: DebugEvent[];
+}
+
+interface DebugSummary {
+  requestId: string;
+  durationMs: number;
+  callsTotal: number;
+  toolCallsTotal: number;
+  retriesTotal: number;
+  fallbackUsed: boolean;
+  success: boolean;
+  error?: string;
+}
+
+interface DebugEvent {
+  type: string;
+  requestId: string;
+  timestamp: number;
+  data?: Record<string, unknown>;
 }
 
 const INITIAL_MESSAGES: Message[] = [
@@ -50,16 +70,21 @@ const INITIAL_MESSAGES: Message[] = [
 ];
 
 /**
- * AssistantChat - Botão flutuante + painel de chat do assistente
- *
- * Features:
- * - Botão fixo no canto inferior direito
- * - Painel de chat com animação
- * - Responsivo (drawer em mobile)
- * - Acessível (aria-labels, foco, ESC para fechar)
+ * Hook interno para obter debug flag via URL param
+ * Isolado para permitir Suspense boundary
  */
-export function AssistantChat() {
+function useDebugFlag(): boolean {
+  const searchParams = useSearchParams();
+  return searchParams?.get("assistantDebug") === "1";
+}
+
+/**
+ * Componente interno que usa useSearchParams
+ * Deve ser usado dentro de Suspense
+ */
+function AssistantChatInner() {
   const pathname = usePathname();
+  const debugEnabled = useDebugFlag();
   const { user } = useCurrentUser();
 
   const [isOpen, setIsOpen] = useState(false);
@@ -69,10 +94,12 @@ export function AssistantChat() {
   const [mounted, setMounted] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isSending, setIsSending] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // Verifica se deve esconder o assistente
   const shouldHide = !user || HIDDEN_ROUTES.some((route) => pathname?.startsWith(route));
@@ -128,6 +155,15 @@ export function AssistantChat() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isOpen]);
 
+  // Cleanup AbortController on unmount
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, []);
+
   const handleToggle = () => {
     setIsOpen((prev) => !prev);
   };
@@ -135,6 +171,27 @@ export function AssistantChat() {
   const handleSendMessage = async () => {
     const content = inputValue.trim();
     if (!content) return;
+
+    // Anti-double-submit: prevent sending while already sending
+    if (isSending) {
+      if (debugEnabled) {
+        console.warn("[ASSISTANT_DEBUG] Blocked double submit attempt");
+      }
+      return;
+    }
+
+    // Cancel any previous request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    // Create new abort controller for this request
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
+
+    // Generate unique request ID for idempotency and tracing
+    const requestId = crypto.randomUUID();
+    const startTime = Date.now();
 
     const userMessage: Message = {
       id: `user-${Date.now()}`,
@@ -146,17 +203,32 @@ export function AssistantChat() {
     setMessages((prev) => [...prev, userMessage]);
     setInputValue("");
     setIsTyping(true);
+    setIsSending(true);
     setError(null);
+
+    // Debug logging
+    if (debugEnabled) {
+      console.groupCollapsed(`[ASSISTANT_DEBUG][requestId=${requestId}] Request Start`);
+      console.log("Message:", content.slice(0, 100) + (content.length > 100 ? "..." : ""));
+      console.log("SessionId:", sessionId || "(new session)");
+      console.log("Timestamp:", new Date().toISOString());
+      console.groupEnd();
+    }
 
     try {
       const response = await fetch("/api/assistant/chat", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-assistant-request-id": requestId,
+          ...(debugEnabled && { "x-assistant-debug": "1" }),
+        },
         body: JSON.stringify({
           message: content,
           sessionId: sessionId || undefined,
           includeHistory: true,
         }),
+        signal: abortController.signal,
       });
 
       const json = await response.json();
@@ -166,6 +238,21 @@ export function AssistantChat() {
       }
 
       const data: ChatResponse = json.data ?? json;
+
+      // Debug logging for response
+      if (debugEnabled) {
+        const duration = Date.now() - startTime;
+        console.groupCollapsed(`[ASSISTANT_DEBUG][requestId=${requestId}] Response (${duration}ms)`);
+        console.log("Success: true");
+        console.log("Tools used:", data.toolsUsed?.length || 0, data.toolsUsed);
+        if (data.debugSummary) {
+          console.log("Debug Summary:", data.debugSummary);
+        }
+        if (data.debugEvents) {
+          console.log("Debug Events:", data.debugEvents);
+        }
+        console.groupEnd();
+      }
 
       // Atualizar sessionId se for nova sessão
       if (data.sessionId && data.sessionId !== sessionId) {
@@ -182,7 +269,24 @@ export function AssistantChat() {
 
       setMessages((prev) => [...prev, assistantMessage]);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erro ao processar mensagem");
+      // Check if request was aborted
+      if (err instanceof Error && err.name === "AbortError") {
+        if (debugEnabled) {
+          console.log(`[ASSISTANT_DEBUG][requestId=${requestId}] Request aborted`);
+        }
+        return;
+      }
+
+      const errorMsg = err instanceof Error ? err.message : "Erro ao processar mensagem";
+      setError(errorMsg);
+
+      // Debug logging for errors
+      if (debugEnabled) {
+        const duration = Date.now() - startTime;
+        console.groupCollapsed(`[ASSISTANT_DEBUG][requestId=${requestId}] Error (${duration}ms)`);
+        console.error("Error:", errorMsg);
+        console.groupEnd();
+      }
 
       // Mostrar mensagem de erro como resposta do assistente
       const errorMessage: Message = {
@@ -194,6 +298,11 @@ export function AssistantChat() {
       setMessages((prev) => [...prev, errorMessage]);
     } finally {
       setIsTyping(false);
+      setIsSending(false);
+      // Clear abort controller reference
+      if (abortControllerRef.current === abortController) {
+        abortControllerRef.current = null;
+      }
     }
   };
 
@@ -328,7 +437,7 @@ export function AssistantChat() {
             type="primary"
             icon={<SendOutlined />}
             onClick={handleSendMessage}
-            disabled={!inputValue.trim() || isTyping}
+            disabled={!inputValue.trim() || isTyping || isSending}
             aria-label="Enviar mensagem"
             className={styles.sendButton}
           />
@@ -344,3 +453,22 @@ export function AssistantChat() {
   );
 }
 
+/**
+ * AssistantChat - Botão flutuante + painel de chat do assistente
+ *
+ * Features:
+ * - Botão fixo no canto inferior direito
+ * - Painel de chat com animação
+ * - Responsivo (drawer em mobile)
+ * - Acessível (aria-labels, foco, ESC para fechar)
+ * - Debug mode via ?assistantDebug=1
+ * - Anti-double-submit
+ * - Request tracing com requestId
+ */
+export function AssistantChat() {
+  return (
+    <Suspense fallback={null}>
+      <AssistantChatInner />
+    </Suspense>
+  );
+}

@@ -335,7 +335,7 @@ export default function ShipmentDetailClient() {
                         </div>
                         <Table
                           dataSource={record.items}
-                          rowKey={(item, idx) => item.id || `item-${idx}`}
+                          rowKey={(item) => item.id || `${item.descricao}-${item.quantidade}-${item.valorUnitario}`}
                           pagination={false}
                           size="small"
                           columns={[

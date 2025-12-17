@@ -126,13 +126,16 @@ function getCredentialsSync(): GoogleCredentials | null {
 // Configuração
 // ============================================================================
 
-// Get base URL from environment or construct from request
+// Get base URL from environment
 function getBaseUrl(): string {
-  if (process.env.NEXT_PUBLIC_APP_URL) {
-    return process.env.NEXT_PUBLIC_APP_URL;
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+  if (!appUrl) {
+    throw new Error(
+      '[GOOGLE_OAUTH] NEXT_PUBLIC_APP_URL não está configurado. ' +
+      'Defina esta variável de ambiente com a URL do servidor (ex: https://app.enviolegal.com)'
+    );
   }
-  // Fallback for development
-  return 'http://localhost:3000';
+  return appUrl;
 }
 
 export function getRedirectUri(): string {

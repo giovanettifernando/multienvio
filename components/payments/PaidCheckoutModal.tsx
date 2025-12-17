@@ -440,7 +440,7 @@ export function PaidCheckoutModal({
         tip="Processando pagamento..."
         size="large"
       >
-        <Space direction="vertical" size="large" style={{ width: '100%' }}>
+        <Space orientation="vertical" size="large" style={{ width: '100%' }}>
           {/* Exibir valor total */}
           <div>
             <Text strong>Total a pagar: </Text>
@@ -465,7 +465,7 @@ export function PaidCheckoutModal({
                 onChange={(e) => setSelectedMethod(e.target.value)}
                 style={{ width: '100%' }}
               >
-                <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+                <Space orientation="vertical" size="middle" style={{ width: '100%' }}>
                   {/* Carteira */}
                   <Radio
                     value="wallet"

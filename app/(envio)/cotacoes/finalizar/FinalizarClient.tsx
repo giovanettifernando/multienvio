@@ -414,7 +414,9 @@ export default function FinalizarClient() {
       const allVolumesHaveDoc = volumeDocuments.every((vol) => {
         if (!vol?.type) return false;
         if (vol.type === "NFE") {
-          return vol.nfeKey && vol.nfeKey.length === 44;
+          // Validar chave E itens (itens vêm do XML)
+          return vol.nfeKey && vol.nfeKey.length === 44 &&
+            vol.nfeItems && vol.nfeItems.length > 0;
         }
         if (vol.type === "DECLARACAO") {
           return vol.declarationItems && vol.declarationItems.length > 0 &&
@@ -430,6 +432,8 @@ export default function FinalizarClient() {
           volumeIndex: idx,
           type: vol?.type,
           hasNfeKey: vol?.nfeKey && vol.nfeKey.length === 44,
+          hasNfeItems: vol?.nfeItems && vol.nfeItems.length > 0,
+          nfeItemsCount: vol?.nfeItems?.length ?? 0,
           hasDeclaration: vol?.declarationItems && vol.declarationItems.length > 0,
         })),
       });

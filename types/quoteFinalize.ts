@@ -542,6 +542,15 @@ export function validateVolumeDocumentsOnSubmit(values: FinalizeFormValues): {
           volumeIndex: idx,
         });
       }
+
+      // Validar que itens da NF-e foram carregados do XML
+      if (!vol.nfeItems || vol.nfeItems.length === 0) {
+        errors.push({
+          path: `document.volumeDocuments.${idx}.nfeItems`,
+          message: `Erro ao processar XML da NF-e do Volume ${idx + 1}. Tente carregar novamente.`,
+          volumeIndex: idx,
+        });
+      }
     }
 
     // Validar Declaração

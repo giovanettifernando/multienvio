@@ -7,24 +7,38 @@
  * 3. Envia resultados de volta ao LLM
  * 4. Repete até o LLM retornar resposta final ou atingir limite
  *
- * Limite de iterações: 3 (para evitar loops infinitos)
+ * Limites (v2):
+ * - MAX_TOOL_ITERATIONS = 2 (reduzido de 3)
+ * - NO extra call when limit reached (server-side message)
+ * - NO iteration reset on fallback
+ * - Fallback only for 5xx/network errors, NEVER for 4xx/429
  */
 
 import {
   chatCompletion,
   type OpenRouterMessage,
   type OpenRouterToolCall,
-  type OpenRouterChatResponse,
 } from '@/lib/integrations/openrouter/client';
 import { ASSISTANT_TOOLS, type AssistantToolName } from './definitions';
 import { executeTool, type ToolExecutionContext, type ToolExecutionResult } from './executors';
+import {
+  type DebugContext,
+  addDebugEvent,
+  summarizeToolArgs,
+  summarizeToolResult,
+} from '@/lib/assistant/debug';
 import { logger } from '@/lib/logger';
 
 // ============================================================================
 // Constants
 // ============================================================================
 
-const MAX_TOOL_ITERATIONS = 3;
+const MAX_TOOL_ITERATIONS = 2;
+
+// Server-side response when tool limit is reached (NO LLM call)
+const TOOL_LIMIT_RESPONSE =
+  'Não consegui concluir a consulta com segurança. ' +
+  'Por favor, forneça mais detalhes como o código de rastreio ou o ID do envio.';
 
 // ============================================================================
 // Types
@@ -46,6 +60,40 @@ export interface ToolCallRecord {
 }
 
 // ============================================================================
+// Helpers
+// ============================================================================
+
+/**
+ * Check if an error is retryable (only 5xx or network)
+ * NEVER retry 4xx or 429
+ */
+function isRetryableError(error: Error): boolean {
+  const msg = error.message.toLowerCase();
+
+  // 5xx errors
+  if (msg.includes('500') || msg.includes('502') || msg.includes('503') || msg.includes('504')) {
+    return true;
+  }
+
+  // Network errors
+  if (
+    msg.includes('network') ||
+    msg.includes('timeout') ||
+    msg.includes('econnrefused') ||
+    msg.includes('fetch failed')
+  ) {
+    return true;
+  }
+
+  // NEVER retry 4xx (including 429)
+  if (msg.includes('400') || msg.includes('401') || msg.includes('403') || msg.includes('404') || msg.includes('429')) {
+    return false;
+  }
+
+  return false;
+}
+
+// ============================================================================
 // Orchestrator
 // ============================================================================
 
@@ -59,13 +107,15 @@ export async function orchestrateAssistantChat(
     model?: string;
     temperature?: number;
     maxTokens?: number;
-  }
+  },
+  debugCtx?: DebugContext
 ): Promise<OrchestrationResult> {
   const toolCallRecords: ToolCallRecord[] = [];
   let currentMessages = [...messages];
   let iterations = 0;
   let totalTokens = 0;
-  let useTools = true; // Flag to track if we should use tools
+  let useTools = true;
+  let triedFallback = false;
 
   logger.info(
     { event: 'orchestration_start', userId: ctx.userId, messageCount: messages.length },
@@ -77,16 +127,19 @@ export async function orchestrateAssistantChat(
 
     try {
       // Chamar o LLM com ou sem tools
-      const response = await chatCompletion({
-        messages: currentMessages,
-        ...(useTools && {
-          tools: ASSISTANT_TOOLS,
-          tool_choice: 'auto',
-        }),
-        model: options?.model,
-        temperature: options?.temperature,
-        max_tokens: options?.maxTokens,
-      });
+      const response = await chatCompletion(
+        {
+          messages: currentMessages,
+          ...(useTools && {
+            tools: ASSISTANT_TOOLS,
+            tool_choice: 'auto',
+          }),
+          model: options?.model,
+          temperature: options?.temperature,
+          max_tokens: options?.maxTokens,
+        },
+        debugCtx
+      );
 
       // Acumular tokens
       if (response.usage) {
@@ -98,7 +151,7 @@ export async function orchestrateAssistantChat(
       // Se não há tool calls, retorna a resposta final
       if (!choice.message.tool_calls || choice.message.tool_calls.length === 0) {
         logger.info(
-          { event: 'orchestration_complete', iterations, totalTokens },
+          { event: 'orchestration_complete', iterations, totalTokens, usedTools: toolCallRecords.length > 0 },
           'Assistant orchestration complete'
         );
 
@@ -111,11 +164,10 @@ export async function orchestrateAssistantChat(
       }
 
       // Executar cada tool call
-      const toolResults = await executeToolCalls(choice.message.tool_calls, ctx);
+      const toolResults = await executeToolCalls(choice.message.tool_calls, ctx, debugCtx);
       toolCallRecords.push(...toolResults);
 
       // IMPORTANTE: Adicionar mensagem do assistente COM os tool_calls
-      // OpenRouter/OpenAI API requer que a mensagem do assistant inclua os tool_calls que ele fez
       currentMessages.push({
         role: 'assistant',
         content: choice.message.content || null,
@@ -138,35 +190,46 @@ export async function orchestrateAssistantChat(
         { event: 'tool_iteration', iteration: iterations, toolCount: choice.message.tool_calls.length },
         'Completed tool iteration'
       );
-
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Erro na orquestração';
+      const errorObj = error instanceof Error ? error : new Error(errorMessage);
 
       logger.error(
         { event: 'orchestration_error', error: errorMessage, iteration: iterations, useTools },
         'Error during orchestration'
       );
 
-      // Detectar erros que indicam problema com tools ou disponibilidade
-      const isToolRelatedError =
-        errorMessage.includes('tool') ||
-        errorMessage.includes('404') ||
-        errorMessage.includes('No endpoints') ||
-        errorMessage.includes('503') ||
-        errorMessage.includes('429') ||
-        errorMessage.includes('rate limit');
-
-      // Se falhou com tools e é um erro relacionado a tools/disponibilidade, tentar sem tools
-      if (useTools && iterations <= 2 && isToolRelatedError) {
+      // Only try fallback once, and only for retryable errors (5xx/network)
+      // NEVER fallback for 4xx or 429
+      if (useTools && !triedFallback && isRetryableError(errorObj)) {
         logger.warn(
           { event: 'orchestration_fallback_no_tools', errorMessage },
-          'Retrying without tools due to tool-related error'
+          'Trying without tools due to 5xx/network error'
         );
+
+        if (debugCtx) {
+          addDebugEvent(debugCtx, 'error', {
+            phase: 'fallback_attempt',
+            reason: 'retryable_error',
+            error: errorMessage.slice(0, 100),
+          });
+        }
+
         useTools = false;
-        // Reset messages to original (sem tool calls anteriores)
-        currentMessages = [...messages];
-        iterations = 0;
+        triedFallback = true;
+        // DO NOT reset iterations - continue from where we are
+        // DO NOT reset messages - keep the context
         continue;
+      }
+
+      // Not retryable or already tried fallback - fail
+      if (debugCtx) {
+        addDebugEvent(debugCtx, 'error', {
+          phase: 'orchestration_failed',
+          error: errorMessage.slice(0, 100),
+          iterations,
+          triedFallback,
+        });
       }
 
       return {
@@ -178,44 +241,26 @@ export async function orchestrateAssistantChat(
     }
   }
 
-  // Atingiu limite de iterações - fazer uma última chamada sem tools
+  // Atingiu limite de iterações - retornar resposta server-side SEM fazer chamada extra ao LLM
   logger.warn(
-    { event: 'orchestration_limit_reached', iterations },
-    'Reached maximum tool iterations'
+    { event: 'tool_iterations_limit_hit', iterations, toolCallsCount: toolCallRecords.length },
+    'Reached maximum tool iterations - returning server-side response'
   );
 
-  try {
-    const finalResponse = await chatCompletion({
-      messages: [
-        ...currentMessages,
-        {
-          role: 'system',
-          content: 'Você atingiu o limite de chamadas de ferramentas. Por favor, forneça uma resposta final ao usuário com base nas informações já coletadas.',
-        },
-      ],
-      model: options?.model,
-      temperature: options?.temperature,
-      max_tokens: options?.maxTokens,
+  if (debugCtx) {
+    addDebugEvent(debugCtx, 'tool_iterations_limit_hit', {
+      iterations,
+      toolCallsCount: toolCallRecords.length,
+      response: 'server_side_message',
     });
-
-    if (finalResponse.usage) {
-      totalTokens += finalResponse.usage.total_tokens;
-    }
-
-    return {
-      success: true,
-      response: finalResponse.choices[0].message.content || 'Desculpe, não consegui processar sua solicitação completamente.',
-      toolCalls: toolCallRecords,
-      totalTokens,
-    };
-  } catch (error) {
-    return {
-      success: false,
-      response: '',
-      toolCalls: toolCallRecords,
-      error: 'Erro ao gerar resposta final',
-    };
   }
+
+  return {
+    success: true,
+    response: TOOL_LIMIT_RESPONSE,
+    toolCalls: toolCallRecords,
+    totalTokens,
+  };
 }
 
 /**
@@ -223,11 +268,11 @@ export async function orchestrateAssistantChat(
  */
 async function executeToolCalls(
   toolCalls: OpenRouterToolCall[],
-  ctx: ToolExecutionContext
+  ctx: ToolExecutionContext,
+  debugCtx?: DebugContext
 ): Promise<ToolCallRecord[]> {
   const results: ToolCallRecord[] = [];
 
-  // Executar tools em paralelo para melhor performance
   const executions = toolCalls.map(async (tc) => {
     const toolName = tc.function.name as AssistantToolName;
     let args: unknown = {};
@@ -241,14 +286,27 @@ async function executeToolCalls(
       );
     }
 
-    logger.debug(
-      { event: 'tool_execution_start', toolName, args },
-      'Starting tool execution'
-    );
+    // Emit tool start event
+    if (debugCtx) {
+      addDebugEvent(debugCtx, 'tool_call_start', {
+        toolName,
+        argsSummary: summarizeToolArgs(args),
+      });
+    }
 
     const startTime = Date.now();
     const result = await executeTool(toolName, args, ctx);
     const duration = Date.now() - startTime;
+
+    // Emit tool end event
+    if (debugCtx) {
+      addDebugEvent(debugCtx, 'tool_call_end', {
+        toolName,
+        durationMs: duration,
+        success: result.success,
+        resultSummary: summarizeToolResult(result),
+      });
+    }
 
     logger.debug(
       { event: 'tool_execution_complete', toolName, success: result.success, duration },
@@ -278,15 +336,19 @@ export async function simpleAssistantChat(
     model?: string;
     temperature?: number;
     maxTokens?: number;
-  }
+  },
+  debugCtx?: DebugContext
 ): Promise<{ success: boolean; response: string; error?: string }> {
   try {
-    const response = await chatCompletion({
-      messages,
-      model: options?.model,
-      temperature: options?.temperature,
-      max_tokens: options?.maxTokens,
-    });
+    const response = await chatCompletion(
+      {
+        messages,
+        model: options?.model,
+        temperature: options?.temperature,
+        max_tokens: options?.maxTokens,
+      },
+      debugCtx
+    );
 
     return {
       success: true,

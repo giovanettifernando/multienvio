@@ -68,7 +68,7 @@ export default function MinhaContaClient() {
         }
         width={480}
       >
-        <Space direction="vertical" size={16} style={{ width: '100%' }}>
+        <Space orientation="vertical" size={16} style={{ width: '100%' }}>
           <ELAlert
             variant="warning"
             title="Cadastro incompleto"

@@ -311,7 +311,7 @@ export default function KnowledgeBaseClient() {
 
   return (
     <div style={{ padding: 24, maxWidth: 1200 }}>
-      <Space direction="vertical" style={{ width: '100%' }} size="large">
+      <Space orientation="vertical" style={{ width: '100%' }} size="large">
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>

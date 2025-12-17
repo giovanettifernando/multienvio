@@ -4,10 +4,21 @@
  * Cliente para chamadas à API do OpenRouter.
  * Suporta chat completions, streaming e listagem de modelos.
  *
+ * Retry Policy (v2):
+ * - maxRetries = 2 for :free models, 1 for paid
+ * - NEVER retry on 429 (rate limit) or any 4xx
+ * - Only retry on network errors or 5xx
+ * - Backoff: 250ms, 750ms
+ *
  * @see https://openrouter.ai/docs
  */
 
 import { getOpenRouterConfigDecrypted } from './config.service';
+import {
+  type DebugContext,
+  addDebugEvent,
+  nextCallIndex,
+} from '@/lib/assistant/debug';
 
 // ============================================================================
 // Types
@@ -18,7 +29,6 @@ export type OpenRouterMessage = {
   content: string | null;
   name?: string;
   tool_call_id?: string;
-  // For assistant messages that include tool calls
   tool_calls?: OpenRouterToolCall[];
 };
 
@@ -48,10 +58,8 @@ export type OpenRouterChatRequest = {
   temperature?: number;
   max_tokens?: number;
   stream?: boolean;
-  // OpenRouter specific
   route?: 'fallback';
   transforms?: string[];
-  // Provider preferences for tool use
   provider?: {
     order?: string[];
     require_parameters?: boolean;
@@ -141,20 +149,50 @@ export type OpenRouterStreamChunk = {
 };
 
 // ============================================================================
-// Client
+// Constants
+// ============================================================================
+
+const BACKOFF_MS = [250, 750]; // Backoff delays for retries
+
+// ============================================================================
+// Helpers
 // ============================================================================
 
 /**
- * Obtém headers para requisições ao OpenRouter
+ * Check if an HTTP status code is retryable
+ * NEVER retry 429 or any 4xx - only 5xx
  */
+function isRetryableStatus(status: number): boolean {
+  return status >= 500 && status < 600;
+}
+
+/**
+ * Check if an error is a network error (no HTTP status)
+ */
+function isNetworkError(error: unknown): boolean {
+  if (error instanceof Error) {
+    const msg = error.message.toLowerCase();
+    return (
+      msg.includes('network') ||
+      msg.includes('timeout') ||
+      msg.includes('econnrefused') ||
+      msg.includes('enotfound') ||
+      msg.includes('fetch failed')
+    );
+  }
+  return false;
+}
+
+// ============================================================================
+// Client
+// ============================================================================
+
 async function getHeaders(): Promise<HeadersInit> {
   const config = await getOpenRouterConfigDecrypted();
 
   if (!config) {
     throw new Error('OpenRouter não configurado');
   }
-
-  console.log('[OpenRouter] API Key decrypted (last 8 chars):', config.apiKey ? `...${config.apiKey.slice(-8)}` : 'EMPTY');
 
   const headers: HeadersInit = {
     Authorization: `Bearer ${config.apiKey}`,
@@ -172,9 +210,6 @@ async function getHeaders(): Promise<HeadersInit> {
   return headers;
 }
 
-/**
- * Obtém a URL base da API
- */
 async function getBaseUrl(): Promise<string> {
   const config = await getOpenRouterConfigDecrypted();
   return config?.baseUrl ?? 'https://openrouter.ai/api/v1';
@@ -242,9 +277,13 @@ export async function listModels(): Promise<OpenRouterModel[]> {
 
 /**
  * Envia mensagem para chat completion (sem streaming)
+ *
+ * @param request - Request parameters
+ * @param debugCtx - Optional debug context for tracing
  */
 export async function chatCompletion(
-  request: OpenRouterChatRequest
+  request: OpenRouterChatRequest,
+  debugCtx?: DebugContext
 ): Promise<OpenRouterChatResponse> {
   const config = await getOpenRouterConfigDecrypted();
 
@@ -263,19 +302,16 @@ export async function chatCompletion(
     stream: false,
   };
 
-  // Add routing configuration for tool use - require providers that support tools
-  // For free models, we allow fallbacks since availability is limited
+  // Add routing configuration for tool use
   if (request.tools && request.tools.length > 0) {
     const isFreeModel = body.model?.includes(':free');
 
     if (isFreeModel) {
-      // For free models, just require tool support but allow any provider
       body.provider = {
         require_parameters: true,
         allow_fallbacks: true,
       };
     } else {
-      // For paid models, prefer the specific provider
       const modelProvider = body.model?.split('/')[0];
       const providerName = modelProvider
         ? modelProvider.charAt(0).toUpperCase() + modelProvider.slice(1)
@@ -290,46 +326,120 @@ export async function chatCompletion(
   }
 
   const isFreeModel = body.model?.includes(':free');
-  const maxRetries = isFreeModel ? 3 : 1;
+  const maxRetries = isFreeModel ? 2 : 1;
   let lastError: Error | null = null;
+  let lastStatus: number | null = null;
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    try {
-      console.log(`[OpenRouter] Attempt ${attempt}/${maxRetries} - Making request to:`, `${baseUrl}/chat/completions`);
-      console.log('[OpenRouter] Model:', body.model);
-      console.log('[OpenRouter] Tools count:', body.tools?.length ?? 0);
+    const callIndex = debugCtx ? nextCallIndex(debugCtx) : attempt;
+    const startTime = Date.now();
 
+    // Emit call start event
+    if (debugCtx) {
+      addDebugEvent(debugCtx, 'openrouter_call_start', {
+        callIndex,
+        attempt,
+        maxRetries,
+        model: body.model,
+        toolsCount: body.tools?.length ?? 0,
+        reason: attempt === 1 ? 'initial' : 'retry',
+      });
+    }
+
+    try {
       const response = await fetch(`${baseUrl}/chat/completions`, {
         method: 'POST',
         headers,
         body: JSON.stringify(body),
       });
 
+      const durationMs = Date.now() - startTime;
+
       if (!response.ok) {
         const errorText = await response.text();
+        lastStatus = response.status;
+        lastError = new Error(`Erro OpenRouter: ${response.status} - ${errorText}`);
 
-        // For free models, retry on 404/429/503 errors
-        if (isFreeModel && attempt < maxRetries && [404, 429, 503].includes(response.status)) {
-          console.log(`[OpenRouter] Retryable error ${response.status}, waiting before retry...`);
-          await new Promise(resolve => setTimeout(resolve, 1000 * attempt)); // Exponential backoff
-          lastError = new Error(`Erro OpenRouter: ${response.status} - ${errorText}`);
+        // Emit call end event (error)
+        if (debugCtx) {
+          addDebugEvent(debugCtx, 'openrouter_call_end', {
+            callIndex,
+            status: response.status,
+            durationMs,
+            success: false,
+            error: `${response.status}`,
+          });
+        }
+
+        // Check if retryable (only 5xx, NEVER 429 or 4xx)
+        if (attempt < maxRetries && isRetryableStatus(response.status)) {
+          const backoffMs = BACKOFF_MS[attempt - 1] ?? 750;
+
+          if (debugCtx) {
+            addDebugEvent(debugCtx, 'openrouter_retry', {
+              callIndex,
+              attempt,
+              status: response.status,
+              backoffMs,
+              reason: '5xx_error',
+            });
+          }
+
+          await new Promise((resolve) => setTimeout(resolve, backoffMs));
           continue;
         }
 
-        throw new Error(`Erro OpenRouter: ${response.status} - ${errorText}`);
+        // Not retryable - throw immediately
+        throw lastError;
       }
 
-      return (await response.json()) as OpenRouterChatResponse;
+      const result = (await response.json()) as OpenRouterChatResponse;
+
+      // Emit call end event (success)
+      if (debugCtx) {
+        addDebugEvent(debugCtx, 'openrouter_call_end', {
+          callIndex,
+          status: 200,
+          durationMs,
+          success: true,
+          tokens: result.usage?.total_tokens,
+        });
+      }
+
+      return result;
     } catch (fetchError) {
+      const durationMs = Date.now() - startTime;
       lastError = fetchError instanceof Error ? fetchError : new Error(String(fetchError));
 
-      if (attempt < maxRetries) {
-        console.log(`[OpenRouter] Error on attempt ${attempt}, retrying...`, lastError.message);
-        await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+      // Check if it's a network error (retryable)
+      if (attempt < maxRetries && isNetworkError(fetchError)) {
+        const backoffMs = BACKOFF_MS[attempt - 1] ?? 750;
+
+        if (debugCtx) {
+          addDebugEvent(debugCtx, 'openrouter_retry', {
+            callIndex,
+            attempt,
+            backoffMs,
+            reason: 'network_error',
+            error: lastError.message.slice(0, 100),
+          });
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, backoffMs));
         continue;
       }
 
-      console.error('[OpenRouter] All retries failed:', lastError);
+      // Emit error event
+      if (debugCtx) {
+        addDebugEvent(debugCtx, 'openrouter_error', {
+          callIndex,
+          durationMs,
+          status: lastStatus,
+          error: lastError.message.slice(0, 200),
+          isRateLimit: lastStatus === 429,
+        });
+      }
+
       throw lastError;
     }
   }
@@ -342,7 +452,8 @@ export async function chatCompletion(
  * Retorna um ReadableStream que pode ser consumido pelo frontend
  */
 export async function chatCompletionStream(
-  request: OpenRouterChatRequest
+  request: OpenRouterChatRequest,
+  debugCtx?: DebugContext
 ): Promise<ReadableStream<Uint8Array>> {
   const config = await getOpenRouterConfigDecrypted();
 
@@ -361,19 +472,16 @@ export async function chatCompletionStream(
     stream: true,
   };
 
-  // Add routing configuration for tool use - require providers that support tools
-  // For free models, we allow fallbacks since availability is limited
+  // Add routing configuration for tool use
   if (request.tools && request.tools.length > 0) {
     const isFreeModel = body.model?.includes(':free');
 
     if (isFreeModel) {
-      // For free models, just require tool support but allow any provider
       body.provider = {
         require_parameters: true,
         allow_fallbacks: true,
       };
     } else {
-      // For paid models, prefer the specific provider
       const modelProvider = body.model?.split('/')[0];
       const providerName = modelProvider
         ? modelProvider.charAt(0).toUpperCase() + modelProvider.slice(1)
@@ -388,50 +496,118 @@ export async function chatCompletionStream(
   }
 
   const isFreeModel = body.model?.includes(':free');
-  const maxRetries = isFreeModel ? 3 : 1;
+  const maxRetries = isFreeModel ? 2 : 1;
   let lastError: Error | null = null;
+  let lastStatus: number | null = null;
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    try {
-      console.log(`[OpenRouter Stream] Attempt ${attempt}/${maxRetries} - Making request to:`, `${baseUrl}/chat/completions`);
-      console.log('[OpenRouter Stream] Model:', body.model);
-      console.log('[OpenRouter Stream] Tools count:', body.tools?.length ?? 0);
+    const callIndex = debugCtx ? nextCallIndex(debugCtx) : attempt;
+    const startTime = Date.now();
 
+    if (debugCtx) {
+      addDebugEvent(debugCtx, 'openrouter_call_start', {
+        callIndex,
+        attempt,
+        maxRetries,
+        model: body.model,
+        toolsCount: body.tools?.length ?? 0,
+        reason: attempt === 1 ? 'initial' : 'retry',
+        stream: true,
+      });
+    }
+
+    try {
       const response = await fetch(`${baseUrl}/chat/completions`, {
         method: 'POST',
         headers,
         body: JSON.stringify(body),
       });
 
+      const durationMs = Date.now() - startTime;
+
       if (!response.ok) {
         const errorText = await response.text();
+        lastStatus = response.status;
+        lastError = new Error(`Erro OpenRouter: ${response.status} - ${errorText}`);
 
-        // For free models, retry on 404/429/503 errors
-        if (isFreeModel && attempt < maxRetries && [404, 429, 503].includes(response.status)) {
-          console.log(`[OpenRouter Stream] Retryable error ${response.status}, waiting before retry...`);
-          await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
-          lastError = new Error(`Erro OpenRouter: ${response.status} - ${errorText}`);
+        if (debugCtx) {
+          addDebugEvent(debugCtx, 'openrouter_call_end', {
+            callIndex,
+            status: response.status,
+            durationMs,
+            success: false,
+            error: `${response.status}`,
+            stream: true,
+          });
+        }
+
+        // Check if retryable (only 5xx, NEVER 429 or 4xx)
+        if (attempt < maxRetries && isRetryableStatus(response.status)) {
+          const backoffMs = BACKOFF_MS[attempt - 1] ?? 750;
+
+          if (debugCtx) {
+            addDebugEvent(debugCtx, 'openrouter_retry', {
+              callIndex,
+              attempt,
+              status: response.status,
+              backoffMs,
+              reason: '5xx_error',
+            });
+          }
+
+          await new Promise((resolve) => setTimeout(resolve, backoffMs));
           continue;
         }
 
-        throw new Error(`Erro OpenRouter: ${response.status} - ${errorText}`);
+        throw lastError;
       }
 
       if (!response.body) {
         throw new Error('Response body is null');
       }
 
+      if (debugCtx) {
+        addDebugEvent(debugCtx, 'openrouter_call_end', {
+          callIndex,
+          status: 200,
+          durationMs,
+          success: true,
+          stream: true,
+        });
+      }
+
       return response.body;
     } catch (fetchError) {
+      const durationMs = Date.now() - startTime;
       lastError = fetchError instanceof Error ? fetchError : new Error(String(fetchError));
 
-      if (attempt < maxRetries) {
-        console.log(`[OpenRouter Stream] Error on attempt ${attempt}, retrying...`, lastError.message);
-        await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+      if (attempt < maxRetries && isNetworkError(fetchError)) {
+        const backoffMs = BACKOFF_MS[attempt - 1] ?? 750;
+
+        if (debugCtx) {
+          addDebugEvent(debugCtx, 'openrouter_retry', {
+            callIndex,
+            attempt,
+            backoffMs,
+            reason: 'network_error',
+            error: lastError.message.slice(0, 100),
+          });
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, backoffMs));
         continue;
       }
 
-      console.error('[OpenRouter Stream] All retries failed:', lastError);
+      if (debugCtx) {
+        addDebugEvent(debugCtx, 'openrouter_error', {
+          callIndex,
+          durationMs,
+          status: lastStatus,
+          error: lastError.message.slice(0, 200),
+          isRateLimit: lastStatus === 429,
+        });
+      }
+
       throw lastError;
     }
   }
@@ -441,7 +617,6 @@ export async function chatCompletionStream(
 
 /**
  * Processa um stream de chat completion e extrai chunks
- * Útil para parsing server-side antes de reenviar ao cliente
  */
 export async function* parseStreamChunks(
   stream: ReadableStream<Uint8Array>
@@ -474,7 +649,6 @@ export async function* parseStreamChunks(
             yield chunk;
           } catch {
             // Ignora linhas que não são JSON válido
-            console.warn('[OpenRouter] Invalid JSON chunk:', jsonStr);
           }
         }
       }
@@ -506,7 +680,6 @@ export async function extractTextFromStream(
       content += choice.delta.content;
     }
 
-    // Processa tool calls incrementais
     if (choice.delta.tool_calls) {
       for (const tc of choice.delta.tool_calls) {
         const existing = toolCallsMap.get(tc.index);
@@ -533,7 +706,6 @@ export async function extractTextFromStream(
     }
   }
 
-  // Converte map para array
   toolCalls.push(...toolCallsMap.values());
 
   return { content, toolCalls, finishReason };
