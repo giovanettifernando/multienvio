@@ -302,38 +302,6 @@ export const POST = withApiHandler(async ({ req }) => {
       );
     }
 
-    // Criar endpoints padrão se não existirem
-    const endpoints = [
-      { operation: 'auth', method: 'POST', path: '/token/v1/autentica/cartaopostagem' },
-      { operation: 'quote', method: 'POST', path: '/preco/v1/nacional' },
-      { operation: 'deadline', method: 'POST', path: '/prazo/v1/nacional' },
-      { operation: 'create_order', method: 'POST', path: '/prepostagem/v2/prepostagens' },
-      { operation: 'label', method: 'GET', path: '/prepostagem/v2/etiquetas/{codigo}' },
-      { operation: 'tracking', method: 'GET', path: '/rastro/v1/objetos/{codigo}' },
-    ];
-
-    for (const ep of endpoints) {
-      await tx.carrierEndpoint.upsert({
-        where: {
-          carrierId_operation: {
-            carrierId: carrier.id,
-            operation: ep.operation,
-          },
-        },
-        create: {
-          carrierId: carrier.id,
-          operation: ep.operation,
-          method: ep.method as 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH',
-          path: ep.path,
-          timeout: 30000,
-          retryable: true,
-        },
-        update: {
-          path: ep.path,
-          updatedAt: new Date(),
-        },
-      });
-    }
   });
 
   // Invalidar caches

@@ -69,6 +69,91 @@ const INITIAL_MESSAGES: Message[] = [
   },
 ];
 
+// Request timeout in milliseconds (60 seconds)
+const REQUEST_TIMEOUT_MS = 60_000;
+
+// localStorage keys for chat persistence
+const STORAGE_KEY_MESSAGES = 'assistant_chat_messages';
+const STORAGE_KEY_SESSION = 'assistant_chat_session';
+const STORAGE_KEY_USER = 'assistant_chat_user';
+const CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+interface CachedChatData {
+  messages: Message[];
+  sessionId: string | null;
+  timestamp: number;
+}
+
+/**
+ * Saves chat data to localStorage
+ */
+function saveChatToStorage(userId: string, messages: Message[], sessionId: string | null): void {
+  try {
+    // Only save if there are messages beyond the welcome message
+    if (messages.length <= 1) return;
+
+    const data: CachedChatData = {
+      messages,
+      sessionId,
+      timestamp: Date.now(),
+    };
+    localStorage.setItem(STORAGE_KEY_MESSAGES, JSON.stringify(data));
+    localStorage.setItem(STORAGE_KEY_USER, userId);
+  } catch {
+    // Ignore storage errors (quota exceeded, etc)
+  }
+}
+
+/**
+ * Loads chat data from localStorage
+ * Returns null if data is expired or belongs to different user
+ */
+function loadChatFromStorage(userId: string): CachedChatData | null {
+  try {
+    const storedUserId = localStorage.getItem(STORAGE_KEY_USER);
+    if (storedUserId !== userId) {
+      // Clear cache if different user
+      clearChatStorage();
+      return null;
+    }
+
+    const stored = localStorage.getItem(STORAGE_KEY_MESSAGES);
+    if (!stored) return null;
+
+    const data: CachedChatData = JSON.parse(stored);
+
+    // Check if cache is expired (24 hours)
+    if (Date.now() - data.timestamp > CACHE_MAX_AGE_MS) {
+      clearChatStorage();
+      return null;
+    }
+
+    // Restore Date objects from JSON
+    data.messages = data.messages.map(m => ({
+      ...m,
+      timestamp: new Date(m.timestamp),
+    }));
+
+    return data;
+  } catch {
+    clearChatStorage();
+    return null;
+  }
+}
+
+/**
+ * Clears chat data from localStorage
+ */
+function clearChatStorage(): void {
+  try {
+    localStorage.removeItem(STORAGE_KEY_MESSAGES);
+    localStorage.removeItem(STORAGE_KEY_SESSION);
+    localStorage.removeItem(STORAGE_KEY_USER);
+  } catch {
+    // Ignore storage errors
+  }
+}
+
 /**
  * Hook interno para obter debug flag via URL param
  * Isolado para permitir Suspense boundary
@@ -108,6 +193,36 @@ function AssistantChatInner() {
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Load chat from localStorage on mount
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const cached = loadChatFromStorage(user.id);
+    if (cached) {
+      setMessages(cached.messages);
+      setSessionId(cached.sessionId);
+      if (debugEnabled) {
+        console.log('[ASSISTANT_DEBUG] Loaded chat from localStorage', {
+          messagesCount: cached.messages.length,
+          sessionId: cached.sessionId,
+          cacheAge: Math.round((Date.now() - cached.timestamp) / 1000 / 60) + ' minutes',
+        });
+      }
+    }
+  }, [user?.id, debugEnabled]);
+
+  // Save messages to localStorage when they change
+  useEffect(() => {
+    if (!user?.id || !mounted) return;
+
+    // Debounce saving to avoid excessive writes
+    const timeoutId = setTimeout(() => {
+      saveChatToStorage(user.id, messages, sessionId);
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
+  }, [messages, sessionId, user?.id, mounted]);
 
   // Scroll para última mensagem
   const scrollToBottom = useCallback(() => {
@@ -215,6 +330,14 @@ function AssistantChatInner() {
       console.groupEnd();
     }
 
+    // Setup request timeout
+    const timeoutId = setTimeout(() => {
+      abortController.abort();
+      if (debugEnabled) {
+        console.warn(`[ASSISTANT_DEBUG][requestId=${requestId}] Request timed out after ${REQUEST_TIMEOUT_MS}ms`);
+      }
+    }, REQUEST_TIMEOUT_MS);
+
     try {
       const response = await fetch("/api/assistant/chat", {
         method: "POST",
@@ -230,6 +353,9 @@ function AssistantChatInner() {
         }),
         signal: abortController.signal,
       });
+
+      // Clear timeout on successful response
+      clearTimeout(timeoutId);
 
       const json = await response.json();
 
@@ -271,8 +397,22 @@ function AssistantChatInner() {
     } catch (err) {
       // Check if request was aborted
       if (err instanceof Error && err.name === "AbortError") {
+        const duration = Date.now() - startTime;
+        const wasTimeout = duration >= REQUEST_TIMEOUT_MS - 100; // Allow small margin
+
         if (debugEnabled) {
-          console.log(`[ASSISTANT_DEBUG][requestId=${requestId}] Request aborted`);
+          console.log(`[ASSISTANT_DEBUG][requestId=${requestId}] Request ${wasTimeout ? 'timed out' : 'aborted'} after ${duration}ms`);
+        }
+
+        // Only show error message if it was a timeout (not user-initiated abort)
+        if (wasTimeout) {
+          const timeoutMessage: Message = {
+            id: `timeout-${Date.now()}`,
+            role: "assistant",
+            content: "A solicitação demorou muito e foi cancelada. Por favor, tente novamente com uma pergunta mais simples.",
+            timestamp: new Date(),
+          };
+          setMessages((prev) => [...prev, timeoutMessage]);
         }
         return;
       }
@@ -288,15 +428,33 @@ function AssistantChatInner() {
         console.groupEnd();
       }
 
+      // Map error messages to user-friendly versions
+      let userMessage = "Desculpe, ocorreu um erro ao processar sua mensagem. Por favor, tente novamente.";
+
+      if (errorMsg.includes("Limite de requisições") || errorMsg.includes("rate limit")) {
+        // Extract reset time if available
+        const match = errorMsg.match(/(\d+)\s*segundos?/);
+        const resetTime = match ? match[1] : "alguns";
+        userMessage = `Você está enviando mensagens muito rápido. Aguarde ${resetTime} segundos e tente novamente.`;
+      } else if (errorMsg.includes("temporariamente indisponível")) {
+        userMessage = "O assistente está temporariamente indisponível. Por favor, tente novamente em alguns instantes.";
+      } else if (errorMsg.includes("Mensagem muito longa")) {
+        userMessage = "Sua mensagem é muito longa. Por favor, tente uma mensagem mais curta (máximo 10.000 caracteres).";
+      } else if (errorMsg.includes("não disponível") || errorMsg.includes("NOT_CONFIGURED")) {
+        userMessage = "O assistente não está configurado no momento. Entre em contato com o suporte.";
+      }
+
       // Mostrar mensagem de erro como resposta do assistente
       const errorMessage: Message = {
         id: `error-${Date.now()}`,
         role: "assistant",
-        content: "Desculpe, ocorreu um erro ao processar sua mensagem. Por favor, tente novamente.",
+        content: userMessage,
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, errorMessage]);
     } finally {
+      // Always clear timeout to prevent memory leak
+      clearTimeout(timeoutId);
       setIsTyping(false);
       setIsSending(false);
       // Clear abort controller reference

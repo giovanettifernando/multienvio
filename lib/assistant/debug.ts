@@ -20,6 +20,7 @@ export type DebugEventType =
   | 'tool_call_end'
   | 'tool_iterations_limit_hit'
   | 'idempotency_hit'
+  | 'rate_limit_check'
   | 'error';
 
 export interface DebugEvent {

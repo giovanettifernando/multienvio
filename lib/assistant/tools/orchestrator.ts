@@ -8,7 +8,7 @@
  * 4. Repete até o LLM retornar resposta final ou atingir limite
  *
  * Limites (v2):
- * - MAX_TOOL_ITERATIONS = 2 (reduzido de 3)
+ * - MAX_TOOL_ITERATIONS = 4 (aumentado para consultas complexas)
  * - NO extra call when limit reached (server-side message)
  * - NO iteration reset on fallback
  * - Fallback only for 5xx/network errors, NEVER for 4xx/429
@@ -33,7 +33,7 @@ import { logger } from '@/lib/logger';
 // Constants
 // ============================================================================
 
-const MAX_TOOL_ITERATIONS = 2;
+const MAX_TOOL_ITERATIONS = 4;
 
 // Server-side response when tool limit is reached (NO LLM call)
 const TOOL_LIMIT_RESPONSE =

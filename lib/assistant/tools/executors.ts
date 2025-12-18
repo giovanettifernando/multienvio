@@ -9,12 +9,82 @@
  * 4. Retornar resultado formatado para o LLM
  */
 
+import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { getOrCreateWallet, centsToReais } from '@/lib/wallet/wallet.service';
 import { createTicketForUser, getTicketForUser, listTicketsForUser } from '@/lib/support/service';
 import { mapToUIStatus, getBackendStatusesForUIFilter, UIShipmentStatus } from '@/lib/shipments/status-labels-map';
 import { ShipmentStatus } from '@/lib/shipments/shipment-status';
 import type { Prisma } from '@prisma/client';
+import { logger } from '@/lib/logger';
+
+// ============================================================================
+// Zod Schemas for Tool Arguments Validation
+// ============================================================================
+
+const listarEnviosArgsSchema = z.object({
+  status: z.enum(['PENDING', 'PROCESSING', 'IN_TRANSIT', 'DELIVERED', 'CANCELLED', 'RETURNED']).optional(),
+  periodo_dias: z.number().min(1).max(365).optional(),
+  limite: z.number().min(1).max(20).optional(),
+  busca: z.string().optional(),
+}).strict();
+
+const detalhesEnvioArgsSchema = z.object({
+  identificador: z.string().min(1, 'Identificador é obrigatório'),
+}).strict();
+
+const buscarConhecimentoArgsSchema = z.object({
+  consulta: z.string().min(1, 'Consulta é obrigatória'),
+  categoria: z.enum(['envios', 'pagamentos', 'conta', 'suporte', 'politicas', 'geral']).optional(),
+}).strict();
+
+const criarTicketSuporteArgsSchema = z.object({
+  titulo: z.string().min(1).max(100, 'Título deve ter no máximo 100 caracteres'),
+  descricao: z.string().min(1, 'Descrição é obrigatória'),
+  categoria: z.enum(['envio', 'pagamento', 'conta', 'tecnico', 'outros']),
+  prioridade: z.enum(['baixa', 'media', 'alta']).optional(),
+  envio_relacionado: z.string().optional(),
+  confirmado: z.boolean(),
+}).strict();
+
+const statusTicketArgsSchema = z.object({
+  ticket_id: z.string().min(1, 'ID do ticket é obrigatório'),
+}).strict();
+
+const informacoesContaArgsSchema = z.object({
+  incluir: z.array(z.enum(['perfil', 'endereco', 'plano', 'configuracoes'])).optional(),
+}).strict();
+
+// Map of tool names to their validation schemas
+const toolArgsSchemas: Record<string, z.ZodSchema> = {
+  listar_envios: listarEnviosArgsSchema,
+  detalhes_envio: detalhesEnvioArgsSchema,
+  saldo_conta: z.object({}).strict(),
+  buscar_conhecimento: buscarConhecimentoArgsSchema,
+  criar_ticket_suporte: criarTicketSuporteArgsSchema,
+  status_ticket: statusTicketArgsSchema,
+  informacoes_conta: informacoesContaArgsSchema,
+};
+
+/**
+ * Validates tool arguments using Zod schema
+ * Returns validated args or throws error
+ */
+function validateToolArgs<T>(toolName: string, args: unknown): T {
+  const schema = toolArgsSchemas[toolName];
+  if (!schema) {
+    throw new Error(`Schema não encontrado para ferramenta: ${toolName}`);
+  }
+
+  const result = schema.safeParse(args);
+  if (!result.success) {
+    const errorMessages = result.error.issues.map(e => `${e.path.join('.')}: ${e.message}`).join(', ');
+    logger.warn({ event: 'tool_args_validation_failed', toolName, errors: errorMessages, args }, 'Tool arguments validation failed');
+    throw new Error(`Argumentos inválidos para ${toolName}: ${errorMessages}`);
+  }
+
+  return result.data as T;
+}
 
 // ============================================================================
 // Status Mapping (Tool status -> UI status)
@@ -643,38 +713,52 @@ export async function executeInformacoesConta(
 
 /**
  * Executa uma ferramenta pelo nome com os argumentos fornecidos
+ * Inclui validação Zod dos argumentos antes da execução
  */
 export async function executeTool(
   toolName: AssistantToolName,
   args: unknown,
   ctx: ToolExecutionContext
 ): Promise<ToolExecutionResult> {
-  switch (toolName) {
-    case 'listar_envios':
-      return executeListarEnvios(ctx, args as ListarEnviosArgs);
+  try {
+    // Validate arguments using Zod schemas
+    const validatedArgs = validateToolArgs(toolName, args || {});
 
-    case 'detalhes_envio':
-      return executeDetalhesEnvio(ctx, args as DetalhesEnvioArgs);
+    switch (toolName) {
+      case 'listar_envios':
+        return executeListarEnvios(ctx, validatedArgs as ListarEnviosArgs);
 
-    case 'saldo_conta':
-      return executeSaldoConta(ctx);
+      case 'detalhes_envio':
+        return executeDetalhesEnvio(ctx, validatedArgs as DetalhesEnvioArgs);
 
-    case 'buscar_conhecimento':
-      return executeBuscarConhecimento(args as BuscarConhecimentoArgs);
+      case 'saldo_conta':
+        return executeSaldoConta(ctx);
 
-    case 'criar_ticket_suporte':
-      return executeCriarTicketSuporte(ctx, args as CriarTicketSuporteArgs);
+      case 'buscar_conhecimento':
+        return executeBuscarConhecimento(validatedArgs as BuscarConhecimentoArgs);
 
-    case 'status_ticket':
-      return executeStatusTicket(ctx, args as StatusTicketArgs);
+      case 'criar_ticket_suporte':
+        return executeCriarTicketSuporte(ctx, validatedArgs as CriarTicketSuporteArgs);
 
-    case 'informacoes_conta':
-      return executeInformacoesConta(ctx, args as InformacoesContaArgs);
+      case 'status_ticket':
+        return executeStatusTicket(ctx, validatedArgs as StatusTicketArgs);
 
-    default:
-      return {
-        success: false,
-        error: `Ferramenta desconhecida: ${toolName}`,
-      };
+      case 'informacoes_conta':
+        return executeInformacoesConta(ctx, validatedArgs as InformacoesContaArgs);
+
+      default:
+        return {
+          success: false,
+          error: `Ferramenta desconhecida: ${toolName}`,
+        };
+    }
+  } catch (error) {
+    // Handle validation errors gracefully
+    const errorMessage = error instanceof Error ? error.message : 'Erro de validação';
+    logger.warn({ event: 'tool_execution_validation_error', toolName, error: errorMessage }, 'Tool execution failed validation');
+    return {
+      success: false,
+      error: errorMessage,
+    };
   }
 }

@@ -55,7 +55,79 @@ setInterval(() => {
 }, 30_000);
 
 // Track in-progress requests to prevent duplicate processing
-const inProgressRequests = new Set<string>();
+// Store timestamp to allow automatic cleanup of stale entries
+const inProgressRequests = new Map<string, number>();
+const IN_PROGRESS_TTL_MS = 120_000; // 2 minutes max per request
+
+// Cleanup stale in-progress requests every 30 seconds
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, timestamp] of inProgressRequests.entries()) {
+    if (now - timestamp > IN_PROGRESS_TTL_MS) {
+      logger.warn({ event: 'in_progress_cleanup', requestId: key, age: now - timestamp }, 'Cleaning up stale in-progress request');
+      inProgressRequests.delete(key);
+    }
+  }
+}, 30_000);
+
+// ============================================================================
+// Rate Limiting (sliding window, 30 req/min per user)
+// ============================================================================
+
+const RATE_LIMIT_WINDOW_MS = 60_000; // 1 minute
+const RATE_LIMIT_MAX_REQUESTS = 30;
+const rateLimitStore = new Map<string, number[]>();
+
+/**
+ * Check and update rate limit for a user
+ * Returns remaining requests or throws ApiError if limit exceeded
+ */
+function checkRateLimit(userId: string): { remaining: number; resetIn: number } {
+  const now = Date.now();
+  const windowStart = now - RATE_LIMIT_WINDOW_MS;
+
+  // Get existing timestamps for user
+  const timestamps = rateLimitStore.get(userId) || [];
+
+  // Filter to only keep timestamps within the window
+  const validTimestamps = timestamps.filter(t => t > windowStart);
+
+  if (validTimestamps.length >= RATE_LIMIT_MAX_REQUESTS) {
+    const oldestInWindow = Math.min(...validTimestamps);
+    const resetIn = Math.ceil((oldestInWindow + RATE_LIMIT_WINDOW_MS - now) / 1000);
+
+    throw new ApiError({
+      code: 'RATE_LIMIT_EXCEEDED',
+      message: `Limite de requisições excedido. Tente novamente em ${resetIn} segundos.`,
+      status: 429,
+      details: { resetIn, limit: RATE_LIMIT_MAX_REQUESTS, window: '1 minuto' },
+    });
+  }
+
+  // Add current timestamp
+  validTimestamps.push(now);
+  rateLimitStore.set(userId, validTimestamps);
+
+  return {
+    remaining: RATE_LIMIT_MAX_REQUESTS - validTimestamps.length,
+    resetIn: Math.ceil(RATE_LIMIT_WINDOW_MS / 1000),
+  };
+}
+
+// Cleanup rate limit store every minute
+setInterval(() => {
+  const now = Date.now();
+  const windowStart = now - RATE_LIMIT_WINDOW_MS;
+
+  for (const [userId, timestamps] of rateLimitStore.entries()) {
+    const validTimestamps = timestamps.filter(t => t > windowStart);
+    if (validTimestamps.length === 0) {
+      rateLimitStore.delete(userId);
+    } else {
+      rateLimitStore.set(userId, validTimestamps);
+    }
+  }
+}, 60_000);
 
 // ============================================================================
 // Validation Schema
@@ -114,20 +186,57 @@ async function getOrCreateSession(
   return { id: session.id, isNew: true };
 }
 
+// Token estimation constants
+const MAX_HISTORY_TOKENS = 4000;
+const AVG_CHARS_PER_TOKEN = 4; // Rough estimate for Portuguese text
+
 /**
- * Carrega histórico de mensagens da sessão
+ * Estimates token count for a string
+ * Uses rough approximation: 1 token ≈ 4 characters for Portuguese
+ */
+function estimateTokens(text: string): number {
+  return Math.ceil(text.length / AVG_CHARS_PER_TOKEN);
+}
+
+/**
+ * Carrega histórico de mensagens da sessão com truncamento inteligente
+ * Prioriza mensagens mais recentes, respeitando limite de tokens
  */
 async function loadSessionHistory(
   sessionId: string,
-  limit: number = 20
+  maxMessages: number = 50
 ): Promise<OpenRouterMessage[]> {
+  // Load messages in reverse chronological order (most recent first)
   const messages = await prisma.assistantChatMessage.findMany({
     where: { sessionId },
-    orderBy: { createdAt: 'asc' },
-    take: limit,
+    orderBy: { createdAt: 'desc' },
+    take: maxMessages,
   });
 
-  return messages.map((m) => ({
+  // Reverse to process oldest first, but we'll select from newest
+  const chronological = messages.reverse();
+
+  // Select messages from newest to oldest until token limit
+  const selected: typeof chronological = [];
+  let totalTokens = 0;
+
+  // Process from end (most recent) to start (oldest)
+  for (let i = chronological.length - 1; i >= 0; i--) {
+    const msg = chronological[i];
+    const msgTokens = estimateTokens(msg.content);
+
+    if (totalTokens + msgTokens > MAX_HISTORY_TOKENS) {
+      // Stop if adding this message would exceed limit
+      break;
+    }
+
+    selected.unshift(msg); // Add to beginning to maintain chronological order
+    totalTokens += msgTokens;
+  }
+
+  logger.debug({ event: 'history_loaded', sessionId, messagesLoaded: selected.length, totalTokens, messagesAvailable: messages.length }, 'Session history loaded with token truncation');
+
+  return selected.map((m) => ({
     role: m.author === 'USER' ? 'user' : m.author === 'ASSISTANT' ? 'assistant' : 'tool',
     content: m.content,
     ...(m.toolName && { name: m.toolName }),
@@ -254,8 +363,8 @@ export const POST = withApiHandler<ChatResponseWithDebug>(async (context) => {
     });
   }
 
-  // Mark request as in progress
-  inProgressRequests.add(requestId);
+  // Mark request as in progress with timestamp for auto-cleanup
+  inProgressRequests.set(requestId, Date.now());
 
   try {
     // Verificar se OpenRouter está configurado
@@ -295,6 +404,16 @@ export const POST = withApiHandler<ChatResponseWithDebug>(async (context) => {
     // Verificar autenticação
     const session = await getUserFromRequest(context.req);
     const isAuthenticated = !!session?.userId;
+
+    // Apply rate limiting (use IP for anonymous, userId for authenticated)
+    const rateLimitKey = isAuthenticated
+      ? session.userId
+      : context.req.headers.get('x-forwarded-for')?.split(',')[0] || 'anonymous';
+    const rateLimit = checkRateLimit(rateLimitKey);
+
+    if (debugCtx) {
+      addDebugEvent(debugCtx, 'rate_limit_check', { remaining: rateLimit.remaining, resetIn: rateLimit.resetIn });
+    }
 
     // Se não autenticado, usar modo limitado
     if (!isAuthenticated) {
