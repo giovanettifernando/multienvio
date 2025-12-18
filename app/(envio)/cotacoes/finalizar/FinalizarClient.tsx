@@ -10,7 +10,7 @@ import {
   Tooltip,
   Typography,
 } from "antd";
-import { EditOutlined } from "@ant-design/icons";
+import { EditOutlined, ArrowLeftOutlined } from "@ant-design/icons";
 import { ELAlert } from "@/components/ui/ELAlert";
 import { ELCard } from "@/components/ui/ELCard";
 import { ELGrid } from "@/components/ui/ELGrid";
@@ -30,7 +30,6 @@ import { PostingUnitPicker } from "@/components/quote/PostingUnitPicker";
 import { RecipientModal } from "@/components/quote/RecipientModal";
 import { LabelPreview } from "@/components/quote/LabelPreview";
 import { ResultsBanner } from "@/components/quote/ResultsBanner";
-import { QuoteNavigationButtons } from "@/components/quote/QuoteNavigationButtons";
 import { useQuoteStore } from "@/store/useQuoteStore";
 import { useCartAdd } from "@/hooks/useCart";
 import { useRecipientSave } from "@/hooks/useQuotes";
@@ -1704,16 +1703,32 @@ export default function FinalizarClient() {
     }
   };
 
+  const handleBackToQuotes = () => {
+    sessionStorage.setItem("preserveQuoteState", "1");
+    router.push("/cotacoes");
+  };
+
+  const backButton = (
+    <ELButton
+      icon={<ArrowLeftOutlined />}
+      onClick={handleBackToQuotes}
+      size="small"
+      style={{ color: '#fff', borderColor: 'rgba(255,255,255,0.5)' }}
+    >
+      Voltar
+    </ELButton>
+  );
+
   if (!results || !selection) {
     return (
-      <PageShell title="Finalizar Envio" gap="md">
+      <PageShell title="Finalizar Envio" gap="md" extra={backButton}>
         <ELSkeleton />
       </PageShell>
     );
   }
 
   return (
-    <PageShell title="Finalizar Envio" gap="md">
+    <PageShell title="Finalizar Envio" gap="md" extra={backButton}>
       <FormProvider {...formMethods}>
         <form>
           {/* Resumo do envio, serviço e pagamento lado a lado no topo */}
@@ -1787,35 +1802,57 @@ export default function FinalizarClient() {
                         Pagar agora
                       </ELButton>
                     </Tooltip>
+                    {/* Mensagem de erro explícita para dispositivos touch (oculta em desktop) */}
+                    {disabledTooltip && !preconditionsOk && (
+                      <Typography.Text
+                        type="secondary"
+                        style={{ fontSize: 12, textAlign: 'center', display: 'block' }}
+                        className="mobile-only-message"
+                      >
+                        {disabledTooltip}
+                      </Typography.Text>
+                    )}
                   </>
                 ) : (
-                  <Tooltip title={!recipientEmail ? "Informe o e-mail do destinatario" : disabledTooltip}>
-                    <ELButton
-                      variant="primary"
-                      htmlType="button"
-                      block
-                      size="small"
-                      loading={isCreatingRecipientPayment}
-                      disabled={isCreatingRecipientPayment || !preconditionsOk || !recipientEmail}
-                      onClick={(e) => {
-                        console.log('[RECIPIENT_PAY_CLICK]', {
-                          isCreatingRecipientPayment,
-                          preconditionsOk,
-                          recipientEmail,
-                        });
-                        handleSubmit(
-                          handleRecipientPayment,
-                          (validationErrors) => {
-                            console.log('[FORM_VALIDATION_FAILED]', validationErrors);
-                            message.error('Por favor, preencha todos os campos obrigatorios.');
-                            setIsCreatingRecipientPayment(false);
-                          }
-                        )(e);
-                      }}
-                    >
-                      Enviar link de pagamento
-                    </ELButton>
-                  </Tooltip>
+                  <>
+                    <Tooltip title={!recipientEmail ? "Informe o e-mail do destinatario" : disabledTooltip}>
+                      <ELButton
+                        variant="primary"
+                        htmlType="button"
+                        block
+                        size="small"
+                        loading={isCreatingRecipientPayment}
+                        disabled={isCreatingRecipientPayment || !preconditionsOk || !recipientEmail}
+                        onClick={(e) => {
+                          console.log('[RECIPIENT_PAY_CLICK]', {
+                            isCreatingRecipientPayment,
+                            preconditionsOk,
+                            recipientEmail,
+                          });
+                          handleSubmit(
+                            handleRecipientPayment,
+                            (validationErrors) => {
+                              console.log('[FORM_VALIDATION_FAILED]', validationErrors);
+                              message.error('Por favor, preencha todos os campos obrigatorios.');
+                              setIsCreatingRecipientPayment(false);
+                            }
+                          )(e);
+                        }}
+                      >
+                        Enviar link de pagamento
+                      </ELButton>
+                    </Tooltip>
+                    {/* Mensagem de erro explícita para dispositivos touch (oculta em desktop) */}
+                    {((!recipientEmail || !preconditionsOk) && (disabledTooltip || !recipientEmail)) && (
+                      <Typography.Text
+                        type="secondary"
+                        style={{ fontSize: 12, textAlign: 'center', display: 'block' }}
+                        className="mobile-only-message"
+                      >
+                        {!recipientEmail ? "Informe o e-mail do destinatário" : disabledTooltip}
+                      </Typography.Text>
+                    )}
+                  </>
                 )}
               </Space>
             </ELCard>
@@ -1878,14 +1915,6 @@ export default function FinalizarClient() {
             </ELGrid>
           </Space>
 
-          <QuoteNavigationButtons
-            onBack={() => {
-              // Marcar que devemos preservar o estado ao voltar para /cotacoes
-              sessionStorage.setItem("preserveQuoteState", "1");
-              router.push("/cotacoes");
-            }}
-            backLabel="Voltar"
-          />
         </form>
 
         {/* Modal de dados do destinatário */}

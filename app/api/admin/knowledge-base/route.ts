@@ -74,7 +74,6 @@ export const GET = withApiHandler<ArticleListResponse>(async ({ req }) => {
   const limit = Math.min(parseInt(url.searchParams.get('limit') || '50'), 100);
   const offset = parseInt(url.searchParams.get('offset') || '0');
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const where: any = {};
 
   if (category) {

@@ -100,3 +100,4 @@ const result = await prisma.$queryRawUnsafe<{ distance_m: number }[]>(`
 - `npm audit --production` retornou **0 vulnerabilidades**.
 - Buscas de TODO/HACK/mock mostraram vários marcadores “mock_*” em rotas admin; avaliar se rotas estão em uso real antes de produção.
 
+

@@ -22,3 +22,4 @@
 - Critérios de aceite: lista de rotas removidas/arquivadas; alertas configurados; documentação publicada no repositório.
 - Testes: revisão manual de rotas removidas (404), smoke tests críticos (login, checkout, reset) e auditoria de logs para garantir ausência de PII.
 
+

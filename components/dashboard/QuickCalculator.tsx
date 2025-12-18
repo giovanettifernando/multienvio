@@ -217,41 +217,41 @@ export function QuickCalculator() {
           </Row>
 
           <Row gutter={[12, 12]} style={{ marginTop: 12 }}>
-            <Col xs={12} sm={6}>
+            <Col xs={12} sm={12} md={6}>
               <Form.Item
                 label={<Text style={{ fontSize: '12px' }}>Peso (kg)</Text>}
                 name="weight"
                 rules={[{ required: true, message: 'Obrigatório' }]}
                 style={{ marginBottom: 0 }}
               >
-                <ELInput type="number" placeholder="0.5" size="small" step="0.1" />
+                <ELInput type="number" placeholder="0.5" size="small" step="0.1" style={{ minWidth: 70 }} />
               </Form.Item>
             </Col>
-            <Col xs={12} sm={6}>
+            <Col xs={12} sm={12} md={6}>
               <Form.Item
                 label={<Text style={{ fontSize: '12px' }}>Altura</Text>}
                 name="height"
                 style={{ marginBottom: 0 }}
               >
-                <ELInput type="number" placeholder="cm" size="small" />
+                <ELInput type="number" placeholder="cm" size="small" style={{ minWidth: 70 }} />
               </Form.Item>
             </Col>
-            <Col xs={12} sm={6}>
+            <Col xs={12} sm={12} md={6}>
               <Form.Item
                 label={<Text style={{ fontSize: '12px' }}>Largura</Text>}
                 name="width"
                 style={{ marginBottom: 0 }}
               >
-                <ELInput type="number" placeholder="cm" size="small" />
+                <ELInput type="number" placeholder="cm" size="small" style={{ minWidth: 70 }} />
               </Form.Item>
             </Col>
-            <Col xs={12} sm={6}>
+            <Col xs={12} sm={12} md={6}>
               <Form.Item
                 label={<Text style={{ fontSize: '12px' }}>Comp.</Text>}
                 name="length"
                 style={{ marginBottom: 0 }}
               >
-                <ELInput type="number" placeholder="cm" size="small" />
+                <ELInput type="number" placeholder="cm" size="small" style={{ minWidth: 70 }} />
               </Form.Item>
             </Col>
           </Row>

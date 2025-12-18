@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, startTransition } from 'react';
+import Image from 'next/image';
 import {
   Card,
   Form,
@@ -284,7 +285,9 @@ function ConfigTab() {
 
   // Reset error quando path muda
   useEffect(() => {
-    setIconError(false);
+    startTransition(() => {
+      setIconError(false);
+    });
   }, [iconPath]);
 
   // Calcular valores do simulador
@@ -372,7 +375,7 @@ function ConfigTab() {
               gap: 16,
             }}>
               {!iconError ? (
-                <img
+                <Image
                   src={iconPath}
                   alt="Ícone Correios"
                   width={48}
@@ -384,6 +387,7 @@ function ConfigTab() {
                     background: '#fff',
                   }}
                   onError={() => setIconError(true)}
+                  unoptimized
                 />
               ) : (
                 <div style={{

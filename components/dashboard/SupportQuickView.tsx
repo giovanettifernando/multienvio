@@ -73,7 +73,7 @@ export function SupportQuickView() {
 
   if (isLoading) {
     return (
-      <ELCard header={{ title: cardTitle }}>
+      <ELCard header={{ title: cardTitle }} style={{ height: '100%' }}>
         <Skeleton active paragraph={{ rows: 4 }} />
       </ELCard>
     );
@@ -81,6 +81,7 @@ export function SupportQuickView() {
 
   return (
     <ELCard
+      style={{ height: '100%' }}
       header={{
         title: cardTitle,
         extra: (

@@ -710,3 +710,14 @@ textarea.ant-input {
 .el-compact .ant-card-body {
   padding: 12px;
 }
+
+/* Utility: mostrar apenas em mobile (ocultar em desktop) */
+.mobile-only-message {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .mobile-only-message {
+    display: block;
+  }
+}

@@ -58,7 +58,7 @@ export function WalletRecent() {
 
   if (isLoading) {
     return (
-      <ELCard header={{ title: cardTitle }}>
+      <ELCard header={{ title: cardTitle }} style={{ height: '100%' }}>
         <Skeleton active paragraph={{ rows: 4 }} />
       </ELCard>
     );
@@ -66,7 +66,7 @@ export function WalletRecent() {
 
   if (!transactions || transactions.length === 0) {
     return (
-      <ELCard header={{ title: cardTitle }}>
+      <ELCard header={{ title: cardTitle }} style={{ height: '100%' }}>
         <ELEmpty description="Nenhuma transação encontrada" />
       </ELCard>
     );
@@ -74,6 +74,7 @@ export function WalletRecent() {
 
   return (
     <ELCard
+      style={{ height: '100%' }}
       header={{
         title: cardTitle,
         extra: (
@@ -81,7 +82,7 @@ export function WalletRecent() {
             variant="link"
             size="small"
             icon={<RightOutlined />}
-            onClick={() => router.push('/carteira/historico')}
+            onClick={() => router.push('/carteira/extrato')}
           >
             Todas
           </ELButton>

@@ -507,7 +507,6 @@ export async function executeStatusTicket(
   }
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function formatTicketData(ticket: any) {
   const statusLabels: Record<string, string> = {
     aberto: 'Aberto',
@@ -563,7 +562,6 @@ export async function executeInformacoesConta(
       };
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const resultado: Record<string, any> = {};
 
     if (incluir.includes('perfil')) {

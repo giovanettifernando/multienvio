@@ -8,16 +8,14 @@ import {
 } from "@ant-design/icons";
 import {
   Avatar,
-  Empty,
   Flex,
   Segmented,
-  Table,
   Tag,
   Typography,
 } from "antd";
 import { ELButton } from "@/components/ui/ELButton";
 import { ELCard } from "@/components/ui/ELCard";
-import type { ColumnsType } from "antd/es/table";
+import { DataTable, type DataTableColumn } from "@/components/ui/DataTable";
 import { useMemo, useState } from "react";
 import type { QuoteResultItem } from "@/types/quote";
 import { useCarrierIcons } from "@/hooks/useCarrierIcons";
@@ -89,13 +87,16 @@ export function ResultsTable({
     setIconErrors((prev) => ({ ...prev, [slug]: true }));
   };
 
-  const columns: ColumnsType<QuoteResultItem> = [
+  const columns: DataTableColumn<QuoteResultItem>[] = [
     {
       title: "Transportadora",
       dataIndex: "carrier",
       key: "carrier",
-      render: (value: string) => {
-        const slug = deriveCarrierSlug(value);
+      showInCard: true,
+      cardLabel: "Transportadora",
+      render: (value: unknown) => {
+        const carrier = value as string;
+        const slug = deriveCarrierSlug(carrier);
         const iconUrl = carrierIcons[slug];
         const hasError = iconErrors[slug];
         const showIcon = iconUrl && !hasError;
@@ -112,18 +113,18 @@ export function ResultsTable({
                   return false;
                 }}
               >
-                {buildAvatarLabel(value)}
+                {buildAvatarLabel(carrier)}
               </Avatar>
             ) : (
               <Avatar
                 shape="square"
                 style={{ backgroundColor: "#1d39c4", color: "#fff" }}
               >
-                {buildAvatarLabel(value)}
+                {buildAvatarLabel(carrier)}
               </Avatar>
             )}
             <div>
-              <Typography.Text strong>{value}</Typography.Text>
+              <Typography.Text strong>{carrier}</Typography.Text>
             </div>
           </Flex>
         );
@@ -133,31 +134,40 @@ export function ResultsTable({
       title: "Modalidade",
       dataIndex: "modalidade",
       key: "modalidade",
-      render: (value: string) => (
-        <Typography.Text>{value}</Typography.Text>
+      showInCard: true,
+      cardLabel: "Serviço",
+      render: (value: unknown) => (
+        <Typography.Text>{value as string}</Typography.Text>
       ),
     },
     {
       title: "Prazo estimado",
       dataIndex: "prazoDias",
       key: "prazoDias",
-      render: (value: number) => (
-        <Flex align="center" gap={6}>
-          <FieldTimeOutlined />
-          <Typography.Text>
-            {value === 1 ? "1 dia útil" : `${value} dias úteis`}
-          </Typography.Text>
-        </Flex>
-      ),
+      showInCard: true,
+      cardLabel: "Prazo",
+      render: (value: unknown) => {
+        const dias = value as number;
+        return (
+          <Flex align="center" gap={6}>
+            <FieldTimeOutlined />
+            <Typography.Text>
+              {dias === 1 ? "1 dia útil" : `${dias} dias úteis`}
+            </Typography.Text>
+          </Flex>
+        );
+      },
     },
     {
       title: "Preço",
       dataIndex: "preco",
       key: "preco",
-      render: (value: number) => (
+      showInCard: true,
+      cardLabel: "Valor",
+      render: (value: unknown) => (
         <Flex align="center" gap={6}>
           <ArrowDownOutlined style={{ color: "#389e0d" }} />
-          <Typography.Text strong>{currency.format(value)}</Typography.Text>
+          <Typography.Text strong>{currency.format(value as number)}</Typography.Text>
         </Flex>
       ),
     },
@@ -165,7 +175,9 @@ export function ResultsTable({
       title: "Seguro",
       dataIndex: "exigeSeguro",
       key: "exigeSeguro",
-      render: (value: boolean) =>
+      showInCard: true,
+      cardLabel: "Seguro",
+      render: (value: unknown) =>
         value ? (
           <Tag icon={<SafetyCertificateOutlined />} color="volcano">
             Obrigatório
@@ -177,7 +189,9 @@ export function ResultsTable({
     {
       title: "",
       key: "actions",
-      render: (_value, record) => (
+      isActions: true,
+      showInCard: true,
+      render: (_value: unknown, record: QuoteResultItem) => (
         <ELButton
           variant="primary"
           icon={<LogoutOutlined />}
@@ -209,17 +223,15 @@ export function ResultsTable({
           ),
         }}
       >
-        <Table
-          locale={{
-            emptyText: (
-              <Empty description="Nenhuma cotação encontrada com os filtros atuais." />
-            ),
-          }}
-          dataSource={sorted}
+        <DataTable
+          data={sorted}
           columns={columns}
-          rowKey={(record) => record.id}
-          pagination={false}
+          rowKey="id"
           loading={loading}
+          enableMobileCards={true}
+          pagination={false}
+          emptyMessage="Nenhuma cotação encontrada"
+          emptyDescription="Não encontramos opções de frete com os filtros atuais."
         />
       </ELCard>
     </Flex>

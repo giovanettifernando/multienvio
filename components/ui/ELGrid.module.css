@@ -16,6 +16,7 @@
 /* Grid de 3 colunas */
 .grid3 {
   grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: stretch;
 }
 
 /* Grid de 4 colunas */

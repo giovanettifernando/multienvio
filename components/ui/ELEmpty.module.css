@@ -35,3 +35,30 @@
   flex-wrap: wrap;
   justify-content: center;
 }
+
+/* Mobile: compactar empty state */
+@media (max-width: 768px) {
+  .empty {
+    padding: var(--el-spacing-md, 12px);
+    gap: var(--el-spacing-sm, 8px);
+  }
+
+  .title {
+    font-size: var(--el-font-size-base, 14px);
+  }
+
+  .description {
+    font-size: var(--el-font-size-sm, 13px);
+  }
+
+  /* Ocultar imagem em mobile para economizar espaço */
+  .empty :global(.ant-empty-image) {
+    height: 40px !important;
+    margin-bottom: 0;
+  }
+
+  .empty :global(.ant-empty-image svg) {
+    height: 40px;
+    width: 40px;
+  }
+}
