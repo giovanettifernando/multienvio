@@ -1,5 +1,5 @@
 .switch {
-  --el-switch-bg: var(--el-color-border);
+  --el-switch-bg: var(--el-border-color);
   --el-switch-checked-bg: var(--el-color-primary);
 }
 

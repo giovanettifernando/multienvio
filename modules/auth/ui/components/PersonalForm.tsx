@@ -9,7 +9,6 @@ import {
   Space,
   Typography,
   Spin,
-  Tooltip,
 } from "antd";
 import { ELButton, ELCard, ELFormItem, ELInput, ELPopconfirm, ELSwitch } from "@/shared/ui";
 import { DeleteOutlined } from "@ant-design/icons";
@@ -302,7 +301,7 @@ export default function PersonalForm() {
               align="center"
               justify="center"
               vertical
-              gap={16}
+              gap={8}
               style={{ width: "100%", padding: "16px 0" }}
             >
                 <input
@@ -312,67 +311,65 @@ export default function PersonalForm() {
                   hidden
                   onChange={(event) => handleAvatarInputChange(event, field.onChange)}
                 />
-                <Flex align="center" gap={12}>
-                  <ELButton
-                    variant="text"
-                    onClick={() => fileInputRef.current?.click()}
-                    aria-label="Alterar foto do usuário"
-                    style={{ padding: 0 }}
+                <span
+                  onClick={() => fileInputRef.current?.click()}
+                  style={{
+                    width: 120,
+                    height: 120,
+                    borderRadius: "50%",
+                    overflow: "hidden",
+                    border: "1px solid var(--color-border)",
+                    backgroundColor: "var(--color-fill-tertiary)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    cursor: "pointer",
+                  }}
+                >
+                  {field.value ? (
+                    <img
+                      src={field.value}
+                      alt="Foto do usuário"
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "cover",
+                        objectPosition: "center",
+                      }}
+                      draggable={false}
+                    />
+                  ) : (
+                    <Typography.Text strong style={{ fontSize: 32 }}>
+                      {avatarInitials}
+                    </Typography.Text>
+                  )}
+                </span>
+                {avatarUploading ? <Spin size="small" aria-live="polite" /> : null}
+                {field.value ? (
+                  <ELPopconfirm
+                    title="Remover sua foto?"
+                    okText="Remover"
+                    cancelText="Cancelar"
+                    onConfirm={() => field.onChange(null)}
+                    placement="bottom"
                   >
                     <span
                       style={{
-                        width: 120,
-                        height: 120,
-                        borderRadius: "50%",
-                        overflow: "hidden",
-                        border: "1px solid var(--color-border)",
-                        backgroundColor: "var(--color-fill-tertiary)",
-                        display: "inline-flex",
-                        alignItems: "center",
-                        justifyContent: "center",
+                        fontSize: 12,
+                        color: 'var(--el-color-danger)',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 4,
                       }}
                     >
-                      {field.value ? (
-                        <img
-                          src={field.value}
-                          alt="Foto do usuário"
-                          style={{
-                            width: "100%",
-                            height: "100%",
-                            objectFit: "cover",
-                            objectPosition: "center",
-                          }}
-                          draggable={false}
-                        />
-                      ) : (
-                        <Typography.Text strong style={{ fontSize: 32 }}>
-                          {avatarInitials}
-                        </Typography.Text>
-                      )}
+                      <DeleteOutlined /> Remover foto
                     </span>
-                  </ELButton>
-                  {field.value ? (
-                    <ELPopconfirm
-                      title="Remover sua foto?"
-                      okText="Remover"
-                      cancelText="Cancelar"
-                      onConfirm={() => field.onChange(null)}
-                      placement="right"
-                    >
-                      <Tooltip title="Remover foto">
-                        <ELButton
-                          shape="circle"
-                          variant="text"
-                          danger
-                          icon={<DeleteOutlined />}
-                          aria-label="Remover foto"
-                          tabIndex={0}
-                        />
-                      </Tooltip>
-                    </ELPopconfirm>
-                  ) : null}
-                </Flex>
-                {avatarUploading ? <Spin size="small" aria-live="polite" /> : null}
+                  </ELPopconfirm>
+                ) : null}
+                <Typography.Text style={{ fontSize: 15, color: 'var(--el-text-primary)' }}>
+                  {defaultValues.email}
+                </Typography.Text>
                 {fieldState.error ? (
                   <Typography.Text type="danger" aria-live="assertive">
                     {fieldState.error.message}
@@ -397,7 +394,7 @@ export default function PersonalForm() {
             />
           ) : null}
 
-          <ELCard padding="sm" header={{ title: "Dados pessoais" }} style={{ borderRadius: 12 }}>
+          <ELCard padding="sm" style={{ borderRadius: 12 }}>
             <Space orientation="vertical" size={16} style={{ width: "100%" }}>
               <Controller
                 name="fullName"
@@ -417,69 +414,50 @@ export default function PersonalForm() {
                   </ELFormItem>
                 )}
               />
-              <Controller
-                name="email"
-                control={form.control}
-                render={({ field, fieldState }) => (
-                  <ELFormItem
-                    label="E-mail"
-                    required
-                    validateStatus={fieldState.error ? "error" : undefined}
-                    help={fieldState.error?.message || "Email não pode ser alterado"}
-                  >
-                    <ELInput
-                      {...field}
-                      type="email"
-                      inputMode="email"
-                      placeholder="email@empresa.com"
-                      aria-invalid={fieldState.invalid}
-                      disabled
-                      readOnly
-                      onChange={(event) => field.onChange(event.target.value.toLowerCase())}
-                    />
-                  </ELFormItem>
-                )}
-              />
-              <Controller
-                name="phone"
-                control={form.control}
-                render={({ field, fieldState }) => (
-                  <ELFormItem
-                    label="Telefone"
-                    required
-                    validateStatus={fieldState.error ? "error" : undefined}
-                    help={fieldState.error?.message}
-                  >
-                    <ELInput
-                      {...field}
-                      inputMode="tel"
-                      placeholder="(00) 00000-0000"
-                      aria-invalid={fieldState.invalid}
-                      onChange={(event) => field.onChange(maskPhone(event.target.value))}
-                    />
-                  </ELFormItem>
-                )}
-              />
-              <Controller
-                name="cpf"
-                control={form.control}
-                render={({ field, fieldState }) => (
-                  <ELFormItem
-                    label="CPF"
-                    required
-                    validateStatus={fieldState.error ? "error" : undefined}
-                    help={fieldState.error?.message}
-                  >
-                    <ELInput
-                      {...field}
-                      inputMode="numeric"
-                      placeholder="000.000.000-00"
-                      aria-invalid={fieldState.invalid}
-                      onChange={(event) => field.onChange(maskCPF(event.target.value))}
-                    />
-                  </ELFormItem>
-                )}
-              />
+              <Flex gap={16} wrap>
+                <Controller
+                  name="phone"
+                  control={form.control}
+                  render={({ field, fieldState }) => (
+                    <ELFormItem
+                      label="Telefone"
+                      required
+                      validateStatus={fieldState.error ? "error" : undefined}
+                      help={fieldState.error?.message}
+                      style={{ flex: '1 1 45%', minWidth: 180 }}
+                    >
+                      <ELInput
+                        {...field}
+                        inputMode="tel"
+                        placeholder="(00) 00000-0000"
+                        aria-invalid={fieldState.invalid}
+                        onChange={(event) => field.onChange(maskPhone(event.target.value))}
+                      />
+                    </ELFormItem>
+                  )}
+                />
+                <Controller
+                  name="cpf"
+                  control={form.control}
+                  render={({ field, fieldState }) => (
+                    <ELFormItem
+                      label="CPF"
+                      required
+                      validateStatus={fieldState.error ? "error" : undefined}
+                      help={fieldState.error?.message}
+                      style={{ flex: '1 1 45%', minWidth: 180 }}
+                    >
+                      <ELInput
+                        {...field}
+                        inputMode="numeric"
+                        placeholder="000.000.000-00"
+                        aria-invalid={fieldState.invalid}
+                        onChange={(event) => field.onChange(maskCPF(event.target.value))}
+                      />
+                    </ELFormItem>
+                  )}
+                />
+              </Flex>
             </Space>
           </ELCard>
 

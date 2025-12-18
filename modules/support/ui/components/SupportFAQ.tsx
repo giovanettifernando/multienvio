@@ -177,7 +177,7 @@ export function SupportFAQ({
         </Title>
       )}
 
-      <Space direction="vertical" style={{ width: '100%' }} size="small">
+      <Space orientation="vertical" style={{ width: '100%' }} size="small">
         <ELInput
           placeholder="Buscar nas perguntas frequentes..."
           prefix={<SearchOutlined />}
@@ -200,7 +200,7 @@ export function SupportFAQ({
       </Space>
 
       {isLoading ? (
-        <Space direction="vertical" style={{ width: '100%' }}>
+        <Space orientation="vertical" style={{ width: '100%' }}>
           <ELSkeleton active lines={2} />
           <ELSkeleton active lines={2} />
           <ELSkeleton active lines={2} />
