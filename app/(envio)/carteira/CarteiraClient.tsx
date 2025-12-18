@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { ELCard } from "@/components/ui/ELCard";
-import Typography from "antd/es/typography";
+import { Typography } from 'antd';
 import { useRouter } from "next/navigation";
 import { ELButton } from "@/components/ui/ELButton";
 import { ELAlert } from "@/components/ui/ELAlert";

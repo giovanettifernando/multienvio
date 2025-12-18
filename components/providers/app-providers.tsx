@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type PropsWithChildren } from "react";
-import App from "antd/es/app";
+import { App } from 'antd';
 import {
   QueryClient,
   QueryClientProvider,

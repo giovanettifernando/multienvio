@@ -1,11 +1,8 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
-import Table from 'antd/es/table';
-import type { TableProps } from 'antd/es/table';
-import type { ColumnsType } from 'antd/es/table';
-import Empty from 'antd/es/empty';
-import Pagination from 'antd/es/pagination';
+import { Table, Empty, Pagination } from 'antd';
+import type { TableProps } from 'antd';
 import { DownOutlined, RightOutlined } from '@ant-design/icons';
 import { cn } from '@/lib/utils/cn';
 import { ELSkeleton } from './ELSkeleton';
@@ -108,7 +105,7 @@ export function DataTable<T extends object>({
   // Estado para cards expandidos no mobile
   const [expandedCardKeys, setExpandedCardKeys] = useState<string[]>([]);
   // Converter colunas para formato Ant Design com ellipsis padrão
-  const antColumns: ColumnsType<T> = useMemo(
+  const antColumns: TableProps<T>['columns'] = useMemo(
     () =>
       columns.map((col) => ({
         title: col.title,

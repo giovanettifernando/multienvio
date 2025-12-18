@@ -8,7 +8,7 @@ import { EnvironmentOutlined, InboxOutlined, CameraOutlined, CheckCircleOutlined
 import dayjs, { Dayjs } from 'dayjs';
 import { PageShell } from '@/components/shared/PageShell';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import type { ColumnsType } from 'antd/es/table';
+import type { TableProps } from 'antd';
 
 interface SenderAddress {
   id: string;
@@ -684,7 +684,7 @@ export default function ColetasColetorClient() {
     }
   };
 
-  const columns: ColumnsType<PickupRequest> = [
+  const columns: TableProps<PickupRequest>['columns'] = [
     {
       title: 'Código',
       dataIndex: ['shipment', 'trackingCode'],

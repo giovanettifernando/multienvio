@@ -3,8 +3,7 @@
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { App, Button, Flex, Popconfirm, Select, Space, Table, Tag } from 'antd';
-import type { ColumnsType } from 'antd/es/table';
-import type { TableRowSelection } from 'antd/lib/table/interface';
+import type { TableProps } from 'antd';
 import { useMutation } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import { DeleteOutlined, EyeOutlined, KeyOutlined, LockOutlined, UnlockOutlined } from '@ant-design/icons';
@@ -144,7 +143,7 @@ export function ClientsTable({ clients, onViewClient, onStatusChange, onDelete }
     deleteMutation.mutate(id);
   };
 
-  const columns: ColumnsType<AdminClient> = [
+  const columns: TableProps<AdminClient>['columns'] = [
     {
       title: 'Tipo',
       dataIndex: 'type',
@@ -251,7 +250,7 @@ export function ClientsTable({ clients, onViewClient, onStatusChange, onDelete }
     },
   ];
 
-  const rowSelection: TableRowSelection<AdminClient> = {
+  const rowSelection: TableProps<AdminClient>['rowSelection'] = {
     selectedRowKeys,
     onChange: (keys) => setSelectedRowKeys(keys),
   };

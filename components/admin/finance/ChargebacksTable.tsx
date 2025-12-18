@@ -12,7 +12,7 @@ import {
   App,
 } from 'antd';
 import { ELInput } from '@/components/ui/ELInput';
-import type { ColumnsType } from 'antd/es/table';
+import type { TableProps } from 'antd';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import { CheckOutlined, CloseOutlined } from '@ant-design/icons';
@@ -103,7 +103,7 @@ export function ChargebacksTable({ period }: ChargebacksTableProps) {
     updateMutation.mutate({ id, status: 'denied' });
   };
 
-  const columns: ColumnsType<ChargebackItem> = [
+  const columns: TableProps<ChargebackItem>['columns'] = [
     {
       title: 'Data',
       dataIndex: 'createdAt',

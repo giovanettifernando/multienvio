@@ -2,7 +2,7 @@
 
 import { Table, Tag, Switch, Tooltip, Button, Flex, Typography, App } from "antd";
 import { EditOutlined, DeleteOutlined, KeyOutlined } from "@ant-design/icons";
-import type { ColumnsType } from "antd/es/table";
+import type { TableProps } from 'antd';
 import type { AdminUser } from "@/lib/auth/types";
 import {
   useToggleUserStatus,
@@ -87,7 +87,7 @@ export function UsersTable({
     });
   };
 
-  const columns: ColumnsType<AdminUser> = [
+  const columns: TableProps<AdminUser>['columns'] = [
     {
       title: "Nome",
       dataIndex: "name",

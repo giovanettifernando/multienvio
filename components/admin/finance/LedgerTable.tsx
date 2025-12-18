@@ -16,8 +16,7 @@ import {
 import { ELModal } from '@/components/ui/ELModal';
 import { ELInput } from '@/components/ui/ELInput';
 import { inputNumberFormatterBRL, inputNumberParserBRL } from '@/lib/utils/format';
-import type { ColumnsType } from 'antd/es/table';
-import type { TableRowSelection } from 'antd/lib/table/interface';
+import type { TableProps } from 'antd';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import { DownloadOutlined, PlusOutlined, CheckOutlined } from '@ant-design/icons';
@@ -184,7 +183,7 @@ export function LedgerTable({ period }: LedgerTableProps) {
     link.click();
   };
 
-  const columns: ColumnsType<LedgerEntry> = [
+  const columns: TableProps<LedgerEntry>['columns'] = [
     {
       title: 'Criada em',
       dataIndex: 'createdAt',
@@ -270,7 +269,7 @@ export function LedgerTable({ period }: LedgerTableProps) {
     },
   ];
 
-  const rowSelection: TableRowSelection<LedgerEntry> = {
+  const rowSelection: TableProps<LedgerEntry>['rowSelection'] = {
     selectedRowKeys,
     onChange: setSelectedRowKeys,
   };

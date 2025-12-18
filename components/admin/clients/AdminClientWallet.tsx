@@ -30,7 +30,7 @@ import {
   ArrowDownOutlined,
   CalendarOutlined,
 } from "@ant-design/icons";
-import type { ColumnsType } from "antd/es/table";
+import type { TableProps } from 'antd';
 import { useQuery } from "@tanstack/react-query";
 import { formatNumberBR } from "@/lib/format";
 import dayjs, { Dayjs } from "dayjs";
@@ -186,7 +186,7 @@ export default function AdminClientWallet({
     }
   };
 
-  const transactionColumns: ColumnsType<Transaction> = [
+  const transactionColumns: TableProps<Transaction>['columns'] = [
     {
       title: "Data",
       dataIndex: "createdAt",

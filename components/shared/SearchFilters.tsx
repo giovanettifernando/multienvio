@@ -2,7 +2,7 @@
  * SearchFilters - Componente padrão para filtros de busca
  */
 import React from "react";
-import Flex from "antd/es/flex";
+import { Flex } from 'antd';
 import { SearchOutlined, ReloadOutlined } from "@ant-design/icons";
 import { ELInput } from "@/components/ui/ELInput";
 import { ELSelect } from "@/components/ui/ELSelect";

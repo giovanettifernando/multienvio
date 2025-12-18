@@ -9,7 +9,7 @@ import {
   RiseOutlined,
   FallOutlined,
 } from '@ant-design/icons';
-import type { ColumnsType } from 'antd/es/table';
+import type { TableProps } from 'antd';
 import { PageShell } from '@/components/shared/PageShell';
 
 interface KPIData {
@@ -87,7 +87,7 @@ export default function CollectorDashClient() {
     return <div>Erro ao carregar dados</div>;
   }
 
-  const columns: ColumnsType<RecentReception> = [
+  const columns: TableProps<RecentReception>['columns'] = [
     {
       title: 'Código',
       dataIndex: 'trackingCode',

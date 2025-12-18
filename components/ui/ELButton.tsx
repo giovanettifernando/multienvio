@@ -1,5 +1,5 @@
-import type { ButtonProps } from "antd/es/button";
-import Button from "antd/es/button";
+import { Button } from 'antd';
+import type { ButtonProps } from 'antd';
 import { cn } from "@/lib/utils/cn";
 import styles from "./ELButton.module.css";
 

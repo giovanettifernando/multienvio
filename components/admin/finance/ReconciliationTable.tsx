@@ -10,8 +10,7 @@ import {
   Typography,
 } from 'antd';
 import { ELInput } from '@/components/ui/ELInput';
-import type { ColumnsType } from 'antd/es/table';
-import type { TableRowSelection } from 'antd/lib/table/interface';
+import type { TableProps } from 'antd';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import { CheckOutlined } from '@ant-design/icons';
@@ -73,7 +72,7 @@ export function ReconciliationTable({ period }: ReconciliationTableProps) {
     markReconciledMutation.mutate(ids);
   };
 
-  const columns: ColumnsType<LedgerEntry> = [
+  const columns: TableProps<LedgerEntry>['columns'] = [
     {
       title: 'Data',
       dataIndex: 'createdAt',
@@ -133,7 +132,7 @@ export function ReconciliationTable({ period }: ReconciliationTableProps) {
     },
   ];
 
-  const rowSelection: TableRowSelection<LedgerEntry> = {
+  const rowSelection: TableProps<LedgerEntry>['rowSelection'] = {
     selectedRowKeys,
     onChange: setSelectedRowKeys,
   };

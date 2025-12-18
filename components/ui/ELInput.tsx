@@ -1,10 +1,6 @@
-import type {
-  InputProps,
-  PasswordProps,
-  TextAreaProps,
-  InputRef,
-} from "antd/es/input";
-import Input from "antd/es/input";
+import { Input } from 'antd';
+import type { InputProps, InputRef } from 'antd';
+import type { PasswordProps, TextAreaProps } from 'antd/es/input';
 import { SearchOutlined } from "@ant-design/icons";
 import type { ForwardRefExoticComponent, RefAttributes, KeyboardEvent } from "react";
 import { forwardRef, useCallback } from "react";

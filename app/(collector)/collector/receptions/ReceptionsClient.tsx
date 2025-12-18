@@ -23,7 +23,7 @@ import {
   WarningOutlined,
   CheckCircleOutlined,
 } from '@ant-design/icons';
-import type { ColumnsType } from 'antd/es/table';
+import type { TableProps } from 'antd';
 import { PageShell } from '@/components/shared/PageShell';
 
 const { TextArea } = Input;
@@ -298,7 +298,7 @@ export default function ReceptionsClient() {
     // TODO: Implementar leitura de código de barras via câmera
   };
 
-  const packageColumns: ColumnsType<Package> = [
+  const packageColumns: TableProps<Package>['columns'] = [
     {
       title: 'Volume',
       dataIndex: 'packageNumber',
@@ -393,7 +393,7 @@ export default function ReceptionsClient() {
     return labelMap[status] || status;
   };
 
-  const columns: ColumnsType<Shipment> = [
+  const columns: TableProps<Shipment>['columns'] = [
     {
       title: 'Código de rastreio',
       dataIndex: 'trackingCode',

@@ -1,6 +1,5 @@
-import Empty from "antd/es/empty";
-import Typography from "antd/es/typography";
-import type { EmptyProps } from "antd/es/empty";
+import { Empty, Typography } from 'antd';
+import type { EmptyProps } from 'antd';
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils/cn";
 import { ELButton } from "./ELButton";

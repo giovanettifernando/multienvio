@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { message } from 'antd';
+import type { MessageInstance } from '@/lib/ui/useAppMessage';
 import type {
   Collector,
   CollectorFilters,
@@ -125,7 +125,7 @@ export function useCollector(id: string | null) {
   });
 }
 
-export function useCreateCollector() {
+export function useCreateCollector(messageApi?: MessageInstance) {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -147,15 +147,15 @@ export function useCreateCollector() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['collectors.list'] });
-      message.success('Coletor criado com sucesso');
+      messageApi?.success('Coletor criado com sucesso');
     },
     onError: (error: Error) => {
-      message.error(error.message);
+      messageApi?.error(error.message);
     },
   });
 }
 
-export function useUpdateCollector() {
+export function useUpdateCollector(messageApi?: MessageInstance) {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -177,15 +177,15 @@ export function useUpdateCollector() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['collectors.list'] });
-      message.success('Coletor atualizado com sucesso');
+      messageApi?.success('Coletor atualizado com sucesso');
     },
     onError: (error: Error) => {
-      message.error(error.message);
+      messageApi?.error(error.message);
     },
   });
 }
 
-export function useDeleteCollector() {
+export function useDeleteCollector(messageApi?: MessageInstance) {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -201,15 +201,15 @@ export function useDeleteCollector() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['collectors.list'] });
-      message.success('Coletor excluído com sucesso');
+      messageApi?.success('Coletor excluído com sucesso');
     },
     onError: (error: Error) => {
-      message.error(error.message);
+      messageApi?.error(error.message);
     },
   });
 }
 
-export function useToggleCollectorStatus() {
+export function useToggleCollectorStatus(messageApi?: MessageInstance) {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -253,7 +253,7 @@ export function useToggleCollectorStatus() {
     },
     onSuccess: (_, { status }) => {
       queryClient.invalidateQueries({ queryKey: ['collectors.list'] });
-      message.success(status === 'active' ? 'Coletor ativado' : 'Coletor bloqueado');
+      messageApi?.success(status === 'active' ? 'Coletor ativado' : 'Coletor bloqueado');
     },
     onError: (error: Error, _variables, context) => {
       if (context?.previous) {
@@ -261,7 +261,7 @@ export function useToggleCollectorStatus() {
           queryClient.setQueryData(queryKey, data);
         });
       }
-      message.error(error.message);
+      messageApi?.error(error.message);
     },
   });
 }

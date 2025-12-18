@@ -12,8 +12,7 @@ import {
   App,
 } from 'antd';
 import { ELInput } from '@/components/ui/ELInput';
-import type { ColumnsType } from 'antd/es/table';
-import type { TableRowSelection } from 'antd/lib/table/interface';
+import type { TableProps } from 'antd';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import { CheckOutlined, CloseOutlined, LinkOutlined } from '@ant-design/icons';
@@ -132,7 +131,7 @@ export function InvoicesTable({ period }: InvoicesTableProps) {
       });
   };
 
-  const columns: ColumnsType<Invoice> = [
+  const columns: TableProps<Invoice>['columns'] = [
     {
       title: 'Emissão',
       dataIndex: 'issueDate',
@@ -228,7 +227,7 @@ export function InvoicesTable({ period }: InvoicesTableProps) {
     },
   ];
 
-  const rowSelection: TableRowSelection<Invoice> = {
+  const rowSelection: TableProps<Invoice>['rowSelection'] = {
     selectedRowKeys,
     onChange: setSelectedRowKeys,
     getCheckboxProps: (record) => ({

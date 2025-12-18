@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Tabs, Button, Space, Spin, App } from 'antd';
 import { ELDrawer } from '@/components/ui/ELDrawer';
 import { MailOutlined } from '@ant-design/icons';
-import type { UploadFile } from 'antd/es/upload/interface';
+import type { UploadFile } from 'antd';
 import { useForm, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import PFForm from './forms/PFForm';

@@ -1,7 +1,9 @@
 "use client";
 
 import { Table, Typography } from "antd";
-import type { ColumnsType } from "antd/es/table";
+import type { TableProps } from "antd";
+
+type ColumnsType<T> = TableProps<T>['columns'];
 import type { Shipment } from "@/types/shipment";
 import { ShipmentStatusBadge } from "@/components/ui/shipment-status-badge";
 

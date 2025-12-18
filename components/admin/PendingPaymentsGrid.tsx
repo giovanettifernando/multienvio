@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Card, Table, Tag, Button, Tooltip, Space, App } from 'antd';
 import { ReloadOutlined, CheckOutlined, ThunderboltOutlined } from '@ant-design/icons';
-import type { ColumnsType } from 'antd/es/table';
+import type { TableProps } from 'antd';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -95,7 +95,7 @@ export default function PendingPaymentsGrid() {
     }
   };
 
-  const columns: ColumnsType<PendingPayment> = [
+  const columns: TableProps<PendingPayment>['columns'] = [
     {
       title: 'Cliente',
       dataIndex: 'user',

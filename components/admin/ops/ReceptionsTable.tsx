@@ -17,7 +17,7 @@ import {
   DatePicker,
   Tooltip,
 } from 'antd';
-import type { ColumnsType } from 'antd/es/table';
+import type { TableProps } from 'antd';
 import { useQuery } from '@tanstack/react-query';
 import {
   SearchOutlined,
@@ -194,7 +194,7 @@ export default function ReceptionsTable({ dateStart, dateEnd }: ReceptionsTableP
       }),
   });
 
-  const columns = useMemo<ColumnsType<PoCQueueItem>>(
+  const columns = useMemo<TableProps<PoCQueueItem>['columns']>(
     () => [
       {
         title: 'Status',

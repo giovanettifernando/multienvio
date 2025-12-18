@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button, Input, Space, Upload, Typography, App, Checkbox } from "antd";
 import type { RcFile, UploadFile } from "antd/es/upload/interface";
+// Note: RcFile and UploadFile are not directly exported from 'antd', keeping /es/ import
 import { CannedReplySelect } from "@/components/support/CannedReplySelect";
 import { usePostTicketMessage } from "@/hooks/useSupport";
 

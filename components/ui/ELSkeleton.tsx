@@ -1,5 +1,5 @@
-import type { SkeletonProps } from "antd/es/skeleton";
-import Skeleton from "antd/es/skeleton";
+import { Skeleton } from 'antd';
+import type { SkeletonProps } from 'antd';
 import { cn } from "@/lib/utils/cn";
 import styles from "./ELSkeleton.module.css";
 

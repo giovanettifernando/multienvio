@@ -1,5 +1,5 @@
-import type { SelectProps } from "antd/es/select";
-import Select from "antd/es/select";
+import { Select } from 'antd';
+import type { SelectProps } from 'antd';
 import { cn } from "@/lib/utils/cn";
 import styles from "./ELSelect.module.css";
 

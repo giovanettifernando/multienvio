@@ -17,7 +17,7 @@ import {
   StarFilled,
   CreditCardOutlined,
 } from "@ant-design/icons";
-import type { ColumnsType } from "antd/es/table";
+import type { TableProps } from 'antd';
 
 const { Text } = Typography;
 
@@ -93,7 +93,7 @@ export default function AdminClientCards({
     }
   };
 
-  const columns: ColumnsType<Card> = [
+  const columns: TableProps<Card>['columns'] = [
     {
       title: "Cartão",
       key: "card",

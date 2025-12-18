@@ -19,7 +19,7 @@ import {
   SyncOutlined,
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import type { ColumnsType } from 'antd/es/table';
+import type { TableProps } from 'antd';
 import { ELInput } from '@/components/ui/ELInput';
 
 const { Title, Text } = Typography;
@@ -153,7 +153,7 @@ export default function CorreiosAgenciesClient() {
     setPage(1);
   };
 
-  const columns: ColumnsType<CorreiosAgency> = [
+  const columns: TableProps<CorreiosAgency>['columns'] = [
     {
       title: 'Agência',
       key: 'nome',

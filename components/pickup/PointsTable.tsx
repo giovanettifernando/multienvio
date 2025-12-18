@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { Table, Button, Space, Switch, Typography, Tag, App } from 'antd';
 import { EyeOutlined, DeleteOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
-import type { ColumnsType } from 'antd/es/table';
+import type { TableProps } from 'antd';
 import { maskCNPJ } from '@/lib/pickup/masks';
 import { formatBRL } from '@/lib/utils/format';
 import type { PickupPoint, PickupPointListResponse } from '@/lib/pickup/types';
@@ -57,7 +57,7 @@ export default function PointsTable({
     });
   };
 
-  const columns: ColumnsType<PickupPoint> = [
+  const columns: TableProps<PickupPoint>['columns'] = [
     {
       title: 'Nome Fantasia',
       dataIndex: 'nomeFantasia',

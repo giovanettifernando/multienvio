@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react';
 import { Table, Flex, Select, Button, Tag, Card, Statistic, Row, Col, DatePicker, Descriptions } from 'antd';
 import { ELModal } from '@/components/ui/ELModal';
 import { ELInput } from '@/components/ui/ELInput';
-import type { ColumnsType } from 'antd/es/table';
+import type { TableProps } from 'antd';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import { DownloadOutlined, EyeOutlined } from '@ant-design/icons';
@@ -136,7 +136,7 @@ export function WalletTransactionsTable() {
     link.click();
   };
 
-  const columns: ColumnsType<AdminWalletTransaction> = [
+  const columns: TableProps<AdminWalletTransaction>['columns'] = [
     {
       title: 'Data',
       dataIndex: 'confirmedAt',

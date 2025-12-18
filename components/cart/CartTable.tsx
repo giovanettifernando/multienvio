@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { Button, Card, Space, Table, Tag, Typography, Grid } from "antd";
 import { DeleteOutlined } from "@ant-design/icons";
-import type { ColumnsType } from "antd/es/table";
+import type { TableProps } from 'antd';
 import type { CartItem } from "@/types/cart";
 
 const { useBreakpoint } = Grid;
@@ -20,7 +20,7 @@ export function CartTable({ items, onRemove }: CartTableProps) {
   const screens = useBreakpoint();
   const isMobile = !screens.md;
 
-  const columns = useMemo<ColumnsType<CartItem>>(
+  const columns = useMemo<TableProps<CartItem>['columns']>(
     () => [
       {
         title: "Transportadora / Modalidade",

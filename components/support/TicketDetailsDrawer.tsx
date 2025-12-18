@@ -19,6 +19,7 @@ import { PaperClipOutlined, ReloadOutlined, SendOutlined, UserOutlined } from '@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { RcFile, UploadFile } from 'antd/es/upload/interface';
+// Note: RcFile and UploadFile types are not directly exported from 'antd', keeping /es/ import
 import {
   useAssignTicket,
   usePostTicketMessage,

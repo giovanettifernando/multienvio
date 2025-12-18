@@ -10,10 +10,9 @@ import {
   SettingOutlined,
   SendOutlined,
 } from '@ant-design/icons';
-import type { ForwardRefExoticComponent, RefAttributes } from 'react';
-import type { AntdIconProps } from '@ant-design/icons/lib/components/AntdIcon';
 
-type IconComponent = ForwardRefExoticComponent<Omit<AntdIconProps, 'ref'> & RefAttributes<HTMLSpanElement>>;
+// Use typeof to infer icon component type from existing icon
+type IconComponent = typeof HomeOutlined;
 
 export interface SidebarItem {
   key: string;

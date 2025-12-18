@@ -18,7 +18,7 @@ import {
   DatePicker,
   Segmented,
 } from 'antd';
-import type { ColumnsType } from 'antd/es/table';
+import type { TableProps } from 'antd';
 import { useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import {
@@ -51,7 +51,7 @@ const formatDate = (dateStr: string | null) =>
   dateStr ? dayjs(dateStr).format('DD/MM/YYYY HH:mm') : '-';
 
 // Colunas da tabela expandida (detalhes dos itens)
-const itemColumns: ColumnsType<ProfileCommissionItem> = [
+const itemColumns: TableProps<ProfileCommissionItem>['columns'] = [
   {
     title: 'Código',
     dataIndex: 'referenceCode',
@@ -220,7 +220,7 @@ export function ProfileCommissionsTable() {
   };
 
   // Colunas da tabela principal (por perfil)
-  const profileColumns: ColumnsType<ProfileCommissionSummary> = [
+  const profileColumns: TableProps<ProfileCommissionSummary>['columns'] = [
     {
       title: profileType === 'collector' ? 'Coletor' : 'Ponto de Coleta',
       dataIndex: 'profileName',

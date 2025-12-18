@@ -26,7 +26,7 @@ import {
   ReloadOutlined,
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import type { ColumnsType } from 'antd/es/table';
+import type { TableProps } from 'antd';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -235,7 +235,7 @@ export default function KnowledgeBaseClient() {
       .replace(/^-|-$/g, '');
   };
 
-  const columns: ColumnsType<Article> = [
+  const columns: TableProps<Article>['columns'] = [
     {
       title: 'Título',
       dataIndex: 'title',

@@ -17,7 +17,7 @@ import {
   Statistic,
   DatePicker,
 } from 'antd';
-import type { ColumnsType } from 'antd/es/table';
+import type { TableProps } from 'antd';
 import { useQuery } from '@tanstack/react-query';
 import {
   DownloadOutlined,
@@ -149,7 +149,7 @@ export function AccountsPayableTable() {
       }),
   });
 
-  const columns = useMemo<ColumnsType<PayableItem>>(
+  const columns = useMemo<TableProps<PayableItem>['columns']>(
     () => [
       {
         title: 'Tipo',

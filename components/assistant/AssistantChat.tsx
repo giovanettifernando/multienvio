@@ -3,10 +3,7 @@
 import { useState, useRef, useEffect, useCallback, Suspense, type KeyboardEvent } from "react";
 import { createPortal } from "react-dom";
 import { usePathname, useSearchParams } from "next/navigation";
-import Avatar from "antd/es/avatar";
-import Badge from "antd/es/badge";
-import Button from "antd/es/button";
-import Input from "antd/es/input";
+import { Avatar, Badge, Button, Input } from 'antd';
 import { MessageOutlined, CloseOutlined, SendOutlined, RobotOutlined, ToolOutlined } from "@ant-design/icons";
 import { cn } from "@/lib/utils/cn";
 import { useCurrentUser } from "@/hooks/useCurrentUser";

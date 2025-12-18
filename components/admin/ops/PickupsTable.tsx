@@ -17,7 +17,7 @@ import {
   Tooltip,
   DatePicker,
 } from 'antd';
-import type { ColumnsType } from 'antd/es/table';
+import type { TableProps } from 'antd';
 import { useQuery } from '@tanstack/react-query';
 import {
   SearchOutlined,
@@ -177,7 +177,7 @@ export default function PickupsTable({ dateStart, dateEnd }: PickupsTableProps) 
       }),
   });
 
-  const columns = useMemo<ColumnsType<PickupItem>>(
+  const columns = useMemo<TableProps<PickupItem>['columns']>(
     () => [
       {
         title: 'Status',

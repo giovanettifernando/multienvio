@@ -18,7 +18,7 @@ import {
   DeleteOutlined,
 } from "@ant-design/icons";
 import { inputNumberFormatterBRL, inputNumberParserBRL } from "@/lib/utils/format";
-import type { ColumnsType } from "antd/es/table";
+import type { TableProps } from 'antd';
 import { formatNumberBR } from "@/lib/format";
 
 interface RecurringItem {
@@ -106,7 +106,7 @@ export default function AdminClientRecurringItems({
     }
   };
 
-  const columns: ColumnsType<RecurringItem> = [
+  const columns: TableProps<RecurringItem>['columns'] = [
     {
       title: "Descrição",
       dataIndex: "descricao",

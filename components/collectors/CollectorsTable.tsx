@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { Table, Button, Space, Switch, Tooltip, Typography, Tag, App } from 'antd';
-import type { ColumnsType } from 'antd/es/table';
+import type { TableProps } from 'antd';
 import { EyeOutlined, DeleteOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import { maskCNPJ } from '@/lib/collectors/masks';
 import { formatBRL } from '@/lib/utils/format';
@@ -53,7 +53,7 @@ export default function CollectorsTable({
     });
   };
 
-  const columns: ColumnsType<Collector> = [
+  const columns: TableProps<Collector>['columns'] = [
     {
       title: 'Nome / CNPJ',
       dataIndex: 'pf.nome',

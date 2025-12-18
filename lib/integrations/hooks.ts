@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { message } from 'antd';
+import type { MessageInstance } from '@/lib/ui/useAppMessage';
 import type {
   Carrier,
   CarrierApi,
@@ -44,7 +44,7 @@ export function useCarrier(id: string | null) {
   });
 }
 
-export function useCreateCarrier() {
+export function useCreateCarrier(messageApi?: MessageInstance) {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -64,15 +64,15 @@ export function useCreateCarrier() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: integrationKeys.carriers() });
-      message.success('Transportadora criada com sucesso');
+      messageApi?.success('Transportadora criada com sucesso');
     },
     onError: (error: Error) => {
-      message.error(error.message);
+      messageApi?.error(error.message);
     },
   });
 }
 
-export function useUpdateCarrier() {
+export function useUpdateCarrier(messageApi?: MessageInstance) {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -103,18 +103,18 @@ export function useUpdateCarrier() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: integrationKeys.carriers() });
-      message.success('Transportadora atualizada com sucesso');
+      messageApi?.success('Transportadora atualizada com sucesso');
     },
     onError: (error: Error, _variables, context) => {
       if (context?.previous) {
         queryClient.setQueryData(integrationKeys.carrier(_variables.id), context.previous);
       }
-      message.error(error.message);
+      messageApi?.error(error.message);
     },
   });
 }
 
-export function useDeleteCarrier() {
+export function useDeleteCarrier(messageApi?: MessageInstance) {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -127,10 +127,10 @@ export function useDeleteCarrier() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: integrationKeys.carriers() });
-      message.success('Transportadora excluída com sucesso');
+      messageApi?.success('Transportadora excluída com sucesso');
     },
     onError: (error: Error) => {
-      message.error(error.message);
+      messageApi?.error(error.message);
     },
   });
 }
@@ -152,7 +152,7 @@ export function useApis(carrierId?: string) {
   });
 }
 
-export function useCreateApi() {
+export function useCreateApi(messageApi?: MessageInstance) {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -169,15 +169,15 @@ export function useCreateApi() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: integrationKeys.apis(variables.carrierId) });
       queryClient.invalidateQueries({ queryKey: integrationKeys.apis() });
-      message.success('API criada com sucesso');
+      messageApi?.success('API criada com sucesso');
     },
     onError: (error: Error) => {
-      message.error(error.message);
+      messageApi?.error(error.message);
     },
   });
 }
 
-export function useUpdateApi() {
+export function useUpdateApi(messageApi?: MessageInstance) {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -193,15 +193,15 @@ export function useUpdateApi() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: integrationKeys.apis() });
-      message.success('API atualizada com sucesso');
+      messageApi?.success('API atualizada com sucesso');
     },
     onError: (error: Error) => {
-      message.error(error.message);
+      messageApi?.error(error.message);
     },
   });
 }
 
-export function useDeleteApi() {
+export function useDeleteApi(messageApi?: MessageInstance) {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -213,10 +213,10 @@ export function useDeleteApi() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: integrationKeys.apis() });
-      message.success('API excluída com sucesso');
+      messageApi?.success('API excluída com sucesso');
     },
     onError: (error: Error) => {
-      message.error(error.message);
+      messageApi?.error(error.message);
     },
   });
 }
@@ -237,7 +237,7 @@ export function useAuth(carrierId: string | null) {
   });
 }
 
-export function useSaveAuth() {
+export function useSaveAuth(messageApi?: MessageInstance) {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -253,15 +253,15 @@ export function useSaveAuth() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: integrationKeys.auth(variables.carrierId) });
-      message.success('Autenticação salva com sucesso');
+      messageApi?.success('Autenticação salva com sucesso');
     },
     onError: (error: Error) => {
-      message.error(error.message);
+      messageApi?.error(error.message);
     },
   });
 }
 
-export function useRotateSecret() {
+export function useRotateSecret(messageApi?: MessageInstance) {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -277,10 +277,10 @@ export function useRotateSecret() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: integrationKeys.auth(variables.carrierId) });
-      message.success('Credencial rotacionada com sucesso');
+      messageApi?.success('Credencial rotacionada com sucesso');
     },
     onError: (error: Error) => {
-      message.error(error.message);
+      messageApi?.error(error.message);
     },
   });
 }
@@ -316,7 +316,7 @@ export function usePaymentGateway() {
   });
 }
 
-export function useSavePaymentGateway() {
+export function useSavePaymentGateway(messageApi?: MessageInstance) {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -345,15 +345,15 @@ export function useSavePaymentGateway() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: integrationKeys.paymentGateway() });
-      message.success('Gateway de pagamento salvo com sucesso');
+      messageApi?.success('Gateway de pagamento salvo com sucesso');
     },
     onError: (error: Error) => {
-      message.error(error.message);
+      messageApi?.error(error.message);
     },
   });
 }
 
-export function useTestPaymentWebhook() {
+export function useTestPaymentWebhook(messageApi?: MessageInstance) {
   return useMutation({
     mutationFn: async (): Promise<{ success: boolean; message: string }> => {
       const res = await fetch('/api/integrations/payment-gateway/test-webhook', {
@@ -364,10 +364,10 @@ export function useTestPaymentWebhook() {
       return (json.data ?? json) as { success: boolean; message: string };
     },
     onSuccess: (data) => {
-      message.success(data.message || 'Webhook testado com sucesso');
+      messageApi?.success(data.message || 'Webhook testado com sucesso');
     },
     onError: (error: Error) => {
-      message.error(error.message);
+      messageApi?.error(error.message);
     },
   });
 }
@@ -387,7 +387,7 @@ export function useHealth() {
   });
 }
 
-export function useTestConnection() {
+export function useTestConnection(messageApi?: MessageInstance) {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -402,13 +402,13 @@ export function useTestConnection() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: integrationKeys.health() });
       if (data.status === 'up') {
-        message.success('Conexão estabelecida com sucesso');
+        messageApi?.success('Conexão estabelecida com sucesso');
       } else {
-        message.warning(data.message || 'Falha na conexão');
+        messageApi?.warning(data.message || 'Falha na conexão');
       }
     },
     onError: (error: Error) => {
-      message.error(error.message);
+      messageApi?.error(error.message);
     },
   });
 }

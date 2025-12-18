@@ -1,6 +1,5 @@
-import type { CardProps } from "antd/es/card";
-import Card from "antd/es/card";
-import Typography from "antd/es/typography";
+import { Card, Typography } from 'antd';
+import type { CardProps } from 'antd';
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils/cn";
 import { spacing } from "@/lib/ui/theme";

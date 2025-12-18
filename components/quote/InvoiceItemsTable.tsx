@@ -1,7 +1,7 @@
 "use client";
 
 import { Alert, Card, Empty, Skeleton, Table, Typography } from "antd";
-import type { ColumnsType } from "antd/es/table";
+import type { TableProps } from 'antd';
 import type { InvoiceItem } from "@/lib/types/invoice";
 
 export interface InvoiceItemsTableProps {
@@ -17,7 +17,7 @@ export function InvoiceItemsTable({
   error = null,
   onRetry,
 }: InvoiceItemsTableProps) {
-  const columns: ColumnsType<InvoiceItem> = [
+  const columns: TableProps<InvoiceItem>['columns'] = [
     {
       title: "#",
       key: "index",

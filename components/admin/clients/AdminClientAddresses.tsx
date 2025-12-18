@@ -21,7 +21,7 @@ import {
   DeleteOutlined,
   StarOutlined,
 } from "@ant-design/icons";
-import type { ColumnsType } from "antd/es/table";
+import type { TableProps } from 'antd';
 import { maskCEP } from "@/lib/masks";
 
 interface Address {
@@ -125,7 +125,7 @@ export default function AdminClientAddresses({
     }
   };
 
-  const columns: ColumnsType<Address> = [
+  const columns: TableProps<Address>['columns'] = [
     {
       title: "Apelido",
       dataIndex: "label",

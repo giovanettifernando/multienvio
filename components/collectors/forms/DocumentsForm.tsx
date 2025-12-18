@@ -3,7 +3,7 @@
 import { useFormContext } from 'react-hook-form';
 import { Form, Upload, Space, Typography, Alert } from 'antd';
 import { UploadOutlined, CheckCircleFilled, CloseCircleFilled } from '@ant-design/icons';
-import type { UploadFile } from 'antd/es/upload/interface';
+import type { UploadFile } from 'antd';
 import type { CollectorFormInput } from '@/lib/collectors/types';
 
 const { Text, Title } = Typography;

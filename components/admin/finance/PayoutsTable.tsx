@@ -12,7 +12,7 @@ import {
   App,
 } from 'antd';
 import { ELModal } from '@/components/ui/ELModal';
-import type { ColumnsType } from 'antd/es/table';
+import type { TableProps } from 'antd';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import { CheckOutlined, LinkOutlined } from '@ant-design/icons';
@@ -113,7 +113,7 @@ export function PayoutsTable({ period }: PayoutsTableProps) {
     setMarkPaidModalOpen(true);
   };
 
-  const columns: ColumnsType<CarrierPayout> = [
+  const columns: TableProps<CarrierPayout>['columns'] = [
     {
       title: 'Período',
       key: 'period',

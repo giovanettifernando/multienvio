@@ -1,5 +1,5 @@
-import type { FormItemProps } from "antd/es/form";
-import Form from "antd/es/form";
+import { Form } from 'antd';
+import type { FormItemProps } from 'antd';
 import { cn } from "@/lib/utils/cn";
 import styles from "./ELFormItem.module.css";
 

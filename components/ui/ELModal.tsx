@@ -1,7 +1,7 @@
 "use client";
 
-import Modal from "antd/es/modal";
-import type { ModalProps } from "antd/es/modal";
+import { Modal } from 'antd';
+import type { ModalProps } from 'antd';
 import { cn } from "@/lib/utils/cn";
 import "./ELModal.module.css";
 

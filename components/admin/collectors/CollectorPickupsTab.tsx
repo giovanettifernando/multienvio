@@ -14,7 +14,7 @@ import {
   Typography,
   Tooltip,
 } from "antd";
-import type { ColumnsType } from "antd/es/table";
+import type { TableProps } from 'antd';
 import {
   CarOutlined,
   ShoppingOutlined,
@@ -141,7 +141,7 @@ export default function CollectorPickupsTab({ collectorId }: CollectorPickupsTab
     }
   };
 
-  const columns: ColumnsType<PickupItem> = [
+  const columns: TableProps<PickupItem>['columns'] = [
     {
       title: "Data da Coleta",
       key: "collectedAt",

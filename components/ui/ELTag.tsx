@@ -1,5 +1,5 @@
-import type { TagProps } from "antd/es/tag";
-import Tag from "antd/es/tag";
+import { Tag } from 'antd';
+import type { TagProps } from 'antd';
 import { cn } from "@/lib/utils/cn";
 import styles from "./ELTag.module.css";
 

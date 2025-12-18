@@ -18,7 +18,7 @@ import {
   Tooltip,
   DatePicker,
 } from 'antd';
-import type { ColumnsType } from 'antd/es/table';
+import type { TableProps } from 'antd';
 import { useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import {
@@ -48,7 +48,7 @@ const formatDate = (dateStr: string | null) =>
   dateStr ? dayjs(dateStr).format('DD/MM/YYYY HH:mm') : '-';
 
 // Colunas da tabela expandida (detalhes dos envios)
-const shipmentColumns: ColumnsType<CarrierPayoutShipment> = [
+const shipmentColumns: TableProps<CarrierPayoutShipment>['columns'] = [
   {
     title: 'Rastreio',
     key: 'tracking',
@@ -271,7 +271,7 @@ export function CarrierPayoutsTable() {
   };
 
   // Colunas da tabela principal (por transportadora)
-  const carrierColumns: ColumnsType<CarrierPayoutSummary> = [
+  const carrierColumns: TableProps<CarrierPayoutSummary>['columns'] = [
     {
       title: 'Transportadora',
       dataIndex: 'carrier',

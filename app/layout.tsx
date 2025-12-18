@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { AntdRegistry } from "@ant-design/nextjs-registry";
-import ConfigProvider from "antd/es/config-provider";
+import { ConfigProvider } from 'antd';
 import ptBR from "antd/locale/pt_BR";
 import { Inter } from "next/font/google";
 import { AppProviders } from "@/components/providers/app-providers";

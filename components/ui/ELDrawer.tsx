@@ -1,7 +1,7 @@
 "use client";
 
-import Drawer from "antd/es/drawer";
-import type { DrawerProps } from "antd/es/drawer";
+import { Drawer } from 'antd';
+import type { DrawerProps } from 'antd';
 import { cn } from "@/lib/utils/cn";
 import "./ELDrawer.module.css";
 

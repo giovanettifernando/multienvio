@@ -21,7 +21,7 @@ import {
   DeleteOutlined,
   StarOutlined,
 } from "@ant-design/icons";
-import type { ColumnsType } from "antd/es/table";
+import type { TableProps } from 'antd';
 import { maskCEP, maskCPF, maskPhone } from "@/lib/masks";
 
 interface Recipient {
@@ -133,7 +133,7 @@ export default function AdminClientRecipients({
     }
   };
 
-  const columns: ColumnsType<Recipient> = [
+  const columns: TableProps<Recipient>['columns'] = [
     {
       title: "Nome",
       dataIndex: "name",

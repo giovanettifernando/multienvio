@@ -29,7 +29,7 @@ import {
 import { ELModal } from '@/components/ui/ELModal';
 import { ELInput } from '@/components/ui/ELInput';
 import { inputNumberFormatterBRL, inputNumberParserBRL } from '@/lib/utils/format';
-import type { ColumnsType } from 'antd/es/table';
+import type { TableProps } from 'antd';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import {
@@ -418,7 +418,7 @@ export function ExpensesTable() {
   };
 
   // Table columns
-  const columns: ColumnsType<Expense> = [
+  const columns: TableProps<Expense>['columns'] = [
     {
       title: 'Data',
       dataIndex: 'createdAt',

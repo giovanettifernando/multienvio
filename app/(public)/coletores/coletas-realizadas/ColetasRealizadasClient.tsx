@@ -6,10 +6,11 @@ import { ELModal } from '@/components/ui/ELModal';
 import { ELEmpty } from '@/components/ui/ELEmpty';
 import { EnvironmentOutlined, InboxOutlined, PhoneOutlined, SearchOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import type { TableRowSelection } from 'antd/es/table/interface';
+// Note: TableRowSelection is not directly exported from 'antd', keeping /es/ import
+import type { TableProps } from 'antd';
 import dayjs, { Dayjs } from 'dayjs';
 import { PageShell } from '@/components/shared/PageShell';
 import { useQuery } from '@tanstack/react-query';
-import type { ColumnsType } from 'antd/es/table';
 
 const { RangePicker } = DatePicker;
 const { Title } = Typography;
@@ -351,7 +352,7 @@ export default function ColetasRealizadasClient() {
     }),
   };
 
-  const columns: ColumnsType<CompletedPickup> = [
+  const columns: TableProps<CompletedPickup>['columns'] = [
     {
       title: 'Código',
       dataIndex: ['shipment', 'trackingCode'],

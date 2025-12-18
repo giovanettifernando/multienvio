@@ -12,7 +12,7 @@ import {
   Spin,
   Card,
 } from 'antd';
-import type { ColumnsType } from 'antd/es/table';
+import type { TableProps } from 'antd';
 import { useQuery } from '@tanstack/react-query';
 import { DownloadOutlined, ReloadOutlined } from '@ant-design/icons';
 import {
@@ -90,8 +90,8 @@ export function DRETable() {
   }, [data]);
 
   // Colunas da tabela
-  const columns = useMemo<ColumnsType<DRETableRow>>(() => {
-    const cols: ColumnsType<DRETableRow> = [
+  const columns = useMemo<TableProps<DRETableRow>['columns']>(() => {
+    const cols: NonNullable<TableProps<DRETableRow>['columns']> = [
       {
         title: 'Cód.',
         dataIndex: 'code',

@@ -20,7 +20,7 @@ import {
   Badge,
 } from 'antd';
 import { ELModal } from '@/components/ui/ELModal';
-import type { ColumnsType } from 'antd/es/table';
+import type { TableProps } from 'antd';
 import { useQuery } from '@tanstack/react-query';
 import {
   SearchOutlined,
@@ -162,7 +162,7 @@ export default function ExceptionsTable({ dateStart, dateEnd }: ExceptionsTableP
       }),
   });
 
-  const columns = useMemo<ColumnsType<ExceptionItem>>(
+  const columns = useMemo<TableProps<ExceptionItem>['columns']>(
     () => [
       {
         title: 'Tipo',

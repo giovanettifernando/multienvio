@@ -12,7 +12,7 @@ import {
   App,
 } from 'antd';
 import { ELInput } from '@/components/ui/ELInput';
-import type { ColumnsType } from 'antd/es/table';
+import type { TableProps } from 'antd';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import { CheckOutlined, DollarOutlined } from '@ant-design/icons';
@@ -117,7 +117,7 @@ export function CommissionsTable({ period }: CommissionsTableProps) {
     markPaidMutation.mutate(id);
   };
 
-  const columns: ColumnsType<CommissionItem> = [
+  const columns: TableProps<CommissionItem>['columns'] = [
     {
       title: 'Período',
       key: 'period',

@@ -13,7 +13,7 @@ import {
   Tag,
   Typography,
 } from "antd";
-import type { ColumnsType } from "antd/es/table";
+import type { TableProps } from 'antd';
 import {
   InboxOutlined,
   CheckCircleOutlined,
@@ -126,7 +126,7 @@ export default function PickupPointReceptionsTab({ pointId }: PickupPointRecepti
     }
   };
 
-  const columns: ColumnsType<ReceptionItem> = [
+  const columns: TableProps<ReceptionItem>['columns'] = [
     {
       title: "Data",
       key: "createdAt",

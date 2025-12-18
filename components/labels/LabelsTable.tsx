@@ -1,14 +1,8 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import Table from 'antd/es/table';
-import Space from 'antd/es/space';
-import Tag from 'antd/es/tag';
-import Typography from 'antd/es/typography';
-import Popconfirm from 'antd/es/popconfirm';
-import App from 'antd/es/app';
-import Grid from 'antd/es/grid';
-import type { ColumnsType } from 'antd/es/table';
+import { Table, Space, Tag, Typography, Popconfirm, App, Grid } from 'antd';
+import type { TableProps } from 'antd';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { EyeOutlined, StopOutlined, DownOutlined, RightOutlined } from '@ant-design/icons';
 
@@ -306,7 +300,7 @@ export function LabelsTable({ onOpenLabel, onOpenPackage }: LabelsTableProps) {
     }
 
     // Desktop: tabela padrão
-    const packageColumns: ColumnsType<PackageItem> = [
+    const packageColumns: TableProps<PackageItem>['columns'] = [
       {
         title: 'Volume',
         key: 'volume',

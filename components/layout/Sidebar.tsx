@@ -2,9 +2,7 @@
 
 import { useMemo } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import Layout from 'antd/es/layout';
-import Menu from 'antd/es/menu';
-import Flex from 'antd/es/flex';
+import { Layout, Menu, Flex } from 'antd';
 import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
