@@ -1,7 +1,7 @@
 "use client";
 
 import type { PickupStatus } from "@/shared/types/pickup";
-import { ELStatusTag, type StatusVariant } from "./ELStatusTag";
+import { ELStatusTag, type StatusVariant } from "@/shared/ui/ELStatusTag";
 
 const STATUS_VARIANT: Record<PickupStatus, StatusVariant> = {
   PENDING: "warning",

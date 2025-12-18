@@ -3,13 +3,10 @@
 import { useEffect } from 'react';
 import {
   App,
-  Button,
   Col,
   Descriptions,
-  Drawer,
   Form,
   Row,
-  Select,
   Space,
   Statistic,
   Tag,
@@ -18,6 +15,7 @@ import { useMutation } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import type { AccountStatus, AdminClient } from '@/modules/admin/application/types';
 import { updateAccount } from '@/modules/admin/application/api/clients';
+import { ELButton, ELDrawer, ELFormItem, ELSelect } from '@/shared/ui';
 import { formatBRL } from '@/shared/utils/format';
 
 interface ClientDrawerProps {
@@ -87,17 +85,17 @@ export function ClientDrawer({ open, client, onClose, onStatusChange }: ClientDr
   const monthBalance = monthBalanceCents / 100;
 
   return (
-    <Drawer
+    <ELDrawer
       title="Detalhes da Conta"
       open={open}
       onClose={onClose}
-      width={720}
-      extra={
+      drawerSize="lg"
+      footer={
         <Space>
-          <Button onClick={onClose}>Fechar</Button>
-          <Button type="primary" onClick={handleSave} loading={updateMutation.isPending}>
+          <ELButton onClick={onClose}>Fechar</ELButton>
+          <ELButton variant="primary" onClick={handleSave} loading={updateMutation.isPending}>
             Salvar
-          </Button>
+          </ELButton>
         </Space>
       }
     >
@@ -137,19 +135,20 @@ export function ClientDrawer({ open, client, onClose, onStatusChange }: ClientDr
         </Descriptions>
 
         <Form form={form} layout="vertical">
-          <Form.Item
+          <ELFormItem
             name="status"
             label="Status da Conta"
             rules={[{ required: true, message: 'Selecione o status' }]}
+            required
           >
-            <Select
+            <ELSelect
               options={[
                 { label: statusLabels.active, value: 'active' },
                 { label: statusLabels.blocked, value: 'blocked' },
                 { label: statusLabels.suspended, value: 'suspended' },
               ]}
             />
-          </Form.Item>
+          </ELFormItem>
         </Form>
 
         <Descriptions title="Informações Financeiras" bordered column={1}>
@@ -174,6 +173,6 @@ export function ClientDrawer({ open, client, onClose, onStatusChange }: ClientDr
           </Descriptions.Item>
         </Descriptions>
       </Space>
-    </Drawer>
+    </ELDrawer>
   );
 }

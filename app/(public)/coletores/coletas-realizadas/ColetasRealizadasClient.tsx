@@ -1,9 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Card, Table, Tag, Space, Spin, App, DatePicker, Input, Row, Col, Typography, Button, Form } from 'antd';
-import { ELModal } from '@/shared/ui/ELModal';
-import { ELEmpty } from '@/shared/ui/ELEmpty';
+import { Table, Tag, Space, Spin, App, Row, Col, Typography, Form } from 'antd';
+import { ELButton, ELCard, ELDatePicker, ELInput, ELModal, ELEmpty } from '@/shared/ui';
 import { EnvironmentOutlined, InboxOutlined, PhoneOutlined, SearchOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import type { TableRowSelection } from 'antd/es/table/interface';
 // Note: TableRowSelection is not directly exported from 'antd', keeping /es/ import
@@ -12,7 +11,8 @@ import dayjs, { Dayjs } from 'dayjs';
 import { PageShell } from '@/shared/ui/PageShell';
 import { useQuery } from '@tanstack/react-query';
 
-const { RangePicker } = DatePicker;
+const { Card, Button, Input, DatePicker } = { Card: ELCard, Button: ELButton, Input: ELInput, DatePicker: ELDatePicker };
+const { RangePicker } = ELDatePicker;
 const { Title } = Typography;
 
 interface SenderAddress {

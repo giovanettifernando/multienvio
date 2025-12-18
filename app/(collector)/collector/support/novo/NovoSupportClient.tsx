@@ -1,9 +1,12 @@
 'use client';
 
-import { Card, Space, Typography } from 'antd';
+import { Space, Typography } from 'antd';
+import { ELCard } from '@/shared/ui';
 import { useRouter } from 'next/navigation';
+
 import { SupportForm } from '@/modules/support/ui/components/SupportForm';
 
+const Card = ELCard;
 const { Title, Text } = Typography;
 
 export default function NovoSupportClient() {

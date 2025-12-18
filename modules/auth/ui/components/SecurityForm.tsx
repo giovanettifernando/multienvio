@@ -1,7 +1,8 @@
 "use client";
 
 import React from "react";
-import { App, Button, Card, Form, Input, Space } from "antd";
+import { App, Space } from "antd";
+import { ELButton, ELCard, ELFormItem, ELInput } from "@/shared/ui";
 import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -69,61 +70,61 @@ export default function SecurityForm() {
   });
 
   return (
-    <Card title="Segurança">
+    <ELCard header={{ title: "Segurança" }}>
       <form onSubmit={handleSubmit}>
         <Space orientation="vertical" size={16} style={{ width: "100%" }}>
           <Controller
             name="currentPassword"
             control={form.control}
             render={({ field, fieldState }) => (
-              <Form.Item
+              <ELFormItem
                 label="Senha atual"
                 required
-                validateStatus={fieldState.error ? "error" : ""}
+                validateStatus={fieldState.error ? "error" : undefined}
                 help={fieldState.error?.message}
               >
-                <Input.Password {...field} placeholder="Senha atual" />
-              </Form.Item>
+                <ELInput.Password {...field} placeholder="Senha atual" />
+              </ELFormItem>
             )}
           />
           <Controller
             name="newPassword"
             control={form.control}
             render={({ field, fieldState }) => (
-              <Form.Item
+              <ELFormItem
                 label="Nova senha"
                 required
-                validateStatus={fieldState.error ? "error" : ""}
+                validateStatus={fieldState.error ? "error" : undefined}
                 help={fieldState.error?.message}
               >
-                <Input.Password {...field} placeholder="Nova senha" />
-              </Form.Item>
+                <ELInput.Password {...field} placeholder="Nova senha" />
+              </ELFormItem>
             )}
           />
           <Controller
             name="confirmNewPassword"
             control={form.control}
             render={({ field, fieldState }) => (
-              <Form.Item
+              <ELFormItem
                 label="Confirmar nova senha"
                 required
-                validateStatus={fieldState.error ? "error" : ""}
+                validateStatus={fieldState.error ? "error" : undefined}
                 help={fieldState.error?.message}
               >
-                <Input.Password {...field} placeholder="Repita a nova senha" />
-              </Form.Item>
+                <ELInput.Password {...field} placeholder="Repita a nova senha" />
+              </ELFormItem>
             )}
           />
-          <Button
-            type="primary"
+          <ELButton
+            variant="primary"
             htmlType="submit"
             loading={mutation.isPending}
             disabled={mutation.isPending}
           >
             Atualizar senha
-          </Button>
+          </ELButton>
         </Space>
       </form>
-    </Card>
+    </ELCard>
   );
 }

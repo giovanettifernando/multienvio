@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect } from 'react';
-import { Tag, Space, Typography, Input, Select, App, Button } from 'antd';
+import { Tag, Space, Typography, App } from 'antd';
 import { ReloadOutlined, SearchOutlined } from '@ant-design/icons';
+import { ELButton, ELInput, ELSelect } from '@/shared/ui';
 import { useState } from 'react';
 import type { SupportTicket, Status, Priority } from '@/shared/validation/support';
 import { useTickets } from '@/modules/support/ui/hooks';
@@ -183,53 +184,52 @@ export function NewTicketList({
     <Space orientation="vertical" style={{ width: '100%' }} size="middle">
       <Space style={{ width: '100%', justifyContent: 'space-between' }} align="start" wrap>
         <Space wrap>
-          <Input
+          <ELInput
             placeholder="Buscar por assunto, descrição ou solicitante"
             prefix={<SearchOutlined />}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-          style={{ width: 300 }}
-          allowClear
-        />
-        <Select
-          mode="multiple"
-          placeholder="Filtrar por status"
-          style={{ minWidth: 200 }}
-          value={statusFilter}
-          onChange={setStatusFilter}
-          options={[
-            { value: 'aberto', label: 'Aberto' },
-            { value: 'em_atendimento', label: 'Em Atendimento' },
-            { value: 'resolvido', label: 'Resolvido' },
-            { value: 'fechado', label: 'Fechado' },
-          ]}
-          allowClear
-        />
-        <Select
-          mode="multiple"
-          placeholder="Filtrar por prioridade"
-          style={{ minWidth: 200 }}
-          value={priorityFilter}
-          onChange={setPriorityFilter}
-          options={[
-            { value: 'baixa', label: 'Baixa' },
-            { value: 'media', label: 'Média' },
-            { value: 'alta', label: 'Alta' },
-            { value: 'critica', label: 'Crítica' },
-          ]}
-          allowClear
+            style={{ width: 300 }}
+            allowClear
+          />
+          <ELSelect
+            mode="multiple"
+            placeholder="Filtrar por status"
+            style={{ minWidth: 200 }}
+            value={statusFilter}
+            onChange={setStatusFilter}
+            options={[
+              { value: 'aberto', label: 'Aberto' },
+              { value: 'em_atendimento', label: 'Em Atendimento' },
+              { value: 'resolvido', label: 'Resolvido' },
+              { value: 'fechado', label: 'Fechado' },
+            ]}
+            allowClear
+          />
+          <ELSelect
+            mode="multiple"
+            placeholder="Filtrar por prioridade"
+            style={{ minWidth: 200 }}
+            value={priorityFilter}
+            onChange={setPriorityFilter}
+            options={[
+              { value: 'baixa', label: 'Baixa' },
+              { value: 'media', label: 'Média' },
+              { value: 'alta', label: 'Alta' },
+              { value: 'critica', label: 'Crítica' },
+            ]}
+            allowClear
           />
         </Space>
-        <Button
+        <ELButton
           icon={<ReloadOutlined />}
           onClick={() => {
             void ticketsQuery.refetch();
           }}
           loading={ticketsQuery.isFetching}
-          variant="outlined"
         >
           Atualizar
-        </Button>
+        </ELButton>
       </Space>
 
       <DataTable<SupportTicket>

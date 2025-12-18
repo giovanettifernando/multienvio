@@ -1,8 +1,8 @@
 "use client";
 
 import { DeleteOutlined, DownloadOutlined, PlusOutlined, UploadOutlined } from "@ant-design/icons";
-import { App, Card, Col, Form, InputNumber, Row, Space, Typography, Upload } from "antd";
-import { ELButton } from '@/shared/ui/ELButton';
+import { App, Col, Form, InputNumber, Row, Space, Typography, Upload } from "antd";
+import { ELButton, ELCard, ELFormItem } from '@/shared/ui';
 import {
   Controller,
   type Control,
@@ -156,7 +156,7 @@ function VolumeItem({
   const cubageKg = computeCubage(volumeValue, DEFAULT_CUBAGE_FACTOR);
 
   return (
-    <Card
+    <ELCard
       key={field.id}
       className={styles.volumeCard}
       data-testid={`volume-card-${index}`}
@@ -176,6 +176,7 @@ function VolumeItem({
       styles={{
         body: { padding: 12 },
       }}
+      padding="sm"
     >
       <Space orientation="vertical" size={16} style={{ width: "100%" }}>
         <Form.Item
@@ -372,7 +373,7 @@ function VolumeItem({
           <strong>{formatNumber(cubageKg)} kg</strong>
         </div>
       </Space>
-    </Card>
+    </ELCard>
   );
 }
 

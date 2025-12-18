@@ -1,9 +1,10 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { Table, Button, Space, Switch, Tooltip, Typography, Tag, App } from 'antd';
-import type { TableProps } from 'antd';
+import { Space, Tooltip, Typography, Tag, App } from 'antd';
 import { EyeOutlined, DeleteOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
+import { ELButton, ELSwitch } from '@/shared/ui';
+import { DataTable, type DataTableColumn } from '@/shared/ui/DataTable';
 import { maskCNPJ } from '@/modules/collectors/application/masks';
 import { formatBRL } from '@/shared/utils/format';
 import DocsStatusBadge from './DocsStatusBadge';
@@ -53,7 +54,7 @@ export default function CollectorsTable({
     });
   };
 
-  const columns: TableProps<Collector>['columns'] = [
+  const columns: DataTableColumn<Collector>[] = [
     {
       title: 'Nome / CNPJ',
       dataIndex: 'pf.nome',
@@ -61,13 +62,13 @@ export default function CollectorsTable({
       render: (_: unknown, record: Collector) => (
         <Space orientation="vertical" size={0}>
           <Tooltip title={`Razão social: ${record.pj.razaoSocial}`}>
-            <Button
-              type="link"
+            <ELButton
+              variant="link"
               style={{ padding: 0, height: 'auto' }}
               onClick={() => router.push(`/admin/coletores/${record.id}`)}
             >
               {record.pf.nome}
-            </Button>
+            </ELButton>
           </Tooltip>
           <Tooltip title={record.pj.cnpj}>
             <Text type="secondary" style={{ fontSize: 12 }}>
@@ -109,11 +110,12 @@ export default function CollectorsTable({
       title: 'Comissão',
       dataIndex: 'commission',
       key: 'commission',
-      render: (commission: Collector['commission']) => {
-        if (commission.kind === 'fixa') {
-          return `${formatBRL(commission.amount)}/coleta`;
+      render: (commission: unknown) => {
+        const comm = commission as Collector['commission'];
+        if (comm.kind === 'fixa') {
+          return `${formatBRL(comm.amount)}/coleta`;
         }
-        return `${formatBRL(commission.amountPerKm)}/km`;
+        return `${formatBRL(comm.amountPerKm)}/km`;
       },
     },
     {
@@ -129,7 +131,7 @@ export default function CollectorsTable({
           <Tag color={record.status === 'active' ? 'green' : 'red'}>
             {record.status === 'active' ? 'Ativo' : 'Bloqueado'}
           </Tag>
-          <Switch
+          <ELSwitch
             size="small"
             checked={record.status === 'active'}
             onChange={(checked) => handleStatusToggle(record, checked)}
@@ -140,37 +142,40 @@ export default function CollectorsTable({
     {
       title: 'Ações',
       key: 'actions',
+      isActions: true,
       render: (_: unknown, record: Collector) => (
         <Space size="small">
-          <Button
-            type="link"
+          <ELButton
+            variant="link"
             icon={<EyeOutlined />}
             size="small"
             onClick={() => router.push(`/admin/coletores/${record.id}`)}
           >
             Ver detalhes
-          </Button>
-          <Button
-            type="link"
+          </ELButton>
+          <ELButton
+            variant="link"
             size="small"
             danger
             icon={<DeleteOutlined />}
             onClick={() => handleDelete(record)}
           >
             Excluir
-          </Button>
+          </ELButton>
         </Space>
       ),
     },
   ];
 
   return (
-    <Table
+    <DataTable<Collector>
       rowKey="id"
       columns={columns}
-      dataSource={data?.items || []}
+      data={data?.items || []}
       loading={loading}
-      scroll={{ x: 1000, y: 'calc(100vh - 340px)' }}
+      enableMobileCards={true}
+      scrollX={1000}
+      scrollY="calc(100vh - 340px)"
       pagination={{
         current: data?.page || 1,
         pageSize: data?.pageSize || 10,

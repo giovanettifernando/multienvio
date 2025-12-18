@@ -2,14 +2,18 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Card, Button, App } from 'antd';
+import { App } from 'antd';
+import { ELButton, ELCard } from '@/shared/ui';
 import { PlusOutlined } from '@ant-design/icons';
 import EntitySearchFilters from '@/shared/ui/EntitySearchFilters';
+
 import PointsTable from '@/modules/pickup-points/ui/components/PointsTable';
 import PointDrawer from '@/modules/pickup-points/ui/components/PointDrawer';
 import { usePickupPointsAPI } from '@/modules/pickup-points/ui/hooks';
 import type { PickupPointFilters, PickupPointFormData, PickupPointListResponse } from '@/modules/pickup-points/application/types';
 import { PageShell } from '@/shared/ui/PageShell';
+
+const { Card, Button } = { Card: ELCard, Button: ELButton };
 
 export default function PickupPointsClient() {
   const { message } = App.useApp();

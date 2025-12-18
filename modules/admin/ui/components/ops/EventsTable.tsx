@@ -1,12 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { Tag, Button, Flex, Select, Space, App } from 'antd';
+import { Tag, Flex, Space, App } from 'antd';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ReloadOutlined, CheckOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import type { OpsEvent } from '@/modules/admin/application/ops/types';
 import { listEvents, retryEvent, markEventProcessed } from '@/modules/admin/application/ops/api';
+import { ELButton, ELSelect } from '@/shared/ui';
 import { DataTable, type DataTableColumn } from '@/shared/ui/DataTable';
 
 const sourceLabels: Record<OpsEvent['source'], string> = {
@@ -28,7 +29,7 @@ export default function EventsTable() {
   const queryClient = useQueryClient();
 
   // Filters
-  const [processedFilter, setProcessedFilter] = useState<boolean | undefined>();
+  const [processedFilter, setProcessedFilter] = useState<string | undefined>();
   const [sourceFilter, setSourceFilter] = useState<OpsEvent['source'] | undefined>();
 
   // Pagination
@@ -42,7 +43,7 @@ export default function EventsTable() {
       listEvents({
         page,
         pageSize,
-        processed: processedFilter,
+        processed: processedFilter === 'true' ? true : processedFilter === 'false' ? false : undefined,
         source: sourceFilter,
       }),
     placeholderData: (prev) => prev,
@@ -186,22 +187,22 @@ export default function EventsTable() {
         <Space size="small">
           {!record.processed && (
             <>
-              <Button
-                type="link"
+              <ELButton
+                variant="link"
                 size="small"
                 icon={<ReloadOutlined />}
                 onClick={() => handleRetry(record.id)}
               >
                 Retry
-              </Button>
-              <Button
-                type="link"
+              </ELButton>
+              <ELButton
+                variant="link"
                 size="small"
                 icon={<CheckOutlined />}
                 onClick={() => handleMarkProcessed(record.id)}
               >
                 Marcar OK
-              </Button>
+              </ELButton>
             </>
           )}
           {record.processed && <span style={{ color: '#52c41a', fontSize: 12 }}>Processado</span>}
@@ -214,18 +215,18 @@ export default function EventsTable() {
     <Flex vertical gap={16}>
       {/* Filters */}
       <Flex gap={8} wrap="wrap">
-        <Select
+        <ELSelect
           placeholder="Status"
           value={processedFilter}
           onChange={setProcessedFilter}
           style={{ width: 140 }}
           allowClear
           options={[
-            { value: true, label: 'Processado' },
-            { value: false, label: 'Pendente' },
+            { value: 'true', label: 'Processado' },
+            { value: 'false', label: 'Pendente' },
           ]}
         />
-        <Select
+        <ELSelect
           placeholder="Fonte"
           value={sourceFilter}
           onChange={setSourceFilter}

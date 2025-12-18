@@ -2,11 +2,14 @@
 
 import { useState } from 'react';
 import { PlusOutlined } from '@ant-design/icons';
-import { Button, Card } from 'antd';
+import { ELButton, ELCard } from '@/shared/ui';
 import { useRouter, useSearchParams } from 'next/navigation';
+
 import { NewTicketList } from '@/modules/support/ui/components/NewTicketList';
 import { TicketDetailsDrawer } from '@/modules/support/ui/components/TicketDetailsDrawer';
 import { PageShell } from '@/shared/ui/PageShell';
+
+const { Button, Card } = { Button: ELButton, Card: ELCard };
 
 export default function SupportClient() {
   const router = useRouter();
@@ -31,7 +34,6 @@ export default function SupportClient() {
       extra={
         <Button
           type="primary"
-          variant="solid"
           icon={<PlusOutlined />}
           onClick={() => router.push('/collector/support/novo')}
         >

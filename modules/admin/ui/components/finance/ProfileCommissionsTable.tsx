@@ -4,20 +4,16 @@ import { useState, useMemo } from 'react';
 import {
   Table,
   Flex,
-  Select,
-  Card,
   Statistic,
   Row,
   Col,
-  Button,
   Typography,
   Tag,
   Space,
   Empty,
   Spin,
-  DatePicker,
-  Segmented,
 } from 'antd';
+import { ELButton, ELCard, ELSelect, ELDatePicker, ELSegmented } from '@/shared/ui';
 import type { TableProps } from 'antd';
 import { useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
@@ -42,7 +38,6 @@ import { formatBRL } from '@/shared/utils/format';
 import { formatDateTimeBR } from '@/shared/utils/date';
 
 const { Text, Title } = Typography;
-const { RangePicker } = DatePicker;
 
 type PeriodPreset = 'today' | '7d' | '30d' | 'month' | 'lastMonth' | 'custom';
 
@@ -297,7 +292,7 @@ export function ProfileCommissionsTable() {
       <Space wrap size="middle">
         <Space size={4}>
           <CalendarOutlined style={{ color: '#8c8c8c' }} />
-          <Select
+          <ELSelect
             value={periodPreset}
             onChange={(v) => {
               setPeriodPreset(v);
@@ -317,7 +312,7 @@ export function ProfileCommissionsTable() {
           />
         </Space>
         {periodPreset === 'custom' && (
-          <RangePicker
+          <ELDatePicker.RangePicker
             value={customRange}
             onChange={(dates) => {
               if (dates && dates[0] && dates[1]) {
@@ -327,7 +322,7 @@ export function ProfileCommissionsTable() {
             format="DD/MM/YYYY"
           />
         )}
-        <Segmented
+        <ELSegmented
           value={profileType}
           onChange={(v) => {
             setProfileType(v as ProfileType);
@@ -338,7 +333,7 @@ export function ProfileCommissionsTable() {
             { label: 'Pontos de Coleta', value: 'pickup_point', icon: <ShopOutlined /> },
           ]}
         />
-        <Select
+        <ELSelect
           value={statusFilter}
           onChange={setStatusFilter}
           style={{ width: 160 }}
@@ -350,13 +345,13 @@ export function ProfileCommissionsTable() {
         />
       </Space>
 
-      <Button
+      <ELButton
         icon={<DownloadOutlined />}
         onClick={handleExportCSV}
         disabled={!data || data.profiles.length === 0}
       >
         Exportar CSV
-      </Button>
+      </ELButton>
     </Flex>
   );
 
@@ -418,7 +413,7 @@ export function ProfileCommissionsTable() {
       {renderFilters()}
 
       {/* Resumo Geral */}
-      <Card size="small">
+      <ELCard padding="sm">
         <Row gutter={[24, 16]}>
           <Col xs={24} sm={12} md={4}>
             <Statistic
@@ -465,7 +460,7 @@ export function ProfileCommissionsTable() {
             />
           </Col>
         </Row>
-      </Card>
+      </ELCard>
 
       {/* Tabela por Perfil */}
       <Table<ProfileCommissionSummary>

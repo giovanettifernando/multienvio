@@ -2,7 +2,8 @@
 
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { Layout, Menu, Button, Dropdown, Spin, App as AntdApp, Drawer } from 'antd';
+import { Layout, Menu, Dropdown, Spin, App as AntdApp } from 'antd';
+import { ELButton, ELDrawer } from '@/shared/ui';
 import {
   DashboardOutlined,
   InboxOutlined,
@@ -14,6 +15,7 @@ import {
 } from '@ant-design/icons';
 import { useCollectorSession } from '@/modules/collectors/ui/state/useCollectorSession';
 
+const { Button, Drawer } = { Button: ELButton, Drawer: ELDrawer };
 const { Header, Sider, Content } = Layout;
 
 // Hook para detectar viewport mobile de forma reativa

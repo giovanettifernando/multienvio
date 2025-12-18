@@ -10,7 +10,8 @@ import dayjs from 'dayjs';
 import { DownloadOutlined, EyeOutlined } from '@ant-design/icons';
 import type { Paged } from '@/modules/admin/application/finance/types';
 import type { AdminWalletTransaction } from '@/app/api/admin/finance/wallet-transactions/route';
-import type { WalletTxType } from '@prisma/client';
+
+type WalletTxType = 'TOPUP' | 'PURCHASE' | 'ADJUSTMENT' | 'REFUND' | 'TRANSFER' | 'WITHDRAW';
 
 const { RangePicker } = DatePicker;
 

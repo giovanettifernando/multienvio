@@ -1,7 +1,7 @@
 "use client";
 
 import type { TrackingEventType } from '@/shared/types/tracking';
-import { ELStatusTag, type StatusVariant } from "./ELStatusTag";
+import { ELStatusTag, type StatusVariant } from "@/shared/ui/ELStatusTag";
 
 const STATUS_VARIANT: Record<TrackingEventType, StatusVariant> = {
   CREATED: "default",

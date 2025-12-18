@@ -3,16 +3,14 @@
 import React, { useState } from "react";
 import {
   App,
-  Button,
-  Card,
   Empty,
-  Popconfirm,
   Space,
   Spin,
   Tag,
   Typography,
   theme,
 } from "antd";
+import { ELButton, ELCard, ELPopconfirm } from "@/shared/ui";
 import { CreditCardOutlined, DeleteOutlined, StarOutlined, StarFilled } from "@ant-design/icons";
 import type { Card as CardType } from '@/shared/types/account';
 import {
@@ -87,13 +85,15 @@ export default function CardsList() {
   const loading = cardsQuery.isLoading;
 
   return (
-    <Card
-      title="Cartões de pagamento"
-      extra={
-        <Button type="primary" icon={<CreditCardOutlined />} onClick={() => setShowModal(true)}>
-          Adicionar cartão
-        </Button>
-      }
+    <ELCard
+      header={{
+        title: "Cartões de pagamento",
+        extra: (
+          <ELButton variant="primary" icon={<CreditCardOutlined />} onClick={() => setShowModal(true)}>
+            Adicionar cartão
+          </ELButton>
+        ),
+      }}
     >
       {loading ? (
         <div style={{ textAlign: "center", padding: "40px 0" }}>
@@ -130,8 +130,8 @@ export default function CardsList() {
                 </div>
               </div>
               <Space orientation="vertical" size={0} style={{ alignItems: "flex-end" }}>
-                <Button
-                  type="text"
+                <ELButton
+                  variant="text"
                   size="small"
                   icon={item.isDefault ? <StarFilled style={{ color: "#faad14" }} /> : <StarOutlined />}
                   disabled={item.isDefault}
@@ -142,15 +142,15 @@ export default function CardsList() {
                   onClick={() => handleSetDefault(item.id)}
                 >
                   {item.isDefault ? "Principal" : "Definir como principal"}
-                </Button>
-                <Popconfirm
+                </ELButton>
+                <ELPopconfirm
                   title="Remover cartão"
                   okText="Remover"
                   cancelText="Cancelar"
                   onConfirm={() => handleDelete(item.id)}
                 >
-                  <Button
-                    type="link"
+                  <ELButton
+                    variant="link"
                     size="small"
                     danger
                     icon={<DeleteOutlined />}
@@ -160,8 +160,8 @@ export default function CardsList() {
                     }
                   >
                     Remover
-                  </Button>
-                </Popconfirm>
+                  </ELButton>
+                </ELPopconfirm>
               </Space>
             </div>
           ))}
@@ -174,6 +174,6 @@ export default function CardsList() {
         onSubmit={handleSubmit}
         onCancel={() => setShowModal(false)}
       />
-    </Card>
+    </ELCard>
   );
 }

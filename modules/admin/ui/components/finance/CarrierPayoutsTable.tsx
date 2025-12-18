@@ -4,20 +4,17 @@ import { useState, useMemo } from 'react';
 import {
   Table,
   Flex,
-  Select,
-  Card,
   Statistic,
   Row,
   Col,
-  Button,
   Typography,
   Tag,
   Space,
   Empty,
   Spin,
   Tooltip,
-  DatePicker,
 } from 'antd';
+import { ELButton, ELCard, ELSelect, ELDatePicker } from '@/shared/ui';
 import type { TableProps } from 'antd';
 import { useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
@@ -39,7 +36,6 @@ import type {
 import { getCarrierPayouts } from '@/modules/admin/application/finance/api';
 
 const { Text, Title } = Typography;
-const { RangePicker } = DatePicker;
 
 type PeriodPreset = 'today' | '7d' | '30d' | 'month' | 'lastMonth' | 'custom';
 
@@ -341,7 +337,7 @@ export function CarrierPayoutsTable() {
       <Space wrap size="middle">
         <Space size={4}>
           <CalendarOutlined style={{ color: '#8c8c8c' }} />
-          <Select
+          <ELSelect
             value={periodPreset}
             onChange={(v) => {
               setPeriodPreset(v);
@@ -361,7 +357,7 @@ export function CarrierPayoutsTable() {
           />
         </Space>
         {periodPreset === 'custom' && (
-          <RangePicker
+          <ELDatePicker.RangePicker
             value={customRange}
             onChange={(dates) => {
               if (dates && dates[0] && dates[1]) {
@@ -371,7 +367,7 @@ export function CarrierPayoutsTable() {
             format="DD/MM/YYYY"
           />
         )}
-        <Select
+        <ELSelect
           value={selectedCarrier}
           onChange={setSelectedCarrier}
           style={{ width: 200 }}
@@ -382,13 +378,13 @@ export function CarrierPayoutsTable() {
         />
       </Space>
 
-      <Button
+      <ELButton
         icon={<DownloadOutlined />}
         onClick={handleExportCSV}
         disabled={!data || filteredCarriers.length === 0}
       >
         Exportar CSV
-      </Button>
+      </ELButton>
     </Flex>
   );
 
@@ -446,7 +442,7 @@ export function CarrierPayoutsTable() {
       {renderFilters()}
 
       {/* Resumo Geral */}
-      <Card size="small">
+      <ELCard padding="sm">
         <Row gutter={[24, 16]}>
           <Col xs={24} sm={12} md={6}>
             <Statistic
@@ -486,7 +482,7 @@ export function CarrierPayoutsTable() {
             />
           </Col>
         </Row>
-      </Card>
+      </ELCard>
 
       {/* Tabela por Transportadora */}
       <Table<CarrierPayoutSummary>

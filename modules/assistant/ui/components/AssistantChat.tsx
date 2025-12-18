@@ -3,11 +3,14 @@
 import { useState, useRef, useEffect, useCallback, Suspense, type KeyboardEvent } from "react";
 import { createPortal } from "react-dom";
 import { usePathname, useSearchParams } from "next/navigation";
-import { Avatar, Badge, Button, Input } from 'antd';
+import { Avatar, Badge } from 'antd';
+import { ELButton, ELInput } from '@/shared/ui';
 import { MessageOutlined, CloseOutlined, SendOutlined, RobotOutlined, ToolOutlined } from "@ant-design/icons";
 import { cn } from "@/shared/utils/cn";
 import { useCurrentUser } from "@/modules/auth/ui/hooks";
 import styles from "./AssistantChat.module.css";
+
+const { Button, Input } = { Button: ELButton, Input: ELInput };
 
 /**
  * Rotas onde o assistente NÃO deve aparecer
@@ -20,7 +23,7 @@ const HIDDEN_ROUTES = [
   "/coletor", // área pública do coletor
 ];
 
-const { TextArea } = Input;
+const { TextArea } = ELInput;
 
 interface Message {
   id: string;

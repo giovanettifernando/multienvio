@@ -1,11 +1,14 @@
 "use client";
 
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
-import { App, Button, Select, Spin } from 'antd';
+import { App, Spin } from 'antd';
+import { ELButton, ELSelect } from '@/shared/ui';
 import { useEffect, useState } from 'react';
 import { useListPackaging, useDeletePackaging, type PackagingTemplate } from '@/modules/quotes/ui/hooks';
 import { ModalNovaEmbalagem } from './ModalNovaEmbalagem';
 import { formatPackagingName } from '@/shared/utils/packaging';
+
+const { Button, Select } = { Button: ELButton, Select: ELSelect };
 
 interface MinhasEmbalagensSelectProps {
   value?: string;

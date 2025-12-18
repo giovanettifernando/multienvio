@@ -3,20 +3,17 @@
 import { useState, useMemo } from 'react';
 import {
   Table,
-  Select,
   Flex,
-  Button,
   Typography,
   Space,
   Empty,
   Spin,
-  Card,
   Tag,
   Row,
   Col,
   Statistic,
-  DatePicker,
 } from 'antd';
+import { ELButton, ELCard, ELSelect, ELDatePicker } from '@/shared/ui';
 import type { TableProps } from 'antd';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -33,7 +30,6 @@ import { formatBRL } from '@/shared/utils/format';
 import { formatDateBR } from '@/shared/utils/date';
 
 const { Text } = Typography;
-const { RangePicker } = DatePicker;
 
 type PayableType = 'collector_commission' | 'pickup_point_commission' | 'carrier_cost' | 'expense';
 type PayableStatus = 'pending' | 'paid';
@@ -263,7 +259,7 @@ export function AccountsPayableTable() {
       <Space wrap size="middle">
         <Space size={4}>
           <Text type="secondary">Período:</Text>
-          <RangePicker
+          <ELDatePicker.RangePicker
             value={dateRange}
             onChange={(dates) => {
               if (dates && dates[0] && dates[1]) {
@@ -276,7 +272,7 @@ export function AccountsPayableTable() {
         </Space>
         <Space size={4}>
           <Text type="secondary">Status:</Text>
-          <Select
+          <ELSelect
             value={status}
             onChange={setStatus}
             style={{ width: 120 }}
@@ -290,20 +286,20 @@ export function AccountsPayableTable() {
       </Space>
 
       <Space>
-        <Button
+        <ELButton
           icon={<ReloadOutlined />}
           onClick={() => refetch()}
           loading={isLoading}
         >
           Atualizar
-        </Button>
-        <Button
+        </ELButton>
+        <ELButton
           icon={<DownloadOutlined />}
           onClick={handleExportCSV}
           disabled={!data?.items?.length}
         >
           Exportar CSV
-        </Button>
+        </ELButton>
       </Space>
     </Flex>
   );
@@ -314,7 +310,7 @@ export function AccountsPayableTable() {
     const { summary } = data;
 
     return (
-      <Card size="small">
+      <ELCard padding="sm">
         <Row gutter={[24, 16]}>
           <Col xs={24} sm={12} md={6}>
             <Statistic
@@ -354,7 +350,7 @@ export function AccountsPayableTable() {
             />
           </Col>
         </Row>
-      </Card>
+      </ELCard>
     );
   };
 
@@ -362,12 +358,12 @@ export function AccountsPayableTable() {
     return (
       <Flex vertical gap={12}>
         {renderFilters()}
-        <Card>
+        <ELCard>
           <Flex vertical justify="center" align="center" gap={12} style={{ minHeight: 300 }}>
             <Spin size="large" />
             <span style={{ color: '#666' }}>Carregando contas a pagar...</span>
           </Flex>
-        </Card>
+        </ELCard>
       </Flex>
     );
   }
@@ -376,7 +372,7 @@ export function AccountsPayableTable() {
     return (
       <Flex vertical gap={12}>
         {renderFilters()}
-        <Card>
+        <ELCard>
           <Empty
             description={
               <Space orientation="vertical">
@@ -387,7 +383,7 @@ export function AccountsPayableTable() {
               </Space>
             }
           />
-        </Card>
+        </ELCard>
       </Flex>
     );
   }
@@ -397,7 +393,7 @@ export function AccountsPayableTable() {
       {renderFilters()}
       {renderSummary()}
 
-      <Card size="small" styles={{ body: { padding: 0 } }}>
+      <ELCard padding="sm" styles={{ body: { padding: 0 } }}>
         <Table<PayableItem>
           dataSource={data?.items || []}
           columns={columns}
@@ -411,7 +407,7 @@ export function AccountsPayableTable() {
           scroll={{ x: 'max-content', y: 'calc(100vh - 520px)' }}
           size="small"
         />
-      </Card>
+      </ELCard>
     </Flex>
   );
 }

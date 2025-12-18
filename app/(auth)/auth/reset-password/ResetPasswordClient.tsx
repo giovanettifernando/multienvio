@@ -5,16 +5,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
-import {
-  Alert,
-  App,
-  Button,
-  Form,
-  Input,
-  Space,
-  Typography,
-} from "antd";
-import { FormCard } from '@/shared/ui/FormCard';
+import { App, Form, Space, Typography } from "antd";
+import { ELAlert, ELButton, ELFormItem, ELInput, FormCard } from '@/shared/ui';
 import {
   ResetPasswordSchema,
   type ResetPasswordAPIInput,
@@ -94,19 +86,19 @@ export default function ResetPasswordClient() {
   if (!token || typeof token !== "string") {
     return (
       <FormCard titulo="Link inválido">
-        <Alert
-          type="error"
+        <ELAlert
+          variant="danger"
           showIcon
           message="Link de redefinição inválido."
           description="Solicite uma nova redefinição para continuar."
         />
-        <Button
+        <ELButton
           style={{ marginTop: 16 }}
-          type="primary"
+          variant="primary"
           href="/auth/forgot-password"
         >
           Solicitar novo link
-        </Button>
+        </ELButton>
       </FormCard>
     );
   }
@@ -124,10 +116,10 @@ export default function ResetPasswordClient() {
         </Typography.Paragraph>
       }
     >
-      <Space orientation="vertical" size={20} style={{ width: "100%" }}>
+      <Space direction="vertical" size={20} style={{ width: "100%" }}>
         {tokenError ? (
-          <Alert
-            type="error"
+          <ELAlert
+            variant="danger"
             showIcon
             message={tokenError}
             description={
@@ -147,24 +139,24 @@ export default function ResetPasswordClient() {
             name="password"
             control={control}
             render={({ field }) => (
-              <Form.Item
+              <ELFormItem
                 label="Nova senha"
                 required
-                validateStatus={errors.password ? "error" : ""}
+                validateStatus={errors.password ? "error" : undefined}
                 help={errors.password?.message}
               >
-                <Input.Password
+                <ELInput.Password
                   {...field}
                   autoComplete="new-password"
                   placeholder="Crie uma nova senha"
                   aria-invalid={Boolean(errors.password)}
                 />
-              </Form.Item>
+              </ELFormItem>
             )}
           />
 
-          <Alert
-            type="info"
+          <ELAlert
+            variant="info"
             showIcon
             message="Requisitos de senha"
             description={
@@ -179,15 +171,15 @@ export default function ResetPasswordClient() {
             style={{ marginBottom: 16 }}
           />
 
-          <Button
-            type="primary"
+          <ELButton
+            variant="primary"
             htmlType="submit"
             loading={mutation.isPending}
             disabled={mutation.isPending}
             block
           >
             Atualizar senha
-          </Button>
+          </ELButton>
         </Form>
       </Space>
     </FormCard>

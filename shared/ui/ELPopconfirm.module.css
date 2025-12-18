@@ -1,0 +1,66 @@
+.popconfirm {
+  --el-popconfirm-bg: var(--el-color-bg-elevated);
+  --el-popconfirm-border: var(--el-color-border);
+}
+
+.popconfirm:global(.ant-popconfirm) {
+  max-width: 320px;
+}
+
+.popconfirm :global(.ant-popover-inner) {
+  background: var(--el-popconfirm-bg);
+  border-radius: 12px;
+  box-shadow: 0 6px 16px 0 rgba(0, 0, 0, 0.08),
+              0 3px 6px -4px rgba(0, 0, 0, 0.12),
+              0 9px 28px 8px rgba(0, 0, 0, 0.05);
+  padding: 16px;
+}
+
+.popconfirm :global(.ant-popconfirm-message) {
+  margin-bottom: 12px;
+}
+
+.popconfirm :global(.ant-popconfirm-message-icon) {
+  font-size: 16px;
+  margin-right: 8px;
+}
+
+.popconfirm :global(.ant-popconfirm-message-title) {
+  color: var(--el-color-text);
+  font-weight: 500;
+}
+
+.popconfirm :global(.ant-popconfirm-description) {
+  color: var(--el-color-text-secondary);
+  font-size: 13px;
+  margin-top: 4px;
+  margin-left: 24px;
+}
+
+.popconfirm :global(.ant-popconfirm-buttons) {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.popconfirm :global(.ant-popconfirm-buttons .ant-btn) {
+  min-width: 72px;
+  border-radius: 8px;
+  height: 32px;
+  font-size: 13px;
+}
+
+/* Responsivo */
+@media (max-width: 768px) {
+  .popconfirm:global(.ant-popconfirm) {
+    max-width: 280px;
+  }
+
+  .popconfirm :global(.ant-popover-inner) {
+    padding: 12px;
+  }
+
+  .popconfirm :global(.ant-popconfirm-buttons .ant-btn) {
+    min-width: 64px;
+  }
+}

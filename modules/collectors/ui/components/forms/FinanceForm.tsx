@@ -1,9 +1,8 @@
 'use client';
 
 import { Controller, useFormContext } from 'react-hook-form';
-import { Segmented, Form, InputNumber, Space, Typography } from 'antd';
-import { ELInput } from '@/shared/ui/ELInput';
-import { ELSelect } from '@/shared/ui/ELSelect';
+import { InputNumber, Space, Typography } from 'antd';
+import { ELFormItem, ELInput, ELSegmented, ELSelect } from '@/shared/ui';
 import type { CollectorFormInput } from '@/modules/collectors/application/types';
 import { inputNumberFormatterBRL, inputNumberParserBRL } from '@/shared/utils/format';
 
@@ -41,8 +40,8 @@ export default function FinanceForm() {
       {/* Seção de Comissão */}
       <div>
         <Title level={5}>Modelo de Comissão</Title>
-        <Form.Item label="Tipo de comissão" required>
-          <Segmented
+        <ELFormItem label="Tipo de comissão" required>
+          <ELSegmented
             value={commissionKind}
             onChange={(value) => handleCommissionKindChange(value as 'fixa' | 'porKm')}
             options={[
@@ -50,12 +49,12 @@ export default function FinanceForm() {
               { label: 'Valor por quilômetro', value: 'porKm' },
             ]}
           />
-        </Form.Item>
+        </ELFormItem>
 
-        <Form.Item
+        <ELFormItem
           label={commissionLabel}
           required
-          validateStatus={errors.commission ? 'error' : ''}
+          validateStatus={errors.commission ? 'error' : undefined}
           help={errors.commission?.message || 'Informe o valor recebido pelo coletor conforme o modelo selecionado.'}
         >
           {commissionKind === 'fixa' ? (
@@ -97,14 +96,14 @@ export default function FinanceForm() {
               )}
             />
           )}
-        </Form.Item>
+        </ELFormItem>
       </div>
 
       {/* Seção de Pagamento */}
       <div>
         <Title level={5}>Forma de Pagamento</Title>
-        <Form.Item label="Método de pagamento" required>
-          <Segmented
+        <ELFormItem label="Método de pagamento" required>
+          <ELSegmented
             value={bankKind}
             onChange={(value) => handleBankKindChange(value as 'pix' | 'transfer')}
             options={[
@@ -112,14 +111,14 @@ export default function FinanceForm() {
               { label: 'Transferência bancária', value: 'transfer' },
             ]}
           />
-        </Form.Item>
+        </ELFormItem>
 
         {bankKind === 'pix' ? (
           <>
-            <Form.Item
+            <ELFormItem
               label="Tipo de chave PIX"
               required
-              validateStatus={errors.bank ? 'error' : ''}
+              validateStatus={errors.bank ? 'error' : undefined}
               help={errors.bank?.message}
             >
               <Controller
@@ -139,12 +138,12 @@ export default function FinanceForm() {
                   />
                 )}
               />
-            </Form.Item>
+            </ELFormItem>
 
-            <Form.Item
+            <ELFormItem
               label="Chave PIX"
               required
-              validateStatus={errors.bank ? 'error' : ''}
+              validateStatus={errors.bank ? 'error' : undefined}
               help={errors.bank?.message}
             >
               <Controller
@@ -154,14 +153,14 @@ export default function FinanceForm() {
                   <ELInput {...field} placeholder="Informe a chave PIX" style={{ width: 300 }} />
                 )}
               />
-            </Form.Item>
+            </ELFormItem>
           </>
         ) : (
           <>
-            <Form.Item
+            <ELFormItem
               label="Código do banco"
               required
-              validateStatus={errors.bank ? 'error' : ''}
+              validateStatus={errors.bank ? 'error' : undefined}
               help={errors.bank?.message || 'Ex: 001, 237, 104'}
             >
               <Controller
@@ -171,13 +170,13 @@ export default function FinanceForm() {
                   <ELInput {...field} placeholder="000" maxLength={3} style={{ width: 120 }} />
                 )}
               />
-            </Form.Item>
+            </ELFormItem>
 
             <Space size={12}>
-              <Form.Item
+              <ELFormItem
                 label="Agência"
                 required
-                validateStatus={errors.bank ? 'error' : ''}
+                validateStatus={errors.bank ? 'error' : undefined}
                 help={errors.bank?.message}
               >
                 <Controller
@@ -187,12 +186,12 @@ export default function FinanceForm() {
                     <ELInput {...field} placeholder="0000" style={{ width: 120 }} />
                   )}
                 />
-              </Form.Item>
+              </ELFormItem>
 
-              <Form.Item
+              <ELFormItem
                 label="Conta"
                 required
-                validateStatus={errors.bank ? 'error' : ''}
+                validateStatus={errors.bank ? 'error' : undefined}
                 help={errors.bank?.message}
               >
                 <Controller
@@ -202,12 +201,12 @@ export default function FinanceForm() {
                     <ELInput {...field} placeholder="12345-6" style={{ width: 150 }} />
                   )}
                 />
-              </Form.Item>
+              </ELFormItem>
 
-              <Form.Item
+              <ELFormItem
                 label="Tipo"
                 required
-                validateStatus={errors.bank ? 'error' : ''}
+                validateStatus={errors.bank ? 'error' : undefined}
                 help={errors.bank?.message}
               >
                 <Controller
@@ -224,13 +223,13 @@ export default function FinanceForm() {
                     />
                   )}
                 />
-              </Form.Item>
+              </ELFormItem>
             </Space>
 
-            <Form.Item
+            <ELFormItem
               label="Titular (Razão Social)"
               required
-              validateStatus={errors.bank ? 'error' : ''}
+              validateStatus={errors.bank ? 'error' : undefined}
               help={errors.bank?.message}
             >
               <Controller
@@ -240,12 +239,12 @@ export default function FinanceForm() {
                   <ELInput {...field} placeholder="Razão social da empresa" />
                 )}
               />
-            </Form.Item>
+            </ELFormItem>
 
-            <Form.Item
+            <ELFormItem
               label="CNPJ do titular"
               required
-              validateStatus={errors.bank ? 'error' : ''}
+              validateStatus={errors.bank ? 'error' : undefined}
               help={errors.bank?.message}
             >
               <Controller
@@ -255,7 +254,7 @@ export default function FinanceForm() {
                   <ELInput {...field} placeholder="00.000.000/0000-00" style={{ width: 220 }} />
                 )}
               />
-            </Form.Item>
+            </ELFormItem>
           </>
         )}
       </div>

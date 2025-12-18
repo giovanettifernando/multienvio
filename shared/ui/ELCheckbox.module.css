@@ -1,0 +1,68 @@
+.checkbox {
+  --el-checkbox-border: var(--el-color-border);
+  --el-checkbox-checked-bg: var(--el-color-primary);
+  --el-checkbox-checked-border: var(--el-color-primary);
+  --el-checkbox-hover-border: var(--el-color-primary);
+}
+
+.checkbox :global(.ant-checkbox-inner) {
+  border-color: var(--el-checkbox-border);
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.checkbox:hover :global(.ant-checkbox-inner) {
+  border-color: var(--el-checkbox-hover-border);
+}
+
+.checkbox :global(.ant-checkbox-checked .ant-checkbox-inner) {
+  background-color: var(--el-checkbox-checked-bg);
+  border-color: var(--el-checkbox-checked-border);
+}
+
+.checkbox :global(.ant-checkbox-indeterminate .ant-checkbox-inner::after) {
+  background-color: var(--el-checkbox-checked-bg);
+}
+
+/* Label */
+.checkbox :global(.ant-checkbox + span) {
+  padding-left: 8px;
+  color: var(--el-color-text);
+}
+
+/* Disabled */
+.checkbox:global(.ant-checkbox-wrapper-disabled) {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Group */
+.checkboxGroup {
+  display: flex;
+  gap: 12px;
+}
+
+.groupHorizontal {
+  flex-direction: row;
+  flex-wrap: wrap;
+}
+
+.groupVertical {
+  flex-direction: column;
+}
+
+.checkboxGroup :global(.ant-checkbox-wrapper) {
+  margin: 0; /* Remove margin default do AntD */
+}
+
+/* Responsivo */
+@media (max-width: 768px) {
+  .checkbox :global(.ant-checkbox-inner) {
+    width: 18px;
+    height: 18px;
+  }
+
+  .checkboxGroup {
+    gap: 8px;
+  }
+}

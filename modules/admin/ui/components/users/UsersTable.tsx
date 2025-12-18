@@ -1,8 +1,9 @@
 "use client";
 
-import { Table, Tag, Switch, Tooltip, Button, Flex, Typography, App } from "antd";
+import { Tag, Tooltip, Flex, Typography, App } from "antd";
 import { EditOutlined, DeleteOutlined, KeyOutlined } from "@ant-design/icons";
-import type { TableProps } from 'antd';
+import { ELButton, ELSwitch } from '@/shared/ui';
+import { DataTable, type DataTableColumn } from '@/shared/ui/DataTable';
 import type { AdminUser } from "@/modules/auth/application/types";
 import {
   useToggleUserStatus,
@@ -77,15 +78,15 @@ export function UsersTable({
     });
   };
 
-  const columns: TableProps<AdminUser>['columns'] = [
+  const columns: DataTableColumn<AdminUser>[] = [
     {
       title: "Nome",
       dataIndex: "name",
       key: "name",
-      sorter: (a, b) => a.name.localeCompare(b.name),
-      render: (name: string, user) => (
+      sorter: (a: AdminUser, b: AdminUser) => a.name.localeCompare(b.name),
+      render: (name: unknown, user: AdminUser) => (
         <Flex vertical gap={4}>
-          <Typography.Text strong>{name}</Typography.Text>
+          <Typography.Text strong>{String(name)}</Typography.Text>
           <Typography.Text type="secondary" style={{ fontSize: 13 }}>
             {user.email}
           </Typography.Text>
@@ -97,17 +98,12 @@ export function UsersTable({
       dataIndex: "status",
       key: "status",
       width: 120,
-      filters: [
-        { text: "Ativo", value: "active" },
-        { text: "Bloqueado", value: "blocked" },
-      ],
-      onFilter: (value, record) => record.status === value,
-      render: (status: string, user) => (
+      render: (status: unknown, user: AdminUser) => (
         <Flex align="center" gap={8}>
           <Tag color={status === "active" ? "success" : "error"}>
             {status === "active" ? "Ativo" : "Bloqueado"}
           </Tag>
-          <Switch
+          <ELSwitch
             size="small"
             checked={status === "active"}
             onChange={(checked) => handleStatusToggle(user, checked)}
@@ -120,7 +116,7 @@ export function UsersTable({
       title: "Permissões",
       dataIndex: "permissions",
       key: "permissions",
-      render: (_: AdminPermissionKey[], user) => {
+      render: (_: unknown, user: AdminUser) => {
         const permissionList: string[] = user.isSuperAdmin
           ? ["admin.super", ...allPermissions]
           : user.permissions;
@@ -166,7 +162,7 @@ export function UsersTable({
       dataIndex: "lastAccessAt",
       key: "lastAccessAt",
       width: 150,
-      sorter: (a, b) => {
+      sorter: (a: AdminUser, b: AdminUser) => {
         if (!a.lastAccessAt) return 1;
         if (!b.lastAccessAt) return -1;
         return (
@@ -174,10 +170,10 @@ export function UsersTable({
           new Date(b.lastAccessAt).getTime()
         );
       },
-      render: (lastAccessAt: string | null) => {
+      render: (lastAccessAt: unknown) => {
         if (!lastAccessAt)
           return <Typography.Text type="secondary">Nunca</Typography.Text>;
-        return <Typography.Text>{formatDateTimeBR(lastAccessAt)}</Typography.Text>;
+        return <Typography.Text>{formatDateTimeBR(lastAccessAt as string)}</Typography.Text>;
       },
     },
     {
@@ -185,10 +181,10 @@ export function UsersTable({
       dataIndex: "updatedAt",
       key: "updatedAt",
       width: 150,
-      sorter: (a, b) =>
+      sorter: (a: AdminUser, b: AdminUser) =>
         new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime(),
-      render: (updatedAt: string) => (
-        <Typography.Text>{formatDateTimeBR(updatedAt)}</Typography.Text>
+      render: (updatedAt: unknown) => (
+        <Typography.Text>{formatDateTimeBR(updatedAt as string)}</Typography.Text>
       ),
     },
     {
@@ -196,26 +192,27 @@ export function UsersTable({
       key: "actions",
       width: 150,
       fixed: "right",
-      render: (_, user) => (
+      isActions: true,
+      render: (_: unknown, user: AdminUser) => (
         <Flex gap={8}>
           <Tooltip title="Editar">
-            <Button
-              type="text"
+            <ELButton
+              variant="text"
               icon={<EditOutlined />}
               onClick={() => onEdit(user)}
             />
           </Tooltip>
           <Tooltip title="Resetar senha">
-            <Button
-              type="text"
+            <ELButton
+              variant="text"
               icon={<KeyOutlined />}
               onClick={() => handleResetPassword(user)}
               loading={resetPasswordMutation.isPending}
             />
           </Tooltip>
           <Tooltip title="Excluir">
-            <Button
-              type="text"
+            <ELButton
+              variant="text"
               danger
               icon={<DeleteOutlined />}
               onClick={() => handleDelete(user)}
@@ -229,11 +226,12 @@ export function UsersTable({
   ];
 
   return (
-    <Table
+    <DataTable<AdminUser>
       columns={columns}
-      dataSource={data}
+      data={data}
       rowKey="id"
       loading={loading}
+      enableMobileCards={true}
       pagination={
         pagination
           ? {
@@ -246,7 +244,8 @@ export function UsersTable({
             }
           : false
       }
-      scroll={{ x: 1200, y: 'calc(100vh - 340px)' }}
+      scrollX={1200}
+      scrollY="calc(100vh - 340px)"
     />
   );
 }

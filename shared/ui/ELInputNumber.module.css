@@ -1,0 +1,56 @@
+.inputNumber {
+  --el-input-number-border: var(--el-color-border);
+  --el-input-number-hover-border: var(--el-color-primary);
+  --el-input-number-focus-border: var(--el-color-primary);
+  --el-input-number-bg: var(--el-color-bg-container);
+  border-radius: 8px;
+}
+
+.inputNumber:global(.ant-input-number) {
+  border-color: var(--el-input-number-border);
+  background: var(--el-input-number-bg);
+  transition: all 0.2s ease;
+}
+
+.inputNumber:global(.ant-input-number:hover) {
+  border-color: var(--el-input-number-hover-border);
+}
+
+.inputNumber:global(.ant-input-number-focused) {
+  border-color: var(--el-input-number-focus-border);
+  box-shadow: 0 0 0 2px rgba(0, 56, 115, 0.1);
+}
+
+.inputNumber :global(.ant-input-number-input) {
+  height: 36px;
+  padding: 0 11px;
+}
+
+.inputNumber :global(.ant-input-number-prefix) {
+  color: var(--el-color-text-secondary);
+  margin-right: 4px;
+}
+
+.inputNumber :global(.ant-input-number-suffix) {
+  color: var(--el-color-text-secondary);
+  margin-left: 4px;
+}
+
+/* Handlers (setas up/down) */
+.inputNumber :global(.ant-input-number-handler-wrap) {
+  border-radius: 0 8px 8px 0;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.inputNumber:hover :global(.ant-input-number-handler-wrap) {
+  opacity: 1;
+}
+
+/* Responsivo */
+@media (max-width: 768px) {
+  .inputNumber :global(.ant-input-number-input) {
+    height: 40px;
+    font-size: 16px; /* Evita zoom no iOS */
+  }
+}

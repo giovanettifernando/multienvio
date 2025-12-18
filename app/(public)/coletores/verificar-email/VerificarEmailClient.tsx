@@ -2,8 +2,11 @@
 
 import { useEffect, useMemo } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { Card, Result, Button, Spin } from 'antd';
+import { Result, Spin } from 'antd';
+import { ELButton, ELCard } from '@/shared/ui';
 import { CheckCircleOutlined, CloseCircleOutlined, LoadingOutlined, WarningOutlined } from '@ant-design/icons';
+
+const { Card, Button } = { Card: ELCard, Button: ELButton };
 
 type Status = 'loading' | 'success' | 'error' | 'already_verified' | 'expired';
 

@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useSyncExternalStore } from "react";
-import { Tabs, Space, Grid, Tooltip } from "antd";
+import { Space, Grid, Tooltip } from "antd";
+import { ELTabs } from "@/shared/ui";
 import {
   EnvironmentOutlined,
   CreditCardOutlined,
@@ -109,7 +110,7 @@ export default function AccountTabs() {
   ];
 
   return (
-    <Tabs
+    <ELTabs
       activeKey={activeKey}
       onChange={handleChange}
       items={tabItems}

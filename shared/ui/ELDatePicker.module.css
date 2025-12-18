@@ -1,0 +1,72 @@
+.datePicker {
+  --el-datepicker-border: var(--el-color-border);
+  --el-datepicker-hover-border: var(--el-color-primary);
+  --el-datepicker-focus-border: var(--el-color-primary);
+  --el-datepicker-bg: var(--el-color-bg-container);
+  border-radius: 8px;
+}
+
+.datePicker:global(.ant-picker) {
+  border-color: var(--el-datepicker-border);
+  background: var(--el-datepicker-bg);
+  transition: all 0.2s ease;
+  min-height: 36px;
+}
+
+.datePicker:global(.ant-picker:hover) {
+  border-color: var(--el-datepicker-hover-border);
+}
+
+.datePicker:global(.ant-picker-focused) {
+  border-color: var(--el-datepicker-focus-border);
+  box-shadow: 0 0 0 2px rgba(0, 56, 115, 0.1);
+}
+
+.datePicker :global(.ant-picker-input > input) {
+  font-size: 14px;
+}
+
+.datePicker :global(.ant-picker-suffix) {
+  color: var(--el-color-text-tertiary);
+}
+
+.datePicker :global(.ant-picker-clear) {
+  background: var(--el-datepicker-bg);
+}
+
+/* RangePicker específico */
+.rangePicker {
+  min-width: 240px;
+}
+
+.rangePicker :global(.ant-picker-range-separator) {
+  color: var(--el-color-text-tertiary);
+}
+
+/* Responsivo */
+@media (max-width: 768px) {
+  .datePicker:global(.ant-picker) {
+    min-height: 40px;
+  }
+
+  .datePicker :global(.ant-picker-input > input) {
+    font-size: 16px; /* Evita zoom no iOS */
+  }
+
+  .rangePicker {
+    min-width: 100%;
+  }
+}
+
+/* Popup do calendário */
+:global(.ant-picker-dropdown) {
+  font-family: inherit;
+}
+
+:global(.ant-picker-dropdown .ant-picker-cell-selected .ant-picker-cell-inner) {
+  background: var(--el-color-primary);
+}
+
+:global(.ant-picker-dropdown .ant-picker-today-btn) {
+  color: var(--el-color-primary);
+}

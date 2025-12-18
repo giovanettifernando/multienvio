@@ -4,18 +4,14 @@ import { useState } from 'react';
 import {
   Tag,
   Space,
-  Input,
-  Select,
-  Button,
   Flex,
-  Card,
   Row,
   Col,
   Statistic,
   Typography,
-  DatePicker,
   Tooltip,
 } from 'antd';
+import { ELButton, ELCard, ELInput, ELSelect, ELDatePicker } from '@/shared/ui';
 import { useQuery } from '@tanstack/react-query';
 import {
   SearchOutlined,
@@ -34,7 +30,6 @@ import { formatDateTimeBR } from '@/shared/utils/date';
 import { DataTable, type DataTableColumn } from '@/shared/ui/DataTable';
 
 const { Text } = Typography;
-const { RangePicker } = DatePicker;
 
 interface PoCQueueItem {
   id: string;
@@ -313,7 +308,7 @@ export default function ReceptionsTable({ dateStart, dateEnd }: ReceptionsTableP
     if (!summary) return null;
 
     return (
-      <Card size="small" style={{ marginBottom: 16 }}>
+      <ELCard padding="sm" style={{ marginBottom: 16 }}>
         <Row gutter={[16, 16]}>
           <Col xs={12} sm={8} md={4}>
             <Statistic
@@ -364,7 +359,7 @@ export default function ReceptionsTable({ dateStart, dateEnd }: ReceptionsTableP
             />
           </Col>
         </Row>
-      </Card>
+      </ELCard>
     );
   };
 
@@ -373,7 +368,7 @@ export default function ReceptionsTable({ dateStart, dateEnd }: ReceptionsTableP
       {/* Filtros */}
       <Flex justify="space-between" align="center" wrap="wrap" gap={12}>
         <Space wrap size="middle">
-          <Input
+          <ELInput
             placeholder="Buscar por código, nome..."
             prefix={<SearchOutlined />}
             value={search}
@@ -384,7 +379,7 @@ export default function ReceptionsTable({ dateStart, dateEnd }: ReceptionsTableP
             style={{ width: 220 }}
             allowClear
           />
-          <Select
+          <ELSelect
             value={status}
             onChange={(v) => {
               setStatus(v);
@@ -400,7 +395,7 @@ export default function ReceptionsTable({ dateStart, dateEnd }: ReceptionsTableP
               { label: 'Coletado', value: 'COLLECTED_FROM_POINT' },
             ]}
           />
-          <Select
+          <ELSelect
             value={pickupPointId}
             onChange={(v) => {
               setPickupPointId(v);
@@ -417,7 +412,7 @@ export default function ReceptionsTable({ dateStart, dateEnd }: ReceptionsTableP
               })),
             ]}
           />
-          <RangePicker
+          <ELDatePicker.RangePicker
             value={dateRange}
             onChange={(dates) => {
               if (dates && dates[0] && dates[1]) {
@@ -433,13 +428,13 @@ export default function ReceptionsTable({ dateStart, dateEnd }: ReceptionsTableP
           />
         </Space>
 
-        <Button
+        <ELButton
           icon={<ReloadOutlined />}
           onClick={() => refetch()}
           loading={isLoading}
         >
           Atualizar
-        </Button>
+        </ELButton>
       </Flex>
 
       {/* Resumo */}

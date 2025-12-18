@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Card, Steps, Button, App, Result, Row, Col, Typography, theme } from 'antd';
+import { Steps, App, Result, Row, Col, Typography, theme } from 'antd';
+import { ELButton, ELCard } from '@/shared/ui';
 import {
   UserOutlined,
   BankOutlined,
@@ -306,7 +307,7 @@ export default function CadastroClient() {
           padding: 24,
         }}
       >
-        <Card style={{ width: '100%', maxWidth: 600, borderRadius: 12 }}>
+        <ELCard style={{ width: '100%', maxWidth: 600, borderRadius: 12 }}>
           <Result
             status="success"
             icon={<CheckCircleOutlined style={{ color: token.colorSuccess }} />}
@@ -325,17 +326,17 @@ export default function CadastroClient() {
               </div>
             }
             extra={[
-              <Button
-                type="primary"
+              <ELButton
+                variant="primary"
                 key="login"
                 size="large"
                 onClick={() => router.push('/coletores/login')}
               >
                 Ir para Login
-              </Button>,
+              </ELButton>,
             ]}
           />
-        </Card>
+        </ELCard>
       </div>
     );
   }
@@ -360,7 +361,7 @@ export default function CadastroClient() {
         </div>
 
         {/* Steps Navigation */}
-        <Card
+        <ELCard
           style={{
             marginBottom: 24,
             borderRadius: 12,
@@ -378,10 +379,10 @@ export default function CadastroClient() {
               status: index < currentStep ? 'finish' : index === currentStep ? 'process' : 'wait',
             }))}
           />
-        </Card>
+        </ELCard>
 
         {/* Form Content */}
-        <Card
+        <ELCard
           style={{
             borderRadius: 12,
             boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
@@ -454,38 +455,38 @@ export default function CadastroClient() {
                   gap: 12,
                 }}
               >
-                <Button
+                <ELButton
                   size="large"
                   icon={<ArrowLeftOutlined />}
                   onClick={handlePrev}
                   disabled={currentStep === 0 || loading}
                 >
                   Voltar
-                </Button>
+                </ELButton>
 
                 {currentStep < steps.length - 1 ? (
-                  <Button
-                    type="primary"
+                  <ELButton
+                    variant="primary"
                     size="large"
                     onClick={handleNext}
                     disabled={loading}
                   >
                     Próximo <ArrowRightOutlined />
-                  </Button>
+                  </ELButton>
                 ) : (
-                  <Button
-                    type="primary"
+                  <ELButton
+                    variant="primary"
                     size="large"
                     htmlType="submit"
                     loading={loading}
                   >
                     Enviar Cadastro <SendOutlined />
-                  </Button>
+                  </ELButton>
                 )}
               </div>
             </form>
           </FormProvider>
-        </Card>
+        </ELCard>
 
         {/* Footer */}
         <div style={{ textAlign: 'center', marginTop: 24 }}>

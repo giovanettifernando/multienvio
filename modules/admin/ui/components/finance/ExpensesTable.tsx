@@ -4,30 +4,32 @@ import { useState, useMemo } from 'react';
 import {
   Table,
   Flex,
-  Select,
-  Card,
   Statistic,
   Row,
   Col,
-  Button,
   Typography,
   Tag,
   Space,
   Empty,
   Spin,
-  DatePicker,
   Form,
   Input,
   InputNumber,
   Upload,
-  Popconfirm,
   message,
-  Switch,
   Tooltip,
   TreeSelect,
 } from 'antd';
-import { ELModal } from '@/shared/ui/ELModal';
-import { ELInput } from '@/shared/ui/ELInput';
+import {
+  ELButton,
+  ELCard,
+  ELSelect,
+  ELDatePicker,
+  ELModal,
+  ELInput,
+  ELPopconfirm,
+  ELSwitch,
+} from '@/shared/ui';
 import { inputNumberFormatterBRL, inputNumberParserBRL, formatBRL } from '@/shared/utils/format';
 import { formatDateBR } from '@/shared/utils/date';
 import type { TableProps } from 'antd';
@@ -65,7 +67,6 @@ import {
 import { DRE_CHART_OF_ACCOUNTS } from '@/modules/admin/application/finance/dre';
 
 const { Text } = Typography;
-const { RangePicker } = DatePicker;
 const { TextArea } = Input;
 
 type PeriodPreset = 'today' | '7d' | '30d' | 'month' | 'lastMonth' | 'custom';
@@ -475,8 +476,8 @@ export function ExpensesTable() {
       render: (_, record) =>
         record.receiptUrl ? (
           <Tooltip title={record.receiptFileName}>
-            <Button
-              type="link"
+            <ELButton
+              variant="link"
               icon={<EyeOutlined />}
               href={record.receiptUrl}
               target="_blank"
@@ -515,8 +516,8 @@ export function ExpensesTable() {
         <Space size={0}>
           {record.status === 'PENDING' && (
             <Tooltip title="Registrar pagamento">
-              <Button
-                type="text"
+              <ELButton
+                variant="text"
                 icon={<WalletOutlined style={{ color: '#52c41a' }} />}
                 size="small"
                 onClick={() => markPaidMutation.mutate(record.id)}
@@ -525,14 +526,14 @@ export function ExpensesTable() {
             </Tooltip>
           )}
           <Tooltip title="Editar">
-            <Button
-              type="text"
+            <ELButton
+              variant="text"
               icon={<EditOutlined />}
               size="small"
               onClick={() => handleOpenEdit(record)}
             />
           </Tooltip>
-          <Popconfirm
+          <ELPopconfirm
             title="Remover despesa?"
             description="Esta ação não pode ser desfeita."
             onConfirm={() => deleteMutation.mutate(record.id)}
@@ -540,9 +541,9 @@ export function ExpensesTable() {
             cancelText="Cancelar"
           >
             <Tooltip title="Remover">
-              <Button type="text" icon={<DeleteOutlined />} size="small" danger />
+              <ELButton variant="text" icon={<DeleteOutlined />} size="small" danger />
             </Tooltip>
-          </Popconfirm>
+          </ELPopconfirm>
         </Space>
       ),
     },
@@ -565,7 +566,7 @@ export function ExpensesTable() {
       <Space wrap size="middle">
         <Space size={4}>
           <CalendarOutlined style={{ color: '#8c8c8c' }} />
-          <Select
+          <ELSelect
             value={periodPreset}
             onChange={(v) => {
               setPeriodPreset(v);
@@ -583,7 +584,7 @@ export function ExpensesTable() {
           />
         </Space>
         {periodPreset === 'custom' && (
-          <RangePicker
+          <ELDatePicker.RangePicker
             value={customRange}
             onChange={(dates) => {
               if (dates && dates[0] && dates[1]) {
@@ -593,13 +594,13 @@ export function ExpensesTable() {
             format="DD/MM/YYYY"
           />
         )}
-        <Select
+        <ELSelect
           value={dreAccountFilter}
           onChange={setDreAccountFilter}
           style={{ width: 220 }}
           options={dreFilterOptions}
         />
-        <Select
+        <ELSelect
           value={statusFilter}
           onChange={setStatusFilter}
           style={{ width: 130 }}
@@ -618,12 +619,12 @@ export function ExpensesTable() {
       </Space>
 
       <Space>
-        <Button icon={<DownloadOutlined />} onClick={handleExportCSV} disabled={!data?.items?.length}>
+        <ELButton icon={<DownloadOutlined />} onClick={handleExportCSV} disabled={!data?.items?.length}>
           Exportar CSV
-        </Button>
-        <Button type="primary" icon={<PlusOutlined />} onClick={handleOpenCreate}>
+        </ELButton>
+        <ELButton variant="primary" icon={<PlusOutlined />} onClick={handleOpenCreate}>
           Nova Despesa
-        </Button>
+        </ELButton>
       </Space>
     </Flex>
   );
@@ -676,7 +677,7 @@ export function ExpensesTable() {
       {renderFilters()}
 
       {/* Resumo */}
-      <Card size="small">
+      <ELCard padding="sm">
         <Row gutter={[24, 16]}>
           <Col xs={24} sm={12} md={6}>
             <Statistic
@@ -716,7 +717,7 @@ export function ExpensesTable() {
             />
           </Col>
         </Row>
-      </Card>
+      </ELCard>
 
       {/* Tabela */}
       <Table<Expense>
@@ -799,7 +800,7 @@ export function ExpensesTable() {
             </Col>
             <Col span={8}>
               <Form.Item name="status" label="Status">
-                <Select
+                <ELSelect
                   options={Object.entries(EXPENSE_STATUS_LABELS).map(([k, v]) => ({
                     label: v,
                     value: k,
@@ -809,7 +810,7 @@ export function ExpensesTable() {
             </Col>
             <Col span={8}>
               <Form.Item name="dueDate" label="Vencimento">
-                <DatePicker style={{ width: '100%' }} format="DD/MM/YYYY" />
+                <ELDatePicker style={{ width: '100%' }} format="DD/MM/YYYY" />
               </Form.Item>
             </Col>
           </Row>
@@ -830,7 +831,7 @@ export function ExpensesTable() {
           <Row gutter={16}>
             <Col span={8}>
               <Form.Item name="isRecurring" label="Recorrente" valuePropName="checked">
-                <Switch />
+                <ELSwitch />
               </Form.Item>
             </Col>
             <Col span={8}>
@@ -859,7 +860,7 @@ export function ExpensesTable() {
                 {({ getFieldValue }) =>
                   getFieldValue('status') === 'PAID' && (
                     <Form.Item name="paidAt" label="Data Pagamento">
-                      <DatePicker style={{ width: '100%' }} format="DD/MM/YYYY" />
+                      <ELDatePicker style={{ width: '100%' }} format="DD/MM/YYYY" />
                     </Form.Item>
                   )
                 }
@@ -877,14 +878,14 @@ export function ExpensesTable() {
                 <a href={editingExpense.receiptUrl} target="_blank" rel="noreferrer">
                   {editingExpense.receiptFileName}
                 </a>
-                <Button
-                  type="link"
+                <ELButton
+                  variant="link"
                   danger
                   size="small"
                   onClick={() => setRemoveReceipt(true)}
                 >
                   Remover
-                </Button>
+                </ELButton>
               </Space>
             )}
             <Upload
@@ -897,19 +898,19 @@ export function ExpensesTable() {
               maxCount={1}
               accept=".pdf,.jpg,.jpeg,.png"
             >
-              <Button icon={<UploadOutlined />}>Selecionar arquivo</Button>
+              <ELButton icon={<UploadOutlined />}>Selecionar arquivo</ELButton>
             </Upload>
           </Form.Item>
 
           <Flex justify="end" gap={8}>
-            <Button onClick={handleCloseModal}>Cancelar</Button>
-            <Button
-              type="primary"
+            <ELButton onClick={handleCloseModal}>Cancelar</ELButton>
+            <ELButton
+              variant="primary"
               htmlType="submit"
               loading={createMutation.isPending || updateMutation.isPending}
             >
               {editingExpense ? 'Salvar' : 'Criar'}
-            </Button>
+            </ELButton>
           </Flex>
         </Form>
       </ELModal>

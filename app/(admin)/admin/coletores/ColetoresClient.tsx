@@ -2,8 +2,9 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Card, Button } from 'antd';
+import { ELButton, ELCard } from '@/shared/ui';
 import { PlusOutlined } from '@ant-design/icons';
+
 import EntitySearchFilters from '@/shared/ui/EntitySearchFilters';
 import CollectorsTable from '@/modules/collectors/ui/components/CollectorsTable';
 import CollectorDrawer from '@/modules/collectors/ui/components/CollectorDrawer';
@@ -15,6 +16,8 @@ import {
 } from '@/modules/collectors/application/hooks';
 import type { CollectorFilters, CollectorFormData } from '@/modules/collectors/application/types';
 import { PageShell } from '@/shared/ui/PageShell';
+
+const { Card, Button } = { Card: ELCard, Button: ELButton };
 
 export default function ColetoresClient() {
   const router = useRouter();

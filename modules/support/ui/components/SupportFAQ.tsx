@@ -1,18 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import {
-  Collapse,
-  Input,
-  Space,
-  Typography,
-  Skeleton,
-  Empty,
-  Button,
-  Divider,
-  App,
-  Segmented,
-} from 'antd';
+import { Collapse, Space, Typography, Skeleton, Divider, App } from 'antd';
 import {
   SearchOutlined,
   QuestionCircleOutlined,
@@ -20,6 +9,7 @@ import {
   DislikeOutlined,
   CheckOutlined,
 } from '@ant-design/icons';
+import { ELButton, ELEmpty, ELInput, ELSegmented, ELSkeleton } from '@/shared/ui';
 import { useFAQ, useFAQFeedback, useFAQView, type FAQItem } from '@/modules/support/ui/hooks';
 
 const { Text, Title } = Typography;
@@ -96,8 +86,8 @@ export function SupportFAQ({
     return (
       <Space>
         <Text type="secondary">Isso foi útil?</Text>
-        <Button
-          type="text"
+        <ELButton
+          variant="text"
           size="small"
           icon={<LikeOutlined />}
           onClick={(e) => {
@@ -107,9 +97,9 @@ export function SupportFAQ({
           loading={feedbackMutation.isPending}
         >
           Sim
-        </Button>
-        <Button
-          type="text"
+        </ELButton>
+        <ELButton
+          variant="text"
           size="small"
           icon={<DislikeOutlined />}
           onClick={(e) => {
@@ -119,7 +109,7 @@ export function SupportFAQ({
           loading={feedbackMutation.isPending}
         >
           Não
-        </Button>
+        </ELButton>
       </Space>
     );
   };
@@ -172,9 +162,8 @@ export function SupportFAQ({
 
   if (isError) {
     return (
-      <Empty
-        image={Empty.PRESENTED_IMAGE_SIMPLE}
-        description="Erro ao carregar perguntas frequentes"
+      <ELEmpty
+        message="Erro ao carregar perguntas frequentes"
       />
     );
   }
@@ -188,8 +177,8 @@ export function SupportFAQ({
         </Title>
       )}
 
-      <Space orientation="vertical" style={{ width: '100%' }} size="small">
-        <Input
+      <Space direction="vertical" style={{ width: '100%' }} size="small">
+        <ELInput
           placeholder="Buscar nas perguntas frequentes..."
           prefix={<SearchOutlined />}
           value={search}
@@ -199,7 +188,7 @@ export function SupportFAQ({
         />
 
         {categories.length > 1 && (
-          <Segmented
+          <ELSegmented
             options={[
               { label: 'Todas', value: 'all' },
               ...categories.map((cat) => ({ label: cat, value: cat })),
@@ -211,15 +200,14 @@ export function SupportFAQ({
       </Space>
 
       {isLoading ? (
-        <Space orientation="vertical" style={{ width: '100%' }}>
-          <Skeleton active paragraph={{ rows: 2 }} />
-          <Skeleton active paragraph={{ rows: 2 }} />
-          <Skeleton active paragraph={{ rows: 2 }} />
+        <Space direction="vertical" style={{ width: '100%' }}>
+          <ELSkeleton active lines={2} />
+          <ELSkeleton active lines={2} />
+          <ELSkeleton active lines={2} />
         </Space>
       ) : displayItems.length === 0 ? (
-        <Empty
-          image={Empty.PRESENTED_IMAGE_SIMPLE}
-          description={
+        <ELEmpty
+          message={
             search
               ? 'Nenhuma pergunta encontrada para esta busca'
               : 'Nenhuma pergunta frequente cadastrada'

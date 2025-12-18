@@ -3,13 +3,9 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
   App,
-  Button,
-  Card,
   Empty,
   Grid,
-  Input,
   Pagination,
-  Popconfirm,
   Space,
   Spin,
   Tag,
@@ -17,6 +13,7 @@ import {
   Upload,
   theme,
 } from "antd";
+import { ELButton, ELCard, ELInput, ELPopconfirm } from "@/shared/ui";
 import { PlusOutlined, SearchOutlined, EditOutlined, DeleteOutlined, StarOutlined, StarFilled, UploadOutlined, DownloadOutlined } from "@ant-design/icons";
 
 const { useBreakpoint } = Grid;
@@ -248,33 +245,35 @@ export default function RecipientsList() {
   };
 
   return (
-    <Card
-      title="Destinatários"
-      extra={
-        <Button type="primary" icon={<PlusOutlined />} onClick={handleOpenCreate} size={isMobile ? "small" : "middle"}>
-          {isMobile ? "Adicionar" : "Adicionar destinatário"}
-        </Button>
-      }
+    <ELCard
+      header={{
+        title: "Destinatários",
+        extra: (
+          <ELButton variant="primary" icon={<PlusOutlined />} onClick={handleOpenCreate} size={isMobile ? "small" : "middle"}>
+            {isMobile ? "Adicionar" : "Adicionar destinatário"}
+          </ELButton>
+        ),
+      }}
     >
       <Space orientation="vertical" size={16} style={{ width: "100%" }}>
         {/* Botões de importação/exportação */}
         <Space wrap size={isMobile ? "small" : "middle"}>
-          <Button icon={<DownloadOutlined />} onClick={handleDownloadTemplate} size={isMobile ? "small" : "middle"}>
+          <ELButton icon={<DownloadOutlined />} onClick={handleDownloadTemplate} size={isMobile ? "small" : "middle"}>
             {isMobile ? "Modelo" : "Baixar Modelo"}
-          </Button>
+          </ELButton>
           <Upload
             accept=".csv"
             showUploadList={false}
             beforeUpload={handleImportCSV}
           >
-            <Button icon={<UploadOutlined />} loading={importing} size={isMobile ? "small" : "middle"}>
+            <ELButton icon={<UploadOutlined />} loading={importing} size={isMobile ? "small" : "middle"}>
               {isMobile ? "Importar" : "Importar Destinatários"}
-            </Button>
+            </ELButton>
           </Upload>
         </Space>
 
         {/* Campo de busca */}
-        <Input
+        <ELInput
           placeholder={isMobile ? "Buscar..." : "Buscar por nome, documento, cidade..."}
           prefix={<SearchOutlined />}
           value={search}
@@ -342,12 +341,12 @@ export default function RecipientsList() {
                     </div>
                   </div>
                   <Space size={isMobile ? "small" : 0} style={{ alignItems: isMobile ? "flex-start" : "flex-end", flexDirection: isMobile ? "row" : "column", flexWrap: "wrap" }}>
-                    <Button type="link" size="small" icon={<EditOutlined />} onClick={() => handleOpenEdit(item)}>
+                    <ELButton variant="link" size="small" icon={<EditOutlined />} onClick={() => handleOpenEdit(item)}>
                       {isMobile ? "" : "Editar"}
-                    </Button>
+                    </ELButton>
                     {!item.isDefault && (
-                      <Button
-                        type="text"
+                      <ELButton
+                        variant="text"
                         size="small"
                         icon={<StarOutlined />}
                         loading={
@@ -357,17 +356,17 @@ export default function RecipientsList() {
                         onClick={() => handleSetDefault(item)}
                       >
                         {isMobile ? "" : "Tornar padrão"}
-                      </Button>
+                      </ELButton>
                     )}
-                    <Popconfirm
+                    <ELPopconfirm
                       title={`Remover "${item.name}"?`}
                       description="Esta ação não pode ser desfeita."
                       okText="Remover"
                       cancelText="Cancelar"
                       onConfirm={() => handleDelete(item)}
                     >
-                      <Button
-                        type="link"
+                      <ELButton
+                        variant="link"
                         size="small"
                         danger
                         icon={<DeleteOutlined />}
@@ -377,8 +376,8 @@ export default function RecipientsList() {
                         }
                       >
                         {isMobile ? "" : "Remover"}
-                      </Button>
-                    </Popconfirm>
+                      </ELButton>
+                    </ELPopconfirm>
                   </Space>
                 </div>
               ))}
@@ -427,6 +426,6 @@ export default function RecipientsList() {
           setEditing(null);
         }}
       />
-    </Card>
+    </ELCard>
   );
 }

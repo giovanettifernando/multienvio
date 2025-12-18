@@ -1,7 +1,7 @@
 'use client';
 
-import { Tabs, Button, Space, Spin } from 'antd';
-import { ELDrawer } from '@/shared/ui/ELDrawer';
+import { Space, Spin } from 'antd';
+import { ELButton, ELDrawer, ELTabs } from '@/shared/ui';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useEffect } from 'react';
@@ -167,21 +167,21 @@ export default function PointDrawer({
       open={open}
       footer={
         <Space style={{ float: 'right' }}>
-          <Button onClick={onClose} disabled={loading}>
+          <ELButton onClick={onClose} disabled={loading}>
             Cancelar
-          </Button>
-          <Button
-            type="primary"
+          </ELButton>
+          <ELButton
+            variant="primary"
             onClick={handleSubmit(handleFormSubmit)}
             loading={loading}
           >
             {isEditMode ? 'Salvar' : 'Criar'}
-          </Button>
+          </ELButton>
         </Space>
       }
     >
       <Spin spinning={loading}>
-        <Tabs items={tabItems} />
+        <ELTabs items={tabItems} />
       </Spin>
     </ELDrawer>
   );

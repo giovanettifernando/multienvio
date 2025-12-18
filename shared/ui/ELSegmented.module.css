@@ -1,0 +1,76 @@
+.segmented {
+  --el-segmented-bg: var(--el-color-bg-layout);
+  --el-segmented-selected-bg: var(--el-color-bg-container);
+  --el-segmented-color: var(--el-color-text);
+  --el-segmented-selected-color: var(--el-color-primary);
+}
+
+.segmented :global(.ant-segmented-group) {
+  background: var(--el-segmented-bg);
+}
+
+.segmented :global(.ant-segmented-item) {
+  color: var(--el-segmented-color);
+  transition: all 0.2s ease;
+}
+
+.segmented :global(.ant-segmented-item-selected) {
+  color: var(--el-segmented-selected-color);
+  background: var(--el-segmented-selected-bg);
+  font-weight: 600;
+}
+
+.segmented :global(.ant-segmented-thumb) {
+  background: var(--el-segmented-selected-bg);
+  border-radius: 6px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+/* Variante Default */
+.segmentedDefault {
+  border-radius: 8px;
+}
+
+.segmentedDefault :global(.ant-segmented-item) {
+  border-radius: 6px;
+  padding: 4px 12px;
+}
+
+/* Variante Pill */
+.segmentedPill {
+  border-radius: 100px;
+}
+
+.segmentedPill :global(.ant-segmented-item) {
+  border-radius: 100px;
+  padding: 4px 16px;
+}
+
+.segmentedPill :global(.ant-segmented-thumb) {
+  border-radius: 100px;
+}
+
+/* Variante Block */
+.segmentedBlock {
+  width: 100%;
+}
+
+.segmentedBlock :global(.ant-segmented-item) {
+  flex: 1;
+  justify-content: center;
+}
+
+/* Responsivo */
+@media (max-width: 768px) {
+  .segmented :global(.ant-segmented-item) {
+    padding: 4px 8px;
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 576px) {
+  .segmented :global(.ant-segmented-item) {
+    padding: 4px 6px;
+    font-size: 12px;
+  }
+}

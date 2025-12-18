@@ -1,14 +1,16 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Card, Table, Tag, Button, Space, Spin, App, Form, Input, DatePicker } from 'antd';
-import { ELModal } from '@/shared/ui/ELModal';
-import { ELEmpty } from '@/shared/ui/ELEmpty';
+import { Table, Tag, Space, Spin, App, Form } from 'antd';
+import { ELButton, ELCard, ELDatePicker, ELInput, ELModal, ELEmpty } from '@/shared/ui';
 import { EnvironmentOutlined, InboxOutlined, CameraOutlined, CheckCircleOutlined, PhoneOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
+
 import dayjs, { Dayjs } from 'dayjs';
 import { PageShell } from '@/shared/ui/PageShell';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { TableProps } from 'antd';
+
+const { Card, Button, Input, DatePicker } = { Card: ELCard, Button: ELButton, Input: ELInput, DatePicker: ELDatePicker };
 
 interface SenderAddress {
   id: string;

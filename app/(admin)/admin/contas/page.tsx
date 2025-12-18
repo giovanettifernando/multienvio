@@ -1,4 +1,3 @@
-import { WalletTxStatus, WalletTxType } from '@prisma/client';
 import type { AccountStatus, AdminClient, ClientType } from '@/modules/admin/application/types';
 import { formatCNPJ, formatCPF } from '@/shared/utils/masks';
 import { AdminClientsPage } from '@/modules/admin/ui/components/clients/AdminClientsPage';
@@ -56,8 +55,8 @@ async function fetchAdminClients(): Promise<AdminClient[]> {
             pendingCents: true,
             transactions: {
               where: {
-                type: WalletTxType.TOPUP,
-                status: WalletTxStatus.CONFIRMED,
+                type: 'TOPUP',
+                status: 'CONFIRMED',
                 createdAt: {
                   gte: startOfMonth,
                   lt: startOfNextMonth,

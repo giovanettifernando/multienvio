@@ -1,6 +1,7 @@
 "use client";
 
-import { Timeline, Empty, Card, Typography } from "antd";
+import { Timeline, Typography } from "antd";
+import { ELCard, ELEmpty } from "@/shared/ui";
 import {
   CheckCircleOutlined,
   ClockCircleOutlined,
@@ -44,12 +45,9 @@ const EVENT_ICONS: Record<string, React.ReactNode> = {
 export function TrackingTimeline({ events, title }: TrackingTimelineProps) {
   if (!events || events.length === 0) {
     return (
-      <Card title={title}>
-        <Empty
-          description="Nenhum evento de rastreamento registrado"
-          image={Empty.PRESENTED_IMAGE_SIMPLE}
-        />
-      </Card>
+      <ELCard title={title}>
+        <ELEmpty message="Nenhum evento de rastreamento registrado" />
+      </ELCard>
     );
   }
 
@@ -88,8 +86,8 @@ export function TrackingTimeline({ events, title }: TrackingTimelineProps) {
   });
 
   return (
-    <Card title={title || "Histórico de rastreamento"}>
+    <ELCard title={title || "Histórico de rastreamento"}>
       <Timeline items={timelineItems} />
-    </Card>
+    </ELCard>
   );
 }

@@ -4,16 +4,8 @@ import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
-import {
-  Alert,
-  App,
-  Button,
-  Form,
-  Input,
-  Space,
-  Typography,
-} from "antd";
-import { FormCard } from '@/shared/ui/FormCard';
+import { App, Form, Space, Typography } from "antd";
+import { ELAlert, ELButton, ELFormItem, ELInput, FormCard } from '@/shared/ui';
 import {
   ForgotPasswordSchema,
   type ForgotPasswordAPIInput,
@@ -81,16 +73,16 @@ export default function ForgotPasswordClient() {
       }
     >
       {confirmed ? (
-        <Space orientation="vertical" size={16} style={{ width: "100%" }}>
-          <Alert
-            type="success"
+        <Space direction="vertical" size={16} style={{ width: "100%" }}>
+          <ELAlert
+            variant="success"
             message="Instruções enviadas!"
             description="Se o email estiver cadastrado, você receberá as instruções para redefinir sua senha. Verifique sua caixa de entrada e o spam. O link expira em 1 hora."
             showIcon
           />
-          <Button type="primary" onClick={() => setConfirmed(false)}>
+          <ELButton variant="primary" onClick={() => setConfirmed(false)}>
             Enviar novamente
-          </Button>
+          </ELButton>
         </Space>
       ) : (
         <Form
@@ -102,32 +94,32 @@ export default function ForgotPasswordClient() {
             name="email"
             control={control}
             render={({ field }) => (
-              <Form.Item
+              <ELFormItem
                 label="E-mail"
                 required
-                validateStatus={errors.email ? "error" : ""}
+                validateStatus={errors.email ? "error" : undefined}
                 help={errors.email?.message}
               >
-                <Input
+                <ELInput
                   {...field}
                   autoComplete="email"
                   inputMode="email"
                   placeholder="voce@empresa.com"
                   aria-invalid={Boolean(errors.email)}
                 />
-              </Form.Item>
+              </ELFormItem>
             )}
           />
 
-          <Button
-            type="primary"
+          <ELButton
+            variant="primary"
             htmlType="submit"
             loading={mutation.isPending}
             disabled={mutation.isPending}
             block
           >
             Enviar link de redefinição
-          </Button>
+          </ELButton>
         </Form>
       )}
     </FormCard>

@@ -5,7 +5,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import {
   App,
   Divider,
-  Modal,
   Space,
   Tooltip,
   Typography,
@@ -17,6 +16,7 @@ import { ELGrid } from '@/shared/ui/ELGrid';
 import { ELSkeleton } from '@/shared/ui/ELSkeleton';
 import { PageShell } from '@/shared/ui/PageShell';
 import { ELButton } from '@/shared/ui/ELButton';
+import { ELModal } from '@/shared/ui/ELModal';
 import {
   FormProvider,
   SubmitHandler,
@@ -1924,7 +1924,7 @@ export default function FinalizarClient() {
         />
 
         {/* Modal simples para captura de email (destinatário recorrente sem email) */}
-        <Modal
+        <ELModal
           title="E-mail do destinatário"
           open={emailModalOpen}
           onCancel={handleEmailModalCancel}
@@ -1970,7 +1970,7 @@ export default function FinalizarClient() {
               />
             </div>
           </Space>
-        </Modal>
+        </ELModal>
 
         {/* Modal de escolha de pagamento (FLUXO LEGADO) */}
         {createdShipment && (
@@ -1998,7 +1998,7 @@ export default function FinalizarClient() {
         )}
 
         {/* Modal de sucesso - Pagamento pelo destinatario */}
-        <Modal
+        <ELModal
           title="Link de pagamento enviado!"
           open={!!recipientPaymentSuccess}
           onCancel={() => {
@@ -2065,7 +2065,7 @@ export default function FinalizarClient() {
               </Typography.Text>
             </Space>
           )}
-        </Modal>
+        </ELModal>
       </FormProvider>
     </PageShell>
   );

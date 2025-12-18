@@ -5,12 +5,9 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Alert, App, Button, Checkbox, Form, Typography } from 'antd';
+import { App, Button, Form, Typography } from 'antd';
 import { GoogleOutlined } from "@ant-design/icons";
-import { ELButton } from '@/shared/ui/ELButton';
-import { ELCard } from '@/shared/ui/ELCard';
-import { ELFormItem } from '@/shared/ui/ELFormItem';
-import { ELInput } from '@/shared/ui/ELInput';
+import { ELAlert, ELButton, ELCard, ELCheckbox, ELFormItem, ELInput } from '@/shared/ui';
 import { spacing } from "@/shared/ui/theme";
 import {
   loginSchema,
@@ -118,8 +115,8 @@ export default function LoginClient() {
         className={styles.form}
       >
         {formError ? (
-          <Alert
-            type="error"
+          <ELAlert
+            variant="danger"
             message={formError}
             showIcon
             style={{ marginBottom: spacing.md }}
@@ -172,14 +169,14 @@ export default function LoginClient() {
             name="lembrarEmail"
             control={control}
             render={({ field }) => (
-              <Checkbox
+              <ELCheckbox
                 {...field}
                 checked={field.value}
                 aria-checked={field.value}
                 className={styles.checkboxLabel}
               >
                 Lembrar meu e-mail
-              </Checkbox>
+              </ELCheckbox>
             )}
           />
           <Link href="/auth/forgot-password" className={styles.link}>

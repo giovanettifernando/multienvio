@@ -1,0 +1,67 @@
+.tabs {
+  --el-tabs-color: var(--el-color-text);
+  --el-tabs-active-color: var(--el-color-primary);
+  --el-tabs-hover-color: var(--el-color-primary-hover);
+  --el-tabs-border-color: var(--el-color-border);
+}
+
+.tabs :global(.ant-tabs-nav) {
+  margin-bottom: 16px;
+}
+
+.tabs :global(.ant-tabs-tab) {
+  color: var(--el-tabs-color);
+  transition: color 0.2s ease;
+}
+
+.tabs :global(.ant-tabs-tab:hover) {
+  color: var(--el-tabs-hover-color);
+}
+
+.tabs :global(.ant-tabs-tab-active .ant-tabs-tab-btn) {
+  color: var(--el-tabs-active-color);
+  font-weight: 600;
+}
+
+.tabs :global(.ant-tabs-ink-bar) {
+  background: var(--el-tabs-active-color);
+}
+
+/* Variante Default (line) */
+.tabsDefault :global(.ant-tabs-nav::before) {
+  border-bottom: 1px solid var(--el-tabs-border-color);
+}
+
+/* Variante Card */
+.tabsCard :global(.ant-tabs-tab) {
+  border-radius: 8px 8px 0 0;
+  background: var(--el-color-bg-container);
+}
+
+.tabsCard :global(.ant-tabs-tab-active) {
+  background: var(--el-color-bg-elevated);
+}
+
+/* Variante Line (igual default mas sem borda inferior) */
+.tabsLine :global(.ant-tabs-nav::before) {
+  border-bottom: none;
+}
+
+/* Responsivo */
+@media (max-width: 768px) {
+  .tabs :global(.ant-tabs-nav) {
+    margin-bottom: 12px;
+  }
+
+  .tabs :global(.ant-tabs-tab) {
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 576px) {
+  .tabs :global(.ant-tabs-tab) {
+    padding: 6px 8px;
+    font-size: 12px;
+  }
+}

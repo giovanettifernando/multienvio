@@ -1,9 +1,10 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { Table, Button, Space, Switch, Typography, Tag, App } from 'antd';
+import { Space, Typography, Tag, App } from 'antd';
 import { EyeOutlined, DeleteOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
-import type { TableProps } from 'antd';
+import { ELButton, ELSwitch } from '@/shared/ui';
+import { DataTable, type DataTableColumn } from '@/shared/ui/DataTable';
 import { maskCNPJ } from '@/modules/pickup-points/application/masks';
 import { formatBRL } from '@/shared/utils/format';
 import type { PickupPoint, PickupPointListResponse } from '@/modules/pickup-points/application/types';
@@ -57,28 +58,28 @@ export default function PointsTable({
     });
   };
 
-  const columns: TableProps<PickupPoint>['columns'] = [
+  const columns: DataTableColumn<PickupPoint>[] = [
     {
       title: 'Nome Fantasia',
       dataIndex: 'nomeFantasia',
       key: 'nomeFantasia',
-      render: (text: string, record: PickupPoint) => (
-        <Button
-          type="link"
+      render: (text: unknown, record: PickupPoint) => (
+        <ELButton
+          variant="link"
           style={{ padding: 0, height: 'auto' }}
           onClick={() => router.push(`/admin/pontos-de-coleta/${record.id}`)}
         >
-          {text}
-        </Button>
+          {String(text)}
+        </ELButton>
       ),
     },
     {
       title: 'CNPJ',
       dataIndex: 'cnpj',
       key: 'cnpj',
-      render: (cnpj: string) => (
+      render: (cnpj: unknown) => (
         <Text type="secondary" style={{ fontSize: 12 }}>
-          {maskCNPJ(cnpj)}
+          {maskCNPJ(String(cnpj))}
         </Text>
       ),
     },
@@ -109,25 +110,27 @@ export default function PointsTable({
       title: 'Capacidade/dia',
       key: 'capacityPerDay',
       dataIndex: 'capacityPerDay',
-      render: (capacity: number | null | undefined) => {
-        if (capacity === null || capacity === undefined || capacity === 0) {
+      render: (capacity: unknown) => {
+        const cap = capacity as number | null | undefined;
+        if (cap === null || cap === undefined || cap === 0) {
           return '—';
         }
-        return capacity;
+        return cap;
       },
     },
     {
       title: 'Comissão/item',
       key: 'commissionPerItem',
       dataIndex: 'commissionPerItem',
-      render: (commission: number | null | undefined) => {
-        if (commission === null || commission === undefined) {
+      render: (commission: unknown) => {
+        const comm = commission as number | null | undefined;
+        if (comm === null || comm === undefined) {
           return '—';
         }
-        if (commission === 0) {
+        if (comm === 0) {
           return 'R$ 0,00';
         }
-        return formatBRL(commission);
+        return formatBRL(comm);
       },
     },
     {
@@ -138,7 +141,7 @@ export default function PointsTable({
           <Tag color={String(record.status) === 'ACTIVE' ? 'green' : 'red'}>
             {String(record.status) === 'ACTIVE' ? 'Ativo' : 'Bloqueado'}
           </Tag>
-          <Switch
+          <ELSwitch
             checked={String(record.status) === 'ACTIVE'}
             onChange={(checked) => handleStatusToggle(record, checked)}
             size="small"
@@ -149,37 +152,40 @@ export default function PointsTable({
     {
       title: 'Ações',
       key: 'actions',
+      isActions: true,
       render: (_: unknown, record: PickupPoint) => (
         <Space size="small">
-          <Button
-            type="link"
+          <ELButton
+            variant="link"
             icon={<EyeOutlined />}
             onClick={() => router.push(`/admin/pontos-de-coleta/${record.id}`)}
             size="small"
           >
             Ver detalhes
-          </Button>
-          <Button
-            type="link"
+          </ELButton>
+          <ELButton
+            variant="link"
             danger
             icon={<DeleteOutlined />}
             onClick={() => handleDelete(record)}
             size="small"
           >
             Excluir
-          </Button>
+          </ELButton>
         </Space>
       ),
     },
   ];
 
   return (
-    <Table
+    <DataTable<PickupPoint>
       columns={columns}
-      dataSource={data?.items || []}
+      data={data?.items || []}
       loading={loading}
       rowKey="id"
-      scroll={{ x: 1000, y: 'calc(100vh - 340px)' }}
+      enableMobileCards={true}
+      scrollX={1000}
+      scrollY="calc(100vh - 340px)"
       pagination={{
         current: data?.page || 1,
         pageSize: data?.pageSize || 10,

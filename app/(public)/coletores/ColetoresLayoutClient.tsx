@@ -2,7 +2,8 @@
 
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { Layout, Menu, Button, Dropdown, Spin, App as AntdApp, Drawer } from 'antd';
+import { Layout, Menu, Dropdown, Spin, App as AntdApp } from 'antd';
+import { ELButton, ELDrawer } from '@/shared/ui';
 import {
   DashboardOutlined,
   InboxOutlined,
@@ -13,6 +14,8 @@ import {
   CloseOutlined,
 } from '@ant-design/icons';
 import { useColetorSession } from '@/modules/collectors/ui/state/useColetorSession';
+
+const { Button, Drawer } = { Button: ELButton, Drawer: ELDrawer };
 
 const { Header, Sider, Content } = Layout;
 

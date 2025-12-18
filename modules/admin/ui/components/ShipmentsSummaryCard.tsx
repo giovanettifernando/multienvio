@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { Card, Flex, Typography, Skeleton, Select } from 'antd';
+import { Flex, Typography, Skeleton } from 'antd';
+import { ELCard, ELSelect } from '@/shared/ui';
 import {
   BarChartOutlined,
   CheckCircleOutlined,
@@ -9,6 +10,7 @@ import {
 } from '@ant-design/icons';
 import { useRouter } from 'next/navigation';
 
+const { Card, Select } = { Card: ELCard, Select: ELSelect };
 const { Text } = Typography;
 
 type TimeFilter = 'year' | 'month' | 'week' | 'today';

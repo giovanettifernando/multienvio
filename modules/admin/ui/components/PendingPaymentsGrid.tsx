@@ -1,11 +1,15 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { Card, Table, Tag, Button, Tooltip, Space, App } from 'antd';
+import { Table, Tag, Tooltip, Space, App } from 'antd';
+import { ELButton, ELCard } from '@/shared/ui';
 import { ReloadOutlined, CheckOutlined, ThunderboltOutlined } from '@ant-design/icons';
 import type { TableProps } from 'antd';
+
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+
+const { Card, Button } = { Card: ELCard, Button: ELButton };
 
 interface PendingPayment {
   id: string;

@@ -1,8 +1,11 @@
 "use client";
 
-import { Alert, Card, Empty, Skeleton, Table, Typography } from "antd";
+import { Alert, Empty, Skeleton, Table, Typography } from "antd";
+import { ELCard } from '@/shared/ui';
 import type { TableProps } from 'antd';
 import type { InvoiceItem } from "@/shared/types/invoice";
+
+const Card = ELCard;
 
 export interface InvoiceItemsTableProps {
   items: InvoiceItem[] | null;

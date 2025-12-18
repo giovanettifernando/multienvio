@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Tabs, Button, Space, Spin, App } from 'antd';
-import { ELDrawer } from '@/shared/ui/ELDrawer';
+import { Space, Spin, App } from 'antd';
+import { ELButton, ELDrawer, ELTabs } from '@/shared/ui';
 import { MailOutlined } from '@ant-design/icons';
 import type { UploadFile } from 'antd';
 import { useForm, FormProvider } from 'react-hook-form';
@@ -335,29 +335,29 @@ export default function CollectorDrawer({
       footer={
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           {editCollector && (
-            <Button
+            <ELButton
               icon={<MailOutlined />}
               onClick={handlePasswordReset}
               loading={sendingPasswordReset}
               disabled={loading}
             >
               Redefinir senha
-            </Button>
+            </ELButton>
           )}
           <Space style={{ marginLeft: 'auto' }}>
-            <Button onClick={onClose} disabled={loading}>
+            <ELButton onClick={onClose} disabled={loading}>
               Cancelar
-            </Button>
-            <Button type="primary" onClick={handleSave} loading={loading}>
+            </ELButton>
+            <ELButton variant="primary" onClick={handleSave} loading={loading}>
               {editCollector ? 'Salvar alterações' : 'Criar coletor'}
-            </Button>
+            </ELButton>
           </Space>
         </div>
       }
     >
       <FormProvider {...formMethods}>
         <Spin spinning={loading}>
-          <Tabs items={tabItems} tabPosition="top" />
+          <ELTabs items={tabItems} tabPosition="top" />
         </Spin>
       </FormProvider>
     </ELDrawer>

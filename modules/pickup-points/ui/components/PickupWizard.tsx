@@ -7,18 +7,13 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import type { Resolver } from "react-hook-form";
 import {
-  Card,
-  DatePicker,
-  Form,
   Space,
   Steps,
   TimePicker,
   Typography,
   message,
 } from "antd";
-import { ELButton } from '@/shared/ui/ELButton';
-import { ELInput } from '@/shared/ui/ELInput';
-import { ELSelect } from '@/shared/ui/ELSelect';
+import { ELButton, ELCard, ELDatePicker, ELFormItem, ELInput, ELSelect } from '@/shared/ui';
 import dayjs from "dayjs";
 import type { CompanyWizardData } from '@/shared/validation/company';
 import { getCompanyDisplayName } from '@/shared/validation/company';
@@ -193,7 +188,7 @@ export function PickupWizard({ sender, shipments }: PickupWizardProps) {
 
       <form onSubmit={handleSubmit(onSubmit)}>
         {currentStep === 0 ? (
-          <Card title="Origem" variant="borderless" style={{ marginBottom: 24 }}>
+          <ELCard header={{ title: "Origem" }} style={{ marginBottom: 24 }}>
             <Typography.Text strong>
               {getCompanyDisplayName(sender)}
             </Typography.Text>
@@ -203,33 +198,33 @@ export function PickupWizard({ sender, shipments }: PickupWizardProps) {
             <Typography.Paragraph style={{ margin: 0 }} type="secondary">
               {`${sender.endereco.bairro} · ${sender.endereco.cidade}/${sender.endereco.uf}`}
             </Typography.Paragraph>
-          </Card>
+          </ELCard>
         ) : null}
 
         {currentStep === 1 ? (
-          <Card title="Selecione os envios" variant="borderless" style={{ marginBottom: 24 }}>
+          <ELCard header={{ title: "Selecione os envios" }} style={{ marginBottom: 24 }}>
             <PickupShipmentsTable
               shipments={shipments}
               selectedRowKeys={shipmentsIds}
               onSelectionChange={(keys) => setValue("shipmentsIds", keys)}
             />
-          </Card>
+          </ELCard>
         ) : null}
 
         {currentStep === 2 ? (
-          <Card title="Agendamento" variant="borderless" style={{ marginBottom: 24 }}>
+          <ELCard header={{ title: "Agendamento" }} style={{ marginBottom: 24 }}>
             <Space orientation="vertical" style={{ width: "100%" }} size={16}>
               <Controller
                 name="schedule.date"
                 control={control}
                 render={({ field }) => (
-                  <Form.Item
+                  <ELFormItem
                     label="Data"
                     required
-                    validateStatus={errors.schedule?.date ? "error" : ""}
+                    validateStatus={errors.schedule?.date ? "error" : undefined}
                     help={errors.schedule?.date?.message}
                   >
-                    <DatePicker
+                    <ELDatePicker
                       {...field}
                       value={field.value ? dayjs(field.value) : null}
                       onChange={(date) =>
@@ -237,7 +232,7 @@ export function PickupWizard({ sender, shipments }: PickupWizardProps) {
                       }
                       style={{ width: 200 }}
                     />
-                  </Form.Item>
+                  </ELFormItem>
                 )}
               />
 
@@ -246,10 +241,10 @@ export function PickupWizard({ sender, shipments }: PickupWizardProps) {
                   name="schedule.windowStart"
                   control={control}
                   render={({ field }) => (
-                    <Form.Item
+                    <ELFormItem
                       label="Início"
                       required
-                      validateStatus={errors.schedule?.windowStart ? "error" : ""}
+                      validateStatus={errors.schedule?.windowStart ? "error" : undefined}
                       help={errors.schedule?.windowStart?.message}
                     >
                       <TimePicker
@@ -260,17 +255,17 @@ export function PickupWizard({ sender, shipments }: PickupWizardProps) {
                         }
                         format="HH:mm"
                       />
-                    </Form.Item>
+                    </ELFormItem>
                   )}
                 />
                 <Controller
                   name="schedule.windowEnd"
                   control={control}
                   render={({ field }) => (
-                    <Form.Item
+                    <ELFormItem
                       label="Fim"
                       required
-                      validateStatus={errors.schedule?.windowEnd ? "error" : ""}
+                      validateStatus={errors.schedule?.windowEnd ? "error" : undefined}
                       help={errors.schedule?.windowEnd?.message}
                     >
                       <TimePicker
@@ -281,7 +276,7 @@ export function PickupWizard({ sender, shipments }: PickupWizardProps) {
                         }
                         format="HH:mm"
                       />
-                    </Form.Item>
+                    </ELFormItem>
                   )}
                 />
               </Space>
@@ -290,9 +285,9 @@ export function PickupWizard({ sender, shipments }: PickupWizardProps) {
                 name="carrierPref"
                 control={control}
                 render={({ field }) => (
-                  <Form.Item label="Transportadora preferencial">
+                  <ELFormItem label="Transportadora preferencial">
                     <ELSelect {...field} options={carrierOptions} style={{ width: 200 }} />
-                  </Form.Item>
+                  </ELFormItem>
                 )}
               />
 
@@ -300,13 +295,13 @@ export function PickupWizard({ sender, shipments }: PickupWizardProps) {
                 name="notes"
                 control={control}
                 render={({ field }) => (
-                  <Form.Item label="Observações">
+                  <ELFormItem label="Observações">
                     <ELInput.TextArea {...field} rows={3} maxLength={500} />
-                  </Form.Item>
+                  </ELFormItem>
                 )}
               />
             </Space>
-          </Card>
+          </ELCard>
         ) : null}
 
         <Space>

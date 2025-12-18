@@ -7,18 +7,10 @@ import { Controller, useForm, useWatch, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 
-import {
-  App,
-  Button,
-  Checkbox,
-  Divider,
-  Form,
-  Input,
-  Typography,
-} from "antd";
+import { App, Button, Divider, Form, Typography } from "antd";
 import { GoogleOutlined } from "@ant-design/icons";
 import { PasswordStrength } from '@/shared/ui/form/PasswordStrength';
-import { FormCard } from '@/shared/ui/FormCard';
+import { FormCard, ELButton, ELCheckbox, ELFormItem, ELInput } from '@/shared/ui';
 import { cadastroSchema } from '@/shared/validation/auth';
 import {
   normalizePhoneInput,
@@ -144,19 +136,19 @@ export default function CadastroClient() {
           name="nomeCompleto"
           control={control}
           render={({ field }) => (
-            <Form.Item
+            <ELFormItem
               label="Nome completo"
               required
-              validateStatus={errors.nomeCompleto ? "error" : ""}
+              validateStatus={errors.nomeCompleto ? "error" : undefined}
               help={errors.nomeCompleto?.message}
             >
-              <Input
+              <ELInput
                 {...field}
                 autoComplete="name"
                 placeholder="Informe seu nome completo"
                 aria-invalid={Boolean(errors.nomeCompleto)}
               />
-            </Form.Item>
+            </ELFormItem>
           )}
         />
 
@@ -164,10 +156,10 @@ export default function CadastroClient() {
           name="email"
           control={control}
           render={({ field }) => (
-            <Form.Item
+            <ELFormItem
               label="E-mail"
               required
-              validateStatus={errors.email ? "error" : ""}
+              validateStatus={errors.email ? "error" : undefined}
               help={
                 errors.email?.message ? (
                   <span id="erro-email" aria-live="assertive">
@@ -176,14 +168,14 @@ export default function CadastroClient() {
                 ) : null
               }
             >
-              <Input
+              <ELInput
                 {...field}
                 autoComplete="email"
                 inputMode="email"
                 placeholder="contato@empresa.com.br"
                 aria-invalid={Boolean(errors.email)}
               />
-            </Form.Item>
+            </ELFormItem>
           )}
         />
 
@@ -191,19 +183,19 @@ export default function CadastroClient() {
           name="senha"
           control={control}
           render={({ field }) => (
-            <Form.Item
+            <ELFormItem
               label="Senha"
               required
-              validateStatus={errors.senha ? "error" : ""}
+              validateStatus={errors.senha ? "error" : undefined}
               help={errors.senha?.message}
             >
-              <Input.Password
+              <ELInput.Password
                 {...field}
                 autoComplete="new-password"
                 placeholder="Crie uma senha forte"
                 aria-invalid={Boolean(errors.senha)}
               />
-            </Form.Item>
+            </ELFormItem>
           )}
         />
 
@@ -213,19 +205,19 @@ export default function CadastroClient() {
           name="confirmarSenha"
           control={control}
           render={({ field }) => (
-            <Form.Item
+            <ELFormItem
               label="Confirmar senha"
               required
-              validateStatus={errors.confirmarSenha ? "error" : ""}
+              validateStatus={errors.confirmarSenha ? "error" : undefined}
               help={errors.confirmarSenha?.message}
             >
-              <Input.Password
+              <ELInput.Password
                 {...field}
                 autoComplete="new-password"
                 placeholder="Repita a senha"
                 aria-invalid={Boolean(errors.confirmarSenha)}
               />
-            </Form.Item>
+            </ELFormItem>
           )}
         />
 
@@ -233,12 +225,12 @@ export default function CadastroClient() {
           name="telefone"
           control={control}
           render={({ field }) => (
-            <Form.Item
+            <ELFormItem
               label="Telefone (opcional)"
-              validateStatus={errors.telefone ? "error" : ""}
+              validateStatus={errors.telefone ? "error" : undefined}
               help={errors.telefone?.message}
             >
-              <Input
+              <ELInput
                 {...field}
                 value={field.value ?? ""}
                 onChange={(event) => {
@@ -252,7 +244,7 @@ export default function CadastroClient() {
                 aria-invalid={Boolean(errors.telefone)}
                 maxLength={16}
               />
-            </Form.Item>
+            </ELFormItem>
           )}
         />
 
@@ -260,13 +252,13 @@ export default function CadastroClient() {
           name="consentLGPD"
           control={control}
           render={({ field }) => (
-            <Form.Item
+            <ELFormItem
               required
-              validateStatus={errors.consentLGPD ? "error" : ""}
+              validateStatus={errors.consentLGPD ? "error" : undefined}
               help={errors.consentLGPD?.message}
               valuePropName="checked"
             >
-              <Checkbox
+              <ELCheckbox
                 {...field}
                 checked={field.value}
                 aria-invalid={Boolean(errors.consentLGPD)}
@@ -274,21 +266,21 @@ export default function CadastroClient() {
                 Li e concordo com a{" "}
                 <Link href="/termos-de-uso">Política de Privacidade</Link>{" "}
                 e os <Link href="/termos-de-uso">Termos de Uso</Link>.
-              </Checkbox>
-            </Form.Item>
+              </ELCheckbox>
+            </ELFormItem>
           )}
         />
 
         <Form.Item style={{ marginBottom: 0 }}>
-          <Button
-            type="primary"
+          <ELButton
+            variant="primary"
             htmlType="submit"
             loading={isLoading}
             disabled={isLoading || isGoogleLoading}
             block
           >
             Criar conta
-          </Button>
+          </ELButton>
         </Form.Item>
 
         <Divider plain style={{ margin: '16px 0', color: 'rgba(0,0,0,0.45)' }}>ou</Divider>

@@ -3,20 +3,16 @@
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import {
-  Card,
   Table,
-  Button,
-  Input,
   Form,
   App,
   Tag,
   Space,
-  Select,
   InputNumber,
   Descriptions,
 } from 'antd';
-import { ELModal } from '@/shared/ui/ELModal';
-import { ELInput } from '@/shared/ui/ELInput';
+import { ELButton, ELCard, ELInput, ELModal, ELSelect } from '@/shared/ui';
+
 import {
   InboxOutlined,
   CameraOutlined,
@@ -26,7 +22,8 @@ import {
 import type { TableProps } from 'antd';
 import { PageShell } from '@/shared/ui/PageShell';
 
-const { TextArea } = Input;
+const { Card, Button, Input, Select } = { Card: ELCard, Button: ELButton, Input: ELInput, Select: ELSelect };
+const { TextArea } = ELInput;
 
 interface Package {
   id: string;

@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect, useRef, useMemo } from "react";
-import { Card as AntCard, Input, Button, Radio, Space, Typography, Alert, Form, App } from "antd";
-import { ELModal } from '@/shared/ui/ELModal';
+import { Card as AntCard, Input, Radio, Space, Typography, Alert, Form, App } from "antd";
+import { ELButton, ELModal } from '@/shared/ui';
 import { CreditCardOutlined, LockOutlined, LoadingOutlined } from "@ant-design/icons";
 import { formatBRL } from "@/shared/utils/format";
 
@@ -338,9 +338,9 @@ export function SavedCardPaymentForm({
             type="info"
             showIcon
           />
-          <Button type="primary" onClick={onUseNewCard} block>
+          <ELButton variant="primary" onClick={onUseNewCard} block>
             Adicionar Novo Cartão
-          </Button>
+          </ELButton>
         </Space>
       </AntCard>
     );
@@ -452,8 +452,8 @@ export function SavedCardPaymentForm({
         </Form.Item>
 
           <Space orientation="vertical" size="middle" style={{ width: "100%" }}>
-            <Button
-              type="primary"
+            <ELButton
+              variant="primary"
               size="large"
               block
               onClick={handleSubmit}
@@ -461,11 +461,11 @@ export function SavedCardPaymentForm({
               disabled={!selectedCardId || !cvv || cvv.length !== cvvLength || !publicKey}
             >
               Pagar {formatBRL(amount)}
-            </Button>
+            </ELButton>
 
-            <Button type="link" onClick={onUseNewCard} block>
+            <ELButton variant="link" onClick={onUseNewCard} block>
               Usar outro cartão
-            </Button>
+            </ELButton>
           </Space>
         </Space>
       </AntCard>

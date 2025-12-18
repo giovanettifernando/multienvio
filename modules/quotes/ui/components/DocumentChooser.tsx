@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useMemo } from "react";
-import { Card, Tabs, Typography, Space, Badge } from "antd";
+import { Typography, Space, Badge } from "antd";
 import { FileTextOutlined, FormOutlined } from "@ant-design/icons";
+import { ELCard, ELTabs } from "@/shared/ui";
 import { useFormContext } from "react-hook-form";
 import type { DocumentType } from '@/shared/types/quote';
 import type { FinalizeFormValues, VolumeDocument } from '@/shared/types/quoteFinalize';
@@ -51,14 +52,14 @@ export function DocumentChooser() {
   ).length;
 
   return (
-    <Card>
+    <ELCard>
       <Typography.Title level={5}>Qual documento usar?</Typography.Title>
       <Typography.Paragraph type="secondary">
         {volumeCount > 1
           ? "Selecione o tipo de documento para cada volume. Você pode usar NF-e para alguns volumes e Declaração para outros."
           : "Cada Volume deve ter NF ou Declaração de Conteúdo."}
       </Typography.Paragraph>
-      <Tabs
+      <ELTabs
         activeKey={activeKey}
         onChange={handleChange}
         items={[
@@ -86,6 +87,6 @@ export function DocumentChooser() {
           },
         ]}
       />
-    </Card>
+    </ELCard>
   );
 }

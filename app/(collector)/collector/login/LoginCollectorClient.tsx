@@ -1,9 +1,12 @@
 'use client';
 
 import { Suspense, useState } from 'react';
-import { App, Button, Card, Form, Input } from 'antd';
+import { App, Form } from 'antd';
+import { ELButton, ELCard, ELInput } from '@/shared/ui';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCollectorSession } from '@/modules/collectors/ui/state/useCollectorSession';
+
+const { Button, Card, Input } = { Button: ELButton, Card: ELCard, Input: ELInput };
 
 type LoginFormValues = {
   cnpj: string;

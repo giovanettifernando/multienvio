@@ -2,10 +2,10 @@
 
 import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { Button, Result, Spin, Typography } from "antd";
+import { Result, Spin, Typography } from "antd";
 import { MailOutlined, CheckCircleOutlined } from "@ant-design/icons";
 import Link from "next/link";
-import { FormCard } from '@/shared/ui/FormCard';
+import { ELButton, FormCard } from '@/shared/ui';
 
 const { Paragraph, Text } = Typography;
 
@@ -29,9 +29,9 @@ function ConfirmacaoContent() {
         }
         extra={[
           <Link key="login" href="/auth/login" passHref>
-            <Button type="primary" size="large">
+            <ELButton variant="primary" size="large">
               Ir para Login
-            </Button>
+            </ELButton>
           </Link>,
         ]}
       />

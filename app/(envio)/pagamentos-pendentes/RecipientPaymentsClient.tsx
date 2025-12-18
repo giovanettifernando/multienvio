@@ -6,7 +6,6 @@ import {
   App,
   Badge,
   Empty,
-  Popconfirm,
   Space,
   Table,
   Tag,
@@ -25,6 +24,7 @@ import { PageShell } from '@/shared/ui/PageShell';
 import { ELButton } from '@/shared/ui/ELButton';
 import { ELSelect } from '@/shared/ui/ELSelect';
 import { ELSkeleton } from '@/shared/ui/ELSkeleton';
+import { ELPopconfirm } from '@/shared/ui/ELPopconfirm';
 import { formatDateTimeBR } from '@/shared/utils/date';
 import { formatCentsAsBRL } from '@/shared/utils/format';
 
@@ -277,7 +277,7 @@ export default function RecipientPaymentsClient() {
                   onClick={() => resendMutation.mutate(record.id)}
                 />
               </Tooltip>
-              <Popconfirm
+              <ELPopconfirm
                 title="Cancelar solicitacao?"
                 description="Esta acao nao pode ser desfeita."
                 onConfirm={() => cancelMutation.mutate(record.id)}
@@ -292,7 +292,7 @@ export default function RecipientPaymentsClient() {
                     loading={cancelMutation.isPending}
                   />
                 </Tooltip>
-              </Popconfirm>
+              </ELPopconfirm>
             </>
           )}
           {record.status === "PAID" && record.shipmentId && (

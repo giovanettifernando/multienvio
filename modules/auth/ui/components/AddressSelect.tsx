@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { App, Button, Empty, Select, Skeleton, Space } from "antd";
+import { App, Empty, Skeleton, Space } from "antd";
+import { ELButton, ELSelect } from "@/shared/ui";
 import { PlusOutlined } from "@ant-design/icons";
 import { useAddresses, useAddressCreate } from "@/modules/account/ui/hooks";
 import { AddressModal, type AddressFormValues } from "@/modules/auth/ui/components/AddressModal";
@@ -109,13 +110,13 @@ export function AddressSelect({
           image={Empty.PRESENTED_IMAGE_SIMPLE}
           description="Nenhum endereço cadastrado"
         >
-          <Button
-            type="primary"
+          <ELButton
+            variant="primary"
             icon={<PlusOutlined />}
             onClick={() => setShowModal(true)}
           >
             Cadastrar endereço
-          </Button>
+          </ELButton>
         </Empty>
 
         <AddressModal
@@ -131,7 +132,7 @@ export function AddressSelect({
 
   return (
     <>
-      <Select
+      <ELSelect
         showSearch
         allowClear
         size="small"

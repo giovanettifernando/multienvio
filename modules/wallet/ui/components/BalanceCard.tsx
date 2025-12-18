@@ -1,11 +1,11 @@
 "use client";
 
 import React from "react";
-import { Card, Space, Typography, Row, Col, Button } from "antd";
+import { Space, Typography, Row, Col } from "antd";
 import { PlusOutlined, WarningOutlined } from "@ant-design/icons";
 import { useWallet } from "@/modules/wallet/ui/hooks";
 import { formatNumberBR } from "@/shared/utils/format";
-import { ELButton } from '@/shared/ui/ELButton';
+import { ELButton, ELCard } from '@/shared/ui';
 
 interface BalanceCardProps {
   onAddFunds: () => void;
@@ -21,7 +21,7 @@ export default function BalanceCard({ onAddFunds, onResolveDebt }: BalanceCardPr
   const negativeAmount = Math.abs(available);
 
   return (
-    <Card loading={isLoading}>
+    <ELCard loading={isLoading}>
       <Row gutter={[16, 16]}>
         <Col xs={24} md={12} lg={16}>
           <Space orientation="vertical" size="small" style={{ width: "100%" }}>
@@ -86,8 +86,7 @@ export default function BalanceCard({ onAddFunds, onResolveDebt }: BalanceCardPr
               Resolver pendências financeiras (R$ {formatNumberBR(negativeAmount)})
             </Typography.Text>
           </Space>
-          <Button
-            type="default"
+          <ELButton
             size="small"
             onClick={onResolveDebt}
             style={{
@@ -98,9 +97,9 @@ export default function BalanceCard({ onAddFunds, onResolveDebt }: BalanceCardPr
             }}
           >
             Resolver agora
-          </Button>
+          </ELButton>
         </div>
       )}
-    </Card>
+    </ELCard>
   );
 }

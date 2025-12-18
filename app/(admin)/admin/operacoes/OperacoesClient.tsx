@@ -1,8 +1,10 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { Card, Statistic, Row, Col, Select, DatePicker, Flex, Tabs, Skeleton, Alert } from 'antd';
+import { Statistic, Row, Col, Flex, Skeleton, Alert } from 'antd';
+import { ELCard, ELSelect, ELDatePicker, ELTabs } from '@/shared/ui';
 import { useQuery } from '@tanstack/react-query';
+
 import dayjs from 'dayjs';
 import { getOpsKpis } from '@/modules/admin/application/ops/api';
 import ShipmentsTable from '@/modules/admin/ui/components/ops/ShipmentsTable';
@@ -12,7 +14,8 @@ import ExceptionsTable from '@/modules/admin/ui/components/ops/ExceptionsTable';
 import EventsTable from '@/modules/admin/ui/components/ops/EventsTable';
 import { PageShell } from '@/shared/ui/PageShell';
 
-const { RangePicker } = DatePicker;
+const { Card, Select, DatePicker, Tabs } = { Card: ELCard, Select: ELSelect, DatePicker: ELDatePicker, Tabs: ELTabs };
+const { RangePicker } = ELDatePicker;
 
 type PeriodPreset = 'today' | '7d' | '30d' | 'month' | 'custom';
 

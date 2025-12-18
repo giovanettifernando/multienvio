@@ -1,9 +1,11 @@
 'use client';
 
-import { Tabs } from 'antd';
+import { ELTabs } from '@/shared/ui';
 import { DRETable } from '@/modules/admin/ui/components/finance/DRETable';
 import { AccountsPayableTable } from '@/modules/admin/ui/components/finance/AccountsPayableTable';
 import { PageShell } from '@/shared/ui/PageShell';
+
+const Tabs = ELTabs;
 
 export default function RelatoriosClient() {
   return (

@@ -1,7 +1,8 @@
 'use client';
 
 import { Suspense, useState, useCallback } from 'react';
-import { App, Button, Card, Divider, Form, Input, Space } from 'antd';
+import { App, Divider, Form, Space } from 'antd';
+import { ELButton, ELCard, ELInput } from '@/shared/ui';
 import { GoogleOutlined } from '@ant-design/icons';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
@@ -92,7 +93,7 @@ function ColetorLoginForm() {
   }
 
   return (
-    <Card title="Coletor Autônomo • Login" style={{ width: 400 }}>
+    <ELCard title="Coletor Autônomo • Login" style={{ width: 400 }}>
       <Form layout="vertical" onFinish={onFinish}>
         <Form.Item
           label="E-mail"
@@ -102,23 +103,23 @@ function ColetorLoginForm() {
             { type: 'email', message: 'E-mail inválido' },
           ]}
         >
-          <Input type="email" placeholder="seu@email.com" />
+          <ELInput type="email" placeholder="seu@email.com" />
         </Form.Item>
         <Form.Item
           label="Senha"
           name="password"
           rules={[{ required: true, message: 'Senha é obrigatória' }]}
         >
-          <Input.Password placeholder="••••••••" />
+          <ELInput.Password placeholder="••••••••" />
         </Form.Item>
         <Space orientation="vertical" style={{ width: '100%' }} size="middle">
-          <Button type="primary" htmlType="submit" block loading={loading} disabled={loading || googleLoading}>
+          <ELButton variant="primary" htmlType="submit" block loading={loading} disabled={loading || googleLoading}>
             Entrar
-          </Button>
+          </ELButton>
 
           <Divider plain style={{ margin: '8px 0', color: 'rgba(0,0,0,0.45)' }}>ou</Divider>
 
-          <Button
+          <ELButton
             block
             icon={<GoogleOutlined />}
             onClick={handleGoogleLogin}
@@ -126,19 +127,19 @@ function ColetorLoginForm() {
             disabled={loading || googleLoading}
           >
             Continuar com Google
-          </Button>
+          </ELButton>
 
           {showResendEmail && (
-            <Button block onClick={handleResendEmail}>
+            <ELButton block onClick={handleResendEmail}>
               Reenviar e-mail de verificação
-            </Button>
+            </ELButton>
           )}
           <Link href="/coletores/cadastro" style={{ width: '100%' }}>
-            <Button block>Sou novo coletor / Quero me cadastrar</Button>
+            <ELButton block>Sou novo coletor / Quero me cadastrar</ELButton>
           </Link>
         </Space>
       </Form>
-    </Card>
+    </ELCard>
   );
 }
 
@@ -155,9 +156,9 @@ export default function LoginColetorClient() {
     >
       <Suspense
         fallback={
-          <Card title="Coletor Autônomo • Login" style={{ width: 400 }}>
+          <ELCard title="Coletor Autônomo • Login" style={{ width: 400 }}>
             Carregando...
-          </Card>
+          </ELCard>
         }
       >
         <ColetorLoginForm />

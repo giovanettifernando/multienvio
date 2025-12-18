@@ -1,8 +1,15 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Card, Tabs, Space, Button, Form, Input, Select, App, Table, Tag, Typography } from 'antd';
-import { ELModal } from '@/shared/ui/ELModal';
+import { Space, Form, App, Table, Tag, Typography } from 'antd';
+import {
+  ELButton,
+  ELCard,
+  ELInput,
+  ELModal,
+  ELSelect,
+  ELTabs,
+} from '@/shared/ui';
 import { PlusOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons';
 import { PageShell } from '@/shared/ui/PageShell';
 import { useTickets, useCreateTicket } from '@/modules/support/ui/hooks';
@@ -15,7 +22,6 @@ import { useColetorSession } from '@/modules/collectors/ui/state/useColetorSessi
 dayjs.extend(relativeTime);
 dayjs.locale('pt-br');
 
-const { TextArea } = Input;
 const { Text } = Typography;
 
 const statusColors: Record<Status, string> = {
@@ -177,8 +183,8 @@ export default function SuporteClient() {
 
   return (
     <PageShell title="Suporte" gap="md">
-      <Card>
-        <Tabs
+      <ELCard>
+        <ELTabs
           defaultActiveKey="tickets"
           items={[
             {
@@ -188,7 +194,7 @@ export default function SuporteClient() {
                 <Space orientation="vertical" style={{ width: '100%' }} size="middle">
                   {/* Filtros */}
                   <Space wrap>
-                    <Input
+                    <ELInput
                       placeholder="Buscar..."
                       prefix={<SearchOutlined />}
                       value={query}
@@ -196,7 +202,7 @@ export default function SuporteClient() {
                       style={{ width: 250 }}
                       allowClear
                     />
-                    <Select
+                    <ELSelect
                       mode="multiple"
                       placeholder="Status"
                       value={statusFilter}
@@ -210,7 +216,7 @@ export default function SuporteClient() {
                       ]}
                       allowClear
                     />
-                    <Select
+                    <ELSelect
                       mode="multiple"
                       placeholder="Prioridade"
                       value={priorityFilter}
@@ -224,20 +230,20 @@ export default function SuporteClient() {
                       ]}
                       allowClear
                     />
-                    <Button
+                    <ELButton
                       icon={<ReloadOutlined />}
                       onClick={() => ticketsQuery.refetch()}
                       loading={ticketsQuery.isFetching}
                     >
                       Atualizar
-                    </Button>
-                    <Button
-                      type="primary"
+                    </ELButton>
+                    <ELButton
+                      variant="primary"
                       icon={<PlusOutlined />}
                       onClick={handleOpenModal}
                     >
                       Novo Chamado
-                    </Button>
+                    </ELButton>
                   </Space>
 
                   {/* Tabela de tickets */}
@@ -257,7 +263,7 @@ export default function SuporteClient() {
             },
           ]}
         />
-      </Card>
+      </ELCard>
 
       {/* Modal de Novo Chamado */}
       <ELModal
@@ -280,7 +286,7 @@ export default function SuporteClient() {
             label="Nome"
             rules={[{ required: true, message: 'Nome é obrigatório' }]}
           >
-            <Input placeholder="Seu nome completo" disabled={!!coletor?.pfNome} />
+            <ELInput placeholder="Seu nome completo" disabled={!!coletor?.pfNome} />
           </Form.Item>
 
           <Form.Item
@@ -291,7 +297,7 @@ export default function SuporteClient() {
               { type: 'email', message: 'E-mail inválido' },
             ]}
           >
-            <Input
+            <ELInput
               placeholder="seu@email.com"
               disabled={!!coletor?.pfEmail}
             />
@@ -301,7 +307,7 @@ export default function SuporteClient() {
             name="phone"
             label="Telefone (opcional)"
           >
-            <Input placeholder="(00) 00000-0000" />
+            <ELInput placeholder="(00) 00000-0000" />
           </Form.Item>
 
           <Form.Item
@@ -309,7 +315,7 @@ export default function SuporteClient() {
             label="Assunto"
             rules={[{ required: true, message: 'Assunto é obrigatório', min: 3 }]}
           >
-            <Input placeholder="Descreva brevemente o problema" />
+            <ELInput placeholder="Descreva brevemente o problema" />
           </Form.Item>
 
           <Form.Item
@@ -317,7 +323,7 @@ export default function SuporteClient() {
             label="Prioridade"
             rules={[{ required: true }]}
           >
-            <Select
+            <ELSelect
               options={[
                 { value: 'baixa', label: 'Baixa' },
                 { value: 'media', label: 'Média' },
@@ -332,7 +338,7 @@ export default function SuporteClient() {
             label="Descrição"
             rules={[{ required: true, message: 'Descrição é obrigatória', min: 3 }]}
           >
-            <TextArea
+            <ELInput.TextArea
               rows={4}
               placeholder="Descreva o problema em detalhes"
               showCount
@@ -342,12 +348,12 @@ export default function SuporteClient() {
 
           <Form.Item style={{ marginBottom: 0 }}>
             <Space style={{ width: '100%', justifyContent: 'flex-end' }}>
-              <Button onClick={handleCloseModal}>
+              <ELButton onClick={handleCloseModal}>
                 Cancelar
-              </Button>
-              <Button type="primary" htmlType="submit" loading={createTicket.isPending}>
+              </ELButton>
+              <ELButton variant="primary" htmlType="submit" loading={createTicket.isPending}>
                 Abrir chamado
-              </Button>
+              </ELButton>
             </Space>
           </Form.Item>
         </Form>

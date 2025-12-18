@@ -1,8 +1,9 @@
 "use client";
 
 import { Suspense, useState, useEffect } from "react";
-import { App, Button, Card, Form, Input } from "antd";
+import { App, Form } from "antd";
 import { useRouter, useSearchParams } from "next/navigation";
+import { ELButton, ELCard, ELFormItem, ELInput } from '@/shared/ui';
 import { useAdminSession } from '@/modules/admin/ui/state/useAdminSession';
 import {
   ADMIN_PERMISSION_KEYS,
@@ -95,30 +96,32 @@ function AdminLoginForm() {
   }
 
   return (
-    <Card title="Admin • Login" style={{ width: 360 }}>
+    <ELCard title="Admin • Login" style={{ width: 360 }}>
       <Form layout="vertical" onFinish={onFinish}>
-        <Form.Item
+        <ELFormItem
           label="E-mail"
           name="email"
           rules={[
             { required: true, message: "E-mail é obrigatório" },
             { type: "email", message: "E-mail inválido" },
           ]}
+          required
         >
-          <Input placeholder="usuario@enviolegal.com" />
-        </Form.Item>
-        <Form.Item
+          <ELInput placeholder="usuario@enviolegal.com" />
+        </ELFormItem>
+        <ELFormItem
           label="Senha"
           name="password"
           rules={[{ required: true, message: "Senha é obrigatória" }]}
+          required
         >
-          <Input.Password placeholder="••••••••" />
-        </Form.Item>
-        <Button type="primary" htmlType="submit" block loading={loading}>
+          <ELInput.Password placeholder="••••••••" />
+        </ELFormItem>
+        <ELButton variant="primary" htmlType="submit" block loading={loading}>
           Entrar
-        </Button>
+        </ELButton>
       </Form>
-    </Card>
+    </ELCard>
   );
 }
 
@@ -134,9 +137,9 @@ export default function AdminLoginClient() {
     >
       <Suspense
         fallback={
-          <Card title="Admin • Login" style={{ width: 360 }}>
+          <ELCard title="Admin • Login" style={{ width: 360 }}>
             Carregando...
-          </Card>
+          </ELCard>
         }
       >
         <AdminLoginForm />

@@ -5,18 +5,13 @@
 import {
   Alert,
   App,
-  Button,
-  Card,
   Flex,
-  Form,
-  Input,
-  Popconfirm,
   Space,
-  Switch,
   Typography,
   Spin,
   Tooltip,
 } from "antd";
+import { ELButton, ELCard, ELFormItem, ELInput, ELPopconfirm, ELSwitch } from "@/shared/ui";
 import { DeleteOutlined } from "@ant-design/icons";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Controller, useForm, useWatch, type FieldErrors } from "react-hook-form";
@@ -318,8 +313,8 @@ export default function PersonalForm() {
                   onChange={(event) => handleAvatarInputChange(event, field.onChange)}
                 />
                 <Flex align="center" gap={12}>
-                  <Button
-                    type="text"
+                  <ELButton
+                    variant="text"
                     onClick={() => fileInputRef.current?.click()}
                     aria-label="Alterar foto do usuário"
                     style={{ padding: 0 }}
@@ -355,9 +350,9 @@ export default function PersonalForm() {
                         </Typography.Text>
                       )}
                     </span>
-                  </Button>
+                  </ELButton>
                   {field.value ? (
-                    <Popconfirm
+                    <ELPopconfirm
                       title="Remover sua foto?"
                       okText="Remover"
                       cancelText="Cancelar"
@@ -365,16 +360,16 @@ export default function PersonalForm() {
                       placement="right"
                     >
                       <Tooltip title="Remover foto">
-                        <Button
+                        <ELButton
                           shape="circle"
-                          type="text"
+                          variant="text"
                           danger
                           icon={<DeleteOutlined />}
                           aria-label="Remover foto"
                           tabIndex={0}
                         />
                       </Tooltip>
-                    </Popconfirm>
+                    </ELPopconfirm>
                   ) : null}
                 </Flex>
                 {avatarUploading ? <Spin size="small" aria-live="polite" /> : null}
@@ -402,37 +397,37 @@ export default function PersonalForm() {
             />
           ) : null}
 
-          <Card size="small" title="Dados pessoais" variant="outlined" style={{ borderRadius: 12 }}>
+          <ELCard padding="sm" header={{ title: "Dados pessoais" }} style={{ borderRadius: 12 }}>
             <Space orientation="vertical" size={16} style={{ width: "100%" }}>
               <Controller
                 name="fullName"
                 control={form.control}
                 render={({ field, fieldState }) => (
-                  <Form.Item
+                  <ELFormItem
                     label="Nome completo"
                     required
-                    validateStatus={fieldState.error ? "error" : ""}
+                    validateStatus={fieldState.error ? "error" : undefined}
                     help={fieldState.error?.message}
                   >
-                    <Input
+                    <ELInput
                       {...field}
                       placeholder="Nome e sobrenome"
                       aria-invalid={fieldState.invalid}
                     />
-                  </Form.Item>
+                  </ELFormItem>
                 )}
               />
               <Controller
                 name="email"
                 control={form.control}
                 render={({ field, fieldState }) => (
-                  <Form.Item
+                  <ELFormItem
                     label="E-mail"
                     required
-                    validateStatus={fieldState.error ? "error" : ""}
+                    validateStatus={fieldState.error ? "error" : undefined}
                     help={fieldState.error?.message || "Email não pode ser alterado"}
                   >
-                    <Input
+                    <ELInput
                       {...field}
                       type="email"
                       inputMode="email"
@@ -442,61 +437,60 @@ export default function PersonalForm() {
                       readOnly
                       onChange={(event) => field.onChange(event.target.value.toLowerCase())}
                     />
-                  </Form.Item>
+                  </ELFormItem>
                 )}
               />
               <Controller
                 name="phone"
                 control={form.control}
                 render={({ field, fieldState }) => (
-                  <Form.Item
+                  <ELFormItem
                     label="Telefone"
                     required
-                    validateStatus={fieldState.error ? "error" : ""}
+                    validateStatus={fieldState.error ? "error" : undefined}
                     help={fieldState.error?.message}
                   >
-                    <Input
+                    <ELInput
                       {...field}
                       inputMode="tel"
                       placeholder="(00) 00000-0000"
                       aria-invalid={fieldState.invalid}
                       onChange={(event) => field.onChange(maskPhone(event.target.value))}
                     />
-                  </Form.Item>
+                  </ELFormItem>
                 )}
               />
               <Controller
                 name="cpf"
                 control={form.control}
                 render={({ field, fieldState }) => (
-                  <Form.Item
+                  <ELFormItem
                     label="CPF"
                     required
-                    validateStatus={fieldState.error ? "error" : ""}
+                    validateStatus={fieldState.error ? "error" : undefined}
                     help={fieldState.error?.message}
                   >
-                    <Input
+                    <ELInput
                       {...field}
                       inputMode="numeric"
                       placeholder="000.000.000-00"
                       aria-invalid={fieldState.invalid}
                       onChange={(event) => field.onChange(maskCPF(event.target.value))}
                     />
-                  </Form.Item>
+                  </ELFormItem>
                 )}
               />
             </Space>
-          </Card>
+          </ELCard>
 
-          <Card
-            size="small"
-            variant="outlined"
+          <ELCard
+            padding="sm"
             style={{ borderRadius: 12 }}
           >
             <Space orientation="vertical" size={16} style={{ width: "100%" }}>
               <Flex align="center" gap={8}>
                 <Typography.Text>Adicionar dados de empresa</Typography.Text>
-                <Switch
+                <ELSwitch
                   checked={hasCompany}
                   onChange={handleCompanyToggle}
                   aria-label="Adicionar dados de empresa"
@@ -509,60 +503,60 @@ export default function PersonalForm() {
                     name="cnpj"
                     control={form.control}
                     render={({ field, fieldState }) => (
-                      <Form.Item
+                      <ELFormItem
                         label="CNPJ"
                         required
-                        validateStatus={fieldState.error ? "error" : ""}
+                        validateStatus={fieldState.error ? "error" : undefined}
                         help={fieldState.error?.message}
                       >
-                        <Input
+                        <ELInput
                           {...field}
                           inputMode="numeric"
                           placeholder="00.000.000/0000-00"
                           aria-invalid={fieldState.invalid}
                           onChange={(event) => field.onChange(maskCNPJ(event.target.value))}
                         />
-                      </Form.Item>
+                      </ELFormItem>
                     )}
                   />
                   <Controller
                     name="razaoSocial"
                     control={form.control}
                     render={({ field, fieldState }) => (
-                      <Form.Item
+                      <ELFormItem
                         label="Razão social"
                         required
-                        validateStatus={fieldState.error ? "error" : ""}
+                        validateStatus={fieldState.error ? "error" : undefined}
                         help={fieldState.error?.message}
                       >
-                        <Input
+                        <ELInput
                           {...field}
                           placeholder="Nome empresarial"
                           aria-invalid={fieldState.invalid}
                         />
-                      </Form.Item>
+                      </ELFormItem>
                     )}
                   />
                 </>
               )}
             </Space>
-          </Card>
+          </ELCard>
 
           <Flex justify="flex-end" gap={12} wrap>
-            <Button
-              type="text"
+            <ELButton
+              variant="text"
               onClick={handleCancel}
               disabled={saveMutation.isPending}
             >
               Cancelar
-            </Button>
-            <Button
-              type="primary"
+            </ELButton>
+            <ELButton
+              variant="primary"
               htmlType="submit"
               loading={saveMutation.isPending}
             >
               Salvar
-            </Button>
+            </ELButton>
           </Flex>
         </Space>
       </form>

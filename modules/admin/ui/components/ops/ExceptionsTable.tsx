@@ -4,21 +4,16 @@ import { useState } from 'react';
 import {
   Tag,
   Space,
-  Input,
-  Select,
-  Button,
   Flex,
-  Card,
   Row,
   Col,
   Statistic,
   Typography,
-  DatePicker,
   Descriptions,
   Image,
   Badge,
 } from 'antd';
-import { ELModal } from '@/shared/ui/ELModal';
+import { ELButton, ELCard, ELInput, ELModal, ELSelect, ELDatePicker } from '@/shared/ui';
 import { useQuery } from '@tanstack/react-query';
 import {
   SearchOutlined,
@@ -35,7 +30,6 @@ import { formatDateTimeBR } from '@/shared/utils/date';
 import { DataTable, type DataTableColumn } from '@/shared/ui/DataTable';
 
 const { Text } = Typography;
-const { RangePicker } = DatePicker;
 
 interface ExceptionItem {
   id: string;
@@ -288,15 +282,15 @@ export default function ExceptionsTable({ dateStart, dateEnd }: ExceptionsTableP
         title: 'Ações',
         key: 'actions',
         width: 100,
-        render: (_, record) => (
-          <Button
-            type="link"
+        render: (_: unknown, record: ExceptionItem) => (
+          <ELButton
+            variant="link"
             icon={<EyeOutlined />}
             onClick={() => setDetailsModal(record)}
             size="small"
           >
             Detalhes
-          </Button>
+          </ELButton>
         ),
         isActions: true,
       },
@@ -307,7 +301,7 @@ export default function ExceptionsTable({ dateStart, dateEnd }: ExceptionsTableP
     if (!summary) return null;
 
     return (
-      <Card size="small" style={{ marginBottom: 16 }}>
+      <ELCard padding="sm" style={{ marginBottom: 16 }}>
         <Row gutter={[16, 16]}>
           <Col xs={24} sm={8}>
             <Statistic
@@ -333,7 +327,7 @@ export default function ExceptionsTable({ dateStart, dateEnd }: ExceptionsTableP
             />
           </Col>
         </Row>
-      </Card>
+      </ELCard>
     );
   };
 
@@ -354,9 +348,9 @@ export default function ExceptionsTable({ dateStart, dateEnd }: ExceptionsTableP
         open={!!detailsModal}
         onCancel={() => setDetailsModal(null)}
         footer={[
-          <Button key="close" onClick={() => setDetailsModal(null)}>
+          <ELButton key="close" onClick={() => setDetailsModal(null)}>
             Fechar
-          </Button>,
+          </ELButton>,
         ]}
         size="md"
       >
@@ -486,7 +480,7 @@ export default function ExceptionsTable({ dateStart, dateEnd }: ExceptionsTableP
       {/* Filtros */}
       <Flex justify="space-between" align="center" wrap="wrap" gap={12}>
         <Space wrap size="middle">
-          <Input
+          <ELInput
             placeholder="Buscar por código, descrição..."
             prefix={<SearchOutlined />}
             value={search}
@@ -497,7 +491,7 @@ export default function ExceptionsTable({ dateStart, dateEnd }: ExceptionsTableP
             style={{ width: 220 }}
             allowClear
           />
-          <Select
+          <ELSelect
             value={type}
             onChange={(v) => {
               setType(v);
@@ -510,7 +504,7 @@ export default function ExceptionsTable({ dateStart, dateEnd }: ExceptionsTableP
               { label: 'Tentativas de Coleta', value: 'pickup_attempt' },
             ]}
           />
-          <RangePicker
+          <ELDatePicker.RangePicker
             value={dateRange}
             onChange={(dates) => {
               if (dates && dates[0] && dates[1]) {
@@ -526,13 +520,13 @@ export default function ExceptionsTable({ dateStart, dateEnd }: ExceptionsTableP
           />
         </Space>
 
-        <Button
+        <ELButton
           icon={<ReloadOutlined />}
           onClick={() => refetch()}
           loading={isLoading}
         >
           Atualizar
-        </Button>
+        </ELButton>
       </Flex>
 
       {/* Resumo */}

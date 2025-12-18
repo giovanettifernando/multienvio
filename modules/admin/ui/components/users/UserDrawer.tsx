@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect } from "react";
-import { Form, Input, Select, Button, Flex } from "antd";
-import { ELDrawer } from '@/shared/ui/ELDrawer';
+import { Form, Flex } from "antd";
+import { ELButton, ELDrawer, ELFormItem, ELInput, ELSelect } from '@/shared/ui';
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { adminUserSchema } from "@/modules/auth/application/schemas";
@@ -107,21 +107,21 @@ export function UserDrawer({ open, user, onClose }: UserDrawerProps) {
       drawerSize="lg"
       footer={
         <Flex justify="flex-end" gap={spacing.md}>
-          <Button onClick={handleClose}>Cancelar</Button>
-          <Button
-            type="primary"
+          <ELButton onClick={handleClose}>Cancelar</ELButton>
+          <ELButton
+            variant="primary"
             onClick={handleSubmit(onSubmit)}
             loading={isSubmitting}
           >
             {isEdit ? "Salvar" : "Criar"}
-          </Button>
+          </ELButton>
         </Flex>
       }
     >
       <Form layout="vertical">
-        <Form.Item
+        <ELFormItem
           label="Nome"
-          validateStatus={errors.name ? "error" : ""}
+          validateStatus={errors.name ? "error" : undefined}
           help={errors.name?.message}
           required
         >
@@ -129,14 +129,14 @@ export function UserDrawer({ open, user, onClose }: UserDrawerProps) {
             name="name"
             control={control}
             render={({ field }) => (
-              <Input {...field} placeholder="Nome completo" />
+              <ELInput {...field} placeholder="Nome completo" />
             )}
           />
-        </Form.Item>
+        </ELFormItem>
 
-        <Form.Item
+        <ELFormItem
           label="E-mail"
-          validateStatus={errors.email ? "error" : ""}
+          validateStatus={errors.email ? "error" : undefined}
           help={errors.email?.message}
           required
         >
@@ -144,28 +144,28 @@ export function UserDrawer({ open, user, onClose }: UserDrawerProps) {
             name="email"
             control={control}
             render={({ field }) => (
-              <Input {...field} type="email" placeholder="usuario@enviolegal.com" />
+              <ELInput {...field} type="email" placeholder="usuario@enviolegal.com" />
             )}
           />
-        </Form.Item>
+        </ELFormItem>
 
-        <Form.Item
+        <ELFormItem
           label="Telefone"
-          validateStatus={errors.phone ? "error" : ""}
+          validateStatus={errors.phone ? "error" : undefined}
           help={errors.phone?.message}
         >
           <Controller
             name="phone"
             control={control}
             render={({ field }) => (
-              <Input {...field} value={field.value || ""} placeholder="+55 11 98765-4321" />
+              <ELInput {...field} value={field.value || ""} placeholder="+55 11 98765-4321" />
             )}
           />
-        </Form.Item>
+        </ELFormItem>
 
-        <Form.Item
+        <ELFormItem
           label="Status"
-          validateStatus={errors.status ? "error" : ""}
+          validateStatus={errors.status ? "error" : undefined}
           help={errors.status?.message}
           required
         >
@@ -173,7 +173,7 @@ export function UserDrawer({ open, user, onClose }: UserDrawerProps) {
             name="status"
             control={control}
             render={({ field }) => (
-              <Select
+              <ELSelect
                 {...field}
                 options={[
                   { label: "Ativo", value: "active" },
@@ -182,11 +182,11 @@ export function UserDrawer({ open, user, onClose }: UserDrawerProps) {
               />
             )}
           />
-        </Form.Item>
+        </ELFormItem>
 
-        <Form.Item
+        <ELFormItem
           label="Permissões"
-          validateStatus={errors.roles ? "error" : ""}
+          validateStatus={errors.roles ? "error" : undefined}
           help={errors.roles?.message}
           required
         >
@@ -195,7 +195,7 @@ export function UserDrawer({ open, user, onClose }: UserDrawerProps) {
             control={control}
             render={({ field }) => <RolesChecklist {...field} />}
           />
-        </Form.Item>
+        </ELFormItem>
       </Form>
     </ELDrawer>
   );

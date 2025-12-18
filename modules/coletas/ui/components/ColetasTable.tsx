@@ -1,11 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Table, Typography, Space, Alert } from 'antd';
+import { Typography, Space } from 'antd';
 import { EnvironmentOutlined, EyeOutlined } from "@ant-design/icons";
-import type { TableProps } from 'antd';
-import { ELButton } from '@/shared/ui/ELButton';
-import { ELSelect } from '@/shared/ui/ELSelect';
+import { ELAlert, ELButton, ELSelect } from '@/shared/ui';
+import { DataTable, type DataTableColumn } from '@/shared/ui/DataTable';
 import { formatDateTimeBR } from '@/shared/utils/date';
 import {
   CollectionStatus,
@@ -40,15 +39,15 @@ export function ColetasTable({ data, loading }: ColetasTableProps) {
     }
   };
 
-  const columns: TableProps<Coleta>['columns'] = [
+  const columns: DataTableColumn<Coleta>[] = [
     {
       title: "ID do Envio",
       dataIndex: "shipmentId",
       key: "shipmentId",
       width: 180,
-      render: (shipmentId: string) => (
+      render: (shipmentId: unknown) => (
         <Typography.Text copyable strong>
-          {shipmentId}
+          {String(shipmentId)}
         </Typography.Text>
       ),
     },
@@ -56,7 +55,7 @@ export function ColetasTable({ data, loading }: ColetasTableProps) {
       title: "Origem",
       key: "origem",
       width: 250,
-      render: (_, coleta) => (
+      render: (_: unknown, coleta: Coleta) => (
         <Space orientation="vertical" size={0}>
           <Typography.Text strong>{coleta.origem.nome}</Typography.Text>
           <Typography.Text type="secondary" style={{ fontSize: 12 }}>
@@ -69,7 +68,7 @@ export function ColetasTable({ data, loading }: ColetasTableProps) {
       title: "Transportadora / Serviço",
       key: "transportadora",
       width: 200,
-      render: (_, coleta) => (
+      render: (_: unknown, coleta: Coleta) => (
         <Space orientation="vertical" size={0}>
           {coleta.transportadora && (
             <Typography.Text>{coleta.transportadora}</Typography.Text>
@@ -90,9 +89,9 @@ export function ColetasTable({ data, loading }: ColetasTableProps) {
       dataIndex: "status",
       key: "status",
       width: 150,
-      render: (status: ColetaStatus, record) => (
+      render: (status: unknown, record: Coleta) => (
         <ELSelect
-          value={status}
+          value={status as ColetaStatus}
           style={{ width: "100%" }}
           onChange={(newStatus) => handleStatusChange(record.id, newStatus as ColetaStatus)}
           options={[
@@ -125,8 +124,8 @@ export function ColetasTable({ data, loading }: ColetasTableProps) {
       dataIndex: "createdAt",
       key: "createdAt",
       width: 150,
-      render: (date: string) => (
-        <Typography.Text type="secondary">{formatDateTimeBR(date)}</Typography.Text>
+      render: (date: unknown) => (
+        <Typography.Text type="secondary">{formatDateTimeBR(date as string)}</Typography.Text>
       ),
     },
     {
@@ -134,9 +133,9 @@ export function ColetasTable({ data, loading }: ColetasTableProps) {
       dataIndex: "updatedAt",
       key: "updatedAt",
       width: 150,
-      sorter: (a, b) => a.updatedAt.localeCompare(b.updatedAt),
-      render: (date: string) => (
-        <Typography.Text>{formatDateTimeBR(date)}</Typography.Text>
+      sorter: (a: Coleta, b: Coleta) => a.updatedAt.localeCompare(b.updatedAt),
+      render: (date: unknown) => (
+        <Typography.Text>{formatDateTimeBR(date as string)}</Typography.Text>
       ),
     },
     {
@@ -144,7 +143,8 @@ export function ColetasTable({ data, loading }: ColetasTableProps) {
       key: "actions",
       width: 150,
       fixed: "right",
-      render: (_, coleta) => (
+      isActions: true,
+      render: (_: unknown, coleta: Coleta) => (
         <Space size="small">
           <ELButton
             variant="link"
@@ -177,8 +177,8 @@ export function ColetasTable({ data, loading }: ColetasTableProps) {
 
   if (data.length === 0 && !loading) {
     return (
-      <Alert
-        type="info"
+      <ELAlert
+        variant="info"
         showIcon
         message="Nenhuma coleta cadastrada ainda"
         description="As coletas serão criadas automaticamente quando você finalizar um checkout com a opção 'Solicitar coleta na origem' ativada."
@@ -188,18 +188,20 @@ export function ColetasTable({ data, loading }: ColetasTableProps) {
 
   return (
     <>
-      <Table
+      <DataTable<Coleta>
         columns={columns}
-        dataSource={data}
+        data={data}
         rowKey="id"
         loading={loading}
+        enableMobileCards={true}
         pagination={{
           pageSize: 10,
           showSizeChanger: true,
-        showTotal: (total) => `Total: ${total} coletas`,
-      }}
-      scroll={{ x: 1200, y: 'calc(100vh - 400px)' }}
-    />
+          showTotal: (total) => `Total: ${total} coletas`,
+        }}
+        scrollX={1200}
+        scrollY="calc(100vh - 400px)"
+      />
 
       <ColetaDetailDrawer
         open={detailDrawerOpen}

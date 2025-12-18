@@ -4,15 +4,13 @@ import React, { useState } from 'react';
 import {
   Typography,
   Space,
-  Button,
   Radio,
-  Card,
   Divider,
   Alert,
   message,
   Spin,
 } from 'antd';
-import { ELModal } from '@/shared/ui/ELModal';
+import { ELButton, ELCard, ELModal } from '@/shared/ui';
 import {
   WarningOutlined,
   CreditCardOutlined,
@@ -130,7 +128,7 @@ export default function ResolveDebtModal({ open, onClose }: ResolveDebtModalProp
           </div>
 
           {/* Valor da dívida */}
-          <Card
+          <ELCard
             style={{
               backgroundColor: '#fff1f0',
               borderColor: '#ffa39e',
@@ -145,7 +143,7 @@ export default function ResolveDebtModal({ open, onClose }: ResolveDebtModalProp
                 R$ {formatNumberBR(debtAmount)}
               </Title>
             </div>
-          </Card>
+          </ELCard>
 
           <Alert
             type="warning"
@@ -163,7 +161,7 @@ export default function ResolveDebtModal({ open, onClose }: ResolveDebtModalProp
             style={{ width: '100%' }}
           >
             <Space orientation="vertical" style={{ width: '100%' }}>
-              <Card
+              <ELCard
                 hoverable
                 style={{
                   cursor: 'pointer',
@@ -183,9 +181,9 @@ export default function ResolveDebtModal({ open, onClose }: ResolveDebtModalProp
                     </div>
                   </Space>
                 </Radio>
-              </Card>
+              </ELCard>
 
-              <Card
+              <ELCard
                 hoverable
                 style={{
                   cursor: 'pointer',
@@ -207,11 +205,11 @@ export default function ResolveDebtModal({ open, onClose }: ResolveDebtModalProp
                     </div>
                   </Space>
                 </Radio>
-              </Card>
+              </ELCard>
 
               {/* Lista de cartões */}
               {paymentMethod === 'card' && cards && cards.length > 0 && (
-                <Card size="small" style={{ marginLeft: 24 }}>
+                <ELCard padding="sm" style={{ marginLeft: 24 }}>
                   <Radio.Group
                     value={selectedCardId}
                     onChange={(e) => setSelectedCardId(e.target.value)}
@@ -232,7 +230,7 @@ export default function ResolveDebtModal({ open, onClose }: ResolveDebtModalProp
                       ))}
                     </Space>
                   </Radio.Group>
-                </Card>
+                </ELCard>
               )}
 
               {paymentMethod === 'card' && (!cards || cards.length === 0) && (
@@ -248,11 +246,11 @@ export default function ResolveDebtModal({ open, onClose }: ResolveDebtModalProp
 
           {/* Botões */}
           <Space style={{ width: '100%', justifyContent: 'flex-end' }}>
-            <Button onClick={onClose} disabled={isProcessing}>
+            <ELButton onClick={onClose} disabled={isProcessing}>
               Cancelar
-            </Button>
-            <Button
-              type="primary"
+            </ELButton>
+            <ELButton
+              variant="primary"
               danger
               onClick={handleResolve}
               loading={isProcessing}
@@ -262,7 +260,7 @@ export default function ResolveDebtModal({ open, onClose }: ResolveDebtModalProp
               }
             >
               Pagar R$ {formatNumberBR(debtAmount)}
-            </Button>
+            </ELButton>
           </Space>
         </Space>
       </Spin>

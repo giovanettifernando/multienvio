@@ -2,14 +2,13 @@
 
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { App, Button, Flex, Popconfirm, Select, Space, Table, Tag } from 'antd';
+import { App, Flex, Space, Table, Tag } from 'antd';
 import type { TableProps } from 'antd';
 import { useMutation } from '@tanstack/react-query';
-import dayjs from 'dayjs';
 import { DeleteOutlined, EyeOutlined, KeyOutlined, LockOutlined, UnlockOutlined } from '@ant-design/icons';
 import type { AccountStatus, AdminClient, ClientType } from '@/modules/admin/application/types';
 import { blockAccounts, deleteAccount, resetPassword, unblockAccounts } from '@/modules/admin/application/api/clients';
-import { ELInput } from '@/shared/ui/ELInput';
+import { ELButton, ELInput, ELPopconfirm, ELSelect } from '@/shared/ui';
 import { formatCentsAsBRL } from '@/shared/utils/format';
 
 interface ClientsTableProps {
@@ -180,68 +179,68 @@ export function ClientsTable({ clients, onViewClient, onStatusChange, onDelete }
       width: 260,
       render: (_, record) => (
         <Space size="small">
-          <Button
-            type="link"
+          <ELButton
+            variant="link"
             size="small"
             icon={<EyeOutlined />}
             onClick={() => router.push(`/admin/contas/${record.id}`)}
           >
             Ver detalhes
-          </Button>
+          </ELButton>
           {record.status === 'blocked' ? (
-            <Popconfirm
+            <ELPopconfirm
               title="Desbloquear conta?"
               onConfirm={() => handleUnblock([record.id])}
               okText="Sim"
               cancelText="Não"
             >
-              <Button
-                type="link"
+              <ELButton
+                variant="link"
                 size="small"
                 icon={<UnlockOutlined />}
                 disabled={unblockMutation.isPending || blockMutation.isPending || deleteMutation.isPending}
               >
                 Desbloquear
-              </Button>
-            </Popconfirm>
+              </ELButton>
+            </ELPopconfirm>
           ) : (
             record.status === 'active' && (
-              <Popconfirm
+              <ELPopconfirm
                 title="Bloquear conta?"
                 onConfirm={() => handleBlock([record.id])}
                 okText="Sim"
                 cancelText="Não"
               >
-                <Button
-                  type="link"
+                <ELButton
+                  variant="link"
                   size="small"
                   danger
                   icon={<LockOutlined />}
                   disabled={blockMutation.isPending || unblockMutation.isPending || deleteMutation.isPending}
                 >
                   Bloquear
-                </Button>
-              </Popconfirm>
+                </ELButton>
+              </ELPopconfirm>
             )
           )}
-          <Popconfirm
+          <ELPopconfirm
             title="Deseja realmente excluir o usuário?"
             description="Esta ação não pode ser desfeita."
             onConfirm={() => handleDelete(record.id)}
             okText="Sim, excluir"
             cancelText="Cancelar"
-            okButtonProps={{ danger: true }}
+            variant="danger"
           >
-            <Button
-              type="link"
+            <ELButton
+              variant="link"
               size="small"
               danger
               icon={<DeleteOutlined />}
               disabled={deleteMutation.isPending || blockMutation.isPending || unblockMutation.isPending}
             >
               Excluir
-            </Button>
-          </Popconfirm>
+            </ELButton>
+          </ELPopconfirm>
         </Space>
       ),
     },
@@ -276,7 +275,7 @@ export function ClientsTable({ clients, onViewClient, onStatusChange, onDelete }
             setSearchValue(v);
           }}
         />
-        <Select
+        <ELSelect
           value={type}
           onChange={(v) => {
             setPage(1);
@@ -289,7 +288,7 @@ export function ClientsTable({ clients, onViewClient, onStatusChange, onDelete }
             { label: 'PJ', value: 'PJ' },
           ]}
         />
-        <Select
+        <ELSelect
           value={status}
           onChange={(v) => {
             setPage(1);
@@ -307,36 +306,36 @@ export function ClientsTable({ clients, onViewClient, onStatusChange, onDelete }
 
       {hasSelection && (
         <Flex gap={8} wrap="wrap">
-          <Popconfirm
+          <ELPopconfirm
             title={`Bloquear ${selectedIds.length} conta(s)?`}
             onConfirm={() => handleBlock(selectedIds)}
             okText="Sim"
             cancelText="Não"
           >
-            <Button danger icon={<LockOutlined />}>
+            <ELButton danger icon={<LockOutlined />}>
               Bloquear ({selectedIds.length})
-            </Button>
-          </Popconfirm>
-          <Popconfirm
+            </ELButton>
+          </ELPopconfirm>
+          <ELPopconfirm
             title={`Desbloquear ${selectedIds.length} conta(s)?`}
             onConfirm={() => handleUnblock(selectedIds)}
             okText="Sim"
             cancelText="Não"
           >
-            <Button icon={<UnlockOutlined />}>
+            <ELButton icon={<UnlockOutlined />}>
               Desbloquear ({selectedIds.length})
-            </Button>
-          </Popconfirm>
-          <Popconfirm
+            </ELButton>
+          </ELPopconfirm>
+          <ELPopconfirm
             title={`Resetar senha de ${selectedIds.length} conta(s)?`}
             onConfirm={() => handleResetPassword(selectedIds)}
             okText="Sim"
             cancelText="Não"
           >
-            <Button icon={<KeyOutlined />}>
+            <ELButton icon={<KeyOutlined />}>
               Resetar Senha ({selectedIds.length})
-            </Button>
-          </Popconfirm>
+            </ELButton>
+          </ELPopconfirm>
         </Flex>
       )}
 

@@ -2,10 +2,10 @@
 
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Alert, Button, Result, Spin } from "antd";
+import { Result, Spin } from "antd";
 import { CheckCircleOutlined, CloseCircleOutlined, MailOutlined } from "@ant-design/icons";
 import Link from "next/link";
-import { FormCard } from '@/shared/ui/FormCard';
+import { ELAlert, ELButton, FormCard } from '@/shared/ui';
 
 type VerificationState = "validating" | "success" | "error" | "already_verified";
 type VerificationResult = {
@@ -104,9 +104,9 @@ function VerifyEmailContent() {
           subTitle={message}
           extra={[
             <Link key="login" href="/auth/login" passHref>
-              <Button type="primary" size="large">
+              <ELButton variant="primary" size="large">
                 Fazer Login
-              </Button>
+              </ELButton>
             </Link>,
           ]}
         />
@@ -124,9 +124,9 @@ function VerifyEmailContent() {
           subTitle={message}
           extra={[
             <Link key="login" href="/auth/login" passHref>
-              <Button type="primary" size="large">
+              <ELButton variant="primary" size="large">
                 Fazer Login
-              </Button>
+              </ELButton>
             </Link>,
           ]}
         />
@@ -147,38 +147,38 @@ function VerifyEmailContent() {
         subTitle={message}
         extra={[
           <Link key="login" href="/auth/login" passHref>
-            <Button size="large">Ir para Login</Button>
+            <ELButton size="large">Ir para Login</ELButton>
           </Link>,
           errorCode === "INVALID_TOKEN" && (
-            <Button
+            <ELButton
               key="resend"
-              type="primary"
+              variant="primary"
               size="large"
               icon={<MailOutlined />}
               onClick={handleResendVerification}
               disabled={!email}
             >
               Reenviar Email de Verificação
-            </Button>
+            </ELButton>
           ),
         ].filter(Boolean)}
       />
 
       {errorCode === "MISSING_TOKEN" && (
-        <Alert
+        <ELAlert
           message="Token não fornecido"
           description="Verifique se você clicou no link correto enviado por email."
-          type="warning"
+          variant="warning"
           showIcon
           style={{ marginTop: 24 }}
         />
       )}
 
       {errorCode === "INVALID_TOKEN" && (
-        <Alert
+        <ELAlert
           message="Token inválido ou expirado"
           description="O link de verificação pode ter expirado. Clique no botão acima para solicitar um novo email."
-          type="error"
+          variant="danger"
           showIcon
           style={{ marginTop: 24 }}
         />

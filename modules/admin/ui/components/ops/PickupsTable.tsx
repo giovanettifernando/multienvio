@@ -4,17 +4,12 @@ import { useState } from 'react';
 import {
   Tag,
   Space,
-  Input,
-  Select,
-  Button,
   Flex,
-  Card,
   Row,
   Col,
   Statistic,
   Typography,
   Tooltip,
-  DatePicker,
 } from 'antd';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -32,10 +27,10 @@ import dayjs from 'dayjs';
 import type { Dayjs } from 'dayjs';
 import { formatBRL } from '@/shared/utils/format';
 import { formatDateTimeBR } from '@/shared/utils/date';
+import { ELButton, ELCard, ELInput, ELSelect, ELDatePicker } from '@/shared/ui';
 import { DataTable, type DataTableColumn } from '@/shared/ui/DataTable';
 
 const { Text } = Typography;
-const { RangePicker } = DatePicker;
 
 interface PickupItem {
   id: string;
@@ -327,7 +322,7 @@ export default function PickupsTable({ dateStart, dateEnd }: PickupsTableProps) 
     if (!summary) return null;
 
     return (
-      <Card size="small" style={{ marginBottom: 16 }}>
+      <ELCard padding="sm" style={{ marginBottom: 16 }}>
         <Row gutter={[16, 16]}>
           <Col xs={12} sm={8} md={4}>
             <Statistic
@@ -372,7 +367,7 @@ export default function PickupsTable({ dateStart, dateEnd }: PickupsTableProps) 
             />
           </Col>
         </Row>
-      </Card>
+      </ELCard>
     );
   };
 
@@ -381,7 +376,7 @@ export default function PickupsTable({ dateStart, dateEnd }: PickupsTableProps) 
       {/* Filtros */}
       <Flex justify="space-between" align="center" wrap="wrap" gap={12}>
         <Space wrap size="middle">
-          <Input
+          <ELInput
             placeholder="Buscar por código, cidade..."
             prefix={<SearchOutlined />}
             value={search}
@@ -392,7 +387,7 @@ export default function PickupsTable({ dateStart, dateEnd }: PickupsTableProps) 
             style={{ width: 220 }}
             allowClear
           />
-          <Select
+          <ELSelect
             value={status}
             onChange={(v) => {
               setStatus(v);
@@ -409,7 +404,7 @@ export default function PickupsTable({ dateStart, dateEnd }: PickupsTableProps) 
               { label: 'Cancelada', value: 'CANCELED' },
             ]}
           />
-          <RangePicker
+          <ELDatePicker.RangePicker
             value={dateRange}
             onChange={(dates) => {
               if (dates && dates[0] && dates[1]) {
@@ -425,13 +420,13 @@ export default function PickupsTable({ dateStart, dateEnd }: PickupsTableProps) 
           />
         </Space>
 
-        <Button
+        <ELButton
           icon={<ReloadOutlined />}
           onClick={() => refetch()}
           loading={isLoading}
         >
           Atualizar
-        </Button>
+        </ELButton>
       </Flex>
 
       {/* Resumo */}
