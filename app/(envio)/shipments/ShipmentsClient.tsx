@@ -18,7 +18,7 @@ import {
   ExclamationCircleOutlined,
 } from "@ant-design/icons";
 import Link from "next/link";
-import { useShipments, useShipmentCancel } from "@/hooks/useShipments";
+import { useShipments, useShipmentCancel } from "@/modules/shipments/ui/hooks";
 import type { Shipment, ShipmentStatus } from '@/shared/types/shipments';
 import { PageShell } from '@/shared/ui/PageShell';
 import { useQuery } from "@tanstack/react-query";
@@ -33,6 +33,7 @@ import { DataTable, type DataTableColumn } from '@/shared/ui/DataTable';
 import { ActionBar } from '@/shared/ui/ActionBar';
 import tableStyles from "@/shared/ui/ELTableWrapper.module.css";
 import { ShipmentLabelPdfModal } from "@/modules/labels/ui/components";
+import { formatDateBR } from '@/shared/utils/date';
 
 const { Text } = Typography;
 
@@ -204,20 +205,6 @@ export default function ShipmentsClient() {
     }
   }, [shipmentToCancel, cancelMut, message, handleCloseCancelConfirm]);
 
-  // Função auxiliar para formatar datas
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
-  };
-
-  // Função auxiliar para calcular data prevista
-  const getExpectedDate = (row: Shipment) => {
-    const baseDate = row.expectedDeliveryDate
-      ? new Date(row.expectedDeliveryDate)
-      : new Date(new Date(row.createdAt).getTime() + row.etaDays * 86_400_000);
-    return baseDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
-  };
-
   const columns: DataTableColumn<Shipment>[] = useMemo(
     () => [
       // COLUNA 1: Envio (código + destinatário + cidade/UF)
@@ -280,10 +267,10 @@ export default function ShipmentsClient() {
               </ELStatusTag>
             )}
             <Text type="secondary" style={{ fontSize: 11 }}>
-              Criado: {formatDate(row.createdAt)}
+              Criado: {formatDateBR(row.createdAt)}
             </Text>
             <Text type="secondary" style={{ fontSize: 11 }}>
-              Previsto: {formatDate(row.expectedDeliveryDate || new Date(new Date(row.createdAt).getTime() + row.etaDays * 86_400_000).toISOString())}
+              Previsto: {formatDateBR(row.expectedDeliveryDate || new Date(new Date(row.createdAt).getTime() + row.etaDays * 86_400_000).toISOString())}
             </Text>
           </div>
         ),

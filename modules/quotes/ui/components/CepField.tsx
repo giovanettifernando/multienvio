@@ -9,7 +9,7 @@ import {
   useWatch,
   type FieldPath,
 } from "react-hook-form";
-import { useCepLookup } from "@/hooks/useCepLookup";
+import { useCepLookup } from "@/shared/hooks";
 import { formatCep, normalizeCep } from "@/platform/integrations/shared/brasilapi";
 import type { QuoteFormValues } from "./QuoteForm";
 

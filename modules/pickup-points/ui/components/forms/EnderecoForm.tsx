@@ -1,6 +1,8 @@
 'use client';
 
-import { Form, Input, Select, Row, Col } from 'antd';
+import { Form, Row, Col } from 'antd';
+import { ELInput } from '@/shared/ui/ELInput';
+import { ELSelect } from '@/shared/ui/ELSelect';
 import { Controller, Control, FieldErrors } from 'react-hook-form';
 import { maskCEP, unmaskDigits } from '@/modules/pickup-points/application/masks';
 import type { PickupPointFormData } from '@/modules/pickup-points/application/types';
@@ -28,7 +30,7 @@ export default function EnderecoForm({ control, errors }: EnderecoFormProps) {
             name="cep"
             control={control}
             render={({ field }) => (
-              <Input
+              <ELInput
                 {...field}
                 value={field.value || ''}
                 placeholder="00000-000"
@@ -54,7 +56,7 @@ export default function EnderecoForm({ control, errors }: EnderecoFormProps) {
             name="logradouro"
             control={control}
             render={({ field }) => (
-              <Input
+              <ELInput
                 {...field}
                 value={field.value || ''}
                 placeholder="Rua, Avenida, etc."
@@ -75,7 +77,7 @@ export default function EnderecoForm({ control, errors }: EnderecoFormProps) {
                 name="numero"
                 control={control}
                 render={({ field }) => (
-                  <Input
+                  <ELInput
                     {...field}
                     value={field.value || ''}
                     placeholder="Nº"
@@ -96,7 +98,7 @@ export default function EnderecoForm({ control, errors }: EnderecoFormProps) {
                 name="complemento"
                 control={control}
                 render={({ field }) => (
-                  <Input
+                  <ELInput
                     {...field}
                     value={field.value || ''}
                     placeholder="Sala, bloco, etc. (opcional)"
@@ -117,7 +119,7 @@ export default function EnderecoForm({ control, errors }: EnderecoFormProps) {
             name="bairro"
             control={control}
             render={({ field }) => (
-              <Input
+              <ELInput
                 {...field}
                 value={field.value || ''}
                 placeholder="Bairro"
@@ -138,7 +140,7 @@ export default function EnderecoForm({ control, errors }: EnderecoFormProps) {
                 name="cidade"
                 control={control}
                 render={({ field }) => (
-                  <Input
+                  <ELInput
                     {...field}
                     value={field.value || ''}
                     placeholder="Cidade"
@@ -159,7 +161,7 @@ export default function EnderecoForm({ control, errors }: EnderecoFormProps) {
                 name="uf"
                 control={control}
                 render={({ field }) => (
-                  <Select
+                  <ELSelect
                     {...field}
                     value={field.value || undefined}
                     placeholder="UF"

@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { Controller, useFormContext } from 'react-hook-form';
-import { Form, Input, DatePicker, Checkbox, Row, Col, Typography, Select, Divider } from 'antd';
+import { Form, DatePicker, Checkbox, Row, Col, Typography, Divider } from 'antd';
+import { ELInput } from '@/shared/ui/ELInput';
+import { ELSelect } from '@/shared/ui/ELSelect';
 import { UserOutlined, IdcardOutlined, HomeOutlined, PhoneOutlined, LockOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import type { CollectorFormInput } from '@/modules/collectors/application/types';
@@ -90,7 +92,7 @@ export default function PFForm({ showPassword = false }: PFFormProps) {
               name="pf.nome"
               control={control}
               render={({ field }) => (
-                <Input {...field} placeholder="Digite seu nome completo" />
+                <ELInput {...field} placeholder="Digite seu nome completo" />
               )}
             />
           </Form.Item>
@@ -107,7 +109,7 @@ export default function PFForm({ showPassword = false }: PFFormProps) {
               name="pf.cpf"
               control={control}
               render={({ field }) => (
-                <Input
+                <ELInput
                   {...field}
                   onChange={(e) => field.onChange(maskCPF(e.target.value))}
                   placeholder="000.000.000-00"
@@ -131,7 +133,7 @@ export default function PFForm({ showPassword = false }: PFFormProps) {
               name="pf.email"
               control={control}
               render={({ field }) => (
-                <Input {...field} type="email" placeholder="seu@email.com" />
+                <ELInput {...field} type="email" placeholder="seu@email.com" />
               )}
             />
           </Form.Item>
@@ -158,7 +160,7 @@ export default function PFForm({ showPassword = false }: PFFormProps) {
                   name="pf.password"
                   control={control}
                   render={({ field }) => (
-                    <Input.Password
+                    <ELInput.Password
                       {...field}
                       value={field.value || ''}
                       placeholder="Crie uma senha segura"
@@ -179,7 +181,7 @@ export default function PFForm({ showPassword = false }: PFFormProps) {
                   name="pf.confirmPassword"
                   control={control}
                   render={({ field }) => (
-                    <Input.Password
+                    <ELInput.Password
                       {...field}
                       value={field.value || ''}
                       placeholder="Digite a senha novamente"
@@ -210,7 +212,7 @@ export default function PFForm({ showPassword = false }: PFFormProps) {
               name="pf.cnh.number"
               control={control}
               render={({ field }) => (
-                <Input {...field} placeholder="00000000000" maxLength={11} />
+                <ELInput {...field} placeholder="00000000000" maxLength={11} />
               )}
             />
           </Form.Item>
@@ -227,7 +229,7 @@ export default function PFForm({ showPassword = false }: PFFormProps) {
               name="pf.cnh.category"
               control={control}
               render={({ field }) => (
-                <Select
+                <ELSelect
                   {...field}
                   placeholder="Categoria"
                   options={[
@@ -286,7 +288,7 @@ export default function PFForm({ showPassword = false }: PFFormProps) {
               name="pf.endereco.cep"
               control={control}
               render={({ field }) => (
-                <Input
+                <ELInput
                   {...field}
                   value={field.value || ''}
                   onChange={(e) => field.onChange(maskCEP(e.target.value))}
@@ -308,7 +310,7 @@ export default function PFForm({ showPassword = false }: PFFormProps) {
               name="pf.endereco.logradouro"
               control={control}
               render={({ field }) => (
-                <Input
+                <ELInput
                   {...field}
                   value={field.value || ''}
                   disabled={cepResolved}
@@ -331,7 +333,7 @@ export default function PFForm({ showPassword = false }: PFFormProps) {
               name="pf.endereco.numero"
               control={control}
               render={({ field }) => (
-                <Input {...field} value={field.value || ''} placeholder="123" />
+                <ELInput {...field} value={field.value || ''} placeholder="123" />
               )}
             />
           </Form.Item>
@@ -347,7 +349,7 @@ export default function PFForm({ showPassword = false }: PFFormProps) {
               name="pf.endereco.complemento"
               control={control}
               render={({ field }) => (
-                <Input {...field} value={field.value || ''} placeholder="Apto, Bloco..." />
+                <ELInput {...field} value={field.value || ''} placeholder="Apto, Bloco..." />
               )}
             />
           </Form.Item>
@@ -363,7 +365,7 @@ export default function PFForm({ showPassword = false }: PFFormProps) {
               name="pf.endereco.bairro"
               control={control}
               render={({ field }) => (
-                <Input
+                <ELInput
                   {...field}
                   value={field.value || ''}
                   disabled={cepResolved}
@@ -386,7 +388,7 @@ export default function PFForm({ showPassword = false }: PFFormProps) {
               name="pf.endereco.cidade"
               control={control}
               render={({ field }) => (
-                <Input
+                <ELInput
                   {...field}
                   value={field.value || ''}
                   disabled={cepResolved}
@@ -407,7 +409,7 @@ export default function PFForm({ showPassword = false }: PFFormProps) {
               name="pf.endereco.uf"
               control={control}
               render={({ field }) => (
-                <Input
+                <ELInput
                   {...field}
                   value={field.value || ''}
                   disabled={cepResolved}
@@ -445,7 +447,7 @@ export default function PFForm({ showPassword = false }: PFFormProps) {
               name="pf.celular"
               control={control}
               render={({ field }) => (
-                <Input
+                <ELInput
                   {...field}
                   value={field.value || ''}
                   onChange={(e) => field.onChange(maskPhone(e.target.value))}
@@ -490,7 +492,7 @@ export default function PFForm({ showPassword = false }: PFFormProps) {
                 name="pf.whatsapp"
                 control={control}
                 render={({ field }) => (
-                  <Input
+                  <ELInput
                     {...field}
                     value={field.value || ''}
                     onChange={(e) => field.onChange(maskPhone(e.target.value))}

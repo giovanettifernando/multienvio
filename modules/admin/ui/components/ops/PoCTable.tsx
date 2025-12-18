@@ -1,12 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { Table, Flex, Input, Select } from 'antd';
+import { Flex, Input, Select } from 'antd';
 import { useQuery } from '@tanstack/react-query';
 import { SearchOutlined } from '@ant-design/icons';
 import type { PointOfCollection } from '@/modules/admin/application/ops/types';
 import { listPoC } from '@/modules/admin/application/ops/api';
 import { formatBRL } from '@/shared/utils/format';
+import { DataTable, type DataTableColumn } from '@/shared/ui/DataTable';
 
 export default function PoCTable() {
   // Filters
@@ -35,7 +36,7 @@ export default function PoCTable() {
     return true;
   });
 
-  const columns = [
+  const columns: DataTableColumn<PointOfCollection>[] = [
     {
       title: 'Nome/Código',
       key: 'name',
@@ -64,34 +65,36 @@ export default function PoCTable() {
       dataIndex: 'commissionPerItem',
       key: 'commissionPerItem',
       width: 120,
-      render: (value: number) => `R$ ${value.toFixed(2)}`,
+      render: (value: unknown) => `R$ ${(value as number).toFixed(2)}`,
     },
     {
       title: 'Capacidade Diária',
       dataIndex: 'capacityDaily',
       key: 'capacityDaily',
       width: 140,
-      render: (value: number | null) => (value !== null ? value : '—'),
+      render: (value: unknown) => {
+        const v = value as number | null;
+        return v !== null ? String(v) : '—';
+      },
     },
     {
       title: 'Fila Atual',
       dataIndex: 'itemsAwaiting',
       key: 'itemsAwaiting',
       width: 100,
-      render: (value: number) => value,
+      render: (value: unknown) => String(value as number),
     },
     {
       title: 'Recebidos Hoje',
       dataIndex: 'itemsReceivedToday',
       key: 'itemsReceivedToday',
       width: 130,
-      render: (value: number) => value,
+      render: (value: unknown) => String(value as number),
     },
     {
       title: 'Comissão acumulada (mês)',
       key: 'monthlyCommission',
       width: 180,
-      align: 'right' as const,
       render: (_: unknown, record: PointOfCollection) => {
         const monthlyCommission = (record.monthlyReceived ?? 0) * (record.commissionPerItem ?? 0);
         return formatBRL(monthlyCommission);
@@ -132,18 +135,20 @@ export default function PoCTable() {
       </Flex>
 
       {/* Table */}
-      <Table
+      <DataTable<PointOfCollection>
         columns={columns}
-        dataSource={filteredPoCs || []}
+        data={filteredPoCs || []}
         rowKey="id"
         loading={isLoading}
-        scroll={{ x: 1400, y: 'calc(100vh - 340px)' }}
+        enableMobileCards={false}
+        compact
+        scrollX={1400}
+        scrollY="calc(100vh - 340px)"
         pagination={{
           pageSize: 20,
           showTotal: (total) => `Total: ${total} PoCs`,
           showSizeChanger: false,
         }}
-        size="small"
       />
     </Flex>
   );

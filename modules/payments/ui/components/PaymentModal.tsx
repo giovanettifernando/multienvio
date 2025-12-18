@@ -23,11 +23,11 @@ import {
 import { CardPaymentForm } from "@/modules/wallet/ui/components/CardPaymentForm";
 import { SavedCardPaymentForm } from "@/modules/wallet/ui/components/SavedCardPaymentForm";
 import { MercadoPagoSecurity, getDeviceSessionId } from "@/modules/payments/ui/components/MercadoPagoSecurity";
-import { useCards } from "@/hooks/useAccount";
+import { useCards } from "@/modules/account/ui/hooks";
 import { ELModal } from '@/shared/ui/ELModal';
 import { ELButton } from '@/shared/ui/ELButton';
 import { ELAlert } from '@/shared/ui/ELAlert';
-import { inputNumberFormatterBRL, inputNumberParserBRL } from "@/shared/utils/format";
+import { inputNumberFormatterBRL, inputNumberParserBRL, formatBRL } from "@/shared/utils/format";
 
 const { Text } = Typography;
 
@@ -172,13 +172,6 @@ export function PaymentModal({
     (selectedMethod === "wallet" && isWalletDisabled);
 
   const isLoading = isLoadingCards || (allowWallet && isLoadingWallet);
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(value);
-  };
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -456,7 +449,7 @@ export function PaymentModal({
             <div style={{ marginBottom: 16 }}>
               <Text strong>Valor a pagar: </Text>
               <Text style={{ fontSize: 20, color: "#52c41a" }}>
-                {formatCurrency(amount)}
+                {formatBRL(amount)}
               </Text>
             </div>
 
@@ -613,7 +606,7 @@ export function PaymentModal({
 
             <div style={{ marginTop: 16 }}>
               <Text strong style={{ fontSize: 18 }}>
-                {formatCurrency(amount)}
+                {formatBRL(amount)}
               </Text>
               <br />
               <Text type="secondary" style={{ fontSize: 12 }}>
@@ -714,7 +707,7 @@ export function PaymentModal({
         {mode === "checkout" && fixedAmount && (
           <div>
             <Text strong>Total a pagar: </Text>
-            <Text style={{ fontSize: 20, color: "#1890ff" }}>{formatCurrency(fixedAmount)}</Text>
+            <Text style={{ fontSize: 20, color: "#1890ff" }}>{formatBRL(fixedAmount)}</Text>
           </div>
         )}
 
@@ -744,7 +737,7 @@ export function PaymentModal({
                       <div>
                         <div>Saldo em carteira</div>
                         <Text type="secondary" style={{ fontSize: 12 }}>
-                          Saldo disponível: {formatCurrency(balance)}
+                          Saldo disponível: {formatBRL(balance)}
                         </Text>
                         {hasInsufficientBalance && (
                           <div>

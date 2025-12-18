@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { Controller, useFormContext } from 'react-hook-form';
-import { Form, Input, Button, Row, Col, Typography, Divider, App } from 'antd';
+import { Form, Button, Row, Col, Typography, Divider, App } from 'antd';
+import { ELInput } from '@/shared/ui/ELInput';
 import { BankOutlined, HomeOutlined, CopyOutlined } from '@ant-design/icons';
 import type { CollectorFormInput } from '@/modules/collectors/application/types';
 import { maskCNPJ, maskCEP, unmaskDigits } from '@/modules/collectors/application/masks';
@@ -97,7 +98,7 @@ export default function PJForm() {
               name="pj.razaoSocial"
               control={control}
               render={({ field }) => (
-                <Input {...field} placeholder="Razão social da empresa" />
+                <ELInput {...field} placeholder="Razão social da empresa" />
               )}
             />
           </Form.Item>
@@ -114,7 +115,7 @@ export default function PJForm() {
               name="pj.cnpj"
               control={control}
               render={({ field }) => (
-                <Input
+                <ELInput
                   {...field}
                   value={field.value || ''}
                   onChange={(e) => field.onChange(maskCNPJ(e.target.value))}
@@ -154,7 +155,7 @@ export default function PJForm() {
               name="pj.endereco.cep"
               control={control}
               render={({ field }) => (
-                <Input
+                <ELInput
                   {...field}
                   value={field.value || ''}
                   onChange={(e) => field.onChange(maskCEP(e.target.value))}
@@ -176,7 +177,7 @@ export default function PJForm() {
               name="pj.endereco.logradouro"
               control={control}
               render={({ field }) => (
-                <Input
+                <ELInput
                   {...field}
                   value={field.value || ''}
                   disabled={cepResolved}
@@ -199,7 +200,7 @@ export default function PJForm() {
               name="pj.endereco.numero"
               control={control}
               render={({ field }) => (
-                <Input {...field} value={field.value || ''} placeholder="123" />
+                <ELInput {...field} value={field.value || ''} placeholder="123" />
               )}
             />
           </Form.Item>
@@ -215,7 +216,7 @@ export default function PJForm() {
               name="pj.endereco.complemento"
               control={control}
               render={({ field }) => (
-                <Input {...field} value={field.value || ''} placeholder="Sala, Andar..." />
+                <ELInput {...field} value={field.value || ''} placeholder="Sala, Andar..." />
               )}
             />
           </Form.Item>
@@ -231,7 +232,7 @@ export default function PJForm() {
               name="pj.endereco.bairro"
               control={control}
               render={({ field }) => (
-                <Input
+                <ELInput
                   {...field}
                   value={field.value || ''}
                   disabled={cepResolved}
@@ -254,7 +255,7 @@ export default function PJForm() {
               name="pj.endereco.cidade"
               control={control}
               render={({ field }) => (
-                <Input
+                <ELInput
                   {...field}
                   value={field.value || ''}
                   disabled={cepResolved}
@@ -275,7 +276,7 @@ export default function PJForm() {
               name="pj.endereco.uf"
               control={control}
               render={({ field }) => (
-                <Input
+                <ELInput
                   {...field}
                   value={field.value || ''}
                   disabled={cepResolved}

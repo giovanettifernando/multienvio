@@ -6,8 +6,8 @@ import { InfoCircleOutlined } from '@ant-design/icons';
 import { ELInput } from '@/shared/ui/ELInput';
 import { ELSelect } from '@/shared/ui/ELSelect';
 import { ELButton } from '@/shared/ui/ELButton';
-import { useCreateTicket } from '@/hooks/useSupport';
-import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { useCreateTicket } from '@/modules/support/ui/hooks';
+import { useCurrentUser } from '@/modules/auth/ui/hooks';
 import { useCollectorSession } from '@/modules/collectors/ui/state/useCollectorSession';
 import { NewTicketInputSchema, type Priority } from '@/shared/validation/support';
 

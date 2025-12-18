@@ -31,8 +31,8 @@ import { RecipientModal } from "@/modules/quotes/ui/components/RecipientModal";
 import { LabelPreview } from "@/modules/quotes/ui/components/LabelPreview";
 import { ResultsBanner } from "@/modules/quotes/ui/components/ResultsBanner";
 import { useQuoteStore } from '@/modules/quotes/ui/state/useQuoteStore';
-import { useCartAdd } from "@/hooks/useCart";
-import { useRecipientSave } from "@/hooks/useQuotes";
+import { useCartAdd } from "@/modules/cart/ui/hooks";
+import { useRecipientSave } from "@/modules/quotes/ui/hooks";
 import {
   createFinalizeFormSchema,
   validateVolumeDocumentsOnSubmit,
@@ -43,10 +43,10 @@ import { useQuoteDraft } from "@/modules/quotes/ui/state/quoteDraft";
 import { useCheckoutStore } from '@/modules/cart/ui/state/checkout';
 import { CheckoutModal } from "@/modules/payments/ui/components/CheckoutModal";
 import { PaidCheckoutModal, type CheckoutData } from "@/modules/payments/ui/components/PaidCheckoutModal";
-import { usePickupFee } from "@/hooks/usePickupFee";
+import { usePickupFee } from "@/modules/quotes/ui/hooks";
 import { generateUUID } from "@/shared/utils/uuid";
 import { useAddressStore } from "@/modules/auth/ui/state/addresses";
-import { useAddresses } from "@/hooks/useAccount";
+import { useAddresses } from "@/modules/account/ui/hooks";
 
 const dispatchTelemetry = (event: string, detail?: Record<string, unknown>) => {
   if (typeof window === "undefined") return;

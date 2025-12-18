@@ -6,7 +6,7 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { Avatar, Badge, Button, Input } from 'antd';
 import { MessageOutlined, CloseOutlined, SendOutlined, RobotOutlined, ToolOutlined } from "@ant-design/icons";
 import { cn } from "@/shared/utils/cn";
-import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useCurrentUser } from "@/modules/auth/ui/hooks";
 import styles from "./AssistantChat.module.css";
 
 /**

@@ -1,7 +1,9 @@
 'use client';
 
 import { Controller, useFormContext } from 'react-hook-form';
-import { Segmented, Form, Input, InputNumber, Select, Space, Typography } from 'antd';
+import { Segmented, Form, InputNumber, Space, Typography } from 'antd';
+import { ELInput } from '@/shared/ui/ELInput';
+import { ELSelect } from '@/shared/ui/ELSelect';
 import type { CollectorFormInput } from '@/modules/collectors/application/types';
 import { inputNumberFormatterBRL, inputNumberParserBRL } from '@/shared/utils/format';
 
@@ -124,7 +126,7 @@ export default function FinanceForm() {
                 name="bank.pixType"
                 control={control}
                 render={({ field }) => (
-                  <Select
+                  <ELSelect
                     {...field}
                     style={{ width: 200 }}
                     options={[
@@ -149,7 +151,7 @@ export default function FinanceForm() {
                 name="bank.pixKey"
                 control={control}
                 render={({ field }) => (
-                  <Input {...field} placeholder="Informe a chave PIX" style={{ width: 300 }} />
+                  <ELInput {...field} placeholder="Informe a chave PIX" style={{ width: 300 }} />
                 )}
               />
             </Form.Item>
@@ -166,7 +168,7 @@ export default function FinanceForm() {
                 name="bank.bankCode"
                 control={control}
                 render={({ field }) => (
-                  <Input {...field} placeholder="000" maxLength={3} style={{ width: 120 }} />
+                  <ELInput {...field} placeholder="000" maxLength={3} style={{ width: 120 }} />
                 )}
               />
             </Form.Item>
@@ -182,7 +184,7 @@ export default function FinanceForm() {
                   name="bank.branch"
                   control={control}
                   render={({ field }) => (
-                    <Input {...field} placeholder="0000" style={{ width: 120 }} />
+                    <ELInput {...field} placeholder="0000" style={{ width: 120 }} />
                   )}
                 />
               </Form.Item>
@@ -197,7 +199,7 @@ export default function FinanceForm() {
                   name="bank.account"
                   control={control}
                   render={({ field }) => (
-                    <Input {...field} placeholder="12345-6" style={{ width: 150 }} />
+                    <ELInput {...field} placeholder="12345-6" style={{ width: 150 }} />
                   )}
                 />
               </Form.Item>
@@ -212,7 +214,7 @@ export default function FinanceForm() {
                   name="bank.accountType"
                   control={control}
                   render={({ field }) => (
-                    <Select
+                    <ELSelect
                       {...field}
                       style={{ width: 140 }}
                       options={[
@@ -235,7 +237,7 @@ export default function FinanceForm() {
                 name="bank.holderName"
                 control={control}
                 render={({ field }) => (
-                  <Input {...field} placeholder="Razão social da empresa" />
+                  <ELInput {...field} placeholder="Razão social da empresa" />
                 )}
               />
             </Form.Item>
@@ -250,7 +252,7 @@ export default function FinanceForm() {
                 name="bank.holderCnpj"
                 control={control}
                 render={({ field }) => (
-                  <Input {...field} placeholder="00.000.000/0000-00" style={{ width: 220 }} />
+                  <ELInput {...field} placeholder="00.000.000/0000-00" style={{ width: 220 }} />
                 )}
               />
             </Form.Item>

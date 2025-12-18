@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import type { WalletBalanceResponse } from '@/shared/types/wallet-statement';
+import type { WalletBalanceResponse } from "@/shared/types/wallet-statement";
 import { apiFetch } from "@/platform/api/client";
 
 export function useWallet() {

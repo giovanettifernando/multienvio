@@ -20,7 +20,7 @@ import {
   useCardCreate,
   useCardDelete,
   useCardUpdate,
-} from "@/hooks/useAccount";
+} from "@/modules/account/ui/hooks";
 import { CardModal, type CardFormValues } from "@/modules/auth/ui/components/CardModal";
 
 export default function CardsList() {

@@ -29,7 +29,8 @@ import {
 } from '@ant-design/icons';
 import { ELModal } from '@/shared/ui/ELModal';
 import { ELButton } from '@/shared/ui/ELButton';
-import { useCards } from '@/hooks/useAccount';
+import { useCards } from '@/modules/account/ui/hooks';
+import { formatBRL } from '@/shared/utils/format';
 import { usePixPayment } from './usePixPayment';
 import { PixPaymentView } from './PixPaymentView';
 import { CardPaymentView } from './CardPaymentView';
@@ -199,13 +200,6 @@ export function PaidCheckoutModal({
   const balance = walletData?.balance?.availableReais ?? 0;
   const hasInsufficientBalance = balance < totalAmount;
   const isLoading = isLoadingWallet || isLoadingCards;
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    }).format(value);
-  };
 
   // Função para criar shipment com pagamento confirmado
   const createShipmentWithPayment = async (paymentMethod: 'WALLET' | 'MERCADO_PAGO', mercadoPagoPaymentId?: string) => {
@@ -444,7 +438,7 @@ export function PaidCheckoutModal({
           {/* Exibir valor total */}
           <div>
             <Text strong>Total a pagar: </Text>
-            <Text style={{ fontSize: 20, color: '#1890ff' }}>{formatCurrency(totalAmount)}</Text>
+            <Text style={{ fontSize: 20, color: '#1890ff' }}>{formatBRL(totalAmount)}</Text>
           </div>
 
           {/* Lista de métodos de pagamento */}
@@ -477,7 +471,7 @@ export function PaidCheckoutModal({
                       <div>
                         <div>Saldo em carteira</div>
                         <Text type="secondary" style={{ fontSize: 12 }}>
-                          Saldo disponível: {formatCurrency(balance)}
+                          Saldo disponível: {formatBRL(balance)}
                         </Text>
                         {hasInsufficientBalance && (
                           <div>

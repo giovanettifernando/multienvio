@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { Shipment, ShipmentStatus } from '@/shared/types/shipments';
+import type { Shipment, ShipmentStatus } from "@/shared/types/shipments";
 import { afterShipmentCreated } from "@/modules/shipments/application/after-create";
 import { apiFetch } from "@/platform/api/client";
 

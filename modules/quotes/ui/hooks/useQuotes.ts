@@ -9,7 +9,7 @@ import type {
   Recipient,
   RecipientPayload,
   UnitFilters,
-} from '@/shared/types/quote';
+} from "@/shared/types/quote";
 
 const parseQuoteResponse = (data: unknown): QuoteCalculateResponse => {
   if (Array.isArray(data)) {

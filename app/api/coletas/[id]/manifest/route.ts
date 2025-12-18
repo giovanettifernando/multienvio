@@ -6,6 +6,7 @@ import { getUserSessionFromRequest } from '@/modules/auth/application/user-sessi
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import { readFile } from 'fs/promises';
 import { join } from 'path';
+import { formatCEP, formatCNPJ } from '@/shared/utils/masks';
 
 /**
  * GET /api/coletas/[id]/manifest
@@ -235,11 +236,11 @@ async function generateManifestPdf(pickup: PickupRequestWithRelations): Promise<
     : pickup.user.name || 'Não informado';
   drawField('Remetente:', companyName);
   if (pickup.user.hasCompany && pickup.user.cnpj) {
-    drawField('CNPJ:', formatCnpj(pickup.user.cnpj));
+    drawField('CNPJ:', formatCNPJ(pickup.user.cnpj));
   }
   drawField('Endereço:', pickup.originAddress);
   drawField('Cidade/UF:', pickup.originCity && pickup.originUf ? `${pickup.originCity}/${pickup.originUf}` : null);
-  drawField('CEP:', formatCep(pickup.originCep));
+  drawField('CEP:', formatCEP(pickup.originCep));
 
   yPos -= 15;
 
@@ -260,7 +261,7 @@ async function generateManifestPdf(pickup: PickupRequestWithRelations): Promise<
   drawField('Transportadora:', pickup.shipment.carrier);
   drawField('Serviço:', pickup.shipment.service);
   drawField('Destinatário:', pickup.shipment.recipientName);
-  drawField('CEP Destino:', pickup.shipment.destinationCep ? formatCep(pickup.shipment.destinationCep) : null);
+  drawField('CEP Destino:', pickup.shipment.destinationCep ? formatCEP(pickup.shipment.destinationCep) : null);
   if (pickup.shipment.weight) {
     drawField('Peso:', `${pickup.shipment.weight} kg`);
   }
@@ -364,18 +365,3 @@ function formatDateTime(date: Date): string {
   });
 }
 
-function formatCep(cep: string): string {
-  const clean = cep.replace(/\D/g, '');
-  if (clean.length === 8) {
-    return `${clean.slice(0, 5)}-${clean.slice(5)}`;
-  }
-  return cep;
-}
-
-function formatCnpj(cnpj: string): string {
-  const clean = cnpj.replace(/\D/g, '');
-  if (clean.length === 14) {
-    return `${clean.slice(0, 2)}.${clean.slice(2, 5)}.${clean.slice(5, 8)}/${clean.slice(8, 12)}-${clean.slice(12)}`;
-  }
-  return cnpj;
-}

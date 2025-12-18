@@ -25,6 +25,8 @@ import { PageShell } from '@/shared/ui/PageShell';
 import { ELButton } from '@/shared/ui/ELButton';
 import { ELSelect } from '@/shared/ui/ELSelect';
 import { ELSkeleton } from '@/shared/ui/ELSkeleton';
+import { formatDateTimeBR } from '@/shared/utils/date';
+import { formatCentsAsBRL } from '@/shared/utils/format';
 
 const { Text } = Typography;
 
@@ -156,20 +158,6 @@ export default function RecipientPaymentsClient() {
     },
   });
 
-  const formatCurrency = (cents: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(cents / 100);
-  };
-
-  const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleString("pt-BR", {
-      dateStyle: "short",
-      timeStyle: "short",
-    });
-  };
-
   const getTimeRemaining = (expiresAt: string) => {
     const now = new Date();
     const expires = new Date(expiresAt);
@@ -223,7 +211,7 @@ export default function RecipientPaymentsClient() {
       title: "Valor",
       key: "value",
       render: (_: unknown, record: RecipientPaymentRequest) => (
-        <Text strong>{formatCurrency(record.totalCents)}</Text>
+        <Text strong>{formatCentsAsBRL(record.totalCents)}</Text>
       ),
     },
     {
@@ -262,7 +250,7 @@ export default function RecipientPaymentsClient() {
       key: "createdAt",
       render: (_: unknown, record: RecipientPaymentRequest) => (
         <Text type="secondary" style={{ fontSize: 12 }}>
-          {formatDate(record.createdAt)}
+          {formatDateTimeBR(record.createdAt)}
         </Text>
       ),
     },

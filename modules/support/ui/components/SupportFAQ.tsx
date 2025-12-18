@@ -20,7 +20,7 @@ import {
   DislikeOutlined,
   CheckOutlined,
 } from '@ant-design/icons';
-import { useFAQ, useFAQFeedback, useFAQView, type FAQItem } from '@/hooks/useFAQ';
+import { useFAQ, useFAQFeedback, useFAQView, type FAQItem } from '@/modules/support/ui/hooks';
 
 const { Text, Title } = Typography;
 

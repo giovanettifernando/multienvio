@@ -21,6 +21,7 @@ import { ELModal } from '@/shared/ui/ELModal';
 import { ELButton } from '@/shared/ui/ELButton';
 import { ELAlert } from '@/shared/ui/ELAlert';
 import { RecipientCardPaymentForm } from "@/modules/payments/ui/components/RecipientCardPaymentForm";
+import { formatBRL } from "@/shared/utils/format";
 
 const { Text } = Typography;
 
@@ -86,13 +87,6 @@ export function RecipientPaymentModal({
   const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const isConfirmDisabled = !selectedMethod || !amount || amount <= 0;
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(value);
-  };
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -335,7 +329,7 @@ export function RecipientPaymentModal({
           <div style={{ marginBottom: 16 }}>
             <Text strong>Valor a pagar: </Text>
             <Text style={{ fontSize: 20, color: "#52c41a" }}>
-              {formatCurrency(amount)}
+              {formatBRL(amount)}
             </Text>
           </div>
 
@@ -485,7 +479,7 @@ export function RecipientPaymentModal({
 
             <div style={{ marginTop: 16 }}>
               <Text strong style={{ fontSize: 18 }}>
-                {formatCurrency(amount)}
+                {formatBRL(amount)}
               </Text>
               <br />
               <Text type="secondary" style={{ fontSize: 12 }}>
@@ -551,7 +545,7 @@ export function RecipientPaymentModal({
           {/* Exibir valor */}
           <div>
             <Text strong>Total a pagar: </Text>
-            <Text style={{ fontSize: 20, color: "#1890ff" }}>{formatCurrency(amount)}</Text>
+            <Text style={{ fontSize: 20, color: "#1890ff" }}>{formatBRL(amount)}</Text>
           </div>
 
           {/* Lista de metodos de pagamento */}

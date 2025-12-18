@@ -1,0 +1,117 @@
+# SUMMARY
+
+- [Documentação Envio Legal](README.md)
+- Architecture
+  - Admin
+    - [Gestão de usuários admin](architecture/admin/admin-usuarios-relatorio.md)
+  - Auth
+    - [Autenticação real](architecture/auth/auth-implementation.md)
+    - [Reset de senha](architecture/auth/password-reset-implementation.md)
+    - [Token version](architecture/auth/auth-token-version.md)
+    - [Login de coletores](architecture/auth/collector-login-implementation.md)
+  - API
+    - [Padrões de API](architecture/api/api-contracts.md)
+    - [Conta - dados pessoais](architecture/api/api-account-me.md)
+    - [Conta - destinatários](architecture/api/api-account-recipients.md)
+    - [Conta - cartões](architecture/api/api-account-cards.md)
+    - [Segurança da conta](architecture/api/api-account-security.md)
+  - Payments
+    - [Arquitetura pagamentos e carteira](architecture/payments/architecture-payments-wallet.md)
+    - [Refatoração da carteira](architecture/payments/wallet-refactoring.md)
+  - Shipments
+    - [Status inicial](architecture/shipments/status-initial-fix.md)
+    - [Análise de migração de status](architecture/shipments/status-migration-analysis.md)
+    - [Resumo de padronização de status](architecture/shipments/status-refactor-summary.md)
+  - Quotes
+    - [Backend de cotações](architecture/quotes/quotation-backend.md)
+  - Flows & Project
+    - [Fluxos mapeados](architecture/flows/fluxos-envio-legal.md)
+    - [Plano de reorganização do projeto](architecture/project-reorg-plan.md)
+- Integrations
+  - [Visão geral de integrações](integrations/overview-backend.md)
+  - Mercado Pago
+    - [Integração Mercado Pago](integrations/mercadopago/payments-mercadopago.md)
+    - [Pendência pending_contingency](integrations/mercadopago/pending-contingency-report.md)
+    - [Remoção de mocks](integrations/mercadopago/remocao-mocks.md)
+- Operations
+  - Security
+    - [Segurança e deploy](operations/security/security-overview.md)
+    - [Rotação de secrets](operations/security/secret-rotation.md)
+    - [Security cleanup plan](operations/security/security-cleanup-plan.md)
+  - Migrations
+    - [Plano de migração DB audit](operations/migrations/db-audit-migration-plan.md)
+    - [Migração para PostGIS](operations/migrations/postgis-migration.md)
+  - Scripts
+    - [Geocodificação de pontos de coleta](operations/scripts/geocoding.md)
+    - [Taxa de coleta na origem](operations/scripts/pickup-fee.md)
+  - Testing
+    - [Testes de segurança](operations/testing/security-testing.md)
+    - [Mapa de rotas (responsividade)](operations/testing/responsividade/responsividade-remetente-mapa-rotas.md)
+    - [TestIDs de responsividade](operations/testing/responsividade/testids-remetente.md)
+    - [Relatório de responsividade](operations/testing/responsividade/relatorio-responsividade-remetente.md)
+  - Troubleshooting
+    - [Gestão de CEPs](operations/troubleshooting/cep-management.md)
+    - [Debug de validação de cotações](operations/troubleshooting/debug-quote-validation.md)
+    - [Persistência de documentos de coletores](operations/troubleshooting/fix-document-persistence.md)
+    - [Header de origem/CEP](operations/troubleshooting/fix-header-origem.md)
+    - [CEP correto no header](operations/troubleshooting/fix-header-cep-final.md)
+    - [Erro de cálculo de cotações](operations/troubleshooting/fix-quote-calculation-error.md)
+    - [Correção de volumes em shipments](operations/troubleshooting/shipments-volumes-fix.md)
+    - [Eventos de rastreamento vazios](operations/troubleshooting/tracking-events-fix.md)
+    - [Correção de troca de senha](operations/troubleshooting/password-change-fix.md)
+- UI/UX
+  - Design System & Temas
+    - [Standardization plan](ui-ux/design-system/standardization-plan.md)
+    - [Padronização de componentes](ui-ux/design-system/padronizacao-componentes.md)
+    - [Design system v2](ui-ux/design-system/ui-design-system-v2.md)
+    - [Plano de modernização da UI](ui-ux/design-system/plano-modernizacao-ui-envio-legal.md)
+    - [Plano de refresh visual](ui-ux/ui-refresh-plan.md)
+  - Responsiveness
+    - [Implementação de responsividade](ui-ux/responsiveness/implementacao-responsividade.md)
+    - [Plano de execução UI (v3)](ui-ux/responsiveness/plano-execucao-ui-envio-legal.md)
+  - Quotes UI
+    - [Endereços/destinatários](ui-ux/quotes/address-recipient-select.md)
+    - [Botões de navegação](ui-ux/quotes/quote-navigation-buttons.md)
+    - [Refatoração de cotações](ui-ux/quotes/refatoracao-cotacoes.md)
+  - Shipments UI
+    - [Refatoração de detalhes do envio](ui-ux/shipments/shipment-details-refactor.md)
+    - [Expansão de volumes](ui-ux/shipments/shipment-details-volume-expansion.md)
+  - Tracking
+    - [Refatoração da página pública](ui-ux/tracking/public-tracking-page-refactor.md)
+  - Inventários e auditorias de UX
+    - [Inventário de formulários](ui-ux/forms-inventory.md)
+    - [Harmonização de estilo](ui-ux/harmonizacao-relatorio.md)
+    - [Padrões de código em páginas cliente](ui-ux/patterns/client-pages-code-examples.md)
+    - [Plano de auditoria UI/UX](ui-ux/audits/ui-ux-audit-plan.md)
+    - [Auditoria visual](ui-ux/audits/ui-visual-audit.md)
+- Audits
+  - Security
+    - [Pentest report v2](audits/security/pentest-report-v2.md)
+    - [Auditoria de sessão v3](audits/security/auditoria-sessao-v3.md)
+    - [Security audit report](audits/security/security-audit-report.md)
+  - Database
+    - [DB audit report](audits/database/db-audit-report.md)
+    - [Análise de campos sem uso v2](audits/database/analise-campos-sem-uso-v2.md)
+    - [Evidências da auditoria de DB](audits/database/db-audit-evidence.md)
+  - Codebase
+    - [Code review report](audits/code/code-review-report.md)
+    - [Auditoria de duplicações](audits/code/duplication-audit.md)
+    - [Dead code audit](audits/code/dead-code-audit.md)
+    - [Plano de remoção de dead code](audits/code/dead-code-removal-plan.md)
+    - [Auditoria do chat assistente](audits/code/assistant-chat-audit-report.md)
+  - Architecture
+    - [Auditoria do admin](audits/architecture/auditoria-adm.md)
+    - [Inconsistências de fluxo](audits/architecture/inconsistencia-de-fluxos.md)
+    - [Auditoria de estrutura](audits/architecture/project-structure-audit.md)
+  - Routes
+    - [Revisão de rotas remetente v2](audits/routes/revisao-rotas-e-apis-remetente-v2.md)
+  - QA & Frontend
+    - [QA /cotacoes](audits/qa/qa-report-cotacoes.md)
+    - [Auditoria Ant Design](audits/frontend/antd-audit.md)
+- Guides
+  - [Manual do usuário remetente](guides/manual-usuario-remetente.md)
+- Archive (histórico)
+  - [Itens arquivados](archive/)
+- Migration
+  - [Mapa de movimentação](_migration/md-move-map.md)
+  - [Notas da auditoria](_migration/doc-audit-notes.md)

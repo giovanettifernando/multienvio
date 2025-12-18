@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import type { StatementResponse } from '@/shared/types/wallet-statement';
+import type { StatementResponse } from "@/shared/types/wallet-statement";
 import { apiFetch } from "@/platform/api/client";
 
 export interface WalletTransactionsFilters {

@@ -2,10 +2,12 @@
 
 import { useState, useEffect, startTransition } from 'react';
 import { Controller, useFormContext } from 'react-hook-form';
-import { Form, Input, Select, Row, Col, Typography, Spin } from 'antd';
+import { Form, Row, Col, Typography, Spin } from 'antd';
+import { ELInput } from '@/shared/ui/ELInput';
+import { ELSelect } from '@/shared/ui/ELSelect';
 import { CarOutlined } from '@ant-design/icons';
 import type { CollectorFormInput } from '@/modules/collectors/application/types';
-import { useFipeBrands, useFipeModels } from '@/hooks/useFipeVehicles';
+import { useFipeBrands, useFipeModels } from '@/modules/collectors/ui/hooks';
 
 const { Title } = Typography;
 
@@ -105,7 +107,7 @@ export default function VehicleForm() {
               name="vehicle.plate"
               control={control}
               render={({ field }) => (
-                <Input
+                <ELInput
                   {...field}
                   value={field.value || ''}
                   placeholder="AAA0A00"
@@ -131,7 +133,7 @@ export default function VehicleForm() {
               name="vehicle.year"
               control={control}
               render={({ field }) => (
-                <Select
+                <ELSelect
                   {...field}
                   value={field.value || undefined}
                   placeholder="Selecione o ano"
@@ -158,7 +160,7 @@ export default function VehicleForm() {
               name="vehicle.brand"
               control={control}
               render={({ field }) => (
-                <Select
+                <ELSelect
                   value={selectedBrandId || undefined}
                   placeholder="Selecione a marca"
                   loading={brandsLoading}
@@ -194,7 +196,7 @@ export default function VehicleForm() {
               name="vehicle.model"
               control={control}
               render={({ field }) => (
-                <Select
+                <ELSelect
                   value={
                     models.find((m) => m.name === field.value)?.id || undefined
                   }

@@ -102,3 +102,25 @@ export function formatCEP(value: string): string {
 export function normalizeCEPInput(value: string): string {
   return maskCEP(value);
 }
+
+/**
+ * Remove máscara do CEP, retornando apenas dígitos
+ * @param cep - CEP com ou sem máscara
+ * @returns String com apenas 8 dígitos ou vazio se inválido
+ * @example normalizeCep("12345-678") // "12345678"
+ */
+export function normalizeCep(cep: string | null | undefined): string {
+  if (!cep) return '';
+  return onlyDigits(cep).slice(0, 8);
+}
+
+/**
+ * Valida se o CEP tem 8 dígitos
+ * @param cep - CEP com ou sem máscara
+ * @returns true se válido (8 dígitos)
+ * @example isValidCep("12345-678") // true
+ * @example isValidCep("1234") // false
+ */
+export function isValidCep(cep: string | null | undefined): boolean {
+  return normalizeCep(cep).length === 8;
+}

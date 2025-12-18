@@ -1,4 +1,5 @@
 import type { Cart } from '@/shared/types/cart';
+import { formatBRL as formatCurrency } from '@/shared/utils/format';
 
 export interface CheckoutCartModalProps {
   open: boolean;
@@ -39,9 +40,5 @@ export interface MercadoPagoPaymentResult {
 
 export type PixPaymentStatus = 'pending' | 'paid' | 'expired' | 'error';
 
-export const formatCurrency = (value: number) => {
-  return new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-  }).format(value);
-};
+// Re-export formatCurrency as alias for formatBRL for backward compatibility
+export { formatCurrency };

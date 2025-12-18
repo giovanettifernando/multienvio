@@ -23,7 +23,7 @@ import { Controller, useForm, useWatch, type FieldErrors } from "react-hook-form
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 
-import { useProfile, useProfileSave } from "@/hooks/useAccount";
+import { useProfile, useProfileSave } from "@/modules/account/ui/hooks";
 import type { Profile } from '@/shared/types/account';
 import { useAuthStore } from '@/modules/auth/ui/state/auth';
 import { maskCPF, maskCNPJ, maskPhone, onlyDigits } from "@/shared/utils/masks";

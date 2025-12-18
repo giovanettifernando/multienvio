@@ -1,6 +1,7 @@
 'use client';
 
-import { Form, Input, InputNumber } from 'antd';
+import { Form, InputNumber } from 'antd';
+import { ELInput } from '@/shared/ui/ELInput';
 import { Controller, Control, FieldErrors } from 'react-hook-form';
 import { maskCNPJ, unmaskDigits } from '@/modules/pickup-points/application/masks';
 import type { PickupPointFormData } from '@/modules/pickup-points/application/types';
@@ -24,7 +25,7 @@ export default function PJForm({ control, errors }: PJFormProps) {
             name="razaoSocial"
             control={control}
             render={({ field }) => (
-              <Input
+              <ELInput
                 {...field}
                 placeholder="Ex: Empresa Logística Ltda"
                 autoFocus
@@ -44,7 +45,7 @@ export default function PJForm({ control, errors }: PJFormProps) {
             name="nomeFantasia"
             control={control}
             render={({ field }) => (
-              <Input
+              <ELInput
                 {...field}
                 placeholder="Ex: Ponto Express Centro"
                 aria-label="Nome Fantasia"
@@ -63,7 +64,7 @@ export default function PJForm({ control, errors }: PJFormProps) {
             name="cnpj"
             control={control}
             render={({ field }) => (
-              <Input
+              <ELInput
                 {...field}
                 placeholder="00.000.000/0000-00"
                 maxLength={18}
@@ -86,7 +87,7 @@ export default function PJForm({ control, errors }: PJFormProps) {
             name="ie"
             control={control}
             render={({ field }) => (
-              <Input
+              <ELInput
                 {...field}
                 value={field.value || ''}
                 placeholder="Inscrição Estadual (opcional)"
@@ -105,7 +106,7 @@ export default function PJForm({ control, errors }: PJFormProps) {
             name="email"
             control={control}
             render={({ field }) => (
-              <Input
+              <ELInput
                 {...field}
                 value={field.value || ''}
                 type="email"
@@ -125,7 +126,7 @@ export default function PJForm({ control, errors }: PJFormProps) {
             name="telefone"
             control={control}
             render={({ field }) => (
-              <Input
+              <ELInput
                 {...field}
                 value={field.value || ''}
                 placeholder="(00) 00000-0000"
@@ -150,7 +151,7 @@ export default function PJForm({ control, errors }: PJFormProps) {
             name="password"
             control={control}
             render={({ field }) => (
-              <Input.Password
+              <ELInput.Password
                 {...field}
                 value={field.value || ''}
                 placeholder="Mínimo 6 caracteres"

@@ -1,8 +1,7 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import {
-  Table,
   Tag,
   Space,
   Input,
@@ -20,7 +19,6 @@ import {
   Badge,
 } from 'antd';
 import { ELModal } from '@/shared/ui/ELModal';
-import type { TableProps } from 'antd';
 import { useQuery } from '@tanstack/react-query';
 import {
   SearchOutlined,
@@ -33,6 +31,8 @@ import {
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import type { Dayjs } from 'dayjs';
+import { formatDateTimeBR } from '@/shared/utils/date';
+import { DataTable, type DataTableColumn } from '@/shared/ui/DataTable';
 
 const { Text } = Typography;
 const { RangePicker } = DatePicker;
@@ -117,11 +117,6 @@ async function fetchExceptions(params: {
   return json.data ?? json;
 }
 
-function formatDate(dateStr: string | null): string {
-  if (!dateStr) return '-';
-  return dayjs(dateStr).format('DD/MM/YYYY HH:mm');
-}
-
 interface ExceptionsTableProps {
   dateStart?: string;
   dateEnd?: string;
@@ -162,15 +157,15 @@ export default function ExceptionsTable({ dateStart, dateEnd }: ExceptionsTableP
       }),
   });
 
-  const columns = useMemo<TableProps<ExceptionItem>['columns']>(
-    () => [
+  const columns: DataTableColumn<ExceptionItem>[] = [
       {
         title: 'Tipo',
         dataIndex: 'type',
         key: 'type',
         width: 150,
-        render: (type: string) => {
-          const config = TYPE_CONFIG[type] || { label: type, color: 'default', icon: null };
+        render: (type: unknown) => {
+          const t = type as string;
+          const config = TYPE_CONFIG[t] || { label: t, color: 'default', icon: null };
           return (
             <Tag color={config.color} icon={config.icon}>
               {config.label}
@@ -183,9 +178,9 @@ export default function ExceptionsTable({ dateStart, dateEnd }: ExceptionsTableP
         dataIndex: 'trackingCode',
         key: 'trackingCode',
         width: 160,
-        render: (code: string | null) => (
+        render: (code: unknown) => (
           <Text strong style={{ fontSize: 12 }}>
-            {code || '-'}
+            {(code as string) || '-'}
           </Text>
         ),
       },
@@ -269,13 +264,13 @@ export default function ExceptionsTable({ dateStart, dateEnd }: ExceptionsTableP
         dataIndex: 'attemptCount',
         key: 'attemptCount',
         width: 90,
-        align: 'center',
-        render: (count: number | undefined) => {
-          if (count === undefined) return '-';
+        render: (count: unknown) => {
+          const c = count as number | undefined;
+          if (c === undefined) return '-';
           return (
             <Badge
-              count={count}
-              style={{ backgroundColor: count > 2 ? '#f5222d' : count > 1 ? '#fa8c16' : '#1890ff' }}
+              count={c}
+              style={{ backgroundColor: c > 2 ? '#f5222d' : c > 1 ? '#fa8c16' : '#1890ff' }}
             />
           );
         },
@@ -285,15 +280,14 @@ export default function ExceptionsTable({ dateStart, dateEnd }: ExceptionsTableP
         dataIndex: 'createdAt',
         key: 'createdAt',
         width: 130,
-        render: (date: string) => (
-          <Text style={{ fontSize: 12 }}>{formatDate(date)}</Text>
+        render: (date: unknown) => (
+          <Text style={{ fontSize: 12 }}>{formatDateTimeBR(date as string)}</Text>
         ),
       },
       {
         title: 'Ações',
         key: 'actions',
         width: 100,
-        align: 'center',
         render: (_, record) => (
           <Button
             type="link"
@@ -304,10 +298,9 @@ export default function ExceptionsTable({ dateStart, dateEnd }: ExceptionsTableP
             Detalhes
           </Button>
         ),
+        isActions: true,
       },
-    ],
-    []
-  );
+  ];
 
   const renderSummary = () => {
     const summary = data?.summary;
@@ -461,7 +454,7 @@ export default function ExceptionsTable({ dateStart, dateEnd }: ExceptionsTableP
           </Descriptions.Item>
 
           <Descriptions.Item label="Data de Registro">
-            {formatDate(detailsModal.createdAt)}
+            {formatDateTimeBR(detailsModal.createdAt)}
           </Descriptions.Item>
         </Descriptions>
 
@@ -546,11 +539,13 @@ export default function ExceptionsTable({ dateStart, dateEnd }: ExceptionsTableP
       {renderSummary()}
 
       {/* Tabela */}
-      <Table<ExceptionItem>
-        dataSource={data?.items || []}
+      <DataTable<ExceptionItem>
+        data={data?.items || []}
         columns={columns}
         rowKey="id"
         loading={isLoading}
+        enableMobileCards={false}
+        compact
         pagination={{
           current: page,
           pageSize,
@@ -560,11 +555,10 @@ export default function ExceptionsTable({ dateStart, dateEnd }: ExceptionsTableP
             setPageSize(ps);
           },
           showSizeChanger: true,
-          pageSizeOptions: ['10', '20', '50', '100'],
           showTotal: (total) => `Total: ${total} exceções`,
         }}
-        scroll={{ x: 'max-content', y: 'calc(100vh - 480px)' }}
-        size="small"
+        scrollX="max-content"
+        scrollY="calc(100vh - 480px)"
       />
 
       {/* Modal de Detalhes */}

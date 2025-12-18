@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { usePontosStore } from '@/modules/pickup-points/ui/state/pontos';
+import { usePontosStore } from '@/modules/pickup-points/ui/state/usePickupPointsStore';
 import type { StatusOperacional } from '@/modules/pickup-points/application/types';
 
 export function usePontos(filter?: {

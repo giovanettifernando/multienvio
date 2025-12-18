@@ -1,11 +1,12 @@
 'use client';
 
 import { useEffect } from 'react';
-import { Table, Tag, Space, Typography, Input, Select, App, Button } from 'antd';
+import { Tag, Space, Typography, Input, Select, App, Button } from 'antd';
 import { ReloadOutlined, SearchOutlined } from '@ant-design/icons';
 import { useState } from 'react';
 import type { SupportTicket, Status, Priority } from '@/shared/validation/support';
-import { useTickets } from '@/hooks/useSupport';
+import { useTickets } from '@/modules/support/ui/hooks';
+import { DataTable, type DataTableColumn } from '@/shared/ui/DataTable';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/pt-br';
@@ -105,14 +106,14 @@ export function NewTicketList({
   const currentPage = ticketsQuery.data?.page ?? page;
   const currentPageSize = ticketsQuery.data?.pageSize ?? pageSize;
 
-  const columns = [
+  const columns: DataTableColumn<SupportTicket>[] = [
     {
       title: 'ID',
       dataIndex: 'id',
       key: 'id',
-      render: (id: string) => (
+      render: (id: unknown) => (
         <Text code style={{ whiteSpace: 'nowrap' }}>
-          {id.slice(0, 8)}
+          {String(id).slice(0, 8)}
         </Text>
       ),
     },
@@ -120,51 +121,60 @@ export function NewTicketList({
       title: 'Assunto',
       dataIndex: 'subject',
       key: 'subject',
-      render: (subject: string, record: SupportTicket) => (
-        <a onClick={() => onTicketClick?.(record.id)}>{subject}</a>
+      render: (subject: unknown, record: SupportTicket) => (
+        <a onClick={() => onTicketClick?.(record.id)}>{String(subject)}</a>
       ),
     },
     ...(showRequester ? [{
       title: 'Solicitante',
       dataIndex: 'requester',
       key: 'requester',
-      render: (requester: SupportTicket['requester']) => (
-        <Space orientation="vertical" size={0}>
-          <Text strong style={{ whiteSpace: 'nowrap' }}>{requester.name}</Text>
-          <Text type="secondary" style={{ fontSize: 12, whiteSpace: 'nowrap' }}>{requester.email}</Text>
-        </Space>
-      ),
-    }] : []),
+      render: (requester: unknown) => {
+        const req = requester as SupportTicket['requester'];
+        return (
+          <Space orientation="vertical" size={0}>
+            <Text strong style={{ whiteSpace: 'nowrap' }}>{req.name}</Text>
+            <Text type="secondary" style={{ fontSize: 12, whiteSpace: 'nowrap' }}>{req.email}</Text>
+          </Space>
+        );
+      },
+    }] as DataTableColumn<SupportTicket>[] : []),
     {
       title: 'Prioridade',
       dataIndex: 'priority',
       key: 'priority',
-      render: (priority: Priority) => (
-        <Tag color={priorityColors[priority]} style={{ whiteSpace: 'nowrap' }}>{priorityLabels[priority]}</Tag>
-      ),
+      render: (priority: unknown) => {
+        const p = priority as Priority;
+        return (
+          <Tag color={priorityColors[p]} style={{ whiteSpace: 'nowrap' }}>{priorityLabels[p]}</Tag>
+        );
+      },
     },
     {
       title: 'Status',
       dataIndex: 'status',
       key: 'status',
-      render: (status: Status) => (
-        <Tag color={statusColors[status]} style={{ whiteSpace: 'nowrap' }}>{statusLabels[status]}</Tag>
-      ),
+      render: (status: unknown) => {
+        const s = status as Status;
+        return (
+          <Tag color={statusColors[s]} style={{ whiteSpace: 'nowrap' }}>{statusLabels[s]}</Tag>
+        );
+      },
     },
     {
       title: 'Criado',
       dataIndex: 'createdAt',
       key: 'createdAt',
-      render: (date: string) => (
-        <Text type="secondary" style={{ whiteSpace: 'nowrap' }}>{dayjs(date).fromNow()}</Text>
+      render: (date: unknown) => (
+        <Text type="secondary" style={{ whiteSpace: 'nowrap' }}>{dayjs(date as string).fromNow()}</Text>
       ),
     },
     {
       title: 'Atualizado',
       dataIndex: 'updatedAt',
       key: 'updatedAt',
-      render: (date: string) => (
-        <Text type="secondary" style={{ whiteSpace: 'nowrap' }}>{dayjs(date).fromNow()}</Text>
+      render: (date: unknown) => (
+        <Text type="secondary" style={{ whiteSpace: 'nowrap' }}>{dayjs(date as string).fromNow()}</Text>
       ),
     },
   ];
@@ -222,12 +232,12 @@ export function NewTicketList({
         </Button>
       </Space>
 
-      <Table
-        dataSource={tickets}
+      <DataTable<SupportTicket>
+        data={tickets}
         columns={columns}
         rowKey="id"
-        tableLayout="auto"
         loading={ticketsQuery.isLoading || ticketsQuery.isFetching}
+        enableMobileCards={true}
         pagination={
           audience === 'admin'
             ? {
@@ -250,9 +260,7 @@ export function NewTicketList({
                 showTotal: (total) => `Total: ${total} chamado${total !== 1 ? 's' : ''}`,
               }
         }
-        locale={{
-          emptyText: ticketsQuery.isLoading ? 'Carregando...' : 'Nenhum chamado encontrado',
-        }}
+        emptyMessage={ticketsQuery.isLoading ? 'Carregando...' : 'Nenhum chamado encontrado'}
       />
     </Space>
   );

@@ -1,13 +1,14 @@
 'use client';
 
 import { useState } from 'react';
-import { Table, Tag, Button, Flex, Input, Select, DatePicker, App } from 'antd';
+import { Tag, Button, Flex, Input, Select, DatePicker, App } from 'antd';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { SearchOutlined, EyeOutlined, DownloadOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import type { OpsShipment } from '@/modules/admin/application/ops/types';
 import { listShipments } from '@/modules/admin/application/ops/api';
 import ShipmentDetailDrawer from './ShipmentDetailDrawer';
+import { DataTable, type DataTableColumn } from '@/shared/ui/DataTable';
 
 const { RangePicker } = DatePicker;
 
@@ -132,20 +133,20 @@ export default function ShipmentsTable({ dateStart, dateEnd }: ShipmentsTablePro
     message.success('CSV exportado');
   };
 
-  const columns = [
+  const columns: DataTableColumn<OpsShipment>[] = [
     {
       title: 'Criado em',
       dataIndex: 'createdAt',
       key: 'createdAt',
       width: 110,
-      render: (date: string) => dayjs(date).format('DD/MM/YY HH:mm'),
-      fixed: 'left' as const,
+      render: (date: unknown) => dayjs(date as string).format('DD/MM/YY HH:mm'),
+      fixed: 'left',
     },
     {
       title: 'Tracking',
       key: 'tracking',
       width: 180,
-      fixed: 'left' as const,
+      fixed: 'left',
       render: (_: unknown, record: OpsShipment) => (
         <div>
           <div style={{ fontWeight: 500, fontSize: 12 }}>
@@ -216,8 +217,8 @@ export default function ShipmentsTable({ dateStart, dateEnd }: ShipmentsTablePro
       dataIndex: 'status',
       key: 'status',
       width: 180,
-      render: (status: string) => {
-        const { label, color } = getStatusDisplay(status);
+      render: (status: unknown) => {
+        const { label, color } = getStatusDisplay(status as string);
         return <Tag color={color}>{label}</Tag>;
       },
     },
@@ -267,8 +268,10 @@ export default function ShipmentsTable({ dateStart, dateEnd }: ShipmentsTablePro
       dataIndex: 'freightCost',
       key: 'freightCost',
       width: 100,
-      render: (cost: number | null) =>
-        cost !== null ? `R$ ${cost.toFixed(2)}` : '—',
+      render: (cost: unknown) => {
+        const c = cost as number | null;
+        return c !== null ? `R$ ${c.toFixed(2)}` : '—';
+      },
     },
     {
       title: 'Etiqueta',
@@ -320,7 +323,8 @@ export default function ShipmentsTable({ dateStart, dateEnd }: ShipmentsTablePro
       title: 'Ações',
       key: 'actions',
       width: 100,
-      fixed: 'right' as const,
+      fixed: 'right',
+      isActions: true,
       render: (_: unknown, record: OpsShipment) => (
         <Button
           type="primary"
@@ -402,21 +406,23 @@ export default function ShipmentsTable({ dateStart, dateEnd }: ShipmentsTablePro
         </Flex>
 
         {/* Table */}
-        <Table
+        <DataTable<OpsShipment>
           columns={columns}
-          dataSource={data?.items || []}
+          data={data?.items || []}
           rowKey="id"
           loading={isLoading}
-          scroll={{ x: 2000, y: 'calc(100vh - 480px)' }}
+          enableMobileCards={false}
+          compact
+          scrollX={2000}
+          scrollY="calc(100vh - 480px)"
           pagination={{
             current: page,
             pageSize,
             total: data?.total || 0,
-            onChange: setPage,
+            onChange: (p) => setPage(p),
             showTotal: (total) => `Total: ${total} envios`,
             showSizeChanger: false,
           }}
-          size="small"
         />
       </Flex>
 

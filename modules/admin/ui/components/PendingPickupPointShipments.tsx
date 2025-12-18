@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { apiFetch } from '@/shared/utils/api-fetch';
 import { ELButton } from '@/shared/ui/ELButton';
+import { formatDateBR } from '@/shared/utils/date';
 import { ELCard } from '@/shared/ui/ELCard';
 import { ELFlex } from '@/shared/ui/ELGrid';
 import { ELEmpty } from '@/shared/ui/ELEmpty';
@@ -31,15 +32,6 @@ interface PendingShipmentsResponse {
 
 async function fetchPendingShipments(): Promise<PendingShipmentsResponse> {
   return apiFetch('/api/dashboard/pending-pickup-shipments?limit=5');
-}
-
-function formatDate(dateString: string): string {
-  const date = new Date(dateString);
-  return date.toLocaleDateString('pt-BR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  });
 }
 
 export function PendingPickupPointShipments() {
@@ -115,7 +107,7 @@ export function PendingPickupPointShipments() {
                     {shipment.pickupPointName}
                   </Text>
                   <Text type="secondary" style={{ fontSize: '11px' }}>
-                    {shipment.pickupPointCity}/{shipment.pickupPointState} • {formatDate(shipment.createdAt)}
+                    {shipment.pickupPointCity}/{shipment.pickupPointState} • {formatDateBR(shipment.createdAt)}
                   </Text>
                 </ELFlex>
 

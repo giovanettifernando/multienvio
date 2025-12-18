@@ -22,10 +22,10 @@ import {
 } from "@ant-design/icons";
 import type { QuoteResultItem, DocumentType } from '@/shared/types/quote';
 import { ContentDeclarationModal } from "./ContentDeclarationModal";
-import { useQuoteSelection } from "@/hooks/useQuotes";
+import { useQuoteSelection } from "@/modules/quotes/ui/hooks";
 import { useQuoteStore } from '@/modules/quotes/ui/state/useQuoteStore';
 import { useShallow } from "zustand/react/shallow";
-import { useCarrierIcons } from "@/hooks/useCarrierIcons";
+import { useCarrierIcons } from "@/shared/hooks";
 
 /**
  * Deriva o slug da transportadora a partir do nome.

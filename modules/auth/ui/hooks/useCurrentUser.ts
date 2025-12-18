@@ -6,7 +6,7 @@
  */
 
 import { useEffect, useRef, useState, startTransition } from "react";
-import { useAuthStore } from '@/modules/auth/ui/state/auth';
+import { useAuthStore } from "@/modules/auth/ui/state/useAuthStore";
 import type { User } from "@/modules/auth/application/types";
 
 export function useCurrentUser(): { user: User | null; loading: boolean } {

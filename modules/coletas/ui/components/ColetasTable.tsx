@@ -4,15 +4,15 @@ import { useState } from "react";
 import { Table, Typography, Space, Alert } from 'antd';
 import { EnvironmentOutlined, EyeOutlined } from "@ant-design/icons";
 import type { TableProps } from 'antd';
-import dayjs from "dayjs";
 import { ELButton } from '@/shared/ui/ELButton';
 import { ELSelect } from '@/shared/ui/ELSelect';
+import { formatDateTimeBR } from '@/shared/utils/date';
 import {
   CollectionStatus,
   COLLECTION_STATUS_LABELS,
 } from '@/shared/types/contracts';
 import type { Coleta, ColetaStatus } from "@/modules/coletas/application/types";
-import { useColetasActions } from "@/hooks/useColetas";
+import { useColetasActions } from "@/modules/coletas/ui/hooks";
 import { ColetaDetailDrawer } from "./ColetaDetailDrawer";
 
 interface ColetasTableProps {
@@ -24,10 +24,6 @@ export function ColetasTable({ data, loading }: ColetasTableProps) {
   const { updateStatus, remove } = useColetasActions();
   const [selectedColeta, setSelectedColeta] = useState<Coleta | null>(null);
   const [detailDrawerOpen, setDetailDrawerOpen] = useState(false);
-
-  const formatDate = (dateString: string) => {
-    return dayjs(dateString).format("DD/MM/YYYY HH:mm");
-  };
 
   const formatEndereco = (coleta: Coleta) => {
     const { origem } = coleta;
@@ -130,7 +126,7 @@ export function ColetasTable({ data, loading }: ColetasTableProps) {
       key: "createdAt",
       width: 150,
       render: (date: string) => (
-        <Typography.Text type="secondary">{formatDate(date)}</Typography.Text>
+        <Typography.Text type="secondary">{formatDateTimeBR(date)}</Typography.Text>
       ),
     },
     {
@@ -140,7 +136,7 @@ export function ColetasTable({ data, loading }: ColetasTableProps) {
       width: 150,
       sorter: (a, b) => a.updatedAt.localeCompare(b.updatedAt),
       render: (date: string) => (
-        <Typography.Text>{formatDate(date)}</Typography.Text>
+        <Typography.Text>{formatDateTimeBR(date)}</Typography.Text>
       ),
     },
     {

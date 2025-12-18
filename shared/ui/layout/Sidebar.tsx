@@ -10,7 +10,7 @@ import {
 } from '@ant-design/icons';
 import { sidebarItems } from './sidebar-items';
 import { UserPanel } from './UserPanel';
-import { useAddresses } from '@/hooks/useAccount';
+import { useAddresses } from '@/modules/account/ui/hooks';
 import type { MenuProps } from 'antd';
 import styles from './Sidebar.module.css';
 

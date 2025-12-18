@@ -17,7 +17,7 @@ import {
 import { PlusOutlined, EditOutlined, DeleteOutlined, StarOutlined, StarFilled } from "@ant-design/icons";
 
 const { useBreakpoint } = Grid;
-import { useAddresses, useAddressCreate } from "@/hooks/useAccount";
+import { useAddresses, useAddressCreate } from "@/modules/account/ui/hooks";
 import { AddressModal, type AddressFormValues } from "./AddressModal";
 import type { Address } from '@/shared/types/account';
 

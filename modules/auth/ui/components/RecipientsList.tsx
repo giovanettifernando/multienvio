@@ -26,7 +26,7 @@ import {
   useRecipientDelete,
   useRecipientMakeDefault,
   useRecipientUpdate,
-} from "@/hooks/useAccount";
+} from "@/modules/account/ui/hooks";
 import { useRecipientsStore } from "@/modules/recipients/ui/state/recipients";
 import type { Recipient } from '@/shared/types/account';
 import type { Recipient as StoreRecipient } from "@/modules/recipients/ui/state/recipients";

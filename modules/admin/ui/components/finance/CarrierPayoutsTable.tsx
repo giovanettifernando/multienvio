@@ -29,6 +29,8 @@ import {
   FileTextOutlined,
   CalendarOutlined,
 } from '@ant-design/icons';
+import { formatBRL } from '@/shared/utils/format';
+import { formatDateTimeBR } from '@/shared/utils/date';
 import type {
   PeriodFilter,
   CarrierPayoutSummary,
@@ -40,12 +42,6 @@ const { Text, Title } = Typography;
 const { RangePicker } = DatePicker;
 
 type PeriodPreset = 'today' | '7d' | '30d' | 'month' | 'lastMonth' | 'custom';
-
-const formatCurrency = (value: number) =>
-  value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-
-const formatDate = (dateStr: string | null) =>
-  dateStr ? dayjs(dateStr).format('DD/MM/YYYY HH:mm') : '-';
 
 // Colunas da tabela expandida (detalhes dos envios)
 const shipmentColumns: TableProps<CarrierPayoutShipment>['columns'] = [
@@ -83,14 +79,14 @@ const shipmentColumns: TableProps<CarrierPayoutShipment>['columns'] = [
     dataIndex: 'freightCostReais',
     width: 110,
     align: 'right',
-    render: (v: number) => formatCurrency(v),
+    render: (v: number) => formatBRL(v),
   },
   {
     title: 'Taxa Plataforma',
     dataIndex: 'platformCommissionCents',
     width: 120,
     align: 'right',
-    render: (v: number) => formatCurrency(v / 100),
+    render: (v: number) => formatBRL(v / 100),
   },
   {
     title: 'Repasse',
@@ -99,7 +95,7 @@ const shipmentColumns: TableProps<CarrierPayoutShipment>['columns'] = [
     align: 'right',
     render: (v: number) => (
       <Text strong style={{ color: '#52c41a' }}>
-        {formatCurrency(v)}
+        {formatBRL(v)}
       </Text>
     ),
   },
@@ -107,13 +103,13 @@ const shipmentColumns: TableProps<CarrierPayoutShipment>['columns'] = [
     title: 'Data Etiqueta',
     dataIndex: 'createdAt',
     width: 140,
-    render: (v: string) => formatDate(v),
+    render: (v: string) => formatDateTimeBR(v),
   },
   {
     title: 'Postado',
     dataIndex: 'postedAt',
     width: 140,
-    render: (v: string | null) => formatDate(v),
+    render: (v: string | null) => formatDateTimeBR(v),
   },
   {
     title: 'Status',
@@ -295,7 +291,7 @@ export function CarrierPayoutsTable() {
       dataIndex: 'grossAmountReais',
       width: 150,
       align: 'right',
-      render: (v: number) => formatCurrency(v),
+      render: (v: number) => formatBRL(v),
       sorter: (a, b) => a.grossAmountReais - b.grossAmountReais,
     },
     {
@@ -304,7 +300,7 @@ export function CarrierPayoutsTable() {
       width: 150,
       align: 'right',
       render: (v: number) => (
-        <Text type="secondary">{formatCurrency(v)}</Text>
+        <Text type="secondary">{formatBRL(v)}</Text>
       ),
       sorter: (a, b) => a.platformCommissionReais - b.platformCommissionReais,
     },
@@ -332,7 +328,7 @@ export function CarrierPayoutsTable() {
       align: 'right',
       render: (v: number) => (
         <Text strong style={{ color: '#52c41a', fontSize: 15 }}>
-          {formatCurrency(v)}
+          {formatBRL(v)}
         </Text>
       ),
       sorter: (a, b) => a.netPayoutReais - b.netPayoutReais,
@@ -531,10 +527,10 @@ export function CarrierPayoutsTable() {
                 <Text strong>{data.summary.totalShipments}</Text>
               </Table.Summary.Cell>
               <Table.Summary.Cell index={2} align="right">
-                <Text strong>{formatCurrency(data.summary.totalGrossReais)}</Text>
+                <Text strong>{formatBRL(data.summary.totalGrossReais)}</Text>
               </Table.Summary.Cell>
               <Table.Summary.Cell index={3} align="right">
-                <Text strong>{formatCurrency(data.summary.totalPlatformCommissionReais)}</Text>
+                <Text strong>{formatBRL(data.summary.totalPlatformCommissionReais)}</Text>
               </Table.Summary.Cell>
               <Table.Summary.Cell index={4} align="right">
                 {data.summary.totalGrossReais > 0 && (
@@ -545,7 +541,7 @@ export function CarrierPayoutsTable() {
               </Table.Summary.Cell>
               <Table.Summary.Cell index={5} align="right">
                 <Text strong style={{ color: '#52c41a', fontSize: 16 }}>
-                  {formatCurrency(data.summary.totalNetPayoutReais)}
+                  {formatBRL(data.summary.totalNetPayoutReais)}
                 </Text>
               </Table.Summary.Cell>
             </Table.Summary.Row>

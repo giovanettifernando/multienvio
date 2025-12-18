@@ -17,6 +17,7 @@ import { DataTable, type DataTableColumn } from '@/shared/ui/DataTable';
 import { ActionBar } from '@/shared/ui/ActionBar';
 import { fetchLabels } from '@/platform/api/labels';
 import type { LabelItem, PrintStatus, PackageItem, PackageLabelStatus } from '@/shared/types/label';
+import { formatBRL } from '@/shared/utils/format';
 
 // Table and ColumnsType still needed for expandedRowRender nested table
 
@@ -60,15 +61,6 @@ function PackageStatusBadge({ status }: { status: PackageLabelStatus }) {
   return <Tag color={config.color}>{config.text}</Tag>;
 }
 
-// Formatar valor em BRL
-function formatCurrency(value: number | undefined): string {
-  if (value === undefined || value === null) return '-';
-  return new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-  }).format(value);
-}
-
 // Resumo do envio (linha pai)
 // Formato: Origem (UF) → Nome Destinatário, CEP, Cidade (UF)
 //          X volumes • Correios SERVIÇO • R$ XX,XX
@@ -89,7 +81,7 @@ function ShipmentSummary({ record }: { record: LabelItem }) {
         {destState}
       </Text>
       <Text type="secondary" style={{ fontSize: 12 }}>
-        {record.totalVolumes} {record.totalVolumes === 1 ? 'volume' : 'volumes'} • {record.carrier} {record.service} • {formatCurrency(record.price)}
+        {record.totalVolumes} {record.totalVolumes === 1 ? 'volume' : 'volumes'} • {record.carrier} {record.service} • {formatBRL(record.price)}
       </Text>
     </Space>
   );
@@ -106,13 +98,13 @@ function PackageSummary({ pkg }: { pkg: PackageItem }) {
     // NF-e: chave...valor
     contentInfo = `NF-e: ${pkg.contentSummary}`;
     if (pkg.contentValue !== undefined) {
-      contentInfo += ` • ${formatCurrency(pkg.contentValue)}`;
+      contentInfo += ` • ${formatBRL(pkg.contentValue)}`;
     }
   } else if (pkg.contentType === 'declaration') {
     // Declaração: X itens • R$ XX,XX
     contentInfo = pkg.contentSummary ? `Declaração: ${pkg.contentSummary}` : 'Declaração';
     if (pkg.contentValue !== undefined) {
-      contentInfo += ` • ${formatCurrency(pkg.contentValue)}`;
+      contentInfo += ` • ${formatBRL(pkg.contentValue)}`;
     }
   }
 

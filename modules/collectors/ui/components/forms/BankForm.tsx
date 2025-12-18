@@ -1,7 +1,9 @@
 'use client';
 
 import { Controller, useFormContext } from 'react-hook-form';
-import { Segmented, Form, Select, Input, Row, Col, Typography, Card } from 'antd';
+import { Segmented, Form, Row, Col, Typography, Card } from 'antd';
+import { ELInput } from '@/shared/ui/ELInput';
+import { ELSelect } from '@/shared/ui/ELSelect';
 import { DollarOutlined, BankOutlined } from '@ant-design/icons';
 import type { CollectorFormInput } from '@/modules/collectors/application/types';
 import { maskCNPJ } from '@/modules/collectors/application/masks';
@@ -75,7 +77,7 @@ export default function BankForm() {
                   name="bank.pixType"
                   control={control}
                   render={({ field }) => (
-                    <Select
+                    <ELSelect
                       {...field}
                       options={PIX_TYPE_OPTIONS}
                       placeholder="Selecione o tipo"
@@ -96,7 +98,7 @@ export default function BankForm() {
                   name="bank.pixKey"
                   control={control}
                   render={({ field }) => (
-                    <Input {...field} placeholder="Informe a chave PIX" />
+                    <ELInput {...field} placeholder="Informe a chave PIX" />
                   )}
                 />
               </Form.Item>
@@ -125,7 +127,7 @@ export default function BankForm() {
                   name="bank.bankCode"
                   control={control}
                   render={({ field }) => (
-                    <Input {...field} placeholder="341" maxLength={3} />
+                    <ELInput {...field} placeholder="341" maxLength={3} />
                   )}
                 />
               </Form.Item>
@@ -142,7 +144,7 @@ export default function BankForm() {
                   name="bank.branch"
                   control={control}
                   render={({ field }) => (
-                    <Input {...field} placeholder="0001" maxLength={5} />
+                    <ELInput {...field} placeholder="0001" maxLength={5} />
                   )}
                 />
               </Form.Item>
@@ -159,7 +161,7 @@ export default function BankForm() {
                   name="bank.account"
                   control={control}
                   render={({ field }) => (
-                    <Input {...field} placeholder="123456-7" />
+                    <ELInput {...field} placeholder="123456-7" />
                   )}
                 />
               </Form.Item>
@@ -176,7 +178,7 @@ export default function BankForm() {
                   name="bank.accountType"
                   control={control}
                   render={({ field }) => (
-                    <Select {...field} options={ACCOUNT_TYPE_OPTIONS} placeholder="Selecione" />
+                    <ELSelect {...field} options={ACCOUNT_TYPE_OPTIONS} placeholder="Selecione" />
                   )}
                 />
               </Form.Item>
@@ -195,7 +197,7 @@ export default function BankForm() {
                   name="bank.holderName"
                   control={control}
                   render={({ field }) => (
-                    <Input {...field} placeholder="Nome completo ou razão social" />
+                    <ELInput {...field} placeholder="Nome completo ou razão social" />
                   )}
                 />
               </Form.Item>
@@ -212,7 +214,7 @@ export default function BankForm() {
                   name="bank.holderCnpj"
                   control={control}
                   render={({ field }) => (
-                    <Input
+                    <ELInput
                       {...field}
                       onChange={(e) => field.onChange(maskCNPJ(e.target.value))}
                       placeholder="00.000.000/0000-00"

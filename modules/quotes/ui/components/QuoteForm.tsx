@@ -38,12 +38,12 @@ import type {
   QuoteSummary,
   QuoteVolume,
 } from '@/shared/types/quote';
-import { useQuoteCalculate } from "@/hooks/useQuotes";
+import { useQuoteCalculate } from "@/modules/quotes/ui/hooks";
 import { fetchCepV2, normalizeCep, formatCep } from "@/platform/integrations/shared/brasilapi";
 import { AddressSelect } from "@/modules/auth/ui/components/AddressSelect";
 import { RecipientSelect } from "@/modules/recipients/ui/components/RecipientSelect";
 import type { Recipient } from '@/shared/types/account';
-import { useAddresses, useAccountRecipients } from "@/hooks/useAccount";
+import { useAddresses, useAccountRecipients } from "@/modules/account/ui/hooks";
 import { useQuoteDraft } from "@/modules/quotes/ui/state/quoteDraft";
 import { RouteCards } from "@/modules/shipments/ui/components/RouteCards";
 import { OriginCard } from "@/modules/shipments/ui/components/OriginCard";

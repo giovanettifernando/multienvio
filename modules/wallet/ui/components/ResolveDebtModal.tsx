@@ -18,8 +18,8 @@ import {
   CreditCardOutlined,
   QrcodeOutlined,
 } from '@ant-design/icons';
-import { useWallet } from '@/hooks/useWallet';
-import { useCards } from '@/hooks/useAccount';
+import { useWallet } from '@/modules/wallet/ui/hooks';
+import { useCards } from '@/modules/account/ui/hooks';
 import { formatNumberBR } from '@/shared/utils/format';
 import { useQueryClient } from '@tanstack/react-query';
 

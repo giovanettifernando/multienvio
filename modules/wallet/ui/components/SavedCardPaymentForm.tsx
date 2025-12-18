@@ -4,10 +4,11 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { Card as AntCard, Input, Button, Radio, Space, Typography, Alert, Form, App } from "antd";
 import { ELModal } from '@/shared/ui/ELModal';
 import { CreditCardOutlined, LockOutlined, LoadingOutlined } from "@ant-design/icons";
+import { formatBRL } from "@/shared/utils/format";
 
 // Timeout para aguardar confirmação da operadora (15 segundos)
 const CARD_PROCESSING_TIMEOUT_MS = 15000;
-import { useCards } from "@/hooks/useAccount";
+import { useCards } from "@/modules/account/ui/hooks";
 
 const { Text } = Typography;
 
@@ -128,13 +129,6 @@ export function SavedCardPaymentForm({
 
     fetchPublicKey();
   }, [messageApi]);
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(value);
-  };
 
   const getBrandName = (brand: string): string => {
     const brandMap: Record<string, string> = {
@@ -382,7 +376,7 @@ export function SavedCardPaymentForm({
               Valor a pagar:
             </Text>
             <Text style={{ fontSize: 24, color: "#52c41a" }}>
-              {formatCurrency(amount)}
+              {formatBRL(amount)}
             </Text>
           </div>
 
@@ -466,7 +460,7 @@ export function SavedCardPaymentForm({
               loading={processing || loadingKey}
               disabled={!selectedCardId || !cvv || cvv.length !== cvvLength || !publicKey}
             >
-              Pagar {formatCurrency(amount)}
+              Pagar {formatBRL(amount)}
             </Button>
 
             <Button type="link" onClick={onUseNewCard} block>

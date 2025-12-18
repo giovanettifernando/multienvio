@@ -11,6 +11,7 @@ import {
 } from "@/modules/auth/application/hooks";
 import { getPermissionLabel } from "@/modules/auth/application/roles";
 import { ADMIN_PERMISSION_KEYS, type AdminPermissionKey } from "@/modules/auth/application/types";
+import { formatDateTimeBR } from '@/shared/utils/date';
 
 interface UsersTableProps {
   data: AdminUser[];
@@ -36,17 +37,6 @@ export function UsersTable({
   const resetPasswordMutation = useResetPassword();
 
   const allPermissions = ADMIN_PERMISSION_KEYS;
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleString("pt-BR", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
 
   const handleStatusToggle = (user: AdminUser, checked: boolean) => {
     const newStatus = checked ? "active" : "blocked";
@@ -187,7 +177,7 @@ export function UsersTable({
       render: (lastAccessAt: string | null) => {
         if (!lastAccessAt)
           return <Typography.Text type="secondary">Nunca</Typography.Text>;
-        return <Typography.Text>{formatDate(lastAccessAt)}</Typography.Text>;
+        return <Typography.Text>{formatDateTimeBR(lastAccessAt)}</Typography.Text>;
       },
     },
     {
@@ -198,7 +188,7 @@ export function UsersTable({
       sorter: (a, b) =>
         new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime(),
       render: (updatedAt: string) => (
-        <Typography.Text>{formatDate(updatedAt)}</Typography.Text>
+        <Typography.Text>{formatDateTimeBR(updatedAt)}</Typography.Text>
       ),
     },
     {

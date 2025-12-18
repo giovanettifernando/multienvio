@@ -1,8 +1,7 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import {
-  Table,
   Tag,
   Space,
   Input,
@@ -17,7 +16,6 @@ import {
   DatePicker,
   Tooltip,
 } from 'antd';
-import type { TableProps } from 'antd';
 import { useQuery } from '@tanstack/react-query';
 import {
   SearchOutlined,
@@ -31,6 +29,9 @@ import {
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import type { Dayjs } from 'dayjs';
+import { formatBRL } from '@/shared/utils/format';
+import { formatDateTimeBR } from '@/shared/utils/date';
+import { DataTable, type DataTableColumn } from '@/shared/ui/DataTable';
 
 const { Text } = Typography;
 const { RangePicker } = DatePicker;
@@ -133,19 +134,6 @@ async function fetchPickupPoints(): Promise<PickupPointOption[]> {
   }));
 }
 
-function formatDate(dateStr: string | null): string {
-  if (!dateStr) return '-';
-  return dayjs(dateStr).format('DD/MM/YYYY HH:mm');
-}
-
-function formatCurrency(value: number | null): string {
-  if (value === null || value === undefined) return '-';
-  return value.toLocaleString('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-  });
-}
-
 interface ReceptionsTableProps {
   dateStart?: string;
   dateEnd?: string;
@@ -194,15 +182,15 @@ export default function ReceptionsTable({ dateStart, dateEnd }: ReceptionsTableP
       }),
   });
 
-  const columns = useMemo<TableProps<PoCQueueItem>['columns']>(
-    () => [
+  const columns: DataTableColumn<PoCQueueItem>[] = [
       {
         title: 'Status',
         dataIndex: 'status',
         key: 'status',
         width: 150,
-        render: (status: string) => {
-          const config = STATUS_CONFIG[status] || { label: status, color: 'default', icon: null };
+        render: (status: unknown) => {
+          const s = status as string;
+          const config = STATUS_CONFIG[s] || { label: s, color: 'default', icon: null };
           return (
             <Tag color={config.color} icon={config.icon}>
               {config.label}
@@ -284,7 +272,7 @@ export default function ReceptionsTable({ dateStart, dateEnd }: ReceptionsTableP
             <Text style={{ fontSize: 11 }}>{record.weight?.toFixed(2) || '-'} kg</Text>
             {record.declaredValue && (
               <Text type="secondary" style={{ fontSize: 11 }}>
-                {formatCurrency(record.declaredValue)}
+                {formatBRL(record.declaredValue)}
               </Text>
             )}
           </Space>
@@ -295,18 +283,18 @@ export default function ReceptionsTable({ dateStart, dateEnd }: ReceptionsTableP
         dataIndex: 'pickupFee',
         key: 'pickupFee',
         width: 100,
-        align: 'right',
-        render: (fee: number | null) => (
-          <Text style={{ fontSize: 12 }}>{formatCurrency(fee)}</Text>
-        ),
+        render: (fee: unknown) => {
+          const f = fee as number | null;
+          return <Text style={{ fontSize: 12 }}>{f !== null ? formatBRL(f) : '-'}</Text>;
+        },
       },
       {
         title: 'Recebido em',
         dataIndex: 'receivedAt',
         key: 'receivedAt',
         width: 130,
-        render: (date: string | null) => (
-          <Text style={{ fontSize: 12 }}>{formatDate(date)}</Text>
+        render: (date: unknown) => (
+          <Text style={{ fontSize: 12 }}>{formatDateTimeBR(date as string | null)}</Text>
         ),
       },
       {
@@ -314,13 +302,11 @@ export default function ReceptionsTable({ dateStart, dateEnd }: ReceptionsTableP
         dataIndex: 'createdAt',
         key: 'createdAt',
         width: 130,
-        render: (date: string) => (
-          <Text style={{ fontSize: 12 }}>{formatDate(date)}</Text>
+        render: (date: unknown) => (
+          <Text style={{ fontSize: 12 }}>{formatDateTimeBR(date as string)}</Text>
         ),
       },
-    ],
-    []
-  );
+  ];
 
   const renderSummary = () => {
     const summary = data?.summary;
@@ -460,11 +446,13 @@ export default function ReceptionsTable({ dateStart, dateEnd }: ReceptionsTableP
       {renderSummary()}
 
       {/* Tabela */}
-      <Table<PoCQueueItem>
-        dataSource={data?.items || []}
+      <DataTable<PoCQueueItem>
+        data={data?.items || []}
         columns={columns}
         rowKey="id"
         loading={isLoading}
+        enableMobileCards={false}
+        compact
         pagination={{
           current: page,
           pageSize,
@@ -474,11 +462,10 @@ export default function ReceptionsTable({ dateStart, dateEnd }: ReceptionsTableP
             setPageSize(ps);
           },
           showSizeChanger: true,
-          pageSizeOptions: ['10', '20', '50', '100'],
           showTotal: (total) => `Total: ${total} envios`,
         }}
-        scroll={{ x: 'max-content', y: 'calc(100vh - 480px)' }}
-        size="small"
+        scrollX="max-content"
+        scrollY="calc(100vh - 480px)"
       />
     </Flex>
   );

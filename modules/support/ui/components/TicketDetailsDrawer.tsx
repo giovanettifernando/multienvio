@@ -25,7 +25,7 @@ import {
   usePostTicketMessage,
   useTicket,
   useUpdateTicketStatus,
-} from '@/hooks/useSupport';
+} from '@/modules/support/ui/hooks';
 import type { Status, Priority, AuthorRole } from '@/shared/validation/support';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';

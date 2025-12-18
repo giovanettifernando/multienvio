@@ -9,3 +9,4 @@ export * from './status-migration';
 export * from './public-tracking-status';
 export * from './create-paid-shipment.service';
 export * from './after-create';
+export * from './list.service';

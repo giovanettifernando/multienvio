@@ -11,8 +11,8 @@ import MonthlySummaryCard from '@/modules/wallet/ui/components/MonthlySummaryCar
 import AddFundsModal from '@/modules/wallet/ui/components/AddFundsModal';
 import ResolveDebtModal from '@/modules/wallet/ui/components/ResolveDebtModal';
 import TransactionsTable from '@/modules/wallet/ui/components/TransactionsTable';
-import { useWallet } from "@/hooks/useWallet";
-import { useCards } from "@/hooks/useAccount";
+import { useWallet } from "@/modules/wallet/ui/hooks";
+import { useCards } from "@/modules/account/ui/hooks";
 import { PageShell } from '@/shared/ui/PageShell';
 import gridStyles from "@/shared/ui/ELGrid.module.css";
 import { cn } from "@/shared/utils/cn";

@@ -22,6 +22,7 @@ import { ELCard } from '@/shared/ui/ELCard';
 import { ELSkeleton } from '@/shared/ui/ELSkeleton';
 import type { PublicPaymentData } from "@/modules/recipients/application/types";
 import { RecipientPaymentModal } from "@/modules/payments/ui/components/RecipientPaymentModal";
+import { formatCentsAsBRL } from "@/shared/utils/format";
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -84,14 +85,6 @@ export default function PaymentPageClient({ token }: PaymentPageClientProps) {
     }
 
     return `${hours}h ${minutes}min restantes`;
-  };
-
-  // Formatar valor em reais
-  const formatCurrency = (cents: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(cents / 100);
   };
 
   // Abrir modal de pagamento
@@ -392,12 +385,12 @@ export default function PaymentPageClient({ token }: PaymentPageClientProps) {
           >
             <Text type="secondary">Valor do Frete</Text>
             <Title level={2} style={{ margin: "8px 0", color: "#1890ff" }}>
-              {formatCurrency(paymentData.totalCents)}
+              {formatCentsAsBRL(paymentData.totalCents)}
             </Title>
             {paymentData.pickupFeeCents && paymentData.pickupFeeCents > 0 && (
               <Text type="secondary" style={{ fontSize: 12 }}>
                 (inclui taxa de coleta de{" "}
-                {formatCurrency(paymentData.pickupFeeCents)})
+                {formatCentsAsBRL(paymentData.pickupFeeCents)})
               </Text>
             )}
           </ELCard>
@@ -420,7 +413,7 @@ export default function PaymentPageClient({ token }: PaymentPageClientProps) {
             onClick={handlePayment}
             style={{ height: 50, fontSize: 16 }}
           >
-            Pagar {formatCurrency(paymentData.totalCents)}
+            Pagar {formatCentsAsBRL(paymentData.totalCents)}
           </ELButton>
 
           <Paragraph

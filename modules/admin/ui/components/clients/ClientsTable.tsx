@@ -10,6 +10,7 @@ import { DeleteOutlined, EyeOutlined, KeyOutlined, LockOutlined, UnlockOutlined 
 import type { AccountStatus, AdminClient, ClientType } from '@/modules/admin/application/types';
 import { blockAccounts, deleteAccount, resetPassword, unblockAccounts } from '@/modules/admin/application/api/clients';
 import { ELInput } from '@/shared/ui/ELInput';
+import { formatCentsAsBRL } from '@/shared/utils/format';
 
 interface ClientsTableProps {
   clients: AdminClient[];
@@ -29,10 +30,6 @@ const statusLabels: Record<AccountStatus, string> = {
   blocked: 'Bloqueado',
   suspended: 'Suspenso',
 };
-
-function formatCurrencyFromCents(value: number): string {
-  return (value / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-}
 
 export function ClientsTable({ clients, onViewClient, onStatusChange, onDelete }: ClientsTableProps) {
   const { message } = App.useApp();
@@ -167,7 +164,7 @@ export function ClientsTable({ clients, onViewClient, onStatusChange, onDelete }
       dataIndex: 'walletBalance',
       width: 160,
       align: 'right',
-      render: (v: number) => formatCurrencyFromCents(v),
+      render: (v: number) => formatCentsAsBRL(v),
       sorter: (a, b) => a.walletBalance - b.walletBalance,
     },
     {

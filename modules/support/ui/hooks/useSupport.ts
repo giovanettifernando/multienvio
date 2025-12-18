@@ -14,7 +14,7 @@ import {
   type Status,
   type SupportMessage,
   type SupportTicket,
-} from '@/shared/validation/support';
+} from "@/shared/validation/support";
 
 type Audience = "user" | "admin" | "collector" | "autonomous_collector";
 

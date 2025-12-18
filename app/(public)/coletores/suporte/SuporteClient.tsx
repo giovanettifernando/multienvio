@@ -5,7 +5,7 @@ import { Card, Tabs, Space, Button, Form, Input, Select, App, Table, Tag, Typogr
 import { ELModal } from '@/shared/ui/ELModal';
 import { PlusOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons';
 import { PageShell } from '@/shared/ui/PageShell';
-import { useTickets, useCreateTicket } from '@/hooks/useSupport';
+import { useTickets, useCreateTicket } from '@/modules/support/ui/hooks';
 import type { Status, Priority } from '@/shared/validation/support';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';

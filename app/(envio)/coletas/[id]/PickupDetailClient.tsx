@@ -18,6 +18,7 @@ import { PickupStatusTag } from "@/modules/pickup-points/ui/components/PickupSta
 import { PickupTimeline } from "@/modules/pickup-points/ui/components/PickupTimeline";
 import { PageShell } from '@/shared/ui/PageShell';
 import { ELButton } from '@/shared/ui/ELButton';
+import { formatDateTimeBR, formatDateBR } from '@/shared/utils/date';
 import { ELSelect } from '@/shared/ui/ELSelect';
 import { ELInput } from '@/shared/ui/ELInput';
 
@@ -38,26 +39,6 @@ const STATUS_OPTIONS = [
   { label: "Falhou", value: "FAILED" },
   { label: "Cancelada", value: "CANCELED" },
 ];
-
-function formatDate(isoDate: string | null | undefined): string {
-  if (!isoDate) return "—";
-  return new Date(isoDate).toLocaleString("pt-BR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
-function formatDateShort(isoDate: string | null | undefined): string {
-  if (!isoDate) return "—";
-  return new Date(isoDate).toLocaleDateString("pt-BR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
-}
 
 export default function PickupDetailClient() {
   const { id } = useParams<{ id: string }>();
@@ -144,11 +125,11 @@ export default function PickupDetailClient() {
           </Descriptions.Item>
           <Descriptions.Item label="Janela de Coleta">
             {pickup.windowStart && pickup.windowEnd
-              ? `${formatDate(pickup.windowStart)} até ${formatDate(pickup.windowEnd)}`
+              ? `${formatDateTimeBR(pickup.windowStart)} até ${formatDateTimeBR(pickup.windowEnd)}`
               : "Não definida"}
           </Descriptions.Item>
           <Descriptions.Item label="Data Agendada">
-            {formatDate(pickup.scheduleAt)}
+            {formatDateTimeBR(pickup.scheduleAt)}
           </Descriptions.Item>
           <Descriptions.Item label="Coletor">
             {pickup.collector?.name ?? "Não atribuído"}
@@ -172,7 +153,7 @@ export default function PickupDetailClient() {
           </Descriptions.Item>
           {pickup.collectedAt && (
             <Descriptions.Item label="Coletado em">
-              {formatDate(pickup.collectedAt)}
+              {formatDateTimeBR(pickup.collectedAt)}
               {pickup.collectedBy && ` por ${pickup.collectedBy}`}
             </Descriptions.Item>
           )}
@@ -180,10 +161,10 @@ export default function PickupDetailClient() {
             {pickup.notes || "—"}
           </Descriptions.Item>
           <Descriptions.Item label="Criado em">
-            {formatDateShort(pickup.createdAt)}
+            {formatDateBR(pickup.createdAt)}
           </Descriptions.Item>
           <Descriptions.Item label="Atualizado em">
-            {formatDateShort(pickup.updatedAt)}
+            {formatDateBR(pickup.updatedAt)}
           </Descriptions.Item>
         </Descriptions>
       </ELCard>

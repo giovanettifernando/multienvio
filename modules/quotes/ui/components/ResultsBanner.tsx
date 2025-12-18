@@ -8,6 +8,7 @@ import {
 } from "@ant-design/icons";
 import { Card, Space, Tag, Tooltip, Typography } from "antd";
 import type { QuoteSummary, QuoteVolume } from '@/shared/types/quote';
+import { formatBRL } from '@/shared/utils/format';
 
 type ResultsBannerProps = {
   summary: QuoteSummary;
@@ -28,16 +29,6 @@ const calculateCubicWeight = (volume: QuoteVolume) => {
 // Calcular peso cubado total
 const calculateTotalCubicWeight = (volumes: QuoteVolume[]) => {
   return volumes.reduce((sum, vol) => sum + calculateCubicWeight(vol), 0);
-};
-
-const formatCurrency = (value: number | null | undefined) => {
-  if (value === null || value === undefined || value === 0) return "—";
-  return value.toLocaleString("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
 };
 
 export function ResultsBanner({ summary }: ResultsBannerProps) {
@@ -111,7 +102,7 @@ export function ResultsBanner({ summary }: ResultsBannerProps) {
           <Space size={6}>
             <SafetyOutlined style={{ fontSize: 16, color: "#15803d" }} />
             <Typography.Text style={{ fontSize: 14 }}>
-              <strong>Seguro:</strong> {formatCurrency(summary.seguroValor ?? null)}
+              <strong>Seguro:</strong> {summary.seguroValor ? formatBRL(summary.seguroValor) : "—"}
             </Typography.Text>
           </Space>
 

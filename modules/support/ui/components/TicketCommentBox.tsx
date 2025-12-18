@@ -6,7 +6,7 @@ import { Button, Input, Space, Upload, Typography, App, Checkbox } from "antd";
 import type { RcFile, UploadFile } from "antd/es/upload/interface";
 // Note: RcFile and UploadFile are not directly exported from 'antd', keeping /es/ import
 import { CannedReplySelect } from "@/modules/support/ui/components/CannedReplySelect";
-import { usePostTicketMessage } from "@/hooks/useSupport";
+import { usePostTicketMessage } from "@/modules/support/ui/hooks";
 
 type Props = {
   ticketId: string;

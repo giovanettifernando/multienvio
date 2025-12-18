@@ -3,8 +3,47 @@
  * Padroniza o uso de timezone UTC-3 (Brasília) para relatórios financeiros
  */
 
+import dayjs from 'dayjs';
+
 /** Offset de Brasília em minutos (UTC-3) */
 const BRASILIA_OFFSET_MINUTES = -180;
+
+// ============================================================================
+// Helpers de formatação para UI
+// ============================================================================
+
+/**
+ * Formata uma data para exibição no padrão brasileiro (DD/MM/YYYY)
+ * @param date - Data em formato ISO string, Date ou null/undefined
+ * @returns String formatada ou "-" para valores nulos
+ * @example formatDateBR("2024-01-15T10:30:00Z") // "15/01/2024"
+ */
+export function formatDateBR(date: Date | string | null | undefined): string {
+  if (!date) return '-';
+  return dayjs(date).format('DD/MM/YYYY');
+}
+
+/**
+ * Formata uma data com hora para exibição no padrão brasileiro (DD/MM/YYYY HH:mm)
+ * @param date - Data em formato ISO string, Date ou null/undefined
+ * @returns String formatada ou "-" para valores nulos
+ * @example formatDateTimeBR("2024-01-15T10:30:00Z") // "15/01/2024 10:30"
+ */
+export function formatDateTimeBR(date: Date | string | null | undefined): string {
+  if (!date) return '-';
+  return dayjs(date).format('DD/MM/YYYY HH:mm');
+}
+
+/**
+ * Formata uma data de forma curta (DD/MM/YY)
+ * @param date - Data em formato ISO string, Date ou null/undefined
+ * @returns String formatada ou "—" para valores nulos
+ * @example formatDateShortBR("2024-01-15") // "15/01/24"
+ */
+export function formatDateShortBR(date: Date | string | null | undefined): string {
+  if (!date) return '—';
+  return dayjs(date).format('DD/MM/YY');
+}
 
 /**
  * Ajusta uma data para o início do dia em UTC-3 (Brasília)

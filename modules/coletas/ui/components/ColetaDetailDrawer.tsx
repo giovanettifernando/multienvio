@@ -17,7 +17,7 @@ import {
   COLLECTION_STATUS_LABELS,
   COLLECTION_STATUS_COLORS,
 } from '@/shared/types/contracts';
-import { useColetasActions } from "@/hooks/useColetas";
+import { useColetasActions } from "@/modules/coletas/ui/hooks";
 
 const { TextArea } = Input;
 

@@ -6,7 +6,7 @@ import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { usePasswordChange } from "@/hooks/useAccount";
+import { usePasswordChange } from "@/modules/account/ui/hooks";
 
 const passwordPolicy = z
   .string()

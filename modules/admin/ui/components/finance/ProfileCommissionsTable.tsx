@@ -38,17 +38,13 @@ import type {
   ProfileCommissionItem,
 } from '@/modules/admin/application/finance/types';
 import { getProfileCommissions } from '@/modules/admin/application/finance/api';
+import { formatBRL } from '@/shared/utils/format';
+import { formatDateTimeBR } from '@/shared/utils/date';
 
 const { Text, Title } = Typography;
 const { RangePicker } = DatePicker;
 
 type PeriodPreset = 'today' | '7d' | '30d' | 'month' | 'lastMonth' | 'custom';
-
-const formatCurrency = (value: number) =>
-  value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-
-const formatDate = (dateStr: string | null) =>
-  dateStr ? dayjs(dateStr).format('DD/MM/YYYY HH:mm') : '-';
 
 // Colunas da tabela expandida (detalhes dos itens)
 const itemColumns: TableProps<ProfileCommissionItem>['columns'] = [
@@ -75,7 +71,7 @@ const itemColumns: TableProps<ProfileCommissionItem>['columns'] = [
     align: 'right',
     render: (v: number) => (
       <Text strong style={{ color: '#52c41a' }}>
-        {formatCurrency(v)}
+        {formatBRL(v)}
       </Text>
     ),
   },
@@ -99,13 +95,13 @@ const itemColumns: TableProps<ProfileCommissionItem>['columns'] = [
     title: 'Data Criação',
     dataIndex: 'createdAt',
     width: 150,
-    render: (v: string) => formatDate(v),
+    render: (v: string) => formatDateTimeBR(v),
   },
   {
     title: 'Data Conclusão',
     dataIndex: 'completedAt',
     width: 150,
-    render: (v: string | null) => formatDate(v),
+    render: (v: string | null) => formatDateTimeBR(v),
   },
 ];
 
@@ -267,7 +263,7 @@ export function ProfileCommissionsTable() {
       width: 150,
       align: 'right',
       render: (v: number) => (
-        <Text style={{ color: '#52c41a' }}>{formatCurrency(v)}</Text>
+        <Text style={{ color: '#52c41a' }}>{formatBRL(v)}</Text>
       ),
       sorter: (a, b) => a.completedCommissionReais - b.completedCommissionReais,
     },
@@ -277,7 +273,7 @@ export function ProfileCommissionsTable() {
       width: 150,
       align: 'right',
       render: (v: number) => (
-        <Text style={{ color: '#fa8c16' }}>{formatCurrency(v)}</Text>
+        <Text style={{ color: '#fa8c16' }}>{formatBRL(v)}</Text>
       ),
       sorter: (a, b) => a.pendingCommissionReais - b.pendingCommissionReais,
     },
@@ -288,7 +284,7 @@ export function ProfileCommissionsTable() {
       align: 'right',
       render: (v: number) => (
         <Text strong style={{ color: '#1890ff', fontSize: 15 }}>
-          {formatCurrency(v)}
+          {formatBRL(v)}
         </Text>
       ),
       sorter: (a, b) => a.totalCommissionReais - b.totalCommissionReais,
@@ -521,17 +517,17 @@ export function ProfileCommissionsTable() {
               </Table.Summary.Cell>
               <Table.Summary.Cell index={4} align="right">
                 <Text strong style={{ color: '#52c41a' }}>
-                  {formatCurrency(data.summary.completedCommissionReais)}
+                  {formatBRL(data.summary.completedCommissionReais)}
                 </Text>
               </Table.Summary.Cell>
               <Table.Summary.Cell index={5} align="right">
                 <Text strong style={{ color: '#fa8c16' }}>
-                  {formatCurrency(data.summary.pendingCommissionReais)}
+                  {formatBRL(data.summary.pendingCommissionReais)}
                 </Text>
               </Table.Summary.Cell>
               <Table.Summary.Cell index={6} align="right">
                 <Text strong style={{ color: '#1890ff', fontSize: 16 }}>
-                  {formatCurrency(data.summary.totalCommissionReais)}
+                  {formatBRL(data.summary.totalCommissionReais)}
                 </Text>
               </Table.Summary.Cell>
             </Table.Summary.Row>

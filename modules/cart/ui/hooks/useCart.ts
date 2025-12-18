@@ -6,7 +6,7 @@ import type {
   CartUpdatableFields,
   CheckoutPayload,
   CheckoutResponse,
-} from '@/shared/types/cart';
+} from "@/shared/types/cart";
 
 // Calcular peso cubado de um volume: (A × L × C) / 6000
 function calculateCubicWeight(alturaCm: number, larguraCm: number, comprimentoCm: number): number {

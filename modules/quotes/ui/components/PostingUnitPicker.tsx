@@ -27,10 +27,10 @@ import type { PickupPoint } from "@/modules/pickup-points/application/types";
 import { matchesSearch } from "@/shared/utils/string";
 import { calculateDistance, getUFCoordinates, formatDistance } from "@/shared/utils/geo";
 import { MapModal } from "./MapModal";
-import { usePickupPoints } from "@/hooks/usePickupPoints";
-import { useGeocode } from "@/hooks/useGeocode";
+import { usePickupPoints } from "@/modules/pickup-points/ui/hooks";
+import { useGeocode } from "@/shared/hooks";
 import { PickupPointStatus } from '@/shared/types/contracts';
-import { useCorreiosAgencies, type CorreiosAgency } from "@/hooks/useCorreiosAgencies";
+import { useCorreiosAgencies, type CorreiosAgency } from "@/modules/quotes/ui/hooks";
 
 interface PickupPointWithDistance extends PickupPoint {
   distance?: number;

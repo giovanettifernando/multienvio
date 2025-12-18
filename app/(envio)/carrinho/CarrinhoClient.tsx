@@ -12,7 +12,7 @@ import { CheckoutCartModal } from '@/modules/payments/ui/components/CheckoutCart
 import {
   useCart,
   useCartClear as useCartClearMutation,
-} from "@/hooks/useCart";
+} from "@/modules/cart/ui/hooks";
 import type { CartItem } from '@/shared/types/cart';
 import { PageShell } from '@/shared/ui/PageShell';
 import { useMutation, useQueryClient } from "@tanstack/react-query";

@@ -1,12 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { Table, Tag, Button, Flex, Select, Space, App } from 'antd';
+import { Tag, Button, Flex, Select, Space, App } from 'antd';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ReloadOutlined, CheckOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import type { OpsEvent } from '@/modules/admin/application/ops/types';
 import { listEvents, retryEvent, markEventProcessed } from '@/modules/admin/application/ops/api';
+import { DataTable, type DataTableColumn } from '@/shared/ui/DataTable';
 
 const sourceLabels: Record<OpsEvent['source'], string> = {
   carrier_webhook: 'Webhook Carrier',
@@ -99,36 +100,39 @@ export default function EventsTable() {
     }
   };
 
-  const columns = [
+  const columns: DataTableColumn<OpsEvent>[] = [
     {
       title: 'Recebido em',
       dataIndex: 'receivedAt',
       key: 'receivedAt',
       width: 150,
-      render: (date: string) => dayjs(date).format('DD/MM/YY HH:mm:ss'),
+      render: (date: unknown) => dayjs(date as string).format('DD/MM/YY HH:mm:ss'),
     },
     {
       title: 'Fonte',
       dataIndex: 'source',
       key: 'source',
       width: 150,
-      render: (source: OpsEvent['source']) => (
-        <Tag color={sourceColors[source]}>{sourceLabels[source]}</Tag>
-      ),
+      render: (source: unknown) => {
+        const s = source as OpsEvent['source'];
+        return <Tag color={sourceColors[s]}>{sourceLabels[s]}</Tag>;
+      },
     },
     {
       title: 'Envio',
       dataIndex: 'shipmentId',
       key: 'shipmentId',
       width: 120,
-      render: (shipmentId: string | null) =>
-        shipmentId ? (
+      render: (shipmentId: unknown) => {
+        const id = shipmentId as string | null;
+        return id ? (
           <a href={`#`} style={{ fontFamily: 'monospace', fontSize: 12 }}>
-            {shipmentId}
+            {id}
           </a>
         ) : (
           '—'
-        ),
+        );
+      },
     },
     {
       title: 'Payload Preview',
@@ -136,8 +140,8 @@ export default function EventsTable() {
       key: 'payloadPreview',
       width: 300,
       ellipsis: true,
-      render: (text: string) => (
-        <span style={{ fontFamily: 'monospace', fontSize: 11, color: '#666' }}>{text}</span>
+      render: (text: unknown) => (
+        <span style={{ fontFamily: 'monospace', fontSize: 11, color: '#666' }}>{text as string}</span>
       ),
     },
     {
@@ -145,16 +149,17 @@ export default function EventsTable() {
       dataIndex: 'processed',
       key: 'processed',
       width: 100,
-      render: (processed: boolean) => (
-        <Tag color={processed ? 'green' : 'orange'}>{processed ? 'Sim' : 'Não'}</Tag>
-      ),
+      render: (processed: unknown) => {
+        const p = processed as boolean;
+        return <Tag color={p ? 'green' : 'orange'}>{p ? 'Sim' : 'Não'}</Tag>;
+      },
     },
     {
       title: 'Retries',
       dataIndex: 'retries',
       key: 'retries',
       width: 80,
-      render: (retries: number) => retries || 0,
+      render: (retries: unknown) => (retries as number) || 0,
     },
     {
       title: 'Erro',
@@ -162,18 +167,21 @@ export default function EventsTable() {
       key: 'lastError',
       width: 200,
       ellipsis: true,
-      render: (error: string | null) =>
-        error ? (
-          <span style={{ color: '#cf1322', fontSize: 12 }}>{error}</span>
+      render: (error: unknown) => {
+        const e = error as string | null;
+        return e ? (
+          <span style={{ color: '#cf1322', fontSize: 12 }}>{e}</span>
         ) : (
           '—'
-        ),
+        );
+      },
     },
     {
       title: 'Ações',
       key: 'actions',
       width: 180,
-      fixed: 'right' as const,
+      fixed: 'right',
+      isActions: true,
       render: (_: unknown, record: OpsEvent) => (
         <Space size="small">
           {!record.processed && (
@@ -231,21 +239,23 @@ export default function EventsTable() {
       </Flex>
 
       {/* Table */}
-      <Table
+      <DataTable<OpsEvent>
         columns={columns}
-        dataSource={data?.items || []}
+        data={data?.items || []}
         rowKey="id"
         loading={isLoading}
-        scroll={{ x: 1400, y: 'calc(100vh - 480px)' }}
+        enableMobileCards={false}
+        compact
+        scrollX={1400}
+        scrollY="calc(100vh - 480px)"
         pagination={{
           current: page,
           pageSize,
           total: data?.total || 0,
-          onChange: setPage,
+          onChange: (p) => setPage(p),
           showTotal: (total) => `Total: ${total} eventos`,
           showSizeChanger: false,
         }}
-        size="small"
       />
     </Flex>
   );

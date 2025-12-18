@@ -7,7 +7,7 @@ import { PlusOutlined } from '@ant-design/icons';
 import EntitySearchFilters from '@/shared/ui/EntitySearchFilters';
 import PointsTable from '@/modules/pickup-points/ui/components/PointsTable';
 import PointDrawer from '@/modules/pickup-points/ui/components/PointDrawer';
-import { usePickupPointsAPI } from '@/hooks/usePickupPointsAPI';
+import { usePickupPointsAPI } from '@/modules/pickup-points/ui/hooks';
 import type { PickupPointFilters, PickupPointFormData, PickupPointListResponse } from '@/modules/pickup-points/application/types';
 import { PageShell } from '@/shared/ui/PageShell';
 

@@ -1,8 +1,7 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import {
-  Table,
   Tag,
   Space,
   Input,
@@ -17,7 +16,6 @@ import {
   Tooltip,
   DatePicker,
 } from 'antd';
-import type { TableProps } from 'antd';
 import { useQuery } from '@tanstack/react-query';
 import {
   SearchOutlined,
@@ -32,6 +30,9 @@ import {
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import type { Dayjs } from 'dayjs';
+import { formatBRL } from '@/shared/utils/format';
+import { formatDateTimeBR } from '@/shared/utils/date';
+import { DataTable, type DataTableColumn } from '@/shared/ui/DataTable';
 
 const { Text } = Typography;
 const { RangePicker } = DatePicker;
@@ -125,19 +126,6 @@ async function fetchPickups(params: {
   return json.data ?? json;
 }
 
-function formatDate(dateStr: string | null): string {
-  if (!dateStr) return '-';
-  return dayjs(dateStr).format('DD/MM/YYYY HH:mm');
-}
-
-function formatCurrency(value: number | null): string {
-  if (value === null || value === undefined) return '-';
-  return value.toLocaleString('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-  });
-}
-
 interface PickupsTableProps {
   dateStart?: string;
   dateEnd?: string;
@@ -177,15 +165,15 @@ export default function PickupsTable({ dateStart, dateEnd }: PickupsTableProps) 
       }),
   });
 
-  const columns = useMemo<TableProps<PickupItem>['columns']>(
-    () => [
+  const columns: DataTableColumn<PickupItem>[] = [
       {
         title: 'Status',
         dataIndex: 'status',
         key: 'status',
         width: 120,
-        render: (status: string) => {
-          const config = STATUS_CONFIG[status] || { label: status, color: 'default', icon: null };
+        render: (status: unknown) => {
+          const s = status as string;
+          const config = STATUS_CONFIG[s] || { label: s, color: 'default', icon: null };
           return (
             <Tag color={config.color} icon={config.icon}>
               {config.label}
@@ -299,12 +287,12 @@ export default function PickupsTable({ dateStart, dateEnd }: PickupsTableProps) 
         render: (_, record) => (
           <Space orientation="vertical" size={0}>
             {record.scheduleAt ? (
-              <Text style={{ fontSize: 12 }}>{formatDate(record.scheduleAt)}</Text>
+              <Text style={{ fontSize: 12 }}>{formatDateTimeBR(record.scheduleAt)}</Text>
             ) : record.windowStart && record.windowEnd ? (
               <>
-                <Text style={{ fontSize: 11 }}>{formatDate(record.windowStart)}</Text>
+                <Text style={{ fontSize: 11 }}>{formatDateTimeBR(record.windowStart)}</Text>
                 <Text type="secondary" style={{ fontSize: 11 }}>
-                  até {formatDate(record.windowEnd)}
+                  até {formatDateTimeBR(record.windowEnd)}
                 </Text>
               </>
             ) : (
@@ -315,26 +303,24 @@ export default function PickupsTable({ dateStart, dateEnd }: PickupsTableProps) 
       },
       {
         title: 'Taxa Coleta',
-        dataIndex: ['shipment', 'pickupFee'],
+        dataIndex: 'shipment.pickupFee',
         key: 'pickupFee',
         width: 100,
-        align: 'right',
-        render: (fee: number | null) => (
-          <Text style={{ fontSize: 12 }}>{formatCurrency(fee)}</Text>
-        ),
+        render: (fee: unknown) => {
+          const f = fee as number | null;
+          return <Text style={{ fontSize: 12 }}>{f !== null ? formatBRL(f) : '-'}</Text>;
+        },
       },
       {
         title: 'Criado em',
         dataIndex: 'createdAt',
         key: 'createdAt',
         width: 130,
-        render: (date: string) => (
-          <Text style={{ fontSize: 12 }}>{formatDate(date)}</Text>
+        render: (date: unknown) => (
+          <Text style={{ fontSize: 12 }}>{formatDateTimeBR(date as string)}</Text>
         ),
       },
-    ],
-    []
-  );
+  ];
 
   const renderSummary = () => {
     const summary = data?.summary;
@@ -452,11 +438,13 @@ export default function PickupsTable({ dateStart, dateEnd }: PickupsTableProps) 
       {renderSummary()}
 
       {/* Tabela */}
-      <Table<PickupItem>
-        dataSource={data?.items || []}
+      <DataTable<PickupItem>
+        data={data?.items || []}
         columns={columns}
         rowKey="id"
         loading={isLoading}
+        enableMobileCards={false}
+        compact
         pagination={{
           current: page,
           pageSize,
@@ -466,11 +454,10 @@ export default function PickupsTable({ dateStart, dateEnd }: PickupsTableProps) 
             setPageSize(ps);
           },
           showSizeChanger: true,
-          pageSizeOptions: ['10', '20', '50', '100'],
           showTotal: (total) => `Total: ${total} coletas`,
         }}
-        scroll={{ x: 'max-content', y: 'calc(100vh - 480px)' }}
-        size="small"
+        scrollX="max-content"
+        scrollY="calc(100vh - 480px)"
       />
     </Flex>
   );

@@ -29,6 +29,8 @@ import {
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import type { Dayjs } from 'dayjs';
+import { formatBRL } from '@/shared/utils/format';
+import { formatDateBR } from '@/shared/utils/date';
 
 const { Text } = Typography;
 const { RangePicker } = DatePicker;
@@ -113,18 +115,6 @@ async function fetchAccountsPayable(params: {
   return json.data ?? json;
 }
 
-function formatCurrency(valueReais: number): string {
-  return valueReais.toLocaleString('pt-BR', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-}
-
-function formatDate(dateStr: string | null): string {
-  if (!dateStr) return '-';
-  return dayjs(dateStr).format('DD/MM/YYYY');
-}
-
 export function AccountsPayableTable() {
   const [dateRange, setDateRange] = useState<[Dayjs, Dayjs]>([
     dayjs().startOf('month'),
@@ -199,7 +189,7 @@ export function AccountsPayableTable() {
           return new Date(dateA).getTime() - new Date(dateB).getTime();
         },
         render: (dueDate: string | null) => (
-          <span style={{ fontSize: 12 }}>{formatDate(dueDate)}</span>
+          <span style={{ fontSize: 12 }}>{formatDateBR(dueDate)}</span>
         ),
       },
       {
@@ -211,7 +201,7 @@ export function AccountsPayableTable() {
         sorter: (a, b) => a.amountReais - b.amountReais,
         render: (amount: number) => (
           <span style={{ fontSize: 12, fontWeight: 500 }}>
-            R$ {formatCurrency(amount)}
+            {formatBRL(amount)}
           </span>
         ),
       },
@@ -249,12 +239,12 @@ export function AccountsPayableTable() {
         `"${PAYABLE_TYPE_LABELS[item.type]}"`,
         `"${item.creditorName}"`,
         `"${item.description}"`,
-        formatDate(item.dueDate),
+        formatDateBR(item.dueDate),
         (item.amountReais).toFixed(2).replace('.', ','),
         STATUS_LABELS[item.status],
         item.referenceCode || '',
-        formatDate(item.createdAt),
-        formatDate(item.paidAt),
+        formatDateBR(item.createdAt),
+        formatDateBR(item.paidAt),
       ];
       rows.push(row.join(';'));
     }

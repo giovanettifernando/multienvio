@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { App, Button, Empty, Select, Skeleton, Space } from "antd";
 import { PlusOutlined } from "@ant-design/icons";
-import { useAddresses, useAddressCreate } from "@/hooks/useAccount";
+import { useAddresses, useAddressCreate } from "@/modules/account/ui/hooks";
 import { AddressModal, type AddressFormValues } from "@/modules/auth/ui/components/AddressModal";
 import type { Address } from '@/shared/types/account';
 

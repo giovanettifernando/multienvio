@@ -18,7 +18,7 @@ import { ELCard } from '@/shared/ui/ELCard';
 import { DataTable, type DataTableColumn } from '@/shared/ui/DataTable';
 import { useMemo, useState } from "react";
 import type { QuoteResultItem } from '@/shared/types/quote';
-import { useCarrierIcons } from "@/hooks/useCarrierIcons";
+import { useCarrierIcons } from "@/shared/hooks";
 
 type SortOrder = "price" | "prazo";
 

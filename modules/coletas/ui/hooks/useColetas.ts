@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { useColetasStore } from '@/modules/pickups/ui/state/coletas';
+import { useColetasStore } from "@/modules/coletas/ui/state/useColetasStore";
 import type { ColetaStatus } from "@/modules/coletas/application/types";
 import { normalizeString } from "@/shared/utils/string";
 

@@ -3,7 +3,7 @@
 import React from "react";
 import { Card, Space, Typography, Row, Col, Button } from "antd";
 import { PlusOutlined, WarningOutlined } from "@ant-design/icons";
-import { useWallet } from "@/hooks/useWallet";
+import { useWallet } from "@/modules/wallet/ui/hooks";
 import { formatNumberBR } from "@/shared/utils/format";
 import { ELButton } from '@/shared/ui/ELButton';
 

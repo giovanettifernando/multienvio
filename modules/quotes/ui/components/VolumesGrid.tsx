@@ -13,7 +13,7 @@ import {
 import { useEffect, useRef, useState, startTransition } from "react";
 import type { QuoteFormValues } from "./quoteFormSchema";
 import { MinhasEmbalagensSelect } from "@/modules/quotes/ui/components/MinhasEmbalagensSelect";
-import type { PackagingTemplate } from "@/hooks/usePackaging";
+import type { PackagingTemplate } from "@/modules/quotes/ui/hooks";
 import styles from "@/app/(envio)/cotacoes/cotacoes.module.css";
 
 export const DEFAULT_CUBAGE_FACTOR = 6000;

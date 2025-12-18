@@ -5,7 +5,7 @@ import { App, Spin, Space } from 'antd';
 import { CheckCircleOutlined, LoadingOutlined } from '@ant-design/icons';
 import { useRouter } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useCards } from '@/hooks/useAccount';
+import { useCards } from '@/modules/account/ui/hooks';
 import { usePixPayment } from './usePixPayment';
 import { PixPaymentView } from './PixPaymentView';
 import { CardPaymentView } from './CardPaymentView';

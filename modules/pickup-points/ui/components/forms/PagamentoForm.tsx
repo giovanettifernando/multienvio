@@ -1,6 +1,8 @@
 'use client';
 
-import { Form, Input, Select, Radio, InputNumber, Row, Col } from 'antd';
+import { Form, Radio, InputNumber, Row, Col } from 'antd';
+import { ELInput } from '@/shared/ui/ELInput';
+import { ELSelect } from '@/shared/ui/ELSelect';
 import { Controller, Control, FieldErrors, UseFormWatch } from 'react-hook-form';
 import { maskCNPJ, maskCPF, unmaskDigits } from '@/modules/pickup-points/application/masks';
 import type { PickupPointFormData } from '@/modules/pickup-points/application/types';
@@ -43,7 +45,7 @@ export default function PagamentoForm({ control, errors, watch }: PagamentoFormP
                 name="paymentMethod.pixType"
                 control={control}
                 render={({ field }) => (
-                  <Select
+                  <ELSelect
                     {...field}
                     placeholder="Selecione o tipo de chave"
                     options={[
@@ -81,7 +83,7 @@ export default function PagamentoForm({ control, errors, watch }: PagamentoFormP
                   };
 
                   return (
-                    <Input
+                    <ELInput
                       {...field}
                       placeholder={
                         pixType === 'email'
@@ -113,7 +115,7 @@ export default function PagamentoForm({ control, errors, watch }: PagamentoFormP
                     name="paymentMethod.bankCode"
                     control={control}
                     render={({ field }) => (
-                      <Input
+                      <ELInput
                         {...field}
                         placeholder="001"
                         maxLength={8}
@@ -130,7 +132,7 @@ export default function PagamentoForm({ control, errors, watch }: PagamentoFormP
                     name="paymentMethod.branch"
                     control={control}
                     render={({ field }) => (
-                      <Input
+                      <ELInput
                         {...field}
                         placeholder="1234"
                         aria-label="Agência"
@@ -146,7 +148,7 @@ export default function PagamentoForm({ control, errors, watch }: PagamentoFormP
                     name="paymentMethod.accountType"
                     control={control}
                     render={({ field }) => (
-                      <Select
+                      <ELSelect
                         {...field}
                         placeholder="Tipo"
                         options={[
@@ -166,7 +168,7 @@ export default function PagamentoForm({ control, errors, watch }: PagamentoFormP
                 name="paymentMethod.account"
                 control={control}
                 render={({ field }) => (
-                  <Input
+                  <ELInput
                     {...field}
                     placeholder="12345-6"
                     aria-label="Conta"
@@ -180,7 +182,7 @@ export default function PagamentoForm({ control, errors, watch }: PagamentoFormP
                 name="paymentMethod.holderName"
                 control={control}
                 render={({ field }) => (
-                  <Input
+                  <ELInput
                     {...field}
                     placeholder="Nome completo do titular"
                     aria-label="Nome do Titular"
@@ -194,7 +196,7 @@ export default function PagamentoForm({ control, errors, watch }: PagamentoFormP
                 name="paymentMethod.holderDocument"
                 control={control}
                 render={({ field }) => (
-                  <Input
+                  <ELInput
                     {...field}
                     placeholder="00.000.000/0000-00"
                     maxLength={18}

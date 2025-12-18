@@ -17,6 +17,7 @@ import {
 } from "antd";
 import { SaveOutlined } from "@ant-design/icons";
 import { maskCPF, maskCNPJ, maskPhone } from "@/shared/utils/masks";
+import { formatDateTimeBR } from '@/shared/utils/date';
 
 const { Text } = Typography;
 
@@ -84,17 +85,6 @@ export default function AdminClientProfile({
     }
   };
 
-  const formatDate = (date: string | null) => {
-    if (!date) return "-";
-    return new Date(date).toLocaleDateString("pt-BR", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
   return (
     <div>
       {/* Info de auditoria */}
@@ -113,13 +103,13 @@ export default function AdminClientProfile({
           {user.authProvider === "email" ? "Email/Senha" : "Google"}
         </Descriptions.Item>
         <Descriptions.Item label="Criado em">
-          {formatDate(user.createdAt)}
+          {formatDateTimeBR(user.createdAt)}
         </Descriptions.Item>
         <Descriptions.Item label="Último login">
-          {formatDate(user.lastLoginAt)}
+          {formatDateTimeBR(user.lastLoginAt)}
         </Descriptions.Item>
         <Descriptions.Item label="Atualizado em">
-          {formatDate(user.updatedAt)}
+          {formatDateTimeBR(user.updatedAt)}
         </Descriptions.Item>
       </Descriptions>
 

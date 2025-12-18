@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { App, Button, Empty, Select, Skeleton, Space } from "antd";
 import { PlusOutlined } from "@ant-design/icons";
-import { useAccountRecipients, useRecipientCreate } from "@/hooks/useAccount";
+import { useAccountRecipients, useRecipientCreate } from "@/modules/account/ui/hooks";
 import { RecipientModal, type RecipientFormValues } from "@/modules/recipients/ui/components/RecipientModal";
 import type { Recipient } from '@/shared/types/account';
 

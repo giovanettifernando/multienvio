@@ -18,6 +18,7 @@ import { useMutation } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import type { AccountStatus, AdminClient } from '@/modules/admin/application/types';
 import { updateAccount } from '@/modules/admin/application/api/clients';
+import { formatBRL } from '@/shared/utils/format';
 
 interface ClientDrawerProps {
   open: boolean;
@@ -31,9 +32,6 @@ const statusLabels: Record<AccountStatus, string> = {
   blocked: 'Bloqueado',
   suspended: 'Suspenso',
 };
-
-const formatCurrency = (value: number) =>
-  value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
 export function ClientDrawer({ open, client, onClose, onStatusChange }: ClientDrawerProps) {
   const { message } = App.useApp();
@@ -156,13 +154,13 @@ export function ClientDrawer({ open, client, onClose, onStatusChange }: ClientDr
 
         <Descriptions title="Informações Financeiras" bordered column={1}>
           <Descriptions.Item label="Saldo em Carteira">
-            {formatCurrency(walletAvailable)}
+            {formatBRL(walletAvailable)}
           </Descriptions.Item>
           <Descriptions.Item label="Créditos no Mês">
-            {formatCurrency(creditsMonth)}
+            {formatBRL(creditsMonth)}
           </Descriptions.Item>
           <Descriptions.Item label="Débitos no Mês">
-            {debitsMonth != null ? formatCurrency(debitsMonth) : '—'}
+            {debitsMonth != null ? formatBRL(debitsMonth) : '—'}
           </Descriptions.Item>
           <Descriptions.Item label="Balanço do Mês">
             <span
@@ -171,7 +169,7 @@ export function ClientDrawer({ open, client, onClose, onStatusChange }: ClientDr
                 fontWeight: 'bold',
               }}
             >
-              {formatCurrency(monthBalance)}
+              {formatBRL(monthBalance)}
             </span>
           </Descriptions.Item>
         </Descriptions>

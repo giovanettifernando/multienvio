@@ -28,7 +28,8 @@ import {
 } from 'antd';
 import { ELModal } from '@/shared/ui/ELModal';
 import { ELInput } from '@/shared/ui/ELInput';
-import { inputNumberFormatterBRL, inputNumberParserBRL } from '@/shared/utils/format';
+import { inputNumberFormatterBRL, inputNumberParserBRL, formatBRL } from '@/shared/utils/format';
+import { formatDateBR } from '@/shared/utils/date';
 import type { TableProps } from 'antd';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
@@ -68,12 +69,6 @@ const { RangePicker } = DatePicker;
 const { TextArea } = Input;
 
 type PeriodPreset = 'today' | '7d' | '30d' | 'month' | 'lastMonth' | 'custom';
-
-const formatCurrency = (value: number) =>
-  value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-
-const formatDate = (dateStr: string | null) =>
-  dateStr ? dayjs(dateStr).format('DD/MM/YYYY') : '-';
 
 const STATUS_COLORS: Record<ExpenseStatus, string> = {
   PENDING: 'gold',
@@ -454,7 +449,7 @@ export function ExpensesTable() {
       width: 120,
       align: 'right',
       render: (v: number) => (
-        <Text strong>{formatCurrency(v)}</Text>
+        <Text strong>{formatBRL(v)}</Text>
       ),
       sorter: (a, b) => a.amountReais - b.amountReais,
     },
@@ -462,7 +457,7 @@ export function ExpensesTable() {
       title: 'Vencimento',
       dataIndex: 'dueDate',
       width: 100,
-      render: (v: string | null) => formatDate(v),
+      render: (v: string | null) => formatDateBR(v),
     },
     {
       title: 'Status',

@@ -1,37 +1,37 @@
+/**
+ * Cart Item API Route
+ *
+ * PATCH  /api/cart/items/[id] - Atualiza um item do carrinho
+ * DELETE /api/cart/items/[id] - Remove um item do carrinho
+ */
+
 import { withApiHandler } from '@/platform/api/handler';
 import { ApiError } from '@/platform/api/errors';
 import { getUserFromRequest } from '@/modules/auth/application/session';
-import { prisma } from '@/platform/db/db';
-import { updateCartItemSchema } from '@/shared/validation/cart';
 import { logger } from '@/platform/logging/logger';
-import type { Prisma } from '@prisma/client';
+import { updateCartItemSchema } from '@/modules/cart/dto/cart';
+import { updateItem, deleteItem, type CartItemDto } from '@/modules/cart/application';
 
-// Tipo para item do carrinho na resposta
-type CartItemResponse = {
-  id: string;
-  originAddress: Prisma.JsonValue;
-  destination: Prisma.JsonValue;
-  volumes: Prisma.JsonValue;
-  preferences: Prisma.JsonValue;
-  insuranceValue?: number;
-  pickupPoint: Prisma.JsonValue;
-  selectedQuote: Prisma.JsonValue;
-  totals: Prisma.JsonValue;
-  document: Prisma.JsonValue;
-  createdAt: string;
-  updatedAt: string;
-};
+// =============================================================================
+// Response Types
+// =============================================================================
 
-// Tipo para resposta PATCH /api/cart/items/[id]
 type PatchCartItemResponse = {
   message: string;
-  item: CartItemResponse;
+  item: CartItemDto;
 };
 
-// Tipo para parâmetros da rota
+type DeleteCartItemResponse = {
+  message: string;
+};
+
 type CartItemParams = {
   id: string;
 };
+
+// =============================================================================
+// Handlers
+// =============================================================================
 
 /**
  * PATCH /api/cart/items/[id]
@@ -57,89 +57,15 @@ export const PATCH = withApiHandler<PatchCartItemResponse, CartItemParams>(async
     });
   }
 
-  const data = validation.data;
-
-  // Verificar que o item pertence ao carrinho do usuário
-  const item = await prisma.cartItem.findFirst({
-    where: { id: itemId },
-    include: { cart: true },
-  });
-
-  if (!item || item.cart.userId !== session.userId) {
-    throw new ApiError({ code: 'not_found', message: 'Item não encontrado', status: 404 });
-  }
-
-  // Atualizar apenas os campos fornecidos
-  const updateData: Prisma.CartItemUpdateInput = {
-    updatedAt: new Date(),
-  };
-
-  if (data.originAddress) updateData.originAddress = data.originAddress as Prisma.InputJsonValue;
-  if (data.destination) updateData.destination = data.destination as Prisma.InputJsonValue;
-  if (data.volumes) updateData.volumes = data.volumes as Prisma.InputJsonValue;
-  if (data.preferences) updateData.preferences = data.preferences as Prisma.InputJsonValue;
-  if (data.insuranceValue !== undefined) updateData.insuranceValue = data.insuranceValue;
-  if (data.pickupPoint !== undefined) updateData.pickupPoint = (data.pickupPoint || null) as Prisma.InputJsonValue;
-  if (data.selectedQuote) updateData.selectedQuote = data.selectedQuote as Prisma.InputJsonValue;
-  if (data.totals) updateData.totals = data.totals as Prisma.InputJsonValue;
-  if (data.document !== undefined) updateData.document = (data.document || null) as Prisma.InputJsonValue;
-
-  const updatedItem = await prisma.cartItem.update({
-    where: { id: itemId },
-    data: updateData,
-  });
-
-  // Recalcular totals do carrinho
-  const cart = await prisma.cart.findFirst({
-    where: { id: item.cartId },
-    include: { items: true },
-  });
-
-  if (cart) {
-    const cartTotal = cart.items.reduce((sum, cartItem) => {
-      const itemTotals = cartItem.totals as { total?: number };
-      const itemTotal = itemTotals?.total || 0;
-      return sum + Number(itemTotal);
-    }, 0);
-
-    await prisma.cart.update({
-      where: { id: cart.id },
-      data: {
-        totals: {
-          subtotal: cartTotal,
-          total: cartTotal,
-          moeda: 'BRL',
-        },
-        updatedAt: new Date(),
-      },
-    });
-  }
+  const item = await updateItem(session.userId, itemId, validation.data);
 
   return {
     data: {
       message: 'Item atualizado',
-      item: {
-        id: updatedItem.id,
-        originAddress: updatedItem.originAddress,
-        destination: updatedItem.destination,
-        volumes: updatedItem.volumes,
-        preferences: updatedItem.preferences,
-        insuranceValue: updatedItem.insuranceValue ? Number(updatedItem.insuranceValue) : undefined,
-        pickupPoint: updatedItem.pickupPoint,
-        selectedQuote: updatedItem.selectedQuote,
-        totals: updatedItem.totals,
-        document: updatedItem.document,
-        createdAt: updatedItem.createdAt.toISOString(),
-        updatedAt: updatedItem.updatedAt.toISOString(),
-      },
+      item,
     },
   };
 });
-
-// Tipo para resposta DELETE /api/cart/items/[id]
-type DeleteCartItemResponse = {
-  message: string;
-};
 
 /**
  * DELETE /api/cart/items/[id]
@@ -153,48 +79,7 @@ export const DELETE = withApiHandler<DeleteCartItemResponse, CartItemParams>(asy
 
   const itemId = context.params.id;
 
-  // Verificar que o item pertence ao carrinho do usuário
-  const item = await prisma.cartItem.findFirst({
-    where: { id: itemId },
-    include: { cart: true },
-  });
-
-  if (!item || item.cart.userId !== session.userId) {
-    throw new ApiError({ code: 'not_found', message: 'Item não encontrado', status: 404 });
-  }
-
-  const cartId = item.cartId;
-
-  // Remover item
-  await prisma.cartItem.delete({
-    where: { id: itemId },
-  });
-
-  // Recalcular totals do carrinho
-  const cart = await prisma.cart.findFirst({
-    where: { id: cartId },
-    include: { items: true },
-  });
-
-  if (cart) {
-    const cartTotal = cart.items.reduce((sum, cartItem) => {
-      const itemTotals = cartItem.totals as { total?: number };
-      const itemTotal = itemTotals?.total || 0;
-      return sum + Number(itemTotal);
-    }, 0);
-
-    await prisma.cart.update({
-      where: { id: cart.id },
-      data: {
-        totals: {
-          subtotal: cartTotal,
-          total: cartTotal,
-          moeda: 'BRL',
-        },
-        updatedAt: new Date(),
-      },
-    });
-  }
+  await deleteItem(session.userId, itemId);
 
   return {
     data: {

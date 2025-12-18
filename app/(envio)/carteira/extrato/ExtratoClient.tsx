@@ -6,7 +6,7 @@ import { ELCard } from '@/shared/ui/ELCard';
 import { PrinterOutlined } from "@ant-design/icons";
 import { useRouter } from "next/navigation";
 import dayjs, { Dayjs } from "dayjs";
-import { useWalletTransactions } from "@/hooks/useWalletTransactions";
+import { useWalletTransactions } from "@/modules/wallet/ui/hooks";
 import PeriodSummaryCard from '@/modules/wallet/ui/components/PeriodSummaryCard';
 import StatementTable from '@/modules/wallet/ui/components/StatementTable';
 import StatementPDFModal from '@/modules/wallet/ui/components/StatementPDFModal';

@@ -5,7 +5,7 @@ import { ELModal } from '@/shared/ui/ELModal';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { packagingCreateSchema, type PackagingCreateInput } from '@/shared/validation/packaging';
-import { useCreatePackaging } from '@/hooks/usePackaging';
+import { useCreatePackaging } from '@/modules/quotes/ui/hooks';
 import { useEffect } from 'react';
 
 interface ModalNovaEmbalagemProps {
