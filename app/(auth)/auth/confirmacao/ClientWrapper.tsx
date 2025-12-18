@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { Spin } from "antd";
-import { FormCard } from "@/components/ui/FormCard";
+import { FormCard } from '@/shared/ui/FormCard';
 
 const ConfirmacaoClient = dynamic(() => import("./ConfirmacaoClient"), {
   ssr: false,

@@ -1,13 +1,13 @@
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
-import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
+import { getAdminSessionFromRequest } from '@/modules/auth/application/admin-session';
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
-import { prisma } from '@/lib/db';
+import { prisma } from '@/platform/db/db';
 import { AdminPermission } from '@prisma/client';
-import { logPasswordReset } from '@/lib/audit-admin';
-import { rateLimitByUser, RATE_LIMITS } from '@/lib/rate-limit-redis';
-import { staffSessionCache } from '@/lib/cache';
+import { logPasswordReset } from '@/platform/logging/audit-admin';
+import { rateLimitByUser, RATE_LIMITS } from '@/platform/cache/rate-limit-redis';
+import { staffSessionCache } from '@/platform/cache/cache';
 
 type PasswordResetResponse = {
   message: string;

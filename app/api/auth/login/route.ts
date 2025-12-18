@@ -1,20 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ZodError } from 'zod';
 import bcrypt from 'bcrypt';
-import { withApiHandlerResponse } from '@/lib/api/handler';
-import { LoginSchema } from '@/lib/validation/auth';
-import { prisma } from '@/lib/db';
+import { withApiHandlerResponse } from '@/platform/api/handler';
+import { LoginSchema } from '@/shared/validation/auth';
+import { prisma } from '@/platform/db/db';
 import {
   signTokenPair,
   ACCESS_TOKEN_COOKIE,
   REFRESH_TOKEN_COOKIE,
   ACCESS_TOKEN_MAX_AGE_SECONDS,
   REFRESH_TOKEN_MAX_AGE_SECONDS,
-} from '@/lib/auth/jwt-tokens';
-import { UserStatus, AuthRole, type User } from '@/types/contracts';
-import { rateLimitByIPStrict, RATE_LIMITS } from '@/lib/rate-limit-redis';
-import { sessionCache } from '@/lib/cache';
-import { requireValidOrigin } from '@/lib/api/csrf';
+} from '@/modules/auth/application/jwt-tokens';
+import { UserStatus, AuthRole, type User } from '@/shared/types/contracts';
+import { rateLimitByIPStrict, RATE_LIMITS } from '@/platform/cache/rate-limit-redis';
+import { sessionCache } from '@/platform/cache/cache';
+import { requireValidOrigin } from '@/platform/api/csrf';
 
 export const POST = withApiHandlerResponse(async (context) => {
   const { req, logger } = context;

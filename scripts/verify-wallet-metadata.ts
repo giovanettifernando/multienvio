@@ -2,7 +2,7 @@
  * Script para verificar se o payment ID do MP está sendo salvo no meta
  */
 
-import { prisma } from '@/lib/db';
+import { prisma } from '@/platform/db/db';
 
 async function verify() {
   console.log('========================================');

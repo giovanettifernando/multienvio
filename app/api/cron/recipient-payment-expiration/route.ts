@@ -17,19 +17,19 @@
  * - Ex: curl -X POST -H "X-Cron-Secret: $SECRET" https://seusite.com/api/cron/recipient-payment-expiration
  */
 
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
 import crypto from 'crypto';
 import {
   expirePendingRequests,
   getRequestsExpiringWithin,
-} from '@/lib/recipient-payment/service';
+} from '@/modules/recipients/application/service';
 import {
   sendRecipientPaymentExpiredEmail,
   sendRecipientPaymentReminderEmail,
-} from '@/lib/email/recipient-payment';
-import { prisma } from '@/lib/db';
-import { logger } from '@/lib/logger';
+} from '@/platform/email/recipient-payment';
+import { prisma } from '@/platform/db/db';
+import { logger } from '@/platform/logging/logger';
 
 export const maxDuration = 60; // 60 segundos de timeout
 

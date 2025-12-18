@@ -20,7 +20,7 @@ import {
   message,
   Badge,
 } from 'antd';
-import { inputNumberFormatterBRL, inputNumberParserBRL } from '@/lib/utils/format';
+import { inputNumberFormatterBRL, inputNumberParserBRL } from '@/shared/utils/format';
 import {
   SaveOutlined,
   ApiOutlined,

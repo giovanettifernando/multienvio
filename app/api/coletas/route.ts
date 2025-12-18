@@ -1,15 +1,15 @@
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
-import { prisma } from '@/lib/db';
-import { getUserFromRequest } from '@/lib/auth/session';
-import { createPickupRequestSchema, listPickupsQuerySchema } from '@/lib/validation/pickup';
-import { logger } from '@/lib/logger';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
+import { prisma } from '@/platform/db/db';
+import { getUserFromRequest } from '@/modules/auth/application/session';
+import { createPickupRequestSchema, listPickupsQuerySchema } from '@/shared/validation/pickup';
+import { logger } from '@/platform/logging/logger';
 import type { Prisma } from '@prisma/client';
 import type {
   PickupRequestWithShipment,
   PickupRequestsResponse,
   PickupStatus,
-} from '@/lib/types/pickup';
+} from '@/shared/types/pickup';
 
 /**
  * GET /api/coletas

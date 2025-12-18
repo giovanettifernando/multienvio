@@ -5,10 +5,10 @@
  * Endpoint publico - usado pela pagina de pagamento do destinatario
  */
 
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
-import { getRequestByToken } from '@/lib/recipient-payment/service';
-import type { PublicPaymentData } from '@/lib/recipient-payment/types';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
+import { getRequestByToken } from '@/modules/recipients/application/service';
+import type { PublicPaymentData } from '@/modules/recipients/application/types';
 
 type GetResponse = PublicPaymentData;
 

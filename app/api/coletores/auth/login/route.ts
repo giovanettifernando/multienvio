@@ -4,14 +4,14 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/db';
+import { prisma } from '@/platform/db/db';
 import bcrypt from 'bcrypt';
 import { SignJWT } from 'jose';
 import { cookies } from 'next/headers';
-import { rateLimitByIP } from '@/lib/rate-limit-redis';
-import { withApiHandlerResponse } from '@/lib/api/handler';
-import { CollectorLoginSchema } from '@/lib/validation/auth';
-import { collectorSessionCache } from '@/lib/cache';
+import { rateLimitByIP } from '@/platform/cache/rate-limit-redis';
+import { withApiHandlerResponse } from '@/platform/api/handler';
+import { CollectorLoginSchema } from '@/shared/validation/auth';
+import { collectorSessionCache } from '@/platform/cache/cache';
 
 // Validar JWT_SECRET em produção
 if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {

@@ -3,9 +3,9 @@
 import { Suspense, useState, useMemo } from 'react';
 import { Grid, Skeleton } from 'antd';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { NewTicketList } from '@/components/support/NewTicketList';
-import { TicketDetailsDrawer } from '@/components/support/TicketDetailsDrawer';
-import { PageShell } from '@/components/shared/PageShell';
+import { NewTicketList } from '@/modules/support/ui/components/NewTicketList';
+import { TicketDetailsDrawer } from '@/modules/support/ui/components/TicketDetailsDrawer';
+import { PageShell } from '@/shared/ui/PageShell';
 
 export default function SuporteAdminClient() {
   return (

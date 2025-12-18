@@ -1,9 +1,9 @@
-import { withApiHandler } from "@/lib/api/handler";
+import { withApiHandler } from "@/platform/api/handler";
 import {
   enforceCardWriteLimit,
   requireUserId,
 } from "../../helpers";
-import { makeUserCardDefault, type AccountCardDto } from "@/lib/services/account-cards.service";
+import { makeUserCardDefault, type AccountCardDto } from "@/modules/auth/application/account-cards.service";
 
 type CardDtoResponse = {
   id: string;

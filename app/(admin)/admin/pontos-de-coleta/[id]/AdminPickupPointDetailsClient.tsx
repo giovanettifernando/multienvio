@@ -37,12 +37,12 @@ import {
   DeleteOutlined,
   InboxOutlined,
 } from "@ant-design/icons";
-import { PageShell } from "@/components/shared/PageShell";
-import { pickupPointSchema } from "@/lib/pickup/schemas";
-import { maskCNPJ, maskCEP, maskPhone, maskCPF, unmaskDigits } from "@/lib/pickup/masks";
-import { formatBRL, inputNumberFormatterBRL, inputNumberParserBRL } from "@/lib/utils/format";
-import type { PickupPoint, PickupPointFormData } from "@/lib/pickup/types";
-import PickupPointReceptionsTab from "@/components/admin/pickup-points/PickupPointReceptionsTab";
+import { PageShell } from '@/shared/ui/PageShell';
+import { pickupPointSchema } from "@/modules/pickup-points/application/schemas";
+import { maskCNPJ, maskCEP, maskPhone, maskCPF, unmaskDigits } from "@/modules/pickup-points/application/masks";
+import { formatBRL, inputNumberFormatterBRL, inputNumberParserBRL } from "@/shared/utils/format";
+import type { PickupPoint, PickupPointFormData } from "@/modules/pickup-points/application/types";
+import PickupPointReceptionsTab from '@/modules/admin/ui/components/pickup-points/PickupPointReceptionsTab';
 
 const { Title, Text } = Typography;
 

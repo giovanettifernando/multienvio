@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import { getCardPanForDev } from '@/lib/services/account-cards.service';
+import { getCardPanForDev } from '@/modules/auth/application/account-cards.service';
 
 const prisma = new PrismaClient();
 

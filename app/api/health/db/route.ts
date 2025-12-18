@@ -1,5 +1,5 @@
-import { withApiHandler } from "@/lib/api/handler";
-import { pingDatabase, schedulePrismaReconnect, getPoolMetrics, type PoolMetrics } from "@/lib/db";
+import { withApiHandler } from "@/platform/api/handler";
+import { pingDatabase, schedulePrismaReconnect, getPoolMetrics, type PoolMetrics } from "@/platform/db/db";
 
 type HealthDbResponse =
   | { status: "ok"; pool: PoolMetrics; latencyMs: number }

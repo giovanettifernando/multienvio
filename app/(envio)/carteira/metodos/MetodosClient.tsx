@@ -3,14 +3,14 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Form, Input, InputNumber, App } from "antd";
-import { PageShell } from "@/components/shared/PageShell";
-import { ELButton } from "@/components/ui/ELButton";
-import { ELModal } from "@/components/ui/ELModal";
-import { ActionBar } from "@/components/ui/ActionBar";
-import { ELFlex } from "@/components/ui/ELGrid";
-import AddFundsModal from "@/components/wallet/AddFundsModal";
-import type { CardMethod } from "@/types/billing";
-import { PaymentMethodCard } from "@/components/wallet/PaymentMethodCard";
+import { PageShell } from '@/shared/ui/PageShell';
+import { ELButton } from '@/shared/ui/ELButton';
+import { ELModal } from '@/shared/ui/ELModal';
+import { ActionBar } from '@/shared/ui/ActionBar';
+import { ELFlex } from '@/shared/ui/ELGrid';
+import AddFundsModal from '@/modules/wallet/ui/components/AddFundsModal';
+import type { CardMethod } from '@/shared/types/billing';
+import { PaymentMethodCard } from "@/modules/wallet/ui/components/PaymentMethodCard";
 
 async function fetchCards(): Promise<CardMethod[]> {
   const response = await fetch("/api/account/cards");

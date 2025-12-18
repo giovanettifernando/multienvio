@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { readFile, stat } from 'fs/promises';
 import path from 'path';
-import { withApiHandlerResponse } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
+import { withApiHandlerResponse } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
 
 // Mapeamento de extensões para content-types
 const MIME_TYPES: Record<string, string> = {

@@ -5,12 +5,12 @@
  * Requer autenticação admin e configuração válida do OpenRouter
  */
 
-import { requireAdminUser } from '@/lib/auth/admin-helpers';
+import { requireAdminUser } from '@/modules/auth/application/admin-helpers';
 import { AdminPermission } from '@prisma/client';
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
-import { listModels, type OpenRouterModel } from '@/lib/integrations/openrouter/client';
-import { isOpenRouterConfigured } from '@/lib/integrations/openrouter/config.service';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
+import { listModels, type OpenRouterModel } from '@/platform/integrations/openrouter/client';
+import { isOpenRouterConfigured } from '@/platform/integrations/openrouter/config.service';
 
 /**
  * Response type for models list endpoint

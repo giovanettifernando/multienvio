@@ -1,10 +1,10 @@
 import { z } from "zod";
-import { ApiError } from "@/lib/api/errors";
-import { withApiHandler } from "@/lib/api/handler";
+import { ApiError } from "@/platform/api/errors";
+import { withApiHandler } from "@/platform/api/handler";
 import {
   getSystemStatus,
   updateSystemStatus,
-} from "@/lib/services/system-status.service";
+} from "@/platform/db/system-status.service";
 
 const updateSchema = z
   .object({

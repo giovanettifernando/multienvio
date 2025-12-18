@@ -16,15 +16,15 @@ import {
 import { useRouter } from 'next/navigation';
 import { useForm, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import PFForm from '@/components/collectors/forms/PFForm';
-import PJForm from '@/components/collectors/forms/PJForm';
-import VehicleForm from '@/components/collectors/forms/VehicleForm';
-import DocumentsForm from '@/components/collectors/forms/DocumentsForm';
-import BankForm from '@/components/collectors/forms/BankForm';
-import { publicRegistrationSchema } from '@/lib/collectors/schemas';
-import type { PublicRegistrationSchemaInput } from '@/lib/collectors/schemas';
+import PFForm from '@/modules/collectors/ui/components/forms/PFForm';
+import PJForm from '@/modules/collectors/ui/components/forms/PJForm';
+import VehicleForm from '@/modules/collectors/ui/components/forms/VehicleForm';
+import DocumentsForm from '@/modules/collectors/ui/components/forms/DocumentsForm';
+import BankForm from '@/modules/collectors/ui/components/forms/BankForm';
+import { publicRegistrationSchema } from '@/modules/collectors/application/schemas';
+import type { PublicRegistrationSchemaInput } from '@/modules/collectors/application/schemas';
 import type { UploadFile } from 'antd/es/upload/interface';
-import { useUpload } from '@/lib/collectors/hooks';
+import { useUpload } from '@/modules/collectors/application/hooks';
 
 const { Title, Text, Paragraph } = Typography;
 

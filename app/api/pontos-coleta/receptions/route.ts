@@ -3,12 +3,12 @@
  * GET /api/pontos-coleta/receptions - Lista envios pendentes de recepção
  */
 
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
-import { prisma } from '@/lib/db';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
+import { prisma } from '@/platform/db/db';
 import { Prisma } from '@prisma/client';
-import { ShipmentStatus } from '@/lib/shipments/shipment-status';
-import { getCollectorSessionFromRequest } from '@/lib/auth/collector-session';
+import { ShipmentStatus } from '@/modules/shipments/application/shipment-status';
+import { getCollectorSessionFromRequest } from '@/modules/auth/application/collector-session';
 
 type PackageInfo = {
   id: string;

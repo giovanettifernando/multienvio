@@ -2,7 +2,7 @@
 
 import { Suspense } from 'react';
 import dynamic from 'next/dynamic';
-import { ELSkeleton } from '@/components/ui/ELSkeleton';
+import { ELSkeleton } from '@/shared/ui/ELSkeleton';
 
 const EnvioLayoutClient = dynamic(() => import('./EnvioLayoutClient'), {
   ssr: false,

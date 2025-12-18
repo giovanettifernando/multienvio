@@ -6,15 +6,15 @@
  * Todas as ações são registradas no ledger para auditoria
  */
 
-import { requireAdminUser } from '@/lib/auth/admin-helpers';
-import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
+import { requireAdminUser } from '@/modules/auth/application/admin-helpers';
+import { getAdminSessionFromRequest } from '@/modules/auth/application/admin-session';
 import { AdminPermission } from '@prisma/client';
-import { prisma } from '@/lib/db';
-import * as walletService from '@/lib/wallet/wallet.service';
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
+import { prisma } from '@/platform/db/db';
+import * as walletService from '@/modules/wallet/application/wallet.service';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
 import { z } from 'zod';
-import { logger } from '@/lib/logger';
+import { logger } from '@/platform/logging/logger';
 
 const ForceApproveSchema = z.object({
   reason: z.string().max(500).optional(),

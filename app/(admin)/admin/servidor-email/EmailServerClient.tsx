@@ -1,7 +1,7 @@
 'use client';
 
-import { PageShell } from '@/components/shared/PageShell';
-import EmailConfigForm from '@/components/admin/EmailConfigForm';
+import { PageShell } from '@/shared/ui/PageShell';
+import EmailConfigForm from '@/modules/admin/ui/components/EmailConfigForm';
 
 export default function EmailServerClient() {
   return (

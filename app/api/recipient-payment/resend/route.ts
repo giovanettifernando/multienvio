@@ -6,13 +6,13 @@
  * Requer autenticacao - apenas o remetente pode reenviar
  */
 
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
-import { getSession } from '@/lib/auth/session';
-import { resendPaymentLink } from '@/lib/recipient-payment/service';
-import { resendLinkSchema } from '@/lib/recipient-payment/validation';
-import { sendRecipientPaymentRequestEmail } from '@/lib/email/recipient-payment';
-import { prisma } from '@/lib/db';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
+import { getSession } from '@/modules/auth/application/session';
+import { resendPaymentLink } from '@/modules/recipients/application/service';
+import { resendLinkSchema } from '@/modules/recipients/application/validation';
+import { sendRecipientPaymentRequestEmail } from '@/platform/email/recipient-payment';
+import { prisma } from '@/platform/db/db';
 
 type ResendResponse = {
   success: boolean;

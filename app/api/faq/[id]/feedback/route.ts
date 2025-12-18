@@ -6,9 +6,9 @@
  * Não requer autenticação
  */
 
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
-import { prisma } from '@/lib/db';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
+import { prisma } from '@/platform/db/db';
 import { z } from 'zod';
 
 const feedbackSchema = z.object({

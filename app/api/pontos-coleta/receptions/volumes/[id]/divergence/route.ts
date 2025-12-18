@@ -3,12 +3,12 @@
  * POST /api/pontos-coleta/receptions/volumes/[id]/divergence
  */
 
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
-import { prisma } from '@/lib/db';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
+import { prisma } from '@/platform/db/db';
 import { z } from 'zod';
-import { saveBase64Image, validateBase64Image } from '@/lib/upload/file-upload';
-import { getCollectorSessionFromRequest } from '@/lib/auth/collector-session';
+import { saveBase64Image, validateBase64Image } from '@/platform/storage/file-upload';
+import { getCollectorSessionFromRequest } from '@/modules/auth/application/collector-session';
 
 const DivergenceSchema = z.object({
   divergenceType: z.enum(['DIMENSAO', 'PESO', 'DIMENSAO_E_PESO']),

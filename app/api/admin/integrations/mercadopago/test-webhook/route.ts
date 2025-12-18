@@ -4,11 +4,11 @@
  * Testa se o webhook do Mercado Pago está configurado corretamente
  */
 
-import { requireAdminUser } from '@/lib/auth/admin-helpers';
+import { requireAdminUser } from '@/modules/auth/application/admin-helpers';
 import { AdminPermission } from '@prisma/client';
-import { isMercadoPagoConfigured } from '@/lib/mercadopago';
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
+import { isMercadoPagoConfigured } from '@/platform/integrations/mercadopago';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
 
 /**
  * POST - Testa webhook do Mercado Pago

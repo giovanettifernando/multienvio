@@ -8,11 +8,11 @@
  */
 
 import { NextResponse } from 'next/server';
-import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
-import { requirePermission } from '@/lib/auth/permissions';
+import { getAdminSessionFromRequest } from '@/modules/auth/application/admin-session';
+import { requirePermission } from '@/modules/auth/application/permissions';
 import { AdminPermission } from '@prisma/client';
-import { withApiHandlerResponse } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
+import { withApiHandlerResponse } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
 
 export const GET = withApiHandlerResponse(async ({ req, logger }) => {
   const session = await getAdminSessionFromRequest(req);

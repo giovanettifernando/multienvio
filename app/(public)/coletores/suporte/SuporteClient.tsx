@@ -2,15 +2,15 @@
 
 import { useState, useEffect } from 'react';
 import { Card, Tabs, Space, Button, Form, Input, Select, App, Table, Tag, Typography } from 'antd';
-import { ELModal } from '@/components/ui/ELModal';
+import { ELModal } from '@/shared/ui/ELModal';
 import { PlusOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons';
-import { PageShell } from '@/components/shared/PageShell';
+import { PageShell } from '@/shared/ui/PageShell';
 import { useTickets, useCreateTicket } from '@/hooks/useSupport';
-import type { Status, Priority } from '@/lib/validation/support';
+import type { Status, Priority } from '@/shared/validation/support';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/pt-br';
-import { useColetorSession } from '@/stores/useColetorSession';
+import { useColetorSession } from '@/modules/collectors/ui/state/useColetorSession';
 
 dayjs.extend(relativeTime);
 dayjs.locale('pt-br');

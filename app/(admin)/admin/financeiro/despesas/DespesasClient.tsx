@@ -1,7 +1,7 @@
 'use client';
 
-import { ExpensesTable } from '@/components/admin/finance/ExpensesTable';
-import { PageShell } from '@/components/shared/PageShell';
+import { ExpensesTable } from '@/modules/admin/ui/components/finance/ExpensesTable';
+import { PageShell } from '@/shared/ui/PageShell';
 
 export default function DespesasClient() {
   return (

@@ -4,13 +4,13 @@
  * Envia um email de teste usando a configuração SMTP salva
  */
 
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
-import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
+import { getAdminSessionFromRequest } from '@/modules/auth/application/admin-session';
 import { AdminPermission } from '@prisma/client';
-import { prisma } from '@/lib/db';
+import { prisma } from '@/platform/db/db';
 import nodemailer from 'nodemailer';
-import { decrypt } from '@/lib/integrations/shared/encryption.service';
+import { decrypt } from '@/platform/integrations/shared/encryption.service';
 import { z } from 'zod';
 
 type EmailSendTestResponse = {

@@ -1,8 +1,8 @@
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
-import { prisma } from '@/lib/db';
-import { getUserFromRequest } from '@/lib/auth/session';
-import { updatePickupRequestSchema } from '@/lib/validation/pickup';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
+import { prisma } from '@/platform/db/db';
+import { getUserFromRequest } from '@/modules/auth/application/session';
+import { updatePickupRequestSchema } from '@/shared/validation/pickup';
 
 interface UpdatePickupResponse {
   message: string;

@@ -1,16 +1,16 @@
 import { NextRequest } from 'next/server';
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
-import { getUserFromRequest } from '@/lib/auth/session';
-import { createQuote, listQuotes } from '@/lib/quotes/service';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
+import { getUserFromRequest } from '@/modules/auth/application/session';
+import { createQuote, listQuotes } from '@/modules/quotes/application/service';
 import {
   quoteRequestSchema,
   listQuotesQuerySchema,
   type QuoteRequest,
-} from '@/lib/validation/quote-backend';
-import { logger } from '@/lib/logger';
-import type { QuoteResultItem, QuoteSummary, PartnerPoint } from '@/types/quote';
-import { enforceRateLimitByIP, RATE_LIMITS } from '@/lib/rate-limit-redis';
+} from '@/shared/validation/quote-backend';
+import { logger } from '@/platform/logging/logger';
+import type { QuoteResultItem, QuoteSummary, PartnerPoint } from '@/shared/types/quote';
+import { enforceRateLimitByIP, RATE_LIMITS } from '@/platform/cache/rate-limit-redis';
 
 type PostCotacoesResponse = {
   quoteId: string;

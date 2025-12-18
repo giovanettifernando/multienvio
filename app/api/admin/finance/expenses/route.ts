@@ -3,12 +3,12 @@
  * POST /api/admin/finance/expenses - Cria nova despesa
  */
 
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
-import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
+import { getAdminSessionFromRequest } from '@/modules/auth/application/admin-session';
 import { AdminPermission, ExpenseType, ExpenseCategory, ExpenseStatus, Prisma } from '@prisma/client';
-import { prisma } from '@/lib/db';
-import { persistExpenseReceipt } from '@/lib/storage/expense-receipts';
+import { prisma } from '@/platform/db/db';
+import { persistExpenseReceipt } from '@/platform/storage/expense-receipts';
 
 interface ExpenseWithAmountReais {
   id: string;

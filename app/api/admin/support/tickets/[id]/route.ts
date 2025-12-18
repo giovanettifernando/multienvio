@@ -1,8 +1,8 @@
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
-import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
+import { getAdminSessionFromRequest } from '@/modules/auth/application/admin-session';
 import { AdminPermission } from '@prisma/client';
-import { getTicket } from '@/lib/support/service';
+import { getTicket } from '@/modules/support/application/service';
 
 
 export const GET = withApiHandler<unknown, { id: string }>(async ({ req, params }) => {

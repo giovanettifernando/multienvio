@@ -1,8 +1,8 @@
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
-import { getUserFromRequest } from '@/lib/auth/session';
-import { prisma } from '@/lib/db';
-import { ShipmentStatus } from '@/lib/shipments/shipment-status';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
+import { getUserFromRequest } from '@/modules/auth/application/session';
+import { prisma } from '@/platform/db/db';
+import { ShipmentStatus } from '@/modules/shipments/application/shipment-status';
 
 interface PendingPickupShipmentItem {
   id: string;

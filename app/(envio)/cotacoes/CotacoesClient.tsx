@@ -3,19 +3,19 @@
 import { useMemo, useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import type { CompanyWizardData } from "@/lib/validation/company";
-import { QuoteForm } from "@/components/quote/QuoteForm";
-import { useAddressStore, getCompanyDefaultAddress } from "@/lib/state/addresses";
-import { maskCEP } from "@/lib/masks";
-import { ELCard } from "@/components/ui/ELCard";
-import { ELSkeleton } from "@/components/ui/ELSkeleton";
-import { ELEmpty } from "@/components/ui/ELEmpty";
-import { PageShell } from "@/components/shared/PageShell";
-import { useQuoteStore } from "@/store/useQuoteStore";
-import { useQuoteDraft } from "@/lib/state/quoteDraft";
-import { useCanQuote } from "@/hooks/useWalletStatus";
-import ResolveDebtModal from "@/components/wallet/ResolveDebtModal";
-import { formatNumberBR } from "@/lib/format";
+import type { CompanyWizardData } from '@/shared/validation/company';
+import { QuoteForm } from "@/modules/quotes/ui/components/QuoteForm";
+import { useAddressStore, getCompanyDefaultAddress } from "@/modules/auth/ui/state/addresses";
+import { maskCEP } from "@/shared/utils/masks";
+import { ELCard } from '@/shared/ui/ELCard';
+import { ELSkeleton } from '@/shared/ui/ELSkeleton';
+import { ELEmpty } from '@/shared/ui/ELEmpty';
+import { PageShell } from '@/shared/ui/PageShell';
+import { useQuoteStore } from '@/modules/quotes/ui/state/useQuoteStore';
+import { useQuoteDraft } from "@/modules/quotes/ui/state/quoteDraft";
+import { useCanQuote } from "@/modules/wallet/ui/hooks/useWalletStatus";
+import ResolveDebtModal from '@/modules/wallet/ui/components/ResolveDebtModal';
+import { formatNumberBR } from "@/shared/utils/format";
 
 async function fetchCompany(): Promise<CompanyWizardData | null> {
   const res = await fetch("/api/account/company");

@@ -8,15 +8,15 @@ import {
   Descriptions,
   Typography,
 } from "antd";
-import { ELCard } from "@/components/ui/ELCard";
-import { ELGrid } from "@/components/ui/ELGrid";
-import type { Shipment } from "@/types/shipment";
-import type { Tracking } from "@/types/tracking";
-import { TrackingTimeline } from "@/components/ui/TrackingTimeline";
-import { TrackingStatusTag } from "@/components/ui/TrackingStatusTag";
-import { PageShell } from "@/components/shared/PageShell";
-import { ELButton } from "@/components/ui/ELButton";
-import { ELSkeleton } from "@/components/ui/ELSkeleton";
+import { ELCard } from '@/shared/ui/ELCard';
+import { ELGrid } from '@/shared/ui/ELGrid';
+import type { Shipment } from '@/shared/types/shipment';
+import type { Tracking } from '@/shared/types/tracking';
+import { TrackingTimeline } from "@/modules/tracking/ui/components/TrackingTimeline";
+import { TrackingStatusTag } from "@/modules/tracking/ui/components/TrackingStatusTag";
+import { PageShell } from '@/shared/ui/PageShell';
+import { ELButton } from '@/shared/ui/ELButton';
+import { ELSkeleton } from '@/shared/ui/ELSkeleton';
 
 async function fetchShipment(id: string): Promise<Shipment> {
   const response = await fetch(`/api/shipments?id=${id}`);

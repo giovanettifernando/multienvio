@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { withApiHandlerResponse } from '@/lib/api/handler';
-import { destroySession, getSession } from '@/lib/auth/session';
-import { sessionCache, userCache } from '@/lib/cache';
-import { verifyRefreshToken, REFRESH_TOKEN_COOKIE } from '@/lib/auth/jwt-tokens';
-import { requireValidOrigin } from '@/lib/api/csrf';
+import { withApiHandlerResponse } from '@/platform/api/handler';
+import { destroySession, getSession } from '@/modules/auth/application/session';
+import { sessionCache, userCache } from '@/platform/cache/cache';
+import { verifyRefreshToken, REFRESH_TOKEN_COOKIE } from '@/modules/auth/application/jwt-tokens';
+import { requireValidOrigin } from '@/platform/api/csrf';
 
 /**
  * POST /api/auth/logout

@@ -4,13 +4,13 @@
  * POST /api/admin/coletores - Cria novo coletor
  */
 
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
-import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
+import { getAdminSessionFromRequest } from '@/modules/auth/application/admin-session';
 import { AdminPermission } from '@prisma/client';
-import { listCollectors, createCollector } from '@/lib/collectors/service';
-import { collectorFormSchema } from '@/lib/collectors/schemas';
-import type { CollectorFilters, CollectorListResponse, Collector } from '@/lib/collectors/types';
+import { listCollectors, createCollector } from '@/modules/collectors/application/service';
+import { collectorFormSchema } from '@/modules/collectors/application/schemas';
+import type { CollectorFilters, CollectorListResponse, Collector } from '@/modules/collectors/application/types';
 import { z } from 'zod';
 
 type GetCollectorsResponse = CollectorListResponse;

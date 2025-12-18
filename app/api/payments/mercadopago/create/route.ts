@@ -6,12 +6,12 @@
  */
 
 
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
 import { z } from 'zod';
-import { getSession } from '@/lib/auth/session';
-import { createPaymentWithTracking, getStatusDetailMessage } from '@/lib/mercadopago';
-import type { CreatePaymentInput } from '@/lib/mercadopago';
+import { getSession } from '@/modules/auth/application/session';
+import { createPaymentWithTracking, getStatusDetailMessage } from '@/platform/integrations/mercadopago';
+import type { CreatePaymentInput } from '@/platform/integrations/mercadopago';
 
 /**
  * Schema de validação para criação de pagamento

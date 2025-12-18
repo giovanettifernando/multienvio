@@ -20,7 +20,7 @@ import {
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { TableProps } from 'antd';
-import { ELInput } from '@/components/ui/ELInput';
+import { ELInput } from '@/shared/ui/ELInput';
 
 const { Title, Text } = Typography;
 

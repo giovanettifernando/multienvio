@@ -8,12 +8,12 @@
  * evitando problemas de incompatibilidade com o SDK JavaScript.
  */
 
-import { ApiError } from "@/lib/api/errors";
-import { withApiHandler } from "@/lib/api/handler";
+import { ApiError } from "@/platform/api/errors";
+import { withApiHandler } from "@/platform/api/handler";
 import { requireUserId } from "../../helpers";
-import { prisma } from "@/lib/db";
-import { decryptPan, loadVaultKey, parsePanCipher } from "@/lib/crypto/card-vault";
-import { createCardToken } from "@/lib/mercadopago/client";
+import { prisma } from "@/platform/db/db";
+import { decryptPan, loadVaultKey, parsePanCipher } from "@/platform/crypto/card-vault";
+import { createCardToken } from "@/platform/integrations/mercadopago/client";
 import { z } from "zod";
 
 const CreateTokenBackendSchema = z.object({

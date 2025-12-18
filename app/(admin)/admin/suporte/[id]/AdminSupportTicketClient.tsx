@@ -4,8 +4,8 @@ import { use } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Breadcrumb, Card } from "antd";
-import { TicketDetailsContent } from "@/components/support/TicketDetailsDrawer";
-import { PageShell } from "@/components/shared/PageShell";
+import { TicketDetailsContent } from '@/modules/support/ui/components/TicketDetailsDrawer';
+import { PageShell } from '@/shared/ui/PageShell';
 
 type RouteParams = { id: string };
 

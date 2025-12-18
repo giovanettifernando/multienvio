@@ -10,15 +10,15 @@
  * 3. Envia e-mails de confirmacao
  */
 
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
 import { z } from 'zod';
-import { processRecipientPayment, getRequestByToken } from '@/lib/recipient-payment/service';
+import { processRecipientPayment, getRequestByToken } from '@/modules/recipients/application/service';
 import {
   sendRecipientPaymentConfirmedEmail,
   sendSenderPaymentReceivedEmail,
-} from '@/lib/email/recipient-payment';
-import { prisma } from '@/lib/db';
+} from '@/platform/email/recipient-payment';
+import { prisma } from '@/platform/db/db';
 
 const paymentSchema = z.object({
   paymentToken: z.string().min(1, 'Token de pagamento e obrigatorio'),

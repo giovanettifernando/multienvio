@@ -5,7 +5,7 @@
  */
 
 import { z } from 'zod';
-import { requireAdminUser } from '@/lib/auth/admin-helpers';
+import { requireAdminUser } from '@/modules/auth/application/admin-helpers';
 import { AdminPermission } from '@prisma/client';
 import {
   getCorreiosConfigAsync,
@@ -16,10 +16,10 @@ import {
   criarPrePostagem,
   getCorreiosConfigInfo,
   testCorreiosAuth,
-} from '@/lib/integrations/correios';
-import { withApiHandler } from '@/lib/api/handler';
-import { logger } from '@/lib/logger';
-import { ApiError } from '@/lib/api/errors';
+} from '@/platform/integrations/correios';
+import { withApiHandler } from '@/platform/api/handler';
+import { logger } from '@/platform/logging/logger';
+import { ApiError } from '@/platform/api/errors';
 
 /**
  * Schema para testes

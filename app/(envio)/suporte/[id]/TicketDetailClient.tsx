@@ -2,11 +2,11 @@
 
 import { ArrowLeftOutlined } from "@ant-design/icons";
 import { use } from "react";
-import { ELCard } from "@/components/ui/ELCard";
-import { ELButton } from "@/components/ui/ELButton";
+import { ELCard } from '@/shared/ui/ELCard';
+import { ELButton } from '@/shared/ui/ELButton';
 import { useRouter, useSearchParams } from "next/navigation";
-import { TicketDetailsContent } from "@/components/support/TicketDetailsDrawer";
-import { PageShell } from "@/components/shared/PageShell";
+import { TicketDetailsContent } from '@/modules/support/ui/components/TicketDetailsDrawer';
+import { PageShell } from '@/shared/ui/PageShell';
 
 type RouteParams = { id: string };
 

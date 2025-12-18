@@ -6,9 +6,9 @@
  */
 
 
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
-import { getMercadoPagoPublicKey } from '@/lib/mercadopago/config';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
+import { getMercadoPagoPublicKey } from '@/platform/integrations/mercadopago/config';
 
 type PublicKeyResponse = {
   publicKey: string;

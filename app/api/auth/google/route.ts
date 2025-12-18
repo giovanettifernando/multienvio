@@ -9,12 +9,12 @@
  */
 
 import { NextResponse } from 'next/server';
-import { withApiHandlerResponse } from '@/lib/api/handler';
+import { withApiHandlerResponse } from '@/platform/api/handler';
 import {
   validateGoogleConfigAsync,
   buildAuthorizationUrl,
   type OAuthContext,
-} from '@/lib/auth/google-oauth';
+} from '@/modules/auth/application/google-oauth';
 
 export const GET = withApiHandlerResponse(async (context) => {
   const { req, logger } = context;

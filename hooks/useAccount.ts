@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { Profile, Address, Card, PasswordChange, Recipient, RecipientList } from "@/types/account";
-import { apiFetch } from "@/lib/api/client";
+import type { Profile, Address, Card, PasswordChange, Recipient, RecipientList } from '@/shared/types/account';
+import { apiFetch } from "@/platform/api/client";
 
 export function useProfile() {
   return useQuery<Profile>({

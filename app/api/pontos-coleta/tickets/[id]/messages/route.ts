@@ -1,10 +1,10 @@
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
-import { getCollectorSessionFromRequest } from '@/lib/auth/collector-session';
-import { addMessageToTicketForCollector } from '@/lib/support/collector-service';
-import { getTicketForCollector } from '@/lib/support/collector-service';
-import { persistSupportAttachments } from '@/lib/storage/support-attachments';
-import type { SupportMessage } from '@/lib/validation/support';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
+import { getCollectorSessionFromRequest } from '@/modules/auth/application/collector-session';
+import { addMessageToTicketForCollector } from '@/modules/support/application/collector-service';
+import { getTicketForCollector } from '@/modules/support/application/collector-service';
+import { persistSupportAttachments } from '@/platform/storage/support-attachments';
+import type { SupportMessage } from '@/shared/validation/support';
 
 const MAX_FILES = 5;
 

@@ -5,11 +5,11 @@
  * CACHE: 1 hora - dados de pontos mudam raramente
  */
 
-import { withApiHandler } from '@/lib/api/handler';
-import { prisma } from '@/lib/db';
-import { getCoordinatesForCep } from '@/lib/services/postgis';
-import { logger } from '@/lib/logger';
-import { cacheGetOrSet, CacheTTL } from '@/lib/cache';
+import { withApiHandler } from '@/platform/api/handler';
+import { prisma } from '@/platform/db/db';
+import { getCoordinatesForCep } from '@/platform/db/postgis';
+import { logger } from '@/platform/logging/logger';
+import { cacheGetOrSet, CacheTTL } from '@/platform/cache/cache';
 
 interface PickupPoint {
   id: string;

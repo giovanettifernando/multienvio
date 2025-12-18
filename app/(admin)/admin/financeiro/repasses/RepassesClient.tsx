@@ -1,7 +1,7 @@
 'use client';
 
-import { CarrierPayoutsTable } from '@/components/admin/finance/CarrierPayoutsTable';
-import { PageShell } from '@/components/shared/PageShell';
+import { CarrierPayoutsTable } from '@/modules/admin/ui/components/finance/CarrierPayoutsTable';
+import { PageShell } from '@/shared/ui/PageShell';
 
 export default function RepassesClient() {
   return (

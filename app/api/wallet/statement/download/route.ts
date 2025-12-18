@@ -6,20 +6,20 @@
  */
 
 import { NextResponse } from 'next/server';
-import { getSession } from '@/lib/auth/session';
-import { prisma } from '@/lib/db';
-import { calculatePeriodSummary, getLastNDaysRange } from '@/lib/wallet/period-summary';
+import { getSession } from '@/modules/auth/application/session';
+import { prisma } from '@/platform/db/db';
+import { calculatePeriodSummary, getLastNDaysRange } from '@/modules/wallet/application/period-summary';
 import {
   getTransactionDirection,
   getTransactionTypeLabel,
-} from '@/lib/wallet/transaction-direction';
-import { formatNumberBR, formatWalletDescription } from '@/lib/format';
+} from '@/modules/wallet/application/transaction-direction';
+import { formatNumberBR, formatWalletDescription } from '@/shared/utils/format';
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import { readFile } from 'fs/promises';
 import { join } from 'path';
 import type { Prisma, WalletTxType } from '@prisma/client';
-import { withApiHandlerResponse } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
+import { withApiHandlerResponse } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
 
 export const maxDuration = 60; // 60 segundos para gerar o PDF
 

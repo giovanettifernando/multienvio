@@ -1,8 +1,8 @@
-import { withApiHandler } from "@/lib/api/handler";
-import { ApiError } from "@/lib/api/errors";
-import prisma from "@/lib/db";
-import { getUserFromRequest } from "@/lib/auth/session";
-import { UserPreferencesSchema } from "@/lib/validation/account";
+import { withApiHandler } from "@/platform/api/handler";
+import { ApiError } from "@/platform/api/errors";
+import prisma from "@/platform/db/db";
+import { getUserFromRequest } from "@/modules/auth/application/session";
+import { UserPreferencesSchema } from '@/shared/validation/account';
 
 interface UserPreferencesResponse {
   defaultPostingUnitId: string | null;

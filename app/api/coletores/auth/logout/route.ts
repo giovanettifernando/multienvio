@@ -5,9 +5,9 @@
 
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { withApiHandlerResponse } from '@/lib/api/handler';
-import { getAutonomousCollectorSession, AUTONOMOUS_COLLECTOR_COOKIE_NAME } from '@/lib/auth/autonomous-collector-session';
-import { collectorSessionCache } from '@/lib/cache';
+import { withApiHandlerResponse } from '@/platform/api/handler';
+import { getAutonomousCollectorSession, AUTONOMOUS_COLLECTOR_COOKIE_NAME } from '@/modules/auth/application/autonomous-collector-session';
+import { collectorSessionCache } from '@/platform/cache/cache';
 
 type CollectorLogoutResponse = {
   message: string;

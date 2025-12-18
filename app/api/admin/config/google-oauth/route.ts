@@ -6,12 +6,12 @@
  */
 
 import { z } from 'zod';
-import { prisma } from '@/lib/db';
-import { requireAdminUser } from '@/lib/auth/admin-helpers';
+import { prisma } from '@/platform/db/db';
+import { requireAdminUser } from '@/modules/auth/application/admin-helpers';
 import { AdminPermission } from '@prisma/client';
-import { encrypt, decrypt } from '@/lib/integrations/shared/encryption.service';
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
+import { encrypt, decrypt } from '@/platform/integrations/shared/encryption.service';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
 
 /**
  * Schema de validação para configuração Google OAuth
@@ -125,7 +125,7 @@ export const POST = withApiHandler(async ({ req }) => {
 
   // Invalidar cache do módulo google-oauth
   try {
-    const { invalidateGoogleOAuthCache } = await import('@/lib/auth/google-oauth');
+    const { invalidateGoogleOAuthCache } = await import('@/modules/auth/application/google-oauth');
     invalidateGoogleOAuthCache();
   } catch {
     // Cache não implementado ainda

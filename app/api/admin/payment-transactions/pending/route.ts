@@ -4,11 +4,11 @@
  * Lista todos os pagamentos pendentes de aprovação
  */
 
-import { requireAdminUser } from '@/lib/auth/admin-helpers';
+import { requireAdminUser } from '@/modules/auth/application/admin-helpers';
 import { AdminPermission } from '@prisma/client';
-import { prisma } from '@/lib/db';
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
+import { prisma } from '@/platform/db/db';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
 
 export const GET = withApiHandler(async ({ req }) => {
   const authResult = await requireAdminUser(req, AdminPermission.INTEGRACOES);

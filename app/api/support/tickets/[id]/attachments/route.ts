@@ -1,8 +1,8 @@
-import { getSession } from "@/lib/auth/session";
-import { getTicketForUser } from "@/lib/support/service";
-import { withApiHandler } from "@/lib/api/handler";
-import { ApiError } from "@/lib/api/errors";
-import type { SupportAttachment } from "@/lib/validation/support";
+import { getSession } from "@/modules/auth/application/session";
+import { getTicketForUser } from "@/modules/support/application/service";
+import { withApiHandler } from "@/platform/api/handler";
+import { ApiError } from "@/platform/api/errors";
+import type { SupportAttachment } from '@/shared/validation/support';
 
 interface GetAttachmentsResponse {
   attachments: SupportAttachment[];

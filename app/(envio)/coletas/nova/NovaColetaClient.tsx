@@ -2,11 +2,11 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { Typography } from "antd";
-import { ELSkeleton } from "@/components/ui/ELSkeleton";
-import type { CompanyWizardData } from "@/lib/validation/company";
-import type { Shipment } from "@/types/shipment";
-import { PickupWizard } from "@/components/pickups/PickupWizard";
-import { PageShell } from "@/components/shared/PageShell";
+import { ELSkeleton } from '@/shared/ui/ELSkeleton';
+import type { CompanyWizardData } from '@/shared/validation/company';
+import type { Shipment } from '@/shared/types/shipment';
+import { PickupWizard } from "@/modules/pickup-points/ui/components/PickupWizard";
+import { PageShell } from '@/shared/ui/PageShell';
 
 async function fetchCompany(): Promise<CompanyWizardData | null> {
   const response = await fetch("/api/account/company");

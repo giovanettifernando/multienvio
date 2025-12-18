@@ -2,8 +2,8 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { logoutAdmin } from "@/lib/admin/auth";
-import { useAdminSession } from "@/stores/useAdminSession";
+import { logoutAdmin } from "@/modules/admin/application/auth";
+import { useAdminSession } from '@/modules/admin/ui/state/useAdminSession';
 import { Spin } from "antd";
 
 export default function LogoutClient() {

@@ -6,12 +6,12 @@
  */
 
 import { z } from 'zod';
-import { requireAdminUser } from '@/lib/auth/admin-helpers';
+import { requireAdminUser } from '@/modules/auth/application/admin-helpers';
 import { AdminPermission } from '@prisma/client';
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
-import { testConnection as testOpenRouterConnection } from '@/lib/integrations/openrouter/client';
-import { getOpenRouterConfigDecrypted } from '@/lib/integrations/openrouter/config.service';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
+import { testConnection as testOpenRouterConnection } from '@/platform/integrations/openrouter/client';
+import { getOpenRouterConfigDecrypted } from '@/platform/integrations/openrouter/config.service';
 
 /**
  * Response type for test endpoint

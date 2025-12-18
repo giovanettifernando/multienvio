@@ -6,11 +6,11 @@
  * Usado para polling do status do PIX na pagina de pagamento do destinatario
  */
 
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
 import { z } from 'zod';
-import { prisma } from '@/lib/db';
-import { updatePaymentFromMercadoPago } from '@/lib/mercadopago';
+import { prisma } from '@/platform/db/db';
+import { updatePaymentFromMercadoPago } from '@/platform/integrations/mercadopago';
 
 const refreshSchema = z.object({
   transactionId: z.string().min(1, 'ID da transacao e obrigatorio'),

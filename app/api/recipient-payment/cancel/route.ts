@@ -5,11 +5,11 @@
  * Requer autenticacao - apenas o remetente pode cancelar
  */
 
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
-import { getSession } from '@/lib/auth/session';
-import { cancelRecipientPaymentRequest } from '@/lib/recipient-payment/service';
-import { cancelRequestSchema } from '@/lib/recipient-payment/validation';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
+import { getSession } from '@/modules/auth/application/session';
+import { cancelRecipientPaymentRequest } from '@/modules/recipients/application/service';
+import { cancelRequestSchema } from '@/modules/recipients/application/validation';
 
 type CancelResponse = {
   success: boolean;

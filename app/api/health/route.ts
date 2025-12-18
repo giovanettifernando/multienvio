@@ -1,6 +1,6 @@
 import packageJson from "@/package.json";
-import { withApiHandler } from "@/lib/api/handler";
-import { getAppStartedAtIso } from "@/lib/api/runtime";
+import { withApiHandler } from "@/platform/api/handler";
+import { getAppStartedAtIso } from "@/platform/api/runtime";
 
 const VERSION = packageJson.version ?? "0.0.0";
 

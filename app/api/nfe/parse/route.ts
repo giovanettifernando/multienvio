@@ -1,5 +1,5 @@
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
 import { z } from 'zod';
 import type {
   InvoiceData,
@@ -13,7 +13,7 @@ import type {
   NFePagamento,
   NFeProtocolo,
   NFeImpostosItem,
-} from '@/lib/types/invoice';
+} from '@/shared/types/invoice';
 
 
 // SECURITY: Limite de tamanho para prevenir ataques de DoS (XML bomb, Billion Laughs)

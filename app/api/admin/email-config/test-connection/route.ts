@@ -4,9 +4,9 @@
  * Testa a conexão SMTP com os parâmetros fornecidos
  */
 
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
-import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
+import { getAdminSessionFromRequest } from '@/modules/auth/application/admin-session';
 import { AdminPermission } from '@prisma/client';
 import nodemailer from 'nodemailer';
 import { z } from 'zod';

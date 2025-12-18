@@ -11,12 +11,12 @@ import {
   Typography,
 } from "antd";
 import { EditOutlined, ArrowLeftOutlined } from "@ant-design/icons";
-import { ELAlert } from "@/components/ui/ELAlert";
-import { ELCard } from "@/components/ui/ELCard";
-import { ELGrid } from "@/components/ui/ELGrid";
-import { ELSkeleton } from "@/components/ui/ELSkeleton";
-import { PageShell } from "@/components/shared/PageShell";
-import { ELButton } from "@/components/ui/ELButton";
+import { ELAlert } from '@/shared/ui/ELAlert';
+import { ELCard } from '@/shared/ui/ELCard';
+import { ELGrid } from '@/shared/ui/ELGrid';
+import { ELSkeleton } from '@/shared/ui/ELSkeleton';
+import { PageShell } from '@/shared/ui/PageShell';
+import { ELButton } from '@/shared/ui/ELButton';
 import {
   FormProvider,
   SubmitHandler,
@@ -25,27 +25,27 @@ import {
 } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useShallow } from "zustand/react/shallow";
-import { DocumentChooser } from "@/components/quote/DocumentChooser";
-import { PostingUnitPicker } from "@/components/quote/PostingUnitPicker";
-import { RecipientModal } from "@/components/quote/RecipientModal";
-import { LabelPreview } from "@/components/quote/LabelPreview";
-import { ResultsBanner } from "@/components/quote/ResultsBanner";
-import { useQuoteStore } from "@/store/useQuoteStore";
+import { DocumentChooser } from "@/modules/quotes/ui/components/DocumentChooser";
+import { PostingUnitPicker } from "@/modules/quotes/ui/components/PostingUnitPicker";
+import { RecipientModal } from "@/modules/quotes/ui/components/RecipientModal";
+import { LabelPreview } from "@/modules/quotes/ui/components/LabelPreview";
+import { ResultsBanner } from "@/modules/quotes/ui/components/ResultsBanner";
+import { useQuoteStore } from '@/modules/quotes/ui/state/useQuoteStore';
 import { useCartAdd } from "@/hooks/useCart";
 import { useRecipientSave } from "@/hooks/useQuotes";
 import {
   createFinalizeFormSchema,
   validateVolumeDocumentsOnSubmit,
   type FinalizeFormValues,
-} from "@/types/quoteFinalize";
-import type { DocumentType } from "@/types/quote";
-import { useQuoteDraft } from "@/lib/state/quoteDraft";
-import { useCheckoutStore } from "@/stores/checkout";
-import { CheckoutModal } from "@/components/payments/CheckoutModal";
-import { PaidCheckoutModal, type CheckoutData } from "@/components/payments/PaidCheckoutModal";
+} from '@/shared/types/quoteFinalize';
+import type { DocumentType } from '@/shared/types/quote';
+import { useQuoteDraft } from "@/modules/quotes/ui/state/quoteDraft";
+import { useCheckoutStore } from '@/modules/cart/ui/state/checkout';
+import { CheckoutModal } from "@/modules/payments/ui/components/CheckoutModal";
+import { PaidCheckoutModal, type CheckoutData } from "@/modules/payments/ui/components/PaidCheckoutModal";
 import { usePickupFee } from "@/hooks/usePickupFee";
-import { generateUUID } from "@/lib/utils/uuid";
-import { useAddressStore } from "@/lib/state/addresses";
+import { generateUUID } from "@/shared/utils/uuid";
+import { useAddressStore } from "@/modules/auth/ui/state/addresses";
 import { useAddresses } from "@/hooks/useAccount";
 
 const dispatchTelemetry = (event: string, detail?: Record<string, unknown>) => {

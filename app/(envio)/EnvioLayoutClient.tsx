@@ -1,9 +1,9 @@
 'use client';
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuthStore, useAuthHydrated } from '@/stores/auth';
-import { DashboardShell } from '@/components/layout/dashboard-shell';
-import { SessionIdleModal } from '@/components/session/SessionIdleModal';
+import { useAuthStore, useAuthHydrated } from '@/modules/auth/ui/state/auth';
+import { DashboardShell } from '@/shared/ui/layout/dashboard-shell';
+import { SessionIdleModal } from '@/modules/auth/ui/components/SessionIdleModal';
 import { Spin } from 'antd';
 
 export default function EnvioLayoutClient({ children }: { children: React.ReactNode }) {

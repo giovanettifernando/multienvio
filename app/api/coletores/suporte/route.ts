@@ -1,12 +1,12 @@
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
-import { getAutonomousCollectorSession } from '@/lib/auth/autonomous-collector-session';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
+import { getAutonomousCollectorSession } from '@/modules/auth/application/autonomous-collector-session';
 import {
   listTicketsForAutonomousCollector,
   createTicketForAutonomousCollector,
   type AutonomousCollectorTicketFilters,
-} from '@/lib/support/autonomous-collector-service';
-import { NewTicketInputSchema, type Status, type Priority, type SupportTicket } from '@/lib/validation/support';
+} from '@/modules/support/application/autonomous-collector-service';
+import { NewTicketInputSchema, type Status, type Priority, type SupportTicket } from '@/shared/validation/support';
 import { z } from 'zod';
 
 type SuporteListResponse = {

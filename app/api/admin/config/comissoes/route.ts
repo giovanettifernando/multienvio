@@ -8,10 +8,10 @@
 
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
-import { prisma } from '@/lib/db';
-import { requireAdminUser } from '@/lib/auth/admin-helpers';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
+import { prisma } from '@/platform/db/db';
+import { requireAdminUser } from '@/modules/auth/application/admin-helpers';
 import { AdminPermission } from '@prisma/client';
 
 /**
@@ -140,7 +140,7 @@ export const POST = withApiHandler(async ({ req }) => {
 
   // Invalidar cache se houver
   try {
-    const { invalidatePlatformCommissionCache } = await import('@/lib/quotes/commission');
+    const { invalidatePlatformCommissionCache } = await import('@/modules/quotes/application/commission');
     invalidatePlatformCommissionCache();
   } catch {
     // Cache não implementado ainda ou módulo não existe

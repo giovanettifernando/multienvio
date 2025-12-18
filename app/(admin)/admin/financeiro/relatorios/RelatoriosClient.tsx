@@ -1,9 +1,9 @@
 'use client';
 
 import { Tabs } from 'antd';
-import { DRETable } from '@/components/admin/finance/DRETable';
-import { AccountsPayableTable } from '@/components/admin/finance/AccountsPayableTable';
-import { PageShell } from '@/components/shared/PageShell';
+import { DRETable } from '@/modules/admin/ui/components/finance/DRETable';
+import { AccountsPayableTable } from '@/modules/admin/ui/components/finance/AccountsPayableTable';
+import { PageShell } from '@/shared/ui/PageShell';
 
 export default function RelatoriosClient() {
   return (

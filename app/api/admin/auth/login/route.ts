@@ -1,15 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ZodError } from 'zod';
 import bcrypt from 'bcrypt';
-import { withApiHandlerResponse } from '@/lib/api/handler';
-import { AdminLoginSchema } from '@/lib/validation/admin-auth';
-import { prisma } from '@/lib/db';
-import { adminSign, createAdminCookieHeader } from '@/lib/auth/admin-session';
-import { logAdminLogin } from '@/lib/audit-admin';
+import { withApiHandlerResponse } from '@/platform/api/handler';
+import { AdminLoginSchema } from '@/shared/validation/admin-auth';
+import { prisma } from '@/platform/db/db';
+import { adminSign, createAdminCookieHeader } from '@/modules/auth/application/admin-session';
+import { logAdminLogin } from '@/platform/logging/audit-admin';
 import { AdminPermission, StaffStatus } from '@prisma/client';
-import { rateLimitByIPStrict, RATE_LIMITS } from '@/lib/rate-limit-redis';
-import { staffSessionCache } from '@/lib/cache';
-import { requireValidOrigin } from '@/lib/api/csrf';
+import { rateLimitByIPStrict, RATE_LIMITS } from '@/platform/cache/rate-limit-redis';
+import { staffSessionCache } from '@/platform/cache/cache';
+import { requireValidOrigin } from '@/platform/api/csrf';
 
 type AdminLoginResponse = {
   staff: {

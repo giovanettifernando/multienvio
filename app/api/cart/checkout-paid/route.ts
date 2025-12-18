@@ -14,13 +14,13 @@
  */
 
 import { NextRequest } from 'next/server';
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
 import { z } from 'zod';
-import { getUserSessionFromRequest } from '@/lib/auth/user-session';
-import { createCartShipmentsWithPayment, CartPaymentMethod } from '@/lib/cart/create-cart-shipments-with-payment.service';
-import { enforceRateLimitByIP, RATE_LIMITS } from '@/lib/rate-limit-redis';
-import { logger } from '@/lib/logger';
+import { getUserSessionFromRequest } from '@/modules/auth/application/user-session';
+import { createCartShipmentsWithPayment, CartPaymentMethod } from '@/modules/cart/application/create-cart-shipments-with-payment.service';
+import { enforceRateLimitByIP, RATE_LIMITS } from '@/platform/cache/rate-limit-redis';
+import { logger } from '@/platform/logging/logger';
 
 /**
  * Resposta da API

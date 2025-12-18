@@ -1,9 +1,9 @@
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
 import {
   companyWizardSchema,
   type CompanyWizardData,
-} from "@/lib/validation/company";
+} from '@/shared/validation/company';
 
 type GetCompanyResponse = {
   company: CompanyWizardData | null;

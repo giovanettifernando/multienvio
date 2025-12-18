@@ -1,5 +1,5 @@
 import { Spin } from 'antd';
-import { FormCard } from '@/components/ui/FormCard';
+import { FormCard } from '@/shared/ui/FormCard';
 
 export default function ConfirmacaoLoading() {
   return (

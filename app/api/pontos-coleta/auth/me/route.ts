@@ -1,7 +1,7 @@
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
-import { getCollectorSessionFromRequest } from '@/lib/auth/collector-session';
-import { prisma } from '@/lib/db';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
+import { getCollectorSessionFromRequest } from '@/modules/auth/application/collector-session';
+import { prisma } from '@/platform/db/db';
 
 type CollectorMeResponse = {
   collector: {

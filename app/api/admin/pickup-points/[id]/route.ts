@@ -1,11 +1,11 @@
 import { z } from 'zod';
 import bcrypt from 'bcrypt';
-import { prisma } from '@/lib/db';
-import { requireAdminUser } from '@/lib/auth/admin-helpers';
+import { prisma } from '@/platform/db/db';
+import { requireAdminUser } from '@/modules/auth/application/admin-helpers';
 import { AdminPermission, Prisma, PickupPointStatus } from '@prisma/client';
 import { Decimal } from '@prisma/client/runtime/client';
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
 
 const pixMethodSchema = z.object({
   kind: z.literal('pix'),

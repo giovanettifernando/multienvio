@@ -5,18 +5,18 @@
  * Sincroniza agências do banco com a API dos Correios
  */
 
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
-import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
-import { prisma } from '@/lib/db';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
+import { getAdminSessionFromRequest } from '@/modules/auth/application/admin-session';
+import { prisma } from '@/platform/db/db';
 import { AdminPermission } from '@prisma/client';
 import {
   listarTodasAgencias,
   mapStatusToEnum,
   mapTipoSiglaToEnum,
   type CorreiosAgenciaAPI,
-} from '@/lib/correios/agencia-client';
-import { logger } from '@/lib/logger';
+} from '@/platform/integrations/correios/agencia-client';
+import { logger } from '@/platform/logging/logger';
 
 type CorreiosAgencySyncResponse = {
   success: boolean;

@@ -1,14 +1,14 @@
-import { ApiError } from "@/lib/api/errors";
-import { withApiHandler } from "@/lib/api/handler";
+import { ApiError } from "@/platform/api/errors";
+import { withApiHandler } from "@/platform/api/handler";
 import {
   getRecipient,
   deleteRecipient,
   updateRecipient,
   type AccountRecipientDto,
-} from "@/lib/services/account-recipients.service";
+} from "@/modules/auth/application/account-recipients.service";
 import {
   validateRecipientUpdateInput,
-} from "@/lib/validation/recipient";
+} from '@/shared/validation/recipient';
 import {
   enforceRecipientWriteLimit,
   mapRecipientValidationError,

@@ -13,14 +13,14 @@
  */
 
 import { z } from 'zod';
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
-import { getUserFromRequest } from '@/lib/auth/session';
-import { prisma } from '@/lib/db';
-import { isOpenRouterConfigured, getOpenRouterConfigDecrypted } from '@/lib/integrations/openrouter/config.service';
-import { orchestrateAssistantChat } from '@/lib/assistant/tools/orchestrator';
-import { generateSystemPrompt, UNAUTHENTICATED_PROMPT } from '@/lib/assistant/prompts/system';
-import type { OpenRouterMessage } from '@/lib/integrations/openrouter/client';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
+import { getUserFromRequest } from '@/modules/auth/application/session';
+import { prisma } from '@/platform/db/db';
+import { isOpenRouterConfigured, getOpenRouterConfigDecrypted } from '@/platform/integrations/openrouter/config.service';
+import { orchestrateAssistantChat } from '@/modules/assistant/application/tools/orchestrator';
+import { generateSystemPrompt, UNAUTHENTICATED_PROMPT } from '@/modules/assistant/application/prompts/system';
+import type { OpenRouterMessage } from '@/platform/integrations/openrouter/client';
 import {
   createDebugContext,
   addDebugEvent,
@@ -28,8 +28,8 @@ import {
   type DebugContext,
   type DebugSummary,
   type DebugEvent,
-} from '@/lib/assistant/debug';
-import { logger } from '@/lib/logger';
+} from '@/modules/assistant/application/debug';
+import { logger } from '@/platform/logging/logger';
 
 // ============================================================================
 // Idempotency Cache (in-memory, 60s TTL)

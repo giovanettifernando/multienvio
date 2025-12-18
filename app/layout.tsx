@@ -3,8 +3,8 @@ import { AntdRegistry } from "@ant-design/nextjs-registry";
 import { ConfigProvider } from 'antd';
 import ptBR from "antd/locale/pt_BR";
 import { Inter } from "next/font/google";
-import { AppProviders } from "@/components/providers/app-providers";
-import { getThemeConfig } from "@/lib/ui/theme";
+import { AppProviders } from '@/shared/ui/providers/app-providers';
+import { getThemeConfig } from "@/shared/ui/theme";
 import "./globals.css";
 
 const inter = Inter({

@@ -4,9 +4,9 @@ import { useState, useCallback } from 'react';
 import { App, Input, Table, Typography, Space, Alert, Spin } from 'antd';
 import { PlayCircleOutlined, WarningOutlined } from '@ant-design/icons';
 import { useMutation } from '@tanstack/react-query';
-import { PageShell } from '@/components/shared/PageShell';
-import { ELButton } from '@/components/ui/ELButton';
-import { ELCard } from '@/components/ui/ELCard';
+import { PageShell } from '@/shared/ui/PageShell';
+import { ELButton } from '@/shared/ui/ELButton';
+import { ELCard } from '@/shared/ui/ELCard';
 
 const { TextArea } = Input;
 const { Text } = Typography;

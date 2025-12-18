@@ -3,8 +3,8 @@
  * GET /api/health/dependencies - Checks database, external services, etc.
  */
 
-import { withApiHandler } from "@/lib/api/handler";
-import { pingDatabase, getPoolMetrics } from "@/lib/db";
+import { withApiHandler } from "@/platform/api/handler";
+import { pingDatabase, getPoolMetrics } from "@/platform/db/db";
 
 
 interface DependencyStatus {

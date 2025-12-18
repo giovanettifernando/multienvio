@@ -1,48 +1,43 @@
-# Auditoria de Estrutura – Envio Legal
+# Auditoria de Estrutura – Envio Legal (após reorganização)
 
 ## 3.1 Mapa do repositório
-- `app/`: rotas App Router. Segmentos paralelos `(envio)`, `(admin)`, `(collector)`, `(auth)`, `(public)` com wrappers `ClientWrapper`/`layout` (ex.: `app/(envio)/cotacoes/page.tsx`, `app/(admin)/admin/page.tsx`, `app/(collector)/collector/page.tsx`, `app/(public)/pagar/[token]/PaymentPageClient.tsx`). `app/api/**` concentra handlers REST/Next (cotacoes, cart, payments, shipments, pickup-points etc.) e arquivos de erro/global (`layout.tsx`, `globals.css`, `error.tsx`, `not-found.tsx`).
-- `components/`: biblioteca UI/feature distribuída por domínio (`components/quote/**`, `components/payments/**`, `components/labels/**`, `components/admin/**`, `components/support/**`, `components/cart/**`, etc.), mais pastas genéricas (`components/ui` com primitivos e componentes de shipments/tracking, `components/shared`, `components/layout`, `components/providers`). Mistura CSS Modules e componentes React.
-- `lib/`: concentra tudo de backoffice: prisma wrapper `lib/db.ts`, serviços (`lib/services/**`), integrações (`lib/integrations/**`, `lib/mercadopago/**`, `lib/correios/**`, `lib/assistant/**`), validações (`lib/validation/**`), autenticação (`lib/auth/**`), utilities (`lib/utils/**`), estado (`lib/state/**`), tipos (`lib/types/**`), adaptadores (`lib/adapters/**`), UI helper (`lib/ui/**`), repositórios (`lib/repositories/**`), constantes/config (`lib/config/**`, `lib/constants`). Pasta `lib/features/` está vazia.
-- `prisma/`: `schema.prisma`, seeds (`seed.ts`, `seed-faq.ts`), migrações recentes e backup (`prisma/migrations/**`, `prisma/migrations_backup_20251115_141457/**`).
-- `hooks/`: hooks de dados front (`hooks/useQuotes.ts`, `hooks/useWallet.ts`, `hooks/usePickupPoints.ts`, etc.) chamando APIs externas/Next.
-- `store/` e `stores/`: stores Zustand independentes (`store/useQuoteStore.ts` separado de `stores/auth.ts`, `stores/session.ts`, `stores/useColetorSession.ts`, `stores/useCollectorSession.ts`, etc.).
-- `types/`: definições de tipos de domínio (quote, shipments, tracking, wallet, support) paralelas a `lib/types`.
-- `tests/`, `tests-e2e/`, `tests-v2/`: três árvores distintas (unitários e e2e Playwright antigos em `tests/`, smoke Playwright em `tests-e2e/`, suíte mais nova com `tests-v2/unit|integration|e2e` e `tests-v2/package.json` próprio).
-- `scripts/`: scripts de manutenção/diagnóstico (integrações MercadoPago, Correios, geocodificação, migrações de status, wallet, etc.).
-- `data/system-status.json`: cache/fixtures de status.
-- `public/`: assets estáticos e favicons.
-- `_infra/postgres/docker-compose.yml`: infra de dev.
-- `_data -> /home/giovanetti/_data_backup`: volume postgres externo; acesso bloqueado (`Permissão negada`).
-- `docs/`: documentação extensa existente (auditorias, planos de correção, integrações).
-- Outros: `coverage/`, `logs/`, `build*.log`, `google/` cred JSON, configs (`eslint.config.mjs`, `tsconfig*.json`, `playwright.config.ts`, `next.config.ts`, `proxy.ts`, `instrumentation.ts`).
+- `app/`: App Router com segmentos `(envio)`, `(admin)`, `(collector)`, `(auth)`, `(public)` ainda com wrappers `ClientWrapper` (ex.: `app/(envio)/cotacoes/page.tsx`, `app/(admin)/admin/page.tsx`, `app/(public)/pagar/[token]/PaymentPageClient.tsx`). `app/api/**` segue concentrando handlers REST; alguns já usam `@/platform/api/*` e módulos, outros permanecem com lógica completa inline.
+- `modules/`: nova raiz por feature com subcamadas `domain/`, `application/`, `infra/`, `dto/`, `api/`, `ui/` (ex.: `modules/quotes/ui/components/**`, `modules/cart/application/checkout.service.ts`, `modules/support/application/service.ts`, `modules/admin/application/finance/**`). Cada módulo também contém `ui/state` e `ui/hooks`.
+- `shared/`: camada transversal com `shared/ui/**` (primitivos e wrappers antes em `components/ui`), `shared/utils/**`, `shared/validation/**`, `shared/types/**`, além de hooks e (por enquanto) `shared/state/` vazio.
+- `platform/`: infraestrutura comum: `platform/api/**` (substitui `lib/api`), `platform/db/**`, `platform/cache/**` (inclui rate limit redis), `platform/integrations/**` (correios, mercadopago, openrouter, fipe), `platform/logging/**`, `platform/crypto/**`, `platform/email/**`, `platform/storage/**`.
+- `_backup_compat_layers/`: backup das pastas de compatibilidade removidas (`lib/`, `components/`, `store/`, `stores/`, `types/`) para rollback se necessário.
+- `hooks/`: mantidos, vários ajustados para novos imports mas ainda consumindo APIs diretamente.
+- `prisma/`: `schema.prisma`, seeds e migrações (inclui backup em `prisma/migrations_backup_20251115_141457/**`).
+- `tests/`: consolidado como raiz única contendo `unit/`, `integration/`, `e2e/` e `obsolete/` (testes de módulos deletados). Usa Node.js test runner para unit/integration e Playwright para e2e.
+- `scripts/`: permanece coleção ampla de scripts (MP, Correios, geocoding, wallet, status), mais scripts novos de migração de imports (`scripts/fix-imports.ts`, `create-reexports.ts`).
+- `shared/public infrastructure`: `public/` assets, `_infra/postgres/docker-compose.yml`, `data/system-status.json`, `google/...json`. `_data` continua como symlink para `/home/giovanetti/_data_backup` (sem permissão de leitura).
+- `docs/`: documentação existente permanece.
 
 ## 3.2 Inventário de padrões atuais
-- **Rotas e renderização**: páginas server + wrappers client (ex.: `app/(envio)/cotacoes/page.tsx` usa `Suspense` e `ClientWrapper` com `dynamic`); rotas API agrupadas por domínio em subpastas de `app/api`.
-- **Tratamento API**: vários handlers usam `withApiHandler` + `ApiError` (`app/api/cotacoes/route.ts`, `app/api/cart/route.ts`); porém mistura import de prisma nomeado e default (`app/api/recurring-items/[id]/route.ts`).
-- **Validação**: `lib/validation/**` concentra schemas para auth, quote, shipment, etc., mas há schemas duplicados no front (`components/quote/quoteFormSchema.ts`, backup `lib/validation/support.ts.backup`).
-- **Acesso a dados**: `lib/db.ts` cria cliente Prisma com Pool PG; muitas rotas API acessam prisma direto (`app/api/cart/route.ts`, `app/api/pickup-points/route.ts`, `app/api/recurring-items/[id]/route.ts`).
-- **Integrações**: espalhadas entre `lib/integrations/**` (openrouter, payments, fipe, correios shared), `lib/mercadopago/**` e `lib/correios/**`, mais scripts de teste em `scripts/test-mp-*.mjs` e `scripts/test-correios-*.ts|mjs`.
-- **UI compartilhada**: `components/ui` mistura primitivos (botões, inputs) com componentes de domínio (QuoteResultCard, shipments-table, TrackingTimeline) e status tags específicas.
-- **Estado cliente**: hooks em `hooks/` + Zustand em `store/` e `stores/` (nomes e convenções diferentes).
-- **Tipos**: tipos de domínio duplicados entre `types/` e `lib/types/`; alguns componentes importam tipos direto do Prisma (`components/admin/finance/WalletTransactionsTable.tsx`).
-- **Testes**: coexistem múltiplas gerações de testes com configs diferentes (Jest/Playwright) sem pasta única.
+- **Camada de compatibilidade**: `components/*`, `lib/*`, `store(s)/*`, `types/*` agora são shims que reexportam `modules/*`, `shared/*` ou `platform/*` para evitar quebra de imports legados.
+- **Feature modules**: para a maioria dos domínios existem pastas completas com `domain/application/infra/ui/dto` (ex.: `modules/quotes`, `modules/cart`, `modules/wallet`, `modules/admin`, `modules/support`, `modules/assistant`), contendo componentes, hooks e stores próprios.
+- **Infra centralizada**: rotas passaram a importar `withApiHandler` de `platform/api/handler`, `ApiError` de `platform/api/errors`, Prisma via `platform/db/db`, rate limit e cache em `platform/cache/**`, integrações em `platform/integrations/**`.
+- **Validações/DTOs**: schemas migrados para `modules/*/dto` e `shared/validation`, mas muitos pontos continuam importando pelo alias legado `@/lib/validation/...` (que reexporta os novos arquivos).
+- **UI**: primitivos e wrappers genéricos vivem em `shared/ui/**`; componentes de domínio migraram para `modules/<feature>/ui/components`. Hooks de UI de compatibilidade em `components/*` apenas reexportam.
+- **Estado cliente**: stores ficam em `modules/<feature>/ui/state`; hooks em `modules/<feature>/ui/hooks`. Pastas `store/` e `stores/` funcionam apenas como ponte.
+- **Tipos**: `shared/types/**` tornou-se fonte canônica; `types/*` e importações de `@/types` agora delegam para `shared`.
+- **Testes**: ainda não consolidados; três pastas distintas coexistem com toolchains diferentes.
 
-## 3.3 Problemas e sintomas (com evidência)
-- **UI “shared” com domínio misturado**: `components/ui/QuoteResultCard.tsx`, `components/ui/shipments-table.tsx`, `components/ui/TrackingTimeline.tsx` vivem ao lado de primitivos `ELButton.tsx`/`ELInput.tsx`, tornando a pasta um “catch-all” e dificultando reutilização/composição por camada.
-- **Regras de negócio e persistência embutidas nas rotas API**: `app/api/cart/route.ts` implementa toda a regra de criação/reset do carrinho com prisma direto e tratamento de erros; `app/api/pickup-points/route.ts` contém lógica de cache, geocodificação e mapeamento; `app/api/recurring-items/[id]/route.ts` faz autorização, validação zod e operações prisma. Falta camada de domínio/serviço separada, elevando risco de duplicação e dificultando testes unitários.
-- **Validações duplicadas/front vs backend**: formulário de cotação usa `components/quote/quoteFormSchema.ts` enquanto a API usa `lib/validation/quote-backend.ts`; backup `lib/validation/support.ts.backup` sugere divergência. Possível drift de regras entre cliente e servidor.
-- **Stores de sessão/estado redundantes e com naming inconsistente**: existe `store/useQuoteStore.ts` isolado, e em `stores/` há `session.ts`, `session.ts.deprecated`, `useColetorSession.ts` e `useCollectorSession.ts` (mesma ideia com nomenclatura pt/en), além de stores para auth/checkout/pontos. Sinal de sobreposição e ausência de convenções.
-- **Camadas de domínio desnormalizadas dentro de `lib`**: serviços, integrações, tipos, UI helpers e validações estão todos em `lib/*` no mesmo nível e há uma pasta vazia `lib/features/`. Não há boundary claro entre domínio (use cases), infra (prisma/cache), e orquestração de rotas.
-- **Tipos espalhados**: coexistem `types/quote.ts`, `types/shipment.ts`, etc. e `lib/types/**` sem regra de origem, aumentando risco de divergência de contratos.
-- **Testes fragmentados**: três raízes (`tests/`, `tests-e2e/`, `tests-v2/`) com configs próprias (`tests-v2/package.json`), dificultando saber qual suíte é canônica ou cobre features atuais.
-- **Dados locais inacessíveis**: `_data` aponta para `/home/giovanetti/_data_backup/postgres` com permissão negada; impede auditar seeds/dumps locais e sugere dependência externa não documentada no repo.
+## 3.3 Problemas e sintomas (pós-reorganização)
+- **Imports migrados (parcialmente)**: ✅ Codemod `scripts/migrate-legacy-imports.ts` migrou ~700+ imports de paths legados para novos paths (`@/shared/*`, `@/modules/*`, `@/platform/*`). Arquivos de validação, tipos, utils e componentes foram copiados para novos locais. Restam apenas shims de compatibilidade em `lib/`, `components/`, `store(s)/` para permitir remoção gradual.
+- **Rotas ainda com regra de negócio embutida**: mesmo com módulos criados, algumas rotas continuam concentrando lógica e acesso direto a Prisma/cache em vez de orquestrar use cases. Ex.: `app/api/cart/route.ts` (criação/reset de carrinho), `app/api/pickup-points/route.ts` (cache + geocode + mapping). Isso fere o boundary pretendido de `app/api` como camada fina.
+- **Validação/DTO sem fonte única explícita**: coexistem `shared/validation`, `modules/*/dto` e imports via `lib/validation` shim. Ainda não há decisão de qual caminho deve ser usado no front (hooks/components) versus API controllers, mantendo risco de drift de contratos.
+- **Estado compartilhado indefinido**: `shared/state` está vazio; stores vivem em `modules/*/ui/state` enquanto `store/` e `stores/` continuam existindo como alias. Sem guideline, novos stores podem reaparecer fora dos módulos.
+- **Testes consolidados**: ✅ Unificados em `tests/` com estrutura `unit/`, `integration/`, `e2e/`. Testes de módulos deletados movidos para `obsolete/`.
+- **Dados locais inacessíveis**: `_data -> /home/giovanetti/_data_backup/postgres` continua com permissão negada, impedindo inspeção de fixtures/seeds locais.
 
-Impactos: aumento de esforço de onboarding (pastas “catch-all”), dificuldade de evoluir regras sem quebrar rotas (lógica colada em handlers), validações e tipos podendo divergir entre front/back, risco de bugs por stores duplicados e imports circulares, e baixa clareza sobre qual suíte de testes usar.
+Impacto: a nova arquitetura está presente, mas a camada de compatibilidade impede enforcement; rotas continuam carregando lógica pesada; validações e stores têm múltiplos caminhos aceitáveis, aumentando risco de inconsistência e dificultando a consolidação final.
 
 ## 3.4 Decisões arquiteturais faltantes
-- **Boundaries explícitos**: ausência de delimitação formal entre UI, domínio, data-access (Prisma), integrações externas e adapters de API; rotas chamam prisma diretamente.
-- **Convenção de pastas e nomes**: não há padrão para componentes shared vs feature (ex.: `components/ui` inclui domínio), stores (`store/` vs `stores/`), tipos (`types/` vs `lib/types/`), nem para integrações (`lib/integrations` vs `lib/mercadopago`/`lib/correios`).
-- **Contratos e DTOs centralizados**: inexistência de fonte única para tipos/DTOs e schemas usados por front e API (ex.: cotação, support, cart).
-- **Padrão de testes**: falta decisão sobre suíte única (jest/vitest? playwright?), localização e nomeação de testes por feature.
-- **Camada de aplicação/domínio**: não há serviços/use-cases claros consumidos pelas rotas; regras vivem em componentes ou handlers.
+- **Fonte canônica de DTO/validation**: escolher se UI/API importam de `modules/<feature>/dto` ou `shared/validation` e eliminar o caminho via `lib/validation`.
+- **Desligar compat layers**: plano e critério para remover barrels de `components/*`, `lib/*`, `store(s)/*`, `types/*` quando todos os imports forem atualizados.
+- **Boundary enforcement**: ✅ ESLint `no-restricted-imports` configurado em `eslint.config.mjs` para:
+  - Emitir warnings em imports legados (`@/lib/*`, `@/components/*`, `@/store(s)/*`, `@/types/*`)
+  - Emitir errors quando UI importa `@/platform/db/*` ou `@prisma/client` diretamente
+- **Padrão de testes**: ✅ Consolidado em `tests/` com Node.js test runner para unit/integration e Playwright para e2e. Scripts atualizados em `package.json`.
+- **Governança de state**: decidir se haverá `shared/state` ou apenas `modules/<feature>/ui/state`, e documentar regra para novos stores/hooks.

@@ -1,9 +1,9 @@
 'use client';
 
-import { ELCard } from '@/components/ui/ELCard';
+import { ELCard } from '@/shared/ui/ELCard';
 import { useRouter } from 'next/navigation';
-import { SupportForm } from '@/components/support/SupportForm';
-import { PageShell } from '@/components/shared/PageShell';
+import { SupportForm } from '@/modules/support/ui/components/SupportForm';
+import { PageShell } from '@/shared/ui/PageShell';
 
 export default function NovoSuporteClient() {
   const router = useRouter();

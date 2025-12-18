@@ -4,11 +4,11 @@
  * Sincroniza um pagamento específico com o Mercado Pago
  */
 
-import { requireAdminUser } from '@/lib/auth/admin-helpers';
+import { requireAdminUser } from '@/modules/auth/application/admin-helpers';
 import { AdminPermission } from '@prisma/client';
-import { updatePaymentFromMercadoPago } from '@/lib/mercadopago/payments';
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
+import { updatePaymentFromMercadoPago } from '@/platform/integrations/mercadopago/payments';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
 
 export const POST = withApiHandler(async ({ req }) => {
   const authResult = await requireAdminUser(req, AdminPermission.INTEGRACOES);

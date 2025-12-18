@@ -4,12 +4,12 @@
  * Atualiza coordenadas de um CEP manualmente
  */
 
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
-import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
+import { getAdminSessionFromRequest } from '@/modules/auth/application/admin-session';
 import { AdminPermission, type CepLocation } from '@prisma/client';
-import { rateLimitByUser, RATE_LIMITS } from '@/lib/rate-limit-redis';
-import { updateCepManual } from '@/lib/services/cepLocation';
+import { rateLimitByUser, RATE_LIMITS } from '@/platform/cache/rate-limit-redis';
+import { updateCepManual } from '@/platform/integrations/shared/cepLocation';
 import { z } from 'zod';
 
 const manualUpdateSchema = z.object({

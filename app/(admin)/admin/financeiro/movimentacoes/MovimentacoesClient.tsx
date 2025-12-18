@@ -1,7 +1,7 @@
 'use client';
 
-import { WalletTransactionsTable } from '@/components/admin/finance/WalletTransactionsTable';
-import { PageShell } from '@/components/shared/PageShell';
+import { WalletTransactionsTable } from '@/modules/admin/ui/components/finance/WalletTransactionsTable';
+import { PageShell } from '@/shared/ui/PageShell';
 
 export default function MovimentacoesClient() {
   return (

@@ -1,11 +1,11 @@
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
 import {
   consultarCep,
   CepError,
   normalizeCep,
   isValidCep,
-} from "@/lib/integrations/correios";
+} from "@/platform/integrations/correios";
 
 type CepResponse = {
   cep: string;

@@ -3,15 +3,15 @@
 import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { Typography, App } from "antd";
-import { ELCard } from "@/components/ui/ELCard";
+import { ELCard } from '@/shared/ui/ELCard';
 import { CopyOutlined } from "@ant-design/icons";
-import { TrackingTimeline, type TrackingEvent } from "@/components/track/TrackingTimeline";
-import { PublicShipmentItems, type PublicVolume } from "@/components/track/PublicShipmentItems";
-import { ELButton } from "@/components/ui/ELButton";
-import { ELAlert } from "@/components/ui/ELAlert";
-import { ELStatusTag, type StatusVariant } from "@/components/ui/ELStatusTag";
-import { ELSkeleton } from "@/components/ui/ELSkeleton";
-import { ELGrid, ELFlex } from "@/components/ui/ELGrid";
+import { TrackingTimeline, type TrackingEvent } from "@/modules/tracking/ui/components/TrackingTimeline";
+import { PublicShipmentItems, type PublicVolume } from "@/modules/tracking/ui/components/PublicShipmentItems";
+import { ELButton } from '@/shared/ui/ELButton';
+import { ELAlert } from '@/shared/ui/ELAlert';
+import { ELStatusTag, type StatusVariant } from '@/shared/ui/ELStatusTag';
+import { ELSkeleton } from '@/shared/ui/ELSkeleton';
+import { ELGrid, ELFlex } from '@/shared/ui/ELGrid';
 
 const { Text } = Typography;
 

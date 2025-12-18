@@ -12,9 +12,9 @@
  * - Arquivos temporários são limpos periodicamente
  */
 
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
-import { enforceRateLimitByIPStrict } from '@/lib/rate-limit-redis';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
+import { enforceRateLimitByIPStrict } from '@/platform/cache/rate-limit-redis';
 import { mkdir, writeFile } from 'fs/promises';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';

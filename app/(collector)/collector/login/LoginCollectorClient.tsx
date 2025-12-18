@@ -3,7 +3,7 @@
 import { Suspense, useState } from 'react';
 import { App, Button, Card, Form, Input } from 'antd';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useCollectorSession } from '@/stores/useCollectorSession';
+import { useCollectorSession } from '@/modules/collectors/ui/state/useCollectorSession';
 
 type LoginFormValues = {
   cnpj: string;

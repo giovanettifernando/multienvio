@@ -1,18 +1,18 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { ELAlert } from "@/components/ui/ELAlert";
-import { ELGrid, ELFlex } from "@/components/ui/ELGrid";
-import { PageShell } from "@/components/shared/PageShell";
-import { QuickCalculator } from "@/components/dashboard/QuickCalculator";
-import { ShipmentsStatusBoard } from "@/components/dashboard/ShipmentsStatusBoard";
-import { ShipmentsSummaryCard } from "@/components/dashboard/ShipmentsSummaryCard";
-import { WalletRecent } from "@/components/dashboard/WalletRecent";
-import { WalletCard } from "@/components/dashboard/WalletCard";
-import { SupportQuickView } from "@/components/dashboard/SupportQuickView";
-import { PickupSchedule } from "@/components/dashboard/PickupSchedule";
-import { PendingPickupPointShipments } from "@/components/dashboard/PendingPickupPointShipments";
-import { apiFetch } from "@/lib/utils/api-fetch";
+import { ELAlert } from '@/shared/ui/ELAlert';
+import { ELGrid, ELFlex } from '@/shared/ui/ELGrid';
+import { PageShell } from '@/shared/ui/PageShell';
+import { QuickCalculator } from '@/modules/dashboard/ui/components/QuickCalculator';
+import { ShipmentsStatusBoard } from '@/modules/dashboard/ui/components/ShipmentsStatusBoard';
+import { ShipmentsSummaryCard } from '@/modules/dashboard/ui/components/ShipmentsSummaryCard';
+import { WalletRecent } from '@/modules/dashboard/ui/components/WalletRecent';
+import { WalletCard } from '@/modules/dashboard/ui/components/WalletCard';
+import { SupportQuickView } from '@/modules/dashboard/ui/components/SupportQuickView';
+import { PickupSchedule } from '@/modules/dashboard/ui/components/PickupSchedule';
+import { PendingPickupPointShipments } from '@/modules/dashboard/ui/components/PendingPickupPointShipments';
+import { apiFetch } from "@/shared/utils/api-fetch";
 
 interface ShipmentItem {
   id: string;

@@ -2,19 +2,19 @@
 
 import { useMemo, useState, useCallback, useRef } from "react";
 import { App } from "antd";
-import { ELGrid } from "@/components/ui/ELGrid";
-import { ELSkeleton } from "@/components/ui/ELSkeleton";
-import { EmptyCart } from "@/components/cart/EmptyCart";
-import { CartTable } from "@/components/cart/CartTable";
-import { CartSummary } from "@/components/cart/CartSummary";
-import { RemoveItemModal } from "@/components/cart/RemoveItemModal";
-import { CheckoutCartModal } from "@/components/payments/CheckoutCartModal";
+import { ELGrid } from '@/shared/ui/ELGrid';
+import { ELSkeleton } from '@/shared/ui/ELSkeleton';
+import { EmptyCart } from '@/modules/cart/ui/components/EmptyCart';
+import { CartTable } from '@/modules/cart/ui/components/CartTable';
+import { CartSummary } from '@/modules/cart/ui/components/CartSummary';
+import { RemoveItemModal } from '@/modules/cart/ui/components/RemoveItemModal';
+import { CheckoutCartModal } from '@/modules/payments/ui/components/CheckoutCartModal';
 import {
   useCart,
   useCartClear as useCartClearMutation,
 } from "@/hooks/useCart";
-import type { CartItem } from "@/types/cart";
-import { PageShell } from "@/components/shared/PageShell";
+import type { CartItem } from '@/shared/types/cart';
+import { PageShell } from '@/shared/ui/PageShell';
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 export default function CarrinhoClient() {

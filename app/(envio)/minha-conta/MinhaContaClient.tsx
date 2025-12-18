@@ -2,15 +2,15 @@
 
 import { useEffect, useState, startTransition } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { PageShell } from "@/components/shared/PageShell";
-import { ELCard } from "@/components/ui/ELCard";
-import { ELModal } from "@/components/ui/ELModal";
-import { ELButton } from "@/components/ui/ELButton";
-import { ELAlert } from "@/components/ui/ELAlert";
-import PersonalForm from "@/components/account/PersonalForm";
-import AccountTabs from "@/components/account/AccountTabs";
-import gridStyles from "@/components/ui/ELGrid.module.css";
-import { cn } from "@/lib/utils/cn";
+import { PageShell } from '@/shared/ui/PageShell';
+import { ELCard } from '@/shared/ui/ELCard';
+import { ELModal } from '@/shared/ui/ELModal';
+import { ELButton } from '@/shared/ui/ELButton';
+import { ELAlert } from '@/shared/ui/ELAlert';
+import PersonalForm from "@/modules/auth/ui/components/PersonalForm";
+import AccountTabs from "@/modules/auth/ui/components/AccountTabs";
+import gridStyles from "@/shared/ui/ELGrid.module.css";
+import { cn } from "@/shared/utils/cn";
 import { EnvironmentOutlined } from "@ant-design/icons";
 import { Typography, Space } from "antd";
 

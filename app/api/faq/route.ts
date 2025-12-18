@@ -7,9 +7,9 @@
  * CACHE: 1 hora (LONG TTL) - FAQs mudam raramente
  */
 
-import { withApiHandler } from '@/lib/api/handler';
-import { prisma } from '@/lib/db';
-import { configCache, CacheTTL } from '@/lib/cache';
+import { withApiHandler } from '@/platform/api/handler';
+import { prisma } from '@/platform/db/db';
+import { configCache, CacheTTL } from '@/platform/cache/cache';
 import type { FAQAudience } from '@prisma/client';
 
 type FAQItem = {

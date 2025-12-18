@@ -5,7 +5,7 @@
  * para testar se o fluxo de crédito da carteira funciona
  */
 
-import { prisma } from '@/lib/db';
+import { prisma } from '@/platform/db/db';
 
 async function testWalletCredit() {
   console.log('========================================');

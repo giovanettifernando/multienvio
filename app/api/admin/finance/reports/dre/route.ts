@@ -2,12 +2,12 @@
  * GET /api/admin/finance/reports/dre - Retorna dados do DRE
  */
 
-import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
+import { getAdminSessionFromRequest } from '@/modules/auth/application/admin-session';
 import { AdminPermission } from '@prisma/client';
-import { prisma } from '@/lib/db';
-import { DRE_CHART_OF_ACCOUNTS, CALCULATED_TOTALS } from '@/lib/admin/finance/dre';
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
+import { prisma } from '@/platform/db/db';
+import { DRE_CHART_OF_ACCOUNTS, CALCULATED_TOTALS } from '@/modules/admin/application/finance/dre';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
 
 // Mapeamento padrão de categorias de despesa para contas DRE
 const EXPENSE_CATEGORY_TO_DRE: Record<string, string> = {

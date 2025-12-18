@@ -1,7 +1,7 @@
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
-import { prisma } from "@/lib/db";
-import { getUserSessionFromRequest } from "@/lib/auth/user-session";
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
+import { prisma } from "@/platform/db/db";
+import { getUserSessionFromRequest } from "@/modules/auth/application/user-session";
 
 type RecipientDto = {
   id: string;

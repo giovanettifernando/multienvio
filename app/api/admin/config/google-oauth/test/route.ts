@@ -5,11 +5,11 @@
  */
 
 import { z } from 'zod';
-import { requireAdminUser } from '@/lib/auth/admin-helpers';
+import { requireAdminUser } from '@/modules/auth/application/admin-helpers';
 import { AdminPermission } from '@prisma/client';
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
-import { getRedirectUri } from '@/lib/auth/google-oauth';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
+import { getRedirectUri } from '@/modules/auth/application/google-oauth';
 
 const testSchema = z.object({
   clientId: z.string().min(1, 'Client ID é obrigatório'),

@@ -6,13 +6,13 @@
  */
 
 import { z } from 'zod';
-import { prisma } from '@/lib/db';
-import { requireAdminUser } from '@/lib/auth/admin-helpers';
+import { prisma } from '@/platform/db/db';
+import { requireAdminUser } from '@/modules/auth/application/admin-helpers';
 import { AdminPermission, IntegrationStatus } from '@prisma/client';
-import { encrypt, decrypt } from '@/lib/integrations/shared/encryption.service';
-import { invalidateConfigCache } from '@/lib/mercadopago';
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
+import { encrypt, decrypt } from '@/platform/integrations/shared/encryption.service';
+import { invalidateConfigCache } from '@/platform/integrations/mercadopago';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
 
 /**
  * Tipos de resposta do GET - Union discriminada por 'configured'

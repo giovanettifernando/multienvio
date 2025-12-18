@@ -7,15 +7,15 @@
  */
 
 import { z } from 'zod';
-import { requireAdminUser } from '@/lib/auth/admin-helpers';
+import { requireAdminUser } from '@/modules/auth/application/admin-helpers';
 import { AdminPermission } from '@prisma/client';
 import {
   getOpenRouterConfigSafe,
   saveOpenRouterConfig,
   invalidateOpenRouterConfigCache,
-} from '@/lib/integrations/openrouter/config.service';
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
+} from '@/platform/integrations/openrouter/config.service';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
 
 /**
  * Schema de validação para configuração do OpenRouter

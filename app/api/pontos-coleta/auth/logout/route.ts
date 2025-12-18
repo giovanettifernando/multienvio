@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
-import { withApiHandlerResponse } from '@/lib/api/handler';
+import { withApiHandlerResponse } from '@/platform/api/handler';
 import {
   createCollectorCookieRemovalHeader,
   getCollectorTokenFromRequest,
   collectorVerifySimple,
-} from '@/lib/auth/collector-session';
-import { pickupPointSessionCache } from '@/lib/cache';
+} from '@/modules/auth/application/collector-session';
+import { pickupPointSessionCache } from '@/platform/cache/cache';
 
 type LogoutResponse = {
   message: string;

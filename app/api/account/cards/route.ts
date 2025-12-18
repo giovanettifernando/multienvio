@@ -1,19 +1,19 @@
-import { withApiHandler } from "@/lib/api/handler";
+import { withApiHandler } from "@/platform/api/handler";
 import {
   createUserCard,
   listUserCards,
   type AccountCardDto,
-} from "@/lib/services/account-cards.service";
+} from "@/modules/auth/application/account-cards.service";
 import {
   validateCardCreateInput,
-} from "@/lib/validation/card";
+} from '@/shared/validation/card';
 import {
   enforceCardWriteLimit,
   parsePositiveInteger,
   rethrowCardValidation,
   requireUserId,
 } from "./helpers";
-import { ApiError } from "@/lib/api/errors";
+import { ApiError } from "@/platform/api/errors";
 
 type CardDtoResponse = {
   id: string;

@@ -6,12 +6,12 @@
 
 import crypto from 'crypto';
 import { NextResponse } from 'next/server';
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
-import { prisma } from '@/lib/db';
-import { requireAdminUser } from '@/lib/auth/admin-helpers';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
+import { prisma } from '@/platform/db/db';
+import { requireAdminUser } from '@/modules/auth/application/admin-helpers';
 import { AdminPermission } from '@prisma/client';
-import { sendPasswordResetEmail } from '@/lib/email/mailer';
+import { sendPasswordResetEmail } from '@/platform/email/mailer';
 import { z } from 'zod';
 
 interface EmailResult {

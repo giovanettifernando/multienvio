@@ -1,8 +1,8 @@
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
 import { z } from 'zod';
-import { prisma } from '@/lib/db';
-import { getCollectorSessionFromRequest } from '@/lib/auth/collector-session';
+import { prisma } from '@/platform/db/db';
+import { getCollectorSessionFromRequest } from '@/modules/auth/application/collector-session';
 import { ReceptionStatus, Prisma } from '@prisma/client';
 
 const receiveSchema = z.object({

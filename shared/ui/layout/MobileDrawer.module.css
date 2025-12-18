@@ -1,0 +1,120 @@
+/**
+ * MobileDrawer - Estilos do menu mobile
+ */
+
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.dark {
+  background: var(--sidebar-bg);
+  color: var(--sidebar-text);
+}
+
+.light {
+  background: #ffffff;
+  color: var(--color-text);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 64px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--sidebar-border);
+}
+
+.logoArea {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.closeButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  border-radius: var(--el-radius-base);
+  transition: background 0.2s;
+}
+
+.dark .closeButton {
+  color: var(--sidebar-text-active);
+}
+
+.dark .closeButton:hover {
+  background: var(--sidebar-hover);
+}
+
+.light .closeButton {
+  color: var(--color-text);
+}
+
+.light .closeButton:hover {
+  background: var(--color-background);
+}
+
+.customHeader {
+  border-bottom: 1px solid var(--sidebar-border);
+}
+
+.menuWrapper {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 8px 0;
+}
+
+.footer {
+  border-top: 1px solid var(--sidebar-border);
+  padding: 16px;
+}
+
+/* Drawer dark theme overrides */
+.drawerDark :global(.ant-drawer-content) {
+  background: var(--sidebar-bg) !important;
+}
+
+.drawerDark :global(.ant-menu-dark) {
+  background: transparent !important;
+}
+
+.drawerDark :global(.ant-menu-dark .ant-menu-item) {
+  color: var(--sidebar-text);
+  border-radius: var(--el-radius-base);
+  margin: 4px 8px;
+}
+
+.drawerDark :global(.ant-menu-dark .ant-menu-item:hover) {
+  background: var(--sidebar-hover);
+}
+
+.drawerDark :global(.ant-menu-dark .ant-menu-item-selected) {
+  background: var(--sidebar-active) !important;
+  color: var(--sidebar-text-active) !important;
+  font-weight: 500;
+}
+
+.drawerDark :global(.ant-menu-dark .ant-menu-item .anticon) {
+  color: var(--sidebar-text-active);
+  font-size: 18px;
+}
+
+/* Drawer light theme overrides */
+.drawerLight :global(.ant-drawer-content) {
+  background: #ffffff !important;
+}
+
+.drawerLight :global(.ant-menu-light .ant-menu-item) {
+  border-radius: var(--el-radius-base);
+  margin: 4px 8px;
+}

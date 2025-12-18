@@ -3,16 +3,16 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQueries } from "@tanstack/react-query";
-import { ELCard } from "@/components/ui/ELCard";
-import type { Shipment } from "@/types/shipment";
-import type { Tracking } from "@/types/tracking";
-import { TrackingStatusTag } from "@/components/ui/TrackingStatusTag";
-import { PageShell } from "@/components/shared/PageShell";
-import { ELButton } from "@/components/ui/ELButton";
-import { ELInput } from "@/components/ui/ELInput";
-import { ELSelect } from "@/components/ui/ELSelect";
-import { DataTable, type DataTableColumn } from "@/components/ui/DataTable";
-import { ActionBar } from "@/components/ui/ActionBar";
+import { ELCard } from '@/shared/ui/ELCard';
+import type { Shipment } from '@/shared/types/shipment';
+import type { Tracking } from '@/shared/types/tracking';
+import { TrackingStatusTag } from "@/modules/tracking/ui/components/TrackingStatusTag";
+import { PageShell } from '@/shared/ui/PageShell';
+import { ELButton } from '@/shared/ui/ELButton';
+import { ELInput } from '@/shared/ui/ELInput';
+import { ELSelect } from '@/shared/ui/ELSelect';
+import { DataTable, type DataTableColumn } from '@/shared/ui/DataTable';
+import { ActionBar } from '@/shared/ui/ActionBar';
 
 async function fetchShipments(): Promise<{ dados: Shipment[] }> {
   const response = await fetch("/api/shipments");

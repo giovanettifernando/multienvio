@@ -1,14 +1,14 @@
 import { NextRequest } from 'next/server';
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
 import { ZodError } from 'zod';
 import bcrypt from 'bcrypt';
-import { RegisterSchema } from '@/lib/validation/auth';
-import { prisma } from '@/lib/db';
-import { generateToken, hashToken } from '@/lib/auth/tokens';
-import { sendVerificationEmail } from '@/lib/email/mailer';
-import { getCachedRoleByName } from '@/lib/cache';
-import { enforceRateLimitByIP, RATE_LIMITS } from '@/lib/rate-limit-redis';
+import { RegisterSchema } from '@/shared/validation/auth';
+import { prisma } from '@/platform/db/db';
+import { generateToken, hashToken } from '@/modules/auth/application/tokens';
+import { sendVerificationEmail } from '@/platform/email/mailer';
+import { getCachedRoleByName } from '@/platform/cache/cache';
+import { enforceRateLimitByIP, RATE_LIMITS } from '@/platform/cache/rate-limit-redis';
 
 interface RegisterResponse {
   userId: string;

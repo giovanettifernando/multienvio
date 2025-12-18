@@ -10,12 +10,12 @@
  * - status: 'pending' | 'paid' | 'all' (default: 'all')
  */
 
-import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
+import { getAdminSessionFromRequest } from '@/modules/auth/application/admin-session';
 import { AdminPermission, Prisma } from '@prisma/client';
-import { prisma } from '@/lib/db';
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
-import { startOfDayBrasilia, endOfDayBrasilia } from '@/lib/utils/date';
+import { prisma } from '@/platform/db/db';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
+import { startOfDayBrasilia, endOfDayBrasilia } from '@/shared/utils/date';
 
 export type PayableType = 'collector_commission' | 'pickup_point_commission' | 'carrier_cost' | 'expense';
 export type PayableStatus = 'pending' | 'paid';

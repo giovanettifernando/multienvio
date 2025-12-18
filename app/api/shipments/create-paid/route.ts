@@ -14,14 +14,14 @@
  */
 
 import { NextRequest } from 'next/server';
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
 import { z } from 'zod';
-import { getUserSessionFromRequest } from '@/lib/auth/user-session';
-import { validateDocumentHasItems } from '@/lib/checkout';
-import { createPaidShipment, PaymentMethod } from '@/lib/shipments/create-paid-shipment.service';
-import { enforceRateLimitByIP, RATE_LIMITS } from '@/lib/rate-limit-redis';
-import { logger } from '@/lib/logger';
+import { getUserSessionFromRequest } from '@/modules/auth/application/user-session';
+import { validateDocumentHasItems } from '@/modules/cart/application';
+import { createPaidShipment, PaymentMethod } from '@/modules/shipments/application/create-paid-shipment.service';
+import { enforceRateLimitByIP, RATE_LIMITS } from '@/platform/cache/rate-limit-redis';
+import { logger } from '@/platform/logging/logger';
 
 /**
  * Resposta da API

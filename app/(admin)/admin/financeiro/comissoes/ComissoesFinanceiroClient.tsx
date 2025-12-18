@@ -1,7 +1,7 @@
 'use client';
 
-import { ProfileCommissionsTable } from '@/components/admin/finance/ProfileCommissionsTable';
-import { PageShell } from '@/components/shared/PageShell';
+import { ProfileCommissionsTable } from '@/modules/admin/ui/components/finance/ProfileCommissionsTable';
+import { PageShell } from '@/shared/ui/PageShell';
 
 export default function ComissoesFinanceiroClient() {
   return (

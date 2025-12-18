@@ -1,13 +1,13 @@
 import { NextRequest } from 'next/server';
 import { ZodError } from 'zod';
 import bcrypt from 'bcrypt';
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
-import { ResetPasswordSchema } from '@/lib/validation/auth';
-import prisma from '@/lib/db';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
+import { ResetPasswordSchema } from '@/shared/validation/auth';
+import prisma from '@/platform/db/db';
 import crypto from 'crypto';
-import { enforceRateLimitByIPStrict, RATE_LIMITS } from '@/lib/rate-limit-redis';
-import { sessionCache } from '@/lib/cache';
+import { enforceRateLimitByIPStrict, RATE_LIMITS } from '@/platform/cache/rate-limit-redis';
+import { sessionCache } from '@/platform/cache/cache';
 
 interface ResetPasswordResponse {
   message: string;

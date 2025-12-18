@@ -4,8 +4,8 @@
  */
 
 import { NextResponse } from 'next/server';
-import { withApiHandlerResponse } from '@/lib/api/handler';
-import { prisma } from '@/lib/db';
+import { withApiHandlerResponse } from '@/platform/api/handler';
+import { prisma } from '@/platform/db/db';
 
 /**
  * GET /api/coletores/auth/confirm-email?token=...

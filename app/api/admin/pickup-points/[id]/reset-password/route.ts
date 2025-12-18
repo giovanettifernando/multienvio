@@ -4,15 +4,15 @@
  * Envia email de redefinição de senha para o ponto de coleta
  */
 
-import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
-import { requirePermission } from '@/lib/auth/permissions';
+import { getAdminSessionFromRequest } from '@/modules/auth/application/admin-session';
+import { requirePermission } from '@/modules/auth/application/permissions';
 import { AdminPermission } from '@prisma/client';
-import { prisma } from '@/lib/db';
+import { prisma } from '@/platform/db/db';
 import { SignJWT } from 'jose';
 import nodemailer from 'nodemailer';
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
-import { logger } from '@/lib/logger';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
+import { logger } from '@/platform/logging/logger';
 
 // JWT secret - OBRIGATÓRIO, sem fallback
 const JWT_SECRET_RAW = process.env.JWT_SECRET;
@@ -80,7 +80,7 @@ export const POST = withApiHandler<unknown, { id: string }>(async ({ req, params
   }
 
   // Descriptografar senha
-  const { decrypt } = await import('@/lib/integrations/shared/encryption.service');
+  const { decrypt } = await import('@/platform/integrations/shared/encryption.service');
   const password = decrypt(emailConfig.password);
 
   // Criar transporter

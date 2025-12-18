@@ -2,7 +2,7 @@
  * Script para verificar os pagamentos recentes no banco
  */
 
-import { prisma } from '@/lib/db';
+import { prisma } from '@/platform/db/db';
 
 async function checkRecentPayments() {
   console.log('========================================');

@@ -14,9 +14,9 @@
  * 2. PUT: Receive Profile → transform to backend format → save to /api/account/me → return
  */
 
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
-import type { Profile } from "@/types/account";
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
+import type { Profile } from '@/shared/types/account';
 import { z } from 'zod';
 
 type GetProfileResponse = Profile;

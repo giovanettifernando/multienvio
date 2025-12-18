@@ -1,5 +1,5 @@
-import type { StoredShipment } from "@/types/shipment";
-import type { CompanyWizardData } from "@/lib/validation/company";
+import type { StoredShipment } from '@/shared/types/shipment';
+import type { CompanyWizardData } from '@/shared/validation/company';
 
 declare global {
    

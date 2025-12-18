@@ -3,15 +3,15 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { InputNumber, App } from "antd";
-import { ELCard } from "@/components/ui/ELCard";
-import { PageShell } from "@/components/shared/PageShell";
-import type { Invoice } from "@/types/billing";
-import { ELButton } from "@/components/ui/ELButton";
-import { ELAlert } from "@/components/ui/ELAlert";
-import { ELModal } from "@/components/ui/ELModal";
-import { DataTable, type DataTableColumn } from "@/components/ui/DataTable";
-import tableStyles from "@/components/ui/ELTableWrapper.module.css";
-import { inputNumberFormatterBRL, inputNumberParserBRL } from "@/lib/utils/format";
+import { ELCard } from '@/shared/ui/ELCard';
+import { PageShell } from '@/shared/ui/PageShell';
+import type { Invoice } from '@/shared/types/billing';
+import { ELButton } from '@/shared/ui/ELButton';
+import { ELAlert } from '@/shared/ui/ELAlert';
+import { ELModal } from '@/shared/ui/ELModal';
+import { DataTable, type DataTableColumn } from '@/shared/ui/DataTable';
+import tableStyles from "@/shared/ui/ELTableWrapper.module.css";
+import { inputNumberFormatterBRL, inputNumberParserBRL } from "@/shared/utils/format";
 
 async function fetchInvoices(): Promise<Invoice[]> {
   const response = await fetch("/api/invoices");

@@ -5,10 +5,10 @@
 
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
-import { prisma } from '@/lib/db';
-import { enforceRateLimitByIP, RATE_LIMITS } from '@/lib/rate-limit-redis';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
+import { prisma } from '@/platform/db/db';
+import { enforceRateLimitByIP, RATE_LIMITS } from '@/platform/cache/rate-limit-redis';
 
 const VerifyEmailSchema = z.object({
   token: z.string().min(1, 'Token é obrigatório'),

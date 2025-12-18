@@ -3,10 +3,10 @@
  * GET /api/coletores/dashboard - Retorna KPIs e dados do dashboard
  */
 
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
-import { getAutonomousCollectorSession } from '@/lib/auth/autonomous-collector-session';
-import { prisma } from '@/lib/db';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
+import { getAutonomousCollectorSession } from '@/modules/auth/application/autonomous-collector-session';
+import { prisma } from '@/platform/db/db';
 
 type CollectorDashboardResponse = {
   kpis: {

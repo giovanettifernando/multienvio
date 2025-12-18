@@ -1,8 +1,8 @@
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
-import { getAutonomousCollectorSession } from '@/lib/auth/autonomous-collector-session';
-import { getTicketForAutonomousCollector } from '@/lib/support/autonomous-collector-service';
-import { type SupportTicket } from '@/lib/validation/support';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
+import { getAutonomousCollectorSession } from '@/modules/auth/application/autonomous-collector-session';
+import { getTicketForAutonomousCollector } from '@/modules/support/application/autonomous-collector-service';
+import { type SupportTicket } from '@/shared/validation/support';
 
 type SuporteTicketResponse = {
   ticket: SupportTicket;

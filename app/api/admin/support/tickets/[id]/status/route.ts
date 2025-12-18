@@ -1,10 +1,10 @@
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
 import { z } from 'zod';
-import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
+import { getAdminSessionFromRequest } from '@/modules/auth/application/admin-session';
 import { AdminPermission } from '@prisma/client';
-import { updateTicketStatus } from '@/lib/support/service';
-import { StatusSchema } from '@/lib/validation/support';
+import { updateTicketStatus } from '@/modules/support/application/service';
+import { StatusSchema } from '@/shared/validation/support';
 
 const UpdateStatusSchema = z.object({
   status: StatusSchema,

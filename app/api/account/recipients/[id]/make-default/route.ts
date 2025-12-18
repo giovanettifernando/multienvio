@@ -1,5 +1,5 @@
-import { withApiHandler } from "@/lib/api/handler";
-import { makeRecipientDefault, type AccountRecipientDto } from "@/lib/services/account-recipients.service";
+import { withApiHandler } from "@/platform/api/handler";
+import { makeRecipientDefault, type AccountRecipientDto } from "@/modules/auth/application/account-recipients.service";
 import { enforceRecipientWriteLimit, requireUserId, handleRecipientDataStoreError } from "../../helpers";
 
 type MakeDefaultRecipientResponse = AccountRecipientDto;

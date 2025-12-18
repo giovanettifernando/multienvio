@@ -1,11 +1,11 @@
 import { NextRequest } from "next/server";
 import { Prisma } from "@prisma/client";
-import { ApiError } from "@/lib/api/errors";
-import { enforceRateLimit } from "@/lib/rate-limit-redis";
-import { getUserFromRequest } from "@/lib/auth/session";
-import type { RequestContext } from "@/lib/api/types";
-import { RecipientValidationError } from "@/lib/validation/recipient";
-import { isDatabaseUnavailableError, schedulePrismaReconnect } from "@/lib/db";
+import { ApiError } from "@/platform/api/errors";
+import { enforceRateLimit } from "@/platform/cache/rate-limit-redis";
+import { getUserFromRequest } from "@/modules/auth/application/session";
+import type { RequestContext } from "@/platform/api/types";
+import { RecipientValidationError } from '@/shared/validation/recipient';
+import { isDatabaseUnavailableError, schedulePrismaReconnect } from "@/platform/db/db";
 
 const WRITE_LIMIT = 10;
 const WRITE_WINDOW_MS = 60_000;

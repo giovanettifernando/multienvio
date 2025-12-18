@@ -1,80 +1,72 @@
 # Plano de Reorganização – Envio Legal
 
 ## 4.1 Estrutura alvo (Target Architecture)
-Objetivo: separar UI, aplicação/domínio, integrações e infraestrutura mantendo o App Router.
+Estado atual: `modules/`, `shared/` e `platform/` já existem; `components/*`, `lib/*`, `store(s)/*` e `types/*` funcionam como shims de compatibilidade. Objetivo agora é consolidar e desligar o legado.
 
-Proposta (raízes novas mantendo `app/`):
-- `app/` (mantido): rotas Next + layouts. Handlers em `app/api/*` ficam “finos”, apenas traduzindo HTTP ↔ use cases.
-- `modules/` (por feature, alinhado às pastas atuais):
-  - `modules/quotes/` (cotacoes), `modules/cart/`, `modules/shipments/`, `modules/payments/`, `modules/pickups/`, `modules/recipients/`, `modules/support/`, `modules/wallet/`, `modules/admin/`, `modules/collector/`.
-  - Dentro de cada módulo: `domain/` (entidades, regras), `application/` (use cases/services), `infra/` (repos Prisma, integrações específicas), `ui/` (componentes/hooks client), `dto/` (schemas shared front/back).
-- `shared/`: recursos transversais (`shared/ui` para primitivos puros; `shared/validation` para schemas; `shared/types` como fonte única de DTOs; `shared/utils`; `shared/auth`; `shared/http` com `withApiHandler`, `apiFetch`; `shared/logging`; `shared/config`).
-- `platform/`: infraestrutura comum (`platform/db` com Prisma client; `platform/cache`; `platform/integrations` com clientes base HTTP/SDK; `platform/observability`).
-- `tests/`: unificar suites (`unit/`, `integration/`, `e2e/`), movendo conteúdo de `tests`, `tests-e2e`, `tests-v2`.
-- `scripts/`: manter, mas referenciar módulos/domain em vez de importar `lib/*` diretamente.
-
-Onde ficariam exemplos atuais:
-- Lógica de cotação hoje em `lib/quotes/service.ts` → `modules/quotes/application/quote.service.ts`; schemas de `lib/validation/quote-backend.ts` e `components/quote/quoteFormSchema.ts` → `modules/quotes/dto/quote.schema.ts`.
-- Componentes `components/quote/**` → `modules/quotes/ui/**`; componentes realmente genéricos de `components/ui/ELButton.tsx`, `ELInput.tsx` → `shared/ui`.
-- Rotas `app/api/cart/route.ts` chamariam `modules/cart/application/cart.service.ts` e mapeadores HTTP em `modules/cart/api/cart.controller.ts`.
-- Integrações `lib/mercadopago/**` → `modules/payments/infra/mercadopago/**` usando clientes base de `platform/integrations/mercadopago.ts`.
-- Stores duplicados (`stores/useCollectorSession.ts`, `store/useQuoteStore.ts`) → `modules/<feature>/ui/state/**` ou `shared/state`.
+Arquitetura final pretendida:
+- `app/`: rotas Next e layouts; handlers `app/api/*` apenas validam input/output e chamam use cases.
+- `modules/<feature>/`: UI + domain + application + infra + dto por domínio (quotes, cart, shipments, payments, pickups, recipients, support, wallet, admin, collector, assistant, tracking, labels, auth). Controllers HTTP podem ficar em `modules/<feature>/api`.
+- `shared/`: fonte única para utilidades, validações comuns e primitivos de UI; `shared/types` como contrato global.
+- `platform/`: infra transversa (db/cache/integrations/email/crypto/logging/api runtime).
+- `tests/`: suíte unificada com `unit/`, `integration/`, `e2e/` e `obsolete/` (testes de módulos deletados).
+- `scripts/`: consumir apenas `modules/<feature>/application|infra` ou `platform/*`.
 
 ## 4.2 Regras de boundary
-- UI (React/Next) não importa `@prisma/client` nem acessa `platform/db` direto; usa casos de uso expostos pela camada `application`.
-- Rotas `app/api/*` apenas validam input (schema em `modules/<feature>/dto`) + chamam use case + mapeiam resposta HTTP; sem regra de negócio nem SQL.
-- `domain/` não importa React nem bibliotecas de infra (fetch, prisma); apenas tipos e invariantes.
-- Integrações externas ficam em `platform/integrations/*` ou `modules/<feature>/infra/*` e retornam DTOs de integração; auth/secrets isolados.
-- DTOs e schemas únicos por feature em `modules/<feature>/dto` consumidos tanto por UI quanto por API (sem duplicar em `components`).
-- Logging/erros centralizados em `shared/logging` e `shared/http/errors`; handlers reutilizam.
-- Stores de estado cliente em `modules/<feature>/ui/state` ou `shared/state` com naming consistente; proibido criar novos em raiz solta.
-- Tipos públicos exportados via `shared/types` e reexportados pelos módulos; nada importa direto de Prisma em camadas de UI/API.
+- UI (React/Next) não importa Prisma/`platform/db` nem clients de integrações; usa apenas `modules/<feature>/application` ou hooks expostos pelo módulo.
+- Rotas `app/api/*` importam schemas de `modules/<feature>/dto`/`shared/validation`, chamam use cases de `modules/<feature>/application` e convertem para HTTP; sem regra de negócio ou SQL.
+- Domínio (`modules/<feature>/domain`) não importa React nem SDKs externos; depende só de tipos/DTOs.
+- Integrações externas ficam em `platform/integrations` ou `modules/<feature>/infra` e são acessadas via interfaces injetadas em application.
+- DTOs e schemas front/back compartilham o mesmo arquivo em `modules/<feature>/dto` (ou `shared/validation` quando global); proibido criar duplicatas em `components` ou `lib`.
+- Stores ficam em `modules/<feature>/ui/state` ou `shared/state` (quando transversal); remover criação de novos stores em raízes antigas.
+- Imports devem usar aliases novos (`@/modules`, `@/shared`, `@/platform`); `@/lib`, `components/*`, `store(s)/*`, `types/*` são temporários.
 
 ## 4.3 Plano em fases (baixo risco)
-**Fase 0 – Padronização mínima**
-- Criar guideline de nomenclatura/import (shared vs feature), decidir aliases (`@/shared`, `@/modules`, `@/platform`), e definir suíte de testes canônica.
-- Aceite: docs atualizados, novos PRs já seguem naming; lint/import resolver configurado.
-- Validação: `npm run lint && npm run type-check` (ou equivalentes atuais).
-- Riscos: quebra de import; mitigação com aliases reexportando `lib/*` temporariamente.
-- Rollback: remover novos aliases e retornar imports antigos.
+**Fase 0 – Congelar contratos e aliases ✅ CONCLUÍDA**
+- ✅ ESLint `no-restricted-imports` configurado em `eslint.config.mjs` para marcar shims como deprecated (warnings).
+- ✅ Regras de boundary impedem UI de importar `@/platform/db/*` ou `@prisma/client` (errors).
+- Aceite: novas PRs emitem warnings em imports via shims.
+- Validação: lint + type-check passam.
 
-**Fase 1 – Consolidar shared utilities/DTOs**
-- Mover utilidades genéricas (`lib/utils/**`, `lib/ui/useAppMessage.ts`) e tipos duplicados (`types/**`, `lib/types/**`) para `shared/utils`, `shared/ui`, `shared/types`; criar `shared/validation` e apontar front/back para o mesmo schema.
-- Aceite: nenhuma referência a `components/quote/quoteFormSchema.ts` isolada; imports passam a vir de `shared`/`modules/.../dto`.
-- Validação: build, lint; smoke nas rotas principais de cotação/carrinho.
-- Riscos: drift de schema; mitigação com reexporto em `lib/validation/index` durante transição.
-- Rollback: reverter aliases e manter arquivos antigos (sem apagar).
+**Fase 1 – Rotas finas + use cases**
+- Migrar rotas que ainda concentram regra de negócio/acesso direto a Prisma para services em `modules/*/application` (priorizar `app/api/cart/route.ts`, `app/api/pickup-points/route.ts` e rotas de coletas/shipments com lógica inline).
+- Aceite: handlers ficam só com validação + orquestração; serviços encapsulam lógica.
+- Validação: testes `tests-v2` relevantes + smoke das rotas alteradas.
+- Risco: regressão funcional; mitigação com adapters que permitam fallback para implementação anterior.
 
-**Fase 2 – Integrar infra e integrações**
-- Mover clientes externos (`lib/mercadopago`, `lib/integrations/**`, `lib/correios`) para `platform/integrations` e subpastas por domínio; padronizar factory de clientes e injeção em serviços.
-- Aceite: rotas de payments/labels/correios usam clientes via adapters e não importam SDKs direto.
-- Validação: testes de integração existentes (`tests-v2/integration/payments`, scripts `scripts/test-mp-*`) e smoke de geração de rótulo/cobrança.
-- Riscos: credenciais carregadas errado; mitigação com feature flags e fallback para clientes antigos até estabilizar.
-- Rollback: manter wrappers que delegam para clientes antigos enquanto não migrado.
+**Fase 2 – Fonte única de DTO/validation ✅ CONCLUÍDA**
+- ✅ Codemod `scripts/migrate-legacy-imports.ts` migrou ~700+ imports.
+- ✅ Arquivos copiados de `lib/validation/` para `shared/validation/`.
+- ✅ Arquivos copiados de `components/` para `modules/*/ui/components/` e `shared/ui/`.
+- ✅ Stores copiados de `stores/` para `modules/*/ui/state/`.
+- Aceite: imports atualizados para novos paths; shims preservados temporariamente.
+- Validação: build + type-check passam.
 
-**Fase 3 – Modularização por feature**
-- Criar módulos (`modules/quotes`, `modules/cart`, `modules/shipments`, `modules/pickups`, `modules/payments`, `modules/support`, `modules/wallet`, `modules/admin`, `modules/collector`) com `domain/application/infra/ui/dto`. Migrar gradualmente serviços de `lib/services/**` e lógica das rotas (ex.: `app/api/cart/route.ts`, `app/api/pickup-points/route.ts`) para use cases. Mover componentes feature de `components/**` para `modules/<feature>/ui`.
-- Aceite: ao menos 2 features completas (ex.: cotação e cart) usando nova estrutura; rotas chamam controllers nos módulos.
-- Validação: testes unitários/integration `tests-v2` ajustados; smoke manual em fluxo cotar→adicionar carrinho→checkout.
-- Riscos: import cycles; mitigação com boundaries explícitos e lint de import paths.
-- Rollback: manter adaptadores em `app/api/*` chamando implementações antigas guardadas em `lib` enquanto migra.
+**Fase 3 – Desligar compat layers ✅ CONCLUÍDA**
+- ✅ Pastas de compatibilidade removidas: `lib/`, `components/`, `store/`, `stores/`, `types/`
+- ✅ Backup criado em `_backup_compat_layers/` (para rollback se necessário)
+- ✅ Imports órfãos corrigidos: `instrumentation.ts`, `proxy.ts`
+- ✅ Build passa sem erros
+- Aceite: zero referências a shims; paths antigos removidos.
 
-**Fase 4 – Limpeza final**
-- Remover duplicações (`components/ui` itens de domínio, `stores/*` obsoletos, `lib/features/` vazio, backups `lib/validation/support.ts.backup`), consolidar `tests*/` em único root e apagar o que ficou legado.
-- Aceite: nenhum import apontando para pastas removidas; CI roda suíte única.
-- Validação: build + testes full; smoke básico em admin, collector e público.
-- Riscos: remoção prematura; mitigação com checklist e busca de referências (`rg`) antes de apagar.
-- Rollback: reter branch com pastas antigas até final da fase.
+**Fase 4 – Testes e governança final ✅ CONCLUÍDA**
+- ✅ Suítes consolidadas em `tests/` com estrutura `unit/`, `integration/`, `e2e/`, `obsolete/`.
+- ✅ Node.js test runner para unit/integration; Playwright para e2e.
+- ✅ Scripts de teste atualizados em `package.json` (`npm test`, `npm run test:e2e`).
+- ✅ Lint de boundaries configurado em ESLint.
+- ✅ Testes de módulos deletados (mercadopago, system-status) movidos para `obsolete/`.
+- Aceite: CI roda suíte única; regras de lint ativas.
+- Validação: build + type-check passam.
 
 ## 4.4 Compatibilidade com o projeto atual
-- Manter `app/` no mesmo lugar; criar barrels temporários (`lib/index.ts` reexportando de `shared`/`modules`) para não quebrar imports durante migração.
-- Adicionar aliases no tsconfig apontando `@/shared`, `@/modules`, `@/platform` e manter `@/lib` apontando para adaptadores de compatibilidade enquanto código legado persiste.
-- Rotas API permanecem nos mesmos caminhos; apenas delegam para controllers nos módulos. Testar cada rota após redirecionar.
-- Código novo já deve nascer na estrutura nova (`modules/<feature>/...`); legado continua funcionando via reexports até ser migrado.
+- Manter endpoints e caminhos atuais; usar shims enquanto os imports migram para os aliases novos.
+- Ajustar `tsconfig`/ESLint para suportar novos aliases e, após Fase 2, começar a falhar imports legados.
+- Ao mover cada rota para o módulo, manter adapter HTTP fino que permita rollback rápido para a implementação anterior.
+- Código novo deve nascer já em `modules/<feature>`/`shared`/`platform`; evitar criar arquivos em `components/`, `lib/`, `store(s)/`, `types/`.
 
 ## 4.5 Checklist de governança
-- **Localização**: componentes genéricos em `shared/ui`; componentes feature em `modules/<feature>/ui`; use cases em `modules/<feature>/application`; integrações em `platform/integrations` ou `modules/<feature>/infra`.
-- **Naming/imports**: evitar importar Prisma/tipos diretamente em UI; usar DTOs de `modules/<feature>/dto`; stores em `modules/<feature>/ui/state`; evitar novos diretórios raiz.
-- **Logs/erros**: usar helpers de `shared/logging` e erros HTTP de `shared/http`; proibir `console.*` em produção.
-- **Testes**: cada módulo precisa de `__tests__` ou espelho em `tests/<feature>/{unit,integration}`; rotas novas exigem teste e2e ou contract test.
-- **Revisão de PR**: verificar boundary (UI vs domain vs infra), imports via aliases corretos, schemas compartilhados, e impacto em rotas existentes; executar `lint`, `type-check` e suíte de testes definida.
+- **Localização**: primitivos/infra em `shared`/`platform`; domínio + aplicação + UI de feature em `modules/<feature>`; evitar novas peças em pastas de compatibilidade.
+- **Imports**: usar `@/modules`, `@/shared`, `@/platform`; bloquear `@/lib`/`components/*` para código novo; UI não importa Prisma/integrations.
+- **DTOs/validação**: contratos em `modules/<feature>/dto` ou `shared/validation` e reutilizados front/back.
+- **Logs/erros**: centralizar em `platform/logging` e `platform/api/errors`; evitar `console.*`.
+- **Testes**: cada feature coberta em `tests-v2/{unit,integration,e2e}`; novas rotas exigem teste de contrato/e2e.
+- **PR checklist**: boundary respeitado, imports nos aliases certos, nenhuma dependência de shim legada, lint/type-check/testes executados.

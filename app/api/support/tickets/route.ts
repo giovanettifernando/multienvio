@@ -1,15 +1,15 @@
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
-import { getUserFromRequest } from '@/lib/auth/session';
-import { createTicketForUser, listTicketsForUser } from '@/lib/support/service';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
+import { getUserFromRequest } from '@/modules/auth/application/session';
+import { createTicketForUser, listTicketsForUser } from '@/modules/support/application/service';
 import {
   NewTicketInputSchema,
   type NewTicketInput,
   type Priority,
   type Status,
   type SupportTicket,
-} from '@/lib/validation/support';
-import { logger } from '@/lib/logger';
+} from '@/shared/validation/support';
+import { logger } from '@/platform/logging/logger';
 
 interface ListTicketsResponse {
   tickets: SupportTicket[];

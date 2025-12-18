@@ -1,9 +1,9 @@
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
-import { getUserFromRequest } from '@/lib/auth/session';
-import { prisma } from '@/lib/db';
-import { updateCartItemSchema } from '@/lib/validation/cart';
-import { logger } from '@/lib/logger';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
+import { getUserFromRequest } from '@/modules/auth/application/session';
+import { prisma } from '@/platform/db/db';
+import { updateCartItemSchema } from '@/shared/validation/cart';
+import { logger } from '@/platform/logging/logger';
 import type { Prisma } from '@prisma/client';
 
 // Tipo para item do carrinho na resposta

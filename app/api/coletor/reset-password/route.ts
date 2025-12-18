@@ -4,13 +4,13 @@
  * Processa a redefinição de senha do coletor usando o token JWT
  */
 
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
 import { jwtVerify } from 'jose';
-import { prisma } from '@/lib/db';
+import { prisma } from '@/platform/db/db';
 import bcrypt from 'bcrypt';
-import { CollectorResetPasswordSchema } from '@/lib/validation/auth';
-import { logger } from '@/lib/logger';
+import { CollectorResetPasswordSchema } from '@/shared/validation/auth';
+import { logger } from '@/platform/logging/logger';
 
 
 // Validar JWT_SECRET em produção

@@ -5,16 +5,16 @@
  */
 
 import { NextResponse } from 'next/server';
-import { withApiHandlerResponse } from '@/lib/api/handler';
-import { getSession } from '@/lib/auth/session';
-import { prisma } from '@/lib/db';
-import { calculatePeriodSummary, getLastNDaysRange, formatPeriodLabel } from '@/lib/wallet/period-summary';
+import { withApiHandlerResponse } from '@/platform/api/handler';
+import { getSession } from '@/modules/auth/application/session';
+import { prisma } from '@/platform/db/db';
+import { calculatePeriodSummary, getLastNDaysRange, formatPeriodLabel } from '@/modules/wallet/application/period-summary';
 import {
   getTransactionDirection,
   getTransactionTypeLabel,
   formatTransactionAmount,
-} from '@/lib/wallet/transaction-direction';
-import { formatNumberBR, formatWalletDescription } from '@/lib/format';
+} from '@/modules/wallet/application/transaction-direction';
+import { formatNumberBR, formatWalletDescription } from '@/shared/utils/format';
 import type { Prisma, WalletTxType } from '@prisma/client';
 
 export const GET = withApiHandlerResponse(async (context) => {

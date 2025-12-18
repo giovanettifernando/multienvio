@@ -4,12 +4,12 @@
  * Lista recepções do ponto de coleta com filtro de período e estatísticas
  */
 
-import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
-import { canAccess } from '@/lib/auth/permissions';
+import { getAdminSessionFromRequest } from '@/modules/auth/application/admin-session';
+import { canAccess } from '@/modules/auth/application/permissions';
 import { AdminPermission } from '@prisma/client';
-import { prisma } from '@/lib/db';
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
+import { prisma } from '@/platform/db/db';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
 
 export const GET = withApiHandler<unknown, { id: string }>(async ({ req, params }) => {
   const session = await getAdminSessionFromRequest(req);

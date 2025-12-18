@@ -1,10 +1,10 @@
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
-import { getUserFromRequest } from '@/lib/auth/session';
-import { prisma } from '@/lib/db';
-import { UpdateProfileSchema } from '@/lib/validation/profile';
-import { logger } from '@/lib/logger';
-import { userCache } from '@/lib/cache';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
+import { getUserFromRequest } from '@/modules/auth/application/session';
+import { prisma } from '@/platform/db/db';
+import { UpdateProfileSchema } from '@/shared/validation/profile';
+import { logger } from '@/platform/logging/logger';
+import { userCache } from '@/platform/cache/cache';
 
 type UserDto = {
   id: string;

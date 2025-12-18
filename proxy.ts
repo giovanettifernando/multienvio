@@ -36,8 +36,8 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { jwtVerify, errors as joseErrors } from 'jose';
-import { getRouteProtection } from './lib/auth/route-protection';
-import { sessionCache, staffSessionCache, collectorSessionCache, pickupPointSessionCache } from './lib/cache';
+import { getRouteProtection } from '@/modules/auth/application/route-protection';
+import { sessionCache, staffSessionCache, collectorSessionCache, pickupPointSessionCache } from '@/platform/cache/cache';
 
 // Validar JWT secrets em produção
 if (process.env.NODE_ENV === 'production') {

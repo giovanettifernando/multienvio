@@ -1,10 +1,10 @@
-import { prisma } from '@/lib/db';
-import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
+import { prisma } from '@/platform/db/db';
+import { getAdminSessionFromRequest } from '@/modules/auth/application/admin-session';
 import { AdminPermission, PickupPointStatus } from '@prisma/client';
-import { canAccess } from '@/lib/auth/permissions';
+import { canAccess } from '@/modules/auth/application/permissions';
 import { Decimal } from '@prisma/client/runtime/client';
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
 
 function toApiPickupPoint(point: {
   id: string;

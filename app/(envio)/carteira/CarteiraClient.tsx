@@ -1,21 +1,21 @@
 "use client";
 
 import React, { useState } from "react";
-import { ELCard } from "@/components/ui/ELCard";
+import { ELCard } from '@/shared/ui/ELCard';
 import { Typography } from 'antd';
 import { useRouter } from "next/navigation";
-import { ELButton } from "@/components/ui/ELButton";
-import { ELAlert } from "@/components/ui/ELAlert";
-import BalanceCard from "@/components/wallet/BalanceCard";
-import MonthlySummaryCard from "@/components/wallet/MonthlySummaryCard";
-import AddFundsModal from "@/components/wallet/AddFundsModal";
-import ResolveDebtModal from "@/components/wallet/ResolveDebtModal";
-import TransactionsTable from "@/components/wallet/TransactionsTable";
+import { ELButton } from '@/shared/ui/ELButton';
+import { ELAlert } from '@/shared/ui/ELAlert';
+import BalanceCard from '@/modules/wallet/ui/components/BalanceCard';
+import MonthlySummaryCard from '@/modules/wallet/ui/components/MonthlySummaryCard';
+import AddFundsModal from '@/modules/wallet/ui/components/AddFundsModal';
+import ResolveDebtModal from '@/modules/wallet/ui/components/ResolveDebtModal';
+import TransactionsTable from '@/modules/wallet/ui/components/TransactionsTable';
 import { useWallet } from "@/hooks/useWallet";
 import { useCards } from "@/hooks/useAccount";
-import { PageShell } from "@/components/shared/PageShell";
-import gridStyles from "@/components/ui/ELGrid.module.css";
-import { cn } from "@/lib/utils/cn";
+import { PageShell } from '@/shared/ui/PageShell';
+import gridStyles from "@/shared/ui/ELGrid.module.css";
+import { cn } from "@/shared/utils/cn";
 
 export default function CarteiraClient() {
   const [open, setOpen] = useState(false);

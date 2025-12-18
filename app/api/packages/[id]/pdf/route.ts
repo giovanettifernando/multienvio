@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
-import { withApiHandlerResponse } from '@/lib/api/handler';
-import { prisma } from '@/lib/db';
-import { getUserSessionFromRequest } from '@/lib/auth/user-session';
-import { baixarRotuloPdf } from '@/lib/integrations/correios/prepostagem';
+import { withApiHandlerResponse } from '@/platform/api/handler';
+import { prisma } from '@/platform/db/db';
+import { getUserSessionFromRequest } from '@/modules/auth/application/user-session';
+import { baixarRotuloPdf } from '@/platform/integrations/correios/prepostagem';
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import bwipjs from 'bwip-js';
 import { readFile } from 'fs/promises';

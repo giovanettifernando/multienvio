@@ -2,14 +2,14 @@
 
 import { useState, useEffect } from 'react';
 import { Card, Table, Tag, Space, Spin, App, DatePicker, Input, Row, Col, Typography, Button, Form } from 'antd';
-import { ELModal } from '@/components/ui/ELModal';
-import { ELEmpty } from '@/components/ui/ELEmpty';
+import { ELModal } from '@/shared/ui/ELModal';
+import { ELEmpty } from '@/shared/ui/ELEmpty';
 import { EnvironmentOutlined, InboxOutlined, PhoneOutlined, SearchOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import type { TableRowSelection } from 'antd/es/table/interface';
 // Note: TableRowSelection is not directly exported from 'antd', keeping /es/ import
 import type { TableProps } from 'antd';
 import dayjs, { Dayjs } from 'dayjs';
-import { PageShell } from '@/components/shared/PageShell';
+import { PageShell } from '@/shared/ui/PageShell';
 import { useQuery } from '@tanstack/react-query';
 
 const { RangePicker } = DatePicker;

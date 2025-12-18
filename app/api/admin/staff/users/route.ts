@@ -1,12 +1,12 @@
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
-import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
+import { getAdminSessionFromRequest } from '@/modules/auth/application/admin-session';
 import { z } from 'zod';
-import { prisma } from '@/lib/db';
+import { prisma } from '@/platform/db/db';
 import { AdminPermission, Prisma, StaffStatus } from '@prisma/client';
 import bcrypt from 'bcrypt';
 import crypto from 'node:crypto';
-import { sendStaffTempPasswordEmail } from '@/lib/email/mailer';
+import { sendStaffTempPasswordEmail } from '@/platform/email/mailer';
 
 type StaffUserApi = {
   id: string;

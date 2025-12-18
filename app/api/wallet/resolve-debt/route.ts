@@ -5,10 +5,10 @@
  * Cria um pagamento para cobrir o valor negativo
  */
 
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
-import { getUserFromRequest } from '@/lib/auth/session';
-import { getOrCreateWallet, centsToReais } from '@/lib/wallet/wallet.service';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
+import { getUserFromRequest } from '@/modules/auth/application/session';
+import { getOrCreateWallet, centsToReais } from '@/modules/wallet/application/wallet.service';
 import { z } from 'zod';
 
 const resolveDebtSchema = z.object({

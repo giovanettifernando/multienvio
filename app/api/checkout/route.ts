@@ -1,14 +1,14 @@
 import { NextRequest } from 'next/server';
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
 import { z } from 'zod';
-import { getUserSessionFromRequest } from '@/lib/auth/user-session';
+import { getUserSessionFromRequest } from '@/modules/auth/application/user-session';
 import {
   processCheckout,
   validateDocumentHasItems,
   type CheckoutInput,
-} from '@/lib/checkout';
-import { enforceRateLimitByIP, RATE_LIMITS } from '@/lib/rate-limit-redis';
+} from '@/modules/cart/application';
+import { enforceRateLimitByIP, RATE_LIMITS } from '@/platform/cache/rate-limit-redis';
 
 /**
  * Tipos de resposta do checkout - Union discriminada por 'source'

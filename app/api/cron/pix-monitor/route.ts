@@ -18,15 +18,15 @@
  * - Ex: curl -X POST -H "X-Cron-Secret: $SECRET" https://seusite.com/api/cron/pix-monitor
  */
 
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
 import crypto from 'crypto';
 import {
   monitorPendingPixPayments,
   cleanupOldPendingPix,
   type PixMonitorResult,
-} from '@/lib/mercadopago/pix-monitor';
-import { logger } from '@/lib/logger';
+} from '@/platform/integrations/mercadopago/pix-monitor';
+import { logger } from '@/platform/logging/logger';
 
 export const maxDuration = 60; // 60 segundos de timeout
 

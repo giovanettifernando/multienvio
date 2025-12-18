@@ -7,23 +7,23 @@
 
 import { NextResponse } from 'next/server';
 import { SignJWT } from 'jose';
-import { prisma } from '@/lib/db';
-import { withApiHandlerResponse } from '@/lib/api/handler';
+import { prisma } from '@/platform/db/db';
+import { withApiHandlerResponse } from '@/platform/api/handler';
 import {
   parseState,
   exchangeCodeForTokens,
   getUserInfo,
   type OAuthContext,
-} from '@/lib/auth/google-oauth';
+} from '@/modules/auth/application/google-oauth';
 import {
   signTokenPair,
   ACCESS_TOKEN_COOKIE,
   REFRESH_TOKEN_COOKIE,
   ACCESS_TOKEN_MAX_AGE_SECONDS,
   REFRESH_TOKEN_MAX_AGE_SECONDS,
-} from '@/lib/auth/jwt-tokens';
-import { getCachedRoleByName, sessionCache } from '@/lib/cache';
-import type { RequestLogger } from '@/lib/api/types';
+} from '@/modules/auth/application/jwt-tokens';
+import { getCachedRoleByName, sessionCache } from '@/platform/cache/cache';
+import type { RequestLogger } from '@/platform/api/types';
 
 // JWT secret for collector tokens - OBRIGATÓRIO, sem fallback
 const JWT_SECRET_RAW = process.env.JWT_SECRET;

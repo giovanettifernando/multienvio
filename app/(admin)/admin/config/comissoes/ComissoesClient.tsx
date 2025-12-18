@@ -24,7 +24,7 @@ import {
   CalculatorOutlined,
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { inputNumberFormatterBRL, inputNumberParserBRL } from '@/lib/utils/format';
+import { inputNumberFormatterBRL, inputNumberParserBRL } from '@/shared/utils/format';
 
 const { Title, Text } = Typography;
 

@@ -1,7 +1,7 @@
 import { WalletTxStatus, WalletTxType } from '@prisma/client';
-import type { AccountStatus, AdminClient, ClientType } from '@/lib/admin/types';
-import { formatCNPJ, formatCPF } from '@/lib/masks';
-import { AdminClientsPage } from '@/components/admin/clients/AdminClientsPage';
+import type { AccountStatus, AdminClient, ClientType } from '@/modules/admin/application/types';
+import { formatCNPJ, formatCPF } from '@/shared/utils/masks';
+import { AdminClientsPage } from '@/modules/admin/ui/components/clients/AdminClientsPage';
 
 
 function mapClientStatus(status: string): AccountStatus {
@@ -32,7 +32,7 @@ function resolveClientDocument(hasCompany: boolean, cpf?: string | null, cnpj?: 
 
 async function fetchAdminClients(): Promise<AdminClient[]> {
   try {
-    const { prisma } = await import('@/lib/db');
+    const { prisma } = await import('@/platform/db/db');
 
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);

@@ -1,5 +1,5 @@
-import { withApiHandler } from "@/lib/api/handler";
-import { ApiError } from "@/lib/api/errors";
+import { withApiHandler } from "@/platform/api/handler";
+import { ApiError } from "@/platform/api/errors";
 import {
   enforceCardWriteLimit,
   rethrowCardValidation,
@@ -9,8 +9,8 @@ import {
   deleteUserCard,
   updateUserCard,
   type AccountCardDto,
-} from "@/lib/services/account-cards.service";
-import { validateCardUpdateInput } from "@/lib/validation/card";
+} from "@/modules/auth/application/account-cards.service";
+import { validateCardUpdateInput } from '@/shared/validation/card';
 
 type CardDtoResponse = {
   id: string;

@@ -10,16 +10,16 @@
 
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { requireAdminUser } from '@/lib/auth/admin-helpers';
+import { requireAdminUser } from '@/modules/auth/application/admin-helpers';
 import { AdminPermission } from '@prisma/client';
-import { withApiHandlerResponse } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
+import { withApiHandlerResponse } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
 import {
   baixarRotuloPdf,
   buscarPrePostagemPorRastreio,
   getCorreiosConfigAsync,
   validateCorreiosConfig,
-} from '@/lib/integrations/correios';
+} from '@/platform/integrations/correios';
 
 const rotuloSchema = z.object({
   // Aceita código de rastreio (ex: AN312817735BR) ou ID da pré-postagem (ex: PRNnhoiSb6SSKvvVJA13MiOA)

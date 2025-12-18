@@ -6,13 +6,13 @@
  */
 
 import { z } from 'zod';
-import { prisma } from '@/lib/db';
-import { requireAdminUser } from '@/lib/auth/admin-helpers';
+import { prisma } from '@/platform/db/db';
+import { requireAdminUser } from '@/modules/auth/application/admin-helpers';
 import { AdminPermission } from '@prisma/client';
 import type { FAQAudience } from '@prisma/client';
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
-import { faqCache } from '@/lib/cache';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
+import { faqCache } from '@/platform/cache/cache';
 
 /**
  * Schema de validação para criar/editar FAQ

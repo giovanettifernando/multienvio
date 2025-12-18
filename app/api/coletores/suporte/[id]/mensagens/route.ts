@@ -1,11 +1,11 @@
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
-import { getAutonomousCollectorSession } from '@/lib/auth/autonomous-collector-session';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
+import { getAutonomousCollectorSession } from '@/modules/auth/application/autonomous-collector-session';
 import {
   addMessageToTicketForAutonomousCollector,
   getTicketForAutonomousCollector,
-} from '@/lib/support/autonomous-collector-service';
-import { type SupportMessage } from '@/lib/validation/support';
+} from '@/modules/support/application/autonomous-collector-service';
+import { type SupportMessage } from '@/shared/validation/support';
 import { z } from 'zod';
 
 const AddMessageSchema = z.object({

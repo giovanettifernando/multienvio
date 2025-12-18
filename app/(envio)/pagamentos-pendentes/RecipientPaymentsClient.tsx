@@ -21,10 +21,10 @@ import {
   ReloadOutlined,
   CopyOutlined,
 } from "@ant-design/icons";
-import { PageShell } from "@/components/shared/PageShell";
-import { ELButton } from "@/components/ui/ELButton";
-import { ELSelect } from "@/components/ui/ELSelect";
-import { ELSkeleton } from "@/components/ui/ELSkeleton";
+import { PageShell } from '@/shared/ui/PageShell';
+import { ELButton } from '@/shared/ui/ELButton';
+import { ELSelect } from '@/shared/ui/ELSelect';
+import { ELSkeleton } from '@/shared/ui/ELSkeleton';
 
 const { Text } = Typography;
 

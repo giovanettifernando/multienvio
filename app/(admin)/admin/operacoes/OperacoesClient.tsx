@@ -4,13 +4,13 @@ import { useState, useMemo } from 'react';
 import { Card, Statistic, Row, Col, Select, DatePicker, Flex, Tabs, Skeleton, Alert } from 'antd';
 import { useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
-import { getOpsKpis } from '@/lib/admin/ops/api';
-import ShipmentsTable from '@/components/admin/ops/ShipmentsTable';
-import PickupsTable from '@/components/admin/ops/PickupsTable';
-import ReceptionsTable from '@/components/admin/ops/ReceptionsTable';
-import ExceptionsTable from '@/components/admin/ops/ExceptionsTable';
-import EventsTable from '@/components/admin/ops/EventsTable';
-import { PageShell } from '@/components/shared/PageShell';
+import { getOpsKpis } from '@/modules/admin/application/ops/api';
+import ShipmentsTable from '@/modules/admin/ui/components/ops/ShipmentsTable';
+import PickupsTable from '@/modules/admin/ui/components/ops/PickupsTable';
+import ReceptionsTable from '@/modules/admin/ui/components/ops/ReceptionsTable';
+import ExceptionsTable from '@/modules/admin/ui/components/ops/ExceptionsTable';
+import EventsTable from '@/modules/admin/ui/components/ops/EventsTable';
+import { PageShell } from '@/shared/ui/PageShell';
 
 const { RangePicker } = DatePicker;
 

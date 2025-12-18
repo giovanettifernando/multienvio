@@ -15,8 +15,8 @@ import {
   InputNumber,
   Descriptions,
 } from 'antd';
-import { ELModal } from '@/components/ui/ELModal';
-import { ELInput } from '@/components/ui/ELInput';
+import { ELModal } from '@/shared/ui/ELModal';
+import { ELInput } from '@/shared/ui/ELInput';
 import {
   InboxOutlined,
   CameraOutlined,
@@ -24,7 +24,7 @@ import {
   CheckCircleOutlined,
 } from '@ant-design/icons';
 import type { TableProps } from 'antd';
-import { PageShell } from '@/components/shared/PageShell';
+import { PageShell } from '@/shared/ui/PageShell';
 
 const { TextArea } = Input;
 

@@ -1,10 +1,10 @@
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
-import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
+import { getAdminSessionFromRequest } from '@/modules/auth/application/admin-session';
 import { AdminPermission, Prisma } from '@prisma/client';
-import { canAccess } from '@/lib/auth/permissions';
-import type { Paged, OpsShipment } from '@/lib/admin/ops/types';
-import prisma from '@/lib/db';
+import { canAccess } from '@/modules/auth/application/permissions';
+import type { Paged, OpsShipment } from '@/modules/admin/application/ops/types';
+import prisma from '@/platform/db/db';
 
 export const GET = withApiHandler<Paged<OpsShipment>>(async (context) => {
   const session = await getAdminSessionFromRequest(context.req);

@@ -14,14 +14,14 @@
  */
 
 import { NextResponse } from 'next/server';
-import { withApiHandlerResponse } from '@/lib/api/handler';
-import { getUserFromRequest, removeAuthCookie, AUTH_COOKIE_NAME } from '@/lib/auth/session';
-import { ApiError } from '@/lib/api/errors';
-import { enforceRateLimit } from '@/lib/rate-limit-redis';
-import { changePasswordSchema } from '@/lib/validation/password-policy';
-import { accountSecurityService } from '@/lib/services/account-security.service';
-import { sendPasswordChangedEmail } from '@/lib/email/mailer';
-import prisma from '@/lib/db';
+import { withApiHandlerResponse } from '@/platform/api/handler';
+import { getUserFromRequest, removeAuthCookie, AUTH_COOKIE_NAME } from '@/modules/auth/application/session';
+import { ApiError } from '@/platform/api/errors';
+import { enforceRateLimit } from '@/platform/cache/rate-limit-redis';
+import { changePasswordSchema } from '@/shared/validation/password-policy';
+import { accountSecurityService } from '@/modules/auth/application/account-security.service';
+import { sendPasswordChangedEmail } from '@/platform/email/mailer';
+import prisma from '@/platform/db/db';
 
 /**
  * Extrai IP do request (considerando proxies)

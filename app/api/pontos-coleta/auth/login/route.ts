@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { prisma } from '@/lib/db';
-import { collectorSign, createCollectorCookieHeader } from '@/lib/auth/collector-session';
+import { prisma } from '@/platform/db/db';
+import { collectorSign, createCollectorCookieHeader } from '@/modules/auth/application/collector-session';
 import bcrypt from 'bcrypt';
-import { withApiHandlerResponse } from '@/lib/api/handler';
-import { rateLimitByIP, RATE_LIMITS } from '@/lib/rate-limit-redis';
-import { pickupPointSessionCache } from '@/lib/cache';
+import { withApiHandlerResponse } from '@/platform/api/handler';
+import { rateLimitByIP, RATE_LIMITS } from '@/platform/cache/rate-limit-redis';
+import { pickupPointSessionCache } from '@/platform/cache/cache';
 
 const loginSchema = z.object({
   cnpj: z.string().min(14).max(14), // CNPJ apenas números

@@ -1,5 +1,6 @@
 {
   "compilerOptions": {
+    "baseUrl": ".",
     "target": "ES2017",
     "lib": [
       "dom",
@@ -23,9 +24,10 @@
       }
     ],
     "paths": {
-      "@/*": [
-        "./*"
-      ]
+      "@/*": ["./*"],
+      "@/modules/*": ["modules/*"],
+      "@/shared/*": ["shared/*"],
+      "@/platform/*": ["platform/*"]
     }
   },
   "include": [
@@ -41,8 +43,8 @@
     "test-*.ts",
     "*.test.ts",
     "tests",
-    "tests-v2",
     "_data",
-    "_infra"
+    "_infra",
+    "_backup_compat_layers"
   ]
 }

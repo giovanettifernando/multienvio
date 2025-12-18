@@ -4,17 +4,17 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, Button } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
-import EntitySearchFilters from '@/components/shared/EntitySearchFilters';
-import CollectorsTable from '@/components/collectors/CollectorsTable';
-import CollectorDrawer from '@/components/collectors/CollectorDrawer';
+import EntitySearchFilters from '@/shared/ui/EntitySearchFilters';
+import CollectorsTable from '@/modules/collectors/ui/components/CollectorsTable';
+import CollectorDrawer from '@/modules/collectors/ui/components/CollectorDrawer';
 import {
   useCollectors,
   useCreateCollector,
   useDeleteCollector,
   useToggleCollectorStatus,
-} from '@/lib/collectors/hooks';
-import type { CollectorFilters, CollectorFormData } from '@/lib/collectors/types';
-import { PageShell } from '@/components/shared/PageShell';
+} from '@/modules/collectors/application/hooks';
+import type { CollectorFilters, CollectorFormData } from '@/modules/collectors/application/types';
+import { PageShell } from '@/shared/ui/PageShell';
 
 export default function ColetoresClient() {
   const router = useRouter();

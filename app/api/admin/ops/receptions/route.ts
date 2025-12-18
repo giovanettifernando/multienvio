@@ -13,11 +13,11 @@
  * - q: Busca textual (código de rastreio, nome do remetente/destinatário)
  */
 
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
-import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
+import { getAdminSessionFromRequest } from '@/modules/auth/application/admin-session';
 import { AdminPermission, Prisma } from '@prisma/client';
-import { prisma } from '@/lib/db';
+import { prisma } from '@/platform/db/db';
 
 interface ReceptionPickupPoint {
   id: string;

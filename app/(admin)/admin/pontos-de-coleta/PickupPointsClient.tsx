@@ -4,12 +4,12 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, Button, App } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
-import EntitySearchFilters from '@/components/shared/EntitySearchFilters';
-import PointsTable from '@/components/pickup/PointsTable';
-import PointDrawer from '@/components/pickup/PointDrawer';
+import EntitySearchFilters from '@/shared/ui/EntitySearchFilters';
+import PointsTable from '@/modules/pickup-points/ui/components/PointsTable';
+import PointDrawer from '@/modules/pickup-points/ui/components/PointDrawer';
 import { usePickupPointsAPI } from '@/hooks/usePickupPointsAPI';
-import type { PickupPointFilters, PickupPointFormData, PickupPointListResponse } from '@/lib/pickup/types';
-import { PageShell } from '@/components/shared/PageShell';
+import type { PickupPointFilters, PickupPointFormData, PickupPointListResponse } from '@/modules/pickup-points/application/types';
+import { PageShell } from '@/shared/ui/PageShell';
 
 export default function PickupPointsClient() {
   const { message } = App.useApp();

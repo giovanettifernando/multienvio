@@ -2,19 +2,19 @@
 
 import React, { useState } from "react";
 import { DatePicker } from "antd";
-import { ELCard } from "@/components/ui/ELCard";
+import { ELCard } from '@/shared/ui/ELCard';
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import type { PickupRequestWithShipment, PickupStatus } from "@/lib/types/pickup";
+import type { PickupRequestWithShipment, PickupStatus } from "@/shared/types/pickup";
 import dayjs, { type Dayjs } from "dayjs";
-import { PageShell } from "@/components/shared/PageShell";
-import { ELButton } from "@/components/ui/ELButton";
-import { ELInput } from "@/components/ui/ELInput";
-import { ELSelect } from "@/components/ui/ELSelect";
-import { ELStatusTag, type StatusVariant } from "@/components/ui/ELStatusTag";
-import { DataTable, type DataTableColumn } from "@/components/ui/DataTable";
-import { ActionBar } from "@/components/ui/ActionBar";
-import tableStyles from "@/components/ui/ELTableWrapper.module.css";
+import { PageShell } from '@/shared/ui/PageShell';
+import { ELButton } from '@/shared/ui/ELButton';
+import { ELInput } from '@/shared/ui/ELInput';
+import { ELSelect } from '@/shared/ui/ELSelect';
+import { ELStatusTag, type StatusVariant } from '@/shared/ui/ELStatusTag';
+import { DataTable, type DataTableColumn } from '@/shared/ui/DataTable';
+import { ActionBar } from '@/shared/ui/ActionBar';
+import tableStyles from "@/shared/ui/ELTableWrapper.module.css";
 
 const { RangePicker } = DatePicker;
 

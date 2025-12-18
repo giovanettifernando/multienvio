@@ -9,15 +9,15 @@ import {
   Tag,
   Typography,
 } from "antd";
-import { ELSkeleton } from "@/components/ui/ELSkeleton";
-import { ELCard } from "@/components/ui/ELCard";
-import { ELButton } from "@/components/ui/ELButton";
-import { ELGrid, ELGridSpanFull } from "@/components/ui/ELGrid";
+import { ELSkeleton } from '@/shared/ui/ELSkeleton';
+import { ELCard } from '@/shared/ui/ELCard';
+import { ELButton } from '@/shared/ui/ELButton';
+import { ELGrid, ELGridSpanFull } from '@/shared/ui/ELGrid';
 import { ShareAltOutlined, CopyOutlined, PrinterOutlined } from "@ant-design/icons";
 import { useQuery } from "@tanstack/react-query";
-import { TrackingTimeline } from "@/components/track/TrackingTimeline";
-import { PageShell } from "@/components/shared/PageShell";
-import { ShipmentLabelPdfModal } from "@/components/labels";
+import { TrackingTimeline } from "@/modules/tracking/ui/components/TrackingTimeline";
+import { PageShell } from '@/shared/ui/PageShell';
+import { ShipmentLabelPdfModal } from "@/modules/labels/ui/components";
 import { useState } from "react";
 
 const { Text } = Typography;

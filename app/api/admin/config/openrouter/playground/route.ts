@@ -6,12 +6,12 @@
  */
 
 import { z } from 'zod';
-import { requireAdminUser } from '@/lib/auth/admin-helpers';
+import { requireAdminUser } from '@/modules/auth/application/admin-helpers';
 import { AdminPermission } from '@prisma/client';
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
-import { getOpenRouterConfigDecrypted } from '@/lib/integrations/openrouter/config.service';
-import { ASSISTANT_TOOLS } from '@/lib/assistant/tools/definitions';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
+import { getOpenRouterConfigDecrypted } from '@/platform/integrations/openrouter/config.service';
+import { ASSISTANT_TOOLS } from '@/modules/assistant/application/tools/definitions';
 
 /**
  * Schema para request do playground

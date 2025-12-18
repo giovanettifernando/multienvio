@@ -22,11 +22,11 @@
  * }
  */
 
-import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
+import { getAdminSessionFromRequest } from '@/modules/auth/application/admin-session';
 import { AdminPermission } from '@prisma/client';
-import { listManualOverrides } from '@/lib/services/cepLocation';
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
+import { listManualOverrides } from '@/platform/integrations/shared/cepLocation';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
 
 export const GET = withApiHandler(async ({ req }) => {
   const session = await getAdminSessionFromRequest(req);

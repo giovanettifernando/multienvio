@@ -9,7 +9,7 @@ import {
   RiseOutlined,
   FallOutlined,
 } from '@ant-design/icons';
-import { PageShell } from '@/components/shared/PageShell';
+import { PageShell } from '@/shared/ui/PageShell';
 
 interface KPIData {
   pending: { value: number; label: string };

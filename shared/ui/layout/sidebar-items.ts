@@ -1,0 +1,86 @@
+import {
+  HomeOutlined,
+  SearchOutlined,
+  ShoppingCartOutlined,
+  // FileAddOutlined, // TODO: Descomentar quando reativar menu Etiquetas
+  ReconciliationOutlined,
+  CalendarOutlined,
+  WalletOutlined,
+  CustomerServiceOutlined,
+  SettingOutlined,
+  SendOutlined,
+} from '@ant-design/icons';
+
+// Use typeof to infer icon component type from existing icon
+type IconComponent = typeof HomeOutlined;
+
+export interface SidebarItem {
+  key: string;
+  icon: IconComponent;
+  label: string;
+  href: string;
+}
+
+export const sidebarItems: SidebarItem[] = [
+  {
+    key: 'overview',
+    icon: HomeOutlined,
+    label: 'Visão geral',
+    href: '/',
+  },
+  {
+    key: 'shipments',
+    icon: ReconciliationOutlined,
+    label: 'Meus Envios',
+    href: '/shipments',
+  },
+  {
+    key: 'quote',
+    icon: SearchOutlined,
+    label: 'Cotar envio',
+    href: '/cotacoes',
+  },
+  {
+    key: 'cart',
+    icon: ShoppingCartOutlined,
+    label: 'Carrinho',
+    href: '/carrinho',
+  },
+  // TODO: Avaliar se mantém ou exclui menu Etiquetas
+  // {
+  //   key: 'labels',
+  //   icon: FileAddOutlined,
+  //   label: 'Etiquetas',
+  //   href: '/etiquetas',
+  // },
+  {
+    key: 'pickups',
+    icon: CalendarOutlined,
+    label: 'Coletas',
+    href: '/coletas',
+  },
+  {
+    key: 'recipient-payments',
+    icon: SendOutlined,
+    label: 'Frete Destinatario',
+    href: '/pagamentos-pendentes',
+  },
+  {
+    key: 'wallet',
+    icon: WalletOutlined,
+    label: 'Carteira',
+    href: '/carteira',
+  },
+  {
+    key: 'support',
+    icon: CustomerServiceOutlined,
+    label: 'Suporte',
+    href: '/suporte',
+  },
+  {
+    key: 'account',
+    icon: SettingOutlined,
+    label: 'Minha conta',
+    href: '/minha-conta',
+  },
+];

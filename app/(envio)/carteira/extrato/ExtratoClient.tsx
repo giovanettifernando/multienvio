@@ -2,21 +2,21 @@
 
 import { useState } from "react";
 import { DatePicker, Space, App } from "antd";
-import { ELCard } from "@/components/ui/ELCard";
+import { ELCard } from '@/shared/ui/ELCard';
 import { PrinterOutlined } from "@ant-design/icons";
 import { useRouter } from "next/navigation";
 import dayjs, { Dayjs } from "dayjs";
 import { useWalletTransactions } from "@/hooks/useWalletTransactions";
-import PeriodSummaryCard from "@/components/wallet/PeriodSummaryCard";
-import StatementTable from "@/components/wallet/StatementTable";
-import StatementPDFModal from "@/components/wallet/StatementPDFModal";
-import { PageShell } from "@/components/shared/PageShell";
-import { ELButton } from "@/components/ui/ELButton";
-import { ELInput } from "@/components/ui/ELInput";
-import { ActionBar } from "@/components/ui/ActionBar";
-import tableStyles from "@/components/ui/ELTableWrapper.module.css";
-import gridStyles from "@/components/ui/ELGrid.module.css";
-import { cn } from "@/lib/utils/cn";
+import PeriodSummaryCard from '@/modules/wallet/ui/components/PeriodSummaryCard';
+import StatementTable from '@/modules/wallet/ui/components/StatementTable';
+import StatementPDFModal from '@/modules/wallet/ui/components/StatementPDFModal';
+import { PageShell } from '@/shared/ui/PageShell';
+import { ELButton } from '@/shared/ui/ELButton';
+import { ELInput } from '@/shared/ui/ELInput';
+import { ActionBar } from '@/shared/ui/ActionBar';
+import tableStyles from "@/shared/ui/ELTableWrapper.module.css";
+import gridStyles from "@/shared/ui/ELGrid.module.css";
+import { cn } from "@/shared/utils/cn";
 
 const { RangePicker } = DatePicker;
 

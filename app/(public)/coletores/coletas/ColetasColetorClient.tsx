@@ -2,11 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { Card, Table, Tag, Button, Space, Spin, App, Form, Input, DatePicker } from 'antd';
-import { ELModal } from '@/components/ui/ELModal';
-import { ELEmpty } from '@/components/ui/ELEmpty';
+import { ELModal } from '@/shared/ui/ELModal';
+import { ELEmpty } from '@/shared/ui/ELEmpty';
 import { EnvironmentOutlined, InboxOutlined, CameraOutlined, CheckCircleOutlined, PhoneOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import dayjs, { Dayjs } from 'dayjs';
-import { PageShell } from '@/components/shared/PageShell';
+import { PageShell } from '@/shared/ui/PageShell';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { TableProps } from 'antd';
 

@@ -13,9 +13,9 @@ import {
   getAdminTokenFromRequest,
   adminVerify,
   ADMIN_AUTH_COOKIE_NAME,
-} from '@/lib/auth/admin-session';
-import { staffSessionCache } from '@/lib/cache';
-import { requireValidOrigin } from '@/lib/api/csrf';
+} from '@/modules/auth/application/admin-session';
+import { staffSessionCache } from '@/platform/cache/cache';
+import { requireValidOrigin } from '@/platform/api/csrf';
 
 const LAST_ACTIVITY_COOKIE_NAME = 'last_activity_admin';
 

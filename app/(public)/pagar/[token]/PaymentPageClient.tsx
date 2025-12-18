@@ -16,12 +16,12 @@ import {
   EnvironmentOutlined,
   SendOutlined,
 } from "@ant-design/icons";
-import { ELAlert } from "@/components/ui/ELAlert";
-import { ELButton } from "@/components/ui/ELButton";
-import { ELCard } from "@/components/ui/ELCard";
-import { ELSkeleton } from "@/components/ui/ELSkeleton";
-import type { PublicPaymentData } from "@/lib/recipient-payment/types";
-import { RecipientPaymentModal } from "@/components/payments/RecipientPaymentModal";
+import { ELAlert } from '@/shared/ui/ELAlert';
+import { ELButton } from '@/shared/ui/ELButton';
+import { ELCard } from '@/shared/ui/ELCard';
+import { ELSkeleton } from '@/shared/ui/ELSkeleton';
+import type { PublicPaymentData } from "@/modules/recipients/application/types";
+import { RecipientPaymentModal } from "@/modules/payments/ui/components/RecipientPaymentModal";
 
 const { Title, Text, Paragraph } = Typography;
 

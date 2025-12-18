@@ -7,14 +7,14 @@
  */
 
 import { z } from 'zod';
-import { prisma } from '@/lib/db';
-import { requireAdminUser } from '@/lib/auth/admin-helpers';
+import { prisma } from '@/platform/db/db';
+import { requireAdminUser } from '@/modules/auth/application/admin-helpers';
 import { AdminPermission, Prisma } from '@prisma/client';
-import { encrypt, decrypt } from '@/lib/integrations/shared/encryption.service';
-import { invalidateCorreiosConfigCache, clearTokenCache } from '@/lib/integrations/correios';
-import { invalidateCarrierCommissionCache } from '@/lib/quotes/commission';
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
+import { encrypt, decrypt } from '@/platform/integrations/shared/encryption.service';
+import { invalidateCorreiosConfigCache, clearTokenCache } from '@/platform/integrations/correios';
+import { invalidateCarrierCommissionCache } from '@/modules/quotes/application/commission';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
 
 const CORREIOS_CARRIER_SLUG = 'correios';
 

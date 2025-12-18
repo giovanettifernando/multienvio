@@ -3,17 +3,17 @@
 import { useState } from "react";
 import { Button } from "antd";
 import { PlusOutlined } from "@ant-design/icons";
-import { PageShell } from "@/components/shared/PageShell";
-import { SearchFilters } from "@/components/shared/SearchFilters";
-import { UsersTable } from "@/components/admin/users/UsersTable";
-import { UserDrawer } from "@/components/admin/users/UserDrawer";
-import { useUsers, useRoles } from "@/lib/auth/hooks";
+import { PageShell } from '@/shared/ui/PageShell';
+import { SearchFilters } from '@/shared/ui/SearchFilters';
+import { UsersTable } from '@/modules/admin/ui/components/users/UsersTable';
+import { UserDrawer } from '@/modules/admin/ui/components/users/UserDrawer';
+import { useUsers, useRoles } from "@/modules/auth/application/hooks";
 import {
   ADMIN_PERMISSION_KEYS,
   type AdminPermissionKey,
   type AdminUser,
   type AdminUserFilters,
-} from "@/lib/auth/types";
+} from "@/modules/auth/application/types";
 
 export default function AdminUsersClient() {
   const [filters, setFilters] = useState<AdminUserFilters>({

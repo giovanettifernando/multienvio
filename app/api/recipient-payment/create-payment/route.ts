@@ -5,12 +5,12 @@
  * Endpoint publico - valida pelo paymentToken do request
  */
 
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
 import { z } from 'zod';
-import { prisma } from '@/lib/db';
-import { createPaymentWithTracking, getStatusDetailMessage } from '@/lib/mercadopago';
-import type { CreatePaymentInput } from '@/lib/mercadopago';
+import { prisma } from '@/platform/db/db';
+import { createPaymentWithTracking, getStatusDetailMessage } from '@/platform/integrations/mercadopago';
+import type { CreatePaymentInput } from '@/platform/integrations/mercadopago';
 
 const createPaymentSchema = z.object({
   paymentToken: z.string().min(1, 'Token de pagamento e obrigatorio'),

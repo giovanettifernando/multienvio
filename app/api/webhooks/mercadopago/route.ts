@@ -7,11 +7,11 @@
  */
 
 
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
-import { processWebhook } from '@/lib/mercadopago';
-import type { MercadoPagoWebhookPayload, WebhookHeaders } from '@/lib/mercadopago';
-import { logger } from '@/lib/logger';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
+import { processWebhook } from '@/platform/integrations/mercadopago';
+import type { MercadoPagoWebhookPayload, WebhookHeaders } from '@/platform/integrations/mercadopago';
+import { logger } from '@/platform/logging/logger';
 import { z } from 'zod';
 
 /**

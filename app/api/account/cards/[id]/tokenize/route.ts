@@ -1,8 +1,8 @@
-import { ApiError } from "@/lib/api/errors";
-import { withApiHandler } from "@/lib/api/handler";
+import { ApiError } from "@/platform/api/errors";
+import { withApiHandler } from "@/platform/api/handler";
 import { requireUserId } from "../../helpers";
-import { prisma } from "@/lib/db";
-import { parsePanCipher, decryptPan, loadVaultKey } from "@/lib/crypto/card-vault";
+import { prisma } from "@/platform/db/db";
+import { parsePanCipher, decryptPan, loadVaultKey } from "@/platform/crypto/card-vault";
 
 type TokenizeCardResponse = {
   pan: string;

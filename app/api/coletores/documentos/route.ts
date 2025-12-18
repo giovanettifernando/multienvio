@@ -7,12 +7,12 @@
  * 2. JSON mode: Client already uploaded files and sends metadata with URLs
  */
 
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
 import { z } from 'zod';
-import { prisma } from '@/lib/db';
-import { getCollectorId } from '@/lib/auth/autonomous-collector-session';
-import { persistCollectorDocument } from '@/lib/storage/collector-documents';
+import { prisma } from '@/platform/db/db';
+import { getCollectorId } from '@/modules/auth/application/autonomous-collector-session';
+import { persistCollectorDocument } from '@/platform/storage/collector-documents';
 
 // Validation schema for document metadata
 const documentMetadataSchema = z.object({

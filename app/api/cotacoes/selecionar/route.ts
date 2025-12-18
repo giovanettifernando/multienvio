@@ -1,12 +1,12 @@
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
-import { getUserFromRequest } from '@/lib/auth/session';
-import { selectQuoteOption } from '@/lib/quotes/service';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
+import { getUserFromRequest } from '@/modules/auth/application/session';
+import { selectQuoteOption } from '@/modules/quotes/application/service';
 import {
   quoteSelectionSchema,
   type QuoteSelectionRequest,
-} from '@/lib/validation/quote-backend';
-import type { QuoteSelectionResponse } from '@/types/quote';
+} from '@/shared/validation/quote-backend';
+import type { QuoteSelectionResponse } from '@/shared/types/quote';
 
 /**
  * POST /api/cotacoes/selecionar

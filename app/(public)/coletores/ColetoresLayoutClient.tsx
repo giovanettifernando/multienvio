@@ -12,7 +12,7 @@ import {
   MenuOutlined,
   CloseOutlined,
 } from '@ant-design/icons';
-import { useColetorSession } from '@/stores/useColetorSession';
+import { useColetorSession } from '@/modules/collectors/ui/state/useColetorSession';
 
 const { Header, Sider, Content } = Layout;
 

@@ -7,10 +7,10 @@
  *   - search: filtro por nome (opcional)
  */
 
-import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
-import { prisma } from '@/lib/db';
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
+import { getAdminSessionFromRequest } from '@/modules/auth/application/admin-session';
+import { prisma } from '@/platform/db/db';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
 
 export const GET = withApiHandler(async ({ req }) => {
   const session = await getAdminSessionFromRequest(req);

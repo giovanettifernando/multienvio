@@ -5,14 +5,14 @@
  * Requer autenticacao - apenas o remetente pode criar
  */
 
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
-import { getSession } from '@/lib/auth/session';
-import { createRecipientPaymentRequest } from '@/lib/recipient-payment/service';
-import { createRecipientPaymentSchema } from '@/lib/recipient-payment/validation';
-import { sendRecipientPaymentRequestEmail } from '@/lib/email/recipient-payment';
-import { prisma } from '@/lib/db';
-import type { RecipientPaymentRequestWithPackages } from '@/lib/recipient-payment/types';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
+import { getSession } from '@/modules/auth/application/session';
+import { createRecipientPaymentRequest } from '@/modules/recipients/application/service';
+import { createRecipientPaymentSchema } from '@/modules/recipients/application/validation';
+import { sendRecipientPaymentRequestEmail } from '@/platform/email/recipient-payment';
+import { prisma } from '@/platform/db/db';
+import type { RecipientPaymentRequestWithPackages } from '@/modules/recipients/application/types';
 
 type CreateResponse = {
   request: RecipientPaymentRequestWithPackages;

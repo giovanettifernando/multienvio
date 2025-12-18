@@ -1,8 +1,8 @@
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
-import { prisma } from '@/lib/db';
-import { generatePublicTimeline, mapToPublicTrackingStatus, PublicStatusMessages } from '@/lib/shipments/public-tracking-status';
-import { ShipmentStatus } from '@/lib/shipments/shipment-status';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
+import { prisma } from '@/platform/db/db';
+import { generatePublicTimeline, mapToPublicTrackingStatus, PublicStatusMessages } from '@/modules/shipments/application/public-tracking-status';
+import { ShipmentStatus } from '@/modules/shipments/application/shipment-status';
 
 /**
  * GET /api/public/track/[code]

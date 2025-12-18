@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { useAuthStore, useAuthHydrated } from "@/stores/auth";
+import { useAuthStore, useAuthHydrated } from '@/modules/auth/ui/state/auth';
 import { Spin } from "antd";
 
 const LOGIN_PATH = "/auth/login";

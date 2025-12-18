@@ -1,6 +1,6 @@
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
-import { geocodeCEP } from '@/lib/services/geocoding';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
+import { geocodeCEP } from '@/platform/integrations/shared/geocoding';
 
 type GeocodeResponse = {
   cep: string;

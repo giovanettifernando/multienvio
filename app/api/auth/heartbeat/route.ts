@@ -31,8 +31,8 @@ import {
   verifyAccessToken,
   ACCESS_TOKEN_COOKIE,
   REFRESH_TOKEN_COOKIE,
-} from '@/lib/auth/jwt-tokens';
-import { sessionCache } from '@/lib/cache';
+} from '@/modules/auth/application/jwt-tokens';
+import { sessionCache } from '@/platform/cache/cache';
 
 const LAST_ACTIVITY_COOKIE_NAME = 'last_activity_user';
 

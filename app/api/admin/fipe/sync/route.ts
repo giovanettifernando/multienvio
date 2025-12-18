@@ -5,13 +5,13 @@
  * Requer permissão INTEGRACOES ou superAdmin
  */
 
-import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
-import { canAccess } from '@/lib/auth/permissions';
+import { getAdminSessionFromRequest } from '@/modules/auth/application/admin-session';
+import { canAccess } from '@/modules/auth/application/permissions';
 import { AdminPermission } from '@prisma/client';
-import { prisma } from '@/lib/db';
-import { syncFipeBrandsAndModels, getFipeStats, type SyncOptions } from '@/lib/integrations/fipe';
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
+import { prisma } from '@/platform/db/db';
+import { syncFipeBrandsAndModels, getFipeStats, type SyncOptions } from '@/platform/integrations/fipe';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
 
 // Timeout maior para sync (5 minutos)
 export const maxDuration = 300;

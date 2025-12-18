@@ -1,8 +1,8 @@
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
-import { getSession } from '@/lib/auth/session';
-import { checkoutCartSchema } from '@/lib/validation/cart';
-import { processCartCheckout, type CartCheckoutResult } from '@/lib/cart';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
+import { getSession } from '@/modules/auth/application/session';
+import { checkoutCartSchema } from '@/shared/validation/cart';
+import { processCartCheckout, type CartCheckoutResult } from '@/modules/cart/application';
 
 // Tipo para resposta POST /api/cart/checkout
 type CheckoutCartResponse = {

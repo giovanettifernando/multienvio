@@ -1,8 +1,8 @@
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
-import { getCollectorSessionFromRequest } from '@/lib/auth/collector-session';
-import { getTicketForCollector } from '@/lib/support/collector-service';
-import type { SupportTicket } from '@/lib/validation/support';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
+import { getCollectorSessionFromRequest } from '@/modules/auth/application/collector-session';
+import { getTicketForCollector } from '@/modules/support/application/collector-service';
+import type { SupportTicket } from '@/shared/validation/support';
 
 type TicketDetailResponse = {
   ticket: SupportTicket;

@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Alert, Button, Result, Spin } from "antd";
 import { CheckCircleOutlined, CloseCircleOutlined, MailOutlined } from "@ant-design/icons";
 import Link from "next/link";
-import { FormCard } from "@/components/ui/FormCard";
+import { FormCard } from '@/shared/ui/FormCard';
 
 type VerificationState = "validating" | "success" | "error" | "already_verified";
 type VerificationResult = {

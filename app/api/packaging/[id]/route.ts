@@ -1,9 +1,9 @@
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
-import { getUserFromRequest } from '@/lib/auth/session';
-import { packagingUpdateSchema } from '@/lib/validation/packaging';
-import * as packagingService from '@/lib/services/packaging';
-import { logger } from '@/lib/logger';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
+import { getUserFromRequest } from '@/modules/auth/application/session';
+import { packagingUpdateSchema } from '@/shared/validation/packaging';
+import * as packagingService from '@/modules/quotes/application/packaging.service';
+import { logger } from '@/platform/logging/logger';
 
 interface PackagingTemplate {
   id: string;

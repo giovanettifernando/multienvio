@@ -1,9 +1,9 @@
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
-import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
+import { getAdminSessionFromRequest } from '@/modules/auth/application/admin-session';
 import { AdminPermission } from '@prisma/client';
-import { addMessageToTicket, getTicket } from '@/lib/support/service';
-import { persistSupportAttachments } from '@/lib/storage/support-attachments';
+import { addMessageToTicket, getTicket } from '@/modules/support/application/service';
+import { persistSupportAttachments } from '@/platform/storage/support-attachments';
 
 
 const MAX_FILES = 5;

@@ -1,9 +1,9 @@
 'use client';
 
-import { PageShell } from '@/components/shared/PageShell';
+import { PageShell } from '@/shared/ui/PageShell';
 import { Flex } from 'antd';
-import PaymentGatewayConfig from '@/components/admin/PaymentGatewayConfig';
-import PendingPaymentsGrid from '@/components/admin/PendingPaymentsGrid';
+import PaymentGatewayConfig from '@/modules/admin/ui/components/PaymentGatewayConfig';
+import PendingPaymentsGrid from '@/modules/admin/ui/components/PendingPaymentsGrid';
 
 export default function PaymentGatewayClient() {
   return (

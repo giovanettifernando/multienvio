@@ -1,8 +1,8 @@
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
-import { calculatePickupFee } from '@/lib/services/pickupFee';
-import { getUserFromRequest } from '@/lib/auth/session';
-import { pickupFeeCalculateSchema } from '@/lib/validation/pickup';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
+import { calculatePickupFee } from '@/modules/pickup-points/application/pickupFee';
+import { getUserFromRequest } from '@/modules/auth/application/session';
+import { pickupFeeCalculateSchema } from '@/shared/validation/pickup';
 
 interface PickupFeeResult {
   success: boolean;

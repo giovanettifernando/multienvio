@@ -1,9 +1,9 @@
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
 import { z } from 'zod';
 import bcrypt from 'bcrypt';
-import { prisma } from '@/lib/db';
-import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
+import { prisma } from '@/platform/db/db';
+import { getAdminSessionFromRequest } from '@/modules/auth/application/admin-session';
 import { AdminPermission, PickupPointStatus, Prisma } from '@prisma/client';
 import { Decimal } from '@prisma/client/runtime/client';
 

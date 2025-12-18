@@ -2,13 +2,13 @@
 
 import { useState } from 'react';
 import { PlusOutlined } from '@ant-design/icons';
-import { ELCard } from '@/components/ui/ELCard';
+import { ELCard } from '@/shared/ui/ELCard';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { NewTicketList } from '@/components/support/NewTicketList';
-import { TicketDetailsDrawer } from '@/components/support/TicketDetailsDrawer';
-import { SupportFAQ } from '@/components/support/SupportFAQ';
-import { PageShell } from '@/components/shared/PageShell';
-import { ELButton } from '@/components/ui/ELButton';
+import { NewTicketList } from '@/modules/support/ui/components/NewTicketList';
+import { TicketDetailsDrawer } from '@/modules/support/ui/components/TicketDetailsDrawer';
+import { SupportFAQ } from '@/modules/support/ui/components/SupportFAQ';
+import { PageShell } from '@/shared/ui/PageShell';
+import { ELButton } from '@/shared/ui/ELButton';
 
 export default function SuporteClient() {
   const router = useRouter();

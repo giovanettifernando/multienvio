@@ -1,5 +1,5 @@
-import { ELSkeleton } from "@/components/ui/ELSkeleton";
-import { PageShell } from "@/components/shared/PageShell";
+import { ELSkeleton } from '@/shared/ui/ELSkeleton';
+import { PageShell } from '@/shared/ui/PageShell';
 
 export default function Loading() {
   return (

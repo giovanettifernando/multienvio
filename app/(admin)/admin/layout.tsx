@@ -5,11 +5,11 @@ import Link from "next/link";
 import { Layout, Menu, Typography, Flex, Spin, Button, Drawer } from "antd";
 import { MenuOutlined, CloseOutlined } from "@ant-design/icons";
 import { usePathname, useRouter } from "next/navigation";
-import { ADMIN_NAV } from "@/lib/admin/nav";
-import { checkAdminAuth } from "@/lib/admin/auth";
-import { useAdminSession } from "@/stores/useAdminSession";
-import { SessionIdleModal } from "@/components/session/SessionIdleModal";
-import { spacing } from "@/lib/ui/theme";
+import { ADMIN_NAV } from "@/modules/admin/application/nav";
+import { checkAdminAuth } from "@/modules/admin/application/auth";
+import { useAdminSession } from '@/modules/admin/ui/state/useAdminSession';
+import { SessionIdleModal } from '@/modules/auth/ui/components/SessionIdleModal';
+import { spacing } from "@/shared/ui/theme";
 
 const { Header, Content } = Layout;
 

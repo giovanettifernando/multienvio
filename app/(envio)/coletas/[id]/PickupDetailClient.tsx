@@ -10,16 +10,16 @@ import {
   Space,
   Typography,
 } from "antd";
-import { ELCard } from "@/components/ui/ELCard";
-import { ELGrid } from "@/components/ui/ELGrid";
+import { ELCard } from '@/shared/ui/ELCard';
+import { ELGrid } from '@/shared/ui/ELGrid';
 import Link from "next/link";
-import type { PickupRequestDetail, PickupStatus, PickupAttemptNote } from "@/lib/types/pickup";
-import { PickupStatusTag } from "@/components/ui/PickupStatusTag";
-import { PickupTimeline } from "@/components/ui/PickupTimeline";
-import { PageShell } from "@/components/shared/PageShell";
-import { ELButton } from "@/components/ui/ELButton";
-import { ELSelect } from "@/components/ui/ELSelect";
-import { ELInput } from "@/components/ui/ELInput";
+import type { PickupRequestDetail, PickupStatus, PickupAttemptNote } from "@/shared/types/pickup";
+import { PickupStatusTag } from "@/modules/pickup-points/ui/components/PickupStatusTag";
+import { PickupTimeline } from "@/modules/pickup-points/ui/components/PickupTimeline";
+import { PageShell } from '@/shared/ui/PageShell';
+import { ELButton } from '@/shared/ui/ELButton';
+import { ELSelect } from '@/shared/ui/ELSelect';
+import { ELInput } from '@/shared/ui/ELInput';
 
 async function fetchPickup(id: string): Promise<PickupRequestDetail> {
   const response = await fetch(`/api/coletas/${id}`);

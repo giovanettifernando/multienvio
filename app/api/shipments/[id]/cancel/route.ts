@@ -1,13 +1,13 @@
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
-import { prisma } from '@/lib/db';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
+import { prisma } from '@/platform/db/db';
 import { Prisma } from '@prisma/client';
-import { getUserFromRequest } from '@/lib/auth/session';
-import { ShipmentStatus, FINAL_STATUSES } from '@/lib/shipments/shipment-status';
-import { canBeCancelled, getNextCancellationStatus } from '@/lib/shipments/status-migration';
-import { refund as walletRefund, reaisToCents } from '@/lib/wallet/wallet.service';
-import { cancelarPrePostagem } from '@/lib/integrations/correios';
-import { logger } from '@/lib/logger';
+import { getUserFromRequest } from '@/modules/auth/application/session';
+import { ShipmentStatus, FINAL_STATUSES } from '@/modules/shipments/application/shipment-status';
+import { canBeCancelled, getNextCancellationStatus } from '@/modules/shipments/application/status-migration';
+import { refund as walletRefund, reaisToCents } from '@/modules/wallet/application/wallet.service';
+import { cancelarPrePostagem } from '@/platform/integrations/correios';
+import { logger } from '@/platform/logging/logger';
 
 type ShipmentCancelResponseWithRefund = {
   ok: true;

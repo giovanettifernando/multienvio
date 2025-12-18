@@ -8,7 +8,7 @@ import {
   Image,
   Typography,
 } from "antd";
-import { ELCard } from "@/components/ui/ELCard";
+import { ELCard } from '@/shared/ui/ELCard';
 import {
   PrinterOutlined,
   StopOutlined,
@@ -19,20 +19,20 @@ import {
 } from "@ant-design/icons";
 import Link from "next/link";
 import { useShipments, useShipmentCancel } from "@/hooks/useShipments";
-import type { Shipment, ShipmentStatus } from "@/types/shipments";
-import { PageShell } from "@/components/shared/PageShell";
+import type { Shipment, ShipmentStatus } from '@/shared/types/shipments';
+import { PageShell } from '@/shared/ui/PageShell';
 import { useQuery } from "@tanstack/react-query";
-import { ELButton } from "@/components/ui/ELButton";
-import { ELInput } from "@/components/ui/ELInput";
-import { ELSelect } from "@/components/ui/ELSelect";
-import { ELStatusTag, type StatusVariant } from "@/components/ui/ELStatusTag";
-import { ELModal } from "@/components/ui/ELModal";
-import { ELTag } from "@/components/ui/ELTag";
-import { ELSkeleton } from "@/components/ui/ELSkeleton";
-import { DataTable, type DataTableColumn } from "@/components/ui/DataTable";
-import { ActionBar } from "@/components/ui/ActionBar";
-import tableStyles from "@/components/ui/ELTableWrapper.module.css";
-import { ShipmentLabelPdfModal } from "@/components/labels";
+import { ELButton } from '@/shared/ui/ELButton';
+import { ELInput } from '@/shared/ui/ELInput';
+import { ELSelect } from '@/shared/ui/ELSelect';
+import { ELStatusTag, type StatusVariant } from '@/shared/ui/ELStatusTag';
+import { ELModal } from '@/shared/ui/ELModal';
+import { ELTag } from '@/shared/ui/ELTag';
+import { ELSkeleton } from '@/shared/ui/ELSkeleton';
+import { DataTable, type DataTableColumn } from '@/shared/ui/DataTable';
+import { ActionBar } from '@/shared/ui/ActionBar';
+import tableStyles from "@/shared/ui/ELTableWrapper.module.css";
+import { ShipmentLabelPdfModal } from "@/modules/labels/ui/components";
 
 const { Text } = Typography;
 

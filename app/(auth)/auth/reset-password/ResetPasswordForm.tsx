@@ -14,11 +14,11 @@ import {
   Space,
   Typography,
 } from "antd";
-import { FormCard } from "@/components/ui/FormCard";
+import { FormCard } from '@/shared/ui/FormCard';
 import {
   ResetPasswordSchema,
   type ResetPasswordAPIInput,
-} from "@/lib/validation/auth";
+} from '@/shared/validation/auth';
 
 type ResetResponse = {
   message: string;

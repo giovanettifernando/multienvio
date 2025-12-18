@@ -1,11 +1,11 @@
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
-import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
-import { prisma } from '@/lib/db';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
+import { getAdminSessionFromRequest } from '@/modules/auth/application/admin-session';
+import { prisma } from '@/platform/db/db';
 import { AdminPermission, WalletTxType, WalletTxStatus } from '@prisma/client';
-import { ShipmentStatus } from '@/lib/shipments/shipment-status';
-import type { FinanceSummary } from '@/lib/admin/finance/types';
-import { startOfDayBrasilia, endOfDayBrasilia } from '@/lib/utils/date';
+import { ShipmentStatus } from '@/modules/shipments/application/shipment-status';
+import type { FinanceSummary } from '@/modules/admin/application/finance/types';
+import { startOfDayBrasilia, endOfDayBrasilia } from '@/shared/utils/date';
 
 export const GET = withApiHandler<FinanceSummary>(async ({ req }) => {
   const session = await getAdminSessionFromRequest(req);

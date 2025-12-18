@@ -3,11 +3,11 @@
  * POST /api/pontos-coleta/receptions/[id]/register-entry
  */
 
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
-import { prisma } from '@/lib/db';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
+import { prisma } from '@/platform/db/db';
 import { z } from 'zod';
-import { getCollectorSessionFromRequest } from '@/lib/auth/collector-session';
+import { getCollectorSessionFromRequest } from '@/modules/auth/application/collector-session';
 
 const RegisterEntrySchema = z.object({
   trackingCode: z.string().min(1, 'Código de rastreio é obrigatório'),

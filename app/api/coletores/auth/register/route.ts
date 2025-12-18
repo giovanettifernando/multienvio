@@ -4,15 +4,15 @@
  */
 
 import { NextRequest } from 'next/server';
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
-import { createCollector } from '@/lib/collectors/service';
-import { publicRegistrationSchema } from '@/lib/collectors/schemas';
-import { prisma } from '@/lib/db';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
+import { createCollector } from '@/modules/collectors/application/service';
+import { publicRegistrationSchema } from '@/modules/collectors/application/schemas';
+import { prisma } from '@/platform/db/db';
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
-import { sendEmail } from '@/lib/email/mailer';
-import { enforceRateLimitByIP, RATE_LIMITS } from '@/lib/rate-limit-redis';
+import { sendEmail } from '@/platform/email/mailer';
+import { enforceRateLimitByIP, RATE_LIMITS } from '@/platform/cache/rate-limit-redis';
 
 type CollectorRegisterResponse = {
   message: string;

@@ -5,11 +5,11 @@
  * Usado para polling manual ou refresh de status
  */
 
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
-import { getUserFromRequest } from '@/lib/auth/session';
-import { prisma } from '@/lib/db';
-import { updatePaymentFromMercadoPago } from '@/lib/mercadopago';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
+import { getUserFromRequest } from '@/modules/auth/application/session';
+import { prisma } from '@/platform/db/db';
+import { updatePaymentFromMercadoPago } from '@/platform/integrations/mercadopago';
 
 type RefreshPaymentResponse = {
   payment: {

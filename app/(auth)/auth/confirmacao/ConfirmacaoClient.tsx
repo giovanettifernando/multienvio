@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { Button, Result, Spin, Typography } from "antd";
 import { MailOutlined, CheckCircleOutlined } from "@ant-design/icons";
 import Link from "next/link";
-import { FormCard } from "@/components/ui/FormCard";
+import { FormCard } from '@/shared/ui/FormCard';
 
 const { Paragraph, Text } = Typography;
 

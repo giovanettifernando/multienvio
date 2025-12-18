@@ -1,11 +1,11 @@
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
-import { prisma } from '@/lib/db';
-import { generateToken, hashToken } from '@/lib/auth/tokens';
-import { sendVerificationEmail } from '@/lib/email/mailer';
-import { enforceRateLimitByIP, RATE_LIMITS } from '@/lib/rate-limit-redis';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
+import { prisma } from '@/platform/db/db';
+import { generateToken, hashToken } from '@/modules/auth/application/tokens';
+import { sendVerificationEmail } from '@/platform/email/mailer';
+import { enforceRateLimitByIP, RATE_LIMITS } from '@/platform/cache/rate-limit-redis';
 
 const ResendSchema = z.object({
   email: z.string().email('Email inválido'),

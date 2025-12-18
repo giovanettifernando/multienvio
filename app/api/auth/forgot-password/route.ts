@@ -1,12 +1,12 @@
 import { NextRequest } from 'next/server';
 import { ZodError } from 'zod';
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
-import { ForgotPasswordSchema } from '@/lib/validation/auth';
-import prisma from '@/lib/db';
-import { sendPasswordResetEmail } from '@/lib/email/mailer';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
+import { ForgotPasswordSchema } from '@/shared/validation/auth';
+import prisma from '@/platform/db/db';
+import { sendPasswordResetEmail } from '@/platform/email/mailer';
 import crypto from 'crypto';
-import { enforceRateLimitByIPStrict, RATE_LIMITS } from '@/lib/rate-limit-redis';
+import { enforceRateLimitByIPStrict, RATE_LIMITS } from '@/platform/cache/rate-limit-redis';
 
 interface ForgotPasswordResponse {
   message: string;

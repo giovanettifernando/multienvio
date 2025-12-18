@@ -13,11 +13,11 @@ import {
   Space,
   Typography,
 } from "antd";
-import { FormCard } from "@/components/ui/FormCard";
+import { FormCard } from '@/shared/ui/FormCard';
 import {
   ForgotPasswordSchema,
   type ForgotPasswordAPIInput,
-} from "@/lib/validation/auth";
+} from '@/shared/validation/auth';
 
 type ForgotResponse = {
   message: string;

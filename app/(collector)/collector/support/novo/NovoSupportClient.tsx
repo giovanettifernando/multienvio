@@ -2,7 +2,7 @@
 
 import { Card, Space, Typography } from 'antd';
 import { useRouter } from 'next/navigation';
-import { SupportForm } from '@/components/support/SupportForm';
+import { SupportForm } from '@/modules/support/ui/components/SupportForm';
 
 const { Title, Text } = Typography;
 

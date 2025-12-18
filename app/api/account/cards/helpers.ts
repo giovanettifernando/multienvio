@@ -1,9 +1,9 @@
 import { NextRequest } from "next/server";
-import { ApiError } from "@/lib/api/errors";
-import { enforceRateLimit } from "@/lib/rate-limit-redis";
-import { getUserFromRequest } from "@/lib/auth/session";
-import type { RequestContext } from "@/lib/api/types";
-import { CardValidationError } from "@/lib/validation/card";
+import { ApiError } from "@/platform/api/errors";
+import { enforceRateLimit } from "@/platform/cache/rate-limit-redis";
+import { getUserFromRequest } from "@/modules/auth/application/session";
+import type { RequestContext } from "@/platform/api/types";
+import { CardValidationError } from '@/shared/validation/card';
 
 const WRITE_LIMIT = 10;
 const WRITE_WINDOW_MS = 60_000;

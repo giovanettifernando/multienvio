@@ -1,8 +1,8 @@
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
-import { prisma } from '@/lib/db';
-import { getAutonomousCollectorSession } from '@/lib/auth/autonomous-collector-session';
-import { ShipmentStatus } from '@/lib/shipments/shipment-status';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
+import { prisma } from '@/platform/db/db';
+import { getAutonomousCollectorSession } from '@/modules/auth/application/autonomous-collector-session';
+import { ShipmentStatus } from '@/modules/shipments/application/shipment-status';
 
 interface SchedulePickupBody {
   scheduleAt: string; // ISO 8601 datetime string

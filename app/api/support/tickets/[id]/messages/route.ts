@@ -1,10 +1,10 @@
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
-import { getUserFromRequest } from '@/lib/auth/session';
-import { addMessageToTicket, getTicketForUser } from '@/lib/support/service';
-import { persistSupportAttachments } from '@/lib/storage/support-attachments';
-import { logger } from '@/lib/logger';
-import type { SupportMessage } from '@/lib/validation/support';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
+import { getUserFromRequest } from '@/modules/auth/application/session';
+import { addMessageToTicket, getTicketForUser } from '@/modules/support/application/service';
+import { persistSupportAttachments } from '@/platform/storage/support-attachments';
+import { logger } from '@/platform/logging/logger';
+import type { SupportMessage } from '@/shared/validation/support';
 
 
 const MAX_FILES = 5;

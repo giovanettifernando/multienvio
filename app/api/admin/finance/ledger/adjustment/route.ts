@@ -1,10 +1,10 @@
 import { z } from 'zod';
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
-import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
+import { getAdminSessionFromRequest } from '@/modules/auth/application/admin-session';
 import { AdminPermission } from '@prisma/client';
-import { rateLimitByUser, RATE_LIMITS } from '@/lib/rate-limit-redis';
-import { logger } from '@/lib/logger';
+import { rateLimitByUser, RATE_LIMITS } from '@/platform/cache/rate-limit-redis';
+import { logger } from '@/platform/logging/logger';
 
 const adjustmentSchema = z.object({
   type: z.enum(['credit', 'debit']),

@@ -1,6 +1,6 @@
 "use client";
 
-import { PageShell } from "@/components/shared/PageShell";
+import { PageShell } from '@/shared/ui/PageShell';
 import { Typography } from "antd";
 
 export default function AdminDashboardClient() {

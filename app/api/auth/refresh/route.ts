@@ -9,7 +9,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { withApiHandlerResponse } from '@/lib/api/handler';
+import { withApiHandlerResponse } from '@/platform/api/handler';
 import {
   verifyRefreshToken,
   signTokenPair,
@@ -17,10 +17,10 @@ import {
   REFRESH_TOKEN_COOKIE,
   ACCESS_TOKEN_MAX_AGE_SECONDS,
   REFRESH_TOKEN_MAX_AGE_SECONDS,
-} from '@/lib/auth/jwt-tokens';
-import { rateLimitByIP, RATE_LIMITS } from '@/lib/rate-limit-redis';
-import { sessionCache } from '@/lib/cache';
-import { requireValidOrigin } from '@/lib/api/csrf';
+} from '@/modules/auth/application/jwt-tokens';
+import { rateLimitByIP, RATE_LIMITS } from '@/platform/cache/rate-limit-redis';
+import { sessionCache } from '@/platform/cache/cache';
+import { requireValidOrigin } from '@/platform/api/csrf';
 
 export const POST = withApiHandlerResponse(async (context) => {
   const { req, logger } = context;

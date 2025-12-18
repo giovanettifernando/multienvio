@@ -1,9 +1,9 @@
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
-import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
+import { getAdminSessionFromRequest } from '@/modules/auth/application/admin-session';
 import { AdminPermission } from '@prisma/client';
-import { listTicketsForAdmin } from '@/lib/support/service';
-import type { Priority, Status } from '@/lib/validation/support';
+import { listTicketsForAdmin } from '@/modules/support/application/service';
+import type { Priority, Status } from '@/shared/validation/support';
 
 
 function parseArrayParam(params: URLSearchParams, key: string): string[] {

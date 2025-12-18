@@ -5,12 +5,12 @@
  * Requer autenticacao
  */
 
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
-import { getSession } from '@/lib/auth/session';
-import { listRecipientPaymentRequests } from '@/lib/recipient-payment/service';
-import { listRequestsSchema } from '@/lib/recipient-payment/validation';
-import type { ListRequestsResult } from '@/lib/recipient-payment/types';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
+import { getSession } from '@/modules/auth/application/session';
+import { listRecipientPaymentRequests } from '@/modules/recipients/application/service';
+import { listRequestsSchema } from '@/modules/recipients/application/validation';
+import type { ListRequestsResult } from '@/modules/recipients/application/types';
 
 type ListResponse = ListRequestsResult;
 

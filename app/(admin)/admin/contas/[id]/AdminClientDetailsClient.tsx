@@ -33,14 +33,14 @@ import {
   MailOutlined,
   DeleteOutlined,
 } from "@ant-design/icons";
-import { PageShell } from "@/components/shared/PageShell";
-import AdminClientProfile from "@/components/admin/clients/AdminClientProfile";
-import AdminClientAddresses from "@/components/admin/clients/AdminClientAddresses";
-import AdminClientCards from "@/components/admin/clients/AdminClientCards";
-import AdminClientRecipients from "@/components/admin/clients/AdminClientRecipients";
-import AdminClientRecurringItems from "@/components/admin/clients/AdminClientRecurringItems";
-import AdminClientWallet from "@/components/admin/clients/AdminClientWallet";
-import { formatNumberBR } from "@/lib/format";
+import { PageShell } from '@/shared/ui/PageShell';
+import AdminClientProfile from '@/modules/admin/ui/components/clients/AdminClientProfile';
+import AdminClientAddresses from '@/modules/admin/ui/components/clients/AdminClientAddresses';
+import AdminClientCards from '@/modules/admin/ui/components/clients/AdminClientCards';
+import AdminClientRecipients from '@/modules/admin/ui/components/clients/AdminClientRecipients';
+import AdminClientRecurringItems from '@/modules/admin/ui/components/clients/AdminClientRecurringItems';
+import AdminClientWallet from '@/modules/admin/ui/components/clients/AdminClientWallet';
+import { formatNumberBR } from "@/shared/utils/format";
 
 const { Title, Text } = Typography;
 

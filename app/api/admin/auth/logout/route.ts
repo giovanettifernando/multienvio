@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { withApiHandlerResponse } from '@/lib/api/handler';
-import { getAdminSessionFromRequest, createAdminCookieRemovalHeader } from '@/lib/auth/admin-session';
-import { staffSessionCache } from '@/lib/cache';
-import { requireValidOrigin } from '@/lib/api/csrf';
+import { withApiHandlerResponse } from '@/platform/api/handler';
+import { getAdminSessionFromRequest, createAdminCookieRemovalHeader } from '@/modules/auth/application/admin-session';
+import { staffSessionCache } from '@/platform/cache/cache';
+import { requireValidOrigin } from '@/platform/api/csrf';
 
 type AdminLogoutResponse = {
   message: string;

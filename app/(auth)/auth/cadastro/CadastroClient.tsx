@@ -17,13 +17,13 @@ import {
   Typography,
 } from "antd";
 import { GoogleOutlined } from "@ant-design/icons";
-import { PasswordStrength } from "@/components/form/PasswordStrength";
-import { FormCard } from "@/components/ui/FormCard";
-import { cadastroSchema } from "@/lib/validation/auth";
+import { PasswordStrength } from '@/shared/ui/form/PasswordStrength';
+import { FormCard } from '@/shared/ui/FormCard';
+import { cadastroSchema } from '@/shared/validation/auth';
 import {
   normalizePhoneInput,
-} from "@/lib/masks";
-import { useAuthStore } from "@/stores/auth";
+} from "@/shared/utils/masks";
+import { useAuthStore } from '@/modules/auth/ui/state/auth';
 
 type CadastroFormValues = z.infer<typeof cadastroSchema>;
 

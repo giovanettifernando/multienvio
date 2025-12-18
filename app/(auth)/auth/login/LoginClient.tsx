@@ -7,16 +7,16 @@ import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Alert, App, Button, Checkbox, Form, Typography } from 'antd';
 import { GoogleOutlined } from "@ant-design/icons";
-import { ELButton } from "@/components/ui/ELButton";
-import { ELCard } from "@/components/ui/ELCard";
-import { ELFormItem } from "@/components/ui/ELFormItem";
-import { ELInput } from "@/components/ui/ELInput";
-import { spacing } from "@/lib/ui/theme";
+import { ELButton } from '@/shared/ui/ELButton';
+import { ELCard } from '@/shared/ui/ELCard';
+import { ELFormItem } from '@/shared/ui/ELFormItem';
+import { ELInput } from '@/shared/ui/ELInput';
+import { spacing } from "@/shared/ui/theme";
 import {
   loginSchema,
   type LoginInput,
-} from "@/lib/validation/auth";
-import { useAuthStore } from "@/stores/auth";
+} from '@/shared/validation/auth';
+import { useAuthStore } from '@/modules/auth/ui/state/auth';
 import styles from "./login.module.css";
 
 const STORAGE_KEY = "enviolegal:last-email";

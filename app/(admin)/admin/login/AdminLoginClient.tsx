@@ -3,12 +3,12 @@
 import { Suspense, useState, useEffect } from "react";
 import { App, Button, Card, Form, Input } from "antd";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useAdminSession } from "@/stores/useAdminSession";
+import { useAdminSession } from '@/modules/admin/ui/state/useAdminSession';
 import {
   ADMIN_PERMISSION_KEYS,
   type AdminPermissionKey,
   type AdminStatus,
-} from "@/lib/auth/types";
+} from "@/modules/auth/application/types";
 
 type LoginFormValues = {
   email: string;

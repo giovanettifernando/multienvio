@@ -5,8 +5,8 @@
  * Usado na tela de cotação para exibir o logo das transportadoras.
  */
 
-import { prisma } from '@/lib/db';
-import { withApiHandler } from '@/lib/api/handler';
+import { prisma } from '@/platform/db/db';
+import { withApiHandler } from '@/platform/api/handler';
 
 export const GET = withApiHandler(async () => {
   const carriers = await prisma.carrier.findMany({

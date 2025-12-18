@@ -1,8 +1,8 @@
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
-import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
-import { logClientStatusChange } from '@/lib/audit-admin';
-import { rateLimitByUser, RATE_LIMITS } from '@/lib/rate-limit-redis';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
+import { getAdminSessionFromRequest } from '@/modules/auth/application/admin-session';
+import { logClientStatusChange } from '@/platform/logging/audit-admin';
+import { rateLimitByUser, RATE_LIMITS } from '@/platform/cache/rate-limit-redis';
 import { z } from 'zod';
 
 interface AdminClientBlockResponse {

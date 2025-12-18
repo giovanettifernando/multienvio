@@ -38,18 +38,18 @@ import {
   CloseCircleOutlined,
   ShoppingOutlined,
 } from "@ant-design/icons";
-import { PageShell } from "@/components/shared/PageShell";
-import PFForm from "@/components/collectors/forms/PFForm";
-import PJForm from "@/components/collectors/forms/PJForm";
-import VehicleForm from "@/components/collectors/forms/VehicleForm";
-import DocumentsForm from "@/components/collectors/forms/DocumentsForm";
-import FinanceForm from "@/components/collectors/forms/FinanceForm";
-import CollectorPickupsTab from "@/components/admin/collectors/CollectorPickupsTab";
-import { collectorFormSchema } from "@/lib/collectors/schemas";
-import { useUpload } from "@/lib/collectors/hooks";
-import { maskCNPJ, maskCPF, maskPhone, maskCEP } from "@/lib/collectors/masks";
-import { formatBRL } from "@/lib/utils/format";
-import type { Collector, CollectorFormInput, CollectorFormData } from "@/lib/collectors/types";
+import { PageShell } from '@/shared/ui/PageShell';
+import PFForm from '@/modules/collectors/ui/components/forms/PFForm';
+import PJForm from '@/modules/collectors/ui/components/forms/PJForm';
+import VehicleForm from '@/modules/collectors/ui/components/forms/VehicleForm';
+import DocumentsForm from '@/modules/collectors/ui/components/forms/DocumentsForm';
+import FinanceForm from '@/modules/collectors/ui/components/forms/FinanceForm';
+import CollectorPickupsTab from '@/modules/admin/ui/components/collectors/CollectorPickupsTab';
+import { collectorFormSchema } from "@/modules/collectors/application/schemas";
+import { useUpload } from "@/modules/collectors/application/hooks";
+import { maskCNPJ, maskCPF, maskPhone, maskCEP } from "@/modules/collectors/application/masks";
+import { formatBRL } from "@/shared/utils/format";
+import type { Collector, CollectorFormInput, CollectorFormData } from "@/modules/collectors/application/types";
 
 const { Title, Text } = Typography;
 

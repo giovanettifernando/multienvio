@@ -3,14 +3,14 @@
 import { useState, useCallback, useRef } from 'react';
 import { App, Spin, Space } from 'antd';
 import { PrinterOutlined, DownloadOutlined, CloseOutlined } from '@ant-design/icons';
-import { ELModal } from '@/components/ui/ELModal';
-import { LabelsTable } from '@/components/labels/LabelsTable';
-import { LabelPrintModal } from '@/components/labels/LabelPrintModal';
-import { ShipmentLabelModal, type ShipmentLabelData } from '@/components/labels';
-import type { LabelItem, PackageItem } from '@/lib/types/label';
-import { PageShell } from '@/components/shared/PageShell';
+import { ELModal } from '@/shared/ui/ELModal';
+import { LabelsTable } from '@/modules/labels/ui/components/LabelsTable';
+import { LabelPrintModal } from '@/modules/labels/ui/components/LabelPrintModal';
+import { ShipmentLabelModal, type ShipmentLabelData } from '@/modules/labels/ui/components';
+import type { LabelItem, PackageItem } from '@/shared/types/label';
+import { PageShell } from '@/shared/ui/PageShell';
 import { useQueryClient } from '@tanstack/react-query';
-import { ELButton } from '@/components/ui/ELButton';
+import { ELButton } from '@/shared/ui/ELButton';
 
 // Verificar se é transportadora Correios
 function isCorreiosCarrier(carrier: string): boolean {

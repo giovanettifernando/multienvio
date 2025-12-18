@@ -1,14 +1,14 @@
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
-import { getCollectorSessionFromRequest } from '@/lib/auth/collector-session';
-import { createTicketForCollector, listTicketsForCollector } from '@/lib/support/collector-service';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
+import { getCollectorSessionFromRequest } from '@/modules/auth/application/collector-session';
+import { createTicketForCollector, listTicketsForCollector } from '@/modules/support/application/collector-service';
 import {
   NewTicketInputSchema,
   type NewTicketInput,
   type Priority,
   type Status,
   type SupportTicket,
-} from '@/lib/validation/support';
+} from '@/shared/validation/support';
 
 type TicketsListResponse = {
   tickets: SupportTicket[];

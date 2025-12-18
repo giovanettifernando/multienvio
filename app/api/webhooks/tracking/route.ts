@@ -1,8 +1,8 @@
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
-import { prisma } from "@/lib/db";
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
+import { prisma } from "@/platform/db/db";
 import { z } from "zod";
-import type { TrackingEventType } from "@/types/tracking";
+import type { TrackingEventType } from '@/shared/types/tracking';
 
 /**
  * Schema de validação para webhook de tracking

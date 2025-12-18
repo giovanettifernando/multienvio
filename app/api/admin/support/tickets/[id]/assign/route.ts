@@ -1,9 +1,9 @@
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
 import { z } from 'zod';
-import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
+import { getAdminSessionFromRequest } from '@/modules/auth/application/admin-session';
 import { AdminPermission } from '@prisma/client';
-import { assignTicket } from '@/lib/support/service';
+import { assignTicket } from '@/modules/support/application/service';
 
 const AssignSchema = z.object({
   assignedTo: z

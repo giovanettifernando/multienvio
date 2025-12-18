@@ -5,17 +5,17 @@
  * DELETE /api/admin/coletores/[id] - Deleta coletor
  */
 
-import { withApiHandler } from '@/lib/api/handler';
-import { ApiError } from '@/lib/api/errors';
-import { getAdminSessionFromRequest } from '@/lib/auth/admin-session';
+import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
+import { getAdminSessionFromRequest } from '@/modules/auth/application/admin-session';
 import { AdminPermission } from '@prisma/client';
 import {
   getCollectorById,
   updateCollector,
   deleteCollector,
-} from '@/lib/collectors/service';
-import { collectorFormSchema } from '@/lib/collectors/schemas';
-import type { Collector } from '@/lib/collectors/types';
+} from '@/modules/collectors/application/service';
+import { collectorFormSchema } from '@/modules/collectors/application/schemas';
+import type { Collector } from '@/modules/collectors/application/types';
 import { z } from 'zod';
 
 interface GetCollectorResponse {

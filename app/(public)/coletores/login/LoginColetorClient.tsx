@@ -5,7 +5,7 @@ import { App, Button, Card, Divider, Form, Input, Space } from 'antd';
 import { GoogleOutlined } from '@ant-design/icons';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { useColetorSession } from '@/stores/useColetorSession';
+import { useColetorSession } from '@/modules/collectors/ui/state/useColetorSession';
 
 type LoginFormValues = {
   email: string;
