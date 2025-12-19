@@ -2,7 +2,15 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { Card, Form, Input, Button, Typography, Space, Alert, App } from 'antd';
+import { ELCard, ELForm, ELInput, ELButton, ELTypography, ELSpace, ELAlert, useELApp } from '@/shared/ui';
+const Card = ELCard;
+const Form = ELForm;
+const Input = ELInput;
+const Button = ELButton;
+const Typography = ELTypography;
+const Space = ELSpace;
+const Alert = ELAlert;
+const App = { useApp: useELApp };
 import { LockOutlined, CheckCircleOutlined } from '@ant-design/icons';
 
 const { Title, Text } = Typography;

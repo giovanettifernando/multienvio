@@ -1,8 +1,13 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Row, Col, Statistic, App, Spin } from 'antd';
-import { ELCard } from '@/shared/ui';
+import { ELRow, ELCol, ELStatistic, useELApp, ELSpin, ELCard } from '@/shared/ui';
+const Row = ELRow;
+const Col = ELCol;
+const Statistic = ELStatistic;
+const App = { useApp: useELApp };
+const Spin = ELSpin;
+const Card = ELCard;
 import {
   InboxOutlined,
   CheckCircleOutlined,
@@ -11,8 +16,6 @@ import {
   FallOutlined,
 } from '@ant-design/icons';
 import { PageShell } from '@/shared/ui/PageShell';
-
-const Card = ELCard;
 
 interface KPIData {
   pending: { value: number; label: string };

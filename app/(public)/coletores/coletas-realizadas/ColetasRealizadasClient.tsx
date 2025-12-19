@@ -1,12 +1,18 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Table, Tag, Space, Spin, App, Row, Col, Typography, Form } from 'antd';
-import { ELButton, ELCard, ELDatePicker, ELInput, ELModal, ELEmpty } from '@/shared/ui';
+import { ELTable, ELTag, ELSpace, ELSpin, useELApp, ELRow, ELCol, ELTypography, ELForm, ELButton, ELCard, ELDatePicker, ELInput, ELModal, ELEmpty } from '@/shared/ui';
+import type { TableRowSelection, TableProps } from '@/shared/ui/antd-types';
+const Table = ELTable;
+const Tag = ELTag;
+const Space = ELSpace;
+const Spin = ELSpin;
+const App = { useApp: useELApp };
+const Row = ELRow;
+const Col = ELCol;
+const Typography = ELTypography;
+const Form = ELForm;
 import { EnvironmentOutlined, InboxOutlined, PhoneOutlined, SearchOutlined, CheckCircleOutlined } from '@ant-design/icons';
-import type { TableRowSelection } from 'antd/es/table/interface';
-// Note: TableRowSelection is not directly exported from 'antd', keeping /es/ import
-import type { TableProps } from 'antd';
 import dayjs, { Dayjs } from 'dayjs';
 import { PageShell } from '@/shared/ui/PageShell';
 import { useQuery } from '@tanstack/react-query';

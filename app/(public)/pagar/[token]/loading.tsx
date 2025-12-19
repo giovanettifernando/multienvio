@@ -1,4 +1,4 @@
-import { Card, Skeleton } from "antd";
+import { ELCard, ELSkeleton } from "@/shared/ui";
 
 export default function PaymentLoading() {
   return (
@@ -10,9 +10,9 @@ export default function PaymentLoading() {
       }}
     >
       <div style={{ maxWidth: 600, margin: "0 auto" }}>
-        <Card>
-          <Skeleton active paragraph={{ rows: 8 }} />
-        </Card>
+        <ELCard>
+          <ELSkeleton active paragraph={{ rows: 8 }} />
+        </ELCard>
       </div>
     </div>
   );

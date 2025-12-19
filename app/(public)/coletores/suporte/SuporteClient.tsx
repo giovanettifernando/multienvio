@@ -1,8 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Space, Form, App, Table, Tag, Typography } from 'antd';
 import {
+  ELSpace,
+  ELForm,
+  useELApp,
+  ELTable,
+  ELTag,
+  ELTypography,
   ELButton,
   ELCard,
   ELInput,
@@ -10,6 +15,12 @@ import {
   ELSelect,
   ELTabs,
 } from '@/shared/ui';
+const Space = ELSpace;
+const Form = ELForm;
+const App = { useApp: useELApp };
+const Table = ELTable;
+const Tag = ELTag;
+const Typography = ELTypography;
 import { PlusOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons';
 import { PageShell } from '@/shared/ui/PageShell';
 import { useTickets, useCreateTicket } from '@/modules/support/ui/hooks';

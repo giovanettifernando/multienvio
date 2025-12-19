@@ -2,8 +2,9 @@
 
 import { useEffect, useMemo } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { Result, Spin } from 'antd';
-import { ELButton, ELCard } from '@/shared/ui';
+import { ELResult, ELSpin, ELButton, ELCard } from '@/shared/ui';
+const Result = ELResult;
+const Spin = ELSpin;
 import { CheckCircleOutlined, CloseCircleOutlined, LoadingOutlined, WarningOutlined } from '@ant-design/icons';
 
 const { Card, Button } = { Card: ELCard, Button: ELButton };

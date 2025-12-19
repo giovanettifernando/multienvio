@@ -39,7 +39,6 @@ const percentParser = (value: string | undefined) => {
   return parseFloat(value.replace('%', '').replace(',', '.')) || 0;
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const ELInputNumber = forwardRef<any, ELInputNumberProps>(function ELInputNumber({
   variant = "default",
   className,

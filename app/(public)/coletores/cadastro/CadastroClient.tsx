@@ -1,8 +1,15 @@
 'use client';
 
 import { useState } from 'react';
-import { Steps, App, Result, Row, Col, Typography, theme } from 'antd';
-import { ELButton, ELCard } from '@/shared/ui';
+import { ELSteps, useELApp, ELResult, ELRow, ELCol, ELTypography, useELTheme, ELButton, ELCard } from '@/shared/ui';
+import type { UploadFile } from '@/shared/ui/antd-types';
+const Steps = ELSteps;
+const App = { useApp: useELApp };
+const Result = ELResult;
+const Row = ELRow;
+const Col = ELCol;
+const Typography = ELTypography;
+const theme = { useToken: useELTheme };
 import {
   UserOutlined,
   BankOutlined,
@@ -24,7 +31,6 @@ import DocumentsForm from '@/modules/collectors/ui/components/forms/DocumentsFor
 import BankForm from '@/modules/collectors/ui/components/forms/BankForm';
 import { publicRegistrationSchema } from '@/modules/collectors/application/schemas';
 import type { PublicRegistrationSchemaInput } from '@/modules/collectors/application/schemas';
-import type { UploadFile } from 'antd/es/upload/interface';
 import { useUpload } from '@/modules/collectors/application/hooks';
 
 const { Title, Text, Paragraph } = Typography;

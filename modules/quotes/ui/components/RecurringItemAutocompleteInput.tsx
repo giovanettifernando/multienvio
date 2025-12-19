@@ -26,7 +26,6 @@ export function RecurringItemAutocompleteInput({
   disabled,
   autoFocus,
 }: RecurringItemAutocompleteInputProps) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const inputRef = useRef<any>(null);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [internalValue, setInternalValue] = useState(value);

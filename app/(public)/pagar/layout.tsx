@@ -1,5 +1,4 @@
-import { ConfigProvider, App } from "antd";
-import ptBR from "antd/locale/pt_BR";
+import { ELConfigProvider, ELApp } from "@/shared/ui";
 
 export default function PaymentLayout({
   children,
@@ -7,16 +6,8 @@ export default function PaymentLayout({
   children: React.ReactNode;
 }) {
   return (
-    <ConfigProvider
-      locale={ptBR}
-      theme={{
-        token: {
-          colorPrimary: "#1890ff",
-          borderRadius: 6,
-        },
-      }}
-    >
-      <App>{children}</App>
-    </ConfigProvider>
+    <ELConfigProvider>
+      <ELApp>{children}</ELApp>
+    </ELConfigProvider>
   );
 }

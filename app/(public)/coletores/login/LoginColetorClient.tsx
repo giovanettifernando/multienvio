@@ -1,8 +1,11 @@
 'use client';
 
 import { Suspense, useState, useCallback } from 'react';
-import { App, Divider, Form, Space } from 'antd';
-import { ELButton, ELCard, ELInput } from '@/shared/ui';
+import { useELApp, ELDivider, ELForm, ELSpace, ELButton, ELCard, ELInput } from '@/shared/ui';
+const App = { useApp: useELApp };
+const Divider = ELDivider;
+const Form = ELForm;
+const Space = ELSpace;
 import { GoogleOutlined } from '@ant-design/icons';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';

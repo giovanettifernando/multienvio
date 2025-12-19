@@ -3,12 +3,21 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  App,
-  Divider,
-  Result,
-  Space,
-  Typography,
-} from "antd";
+  ELApp,
+  ELDivider,
+  ELResult,
+  ELSpace,
+  ELTypography,
+  ELAlert,
+  ELButton,
+  ELCard,
+  ELSkeleton,
+} from "@/shared/ui";
+const App = ELApp;
+const Divider = ELDivider;
+const Result = ELResult;
+const Space = ELSpace;
+const Typography = ELTypography;
 import {
   CheckCircleOutlined,
   ClockCircleOutlined,
@@ -16,10 +25,6 @@ import {
   EnvironmentOutlined,
   SendOutlined,
 } from "@ant-design/icons";
-import { ELAlert } from '@/shared/ui/ELAlert';
-import { ELButton } from '@/shared/ui/ELButton';
-import { ELCard } from '@/shared/ui/ELCard';
-import { ELSkeleton } from '@/shared/ui/ELSkeleton';
 import type { PublicPaymentData } from "@/modules/recipients/application/types";
 import { RecipientPaymentModal } from "@/modules/payments/ui/components/RecipientPaymentModal";
 import { formatCentsAsBRL } from "@/shared/utils/format";

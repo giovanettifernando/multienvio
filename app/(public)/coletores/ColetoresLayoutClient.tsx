@@ -2,8 +2,12 @@
 
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { Layout, Menu, Dropdown, Spin, App as AntdApp } from 'antd';
-import { ELButton, ELDrawer } from '@/shared/ui';
+import { ELLayout, ELMenu, ELDropdown, ELSpin, ELApp, ELButton, ELDrawer } from '@/shared/ui';
+const Layout = ELLayout;
+const Menu = ELMenu;
+const Dropdown = ELDropdown;
+const Spin = ELSpin;
+const AntdApp = ELApp;
 import {
   DashboardOutlined,
   InboxOutlined,
