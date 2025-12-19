@@ -3,7 +3,7 @@
 import { Suspense } from 'react';
 import dynamic from 'next/dynamic';
 
-const PublicTrackingClient = dynamic(() => import('./PublicTrackingClient'), { ssr: false });
+const PublicTrackingClient = dynamic(() => import('./PublicTrackingClient'));
 
 export default function ClientWrapper() {
   return (

@@ -1,3 +1,5 @@
+import 'server-only';
+
 /**
  * JWT Token Management - Access Token + Refresh Token
  *

@@ -1,3 +1,5 @@
+import 'server-only';
+
 /**
  * Card Vault - Criptografia de PANs (números de cartão)
  *

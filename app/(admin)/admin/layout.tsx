@@ -1,3 +1,17 @@
+/**
+ * Layout Admin - Client Component
+ *
+ * Este layout DEVE ser "use client" porque:
+ * 1. Gerencia autenticação client-side com redirecionamento (useRouter, checkAdminAuth)
+ * 2. Gerencia estado global com Zustand (useAdminSession)
+ * 3. Implementa navegação interativa com menu mobile/desktop (useState, useEffect)
+ * 4. Usa hooks de navegação do Next.js (usePathname, useRouter)
+ * 5. Implementa lógica de permissões e autorização em tempo real
+ * 6. Gerencia detecção de viewport com useSyncExternalStore
+ *
+ * Como o layout já é client, páginas filhas podem usar "use client" diretamente
+ * sem necessidade de ClientWrappers adicionais.
+ */
 "use client";
 
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore, useCallback, startTransition } from "react";

@@ -1,13 +1,15 @@
 import { Suspense } from 'react';
 import { connection } from 'next/server';
+import dynamic from 'next/dynamic';
 import PickupDetailLoading from './loading';
-import ClientWrapper from './ClientWrapper';
+
+const PickupDetailClient = dynamic(() => import('./PickupDetailClient'));
 
 export default async function PickupDetailPage() {
   await connection();
   return (
     <Suspense fallback={<PickupDetailLoading />}>
-      <ClientWrapper />
+      <PickupDetailClient />
     </Suspense>
   );
 }

@@ -1,13 +1,15 @@
 import { Suspense } from 'react';
 import { connection } from 'next/server';
+import dynamic from 'next/dynamic';
 import CotacoesLoading from './loading';
-import ClientWrapper from './ClientWrapper';
+
+const CotacoesClient = dynamic(() => import('./CotacoesClient'));
 
 export default async function CotacoesPage() {
   await connection();
   return (
     <Suspense fallback={<CotacoesLoading />}>
-      <ClientWrapper />
+      <CotacoesClient />
     </Suspense>
   );
 }

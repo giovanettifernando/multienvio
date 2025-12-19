@@ -1,3 +1,5 @@
+import 'server-only';
+
 /**
  * Cliente HTTP para APIs REST dos Correios (CWS)
  *

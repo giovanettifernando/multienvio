@@ -1,13 +1,15 @@
 import { Suspense } from 'react';
 import { connection } from 'next/server';
+import dynamic from 'next/dynamic';
 import Loading from './loading';
-import ClientWrapper from './ClientWrapper';
+
+const RastreamentoClient = dynamic(() => import('./RastreamentoClient'));
 
 export default async function RastreamentoPage() {
   await connection();
   return (
     <Suspense fallback={<Loading />}>
-      <ClientWrapper />
+      <RastreamentoClient />
     </Suspense>
   );
 }

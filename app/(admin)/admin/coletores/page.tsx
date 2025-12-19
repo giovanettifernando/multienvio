@@ -1,13 +1,20 @@
+/**
+ * Coletores - Server Component
+ *
+ * Como o layout admin já é "use client", não precisamos de ClientWrapper.
+ * Importamos o componente client diretamente.
+ */
+
 import { Suspense } from 'react';
 import { connection } from 'next/server';
-import ColetoresLoading from './loading';
-import ClientWrapper from './ClientWrapper';
+import Loading from './loading';
+import ColetoresClient from './ColetoresClient';
 
 export default async function ColetoresPage() {
   await connection();
   return (
-    <Suspense fallback={<ColetoresLoading />}>
-      <ClientWrapper />
+    <Suspense fallback={<Loading />}>
+      <ColetoresClient />
     </Suspense>
   );
 }

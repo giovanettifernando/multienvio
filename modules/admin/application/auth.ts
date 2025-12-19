@@ -1,3 +1,5 @@
+'use client';
+
 import type { AdminUser } from '@/modules/admin/ui/state/useAdminSession';
 import { ADMIN_PERMISSION_KEYS, type AdminPermissionKey } from "@/modules/auth/application/types";
 

@@ -1,3 +1,5 @@
+'use client';
+
 import { useState, useCallback } from 'react';
 import type { InvoiceData, ParseXmlResponse } from '@/shared/types/invoice';
 

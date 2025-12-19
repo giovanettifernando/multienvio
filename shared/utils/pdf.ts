@@ -1,3 +1,5 @@
+import 'client-only';
+
 export function base64ToBlob(base64: string, contentType = 'application/pdf'): Blob {
   const byteChars = atob(base64);
   const byteNumbers = new Array(byteChars.length);

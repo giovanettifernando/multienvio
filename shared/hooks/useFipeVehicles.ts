@@ -1,3 +1,5 @@
+'use client';
+
 /**
  * Hook para buscar marcas e modelos de veículos FIPE
  */

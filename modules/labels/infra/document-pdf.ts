@@ -1,3 +1,5 @@
+import 'client-only';
+
 /**
  * Gerador de PDF para Declaração de Conteúdo e Espelho de NF-e
  * Usado na página de rastreamento público

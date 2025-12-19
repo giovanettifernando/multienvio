@@ -1,13 +1,15 @@
 import { Suspense } from 'react';
 import { connection } from 'next/server';
+import dynamic from 'next/dynamic';
 import Loading from './loading';
-import ClientWrapper from './ClientWrapper';
+
+const NovoSuporteClient = dynamic(() => import('./NovoSuporteClient'));
 
 export default async function NovoSuportePage() {
   await connection();
   return (
     <Suspense fallback={<Loading />}>
-      <ClientWrapper />
+      <NovoSuporteClient />
     </Suspense>
   );
 }

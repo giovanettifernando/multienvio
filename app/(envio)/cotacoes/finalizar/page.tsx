@@ -1,13 +1,15 @@
 import { Suspense } from 'react';
 import { connection } from 'next/server';
+import dynamic from 'next/dynamic';
 import FinalizarLoading from './loading';
-import ClientWrapper from './ClientWrapper';
+
+const FinalizarClient = dynamic(() => import('./FinalizarClient'));
 
 export default async function FinalizarPage() {
   await connection();
   return (
     <Suspense fallback={<FinalizarLoading />}>
-      <ClientWrapper />
+      <FinalizarClient />
     </Suspense>
   );
 }

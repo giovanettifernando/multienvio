@@ -1,3 +1,5 @@
+import 'server-only';
+
 /**
  * Serviço de configuração do Mercado Pago
  *

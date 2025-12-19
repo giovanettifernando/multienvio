@@ -1,9 +1,11 @@
-import { Suspense } from 'react';
-import { connection } from 'next/server';
-import LayoutWrapper from './LayoutWrapper';
+'use client';
 
-export default async function ColetoresLayout({ children }: { children: React.ReactNode }) {
-  await connection();
+import { Suspense } from 'react';
+import dynamic from 'next/dynamic';
+
+const ColetoresLayoutClient = dynamic(() => import('./ColetoresLayoutClient'));
+
+export default function ColetoresLayout({ children }: { children: React.ReactNode }) {
   return (
     <Suspense fallback={
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
@@ -18,7 +20,7 @@ export default async function ColetoresLayout({ children }: { children: React.Re
         <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
       </div>
     }>
-      <LayoutWrapper>{children}</LayoutWrapper>
+      <ColetoresLayoutClient>{children}</ColetoresLayoutClient>
     </Suspense>
   );
 }

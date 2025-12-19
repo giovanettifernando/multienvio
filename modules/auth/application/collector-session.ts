@@ -1,3 +1,5 @@
+import 'server-only';
+
 /**
  * Pickup Point (Ponto de Coleta) Session Management
  *

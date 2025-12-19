@@ -1,3 +1,5 @@
+'use client';
+
 import { DEFAULT_CUBAGE_FACTOR } from "@/modules/quotes/ui/components/VolumesGrid";
 import type { CompanyAddress, Address as StoreAddress } from "@/modules/auth/ui/state/addresses";
 import type { QuoteFormValues, RouteHeaderInfo } from "./quoteFormSchema";

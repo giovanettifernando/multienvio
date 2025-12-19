@@ -339,14 +339,16 @@ export function QuoteResultsSection({
           <Typography.Title level={5} style={{ marginBottom: 0 }}>
             Resultados da cotação
           </Typography.Title>
-          <ELButton
-            variant="primary"
-            size="large"
-            onClick={onCalculate}
-            disabled={!canCalculate}
-          >
-            Calcular
-          </ELButton>
+          <div style={{ display: "flex", justifyContent: "center", flex: 1, alignItems: "center", minHeight: 200 }}>
+            <ELButton
+              variant="primary"
+              size="large"
+              onClick={onCalculate}
+              disabled={!canCalculate}
+            >
+              Calcular
+            </ELButton>
+          </div>
         </Space>
       </ELCard>
     );

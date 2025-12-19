@@ -1,3 +1,5 @@
+'use client';
+
 import { useState, useCallback } from 'react';
 import type { PickupPoint, PickupPointFormData, PickupPointFilters, PickupPointListResponse } from '@/modules/pickup-points/application/types';
 

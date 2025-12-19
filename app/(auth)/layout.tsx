@@ -1,9 +1,11 @@
-import { Suspense } from 'react';
-import { connection } from 'next/server';
-import LayoutWrapper from './LayoutWrapper';
+'use client';
 
-export default async function AuthLayout({ children }: { children: React.ReactNode }) {
-  await connection();
+import { Suspense } from 'react';
+import dynamic from 'next/dynamic';
+
+const AuthLayoutClient = dynamic(() => import('./AuthLayoutClient'));
+
+export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
     <Suspense fallback={
       <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center' }}>
@@ -18,7 +20,7 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
         <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
       </div>
     }>
-      <LayoutWrapper>{children}</LayoutWrapper>
+      <AuthLayoutClient>{children}</AuthLayoutClient>
     </Suspense>
   );
 }

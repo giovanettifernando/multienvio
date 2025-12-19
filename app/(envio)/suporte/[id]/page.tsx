@@ -1,9 +1,11 @@
 import { Suspense } from 'react';
 import { connection } from 'next/server';
+import dynamic from 'next/dynamic';
 import Loading from './loading';
-import ClientWrapper from './ClientWrapper';
 
 type RouteParams = { id: string };
+
+const TicketDetailClient = dynamic(() => import('./TicketDetailClient'));
 
 export default async function TicketDetailPage({
   params,
@@ -13,7 +15,7 @@ export default async function TicketDetailPage({
   await connection();
   return (
     <Suspense fallback={<Loading />}>
-      <ClientWrapper params={params} />
+      <TicketDetailClient params={params} />
     </Suspense>
   );
 }

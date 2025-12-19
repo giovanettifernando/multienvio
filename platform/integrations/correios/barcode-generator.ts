@@ -1,3 +1,5 @@
+import 'client-only';
+
 /**
  * Gerador de códigos de barras para etiquetas Correios
  * Usa bwip-js para gerar Data Matrix, Code 128 e GS1-128
