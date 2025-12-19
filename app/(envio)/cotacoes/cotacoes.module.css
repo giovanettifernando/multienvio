@@ -26,7 +26,7 @@
   background: #fff !important;
   border: 1px solid #e2e8f0 !important;
   border-radius: 8px !important;
-  padding: 16px !important;
+  padding: 10px !important;
   transition: all 0.2s ease !important;
 }
 
@@ -35,13 +35,53 @@
   box-shadow: 0 0 4px rgba(59, 130, 246, 0.15) !important;
 }
 
+/* Override ELCard header styles for volume cards */
+.volumeCard :global(.ant-card-body) {
+  padding: 10px !important;
+  gap: 6px !important;
+}
+
+.volumeCard :global(.ant-card-body > div:first-child) {
+  margin-bottom: 0 !important;
+  gap: 0 !important;
+}
+
+.volumeCard :global(h3.ant-typography) {
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  color: #1e3a8a !important;
+  margin: 0 !important;
+  line-height: 1.3 !important;
+}
+
+/* Reduce Form.Item spacing in volume cards */
+.volumeCard :global(.ant-form-item) {
+  margin-bottom: 0 !important;
+}
+
+.volumeCard :global(.ant-form-item-label) {
+  padding-bottom: 2px !important;
+}
+
 .volumeHeader {
   font-weight: 600 !important;
-  font-size: 15px !important;
+  font-size: 13px !important;
   color: #1e3a8a !important;
-  margin-bottom: 8px !important;
 }
 
 .fieldLabelSm {
+  font-size: 12px !important;
+}
+
+/* Select de embalagens */
+.packagingSelect {
+  font-size: 13px !important;
+}
+
+.packagingSelect :global(.ant-select-selection-item) {
+  font-size: 13px !important;
+}
+
+.packagingSelect :global(.ant-select-selection-placeholder) {
   font-size: 13px !important;
 }

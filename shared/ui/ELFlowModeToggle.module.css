@@ -1,0 +1,58 @@
+/**
+ * ELFlowModeToggle - Toggle discreto para Envio/Logística Reversa
+ * Design sutil que não compete com o conteúdo
+ */
+
+.container {
+  display: inline-flex;
+}
+
+.segmented {
+  --segmented-bg: var(--el-color-surface-alt, #F2F4F7);
+  --segmented-selected-bg: var(--el-color-primary, #0B4EA3);
+  --segmented-selected-color: #ffffff;
+
+  background: var(--segmented-bg) !important;
+  border-radius: var(--el-radius-base, 10px) !important;
+  padding: 3px !important;
+  border: 1px solid var(--el-border-color, #E4E7EC) !important;
+}
+
+.segmented :global(.ant-segmented-item) {
+  border-radius: var(--el-radius-sm, 8px) !important;
+  min-height: 32px !important;
+  padding: 0 16px !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  color: var(--el-text-secondary, #475467) !important;
+  transition: all 0.2s ease !important;
+}
+
+.segmented :global(.ant-segmented-item-selected) {
+  background: var(--segmented-selected-bg) !important;
+  color: var(--segmented-selected-color) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+}
+
+.segmented :global(.ant-segmented-item:hover:not(.ant-segmented-item-selected)) {
+  color: var(--el-text-primary, #111827) !important;
+}
+
+/* Modo Reversa - cores de warning/erro sutis */
+.reverse .segmented {
+  --segmented-selected-bg: var(--el-color-warning, #D97706);
+  border-color: var(--el-color-warning-border, #FED7AA) !important;
+}
+
+.reverse .segmented :global(.ant-segmented-item:not(.ant-segmented-item-selected)) {
+  color: var(--el-color-warning, #D97706) !important;
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+  .segmented :global(.ant-segmented-item) {
+    padding: 0 12px !important;
+    font-size: 12px !important;
+    min-height: 28px !important;
+  }
+}

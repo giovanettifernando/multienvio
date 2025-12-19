@@ -16,9 +16,10 @@ interface MinhasEmbalagensSelectProps {
   value?: string;
   onChange?: (value: string | undefined, template: PackagingTemplate | undefined) => void;
   placeholder?: string;
+  className?: string;
 }
 
-export function MinhasEmbalagensSelect({ value, onChange, placeholder }: MinhasEmbalagensSelectProps) {
+export function MinhasEmbalagensSelect({ value, onChange, placeholder, className }: MinhasEmbalagensSelectProps) {
   const { message } = App.useApp();
   const { data: templates, isLoading } = useListPackaging();
   const deletePackaging = useDeletePackaging();
@@ -151,6 +152,7 @@ export function MinhasEmbalagensSelect({ value, onChange, placeholder }: MinhasE
           ]}
           onChange={handleChange}
           style={{ width: '100%' }}
+          className={className}
         />
         <ModalNovaEmbalagem
           open={modalOpen}
@@ -174,6 +176,7 @@ export function MinhasEmbalagensSelect({ value, onChange, placeholder }: MinhasE
         loading={isLoading}
         notFoundContent={isLoading ? <Spin size="small" /> : 'Nenhuma embalagem encontrada'}
         style={{ width: '100%' }}
+        className={className}
         allowClear
         popupMatchSelectWidth={true}
       />

@@ -3,17 +3,21 @@ import type { GlobalToken } from "@/shared/ui/antd-types";
 
 export type RouteCardVariant = "origin" | "destination";
 
-// Paleta de cores customizada para os cards
+/**
+ * Paleta de cores para os cards - Design moderno e sutil
+ * - Cards têm fundo neutro (surface)
+ * - Diferenciação por accent strip no header
+ */
 const cardPalette = {
   origin: {
-    bg: "rgba(15, 42, 95, 0.06)",
-    border: "rgba(15, 42, 95, 0.18)",
-    accent: "#0F2A5F",
+    accent: "#0B4EA3", // Azul primário
+    accentLight: "rgba(11, 78, 163, 0.08)",
+    border: "#E4E7EC",
   },
   destination: {
-    bg: "#16A34A14",
-    border: "rgba(22, 163, 74, 0.20)",
-    accent: "#166534",
+    accent: "#059669", // Verde
+    accentLight: "rgba(5, 150, 105, 0.08)",
+    border: "#E4E7EC",
   },
 };
 
@@ -21,6 +25,13 @@ export const getCardAccentColor = (variant: RouteCardVariant): string => {
   return cardPalette[variant].accent;
 };
 
+export const getCardAccentLightColor = (variant: RouteCardVariant): string => {
+  return cardPalette[variant].accentLight;
+};
+
+/**
+ * Estilos do container do card - Design neutro com accent strip
+ */
 export const cardContainerStyles = (
   token: GlobalToken,
   variant: RouteCardVariant,
@@ -30,26 +41,51 @@ export const cardContainerStyles = (
     flex: 1,
     minWidth: 0,
     borderRadius: token.borderRadiusLG,
-    padding: 16,
+    padding: 0,
     border: `1px solid ${palette.border}`,
-    background: palette.bg,
-    boxShadow: "0 1px 2px 0 rgba(0, 0, 0, 0.03)",
-    transition:
-      "background 200ms ease, border-color 200ms ease, box-shadow 200ms ease",
+    background: token.colorBgContainer,
+    boxShadow: "0 1px 3px rgba(0, 0, 0, 0.04)",
+    overflow: "hidden",
+    transition: "border-color 200ms ease, box-shadow 200ms ease",
   };
 };
 
+/**
+ * Estilos do header do card com accent strip
+ */
+export const cardHeaderStyles = (
+  variant: RouteCardVariant,
+): CSSProperties => {
+  const palette = cardPalette[variant];
+  return {
+    padding: "8px 12px",
+    background: palette.accentLight,
+    borderBottom: `2px solid ${palette.accent}`,
+  };
+};
+
+/**
+ * Estilos do body do card
+ */
+export const cardBodyStyles = (): CSSProperties => ({
+  padding: 16,
+});
+
+/**
+ * @deprecated Use ELFlowConnector ao invés
+ * Estilos do conector (seta) entre os cards
+ */
 export const connectorStyles = (token: GlobalToken): CSSProperties => ({
-  width: 32,
-  height: 32,
+  width: 24,
+  height: 24,
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
   borderRadius: "50%",
-  background: token.colorBgContainer,
+  background: token.colorBgLayout,
   border: `1px solid ${token.colorBorderSecondary}`,
   color: token.colorTextTertiary,
-  fontSize: 14,
+  fontSize: 11,
   flexShrink: 0,
   transition: "transform 240ms ease, color 200ms ease, background 200ms ease",
 });

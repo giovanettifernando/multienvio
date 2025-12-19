@@ -1,12 +1,11 @@
-import { BankOutlined } from "@ant-design/icons";
-import { ELFlexAntd, ELTypography } from "@/shared/ui";
-const Flex = ELFlexAntd;
+import { ELTypography } from "@/shared/ui";
 const Typography = ELTypography;
 import type { ReactNode } from "react";
-import { getCardAccentColor, type RouteCardVariant } from "./route.css";
+import type { RouteCardVariant } from "./route.css";
 
 type OriginCardProps = {
-  title: string;
+  /** @deprecated Título agora é renderizado no header do FlowCard */
+  title?: string;
   subtitle?: string;
   /** @deprecated Use subtitle instead */
   info?: {
@@ -16,37 +15,20 @@ type OriginCardProps = {
     cep?: string;
     isDefault?: boolean;
   } | null;
-  /** Variante visual do card (determina a cor) */
+  /** @deprecated Variante visual agora é controlada pelo RouteCards */
   variant?: RouteCardVariant;
   children: ReactNode;
 };
 
+/**
+ * OriginCard - Conteúdo do card de origem (sem título, que está no header do FlowCard)
+ */
 export function OriginCard({
-  title,
   subtitle,
-  variant = "origin",
   children,
 }: OriginCardProps) {
-  const accentColor = getCardAccentColor(variant);
-
   return (
     <div>
-      <Flex
-        align="center"
-        gap={8}
-        style={{ marginBottom: 12 }}
-      >
-        <BankOutlined
-          style={{
-            fontSize: 18,
-            color: accentColor,
-          }}
-        />
-        <Typography.Text strong style={{ fontSize: 15, color: accentColor }}>
-          {title}
-        </Typography.Text>
-      </Flex>
-
       {subtitle && (
         <Typography.Text
           type="secondary"

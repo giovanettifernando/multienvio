@@ -1,8 +1,6 @@
 "use client";
 
-import { ELConfigProvider, ELSegmented, useELTheme } from '@/shared/ui';
-const ConfigProvider = ELConfigProvider;
-const Segmented = ELSegmented;
+import { ELFlowModeToggle } from '@/shared/ui';
 
 interface ReverseToggleProps {
   isReverse: boolean;
@@ -11,34 +9,15 @@ interface ReverseToggleProps {
 }
 
 /**
- * Toggle between normal shipment and reverse logistics
+ * Toggle between normal shipment and reverse logistics.
+ * Wrapper para ELFlowModeToggle mantendo a interface existente.
  */
 export function ReverseToggle({ isReverse, onChange, disabled }: ReverseToggleProps) {
-  const { token } = useELTheme();
-
   return (
-    <ConfigProvider
-      theme={{
-        components: {
-          Segmented: {
-            itemSelectedBg: isReverse ? token.colorError : token.colorPrimary,
-            itemSelectedColor: "#ffffff",
-            itemColor: isReverse ? token.colorError : token.colorPrimary,
-            trackBg: isReverse ? token.colorErrorBg : token.colorPrimaryBg,
-          },
-        },
-      }}
-    >
-      <Segmented
-        value={isReverse ? "reversa" : "envio"}
-        onChange={(value) => onChange(value === "reversa")}
-        disabled={disabled}
-        options={[
-          { label: "Envio", value: "envio" },
-          { label: "Logística Reversa", value: "reversa" },
-        ]}
-        size="middle"
-      />
-    </ConfigProvider>
+    <ELFlowModeToggle
+      isReverse={isReverse}
+      onChange={onChange}
+      disabled={disabled}
+    />
   );
 }

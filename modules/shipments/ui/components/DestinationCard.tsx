@@ -1,12 +1,11 @@
-import { EnvironmentOutlined } from "@ant-design/icons";
-import { ELFlexAntd, ELTypography } from "@/shared/ui";
-const Flex = ELFlexAntd;
+import { ELTypography } from "@/shared/ui";
 const Typography = ELTypography;
 import type { ReactNode } from "react";
-import { getCardAccentColor, type RouteCardVariant } from "./route.css";
+import type { RouteCardVariant } from "./route.css";
 
 type DestinationCardProps = {
-  title: string;
+  /** @deprecated Título agora é renderizado no header do FlowCard */
+  title?: string;
   subtitle?: string;
   /** @deprecated Use subtitle instead */
   info?: {
@@ -17,38 +16,21 @@ type DestinationCardProps = {
   modeSelector: ReactNode;
   /** @deprecated No longer displayed */
   tag?: ReactNode;
-  /** Variante visual do card (determina a cor) */
+  /** @deprecated Variante visual agora é controlada pelo RouteCards */
   variant?: RouteCardVariant;
   children: ReactNode;
 };
 
+/**
+ * DestinationCard - Conteúdo do card de destino (sem título, que está no header do FlowCard)
+ */
 export function DestinationCard({
-  title,
   subtitle,
   modeSelector,
-  variant = "destination",
   children,
 }: DestinationCardProps) {
-  const accentColor = getCardAccentColor(variant);
-
   return (
     <div>
-      <Flex
-        align="center"
-        gap={8}
-        style={{ marginBottom: 12 }}
-      >
-        <EnvironmentOutlined
-          style={{
-            fontSize: 18,
-            color: accentColor,
-          }}
-        />
-        <Typography.Text strong style={{ fontSize: 15, color: accentColor }}>
-          {title}
-        </Typography.Text>
-      </Flex>
-
       {subtitle && (
         <Typography.Text
           type="secondary"

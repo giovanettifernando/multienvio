@@ -168,25 +168,27 @@ function VolumeItem({
       key={field.id}
       className={styles.volumeCard}
       data-testid={`volume-card-${index}`}
-      title={
-        <span className={styles.volumeHeader}>Volume {index + 1}</span>
-      }
-      size="small"
-      extra={
-        <ELButton
-          variant="text"
-          danger
-          icon={<DeleteOutlined />}
-          disabled={!canRemove}
-          onClick={onRemove}
-        />
-      }
-      styles={{
-        body: { padding: 12 },
+      header={{
+        title: (
+          <span className={styles.volumeHeader}>
+            Volume {index + 1}
+            <Typography.Text type="secondary" style={{ fontWeight: 400, marginLeft: 12, fontSize: 12 }}>
+              Peso cubado: <strong style={{ color: "#1e3a8a" }}>{formatNumber(cubageKg)} kg</strong>
+            </Typography.Text>
+          </span>
+        ),
+        extra: (
+          <ELButton
+            variant="text"
+            danger
+            icon={<DeleteOutlined />}
+            disabled={!canRemove}
+            onClick={onRemove}
+          />
+        ),
       }}
-      padding="sm"
     >
-      <Space orientation="vertical" size={16} style={{ width: "100%" }}>
+      <Space orientation="vertical" size={6} style={{ width: "100%" }}>
         <Form.Item
           label={<span className={styles.fieldLabelSm}>Minhas embalagens</span>}
           style={{ marginBottom: 0 }}
@@ -195,10 +197,11 @@ function VolumeItem({
             value={selectedPackagingId}
             placeholder="Selecione uma embalagem salva"
             onChange={handlePackagingSelect}
+            className={styles.packagingSelect}
           />
         </Form.Item>
 
-              <Row gutter={[16, 12]}>
+              <Row gutter={[12, 8]}>
               <Col xs={24} sm={12} md={6}>
                 <Controller
                   control={control}
@@ -212,7 +215,7 @@ function VolumeItem({
                         label={
                           <div style={{ lineHeight: "1.2" }}>
                             <div className={styles.fieldLabelSm}>Comprimento</div>
-                            <Typography.Text type="secondary" style={{ fontSize: "11px" }}>
+                            <Typography.Text type="secondary" style={{ fontSize: "10px" }}>
                               cm
                             </Typography.Text>
                           </div>
@@ -252,7 +255,7 @@ function VolumeItem({
                         label={
                           <div style={{ lineHeight: "1.2" }}>
                             <div className={styles.fieldLabelSm}>Largura</div>
-                            <Typography.Text type="secondary" style={{ fontSize: "11px" }}>
+                            <Typography.Text type="secondary" style={{ fontSize: "10px" }}>
                               cm
                             </Typography.Text>
                           </div>
@@ -292,7 +295,7 @@ function VolumeItem({
                         label={
                           <div style={{ lineHeight: "1.2" }}>
                             <div className={styles.fieldLabelSm}>Altura</div>
-                            <Typography.Text type="secondary" style={{ fontSize: "11px" }}>
+                            <Typography.Text type="secondary" style={{ fontSize: "10px" }}>
                               cm
                             </Typography.Text>
                           </div>
@@ -332,7 +335,7 @@ function VolumeItem({
                         label={
                           <div style={{ lineHeight: "1.2" }}>
                             <div className={styles.fieldLabelSm}>Peso</div>
-                            <Typography.Text type="secondary" style={{ fontSize: "11px" }}>
+                            <Typography.Text type="secondary" style={{ fontSize: "10px" }}>
                               kg
                             </Typography.Text>
                           </div>
@@ -373,13 +376,6 @@ function VolumeItem({
                 />
               </Col>
         </Row>
-
-        <div>
-          <Typography.Text type="secondary">
-            Peso cubado:
-          </Typography.Text>{" "}
-          <strong>{formatNumber(cubageKg)} kg</strong>
-        </div>
       </Space>
     </ELCard>
   );
@@ -493,7 +489,7 @@ export function VolumesGrid({
   };
 
   return (
-    <Space orientation="vertical" size={16} style={{ width: "100%" }}>
+    <Space orientation="vertical" size={12} style={{ width: "100%" }}>
       {/* Botões de importação */}
       <Space size={8}>
         <ELButton

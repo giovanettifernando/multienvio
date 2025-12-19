@@ -4,16 +4,15 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   useELApp,
+  ELAddonCard,
   ELCard,
   ELCol,
   ELFlexAntd,
   ELForm,
   ELInput,
-  ELRadio,
   ELRow,
   ELSpace,
   ELSpin,
-  ELSwitch,
   ELTag,
   ELTypography,
 } from '@/shared/ui';
@@ -23,11 +22,9 @@ const Col = ELCol;
 const Flex = ELFlexAntd;
 const Form = ELForm;
 const Input = ELInput;
-const Radio = ELRadio;
 const Row = ELRow;
 const Space = ELSpace;
 const Spin = ELSpin;
-const Switch = ELSwitch;
 const Tag = ELTag;
 const Typography = ELTypography;
 import {
@@ -41,7 +38,7 @@ import {
 } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useShallow } from "zustand/react/shallow";
-import { CheckCircleTwoTone, CloseCircleTwoTone } from "@ant-design/icons";
+import { CheckCircleTwoTone, CloseCircleTwoTone, CarOutlined } from "@ant-design/icons";
 import { maskCEP } from "@/shared/utils/masks";
 import { useQuoteStore } from '@/modules/quotes/ui/state/useQuoteStore';
 import type {
@@ -1054,87 +1051,52 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
   const destinatarioPlaceholder = isReverse
     ? "Selecione quem enviará a devolução"
     : "Selecione um destinatário";
-  const destinoModeLabel = isReverse
-    ? "Como deseja informar o remetente?"
-    : "Como deseja informar o destino?";
   const destinationManualLabel = isReverse
     ? "CEP do remetente"
     : "CEP de destino";
-  const destinationManualHelper = isReverse
-    ? "Informe o CEP de quem enviará a devolução."
-    : "Informe o CEP de quem receberá o envio.";
-  const companyCardTitle = isReverse ? "2) Destino" : "1) Origem";
-  const clientCardTitle = isReverse ? "1) Origem" : "2) Destino";
-  const destinationManualRadioLabel = isReverse
-    ? "Informar manualmente o remetente"
-    : "Informar manualmente o CEP";
-  const destinationRecipientRadioLabel = isReverse
-    ? "Selecionar remetente recorrente"
-    : "Selecionar destinatário recorrente";
-  const clientCardInfo = {
-    cidade: isReverse
-      ? origemInfo?.cidade ?? undefined
-      : destinoInfo?.cidade ?? destination?.city ?? undefined,
-    uf: isReverse
-      ? origemInfo?.uf ?? undefined
-      : destinoInfo?.uf ?? destination?.state ?? undefined,
-    label: isReverse ? origemInfo?.label ?? undefined : destination?.recipientName ?? null,
-  };
+
+  const handleDestinationModeChange = useCallback((rawMode: "manual" | "recipient") => {
+    const formMode: "manual" | "recorrente" =
+      rawMode === "recipient" ? "recorrente" : "manual";
+    setDestinationMode(rawMode);
+    setValue(
+      (isReverse ? "modoOrigem" : "modoDestino") as
+        | "modoOrigem"
+        | "modoDestino",
+      formMode,
+      { shouldDirty: true },
+    );
+
+    if (rawMode === "manual") {
+      setSelectedRecipientId(null);
+    } else {
+      if (isReverse) {
+        setValue("origemCep", "", { shouldValidate: false });
+        setOrigemInfo((info) =>
+          info
+            ? { ...info, cidade: undefined, uf: undefined, isDefault: false }
+            : null,
+        );
+        setCepStatus((status) => ({ ...status, origem: false }));
+      } else {
+        setValue("destinoCep", "", { shouldValidate: false });
+        setDestinoInfo(null);
+        setCepStatus((status) => ({ ...status, destino: false }));
+      }
+    }
+  }, [isReverse, setValue, setDestinationMode, setSelectedRecipientId, setOrigemInfo, setDestinoInfo, setCepStatus]);
 
   const destinationModeSelector = (
-    <div>
-      <Typography.Text type="secondary" style={{ fontSize: 13, display: "block", marginBottom: 6 }}>
-        {destinoModeLabel}
-      </Typography.Text>
-      <Radio.Group
-        value={destinationMode}
-        onChange={(e) => {
-          const rawMode = e.target.value as "manual" | "recipient";
-          const formMode: "manual" | "recorrente" =
-            rawMode === "recipient" ? "recorrente" : "manual";
-          setDestinationMode(rawMode);
-          setValue(
-            (isReverse ? "modoOrigem" : "modoDestino") as
-              | "modoOrigem"
-              | "modoDestino",
-            formMode,
-            { shouldDirty: true },
-          );
-
-          if (rawMode === "manual") {
-            setSelectedRecipientId(null);
-          } else {
-            if (isReverse) {
-              setValue("origemCep", "", { shouldValidate: false });
-              setOrigemInfo((info) =>
-                info
-                  ? { ...info, cidade: undefined, uf: undefined, isDefault: false }
-                  : null,
-              );
-              setCepStatus((status) => ({ ...status, origem: false }));
-            } else {
-              setValue("destinoCep", "", { shouldValidate: false });
-              setDestinoInfo(null);
-              setCepStatus((status) => ({ ...status, destino: false }));
-            }
-          }
-        }}
-        size="small"
-      >
-        <Radio value="manual">{destinationManualRadioLabel}</Radio>
-        <Radio value="recipient">
-          {destinationRecipientRadioLabel}
-        </Radio>
-      </Radio.Group>
-    </div>
+    <DestinationModeSelector
+      mode={destinationMode}
+      onChange={handleDestinationModeChange}
+      isReverse={isReverse}
+      disabled={calculateQuotes.isPending}
+    />
   );
 
   const companyCardContent = (
-    <OriginCard
-      title={companyCardTitle}
-      info={isReverse ? destinoInfo : origemInfo}
-      variant={isReverse ? "destination" : "origin"}
-    >
+    <OriginCard>
       <Space orientation="vertical" size={16} style={{ width: "100%" }}>
         <Form.Item
           label="Endereço selecionado"
@@ -1154,27 +1116,19 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
             control={control}
             name="coleta"
             render={({ field }) => (
-              <Space orientation="vertical" style={{ width: "100%" }}>
-                <label style={{ display: "flex", alignItems: "center", gap: 12, cursor: calculateQuotes.isPending ? "not-allowed" : "pointer" }}>
-                  <Switch
-                    checked={field.value}
-                    onChange={(checked) => {
-                      field.onChange(checked);
-                      setPickupAtOrigin(checked);
-                    }}
-                    disabled={calculateQuotes.isPending}
-                  />
-                  <div>
-                    <Typography.Text>
-                      Solicitar coleta na origem
-                    </Typography.Text>
-                    <br />
-                    <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                      Disponível para CEPs com cobertura de coleta
-                    </Typography.Text>
-                  </div>
-                </label>
-              </Space>
+              <ELAddonCard
+                checked={field.value ?? false}
+                onChange={(checked) => {
+                  field.onChange(checked);
+                  setPickupAtOrigin(checked);
+                }}
+                disabled={calculateQuotes.isPending}
+                icon={<CarOutlined />}
+                title="Coleta na origem"
+                description="Disponível para CEPs com cobertura"
+                checkedLabel="Adicionado"
+                uncheckedLabel="Adicionar"
+              />
             )}
           />
         )}
@@ -1183,18 +1137,7 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
   );
 
   const clientCardContent = (
-    <DestinationCard
-      title={clientCardTitle}
-      info={clientCardInfo}
-      modeSelector={destinationModeSelector}
-      variant={isReverse ? "origin" : "destination"}
-      tag=
-        {destinationMode === "recipient" ? (
-          <Tag color="success" bordered={false}>
-            {isReverse ? "Remetente recorrente" : "Destinatário recorrente"}
-          </Tag>
-        ) : null}
-    >
+    <DestinationCard modeSelector={destinationModeSelector}>
       {destinationMode === "manual" ? (
         <Controller
           name={(isReverse ? "origemCep" : "destinoCep") as
@@ -1220,36 +1163,47 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
               </span>
             );
 
+            const locationInfo = isReverse ? origemInfo : destinoInfo;
+            const hasLocation = locationInfo?.cidade && locationInfo?.uf;
+
             return (
               <Form.Item
-                label={destinationManualLabel}
+                label={<Typography.Text style={{ fontSize: 13 }}>{destinationManualLabel}</Typography.Text>}
                 validateStatus={
                   (fieldState.isTouched && fieldState.error) || clientCepError ? "error" : undefined
                 }
                 help={
                   (fieldState.isTouched && fieldState.error?.message) ||
                   clientCepError ||
-                  destinationManualHelper
+                  undefined
                 }
               >
-                <Input
-                  {...field}
-                  value={formatCep(field.value ?? "")}
-                  onChange={(e) => {
-                    const normalized = normalizeCep(e.target.value);
-                    field.onChange(formatCep(normalized));
-                  }}
-                  onFocus={handleClientFocus}
-                  onBlur={() => {
-                    field.onBlur();
-                    void handleClientBlur();
-                  }}
-                  maxLength={9}
-                  placeholder="00000-000"
-                  suffix={suffix}
-                  autoComplete="postal-code"
-                  inputMode="numeric"
-                />
+                <Flex align="center" gap={12}>
+                  <Input
+                    {...field}
+                    value={formatCep(field.value ?? "")}
+                    onChange={(e) => {
+                      const normalized = normalizeCep(e.target.value);
+                      field.onChange(formatCep(normalized));
+                    }}
+                    onFocus={handleClientFocus}
+                    onBlur={() => {
+                      field.onBlur();
+                      void handleClientBlur();
+                    }}
+                    maxLength={9}
+                    placeholder="00000-000"
+                    suffix={suffix}
+                    autoComplete="postal-code"
+                    inputMode="numeric"
+                    style={{ maxWidth: 180 }}
+                  />
+                  {hasLocation && (
+                    <Typography.Text type="secondary" style={{ fontSize: 13, whiteSpace: "nowrap" }}>
+                      {locationInfo.cidade}/{locationInfo.uf}
+                    </Typography.Text>
+                  )}
+                </Flex>
               </Form.Item>
             );
           }}
@@ -1283,41 +1237,36 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
         <Space orientation="vertical" size={24} style={{ width: "100%" }}>
           <Card>
             <Space orientation="vertical" size={16} style={{ width: "100%" }}>
-              <Flex justify="center">
+              <RouteCards
+                isReverse={isReverse}
+                originCard={originCardNode}
+                destinationCard={destinationCardNode}
+              />
+
+              <Flex justify="space-between" align="flex-start" wrap="wrap" gap={16}>
+                <InsuranceInput control={control} />
                 <ReverseToggle
                   isReverse={isReverse}
                   onChange={handleReverseToggle}
                   disabled={calculateQuotes.isPending}
                 />
               </Flex>
-
-              <RouteCards
-                isReverse={isReverse}
-                originCard={originCardNode}
-                destinationCard={destinationCardNode}
-              />
             </Space>
           </Card>
 
           <Row gutter={[24, 24]}>
             <Col xs={24} lg={10}>
               <Space orientation="vertical" size={16} style={{ width: "100%" }}>
-                <InsuranceInput control={control} />
-
-                <VolumesTotalizer
-                  volumeCount={fields.length}
-                  totalPesoCubadoKg={totals.pesoCubadoKg}
-                />
-
                 <Card>
                   <Space orientation="vertical" size={16} style={{ width: "100%" }}>
                     <div>
-                      <Typography.Title level={5} style={{ marginBottom: 4 }}>
+                      <Typography.Title level={5} style={{ marginBottom: 8 }}>
                         Volumes do envio
                       </Typography.Title>
-                      <Typography.Text type="secondary">
-                        Informe medidas internas e peso de cada volume
-                      </Typography.Text>
+                      <VolumesTotalizer
+                        volumeCount={fields.length}
+                        totalPesoCubadoKg={totals.pesoCubadoKg}
+                      />
                     </div>
 
                     <VolumesGrid

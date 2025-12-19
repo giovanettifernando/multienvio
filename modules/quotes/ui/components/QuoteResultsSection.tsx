@@ -334,24 +334,11 @@ export function QuoteResultsSection({
   // Estado inicial: sem resultados e sem loading
   if (!loading && !results && !error) {
     return (
-      <ELCard
-        header={{ title: "Resultados da cotação" }}
-        style={{ height: "100%", minHeight: 400 }}
-      >
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            minHeight: 320,
-            gap: 16,
-          }}
-        >
-          <Empty
-            description="Preencha os dados e clique em Calcular para ver as cotações"
-            image={EL_EMPTY_PRESENTED_IMAGE_SIMPLE}
-          />
+      <ELCard style={{ height: "100%", minHeight: 400 }}>
+        <Space orientation="vertical" size={16} style={{ width: "100%" }}>
+          <Typography.Title level={5} style={{ marginBottom: 0 }}>
+            Resultados da cotação
+          </Typography.Title>
           <ELButton
             variant="primary"
             size="large"
@@ -360,7 +347,7 @@ export function QuoteResultsSection({
           >
             Calcular
           </ELButton>
-        </div>
+        </Space>
       </ELCard>
     );
   }
@@ -368,22 +355,27 @@ export function QuoteResultsSection({
   // Estado de loading
   if (loading) {
     return (
-      <ELCard header={{ title: "Resultados da cotação" }} style={{ height: "100%", minHeight: 400 }}>
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            minHeight: 320,
-            gap: 16,
-          }}
-        >
-          <Spin size="large" />
-          <Typography.Text type="secondary">
-            Calculando cotações...
-          </Typography.Text>
-        </div>
+      <ELCard style={{ height: "100%", minHeight: 400 }}>
+        <Space orientation="vertical" size={16} style={{ width: "100%" }}>
+          <Typography.Title level={5} style={{ marginBottom: 0 }}>
+            Resultados da cotação
+          </Typography.Title>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              minHeight: 200,
+              gap: 16,
+            }}
+          >
+            <Spin size="large" />
+            <Typography.Text type="secondary">
+              Calculando cotações...
+            </Typography.Text>
+          </div>
+        </Space>
       </ELCard>
     );
   }
@@ -391,28 +383,33 @@ export function QuoteResultsSection({
   // Estado de erro
   if (error) {
     return (
-      <ELCard header={{ title: "Resultados da cotação" }} style={{ height: "100%", minHeight: 400 }}>
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            minHeight: 320,
-            gap: 16,
-          }}
-        >
-          <Alert
-            title="Erro ao calcular cotações"
-            description={error}
-            type="error"
-            showIcon
-            style={{ width: "100%" }}
-          />
-          <ELButton variant="primary" onClick={onCalculate} disabled={!canCalculate}>
-            Tentar novamente
-          </ELButton>
-        </div>
+      <ELCard style={{ height: "100%", minHeight: 400 }}>
+        <Space orientation="vertical" size={16} style={{ width: "100%" }}>
+          <Typography.Title level={5} style={{ marginBottom: 0 }}>
+            Resultados da cotação
+          </Typography.Title>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              minHeight: 200,
+              gap: 16,
+            }}
+          >
+            <Alert
+              title="Erro ao calcular cotações"
+              description={error}
+              type="error"
+              showIcon
+              style={{ width: "100%" }}
+            />
+            <ELButton variant="primary" onClick={onCalculate} disabled={!canCalculate}>
+              Tentar novamente
+            </ELButton>
+          </div>
+        </Space>
       </ELCard>
     );
   }
@@ -420,25 +417,30 @@ export function QuoteResultsSection({
   // Estado de resultados vazios
   if (results && results.length === 0) {
     return (
-      <ELCard header={{ title: "Resultados da cotação" }} style={{ height: "100%", minHeight: 400 }}>
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            minHeight: 320,
-            gap: 16,
-          }}
-        >
-          <Empty
-            description="Nenhuma cotação disponível para os parâmetros informados"
-            image={EL_EMPTY_PRESENTED_IMAGE_SIMPLE}
-          />
-          <ELButton variant="primary" onClick={onCalculate} disabled={!canCalculate}>
-            Calcular novamente
-          </ELButton>
-        </div>
+      <ELCard style={{ height: "100%", minHeight: 400 }}>
+        <Space orientation="vertical" size={16} style={{ width: "100%" }}>
+          <Typography.Title level={5} style={{ marginBottom: 0 }}>
+            Resultados da cotação
+          </Typography.Title>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              minHeight: 200,
+              gap: 16,
+            }}
+          >
+            <Empty
+              description="Nenhuma cotação disponível para os parâmetros informados"
+              image={EL_EMPTY_PRESENTED_IMAGE_SIMPLE}
+            />
+            <ELButton variant="primary" onClick={onCalculate} disabled={!canCalculate}>
+              Calcular novamente
+            </ELButton>
+          </div>
+        </Space>
       </ELCard>
     );
   }
@@ -539,19 +541,16 @@ export function QuoteResultsSection({
 
   return (
     <>
-      <ELCard
-        header={{
-          title: "Resultados da cotação",
-          extra: (
+      <ELCard style={{ height: "100%" }} padding="md">
+        <Space orientation="vertical" size={16} style={{ width: "100%" }}>
+          <Flex justify="space-between" align="center" wrap="wrap" gap={8}>
+            <Typography.Title level={5} style={{ marginBottom: 0 }}>
+              Resultados da cotação
+            </Typography.Title>
             <ELButton onClick={onCalculate} disabled={!canCalculate}>
               Recalcular
             </ELButton>
-          ),
-        }}
-        style={{ height: "100%" }}
-        padding="md"
-      >
-        <Space orientation="vertical" size={16} style={{ width: "100%" }}>
+          </Flex>
           {/* Expiration warning - compact style */}
           {timeRemaining && (
             <div

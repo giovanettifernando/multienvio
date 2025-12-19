@@ -1,51 +1,46 @@
 "use client";
 
-import { ELRadio, ELTypography } from '@/shared/ui';
-const Radio = ELRadio;
-const Typography = ELTypography;
+import { ELChoicePills } from '@/shared/ui';
+import { UserOutlined, EditOutlined } from "@ant-design/icons";
 
 interface DestinationModeSelectorProps {
   mode: "manual" | "recipient";
   onChange: (mode: "manual" | "recipient") => void;
   isReverse: boolean;
+  disabled?: boolean;
 }
 
 /**
- * Radio group to select destination input mode
+ * Seletor de modo de entrada do destino/remetente usando pills modernas.
  */
 export function DestinationModeSelector({
   mode,
   onChange,
   isReverse,
+  disabled,
 }: DestinationModeSelectorProps) {
-  const label = isReverse
-    ? "Como deseja informar o remetente?"
-    : "Como deseja informar o destino?";
-
-  const manualLabel = isReverse
-    ? "Informar manualmente o remetente"
-    : "Informar manualmente o CEP";
-
-  const recipientLabel = isReverse
-    ? "Selecionar remetente recorrente"
-    : "Selecionar destinatário recorrente";
+  const options = [
+    {
+      value: "recipient" as const,
+      label: isReverse ? "Remetente recorrente" : "Destinatário recorrente",
+      description: isReverse ? "Selecionar da lista" : "Selecionar da lista",
+      icon: <UserOutlined />,
+    },
+    {
+      value: "manual" as const,
+      label: "Informar manualmente",
+      description: "Digitar o CEP",
+      icon: <EditOutlined />,
+    },
+  ];
 
   return (
-    <div>
-      <Typography.Text
-        type="secondary"
-        style={{ fontSize: 13, display: "block", marginBottom: 6 }}
-      >
-        {label}
-      </Typography.Text>
-      <Radio.Group
-        value={mode}
-        onChange={(e) => onChange(e.target.value as "manual" | "recipient")}
-        size="small"
-      >
-        <Radio value="recipient">{recipientLabel}</Radio>
-        <Radio value="manual">{manualLabel}</Radio>
-      </Radio.Group>
-    </div>
+    <ELChoicePills
+      options={options}
+      value={mode}
+      onChange={onChange}
+      disabled={disabled}
+      size="small"
+    />
   );
 }

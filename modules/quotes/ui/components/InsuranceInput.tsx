@@ -1,10 +1,11 @@
 "use client";
 
-import { ELCard, ELForm, ELInputNumber, ELTypography } from '@/shared/ui';
-const Card = ELCard;
-const Form = ELForm;
+import { ELFlexAntd, ELInputNumber, ELTooltip, ELTypography } from '@/shared/ui';
+const Flex = ELFlexAntd;
 const InputNumber = ELInputNumber;
+const Tooltip = ELTooltip;
 const Typography = ELTypography;
+import { QuestionCircleOutlined } from "@ant-design/icons";
 import { Controller, Control } from "react-hook-form";
 import type { QuoteFormValues } from "./quoteFormSchema";
 import { inputNumberFormatterBRL, inputNumberParserBRL } from "@/shared/utils/format";
@@ -19,37 +20,27 @@ interface InsuranceInputProps {
 }
 
 /**
- * Insurance value input component
+ * Insurance value input component - inline layout
  */
 export function InsuranceInput({ control }: InsuranceInputProps) {
   return (
-    <Card size="small">
-      <Controller
-        control={control}
-        name="seguroValor"
-        render={({ field, fieldState }) => {
-          const valorAtual = field.value ?? 0;
-          const showMinWarning = valorAtual > 0 && valorAtual < VALOR_MINIMO_SEGURO;
+    <Controller
+      control={control}
+      name="seguroValor"
+      render={({ field, fieldState }) => {
+        const valorAtual = field.value ?? 0;
+        const showMinWarning = valorAtual > 0 && valorAtual < VALOR_MINIMO_SEGURO;
+        const hasError = fieldState.error || showMinWarning;
 
-          return (
-            <Form.Item
-              label="Valor do seguro (R$)"
-              validateStatus={fieldState.error ? "error" : showMinWarning ? "warning" : undefined}
-              help={
-                fieldState.error?.message ||
-                (showMinWarning
-                  ? `Valor mínimo para seguro: R$ ${VALOR_MINIMO_SEGURO.toFixed(2).replace('.', ',')} (SEDEX). PAC não aceita seguro.`
-                  : undefined)
-              }
-              style={{ marginBottom: 0 }}
-              extra={
-                !showMinWarning && !fieldState.error && (
-                  <Text type="secondary" style={{ fontSize: 12 }}>
-                    Mínimo R$ 25,63 (somente SEDEX). PAC não aceita seguro.
-                  </Text>
-                )
-              }
-            >
+        return (
+          <div>
+            <Flex align="center" gap={8}>
+              <Flex align="center" gap={4}>
+                <Tooltip title="Mínimo R$ 25,63 (somente SEDEX). PAC não aceita seguro.">
+                  <QuestionCircleOutlined style={{ fontSize: 12, color: "#667085", cursor: "help" }} />
+                </Tooltip>
+                <Text style={{ fontSize: 13 }}>Valor do seguro</Text>
+              </Flex>
               <InputNumber
                 {...field}
                 value={field.value ?? undefined}
@@ -61,13 +52,20 @@ export function InsuranceInput({ control }: InsuranceInputProps) {
                 decimalSeparator=","
                 formatter={inputNumberFormatterBRL}
                 parser={inputNumberParserBRL}
-                style={{ width: "100%" }}
+                status={hasError ? "warning" : undefined}
+                style={{ width: 140, fontSize: 13 }}
                 onChange={(val) => field.onChange(val ?? undefined)}
               />
-            </Form.Item>
-          );
-        }}
-      />
-    </Card>
+            </Flex>
+            {hasError && (
+              <Text type="warning" style={{ fontSize: 11, display: "block", marginTop: 4 }}>
+                {fieldState.error?.message ||
+                  `Mínimo R$ ${VALOR_MINIMO_SEGURO.toFixed(2).replace('.', ',')} (SEDEX). PAC não aceita seguro.`}
+              </Text>
+            )}
+          </div>
+        );
+      }}
+    />
   );
 }
