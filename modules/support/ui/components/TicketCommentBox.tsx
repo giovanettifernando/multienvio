@@ -2,9 +2,15 @@
 
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Button, Input, Space, Upload, Typography, App, Checkbox } from "antd";
-import type { RcFile, UploadFile } from "antd/es/upload/interface";
-// Note: RcFile and UploadFile are not directly exported from 'antd', keeping /es/ import
+import { ELButton, ELInput, ELSpace, ELUpload, ELTypography, useELApp, ELCheckbox } from "@/shared/ui";
+import type { RcFile, UploadFile } from "@/shared/ui/ELUpload";
+const Button = ELButton;
+const Input = ELInput;
+const Space = ELSpace;
+const Upload = ELUpload;
+const Typography = ELTypography;
+const App = { useApp: useELApp };
+const Checkbox = ELCheckbox;
 import { CannedReplySelect } from "@/modules/support/ui/components/CannedReplySelect";
 import { usePostTicketMessage } from "@/modules/support/ui/hooks";
 
@@ -115,7 +121,7 @@ export function TicketCommentBox({ ticketId, onSubmitted, mode = 'admin' }: Prop
         }}
         aria-label="Adicionar anexos"
       >
-        <Button variant="outlined">Anexar arquivo</Button>
+        <Button variant="default">Anexar arquivo</Button>
       </Upload>
       {mode === 'admin' && (
         <Checkbox
@@ -128,8 +134,7 @@ export function TicketCommentBox({ ticketId, onSubmitted, mode = 'admin' }: Prop
         </Checkbox>
       )}
       <Button
-        type="primary"
-        variant="solid"
+        variant="primary"
         onClick={() => mutation.mutate()}
         loading={mutation.isPending || postMessage.isPending}
         disabled={!messageText.trim()}

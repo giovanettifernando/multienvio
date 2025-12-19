@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState, useCallback, useRef } from "react";
-import { App } from "antd";
+import { useELApp } from '@/shared/ui';
+const App = { useApp: useELApp };
 import { ELGrid } from '@/shared/ui/ELGrid';
 import { ELSkeleton } from '@/shared/ui/ELSkeleton';
 import { EmptyCart } from '@/modules/cart/ui/components/EmptyCart';

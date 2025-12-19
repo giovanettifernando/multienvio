@@ -1,6 +1,7 @@
 "use client";
 
-import { Tag } from "antd";
+import { ELTag } from "@/shared/ui";
+const Tag = ELTag;
 import type { ShipmentStatus } from '@/shared/types/shipment';
 
 type StatusConfig = {

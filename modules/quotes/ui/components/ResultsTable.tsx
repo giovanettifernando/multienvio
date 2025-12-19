@@ -7,12 +7,17 @@ import {
   SafetyCertificateOutlined,
 } from "@ant-design/icons";
 import {
-  Avatar,
-  Flex,
-  Segmented,
-  Tag,
-  Typography,
-} from "antd";
+  ELAvatar,
+  ELFlexAntd,
+  ELSegmented,
+  ELTag,
+  ELTypography,
+} from '@/shared/ui';
+const Avatar = ELAvatar;
+const Flex = ELFlexAntd;
+const Segmented = ELSegmented;
+const Tag = ELTag;
+const Typography = ELTypography;
 import { ELButton } from '@/shared/ui/ELButton';
 import { ELCard } from '@/shared/ui/ELCard';
 import { DataTable, type DataTableColumn } from '@/shared/ui/DataTable';

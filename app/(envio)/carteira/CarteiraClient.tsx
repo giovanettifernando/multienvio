@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
-import { ELCard } from '@/shared/ui/ELCard';
-import { Typography } from 'antd';
+import { ELCard, ELTypography } from '@/shared/ui';
+const Typography = ELTypography;
 import { useRouter } from "next/navigation";
 import { ELButton } from '@/shared/ui/ELButton';
 import { ELAlert } from '@/shared/ui/ELAlert';

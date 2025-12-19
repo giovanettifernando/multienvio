@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Spin } from "antd";
+import { ELSpin } from "@/shared/ui";
+const Spin = ELSpin;
 import { ELCard } from '@/shared/ui/ELCard';
 import { ELAlert } from '@/shared/ui/ELAlert';
 import { ELModal } from '@/shared/ui/ELModal';

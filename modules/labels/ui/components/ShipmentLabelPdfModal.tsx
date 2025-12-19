@@ -6,7 +6,12 @@
  */
 
 import { useState, useRef, useCallback, useEffect } from "react";
-import { App, Space, Radio, Spin, Typography } from "antd";
+import { ELApp, ELSpace, ELRadio, ELSpin, ELTypography } from "@/shared/ui";
+const App = ELApp;
+const Space = ELSpace;
+const Radio = ELRadio;
+const Spin = ELSpin;
+const Typography = ELTypography;
 import {
   PrinterOutlined,
   DownloadOutlined,

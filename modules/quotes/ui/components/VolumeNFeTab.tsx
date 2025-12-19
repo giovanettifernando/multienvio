@@ -2,18 +2,27 @@
 
 import { useState } from "react";
 import {
-  App,
-  Collapse,
-  Space,
-  Typography,
-  Tag,
-  Upload,
-  Alert,
-  Table,
-  Descriptions,
-} from "antd";
+  useELApp,
+  ELCollapse,
+  ELSpace,
+  ELTypography,
+  ELTag,
+  ELUpload,
+  ELAlert,
+  ELTable,
+  ELDescriptions,
+} from '@/shared/ui';
+const App = { useApp: useELApp };
+const Collapse = ELCollapse;
+const Space = ELSpace;
+const Typography = ELTypography;
+const Tag = ELTag;
+const Upload = ELUpload;
+const Alert = ELAlert;
+const Table = ELTable;
+const Descriptions = ELDescriptions;
 import { ELButton } from '@/shared/ui/ELButton';
-import type { UploadProps } from "antd";
+import type { UploadProps } from '@/shared/ui/antd-types';
 import {
   InboxOutlined,
   LockOutlined,
@@ -143,7 +152,7 @@ function NFeDetails({
             </Typography.Text>
           </Space>
         }
-        action={
+        actions={
           <ELButton size="small" variant="danger" icon={<DeleteOutlined />} onClick={onRemove}>
             Remover
           </ELButton>

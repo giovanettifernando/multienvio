@@ -2,21 +2,29 @@
 
 import React, { useState } from "react";
 import {
-  App,
-  Button,
-  Card,
-  Empty,
-  Popconfirm,
-  Space,
-  Tag,
-  Typography,
-  Spin,
-  theme,
-  Grid,
-} from "antd";
+  useELApp,
+  ELButton,
+  ELCard,
+  ELEmpty,
+  ELPopconfirm,
+  ELSpace,
+  ELTag,
+  ELTypography,
+  ELSpin,
+  useELTheme,
+  useBreakpoint,
+} from '@/shared/ui';
+const App = { useApp: useELApp };
+const Button = ELButton;
+const Card = ELCard;
+const Empty = ELEmpty;
+const Popconfirm = ELPopconfirm;
+const Space = ELSpace;
+const Tag = ELTag;
+const Typography = ELTypography;
+const Spin = ELSpin;
+const theme = { useToken: useELTheme };
 import { PlusOutlined, EditOutlined, DeleteOutlined, StarOutlined, StarFilled } from "@ant-design/icons";
-
-const { useBreakpoint } = Grid;
 import { useAddresses, useAddressCreate } from "@/modules/account/ui/hooks";
 import { AddressModal, type AddressFormValues } from "./AddressModal";
 import type { Address } from '@/shared/types/account';

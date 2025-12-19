@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Form, Input, InputNumber, App } from "antd";
+import { useELApp, useELForm, ELForm, ELButton, ELModal, ELInput, ELInputNumber } from '@/shared/ui';
+const App = { useApp: useELApp };
+const { Input, InputNumber } = { Input: ELInput, InputNumber: ELInputNumber };
 import { PageShell } from '@/shared/ui/PageShell';
-import { ELButton } from '@/shared/ui/ELButton';
-import { ELModal } from '@/shared/ui/ELModal';
 import { ActionBar } from '@/shared/ui/ActionBar';
 import { ELFlex } from '@/shared/ui/ELGrid';
 import AddFundsModal from '@/modules/wallet/ui/components/AddFundsModal';
@@ -36,7 +36,7 @@ async function fetchCards(): Promise<CardMethod[]> {
 export default function MetodosClient() {
   const { message: messageApi } = App.useApp();
   const queryClient = useQueryClient();
-  const [form] = Form.useForm();
+  const [form] = useELForm();
   const [modalOpen, setModalOpen] = useState(false);
   const [addBalanceOpen, setAddBalanceOpen] = useState(false);
 
@@ -120,25 +120,25 @@ export default function MetodosClient() {
         onOk={() => form.submit()}
         confirmLoading={addCardMutation.isPending}
       >
-        <Form form={form} layout="vertical" onFinish={(values) => addCardMutation.mutate(values)}>
-          <Form.Item name="holder" label="Titular" rules={[{ required: true }]}>
+        <ELForm form={form} layout="vertical" onFinish={(values) => addCardMutation.mutate(values)}>
+          <ELForm.Item name="holder" label="Titular" rules={[{ required: true }]}>
             <Input />
-          </Form.Item>
-          <Form.Item name="number" label="Número" rules={[{ required: true }]}>
+          </ELForm.Item>
+          <ELForm.Item name="number" label="Número" rules={[{ required: true }]}>
             <Input />
-          </Form.Item>
+          </ELForm.Item>
           <ELFlex gap="md" wrap>
-            <Form.Item name="expMonth" label="Mês" rules={[{ required: true }]} style={{ flex: '1 1 80px', minWidth: 80 }}>
+            <ELForm.Item name="expMonth" label="Mês" rules={[{ required: true }]} style={{ flex: '1 1 80px', minWidth: 80 }}>
               <InputNumber min={1} max={12} style={{ width: '100%' }} />
-            </Form.Item>
-            <Form.Item name="expYear" label="Ano" rules={[{ required: true }]} style={{ flex: '1 1 100px', minWidth: 100 }}>
+            </ELForm.Item>
+            <ELForm.Item name="expYear" label="Ano" rules={[{ required: true }]} style={{ flex: '1 1 100px', minWidth: 100 }}>
               <InputNumber min={new Date().getFullYear()} max={new Date().getFullYear() + 15} style={{ width: '100%' }} />
-            </Form.Item>
-            <Form.Item name="cvc" label="CVC" rules={[{ required: true }]} style={{ flex: '1 1 80px', minWidth: 80 }}>
+            </ELForm.Item>
+            <ELForm.Item name="cvc" label="CVC" rules={[{ required: true }]} style={{ flex: '1 1 80px', minWidth: 80 }}>
               <Input />
-            </Form.Item>
+            </ELForm.Item>
           </ELFlex>
-        </Form>
+        </ELForm>
       </ELModal>
 
       <PageShell title="Métodos de pagamento" gap="md">

@@ -2,21 +2,31 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import {
-  App,
-  Empty,
-  Grid,
-  Pagination,
-  Space,
-  Spin,
-  Tag,
-  Typography,
-  Upload,
-  theme,
-} from "antd";
-import { ELButton, ELCard, ELInput, ELPopconfirm } from "@/shared/ui";
+  useELApp,
+  ELEmpty,
+  ELPagination,
+  ELSpace,
+  ELSpin,
+  ELTag,
+  ELTypography,
+  ELUpload,
+  useELTheme,
+  useBreakpoint,
+  ELButton,
+  ELCard,
+  ELInput,
+  ELPopconfirm,
+} from '@/shared/ui';
+const App = { useApp: useELApp };
+const Empty = ELEmpty;
+const Pagination = ELPagination;
+const Space = ELSpace;
+const Spin = ELSpin;
+const Tag = ELTag;
+const Typography = ELTypography;
+const Upload = ELUpload;
+const theme = { useToken: useELTheme };
 import { PlusOutlined, SearchOutlined, EditOutlined, DeleteOutlined, StarOutlined, StarFilled, UploadOutlined, DownloadOutlined } from "@ant-design/icons";
-
-const { useBreakpoint } = Grid;
 import {
   useAccountRecipients,
   useRecipientCreate,

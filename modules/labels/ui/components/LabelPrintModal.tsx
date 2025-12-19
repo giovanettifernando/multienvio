@@ -1,7 +1,12 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
-import { Checkbox, App, Spin, Divider, Space } from 'antd';
+import { ELCheckbox, useELApp, ELSpin, ELDivider, ELSpace } from '@/shared/ui';
+const Checkbox = ELCheckbox;
+const App = { useApp: useELApp };
+const Spin = ELSpin;
+const Divider = ELDivider;
+const Space = ELSpace;
 import { PrinterOutlined, DownloadOutlined, LoadingOutlined } from '@ant-design/icons';
 import dynamic from 'next/dynamic';
 import { ELModal } from '@/shared/ui/ELModal';

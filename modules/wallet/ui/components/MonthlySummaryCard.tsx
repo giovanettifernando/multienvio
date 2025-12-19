@@ -1,7 +1,12 @@
 "use client";
 
 import React from "react";
-import { Card, Row, Col, Statistic, Typography } from "antd";
+import { ELCard, ELRow, ELCol, ELStatistic, ELTypography } from '@/shared/ui';
+const Card = ELCard;
+const Row = ELRow;
+const Col = ELCol;
+const Statistic = ELStatistic;
+const Typography = ELTypography;
 import { ArrowUpOutlined, ArrowDownOutlined } from "@ant-design/icons";
 import type { PeriodSummary } from '@/shared/types/wallet-statement';
 import { formatCurrencyBRL } from "@/shared/utils/format";

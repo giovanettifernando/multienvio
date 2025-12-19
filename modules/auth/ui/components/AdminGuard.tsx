@@ -10,7 +10,8 @@ import { useRouter } from "next/navigation";
 import { useAuthStore } from '@/modules/auth/ui/state/auth';
 import { useCurrentUser } from "@/modules/auth/ui/hooks";
 import { useHydration } from "@/shared/hooks";
-import { Spin } from "antd";
+import { ELSpin } from '@/shared/ui';
+const Spin = ELSpin;
 
 interface AdminGuardProps {
   children: React.ReactNode;

@@ -1,6 +1,11 @@
 "use client";
 
-import { App, Form, Input, InputNumber, Space } from 'antd';
+import { useELApp, ELForm, ELInput, ELInputNumber, ELSpace } from '@/shared/ui';
+const App = { useApp: useELApp };
+const Form = ELForm;
+const Input = ELInput;
+const InputNumber = ELInputNumber;
+const Space = ELSpace;
 import { ELModal } from '@/shared/ui/ELModal';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';

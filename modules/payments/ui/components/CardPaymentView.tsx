@@ -1,6 +1,8 @@
 'use client';
 
-import { Typography, Space } from 'antd';
+import { ELTypography, ELSpace } from '@/shared/ui';
+const Typography = ELTypography;
+const Space = ELSpace;
 import { SavedCardPaymentForm } from '@/modules/wallet/ui/components/SavedCardPaymentForm';
 import { CardPaymentForm } from '@/modules/wallet/ui/components/CardPaymentForm';
 import { formatCurrency } from './checkoutTypes';

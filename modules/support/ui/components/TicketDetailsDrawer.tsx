@@ -1,25 +1,37 @@
 'use client';
 
 import {
-  Descriptions,
-  Tag,
-  Timeline,
-  Input,
-  Space,
-  Typography,
-  Select,
-  App,
-  Divider,
-  Empty,
-  Skeleton,
-  Result,
-  Upload,
-} from 'antd';
+  ELDescriptions,
+  ELTag,
+  ELTimeline,
+  ELInput,
+  ELSpace,
+  ELTypography,
+  ELSelect,
+  useELApp,
+  ELDivider,
+  ELEmpty,
+  ELSkeleton,
+  ELResult,
+  ELUpload,
+} from '@/shared/ui';
+import type { RcFile, UploadFile } from '@/shared/ui/ELUpload';
+const Descriptions = ELDescriptions;
+const Tag = ELTag;
+const Timeline = ELTimeline;
+const Input = ELInput;
+const Space = ELSpace;
+const Typography = ELTypography;
+const Select = ELSelect;
+const App = { useApp: useELApp };
+const Divider = ELDivider;
+const Empty = ELEmpty;
+const Skeleton = ELSkeleton;
+const Result = ELResult;
+const Upload = ELUpload;
 import { PaperClipOutlined, ReloadOutlined, SendOutlined, UserOutlined } from '@ant-design/icons';
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import type { RcFile, UploadFile } from 'antd/es/upload/interface';
-// Note: RcFile and UploadFile types are not directly exported from 'antd', keeping /es/ import
 import {
   useAssignTicket,
   usePostTicketMessage,
@@ -32,7 +44,6 @@ import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/pt-br';
 import { ELDrawer } from '@/shared/ui/ELDrawer';
 import { ELButton } from '@/shared/ui/ELButton';
-import { ELSelect } from '@/shared/ui/ELSelect';
 
 dayjs.extend(relativeTime);
 dayjs.locale('pt-br');

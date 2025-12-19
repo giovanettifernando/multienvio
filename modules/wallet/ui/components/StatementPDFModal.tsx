@@ -1,7 +1,11 @@
 "use client";
 
 import { useRef, useState, useEffect, useCallback } from "react";
-import { App, Space, Spin, Result } from "antd";
+import { useELApp, ELSpace, ELSpin, ELResult } from '@/shared/ui';
+const App = { useApp: useELApp };
+const Space = ELSpace;
+const Spin = ELSpin;
+const Result = ELResult;
 import { PrinterOutlined, DownloadOutlined, ReloadOutlined } from "@ant-design/icons";
 import { ELModal } from '@/shared/ui/ELModal';
 import { ELButton } from '@/shared/ui/ELButton';

@@ -2,14 +2,21 @@
 
 import React, { useState } from "react";
 import {
-  App,
-  Empty,
-  Space,
-  Spin,
-  Tag,
-  Typography,
-  theme,
-} from "antd";
+  useELApp,
+  ELEmpty,
+  ELSpace,
+  ELSpin,
+  ELTag,
+  ELTypography,
+  useELTheme,
+} from '@/shared/ui';
+const App = { useApp: useELApp };
+const Empty = ELEmpty;
+const Space = ELSpace;
+const Spin = ELSpin;
+const Tag = ELTag;
+const Typography = ELTypography;
+const theme = { useToken: useELTheme };
 import { ELButton, ELCard, ELPopconfirm } from "@/shared/ui";
 import { CreditCardOutlined, DeleteOutlined, StarOutlined, StarFilled } from "@ant-design/icons";
 import type { Card as CardType } from '@/shared/types/account';

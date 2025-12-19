@@ -1,6 +1,8 @@
 "use client";
 
-import { Radio, Typography } from "antd";
+import { ELRadio, ELTypography } from '@/shared/ui';
+const Radio = ELRadio;
+const Typography = ELTypography;
 
 interface DestinationModeSelectorProps {
   mode: "manual" | "recipient";

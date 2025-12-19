@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { InputNumber, App } from "antd";
-import { ELCard } from '@/shared/ui/ELCard';
+import { useELApp, ELCard, ELInputNumber } from '@/shared/ui';
+const App = { useApp: useELApp };
+const InputNumber = ELInputNumber;
 import { PageShell } from '@/shared/ui/PageShell';
 import type { Invoice } from '@/shared/types/billing';
 import { ELButton } from '@/shared/ui/ELButton';
@@ -110,7 +111,7 @@ export default function FaturasClient() {
           min={10}
           step={50}
           value={amount}
-          onChange={(value) => setAmount(value ?? 10)}
+          onChange={(value) => setAmount(typeof value === 'number' ? value : 10)}
           style={{ width: "100%" }}
           precision={2}
           prefix="R$"

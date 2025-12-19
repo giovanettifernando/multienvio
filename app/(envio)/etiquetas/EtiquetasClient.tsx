@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useCallback, useRef } from 'react';
-import { App, Spin, Space } from 'antd';
 import { PrinterOutlined, DownloadOutlined, CloseOutlined } from '@ant-design/icons';
-import { ELModal } from '@/shared/ui/ELModal';
+import { ELModal, ELSpin, ELSpace, ELApp, useELApp } from '@/shared/ui';
+const { Spin, Space, App } = { Spin: ELSpin, Space: ELSpace, App: ELApp };
 import { LabelsTable } from '@/modules/labels/ui/components/LabelsTable';
 import { LabelPrintModal } from '@/modules/labels/ui/components/LabelPrintModal';
 import { ShipmentLabelModal, type ShipmentLabelData } from '@/modules/labels/ui/components';
@@ -76,7 +76,7 @@ interface LabelDetailResponse {
 }
 
 export default function EtiquetasClient() {
-  const { message } = App.useApp();
+  const { message } = useELApp();
   const queryClient = useQueryClient();
   const iframeRef = useRef<HTMLIFrameElement>(null);
 

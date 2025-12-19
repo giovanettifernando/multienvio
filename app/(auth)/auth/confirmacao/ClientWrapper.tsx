@@ -1,8 +1,8 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { Spin } from "antd";
-import { FormCard } from '@/shared/ui/FormCard';
+import { ELSpin, FormCard } from '@/shared/ui';
+const Spin = ELSpin;
 
 const ConfirmacaoClient = dynamic(() => import("./ConfirmacaoClient"), {
   ssr: false,

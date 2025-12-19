@@ -1,7 +1,10 @@
 'use client';
 
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { App, Spin, Space } from 'antd';
+import { useELApp, ELSpin, ELSpace } from '@/shared/ui';
+const App = { useApp: useELApp };
+const Spin = ELSpin;
+const Space = ELSpace;
 import { CheckCircleOutlined, LoadingOutlined } from '@ant-design/icons';
 import { useRouter } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';

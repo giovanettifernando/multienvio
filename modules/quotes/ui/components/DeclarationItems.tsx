@@ -2,13 +2,19 @@
 
 import { DeleteOutlined, PlusOutlined } from "@ant-design/icons";
 import {
-  Flex,
-  Form,
-  Input,
-  InputNumber,
-  Space,
-  Typography,
-} from "antd";
+  ELFlexAntd,
+  ELForm,
+  ELInput,
+  ELInputNumber,
+  ELSpace,
+  ELTypography,
+} from '@/shared/ui';
+const Flex = ELFlexAntd;
+const Form = ELForm;
+const Input = ELInput;
+const InputNumber = ELInputNumber;
+const Space = ELSpace;
+const Typography = ELTypography;
 import { ELButton } from '@/shared/ui/ELButton';
 import { ELCard } from '@/shared/ui/ELCard';
 import {

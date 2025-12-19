@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useSyncExternalStore } from "react";
-import { Space, Grid, Tooltip } from "antd";
-import { ELTabs } from "@/shared/ui";
+import { ELSpace, ELTooltip, ELTabs, useBreakpoint } from '@/shared/ui';
+const Space = ELSpace;
+const Tooltip = ELTooltip;
 import {
   EnvironmentOutlined,
   CreditCardOutlined,
@@ -15,8 +16,6 @@ import CardsList from "./CardsList";
 import RecipientsList from "./RecipientsList";
 import RecurringItemsList from "./RecurringItemsList";
 import SecurityForm from "./SecurityForm";
-
-const { useBreakpoint } = Grid;
 
 type TabKey = "addresses" | "cards" | "recipients" | "recurring-items" | "security";
 

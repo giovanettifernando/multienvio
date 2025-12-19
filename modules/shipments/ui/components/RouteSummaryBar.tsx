@@ -1,5 +1,7 @@
 import { ArrowDownOutlined, ArrowRightOutlined } from "@ant-design/icons";
-import { Grid, Space, Typography, theme } from "antd";
+import { ELSpace, ELTypography, useBreakpoint, useELTheme } from "@/shared/ui";
+const Space = ELSpace;
+const Typography = ELTypography;
 import type { ReactNode } from "react";
 
 export type RouteSummary = {
@@ -20,8 +22,8 @@ export function RouteSummaryBar({
   isReverse,
   extra,
 }: RouteSummaryBarProps) {
-  const { token } = theme.useToken();
-  const screens = Grid.useBreakpoint();
+  const { token } = useELTheme();
+  const screens = useBreakpoint();
   const isMobile = !screens.md;
 
   const arrowIcon = isMobile ? (
@@ -102,7 +104,7 @@ function SummaryPart({
   secondary,
   align = "start",
 }: SummaryPartProps) {
-  const { token } = theme.useToken();
+  const { token } = useELTheme();
 
   return (
     <Space

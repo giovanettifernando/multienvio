@@ -1,7 +1,8 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { Typography } from "antd";
+import { ELTypography } from '@/shared/ui';
+const Typography = ELTypography;
 import { ELSkeleton } from '@/shared/ui/ELSkeleton';
 import type { CompanyWizardData } from '@/shared/validation/company';
 import type { Shipment } from '@/shared/types/shipment';

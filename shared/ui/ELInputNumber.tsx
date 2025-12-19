@@ -1,5 +1,6 @@
 import { InputNumber } from 'antd';
 import type { InputNumberProps } from 'antd';
+import { forwardRef } from 'react';
 import { cn } from "@/shared/utils/cn";
 import styles from "./ELInputNumber.module.css";
 
@@ -10,7 +11,7 @@ import styles from "./ELInputNumber.module.css";
  */
 export type ELInputNumberVariant = "default" | "currency" | "percentage";
 
-export interface ELInputNumberProps extends Omit<InputNumberProps, 'variant'> {
+export interface ELInputNumberProps extends Omit<InputNumberProps<number>, 'variant'> {
   variant?: ELInputNumberVariant;
 }
 
@@ -38,7 +39,8 @@ const percentParser = (value: string | undefined) => {
   return parseFloat(value.replace('%', '').replace(',', '.')) || 0;
 };
 
-export function ELInputNumber({
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const ELInputNumber = forwardRef<any, ELInputNumberProps>(function ELInputNumber({
   variant = "default",
   className,
   size,
@@ -48,7 +50,7 @@ export function ELInputNumber({
   suffix,
   decimalSeparator,
   ...props
-}: ELInputNumberProps) {
+}, ref) {
   // Aplicar formatadores baseados na variante
   let computedFormatter = formatter;
   let computedParser = parser;
@@ -70,6 +72,7 @@ export function ELInputNumber({
   return (
     <InputNumber
       {...props}
+      ref={ref}
       formatter={computedFormatter}
       parser={computedParser}
       prefix={computedPrefix}
@@ -79,4 +82,4 @@ export function ELInputNumber({
       size={size ?? "middle"}
     />
   );
-}
+});

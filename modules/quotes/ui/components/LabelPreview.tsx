@@ -6,7 +6,12 @@ import {
   DollarOutlined,
   TruckOutlined,
 } from "@ant-design/icons";
-import { Card, Space, Spin, Switch, Typography } from "antd";
+import { ELCard, ELSpace, ELSpin, ELSwitch, ELTypography } from '@/shared/ui';
+const Card = ELCard;
+const Space = ELSpace;
+const Spin = ELSpin;
+const Switch = ELSwitch;
+const Typography = ELTypography;
 
 type PickupFeeInfo = {
   collectorName: string;

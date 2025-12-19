@@ -1,7 +1,10 @@
 "use client";
 
 import { useEffect, useMemo } from "react";
-import { Typography, Space, Badge } from "antd";
+import { ELTypography, ELSpace, ELBadge } from '@/shared/ui';
+const Typography = ELTypography;
+const Space = ELSpace;
+const Badge = ELBadge;
 import { FileTextOutlined, FormOutlined } from "@ant-design/icons";
 import { ELCard, ELTabs } from "@/shared/ui";
 import { useFormContext } from "react-hook-form";

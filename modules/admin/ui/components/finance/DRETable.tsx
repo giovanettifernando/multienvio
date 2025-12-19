@@ -1,18 +1,10 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import {
-  Table,
-  Select,
-  Flex,
-  Button,
-  Typography,
-  Space,
-  Empty,
-  Spin,
-  Card,
-} from 'antd';
+import { Table, Flex, Typography, Space, Empty, Spin } from 'antd';
 import type { TableProps } from 'antd';
+import { ELButton, ELCard, ELSelect } from '@/shared/ui';
+const { Button, Card, Select } = { Button: ELButton, Card: ELCard, Select: ELSelect };
 import { useQuery } from '@tanstack/react-query';
 import { DownloadOutlined, ReloadOutlined } from '@ant-design/icons';
 import {

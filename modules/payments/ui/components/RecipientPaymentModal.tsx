@@ -1,13 +1,12 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import {
-  Radio,
-  Space,
-  Typography,
-  App,
-  Spin,
-} from "antd";
+import { ELSpace, ELTypography, useELApp, ELRadio, ELSpin } from "@/shared/ui";
+const Radio = ELRadio;
+const Spin = ELSpin;
+const Space = ELSpace;
+const Typography = ELTypography;
+const App = { useApp: useELApp };
 import {
   QrcodeOutlined,
   CreditCardOutlined,

@@ -12,7 +12,9 @@ import AccountTabs from "@/modules/auth/ui/components/AccountTabs";
 import gridStyles from "@/shared/ui/ELGrid.module.css";
 import { cn } from "@/shared/utils/cn";
 import { EnvironmentOutlined } from "@ant-design/icons";
-import { Typography, Space } from "antd";
+import { ELTypography, ELSpace } from "@/shared/ui";
+const Typography = ELTypography;
+const Space = ELSpace;
 
 const { Text } = Typography;
 

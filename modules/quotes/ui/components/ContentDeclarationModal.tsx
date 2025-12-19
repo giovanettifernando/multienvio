@@ -2,7 +2,10 @@
 
 import { useEffect, useState, startTransition } from "react";
 import { FileTextOutlined, SafetyOutlined } from "@ant-design/icons";
-import { Checkbox, Space, Typography } from "antd";
+import { ELCheckbox, ELSpace, ELTypography } from '@/shared/ui';
+const Checkbox = ELCheckbox;
+const Space = ELSpace;
+const Typography = ELTypography;
 import { ELModal } from '@/shared/ui/ELModal';
 import { ELButton } from '@/shared/ui/ELButton';
 

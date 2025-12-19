@@ -1,6 +1,7 @@
 "use client";
 
-import { Typography } from "antd";
+import { ELTypography } from "@/shared/ui";
+const Typography = ELTypography;
 import type { Shipment } from '@/shared/types/shipment';
 import { ShipmentStatusBadge } from "@/modules/shipments/ui/components/shipment-status-badge";
 import { DataTable, type DataTableColumn } from "@/shared/ui/DataTable";

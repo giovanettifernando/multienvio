@@ -1,7 +1,9 @@
 "use client";
 
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
-import { App, Spin } from 'antd';
+import { useELApp, ELSpin } from '@/shared/ui';
+const App = { useApp: useELApp };
+const Spin = ELSpin;
 import { ELButton, ELSelect } from '@/shared/ui';
 import { useEffect, useState } from 'react';
 import { useListPackaging, useDeletePackaging, type PackagingTemplate } from '@/modules/quotes/ui/hooks';

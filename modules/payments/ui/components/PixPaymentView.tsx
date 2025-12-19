@@ -1,6 +1,9 @@
 'use client';
 
-import { Typography, Space, Spin } from 'antd';
+import { ELTypography, ELSpace, ELSpin } from '@/shared/ui';
+const Typography = ELTypography;
+const Space = ELSpace;
+const Spin = ELSpin;
 import { LoadingOutlined, CheckCircleFilled, CloseCircleFilled } from '@ant-design/icons';
 import type { MercadoPagoPaymentResult, PixPaymentStatus } from './checkoutTypes';
 import { formatCurrency } from './checkoutTypes';

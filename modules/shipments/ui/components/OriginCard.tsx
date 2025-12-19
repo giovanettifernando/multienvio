@@ -1,5 +1,7 @@
 import { BankOutlined } from "@ant-design/icons";
-import { Flex, Typography } from "antd";
+import { ELFlexAntd, ELTypography } from "@/shared/ui";
+const Flex = ELFlexAntd;
+const Typography = ELTypography;
 import type { ReactNode } from "react";
 import { getCardAccentColor, type RouteCardVariant } from "./route.css";
 

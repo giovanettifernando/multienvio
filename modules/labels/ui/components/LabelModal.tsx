@@ -1,8 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Descriptions, Space, Button, Tabs, Typography, App, Tag } from 'antd';
-import { ELModal } from '@/shared/ui/ELModal';
+import { ELDescriptions, ELSpace, ELTypography, useELApp, ELTag } from '@/shared/ui';
+const Descriptions = ELDescriptions;
+const Space = ELSpace;
+const Typography = ELTypography;
+const App = { useApp: useELApp };
+const Tag = ELTag;
+import { ELModal, ELButton, ELTabs } from '@/shared/ui';
+const { Button, Tabs } = { Button: ELButton, Tabs: ELTabs };
 import type { LabelItem } from '@/shared/types/label';
 import { createObjectUrlFromLabelFile, printPdfFromIframe, downloadPdf } from '@/shared/utils/pdf';
 import dayjs from 'dayjs';

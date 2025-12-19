@@ -3,8 +3,9 @@
 import { useState, useRef, useEffect, useCallback, Suspense, type KeyboardEvent } from "react";
 import { createPortal } from "react-dom";
 import { usePathname, useSearchParams } from "next/navigation";
-import { Avatar, Badge } from 'antd';
-import { ELButton, ELInput } from '@/shared/ui';
+import { ELButton, ELInput, ELAvatar, ELBadge } from '@/shared/ui';
+const Avatar = ELAvatar;
+const Badge = ELBadge;
 import { MessageOutlined, CloseOutlined, SendOutlined, RobotOutlined, ToolOutlined } from "@ant-design/icons";
 import { cn } from "@/shared/utils/cn";
 import { useCurrentUser } from "@/modules/auth/ui/hooks";

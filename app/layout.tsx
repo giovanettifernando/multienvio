@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { AntdRegistry } from "@ant-design/nextjs-registry";
-import { ConfigProvider } from 'antd';
-import ptBR from "antd/locale/pt_BR";
+import { ELConfigProvider, ELLocale } from '@/shared/ui';
+const ConfigProvider = ELConfigProvider;
+const ptBR = ELLocale.ptBR;
 import { Inter } from "next/font/google";
 import { AppProviders } from '@/shared/ui/providers/app-providers';
 import { getThemeConfig } from "@/shared/ui/theme";

@@ -5,7 +5,8 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
-import { App } from 'antd';
+import { useELApp } from '@/shared/ui';
+const App = { useApp: useELApp };
 import { useEffect } from 'react';
 
 export interface AccountData {

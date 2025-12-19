@@ -1,7 +1,9 @@
 "use client";
 
 import React from "react";
-import { App, Space } from "antd";
+import { useELApp, ELSpace } from '@/shared/ui';
+const App = { useApp: useELApp };
+const Space = ELSpace;
 import { ELButton, ELCard, ELFormItem, ELInput } from "@/shared/ui";
 import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";

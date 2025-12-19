@@ -8,13 +8,19 @@ import {
   UserOutlined,
 } from "@ant-design/icons";
 import {
-  Alert,
-  Form,
-  Input,
-  Space,
-  Typography,
-  Checkbox,
-} from "antd";
+  ELAlert,
+  ELForm,
+  ELInput,
+  ELSpace,
+  ELTypography,
+  ELCheckbox,
+} from '@/shared/ui';
+const Alert = ELAlert;
+const Form = ELForm;
+const Input = ELInput;
+const Space = ELSpace;
+const Typography = ELTypography;
+const Checkbox = ELCheckbox;
 import { ELCard } from '@/shared/ui/ELCard';
 import { ELButton } from '@/shared/ui/ELButton';
 import {

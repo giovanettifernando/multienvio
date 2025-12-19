@@ -1,7 +1,12 @@
 "use client";
 
 import { EnvironmentOutlined } from "@ant-design/icons";
-import { Alert, Card, Typography, Flex, Divider } from "antd";
+import { ELAlert, ELCard, ELTypography, ELFlexAntd, ELDivider } from '@/shared/ui';
+const Alert = ELAlert;
+const Card = ELCard;
+const Typography = ELTypography;
+const Flex = ELFlexAntd;
+const Divider = ELDivider;
 import type { PartnerPoint } from '@/shared/types/quote';
 
 type PartnerPointsProps = {

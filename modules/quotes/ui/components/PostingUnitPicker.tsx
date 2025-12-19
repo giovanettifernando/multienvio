@@ -3,17 +3,26 @@
 import { useEffect, useMemo, useState } from "react";
 import { EnvironmentOutlined, SearchOutlined, ShopOutlined } from "@ant-design/icons";
 import {
-  Alert,
-  App,
-  Input,
-  Radio,
-  Space,
-  Spin,
-  Switch,
-  Tag,
-  Typography,
-  theme,
-} from "antd";
+  ELAlert,
+  useELApp,
+  ELInput,
+  ELRadio,
+  ELSpace,
+  ELSpin,
+  ELSwitch,
+  ELTag,
+  ELTypography,
+  useELTheme,
+} from '@/shared/ui';
+const Alert = ELAlert;
+const App = { useApp: useELApp };
+const Input = ELInput;
+const Radio = ELRadio;
+const Space = ELSpace;
+const Spin = ELSpin;
+const Switch = ELSwitch;
+const Tag = ELTag;
+const Typography = ELTypography;
 import { ELButton } from '@/shared/ui/ELButton';
 import { ELCard } from '@/shared/ui/ELCard';
 import { useFormContext } from "react-hook-form";
@@ -38,7 +47,7 @@ interface PickupPointWithDistance extends PickupPoint {
 
 export function PostingUnitPicker() {
   const { message } = App.useApp();
-  const { token } = theme.useToken();
+  const { token } = useELTheme();
   const { pickupAtOrigin, hydrated } = useQuoteDraft(
     useShallow((s) => ({ pickupAtOrigin: s.pickupAtOrigin, hydrated: s._hasHydrated }))
   );

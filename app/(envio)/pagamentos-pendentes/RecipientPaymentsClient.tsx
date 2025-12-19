@@ -2,16 +2,15 @@
 
 import { useState, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import {
-  App,
-  Badge,
-  Empty,
-  Space,
-  Table,
-  Tag,
-  Tooltip,
-  Typography,
-} from "antd";
+import { ELTypography, ELSpace, ELEmpty, ELTable, useELApp, ELBadge, ELTooltip, ELTag } from '@/shared/ui';
+const Typography = ELTypography;
+const Space = ELSpace;
+const Empty = ELEmpty;
+const Table = ELTable;
+const App = { useApp: useELApp };
+const Badge = ELBadge;
+const Tooltip = ELTooltip;
+const Tag = ELTag;
 import {
   ClockCircleOutlined,
   CheckCircleOutlined,

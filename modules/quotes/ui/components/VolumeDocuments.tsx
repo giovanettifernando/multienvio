@@ -1,6 +1,10 @@
 "use client";
 
-import { Collapse, Space, Typography, Tag } from "antd";
+import { ELCollapse, ELSpace, ELTypography, ELTag } from '@/shared/ui';
+const Collapse = ELCollapse;
+const Space = ELSpace;
+const Typography = ELTypography;
+const Tag = ELTag;
 import { useFormContext } from "react-hook-form";
 import type { FinalizeFormValues } from '@/shared/types/quoteFinalize';
 import { VolumeDeclarationItems } from "@/modules/quotes/ui/components/VolumeDeclarationItems";

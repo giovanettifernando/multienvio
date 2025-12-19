@@ -1,8 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { DatePicker } from "antd";
-import { ELCard } from '@/shared/ui/ELCard';
+import { ELCard, ELDatePicker } from '@/shared/ui';
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import type { PickupRequestWithShipment, PickupStatus } from "@/shared/types/pickup";
@@ -16,7 +15,7 @@ import { DataTable, type DataTableColumn } from '@/shared/ui/DataTable';
 import { ActionBar } from '@/shared/ui/ActionBar';
 import tableStyles from "@/shared/ui/ELTableWrapper.module.css";
 
-const { RangePicker } = DatePicker;
+const { RangePicker } = ELDatePicker;
 
 const STATUS_OPTIONS: Array<{ label: string; value: PickupStatus | "all" }> = [
   { label: "Todos", value: "all" },

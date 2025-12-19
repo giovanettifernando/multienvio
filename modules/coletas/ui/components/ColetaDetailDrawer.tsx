@@ -1,6 +1,13 @@
 "use client";
 
-import { Descriptions, Timeline, Tag, Button, Space, Input, App } from "antd";
+import { ELDescriptions, ELTimeline, ELTag, ELButton, ELSpace, ELApp, ELInput } from "@/shared/ui";
+const Descriptions = ELDescriptions;
+const Timeline = ELTimeline;
+const Tag = ELTag;
+const Button = ELButton;
+const Space = ELSpace;
+const App = ELApp;
+const Input = ELInput;
 import { ELDrawer } from '@/shared/ui/ELDrawer';
 import {
   ClockCircleOutlined,

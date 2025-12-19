@@ -1,6 +1,7 @@
 "use client";
 
-import { Select } from "antd";
+import { ELSelect } from "@/shared/ui";
+const Select = ELSelect;
 
 type Props = {
   onSelect: (message: string) => void;
@@ -30,7 +31,7 @@ export function CannedReplySelect({ onSelect }: Props) {
       style={{ minWidth: 220 }}
       aria-label="Selecionar resposta rápida"
       onChange={(value) => {
-        if (value) {
+        if (value && typeof value === 'string') {
           onSelect(value);
         }
       }}

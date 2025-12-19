@@ -1,12 +1,16 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Table, Space, Tag, Typography, Popconfirm, App, Grid } from 'antd';
-import type { TableProps } from 'antd';
+import { ELTable, ELSpace, ELTag, ELTypography, ELPopconfirm, useELApp, useBreakpoint } from '@/shared/ui';
+import type { TableProps } from '@/shared/ui';
+const Table = ELTable;
+const Space = ELSpace;
+const Tag = ELTag;
+const Typography = ELTypography;
+const Popconfirm = ELPopconfirm;
+const App = { useApp: useELApp };
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { EyeOutlined, StopOutlined, DownOutlined, RightOutlined } from '@ant-design/icons';
-
-const { useBreakpoint } = Grid;
 import { ELInput } from '@/shared/ui/ELInput';
 import { ELSelect } from '@/shared/ui/ELSelect';
 import { ELButton } from '@/shared/ui/ELButton';

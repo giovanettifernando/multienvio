@@ -2,15 +2,14 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  InputNumber,
-  Radio,
-  Space,
-  Typography,
-  App,
-  Spin,
-  Form,
-} from "antd";
+import { ELSpace, ELTypography, useELApp, ELInputNumber, ELRadio, ELSpin, ELForm } from "@/shared/ui";
+const InputNumber = ELInputNumber;
+const Radio = ELRadio;
+const Spin = ELSpin;
+const Form = ELForm;
+const Space = ELSpace;
+const Typography = ELTypography;
+const App = { useApp: useELApp };
 import {
   QrcodeOutlined,
   CreditCardOutlined,

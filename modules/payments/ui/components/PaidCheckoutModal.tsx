@@ -19,7 +19,12 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
-import { App, Space, Typography, Radio, Spin } from 'antd';
+import { useELApp, ELSpace, ELTypography, ELRadio, ELSpin } from '@/shared/ui';
+const App = { useApp: useELApp };
+const Space = ELSpace;
+const Typography = ELTypography;
+const Radio = ELRadio;
+const Spin = ELSpin;
 import {
   WalletOutlined,
   QrcodeOutlined,

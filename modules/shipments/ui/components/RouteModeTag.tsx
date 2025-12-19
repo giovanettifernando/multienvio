@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
-import { Badge, Space, theme } from "antd";
+import { ELSpace, useELTheme, ELBadge } from "@/shared/ui";
+const Space = ELSpace;
+const Badge = ELBadge;
 import {
   RollbackOutlined,
   SwapRightOutlined,
@@ -11,7 +13,7 @@ type RouteModeTagProps = {
 };
 
 export function RouteModeTag({ isReverse, children }: RouteModeTagProps) {
-  const { token } = theme.useToken();
+  const { token } = useELTheme();
 
   const icon = isReverse ? (
     <RollbackOutlined style={{ fontSize: 16 }} />

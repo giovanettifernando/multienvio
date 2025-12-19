@@ -3,13 +3,19 @@
 /* eslint-disable @next/next/no-img-element */
 
 import {
-  Alert,
-  App,
-  Flex,
-  Space,
-  Typography,
-  Spin,
-} from "antd";
+  ELAlert,
+  useELApp,
+  ELFlexAntd,
+  ELSpace,
+  ELTypography,
+  ELSpin,
+} from '@/shared/ui';
+const Alert = ELAlert;
+const App = { useApp: useELApp };
+const Flex = ELFlexAntd;
+const Space = ELSpace;
+const Typography = ELTypography;
+const Spin = ELSpin;
 import { ELButton, ELCard, ELFormItem, ELInput, ELPopconfirm, ELSwitch } from "@/shared/ui";
 import { DeleteOutlined } from "@ant-design/icons";
 import React, { useEffect, useMemo, useRef, useState } from "react";

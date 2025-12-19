@@ -1,7 +1,11 @@
 'use client';
 
 import { useEffect } from 'react';
-import { Tag, Space, Typography, App } from 'antd';
+import { ELTag, ELSpace, ELTypography, useELApp } from '@/shared/ui';
+const Tag = ELTag;
+const Space = ELSpace;
+const Typography = ELTypography;
+const App = { useApp: useELApp };
 import { ReloadOutlined, SearchOutlined } from '@ant-design/icons';
 import { ELButton, ELInput, ELSelect } from '@/shared/ui';
 import { useState } from 'react';

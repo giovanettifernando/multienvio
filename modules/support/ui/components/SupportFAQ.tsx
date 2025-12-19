@@ -1,7 +1,12 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { Collapse, Space, Typography, Skeleton, Divider, App } from 'antd';
+import { ELCollapse, ELSpace, ELTypography, ELDivider, useELApp } from '@/shared/ui';
+const Collapse = ELCollapse;
+const Space = ELSpace;
+const Typography = ELTypography;
+const Divider = ELDivider;
+const App = { useApp: useELApp };
 import {
   SearchOutlined,
   QuestionCircleOutlined,

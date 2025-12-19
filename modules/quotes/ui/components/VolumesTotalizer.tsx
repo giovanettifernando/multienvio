@@ -1,6 +1,7 @@
 "use client";
 
-import { Space } from "antd";
+import { ELSpace } from '@/shared/ui';
+const Space = ELSpace;
 import { InboxOutlined, FunctionOutlined } from "@ant-design/icons";
 import styles from "@/app/(envio)/cotacoes/cotacoes.module.css";
 

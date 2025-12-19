@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Typography, Space } from 'antd';
+import { ELTypography, ELSpace } from '@/shared/ui';
+const Typography = ELTypography;
+const Space = ELSpace;
 import { EnvironmentOutlined, EyeOutlined } from "@ant-design/icons";
 import { ELAlert, ELButton, ELSelect } from '@/shared/ui';
 import { DataTable, type DataTableColumn } from '@/shared/ui/DataTable';

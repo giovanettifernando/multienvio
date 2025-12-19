@@ -6,7 +6,12 @@ import {
   InboxOutlined,
   SafetyOutlined,
 } from "@ant-design/icons";
-import { Card, Space, Tag, Tooltip, Typography } from "antd";
+import { ELCard, ELSpace, ELTag, ELTooltip, ELTypography } from '@/shared/ui';
+const Card = ELCard;
+const Space = ELSpace;
+const Tag = ELTag;
+const Tooltip = ELTooltip;
+const Typography = ELTypography;
 import type { QuoteSummary, QuoteVolume } from '@/shared/types/quote';
 import { formatBRL } from '@/shared/utils/format';
 

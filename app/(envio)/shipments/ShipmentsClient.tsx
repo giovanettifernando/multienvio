@@ -1,13 +1,12 @@
 "use client";
 
 import React, { useMemo, useState, useCallback } from "react";
-import {
-  Tooltip,
-  App,
-  Descriptions,
-  Image,
-  Typography,
-} from "antd";
+import { ELDescriptions, ELTypography, useELApp, ELTooltip, ELImage } from '@/shared/ui';
+const Tooltip = ELTooltip;
+const Image = ELImage;
+const Descriptions = ELDescriptions;
+const Typography = ELTypography;
+const App = { useApp: useELApp };
 import { ELCard } from '@/shared/ui/ELCard';
 import {
   PrinterOutlined,

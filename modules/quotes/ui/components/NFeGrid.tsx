@@ -1,8 +1,15 @@
 "use client";
 
 import { useEffect, useMemo } from "react";
-import { App, Form, Input, Space, Table, Typography, Upload } from "antd";
-import type { UploadProps } from "antd";
+import { useELApp, ELForm, ELInput, ELSpace, ELTable, ELTypography, ELUpload } from '@/shared/ui';
+import type { UploadProps } from '@/shared/ui/antd-types';
+const App = { useApp: useELApp };
+const Form = ELForm;
+const Input = ELInput;
+const Space = ELSpace;
+const Table = ELTable;
+const Typography = ELTypography;
+const Upload = ELUpload;
 import { InboxOutlined } from "@ant-design/icons";
 import { useFieldArray, useFormContext } from "react-hook-form";
 import type { FinalizeFormValues } from '@/shared/types/quoteFinalize';

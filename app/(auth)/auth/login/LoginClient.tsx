@@ -5,9 +5,9 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { App, Button, Form, Typography } from 'antd';
 import { GoogleOutlined } from "@ant-design/icons";
-import { ELAlert, ELButton, ELCard, ELCheckbox, ELFormItem, ELInput } from '@/shared/ui';
+import { ELAlert, ELButton, ELCard, ELCheckbox, ELFormItem, ELInput, ELForm, ELTypography, useELApp } from '@/shared/ui';
+const { Form, Typography } = { Form: ELForm, Typography: ELTypography };
 import { spacing } from "@/shared/ui/theme";
 import {
   loginSchema,
@@ -20,7 +20,7 @@ const STORAGE_KEY = "enviolegal:last-email";
 
 export default function LoginClient() {
   const router = useRouter();
-  const { message } = App.useApp();
+  const { message } = useELApp();
   const loginStore = useAuthStore((state) => state.login);
   const isAdmin = useAuthStore((state) => state.isAdmin);
   const [formError, setFormError] = useState<string | null>(null);
@@ -197,7 +197,7 @@ export default function LoginClient() {
 
           <div className={styles.divider}>ou</div>
 
-          <Button
+          <ELButton
             block
             size="large"
             icon={<GoogleOutlined className={styles.googleIcon} />}
@@ -207,7 +207,7 @@ export default function LoginClient() {
             disabled={isLoading || isGoogleLoading}
           >
             Continuar com Google
-          </Button>
+          </ELButton>
         </div>
       </Form>
     ),

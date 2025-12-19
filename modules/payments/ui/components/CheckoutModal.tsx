@@ -2,7 +2,8 @@
 
 import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
-import { App } from 'antd';
+import { useELApp } from '@/shared/ui';
+const App = { useApp: useELApp };
 import { PaymentModal } from './PaymentModal';
 
 interface CheckoutModalProps {

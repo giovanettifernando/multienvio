@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect } from "react";
-import { App, Input } from "antd";
+import { useELApp, ELInput } from '@/shared/ui';
+const App = { useApp: useELApp };
+const Input = ELInput;
 import { ELModal } from '@/shared/ui/ELModal';
 import { Controller, FormProvider, useForm } from "react-hook-form";
 import { z } from "zod";

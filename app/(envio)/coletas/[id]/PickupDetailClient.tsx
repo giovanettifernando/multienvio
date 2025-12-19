@@ -3,14 +3,12 @@
 import { useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  Alert,
-  Descriptions,
-  Form,
-  Space,
-  Typography,
-} from "antd";
-import { ELCard } from '@/shared/ui/ELCard';
+import { ELCard, ELAlert, ELDescriptions, ELSpace, ELTypography, ELForm } from '@/shared/ui';
+const Form = ELForm;
+const Alert = ELAlert;
+const Descriptions = ELDescriptions;
+const Space = ELSpace;
+const Typography = ELTypography;
 import { ELGrid } from '@/shared/ui/ELGrid';
 import Link from "next/link";
 import type { PickupRequestDetail, PickupStatus, PickupAttemptNote } from "@/shared/types/pickup";

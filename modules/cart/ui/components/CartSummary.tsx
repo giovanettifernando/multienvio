@@ -1,15 +1,14 @@
 "use client";
 
-import {
-  Button,
-  Card,
-  Col,
-  Divider,
-  Flex,
-  Row,
-  Space,
-  Typography,
-} from "antd";
+import { ELButton, ELCard, ELFlexAntd, ELSpace, ELTypography, ELDivider, ELRow, ELCol } from "@/shared/ui";
+const Divider = ELDivider;
+const Row = ELRow;
+const Col = ELCol;
+const Button = ELButton;
+const Card = ELCard;
+const Flex = ELFlexAntd;
+const Space = ELSpace;
+const Typography = ELTypography;
 import { useRouter } from "next/navigation";
 import { useQuoteStore } from '@/modules/quotes/ui/state/useQuoteStore';
 import { useQuoteDraft } from "@/modules/quotes/ui/state/quoteDraft";

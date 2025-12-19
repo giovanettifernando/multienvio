@@ -1,7 +1,15 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Collapse, Space, Typography, Tag, Alert, InputNumber, Row, Col } from "antd";
+import { ELCollapse, ELSpace, ELTypography, ELTag, ELAlert, ELInputNumber, ELRow, ELCol } from '@/shared/ui';
+const Collapse = ELCollapse;
+const Space = ELSpace;
+const Typography = ELTypography;
+const Tag = ELTag;
+const Alert = ELAlert;
+const InputNumber = ELInputNumber;
+const Row = ELRow;
+const Col = ELCol;
 import { ELButton } from '@/shared/ui/ELButton';
 import {
   LockOutlined,

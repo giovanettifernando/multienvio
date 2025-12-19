@@ -1,7 +1,11 @@
 "use client";
 
 import React from "react";
-import { Space, Typography, Row, Col } from "antd";
+import { ELSpace, ELTypography, ELRow, ELCol } from '@/shared/ui';
+const Space = ELSpace;
+const Typography = ELTypography;
+const Row = ELRow;
+const Col = ELCol;
 import { PlusOutlined, WarningOutlined } from "@ant-design/icons";
 import { useWallet } from "@/modules/wallet/ui/hooks";
 import { formatNumberBR } from "@/shared/utils/format";

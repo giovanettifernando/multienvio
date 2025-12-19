@@ -1,7 +1,15 @@
 "use client";
 
 import { useState, useEffect, useRef, useMemo } from "react";
-import { Card as AntCard, Input, Radio, Space, Typography, Alert, Form, App } from "antd";
+import { ELCard, ELInput, ELRadio, ELSpace, ELTypography, ELAlert, ELForm, useELApp } from '@/shared/ui';
+const Card = ELCard;
+const Input = ELInput;
+const Radio = ELRadio;
+const Space = ELSpace;
+const Typography = ELTypography;
+const Alert = ELAlert;
+const Form = ELForm;
+const App = { useApp: useELApp };
 import { ELButton, ELModal } from '@/shared/ui';
 import { CreditCardOutlined, LockOutlined, LoadingOutlined } from "@ant-design/icons";
 import { formatBRL } from "@/shared/utils/format";
@@ -320,17 +328,17 @@ export function SavedCardPaymentForm({
 
   if (isLoading) {
     return (
-      <AntCard>
+      <Card>
         <div style={{ textAlign: "center", padding: "20px 0" }}>
-          <Text type="secondary">Carregando cartões...</Text>
+          <Typography.Text type="secondary">Carregando cartões...</Typography.Text>
         </div>
-      </AntCard>
+      </Card>
     );
   }
 
   if (availableCards.length === 0) {
     return (
-      <AntCard>
+      <Card>
         <Space orientation="vertical" size="middle" style={{ width: "100%" }}>
           <Alert
             message="Nenhum cartão cadastrado"
@@ -342,7 +350,7 @@ export function SavedCardPaymentForm({
             Adicionar Novo Cartão
           </ELButton>
         </Space>
-      </AntCard>
+      </Card>
     );
   }
 
@@ -369,7 +377,7 @@ export function SavedCardPaymentForm({
         </div>
       </ELModal>
 
-      <AntCard>
+      <Card>
         <Space orientation="vertical" size="large" style={{ width: "100%" }}>
           <div>
             <Text strong style={{ marginBottom: 8, display: "block" }}>
@@ -468,7 +476,7 @@ export function SavedCardPaymentForm({
             </ELButton>
           </Space>
         </Space>
-      </AntCard>
+      </Card>
     </>
   );
 }

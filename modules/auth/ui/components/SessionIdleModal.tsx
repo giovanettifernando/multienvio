@@ -2,7 +2,9 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { Typography, Space } from "antd";
+import { ELTypography, ELSpace } from '@/shared/ui';
+const Typography = ELTypography;
+const Space = ELSpace;
 import { ClockCircleOutlined, LogoutOutlined } from "@ant-design/icons";
 import { ELModal } from '@/shared/ui/ELModal';
 import { ELButton } from '@/shared/ui/ELButton';

@@ -1,7 +1,16 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { App, Button, Table, Input, InputNumber, Popconfirm, Upload, Space, Flex } from "antd";
+import { useELApp, ELButton, ELTable, ELInput, ELInputNumber, ELPopconfirm, ELUpload, ELSpace, ELFlex } from '@/shared/ui';
+const App = { useApp: useELApp };
+const Button = ELButton;
+const Table = ELTable;
+const Input = ELInput;
+const InputNumber = ELInputNumber;
+const Popconfirm = ELPopconfirm;
+const Upload = ELUpload;
+const Space = ELSpace;
+const Flex = ELFlex;
 import { DeleteOutlined, PlusOutlined, UploadOutlined, DownloadOutlined, EditOutlined, SaveOutlined, CloseOutlined } from "@ant-design/icons";
 import { inputNumberFormatterBRL, inputNumberParserBRL } from "@/shared/utils/format";
 

@@ -1,7 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { App, Button, Empty, Select, Skeleton, Space } from "antd";
+import { ELApp, ELButton, ELEmpty, ELSelect, ELSkeletonInput, ELSpace, EL_EMPTY_PRESENTED_IMAGE_SIMPLE } from "@/shared/ui";
+const App = ELApp;
+const Button = ELButton;
+const Empty = ELEmpty;
+const Select = ELSelect;
+const Space = ELSpace;
 import { PlusOutlined } from "@ant-design/icons";
 import { useAccountRecipients, useRecipientCreate } from "@/modules/account/ui/hooks";
 import { RecipientModal, type RecipientFormValues } from "@/modules/recipients/ui/components/RecipientModal";
@@ -107,14 +112,14 @@ export function RecipientSelect({
   };
 
   if (loading) {
-    return <Skeleton.Input active block />;
+    return <ELSkeletonInput active block />;
   }
 
   if (!loading && recipients.length === 0) {
     return (
       <Space orientation="vertical" style={{ width: "100%" }}>
         <Empty
-          image={Empty.PRESENTED_IMAGE_SIMPLE}
+          image={EL_EMPTY_PRESENTED_IMAGE_SIMPLE}
           description="Nenhum destinatário cadastrado"
         >
           <Button

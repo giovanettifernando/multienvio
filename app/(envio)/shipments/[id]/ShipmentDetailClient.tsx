@@ -1,16 +1,13 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import {
-  Alert,
-  App,
-  Space,
-  Table,
-  Tag,
-  Typography,
-} from "antd";
-import { ELSkeleton } from '@/shared/ui/ELSkeleton';
-import { ELCard } from '@/shared/ui/ELCard';
+import { ELSkeleton, ELCard, ELAlert, ELTypography, ELSpace, ELTag, useELApp, ELTable } from '@/shared/ui';
+const Table = ELTable;
+const Alert = ELAlert;
+const Typography = ELTypography;
+const Space = ELSpace;
+const Tag = ELTag;
+const App = { useApp: useELApp };
 import { ELButton } from '@/shared/ui/ELButton';
 import { ELGrid, ELGridSpanFull } from '@/shared/ui/ELGrid';
 import { ShareAltOutlined, CopyOutlined, PrinterOutlined } from "@ant-design/icons";
@@ -219,7 +216,7 @@ export default function ShipmentDetailClient() {
           type="error"
           message="Envio não encontrado"
           description="Verifique se o código está correto e tente novamente."
-          action={
+          actions={
             <ELButton onClick={() => router.push("/shipments")}>
               Voltar para listagem
             </ELButton>

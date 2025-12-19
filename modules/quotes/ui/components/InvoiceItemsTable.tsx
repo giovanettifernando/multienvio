@@ -1,11 +1,16 @@
 "use client";
 
-import { Alert, Empty, Skeleton, Table, Typography } from "antd";
-import { ELCard } from '@/shared/ui';
-import type { TableProps } from 'antd';
+import { ELAlert, ELEmpty, ELSkeleton, ELTable, ELTypography, ELCard } from '@/shared/ui';
+import type { TableProps } from '@/shared/ui';
+const Alert = ELAlert;
+const Empty = ELEmpty;
+const Skeleton = ELSkeleton;
+const Table = ELTable;
+const Typography = ELTypography;
 import type { InvoiceItem } from "@/shared/types/invoice";
 
 const Card = ELCard;
+// Note: ELAlert uses variant="error" instead of type="error"
 
 export interface InvoiceItemsTableProps {
   items: InvoiceItem[] | null;
@@ -109,11 +114,11 @@ export function InvoiceItemsTable({
     return (
       <Card title="Itens da Nota Fiscal">
         <Alert
-          type="error"
-          message="Erro ao carregar itens"
+          variant="error"
+          title="Erro ao carregar itens"
           description={error}
           showIcon
-          action={
+          actions={
             onRetry ? (
               <Typography.Link onClick={onRetry}>Tentar novamente</Typography.Link>
             ) : undefined

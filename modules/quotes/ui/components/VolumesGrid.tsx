@@ -1,7 +1,15 @@
 "use client";
 
 import { DeleteOutlined, DownloadOutlined, PlusOutlined, UploadOutlined } from "@ant-design/icons";
-import { App, Col, Form, InputNumber, Row, Space, Typography, Upload } from "antd";
+import { useELApp, ELCol, ELForm, ELInputNumber, ELRow, ELSpace, ELTypography, ELUpload } from '@/shared/ui';
+const App = { useApp: useELApp };
+const Col = ELCol;
+const Form = ELForm;
+const InputNumber = ELInputNumber;
+const Row = ELRow;
+const Space = ELSpace;
+const Typography = ELTypography;
+const Upload = ELUpload;
 import { ELButton, ELCard, ELFormItem } from '@/shared/ui';
 import {
   Controller,

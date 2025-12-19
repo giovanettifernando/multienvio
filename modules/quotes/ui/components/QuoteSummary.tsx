@@ -1,7 +1,13 @@
 "use client";
 
 import type { CSSProperties } from "react";
-import { Button, Card, Divider, Flex, Space, Typography } from "antd";
+import { ELButton, ELCard, ELDivider, ELFlexAntd, ELSpace, ELTypography } from '@/shared/ui';
+const Button = ELButton;
+const Card = ELCard;
+const Divider = ELDivider;
+const Flex = ELFlexAntd;
+const Space = ELSpace;
+const Typography = ELTypography;
 import type {
   OrigemDestinoInput,
   PacoteQuoteInput,

@@ -1,12 +1,11 @@
 "use client";
 
-import { Flex, theme } from "antd";
+import { ELFlexAntd, useELTheme } from '@/shared/ui';
+const Flex = ELFlexAntd;
 import { ArrowLeftOutlined, ArrowRightOutlined } from "@ant-design/icons";
 import { ELButton } from '@/shared/ui/ELButton';
 import { CSSProperties, useEffect } from "react";
 import styles from "./QuoteNavigationButtons.module.css";
-
-const { useToken } = theme;
 
 interface QuoteNavigationButtonsProps {
   /**
@@ -63,7 +62,7 @@ export function QuoteNavigationButtons({
   loadingNext = false,
   nextType = "primary",
 }: QuoteNavigationButtonsProps) {
-  const { token } = useToken();
+  const { token } = useELTheme();
 
   // Acessibilidade: Enter dispara Avançar, Esc foca Voltar
   useEffect(() => {

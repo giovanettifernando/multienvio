@@ -1,7 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { App, Form, Input, Row, Col } from "antd";
+import { useELApp, ELForm, ELInput, ELRow, ELCol } from '@/shared/ui';
+const App = { useApp: useELApp };
+const Form = ELForm;
+const Input = ELInput;
+const Row = ELRow;
+const Col = ELCol;
 import { ELModal } from '@/shared/ui/ELModal';
 import {
   CreditCardOutlined,

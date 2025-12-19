@@ -1,6 +1,8 @@
 "use client";
 
-import { ConfigProvider, Segmented, theme } from "antd";
+import { ELConfigProvider, ELSegmented, useELTheme } from '@/shared/ui';
+const ConfigProvider = ELConfigProvider;
+const Segmented = ELSegmented;
 
 interface ReverseToggleProps {
   isReverse: boolean;
@@ -12,7 +14,7 @@ interface ReverseToggleProps {
  * Toggle between normal shipment and reverse logistics
  */
 export function ReverseToggle({ isReverse, onChange, disabled }: ReverseToggleProps) {
-  const { token } = theme.useToken();
+  const { token } = useELTheme();
 
   return (
     <ConfigProvider

@@ -5,16 +5,14 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
-import {
-  Alert,
-  App,
-  Button,
-  Form,
-  Input,
-  Space,
-  Typography,
-} from "antd";
-import { FormCard } from '@/shared/ui/FormCard';
+import { useELApp, ELAlert, ELButton, ELForm, ELFormItem, ELInput, ELSpace, ELTypography, FormCard } from '@/shared/ui';
+const Alert = ELAlert;
+const App = { useApp: useELApp };
+const Button = ELButton;
+const Form = ELForm;
+const Input = ELInput;
+const Space = ELSpace;
+const Typography = ELTypography;
 import {
   ResetPasswordSchema,
   type ResetPasswordAPIInput,
@@ -147,19 +145,19 @@ export default function ResetPasswordForm() {
             name="password"
             control={control}
             render={({ field }) => (
-              <Form.Item
+              <ELFormItem
                 label="Nova senha"
                 required
-                validateStatus={errors.password ? "error" : ""}
+                validateStatus={errors.password ? "error" : undefined}
                 help={errors.password?.message}
               >
-                <Input.Password
+                <ELInput.Password
                   {...field}
                   autoComplete="new-password"
                   placeholder="Crie uma nova senha"
                   aria-invalid={Boolean(errors.password)}
                 />
-              </Form.Item>
+              </ELFormItem>
             )}
           />
 

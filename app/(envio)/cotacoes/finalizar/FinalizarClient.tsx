@@ -2,13 +2,12 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import {
-  App,
-  Divider,
-  Space,
-  Tooltip,
-  Typography,
-} from "antd";
+import { ELTypography, ELSpace, useELApp, ELDivider, ELTooltip } from '@/shared/ui';
+const Divider = ELDivider;
+const Tooltip = ELTooltip;
+const Typography = ELTypography;
+const Space = ELSpace;
+const App = { useApp: useELApp };
 import { EditOutlined, ArrowLeftOutlined } from "@ant-design/icons";
 import { ELAlert } from '@/shared/ui/ELAlert';
 import { ELCard } from '@/shared/ui/ELCard';

@@ -3,16 +3,26 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
-  Alert,
-  Avatar,
-  Empty,
-  Flex,
-  Space,
-  Spin,
-  Typography,
-  Input,
-  App,
-} from "antd";
+  ELAlert,
+  ELAvatar,
+  ELEmpty,
+  ELFlexAntd,
+  ELSpace,
+  ELSpin,
+  ELTypography,
+  ELInput,
+  useELApp,
+  EL_EMPTY_PRESENTED_IMAGE_SIMPLE,
+} from '@/shared/ui';
+const Alert = ELAlert;
+const Avatar = ELAvatar;
+const Empty = ELEmpty;
+const Flex = ELFlexAntd;
+const Space = ELSpace;
+const Spin = ELSpin;
+const Typography = ELTypography;
+const Input = ELInput;
+const App = { useApp: useELApp };
 import { ELButton } from '@/shared/ui/ELButton';
 import { ELCard } from '@/shared/ui/ELCard';
 import { ELModal } from '@/shared/ui/ELModal';
@@ -340,7 +350,7 @@ export function QuoteResultsSection({
         >
           <Empty
             description="Preencha os dados e clique em Calcular para ver as cotações"
-            image={Empty.PRESENTED_IMAGE_SIMPLE}
+            image={EL_EMPTY_PRESENTED_IMAGE_SIMPLE}
           />
           <ELButton
             variant="primary"
@@ -423,7 +433,7 @@ export function QuoteResultsSection({
         >
           <Empty
             description="Nenhuma cotação disponível para os parâmetros informados"
-            image={Empty.PRESENTED_IMAGE_SIMPLE}
+            image={EL_EMPTY_PRESENTED_IMAGE_SIMPLE}
           />
           <ELButton variant="primary" onClick={onCalculate} disabled={!canCalculate}>
             Calcular novamente

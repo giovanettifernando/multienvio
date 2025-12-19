@@ -1,6 +1,12 @@
 'use client';
 
-import { Form, Input, Select, Button, App, Space } from 'antd';
+import { ELForm, ELInput, ELSelect, ELButton, useELApp, ELSpace } from '@/shared/ui';
+const Form = ELForm;
+const Input = ELInput;
+const Select = ELSelect;
+const Button = ELButton;
+const App = { useApp: useELApp };
+const Space = ELSpace;
 import type { Priority } from '@/shared/validation/support';
 import { useMutation } from '@tanstack/react-query';
 import { useCollectorSession } from '@/modules/collectors/ui/state/useCollectorSession';

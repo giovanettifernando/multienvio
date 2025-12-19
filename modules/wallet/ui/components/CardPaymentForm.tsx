@@ -1,7 +1,10 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Card as AntCard, Spin, Alert } from "antd";
+import { ELCard, ELSpin, ELAlert } from '@/shared/ui';
+const Card = ELCard;
+const Spin = ELSpin;
+const Alert = ELAlert;
 import { ELModal } from '@/shared/ui/ELModal';
 import { LoadingOutlined } from "@ant-design/icons";
 import { initMercadoPago, CardPayment } from "@mercadopago/sdk-react";
@@ -171,13 +174,13 @@ export function CardPaymentForm({
 
   if (loading) {
     return (
-      <AntCard>
+      <Card>
         <div style={{ textAlign: "center", padding: "40px 0" }}>
           <Spin tip="Carregando formulário de pagamento...">
             <div style={{ minHeight: 100 }} />
           </Spin>
         </div>
-      </AntCard>
+      </Card>
     );
   }
 

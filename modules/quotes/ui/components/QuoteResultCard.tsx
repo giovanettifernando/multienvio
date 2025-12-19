@@ -1,6 +1,12 @@
 "use client";
 
-import { Button, Card, Flex, Space, Tag, Typography } from "antd";
+import { ELButton, ELCard, ELFlexAntd, ELSpace, ELTag, ELTypography } from '@/shared/ui';
+const Button = ELButton;
+const Card = ELCard;
+const Flex = ELFlexAntd;
+const Space = ELSpace;
+const Tag = ELTag;
+const Typography = ELTypography;
 
 export type QuoteResult = {
   id: string;

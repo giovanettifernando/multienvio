@@ -2,10 +2,11 @@
 
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Result, Spin } from "antd";
 import { CheckCircleOutlined, CloseCircleOutlined, MailOutlined } from "@ant-design/icons";
 import Link from "next/link";
-import { ELAlert, ELButton, FormCard } from '@/shared/ui';
+import { ELResult, ELSpin, ELAlert, ELButton, FormCard } from '@/shared/ui';
+const Result = ELResult;
+const Spin = ELSpin;
 
 type VerificationState = "validating" | "success" | "error" | "already_verified";
 type VerificationResult = {

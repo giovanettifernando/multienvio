@@ -2,7 +2,10 @@
 
 import { useEffect, useMemo, useRef, useState, startTransition } from "react";
 import { CheckCircleTwoTone, CloseCircleTwoTone, LoadingOutlined } from "@ant-design/icons";
-import { Form, Input, Typography } from "antd";
+import { ELForm, ELInput, ELTypography } from '@/shared/ui';
+const Form = ELForm;
+const Input = ELInput;
+const Typography = ELTypography;
 import {
   Controller,
   useFormContext,

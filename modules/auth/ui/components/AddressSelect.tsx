@@ -1,7 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { App, Empty, Skeleton, Space } from "antd";
+import { useELApp, ELEmpty, ELSkeletonInput, ELSpace, EL_EMPTY_PRESENTED_IMAGE_SIMPLE } from '@/shared/ui';
+const App = { useApp: useELApp };
+const Empty = ELEmpty;
+const Space = ELSpace;
 import { ELButton, ELSelect } from "@/shared/ui";
 import { PlusOutlined } from "@ant-design/icons";
 import { useAddresses, useAddressCreate } from "@/modules/account/ui/hooks";
@@ -100,14 +103,14 @@ export function AddressSelect({
   };
 
   if (loading) {
-    return <Skeleton.Input active block />;
+    return <ELSkeletonInput active block />;
   }
 
   if (!loading && addresses.length === 0) {
     return (
       <Space orientation="vertical" style={{ width: "100%" }}>
         <Empty
-          image={Empty.PRESENTED_IMAGE_SIMPLE}
+          image={EL_EMPTY_PRESENTED_IMAGE_SIMPLE}
           description="Nenhum endereço cadastrado"
         >
           <ELButton

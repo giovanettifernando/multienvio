@@ -1,7 +1,11 @@
 'use client';
 
 import { useEffect } from 'react';
-import { Form, App, Space, Alert } from 'antd';
+import { ELForm, useELApp, ELSpace, ELAlert } from '@/shared/ui';
+const Form = ELForm;
+const App = { useApp: useELApp };
+const Space = ELSpace;
+const Alert = ELAlert;
 import { InfoCircleOutlined } from '@ant-design/icons';
 import { ELInput } from '@/shared/ui/ELInput';
 import { ELSelect } from '@/shared/ui/ELSelect';

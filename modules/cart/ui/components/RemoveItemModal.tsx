@@ -1,4 +1,5 @@
-import { Typography } from "antd";
+import { ELTypography } from "@/shared/ui";
+const Typography = ELTypography;
 import { ELModal } from '@/shared/ui/ELModal';
 import type { CartItem } from '@/shared/types/cart';
 

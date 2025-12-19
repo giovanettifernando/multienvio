@@ -1,7 +1,9 @@
 'use client';
 
 import { useMemo } from 'react';
-import { Card, Flex, Typography, Skeleton } from 'antd';
+import { Flex, Typography, Skeleton } from 'antd';
+import { ELCard } from '@/shared/ui';
+const Card = ELCard;
 import {
   InboxOutlined,
   ClockCircleOutlined,

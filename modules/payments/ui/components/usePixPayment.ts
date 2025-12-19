@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useRef, useCallback, useEffect, startTransition } from 'react';
-import { App } from 'antd';
+import { useELApp } from '@/shared/ui';
+const App = { useApp: useELApp };
 import type { MercadoPagoPaymentResult, PixPaymentStatus } from './checkoutTypes';
 
 interface UsePixPaymentOptions {

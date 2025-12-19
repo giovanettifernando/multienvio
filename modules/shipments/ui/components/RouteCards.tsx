@@ -1,5 +1,6 @@
 import { ArrowDownOutlined, ArrowRightOutlined } from "@ant-design/icons";
-import { Grid, Space, theme } from "antd";
+import { ELSpace, useBreakpoint, useELTheme } from "@/shared/ui";
+const Space = ELSpace;
 import type { ReactNode } from "react";
 import { cardContainerStyles, connectorStyles } from "./route.css";
 import type { RouteCardVariant } from "./route.css";
@@ -15,8 +16,8 @@ export function RouteCards({
   originCard,
   destinationCard,
 }: RouteCardsProps) {
-  const { token } = theme.useToken();
-  const screens = Grid.useBreakpoint();
+  const { token } = useELTheme();
+  const screens = useBreakpoint();
   const isMobile = !screens.md;
 
   const cards = isReverse
@@ -70,7 +71,7 @@ type CardContainerProps = {
 };
 
 function CardContainer({ children, variant }: CardContainerProps) {
-  const { token } = theme.useToken();
+  const { token } = useELTheme();
   return (
     <div style={cardContainerStyles(token, variant)}>
       <Space

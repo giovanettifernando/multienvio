@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react";
-import type { GlobalToken } from "antd/es/theme/interface";
+import type { GlobalToken } from "@/shared/ui/antd-types";
 
 export type RouteCardVariant = "origin" | "destination";
 

@@ -4,7 +4,8 @@ import type { ReactNode } from "react";
 import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuthStore, useAuthHydrated } from '@/modules/auth/ui/state/auth';
-import { Spin } from "antd";
+import { ELSpin } from '@/shared/ui';
+const Spin = ELSpin;
 
 const LOGIN_PATH = "/auth/login";
 

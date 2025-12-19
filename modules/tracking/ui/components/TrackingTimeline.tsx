@@ -1,7 +1,8 @@
 "use client";
 
-import { Timeline, Typography } from "antd";
-import { ELCard, ELEmpty } from "@/shared/ui";
+import { ELTimeline, ELTypography, ELCard, ELEmpty } from "@/shared/ui";
+const Timeline = ELTimeline;
+const Typography = ELTypography;
 import {
   CheckCircleOutlined,
   ClockCircleOutlined,

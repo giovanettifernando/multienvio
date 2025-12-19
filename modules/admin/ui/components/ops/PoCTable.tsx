@@ -1,7 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { Flex, Input, Select } from 'antd';
+import { Flex, Select } from 'antd';
+import { ELInput } from '@/shared/ui';
+const Input = ELInput;
 import { useQuery } from '@tanstack/react-query';
 import { SearchOutlined } from '@ant-design/icons';
 import type { PointOfCollection } from '@/modules/admin/application/ops/types';

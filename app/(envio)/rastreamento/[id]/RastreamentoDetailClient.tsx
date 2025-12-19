@@ -3,12 +3,11 @@
 import { useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import {
-  Alert,
-  Descriptions,
-  Typography,
-} from "antd";
-import { ELCard } from '@/shared/ui/ELCard';
+import { ELDescriptions, ELTypography } from '@/shared/ui';
+const Descriptions = ELDescriptions;
+const Typography = ELTypography;
+import { ELCard, ELAlert } from '@/shared/ui';
+const Alert = ELAlert;
 import { ELGrid } from '@/shared/ui/ELGrid';
 import type { Shipment } from '@/shared/types/shipment';
 import type { Tracking } from '@/shared/types/tracking';

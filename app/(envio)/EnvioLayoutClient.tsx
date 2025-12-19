@@ -4,7 +4,8 @@ import { useRouter } from 'next/navigation';
 import { useAuthStore, useAuthHydrated } from '@/modules/auth/ui/state/auth';
 import { DashboardShell } from '@/shared/ui/layout/dashboard-shell';
 import { SessionIdleModal } from '@/modules/auth/ui/components/SessionIdleModal';
-import { Spin } from 'antd';
+import { ELSpin } from '@/shared/ui';
+const Spin = ELSpin;
 
 export default function EnvioLayoutClient({ children }: { children: React.ReactNode }) {
   const router = useRouter();

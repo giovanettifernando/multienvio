@@ -2,11 +2,13 @@
 
 import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { Result, Spin, Typography } from "antd";
 import { MailOutlined, CheckCircleOutlined } from "@ant-design/icons";
 import Link from "next/link";
-import { ELButton, FormCard } from '@/shared/ui';
+import { ELResult, ELSpin, ELTypography, ELButton, FormCard } from '@/shared/ui';
 
+const Result = ELResult;
+const Spin = ELSpin;
+const Typography = ELTypography;
 const { Paragraph, Text } = Typography;
 
 function ConfirmacaoContent() {

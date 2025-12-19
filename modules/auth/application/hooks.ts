@@ -2,7 +2,8 @@
  * React Query hooks para gestão de usuários admin
  */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { App } from "antd";
+import { useELApp } from '@/shared/ui';
+const App = { useApp: useELApp };
 import { adminUsersKeys } from "./queryKeys";
 import type {
   AdminPermissionKey,

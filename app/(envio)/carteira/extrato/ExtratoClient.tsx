@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { DatePicker, Space, App } from "antd";
-import { ELCard } from '@/shared/ui/ELCard';
+import { useELApp, ELSpace, ELCard, ELDatePicker } from '@/shared/ui';
+const App = { useApp: useELApp };
+const Space = ELSpace;
 import { PrinterOutlined } from "@ant-design/icons";
 import { useRouter } from "next/navigation";
 import dayjs, { Dayjs } from "dayjs";
@@ -18,7 +19,7 @@ import tableStyles from "@/shared/ui/ELTableWrapper.module.css";
 import gridStyles from "@/shared/ui/ELGrid.module.css";
 import { cn } from "@/shared/utils/cn";
 
-const { RangePicker } = DatePicker;
+const { RangePicker } = ELDatePicker;
 
 // Limite máximo de meses para o período de busca
 const MAX_MONTHS_RANGE = 12;

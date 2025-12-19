@@ -7,7 +7,11 @@
  */
 
 import { useRef, useCallback, useState, useEffect } from "react";
-import { Space, Typography, Divider, Spin } from "antd";
+import { ELSpace, ELTypography, ELDivider, ELSpin } from "@/shared/ui";
+const Space = ELSpace;
+const Typography = ELTypography;
+const Divider = ELDivider;
+const Spin = ELSpin;
 import { PrinterOutlined, CloseOutlined, LoadingOutlined, FilePdfOutlined } from "@ant-design/icons";
 import { jsPDF } from "jspdf";
 import html2canvas from "html2canvas";

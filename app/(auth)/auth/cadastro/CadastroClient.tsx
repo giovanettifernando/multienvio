@@ -7,10 +7,14 @@ import { Controller, useForm, useWatch, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 
-import { App, Button, Divider, Form, Typography } from "antd";
 import { GoogleOutlined } from "@ant-design/icons";
 import { PasswordStrength } from '@/shared/ui/form/PasswordStrength';
-import { FormCard, ELButton, ELCheckbox, ELFormItem, ELInput } from '@/shared/ui';
+import { useELApp, ELButton, ELCheckbox, ELDivider, ELForm, ELFormItem, ELInput, ELTypography, FormCard } from '@/shared/ui';
+const App = { useApp: useELApp };
+const Button = ELButton;
+const Divider = ELDivider;
+const Form = ELForm;
+const Typography = ELTypography;
 import { cadastroSchema } from '@/shared/validation/auth';
 import {
   normalizePhoneInput,

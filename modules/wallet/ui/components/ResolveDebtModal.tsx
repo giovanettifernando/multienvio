@@ -2,14 +2,20 @@
 
 import React, { useState } from 'react';
 import {
-  Typography,
-  Space,
-  Radio,
-  Divider,
-  Alert,
-  message,
-  Spin,
-} from 'antd';
+  ELTypography,
+  ELSpace,
+  ELRadio,
+  ELDivider,
+  ELAlert,
+  useELApp,
+  ELSpin,
+} from '@/shared/ui';
+const Typography = ELTypography;
+const Space = ELSpace;
+const Radio = ELRadio;
+const Divider = ELDivider;
+const Alert = ELAlert;
+const Spin = ELSpin;
 import { ELButton, ELCard, ELModal } from '@/shared/ui';
 import {
   WarningOutlined,
@@ -31,6 +37,7 @@ interface ResolveDebtModalProps {
 type PaymentMethod = 'pix' | 'card';
 
 export default function ResolveDebtModal({ open, onClose }: ResolveDebtModalProps) {
+  const { message } = useELApp();
   const { data: walletData, isLoading: walletLoading } = useWallet();
   const { data: cards, isLoading: cardsLoading } = useCards();
   const queryClient = useQueryClient();

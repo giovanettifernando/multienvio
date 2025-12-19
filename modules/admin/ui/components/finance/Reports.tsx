@@ -1,7 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { Card, Select, Button, Flex, App } from 'antd';
+import { Flex, App } from 'antd';
+import { ELButton, ELCard, ELSelect } from '@/shared/ui';
+const { Button, Card, Select } = { Button: ELButton, Card: ELCard, Select: ELSelect };
 import { DownloadOutlined } from '@ant-design/icons';
 import type { PeriodFilter } from '@/modules/admin/application/finance/types';
 import { downloadReportCSV } from '@/modules/admin/application/finance/api';

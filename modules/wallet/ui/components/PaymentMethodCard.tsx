@@ -1,6 +1,10 @@
 "use client";
 
-import { Button, Card, Space, Typography } from "antd";
+import { ELButton, ELCard, ELSpace, ELTypography } from '@/shared/ui';
+const Button = ELButton;
+const Card = ELCard;
+const Space = ELSpace;
+const Typography = ELTypography;
 import type { CardMethod } from '@/shared/types/billing';
 
 type Props = {

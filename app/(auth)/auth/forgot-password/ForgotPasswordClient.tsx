@@ -4,8 +4,11 @@ import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
-import { App, Form, Space, Typography } from "antd";
-import { ELAlert, ELButton, ELFormItem, ELInput, FormCard } from '@/shared/ui';
+import { useELApp, ELForm, ELSpace, ELTypography, ELAlert, ELButton, ELFormItem, ELInput, FormCard } from '@/shared/ui';
+const App = { useApp: useELApp };
+const Form = ELForm;
+const Space = ELSpace;
+const Typography = ELTypography;
 import {
   ForgotPasswordSchema,
   type ForgotPasswordAPIInput,

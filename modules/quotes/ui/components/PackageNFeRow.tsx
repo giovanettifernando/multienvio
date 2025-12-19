@@ -1,7 +1,12 @@
 "use client";
 
 import { useEffect } from "react";
-import { Card, Form, Input, Space, Typography } from "antd";
+import { ELCard, ELForm, ELInput, ELSpace, ELTypography } from '@/shared/ui';
+const Card = ELCard;
+const Form = ELForm;
+const Input = ELInput;
+const Space = ELSpace;
+const Typography = ELTypography;
 import { useFormContext } from "react-hook-form";
 import type { FinalizeFormValues } from '@/shared/types/quoteFinalize';
 import type { InvoiceData } from "@/shared/types/invoice";

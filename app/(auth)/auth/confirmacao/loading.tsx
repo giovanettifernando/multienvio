@@ -1,5 +1,6 @@
-import { Spin } from 'antd';
+import { ELSpin } from '@/shared/ui';
 import { FormCard } from '@/shared/ui/FormCard';
+const Spin = ELSpin;
 
 export default function ConfirmacaoLoading() {
   return (

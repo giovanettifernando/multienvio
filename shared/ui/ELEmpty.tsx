@@ -5,6 +5,10 @@ import { cn } from "@/shared/utils/cn";
 import { ELButton } from "./ELButton";
 import styles from "./ELEmpty.module.css";
 
+// Re-export Empty constants
+export const EL_EMPTY_PRESENTED_IMAGE_SIMPLE = Empty.PRESENTED_IMAGE_SIMPLE;
+export const EL_EMPTY_PRESENTED_IMAGE_DEFAULT = Empty.PRESENTED_IMAGE_DEFAULT;
+
 type ActionConfig = {
   label: string;
   onClick: () => void;

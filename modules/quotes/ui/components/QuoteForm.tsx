@@ -3,20 +3,33 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
-  App,
-  Card,
-  Col,
-  Flex,
-  Form,
-  Input,
-  Radio,
-  Row,
-  Space,
-  Spin,
-  Switch,
-  Tag,
-  Typography,
-} from "antd";
+  useELApp,
+  ELCard,
+  ELCol,
+  ELFlexAntd,
+  ELForm,
+  ELInput,
+  ELRadio,
+  ELRow,
+  ELSpace,
+  ELSpin,
+  ELSwitch,
+  ELTag,
+  ELTypography,
+} from '@/shared/ui';
+const App = { useApp: useELApp };
+const Card = ELCard;
+const Col = ELCol;
+const Flex = ELFlexAntd;
+const Form = ELForm;
+const Input = ELInput;
+const Radio = ELRadio;
+const Row = ELRow;
+const Space = ELSpace;
+const Spin = ELSpin;
+const Switch = ELSwitch;
+const Tag = ELTag;
+const Typography = ELTypography;
 import {
   Controller,
   FormProvider,

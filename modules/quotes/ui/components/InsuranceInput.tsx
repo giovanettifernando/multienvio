@@ -1,6 +1,10 @@
 "use client";
 
-import { Card, Form, InputNumber, Typography } from "antd";
+import { ELCard, ELForm, ELInputNumber, ELTypography } from '@/shared/ui';
+const Card = ELCard;
+const Form = ELForm;
+const InputNumber = ELInputNumber;
+const Typography = ELTypography;
 import { Controller, Control } from "react-hook-form";
 import type { QuoteFormValues } from "./quoteFormSchema";
 import { inputNumberFormatterBRL, inputNumberParserBRL } from "@/shared/utils/format";

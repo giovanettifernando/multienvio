@@ -1,8 +1,11 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback, startTransition } from "react";
-import { Input, Spin, Typography } from "antd";
-import type { InputRef } from "antd";
+import { ELInput, ELSpin, ELTypography } from '@/shared/ui';
+import type { InputRef } from '@/shared/ui/antd-types';
+const Input = ELInput;
+const Spin = ELSpin;
+const Typography = ELTypography;
 import { useRecurringItemsAutocomplete } from "@/modules/shipments/ui/hooks/useRecurringItemsAutocomplete";
 import styles from "./RecurringItemAutocomplete.module.css";
 
@@ -23,7 +26,8 @@ export function RecurringItemAutocompleteInput({
   disabled,
   autoFocus,
 }: RecurringItemAutocompleteInputProps) {
-  const inputRef = useRef<InputRef>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const inputRef = useRef<any>(null);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [internalValue, setInternalValue] = useState(value);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);

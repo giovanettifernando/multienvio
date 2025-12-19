@@ -1,7 +1,13 @@
 "use client";
 
-import { Card, Collapse, Table, Typography, Tag, Dropdown } from "antd";
-import type { MenuProps } from "antd";
+import { ELCard, ELCollapse, ELTable, ELTypography, ELTag, ELDropdown } from "@/shared/ui";
+const Card = ELCard;
+const Collapse = ELCollapse;
+const Table = ELTable;
+const Typography = ELTypography;
+const Tag = ELTag;
+const Dropdown = ELDropdown;
+import type { MenuProps } from "@/shared/ui/antd-types";
 import { InboxOutlined, FileTextOutlined, DownloadOutlined, EyeOutlined, PrinterOutlined } from "@ant-design/icons";
 import { ELButton } from '@/shared/ui/ELButton';
 import { openDocumentPDF, downloadDocumentPDF, type ShipmentInfo, type NFeData } from "@/modules/labels/infra/document-pdf";

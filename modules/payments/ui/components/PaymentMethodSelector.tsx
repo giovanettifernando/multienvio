@@ -1,6 +1,10 @@
 'use client';
 
-import { Radio, Typography, Space, Spin } from 'antd';
+import { ELRadio, ELTypography, ELSpace, ELSpin } from '@/shared/ui';
+const Radio = ELRadio;
+const Typography = ELTypography;
+const Space = ELSpace;
+const Spin = ELSpin;
 import {
   WalletOutlined,
   QrcodeOutlined,

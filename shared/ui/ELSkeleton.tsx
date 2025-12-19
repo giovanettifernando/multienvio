@@ -8,6 +8,13 @@ export interface ELSkeletonProps extends SkeletonProps {
   lines?: number;
 }
 
+// Re-export Skeleton sub-components
+export const ELSkeletonInput = Skeleton.Input;
+export const ELSkeletonButton = Skeleton.Button;
+export const ELSkeletonAvatar = Skeleton.Avatar;
+export const ELSkeletonImage = Skeleton.Image;
+export const ELSkeletonNode = Skeleton.Node;
+
 export function ELSkeleton({
   active,
   paragraph,

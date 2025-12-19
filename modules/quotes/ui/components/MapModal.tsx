@@ -2,14 +2,20 @@
 
 import { useState, useMemo } from "react";
 import {
-  Input,
-  Typography,
-  Space,
-  Alert,
-  Flex,
-  Tag,
-  theme,
-} from "antd";
+  ELInput,
+  ELTypography,
+  ELSpace,
+  ELAlert,
+  ELFlexAntd,
+  ELTag,
+  useELTheme,
+} from '@/shared/ui';
+const Input = ELInput;
+const Typography = ELTypography;
+const Space = ELSpace;
+const Alert = ELAlert;
+const Flex = ELFlexAntd;
+const Tag = ELTag;
 import { ELModal } from '@/shared/ui/ELModal';
 import { ELButton } from '@/shared/ui/ELButton';
 import {
@@ -86,7 +92,7 @@ export function MapModal({
   selectedPointId,
   onSelect,
 }: MapModalProps) {
-  const { token } = theme.useToken();
+  const { token } = useELTheme();
   const [searchQuery, setSearchQuery] = useState("");
   const [hoveredPointId, setHoveredPointId] = useState<string | null>(null);
 

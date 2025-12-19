@@ -1,6 +1,10 @@
 "use client";
 
-import { Flex, Space, Switch, Typography } from "antd";
+import { ELFlexAntd, ELSpace, ELSwitch, ELTypography } from '@/shared/ui';
+const Flex = ELFlexAntd;
+const Space = ELSpace;
+const Switch = ELSwitch;
+const Typography = ELTypography;
 import { Controller, Control } from "react-hook-form";
 import type { QuoteFormValues } from "./quoteFormSchema";
 

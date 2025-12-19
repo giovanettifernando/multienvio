@@ -2,7 +2,9 @@
 
 import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { Typography, App } from "antd";
+import { ELTypography, useELApp } from "@/shared/ui";
+const Typography = ELTypography;
+const App = { useApp: useELApp };
 import { ELCard } from '@/shared/ui/ELCard';
 import { CopyOutlined } from "@ant-design/icons";
 import { TrackingTimeline, type TrackingEvent } from "@/modules/tracking/ui/components/TrackingTimeline";

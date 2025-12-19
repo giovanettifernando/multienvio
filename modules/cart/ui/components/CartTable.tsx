@@ -1,10 +1,15 @@
 import { useMemo } from "react";
-import { Button, Card, Space, Table, Tag, Typography, Grid } from "antd";
+import { ELSpace, ELTable, ELTag, ELTypography, useBreakpoint } from '@/shared/ui';
+import type { TableProps } from '@/shared/ui';
+import { ELButton, ELCard } from '@/shared/ui';
+const { Button, Card } = { Button: ELButton, Card: ELCard };
+const Space = ELSpace;
+const Table = ELTable;
+const Tag = ELTag;
+const Typography = ELTypography;
 import { DeleteOutlined } from "@ant-design/icons";
-import type { TableProps } from 'antd';
 import type { CartItem } from '@/shared/types/cart';
 
-const { useBreakpoint } = Grid;
 
 type CartTableProps = {
   items: CartItem[];

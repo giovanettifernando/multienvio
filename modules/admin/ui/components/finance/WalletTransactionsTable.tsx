@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { Table, Flex, Select, Button, Tag, Card, Statistic, Row, Col, DatePicker, Descriptions } from 'antd';
-import { ELModal } from '@/shared/ui/ELModal';
-import { ELInput } from '@/shared/ui/ELInput';
+import { Table, Flex, Tag, Statistic, Row, Col, Descriptions } from 'antd';
+import { ELModal, ELInput, ELButton, ELCard, ELSelect, ELDatePicker } from '@/shared/ui';
+const { Button, Card, Select, DatePicker } = { Button: ELButton, Card: ELCard, Select: ELSelect, DatePicker: ELDatePicker };
 import type { TableProps } from 'antd';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
