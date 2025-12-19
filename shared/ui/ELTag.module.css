@@ -27,6 +27,11 @@
   color: var(--el-color-warning, #9A4700) !important;
 }
 
+.tagWarningSolid {
+  background: var(--el-color-warning, #F59E0B) !important;
+  color: #ffffff !important;
+}
+
 .tagDanger {
   background: var(--el-color-error-tint, #FDEAEA) !important;
   color: var(--el-color-error, #A12020) !important;

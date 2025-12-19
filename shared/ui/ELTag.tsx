@@ -3,7 +3,7 @@ import type { TagProps } from 'antd';
 import { cn } from "@/shared/utils/cn";
 import styles from "./ELTag.module.css";
 
-export type ELTagStatus = "default" | "success" | "warning" | "danger" | "info";
+export type ELTagStatus = "default" | "success" | "warning" | "warning-solid" | "danger" | "info";
 
 export interface ELTagProps extends TagProps {
   status?: ELTagStatus;
@@ -19,6 +19,8 @@ export function ELTag({
       ? styles.tagSuccess
       : status === "warning"
       ? styles.tagWarning
+      : status === "warning-solid"
+      ? styles.tagWarningSolid
       : status === "danger"
       ? styles.tagDanger
       : status === "info"

@@ -33,10 +33,14 @@ export function ELButton({
   const variantClass =
     variant === "primary"
       ? styles.buttonPrimary
+      : variant === "link" && danger
+      ? styles.buttonLinkDanger
       : variant === "link"
       ? styles.buttonLink
       : variant === "danger"
       ? styles.buttonDanger
+      : (variant === "ghost" || variant === "text") && danger
+      ? styles.buttonTextDanger
       : variant === "ghost" || variant === "text"
       ? styles.buttonGhost
       : variant === "tonal"

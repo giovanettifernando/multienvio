@@ -255,31 +255,27 @@ export default function RecipientsList() {
   };
 
   return (
-    <ELCard
-      header={{
-        title: "Destinatários",
-        extra: (
+    <ELCard>
+      <Space orientation="vertical" size={16} style={{ width: "100%" }}>
+        {/* Botões de ação */}
+        <Space wrap size={isMobile ? "small" : "middle"} style={{ justifyContent: "space-between", width: "100%" }}>
+          <Space wrap size={isMobile ? "small" : "middle"}>
+            <ELButton icon={<DownloadOutlined />} onClick={handleDownloadTemplate} size={isMobile ? "small" : "middle"}>
+              {isMobile ? "Modelo" : "Baixar Modelo"}
+            </ELButton>
+            <Upload
+              accept=".csv"
+              showUploadList={false}
+              beforeUpload={handleImportCSV}
+            >
+              <ELButton icon={<UploadOutlined />} loading={importing} size={isMobile ? "small" : "middle"}>
+                {isMobile ? "Importar" : "Importar Destinatários"}
+              </ELButton>
+            </Upload>
+          </Space>
           <ELButton variant="primary" icon={<PlusOutlined />} onClick={handleOpenCreate} size={isMobile ? "small" : "middle"}>
             {isMobile ? "Adicionar" : "Adicionar destinatário"}
           </ELButton>
-        ),
-      }}
-    >
-      <Space orientation="vertical" size={16} style={{ width: "100%" }}>
-        {/* Botões de importação/exportação */}
-        <Space wrap size={isMobile ? "small" : "middle"}>
-          <ELButton icon={<DownloadOutlined />} onClick={handleDownloadTemplate} size={isMobile ? "small" : "middle"}>
-            {isMobile ? "Modelo" : "Baixar Modelo"}
-          </ELButton>
-          <Upload
-            accept=".csv"
-            showUploadList={false}
-            beforeUpload={handleImportCSV}
-          >
-            <ELButton icon={<UploadOutlined />} loading={importing} size={isMobile ? "small" : "middle"}>
-              {isMobile ? "Importar" : "Importar Destinatários"}
-            </ELButton>
-          </Upload>
         </Space>
 
         {/* Campo de busca */}
@@ -319,41 +315,38 @@ export default function RecipientsList() {
                       {item.document ? (
                         <Typography.Text type="secondary">· {item.document}</Typography.Text>
                       ) : null}
-                      {item.isDefault ? <Tag color="gold">Padrão</Tag> : null}
+                      {item.isDefault ? <ELTag status="warning-solid">Padrão</ELTag> : null}
                     </Space>
-                    <div>
-                      <Typography.Text type="secondary">
+                    <div style={{ fontSize: 13 }}>
+                      <Typography.Text type="secondary" style={{ fontSize: 'inherit' }}>
                         {item.logradouro}, {item.numero}
                         {item.complemento ? ` - ${item.complemento}` : ""} · {item.bairro}
                       </Typography.Text>
                       <br />
-                      <Typography.Text type="secondary">
+                      <Typography.Text type="secondary" style={{ fontSize: 'inherit' }}>
                         {item.cidade}/{item.uf} · CEP {item.cep}
                       </Typography.Text>
                       {item.phone ? (
                         <>
                           <br />
-                          <Typography.Text type="secondary">Tel: {item.phone}</Typography.Text>
+                          <Typography.Text type="secondary" style={{ fontSize: 'inherit' }}>Tel: {item.phone}</Typography.Text>
                         </>
                       ) : null}
                       {item.email ? (
                         <>
                           <br />
-                          <Typography.Text type="secondary">E-mail: {item.email}</Typography.Text>
+                          <Typography.Text type="secondary" style={{ fontSize: 'inherit' }}>E-mail: {item.email}</Typography.Text>
                         </>
                       ) : null}
                       {item.notes ? (
                         <>
                           <br />
-                          <Typography.Text type="secondary">Obs: {item.notes}</Typography.Text>
+                          <Typography.Text type="secondary" style={{ fontSize: 'inherit' }}>Obs: {item.notes}</Typography.Text>
                         </>
                       ) : null}
                     </div>
                   </div>
                   <Space size={isMobile ? "small" : 0} style={{ alignItems: isMobile ? "flex-start" : "flex-end", flexDirection: isMobile ? "row" : "column", flexWrap: "wrap" }}>
-                    <ELButton variant="link" size="small" icon={<EditOutlined />} onClick={() => handleOpenEdit(item)}>
-                      {isMobile ? "" : "Editar"}
-                    </ELButton>
                     {!item.isDefault && (
                       <ELButton
                         variant="text"
@@ -388,6 +381,9 @@ export default function RecipientsList() {
                         {isMobile ? "" : "Remover"}
                       </ELButton>
                     </ELPopconfirm>
+                    <ELButton variant="link" size="small" icon={<EditOutlined />} onClick={() => handleOpenEdit(item)}>
+                      {isMobile ? "" : "Editar"}
+                    </ELButton>
                   </Space>
                 </div>
               ))}

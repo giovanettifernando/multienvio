@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import { useState } from "react";
 import {
   useELApp,
   ELButton,
@@ -15,16 +15,14 @@ import {
   useBreakpoint,
 } from '@/shared/ui';
 const App = { useApp: useELApp };
-const Button = ELButton;
 const Card = ELCard;
 const Empty = ELEmpty;
 const Popconfirm = ELPopconfirm;
 const Space = ELSpace;
-const Tag = ELTag;
 const Typography = ELTypography;
 const Spin = ELSpin;
 const theme = { useToken: useELTheme };
-import { PlusOutlined, EditOutlined, DeleteOutlined, StarOutlined, StarFilled } from "@ant-design/icons";
+import { PlusOutlined, EditOutlined, DeleteOutlined, StarOutlined } from "@ant-design/icons";
 import { useAddresses, useAddressCreate } from "@/modules/account/ui/hooks";
 import { AddressModal, type AddressFormValues } from "./AddressModal";
 import type { Address } from '@/shared/types/account';
@@ -161,14 +159,12 @@ export default function AddressesList() {
 
   return (
     <>
-      <Card
-        title="Endereços"
-        extra={
-          <Button type="primary" icon={<PlusOutlined />} onClick={handleOpenCreate} size={isMobile ? "small" : "middle"}>
+      <Card>
+        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: token.marginSM }}>
+          <ELButton variant="primary" icon={<PlusOutlined />} onClick={handleOpenCreate} size={isMobile ? "small" : "middle"}>
             {isMobile ? "Adicionar" : "Adicionar endereço"}
-          </Button>
-        }
-      >
+          </ELButton>
+        </div>
         {addresses.length === 0 ? (
           <Empty description="Nenhum endereço cadastrado." />
         ) : (
@@ -188,51 +184,51 @@ export default function AddressesList() {
               >
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <Space style={{ marginBottom: token.marginXS }} wrap>
-                    {address.label && <Tag color="blue">{address.label}</Tag>}
-                    {address.isDefault && <Tag color="gold">Padrão</Tag>}
+                    {address.label && <Typography.Text strong>{address.label}</Typography.Text>}
+                    {address.isDefault && <ELTag status="warning-solid">Padrão</ELTag>}
                   </Space>
-                  <div>
-                    <Typography.Text>
+                  <div style={{ fontSize: 13 }}>
+                    <Typography.Text style={{ fontSize: 'inherit' }}>
                       {address.logradouro}, {address.numero}
                       {address.complemento && ` - ${address.complemento}`}
                     </Typography.Text>
                     <br />
-                    <Typography.Text type="secondary">
+                    <Typography.Text type="secondary" style={{ fontSize: 'inherit' }}>
                       {address.bairro}, {address.cidade} - {address.uf}
                     </Typography.Text>
                     <br />
-                    <Typography.Text type="secondary">CEP: {address.cep}</Typography.Text>
+                    <Typography.Text type="secondary" style={{ fontSize: 'inherit' }}>CEP: {address.cep}</Typography.Text>
                   </div>
                 </div>
                 <Space size={isMobile ? "small" : 0} style={{ alignItems: isMobile ? "flex-start" : "flex-end", flexDirection: isMobile ? "row" : "column", flexWrap: "wrap" }}>
                   {!address.isDefault && (
-                    <Button
-                      type="text"
+                    <ELButton
+                      variant="text"
                       size="small"
                       icon={<StarOutlined />}
                       onClick={() => handleMakeDefault(address.id)}
                     >
                       {isMobile ? "" : "Tornar padrão"}
-                    </Button>
+                    </ELButton>
                   )}
-                  <Button
-                    type="link"
-                    size="small"
-                    icon={<EditOutlined />}
-                    onClick={() => handleOpenEdit(address)}
-                  >
-                    {isMobile ? "" : "Editar"}
-                  </Button>
                   <Popconfirm
                     title="Tem certeza que deseja remover este endereço?"
                     onConfirm={() => handleDelete(address.id)}
                     okText="Remover"
                     cancelText="Cancelar"
                   >
-                    <Button type="link" size="small" danger icon={<DeleteOutlined />}>
+                    <ELButton variant="link" size="small" danger icon={<DeleteOutlined />}>
                       {isMobile ? "" : "Remover"}
-                    </Button>
+                    </ELButton>
                   </Popconfirm>
+                  <ELButton
+                    variant="link"
+                    size="small"
+                    icon={<EditOutlined />}
+                    onClick={() => handleOpenEdit(address)}
+                  >
+                    {isMobile ? "" : "Editar"}
+                  </ELButton>
                 </Space>
               </div>
             ))}

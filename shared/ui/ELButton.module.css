@@ -55,6 +55,31 @@
   color: var(--el-color-primary-hover, #0A3F82) !important;
 }
 
+/* === Link/Text Danger (vermelho sem fundo) === */
+.buttonLinkDanger {
+  color: var(--el-color-danger, #DC2626) !important;
+  padding-inline: 0 !important;
+  height: auto !important;
+}
+
+.buttonLinkDanger:hover,
+.buttonLinkDanger:focus {
+  color: #B91C1C !important;
+}
+
+.buttonTextDanger {
+  background-color: transparent !important;
+  border-color: transparent !important;
+  color: var(--el-color-danger, #DC2626) !important;
+  padding-inline: 12px !important;
+}
+
+.buttonTextDanger:hover,
+.buttonTextDanger:focus {
+  background-color: rgba(220, 38, 38, 0.08) !important;
+  color: #B91C1C !important;
+}
+
 /* === Danger (vermelho cheio) === */
 .buttonDanger {
   background-color: var(--el-color-danger, #DC2626) !important;

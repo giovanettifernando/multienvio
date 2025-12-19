@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useELApp, ELButton, ELTable, ELInput, ELInputNumber, ELPopconfirm, ELUpload, ELSpace, ELFlex } from '@/shared/ui';
+import { useELApp, ELButton, ELTable, ELInput, ELInputNumber, ELPopconfirm, ELUpload, ELSpace, ELFlexAntd } from '@/shared/ui';
 const App = { useApp: useELApp };
 const Button = ELButton;
 const Table = ELTable;
@@ -10,7 +10,7 @@ const InputNumber = ELInputNumber;
 const Popconfirm = ELPopconfirm;
 const Upload = ELUpload;
 const Space = ELSpace;
-const Flex = ELFlex;
+const Flex = ELFlexAntd;
 import { DeleteOutlined, PlusOutlined, UploadOutlined, DownloadOutlined, EditOutlined, SaveOutlined, CloseOutlined } from "@ant-design/icons";
 import { inputNumberFormatterBRL, inputNumberParserBRL } from "@/shared/utils/format";
 
@@ -307,19 +307,19 @@ export default function RecurringItemsList() {
       </Space>
 
       {/* Formulário de cadastro */}
-      <Space.Compact style={{ width: "100%" }}>
+      <Flex gap={12} wrap="wrap" align="center">
         <Input
           placeholder="Descrição do item"
           value={newItem.descricao}
           onChange={(e) => setNewItem({ ...newItem, descricao: e.target.value })}
-          style={{ flex: 1 }}
+          style={{ flex: 1, minWidth: 200 }}
           onPressEnter={handleAdd}
         />
         <InputNumber
           placeholder="Valor unitário"
           value={newItem.valorUnitario}
           onChange={(value) => setNewItem({ ...newItem, valorUnitario: value })}
-          style={{ width: 200 }}
+          style={{ width: 180 }}
           min={0}
           precision={2}
           decimalSeparator=","
@@ -329,14 +329,14 @@ export default function RecurringItemsList() {
           onPressEnter={handleAdd}
         />
         <Button
-          type="primary"
+          variant="primary"
           icon={<PlusOutlined />}
           onClick={handleAdd}
           loading={loading}
         >
           Adicionar
         </Button>
-      </Space.Compact>
+      </Flex>
 
       {/* Grid de itens */}
       <Table
