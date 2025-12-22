@@ -1,12 +1,13 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { ELSkeleton, ELCard, ELAlert, ELTypography, ELSpace, ELTag, useELApp, ELTable } from '@/shared/ui';
+import { ELSkeleton, ELCard, ELAlert, ELTypography, ELSpace, ELTag, useELApp, ELTable, ELTooltip } from '@/shared/ui';
 const Table = ELTable;
 const Alert = ELAlert;
 const Typography = ELTypography;
 const Space = ELSpace;
 const Tag = ELTag;
+const Tooltip = ELTooltip;
 const App = { useApp: useELApp };
 import { ELButton } from '@/shared/ui/ELButton';
 import { ELGrid, ELGridSpanFull } from '@/shared/ui/ELGrid';
@@ -210,14 +211,21 @@ export default function ShipmentDetailClient() {
       extra={
         <Space wrap>
           <ELButton onClick={() => router.push("/shipments")}>Voltar</ELButton>
-          {shipment?.label && shipment.label.status === 'issued' && (
-            <ELButton
-              icon={<PrinterOutlined />}
-              onClick={() => setLabelModalOpen(true)}
-            >
-              Imprimir Etiqueta
-            </ELButton>
-          )}
+          {shipment?.label && shipment.label.status === 'issued' && (() => {
+            // Só pode imprimir etiqueta se ainda não foi postado
+            const canPrint = !shipment.postedAt;
+            return (
+              <Tooltip title={canPrint ? "Imprimir etiqueta" : "Objeto já postado"}>
+                <ELButton
+                  icon={<PrinterOutlined />}
+                  onClick={() => setLabelModalOpen(true)}
+                  disabled={!canPrint}
+                >
+                  Imprimir Etiqueta
+                </ELButton>
+              </Tooltip>
+            );
+          })()}
           {shipment?.publicTrackingId && (
             <>
               <ELButton

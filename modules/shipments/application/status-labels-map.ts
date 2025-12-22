@@ -57,16 +57,14 @@ export function mapToUIStatus(status: ShipmentStatus): UIShipmentStatus {
     return "Em trânsito";
   }
 
-  // Fase A/B - Transportadora assumiu
-  if ([
-    ShipmentStatus.RECEIVED_AT_ORIGIN_HUB,
-    ShipmentStatus.IN_TRANSFER,
-  ].includes(status)) {
+  // Fase A/B - Transportadora assumiu (objeto postado)
+  if (status === ShipmentStatus.RECEIVED_AT_ORIGIN_HUB) {
     return "Postado";
   }
 
-  // Fase B - Transporte
+  // Fase B - Transporte (em movimento)
   if ([
+    ShipmentStatus.IN_TRANSFER,
     ShipmentStatus.IN_TRANSIT_TO_DESTINATION,
     ShipmentStatus.AT_DESTINATION_HUB,
   ].includes(status)) {
@@ -157,7 +155,6 @@ export function getBackendStatusesForUIFilter(uiStatus: UIShipmentStatus): Shipm
     case "Postado":
       return [
         ShipmentStatus.RECEIVED_AT_ORIGIN_HUB,
-        ShipmentStatus.IN_TRANSFER,
       ];
 
     case "Em trânsito":
@@ -165,6 +162,7 @@ export function getBackendStatusesForUIFilter(uiStatus: UIShipmentStatus): Shipm
         ShipmentStatus.COLLECTED_FROM_SENDER,
         ShipmentStatus.IN_TRANSIT_TO_CARRIER_HUB,
         ShipmentStatus.COLLECTED_FROM_POINT,
+        ShipmentStatus.IN_TRANSFER,
         ShipmentStatus.IN_TRANSIT_TO_DESTINATION,
         ShipmentStatus.AT_DESTINATION_HUB,
       ];

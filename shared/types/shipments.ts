@@ -24,6 +24,7 @@ export type Shipment = {
   freightValue: number;       // R$
   status: ShipmentStatus;
   createdAt: string;          // ISO
+  postedAt: string | null;    // ISO — data de postagem (null = não postado)
   labelUrl?: string;          // URL da etiqueta (stub)
   trackingUrl?: string;       // URL de rastreio externo (stub)
   hasVolumeDivergence?: boolean; // Flag para alerta de divergência

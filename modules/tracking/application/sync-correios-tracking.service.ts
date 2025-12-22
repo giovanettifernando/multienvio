@@ -2,52 +2,24 @@
  * Serviço de Sincronização de Rastreamento dos Correios
  *
  * Sincroniza eventos de rastreamento da API dos Correios com os shipments no banco.
- * Usado quando webhooks não estão disponíveis ou para forçar atualização manual.
+ * Usa a derivadora de estado para determinar status e marcos (milestones) de forma
+ * determinística baseada na timeline completa de eventos.
  */
 
 import { prisma } from '@/platform/db/db';
 import { rastrearObjeto } from '@/platform/integrations/correios/rastro';
-import { ShipmentStatus } from '@/modules/shipments/application/shipment-status';
 import { logger } from '@/platform/logging/logger';
+import {
+  deriveCorreiosTrackingState,
+  getEventPhase,
+  logUnknownEvents,
+  type TrackingEventInput,
+  type DerivedTrackingState,
+} from './derive-tracking-state';
 
-/**
- * Mapeamento de códigos de evento dos Correios para ShipmentStatus
- */
-const CORREIOS_EVENT_TO_STATUS: Record<string, ShipmentStatus> = {
-  // Postagem
-  'PO': ShipmentStatus.RECEIVED_AT_ORIGIN_HUB, // Objeto postado
-
-  // Em trânsito
-  'RO': ShipmentStatus.IN_TRANSFER, // Objeto em trânsito (recebido na unidade)
-  'DO': ShipmentStatus.IN_TRANSFER, // Objeto em trânsito (distribuição)
-  'BDE': ShipmentStatus.IN_TRANSFER, // Objeto encaminhado
-  'FC': ShipmentStatus.IN_TRANSFER, // Objeto em trânsito
-  'TRI': ShipmentStatus.IN_TRANSFER, // Objeto em trânsito
-  'CD': ShipmentStatus.IN_TRANSFER, // Objeto em trânsito
-
-  // Em transito para destino
-  'OEC': ShipmentStatus.IN_TRANSIT_TO_DESTINATION, // Objeto encaminhado para destino
-
-  // Saiu para entrega
-  'LDI': ShipmentStatus.OUT_FOR_DELIVERY, // Objeto saiu para entrega
-  'ODS': ShipmentStatus.OUT_FOR_DELIVERY, // Objeto saiu para entrega ao destinatário
-
-  // Entrega
-  'BDI': ShipmentStatus.DELIVERED, // Objeto entregue ao destinatário
-  'BDE-DELIVERED': ShipmentStatus.DELIVERED, // Entregue
-
-  // Aguardando retirada
-  'PAR': ShipmentStatus.AWAITING_PICKUP_AT_DESTINATION_HUB, // Aguardando retirada
-  'LDE': ShipmentStatus.AWAITING_PICKUP_AT_DESTINATION_HUB, // Disponível em locker
-
-  // Tentativa de entrega falhou
-  'BLQ': ShipmentStatus.DELIVERY_ATTEMPT_FAILED, // Objeto bloqueado
-  'CMT': ShipmentStatus.DELIVERY_ATTEMPT_FAILED, // Saiu para entrega (pode indicar problema)
-
-  // Devolução
-  'PMT': ShipmentStatus.RETURNING_TO_SENDER, // Objeto em devolução
-  'BDR': ShipmentStatus.RETURNED_TO_SENDER, // Objeto devolvido ao remetente
-};
+// ============================================================================
+// Tipos
+// ============================================================================
 
 /**
  * Resultado da sincronização
@@ -59,8 +31,10 @@ export interface SyncTrackingResult {
   message: string;
   eventsAdded: number;
   statusUpdated: boolean;
+  milestonesUpdated: string[];
   newStatus?: string;
   previousStatus?: string;
+  derivedState?: DerivedTrackingState;
   events?: Array<{
     dataHora: Date;
     descricao: string;
@@ -71,66 +45,64 @@ export interface SyncTrackingResult {
   }>;
 }
 
+// ============================================================================
+// Funções auxiliares
+// ============================================================================
+
 /**
- * Mapeia código de evento dos Correios para ShipmentStatus
- * Tenta pelo código primeiro, depois por palavras-chave na descrição
+ * Gera chave única para um evento (para detectar duplicatas)
+ * Usa descrição + cidade + data (sem hora) para evitar duplicatas por timezone
  */
-function mapCorreiosEventToStatus(eventCode: string, description: string): ShipmentStatus | null {
-  // Tentar mapear pelo código
-  const statusByCode = CORREIOS_EVENT_TO_STATUS[eventCode.toUpperCase()];
-  if (statusByCode) {
-    return statusByCode;
-  }
-
-  // Normalizar descrição para busca por palavras-chave
-  const descNorm = description
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '');
-
-  // Mapeamento por palavras-chave na descrição
-  if (descNorm.includes('entregue') || descNorm.includes('entrega realizada')) {
-    return ShipmentStatus.DELIVERED;
-  }
-
-  if (descNorm.includes('saiu para entrega') || descNorm.includes('em rota de entrega')) {
-    return ShipmentStatus.OUT_FOR_DELIVERY;
-  }
-
-  if (descNorm.includes('objeto em transferencia') || descNorm.includes('encaminhado')) {
-    return ShipmentStatus.IN_TRANSFER;
-  }
-
-  if (descNorm.includes('em transito') || descNorm.includes('por favor aguarde')) {
-    return ShipmentStatus.IN_TRANSIT_TO_DESTINATION;
-  }
-
-  if (descNorm.includes('postado') || descNorm.includes('postagem')) {
-    return ShipmentStatus.RECEIVED_AT_ORIGIN_HUB;
-  }
-
-  if (descNorm.includes('aguardando retirada') || descNorm.includes('disponivel para retirada')) {
-    return ShipmentStatus.AWAITING_PICKUP_AT_DESTINATION_HUB;
-  }
-
-  if (descNorm.includes('tentativa') || descNorm.includes('ausente') || descNorm.includes('nao entregue')) {
-    return ShipmentStatus.DELIVERY_ATTEMPT_FAILED;
-  }
-
-  if (descNorm.includes('devolv') || descNorm.includes('retorn')) {
-    if (descNorm.includes('ao remetente') || descNorm.includes('concluida')) {
-      return ShipmentStatus.RETURNED_TO_SENDER;
-    }
-    return ShipmentStatus.RETURNING_TO_SENDER;
-  }
-
-  // Fallback: se menciona etiqueta emitida, é aguardando postagem
-  if (descNorm.includes('etiqueta') && descNorm.includes('emitida')) {
-    return ShipmentStatus.AWAITING_DROP_OFF_AT_POINT;
-  }
-
-  return null;
+function generateEventKey(description: string, city: string | null | undefined, date: Date): string {
+  const dateOnly = date.toISOString().split('T')[0]; // Apenas YYYY-MM-DD
+  const normalizedDesc = description.toLowerCase().trim();
+  const normalizedCity = (city || '').toLowerCase().trim();
+  return `${normalizedDesc}|${normalizedCity}|${dateOnly}`;
 }
+
+/**
+ * Converte evento da API dos Correios para formato da derivadora
+ */
+function toDerivadoraEvent(evento: {
+  codigo: string;
+  descricao: string;
+  dataHora: Date;
+  local?: string;
+  cidade?: string;
+  uf?: string;
+}): TrackingEventInput {
+  return {
+    codigo: evento.codigo || null,
+    descricao: evento.descricao,
+    dataHora: evento.dataHora,
+    local: evento.local || null,
+    cidade: evento.cidade || null,
+    uf: evento.uf || null,
+  };
+}
+
+/**
+ * Converte evento do banco para formato da derivadora
+ */
+function dbEventToDerivadoraEvent(event: {
+  type: string;
+  description: string;
+  city: string | null;
+  uf?: string | null;
+  occurredAt: Date;
+}): TrackingEventInput {
+  return {
+    codigo: event.type, // type no banco é o código/status
+    descricao: event.description,
+    dataHora: event.occurredAt,
+    cidade: event.city,
+    uf: event.uf || null,
+  };
+}
+
+// ============================================================================
+// Função principal de sincronização
+// ============================================================================
 
 /**
  * Sincroniza rastreamento de um shipment específico pelo código de rastreio da transportadora
@@ -158,6 +130,7 @@ export async function syncCorreiosTracking(carrierTrackingCode: string): Promise
       status: true,
       carrierTrackingCode: true,
       platformTrackingCode: true,
+      postedAt: true,
       deliveredAt: true,
       trackingEvents: {
         orderBy: { occurredAt: 'desc' },
@@ -166,6 +139,7 @@ export async function syncCorreiosTracking(carrierTrackingCode: string): Promise
           type: true,
           description: true,
           city: true,
+          uf: true,
           occurredAt: true,
         },
       },
@@ -179,6 +153,7 @@ export async function syncCorreiosTracking(carrierTrackingCode: string): Promise
       message: `Shipment não encontrado para o código ${trackingCode}`,
       eventsAdded: 0,
       statusUpdated: false,
+      milestonesUpdated: [],
     };
   }
 
@@ -192,6 +167,7 @@ export async function syncCorreiosTracking(carrierTrackingCode: string): Promise
       message: 'Shipment não possui código de rastreio dos Correios',
       eventsAdded: 0,
       statusUpdated: false,
+      milestonesUpdated: [],
     };
   }
 
@@ -206,53 +182,94 @@ export async function syncCorreiosTracking(carrierTrackingCode: string): Promise
       message: rastreio.mensagem || 'Nenhum evento de rastreio encontrado',
       eventsAdded: 0,
       statusUpdated: false,
+      milestonesUpdated: [],
     };
   }
 
-  // 3. Encontrar eventos que ainda não existem no banco
-  // Usar chave composta: descrição + cidade + data (sem hora) para evitar duplicatas por timezone
-  const generateEventKey = (description: string, city: string | null | undefined, date: Date) => {
-    const dateOnly = date.toISOString().split('T')[0]; // Apenas YYYY-MM-DD
-    const normalizedDesc = description.toLowerCase().trim();
-    const normalizedCity = (city || '').toLowerCase().trim();
-    return `${normalizedDesc}|${normalizedCity}|${dateOnly}`;
-  };
-
+  // 3. Identificar eventos existentes (para evitar duplicatas)
   const existingEventKeys = new Set(
     shipment.trackingEvents.map((e) =>
       generateEventKey(e.description, e.city, e.occurredAt)
     )
   );
 
-  const newEvents = rastreio.eventos.filter((e) => {
+  // Filtrar eventos novos da API
+  const newApiEvents = rastreio.eventos.filter((e) => {
     const key = generateEventKey(e.descricao, e.cidade, e.dataHora);
     return !existingEventKeys.has(key);
   });
 
-  // 4. Determinar o status mais recente baseado nos eventos
-  let latestStatus: ShipmentStatus | null = null;
-  let latestEventDate: Date | null = null;
+  // 4. Construir timeline completa (eventos do banco + novos da API)
+  const allEvents: TrackingEventInput[] = [
+    // Eventos existentes no banco
+    ...shipment.trackingEvents.map(dbEventToDerivadoraEvent),
+    // Novos eventos da API
+    ...newApiEvents.map(toDerivadoraEvent),
+  ];
 
-  for (const evento of rastreio.eventos) {
-    const eventStatus = mapCorreiosEventToStatus(evento.codigo, evento.descricao);
-    if (eventStatus && (!latestEventDate || evento.dataHora > latestEventDate)) {
-      latestStatus = eventStatus;
-      latestEventDate = evento.dataHora;
-    }
+  // 5. Derivar estado usando a derivadora
+  const derivedState = deriveCorreiosTrackingState(allEvents);
+
+  // Log eventos desconhecidos para mapeamento futuro
+  if (derivedState.unknownEvents.length > 0) {
+    logUnknownEvents(sroCode, derivedState.unknownEvents);
+    logger.warn({
+      event: 'correios_unknown_events',
+      trackingCode: sroCode,
+      unknownEvents: derivedState.unknownEvents,
+    }, 'Unknown Correios events detected');
   }
 
-  // 5. Atualizar banco em uma transação
+  // 6. Determinar o que precisa ser atualizado
+  const previousStatus = shipment.status;
+  const newStatus = derivedState.currentStatus;
+  const statusChanged = newStatus !== previousStatus;
+
+  // Determinar quais milestones precisam ser atualizados
+  const milestonesUpdated: string[] = [];
+  const milestonesToUpdate: Record<string, Date | null> = {};
+
+  // postedAt
+  if (derivedState.milestones.postedAt && !shipment.postedAt) {
+    milestonesToUpdate.postedAt = derivedState.milestones.postedAt;
+    milestonesUpdated.push('postedAt');
+  }
+
+  // deliveredAt
+  if (derivedState.milestones.deliveredAt && !shipment.deliveredAt) {
+    milestonesToUpdate.deliveredAt = derivedState.milestones.deliveredAt;
+    milestonesUpdated.push('deliveredAt');
+  }
+
+  // 7. Atualizar banco em uma transação
   let eventsAdded = 0;
   let statusUpdated = false;
-  const previousStatus = shipment.status;
 
   await prisma.$transaction(async (tx) => {
     // Adicionar novos eventos
-    for (const evento of newEvents) {
+    for (const evento of newApiEvents) {
+      // Usar a derivadora para determinar o tipo do evento
+      const eventInput = toDerivadoraEvent(evento);
+      const eventPhase = getEventPhase(eventInput);
+
+      // Converter fase para tipo de evento (string para o banco)
+      // A fase é mapeada para o status correspondente
+      const phaseToType: Record<number, string> = {
+        0: 'UNKNOWN',
+        1: 'AWAITING_DROP_OFF_AT_POINT',
+        2: 'RECEIVED_AT_ORIGIN_HUB',
+        3: 'IN_TRANSFER',
+        4: 'OUT_FOR_DELIVERY',
+        5: 'DELIVERED',
+        6: 'RETURNED_TO_SENDER',
+        7: 'DELIVERY_PROBLEM',
+      };
+      const eventType = phaseToType[eventPhase] || 'CORREIOS_EVENT';
+
       await tx.trackingEvent.create({
         data: {
           shipmentId: shipment.id,
-          type: mapCorreiosEventToStatus(evento.codigo, evento.descricao) || 'CORREIOS_EVENT',
+          type: eventType,
           description: evento.descricao,
           city: evento.cidade || null,
           uf: evento.uf || null,
@@ -262,22 +279,28 @@ export async function syncCorreiosTracking(carrierTrackingCode: string): Promise
       eventsAdded++;
     }
 
-    // Atualizar status do shipment se necessário
-    if (latestStatus && latestStatus !== shipment.status) {
-      const updateData: { status: string; deliveredAt?: Date } = {
-        status: latestStatus,
-      };
+    // Atualizar shipment se necessário
+    const updateData: Record<string, unknown> = {};
 
-      // Se foi entregue, registrar data de entrega
-      if (latestStatus === ShipmentStatus.DELIVERED && latestEventDate) {
-        updateData.deliveredAt = latestEventDate;
+    // Atualizar status se mudou
+    if (statusChanged) {
+      updateData.status = newStatus;
+      statusUpdated = true;
+    }
+
+    // Atualizar milestones
+    for (const [key, value] of Object.entries(milestonesToUpdate)) {
+      if (value) {
+        updateData[key] = value;
       }
+    }
 
+    // Executar update se há algo a atualizar
+    if (Object.keys(updateData).length > 0) {
       await tx.shipment.update({
         where: { id: shipment.id },
         data: updateData,
       });
-      statusUpdated = true;
     }
   });
 
@@ -287,21 +310,25 @@ export async function syncCorreiosTracking(carrierTrackingCode: string): Promise
     shipmentId: shipment.id,
     eventsAdded,
     statusUpdated,
-    newStatus: latestStatus,
+    milestonesUpdated,
+    newStatus,
     previousStatus,
+    phase: derivedState.phase,
   }, 'Correios tracking sync completed');
 
   return {
     success: true,
     shipmentId: shipment.id,
     trackingCode: sroCode,
-    message: eventsAdded > 0 || statusUpdated
-      ? `Sincronização concluída: ${eventsAdded} evento(s) adicionado(s)${statusUpdated ? ', status atualizado' : ''}`
+    message: eventsAdded > 0 || statusUpdated || milestonesUpdated.length > 0
+      ? `Sincronização concluída: ${eventsAdded} evento(s) adicionado(s)${statusUpdated ? ', status atualizado' : ''}${milestonesUpdated.length > 0 ? `, milestones: ${milestonesUpdated.join(', ')}` : ''}`
       : 'Nenhuma atualização necessária (já sincronizado)',
     eventsAdded,
     statusUpdated,
-    newStatus: latestStatus || undefined,
+    milestonesUpdated,
+    newStatus: newStatus || undefined,
     previousStatus,
+    derivedState,
     events: rastreio.eventos.map((e) => ({
       dataHora: e.dataHora,
       descricao: e.descricao,
@@ -312,6 +339,10 @@ export async function syncCorreiosTracking(carrierTrackingCode: string): Promise
     })),
   };
 }
+
+// ============================================================================
+// Funções auxiliares de sincronização em lote
+// ============================================================================
 
 /**
  * Sincroniza rastreamento de múltiplos shipments
@@ -335,6 +366,7 @@ export async function syncCorreiosTrackingBatch(
         message: error instanceof Error ? error.message : 'Erro ao sincronizar',
         eventsAdded: 0,
         statusUpdated: false,
+        milestonesUpdated: [],
       });
     }
   }

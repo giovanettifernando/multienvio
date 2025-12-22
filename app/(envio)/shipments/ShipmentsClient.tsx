@@ -326,6 +326,8 @@ export default function ShipmentsClient() {
         render: (_value, row) => {
           const finalStatuses: ShipmentStatus[] = ["Entregue", "Cancelado", "Devolvido"];
           const isFinalStatus = finalStatuses.includes(row.status);
+          // Só pode imprimir etiqueta se ainda não foi postado
+          const canPrint = !row.postedAt;
 
           // Envios cancelados não mostram nenhuma ação
           if (row.status === "Cancelado") {
@@ -334,11 +336,12 @@ export default function ShipmentsClient() {
 
           return (
             <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-              <Tooltip title="Imprimir etiqueta">
+              <Tooltip title={canPrint ? "Imprimir etiqueta" : "Objeto já postado"}>
                 <ELButton
                   variant="ghost"
                   size="small"
                   icon={<PrinterOutlined />}
+                  disabled={!canPrint}
                   onClick={() => handleOpenLabelModal(row)}
                 />
               </Tooltip>

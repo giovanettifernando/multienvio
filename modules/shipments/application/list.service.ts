@@ -26,6 +26,7 @@ export interface ShipmentListItem {
   freightValue: number;
   status: UIShipmentStatus;
   createdAt: string;
+  postedAt: string | null;
   labelUrl: string | undefined;
   trackingUrl: string | undefined;
   hasVolumeDivergence: boolean;
@@ -170,6 +171,7 @@ export function mapShipmentsToListItems(shipments: any[]): ShipmentListItem[] {
       freightValue: s.freightCost || 0,
       status: mapToUIStatus(s.status as ShipmentStatus),
       createdAt: s.createdAt.toISOString(),
+      postedAt: s.postedAt?.toISOString() || null,
       labelUrl: s.label?.fileUrl || (s.label?.fileBase64 ? `data:${s.label.contentType};base64,${s.label.fileBase64}` : undefined),
       trackingUrl: s.publicTrackingId ? `/rastreio/${s.publicTrackingId}` : undefined,
       hasVolumeDivergence,
