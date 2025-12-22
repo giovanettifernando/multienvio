@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState, useCallback } from "react";
+import React, { useMemo, useState, useCallback, useEffect, useRef } from "react";
 import { ELDescriptions, ELTypography, useELApp, ELTooltip, ELImage } from '@/shared/ui';
 const Tooltip = ELTooltip;
 const Image = ELImage;
@@ -97,6 +97,25 @@ export default function ShipmentsClient() {
 
   const { data, isLoading, refetch } = useShipments({ q: query, status, page, limit: pageSize });
   const cancelMut = useShipmentCancel();
+
+  // Sync tracking em background ao montar o componente
+  const syncTriggeredRef = useRef(false);
+  useEffect(() => {
+    if (syncTriggeredRef.current) return;
+    syncTriggeredRef.current = true;
+
+    // Dispara sync em background (fire and forget)
+    fetch('/api/tracking/sync-all', { method: 'POST' })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.data?.started) {
+          console.debug('[SYNC] Background sync started:', data.data.message);
+        }
+      })
+      .catch((err) => {
+        console.debug('[SYNC] Background sync error:', err);
+      });
+  }, []);
 
   const items = data?.items ?? [];
   const pagination = data?.pagination;

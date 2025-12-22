@@ -3,6 +3,9 @@ import { readFile, stat } from 'fs/promises';
 import path from 'path';
 import { withApiHandlerResponse } from '@/platform/api/handler';
 import { ApiError } from '@/platform/api/errors';
+import { getUserFromRequest } from '@/modules/auth/application/session';
+import { getAdminSessionFromRequest } from '@/modules/auth/application/admin-session';
+import { prisma } from '@/platform/db/db';
 
 // Mapeamento de extensões para content-types
 const MIME_TYPES: Record<string, string> = {
@@ -28,7 +31,7 @@ function getMimeType(filePath: string): string {
   return MIME_TYPES[ext] || 'application/octet-stream';
 }
 
-export const GET = withApiHandlerResponse<{ path: string[] }>(async ({ params, logger, requestId }) => {
+export const GET = withApiHandlerResponse<{ path: string[] }>(async ({ req, params, logger, requestId }) => {
   const pathSegments = params.path;
 
   // Validar e sanitizar o caminho
@@ -41,6 +44,63 @@ export const GET = withApiHandlerResponse<{ path: string[] }>(async ({ params, l
       message: 'Invalid path',
       status: 400,
     });
+  }
+
+  // SECURITY FIX F-05: Verificar autenticação
+  const userSession = await getUserFromRequest(req);
+  const adminSession = await getAdminSessionFromRequest(req);
+
+  if (!userSession && !adminSession) {
+    logger.warn('uploads_unauthorized_access', { path: requestedPath });
+    throw new ApiError({
+      code: 'UNAUTHORIZED',
+      message: 'Autenticação necessária',
+      status: 401,
+    });
+  }
+
+  // SECURITY FIX F-05: Verificar ownership baseado no tipo de arquivo
+  if (requestedPath.startsWith('support/')) {
+    // Arquivos de suporte: verificar se o usuário é dono do ticket ou admin
+    const ticketId = pathSegments[1]; // support/{ticketId}/{filename}
+
+    if (ticketId && userSession) {
+      const ticket = await prisma.supportTicket.findFirst({
+        where: {
+          id: ticketId,
+          OR: [
+            { userId: userSession.userId }, // Dono do ticket
+            { assignedTo: userSession.userId }, // Atendente atribuído
+          ],
+        },
+      });
+
+      if (!ticket && !adminSession) {
+        logger.warn('uploads_forbidden_support', {
+          path: requestedPath,
+          ticketId,
+          userId: userSession.userId,
+        });
+        throw new ApiError({
+          code: 'FORBIDDEN',
+          message: 'Acesso negado a este arquivo',
+          status: 403,
+        });
+      }
+    }
+  } else if (requestedPath.startsWith('expenses/')) {
+    // Arquivos de despesas: apenas admins com permissão financeira
+    if (!adminSession) {
+      logger.warn('uploads_forbidden_expenses', {
+        path: requestedPath,
+        userId: userSession?.userId,
+      });
+      throw new ApiError({
+        code: 'FORBIDDEN',
+        message: 'Acesso negado - apenas administradores',
+        status: 403,
+      });
+    }
   }
 
   // Construir caminho absoluto

@@ -20,6 +20,7 @@ import { createInitialTrackingEvent } from '@/modules/tracking/application/creat
 import { ShipmentStatus } from '@/modules/shipments/application/shipment-status';
 import { integrateWithCarrier } from '@/modules/shipments/application/carrier-integration';
 import { logger } from '@/platform/logging/logger';
+import { ApiError } from '@/platform/api/errors';
 
 // ============================================================================
 // TIPOS
@@ -138,6 +139,107 @@ export interface CheckoutResult {
 // ============================================================================
 // FUNÇÕES AUXILIARES
 // ============================================================================
+
+/**
+ * SECURITY FIX F-01: Valida cotação e retorna o preço correto do servidor
+ *
+ * Esta função é crítica para prevenir manipulação de preços.
+ * O preço SEMPRE deve vir da cotação salva no banco, nunca do cliente.
+ */
+export interface ValidatedQuote {
+  quoteId: string;
+  freightCostCents: number;
+  freightCost: number;
+  estimatedDays: number;
+  carrier: string;
+  service: string;
+}
+
+export async function validateQuoteAndGetPrice(
+  quoteId: string,
+  userId: string,
+  clientFreightCost?: number
+): Promise<ValidatedQuote> {
+  const quote = await prisma.quote.findFirst({
+    where: {
+      id: quoteId,
+      userId: userId, // SECURITY: Verificar ownership
+    },
+    include: {
+      selection: true,
+    },
+  });
+
+  if (!quote) {
+    logger.warn({
+      event: 'checkout_quote_not_found',
+      quoteId,
+      userId,
+    }, 'Quote not found or does not belong to user');
+    throw new ApiError({
+      code: 'QUOTE_NOT_FOUND',
+      message: 'Cotação não encontrada ou não pertence ao usuário.',
+      status: 400,
+    });
+  }
+
+  if (!quote.selection) {
+    logger.warn({
+      event: 'checkout_quote_no_selection',
+      quoteId,
+      userId,
+    }, 'Quote has no selection');
+    throw new ApiError({
+      code: 'QUOTE_NO_SELECTION',
+      message: 'Nenhuma opção de frete foi selecionada para esta cotação.',
+      status: 400,
+    });
+  }
+
+  // SECURITY: Verificar expiração
+  if (quote.expiresAt < new Date()) {
+    logger.warn({
+      event: 'checkout_quote_expired',
+      quoteId,
+      userId,
+      expiresAt: quote.expiresAt,
+    }, 'Quote has expired');
+    throw new ApiError({
+      code: 'QUOTE_EXPIRED',
+      message: 'Esta cotação expirou. Por favor, faça uma nova cotação.',
+      status: 400,
+    });
+  }
+
+  const serverFreightCostCents = quote.selection.totalCents;
+  const serverFreightCost = serverFreightCostCents / 100;
+
+  // SECURITY: Log se o cliente tentou enviar um valor diferente
+  if (clientFreightCost !== undefined) {
+    const clientCents = Math.round(clientFreightCost * 100);
+    if (clientCents !== serverFreightCostCents) {
+      logger.warn({
+        event: 'checkout_price_mismatch',
+        quoteId,
+        userId,
+        clientFreightCost,
+        clientCents,
+        serverFreightCost,
+        serverFreightCostCents,
+        difference: clientCents - serverFreightCostCents,
+      }, 'SECURITY: Client sent different freight cost than server quote');
+    }
+  }
+
+  return {
+    quoteId: quote.id,
+    freightCostCents: serverFreightCostCents,
+    freightCost: serverFreightCost,
+    estimatedDays: quote.selection.deliveryDays,
+    carrier: quote.selection.carrierName,
+    service: quote.selection.serviceName,
+  };
+}
 
 /**
  * Valida se há pelo menos 1 item válido no documento
@@ -308,6 +410,18 @@ export async function saveRecipientIfRequested(
  * Processa o checkout criando shipment, label, integração com transportadora e eventos
  */
 export async function processCheckout(input: CheckoutInput): Promise<CheckoutResult> {
+  // SECURITY FIX F-01: Validar cotação e obter preço do servidor
+  // O preço do cliente é ignorado - usamos SEMPRE o preço da cotação salva
+  const validatedQuote = await validateQuoteAndGetPrice(
+    input.quoteId,
+    input.userId,
+    input.freightCost // Passamos para logging de tentativas de manipulação
+  );
+
+  // Usar valores validados do servidor
+  const serverFreightCost = validatedQuote.freightCost;
+  const serverEstimatedDays = validatedQuote.estimatedDays;
+
   const platformTrackingCode = generatePlatformTrackingCode();
   const declaredValue = calculateDeclaredValue(input.document, input.insuranceValue);
   const documentData = prepareDocumentData(input.document);
@@ -322,7 +436,7 @@ export async function processCheckout(input: CheckoutInput): Promise<CheckoutRes
         service: input.service,
         originCep: input.originCep,
         destinationCep: input.destinationCep,
-        freightCost: input.freightCost,
+        freightCost: serverFreightCost, // SECURITY: Usar valor do servidor
         createdAt: {
           gte: new Date(Date.now() - 5 * 60 * 1000), // Últimos 5 minutos
         },
@@ -389,8 +503,8 @@ export async function processCheckout(input: CheckoutInput): Promise<CheckoutRes
         declaredValue,
         carrier: input.carrier,
         service: input.service,
-        estimatedDays: input.estimatedDays,
-        freightCost: input.freightCost,
+        estimatedDays: serverEstimatedDays, // SECURITY: Usar valor do servidor
+        freightCost: serverFreightCost, // SECURITY: Usar valor do servidor
         pickupPointId: input.pickupPointId,
         document: documentData,
         status: initialStatus,
@@ -411,7 +525,7 @@ export async function processCheckout(input: CheckoutInput): Promise<CheckoutRes
         carrier: input.carrier,
         service: input.service,
         status: 'pending',
-        priceCents: Math.round(input.freightCost * 100),
+        priceCents: validatedQuote.freightCostCents, // SECURITY: Usar valor do servidor (já em centavos)
         currency: 'BRL',
         trackingCode: platformTrackingCode,
         recipientName: input.recipient.nome,

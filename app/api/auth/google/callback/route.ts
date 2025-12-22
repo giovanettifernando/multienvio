@@ -300,12 +300,12 @@ export const GET = withApiHandlerResponse(async (context) => {
     );
   }
 
-  // Parse state to get context
-  const state = parseState(stateParam);
+  // SECURITY FIX F-04: Parse state with server-side validation (async)
+  const state = await parseState(stateParam);
   if (!state) {
-    logger.warn('google_oauth_invalid_state');
+    logger.warn('google_oauth_invalid_state', { stateParam: stateParam?.substring(0, 20) });
     return NextResponse.redirect(
-      new URL('/auth/login?error=Estado inválido', req.url)
+      new URL('/auth/login?error=Estado inválido ou expirado', req.url)
     );
   }
 

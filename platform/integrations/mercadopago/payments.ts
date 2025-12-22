@@ -329,11 +329,22 @@ async function applyCheckoutPayment(transaction: PaymentTransaction): Promise<vo
     return;
   }
 
+  // SECURITY FIX F-03: Verificar que a transação tem userId
+  if (!transaction.userId) {
+    console.error('[MERCADO_PAGO] SECURITY: Transaction without userId:', {
+      transactionId: transaction.id,
+      externalId: transaction.externalId,
+    });
+    throw new Error('Cannot apply checkout payment: transaction has no userId');
+  }
+
   try {
-    // Buscar shipments a atualizar
+    // SECURITY FIX F-03: Buscar shipments verificando ownership
+    // O userId da transação DEVE corresponder ao senderId dos shipments
     const shipments = await prisma.shipment.findMany({
       where: {
         id: { in: shipmentIds },
+        senderId: transaction.userId, // SECURITY: Filtrar por dono da transação
       },
       select: {
         id: true,
@@ -343,8 +354,28 @@ async function applyCheckoutPayment(transaction: PaymentTransaction): Promise<vo
       },
     });
 
+    // SECURITY: Verificar se todos os shipments foram encontrados
+    // Se algum não foi encontrado, pode ser tentativa de fraude
+    if (shipments.length !== shipmentIds.length) {
+      const foundIds = new Set(shipments.map(s => s.id));
+      const missingIds = shipmentIds.filter(id => !foundIds.has(id));
+      console.error('[MERCADO_PAGO] SECURITY: Shipment ownership mismatch:', {
+        transactionId: transaction.id,
+        userId: transaction.userId,
+        requestedShipmentIds: shipmentIds,
+        missingShipmentIds: missingIds,
+      });
+      // Não processar nenhum shipment se houver mismatch
+      // Isso previne fraude onde usuário tenta pagar envios de terceiros
+      throw new Error(`Shipment ownership validation failed: ${missingIds.length} shipments not owned by user`);
+    }
+
     if (shipments.length === 0) {
-      console.error('[MERCADO_PAGO] Nenhum shipment encontrado:', shipmentIds);
+      console.error('[MERCADO_PAGO] Nenhum shipment encontrado para o usuário:', {
+        transactionId: transaction.id,
+        userId: transaction.userId,
+        shipmentIds,
+      });
       return;
     }
 

@@ -18,7 +18,7 @@ import { withApiHandler } from '@/platform/api/handler';
 import { ApiError } from '@/platform/api/errors';
 import { z } from 'zod';
 import { getUserSessionFromRequest } from '@/modules/auth/application/user-session';
-import { validateDocumentHasItems } from '@/modules/cart/application';
+import { validateDocumentHasItems, validateQuoteAndGetPrice } from '@/modules/cart/application';
 import { createPaidShipment, PaymentMethod } from '@/modules/shipments/application/create-paid-shipment.service';
 import { enforceRateLimitByIP, RATE_LIMITS } from '@/platform/cache/rate-limit-redis';
 import { logger } from '@/platform/logging/logger';
@@ -39,6 +39,9 @@ interface CreatePaidShipmentResponse {
 
 // Schema de validação
 const createPaidShipmentSchema = z.object({
+  // SECURITY FIX F-01: quoteId obrigatório para validar preços no servidor
+  quoteId: z.string().min(1, 'ID da cotação é obrigatório'),
+
   // Código de rastreamento reservado (obrigatório)
   trackingCode: z.string().min(1, 'Código de rastreamento é obrigatório'),
 
@@ -190,15 +193,32 @@ export const POST = withApiHandler<CreatePaidShipmentResponse>(async ({ req }) =
     });
   }
 
+  // SECURITY FIX F-01: Validar cotação e obter preço do servidor
+  // O preço do cliente é IGNORADO - usamos SEMPRE o preço da cotação salva
+  const validatedQuote = await validateQuoteAndGetPrice(
+    data.quoteId,
+    session.userId,
+    data.freightCost // Passamos para logging de tentativas de manipulação
+  );
+
+  // Calcular totalCost no servidor (freightCost + pickupFee se houver)
+  const serverFreightCost = validatedQuote.freightCost;
+  const pickupFeeAmount = data.pickupFee?.feeAmount ?? 0;
+  const serverTotalCost = serverFreightCost + pickupFeeAmount;
+
   logger.info({
     event: 'create_paid_shipment_request',
     trackingCode: data.trackingCode,
     paymentMethod: data.paymentMethod,
     userId: session.userId,
-  }, 'Processing paid shipment creation');
+    clientFreightCost: data.freightCost,
+    serverFreightCost,
+    clientTotalCost: data.totalCost,
+    serverTotalCost,
+  }, 'Processing paid shipment creation with validated prices');
 
   try {
-    // Criar shipment com pagamento
+    // Criar shipment com pagamento - usando preços VALIDADOS do servidor
     const result = await createPaidShipment({
       userId: session.userId,
       trackingCode: data.trackingCode,
@@ -228,9 +248,9 @@ export const POST = withApiHandler<CreatePaidShipmentResponse>(async ({ req }) =
       originUf: data.originUf,
       originAddress: data.originAddress,
       destinationCep: data.destinationCep,
-      estimatedDays: data.estimatedDays,
-      freightCost: data.freightCost,
-      totalCost: data.totalCost,
+      estimatedDays: validatedQuote.estimatedDays, // SECURITY: Usar valor do servidor
+      freightCost: serverFreightCost, // SECURITY: Usar valor do servidor
+      totalCost: serverTotalCost, // SECURITY: Usar valor calculado no servidor
       solicitarColeta: data.solicitarColeta,
       paymentMethod: data.paymentMethod as PaymentMethod,
       mercadoPagoPaymentId: data.mercadoPagoPaymentId,

@@ -18,6 +18,34 @@ const sqlRequestSchema = z.object({
   query: z.string().min(1, 'Query é obrigatória').max(10000, 'Query muito longa'),
 });
 
+// SECURITY F-07: Lista de padrões SQL perigosos bloqueados
+const DANGEROUS_SQL_PATTERNS: Array<{ pattern: RegExp; description: string }> = [
+  { pattern: /\bDROP\s+(TABLE|DATABASE|INDEX|VIEW|SCHEMA)\b/i, description: 'DROP não é permitido' },
+  { pattern: /\bTRUNCATE\s+TABLE\b/i, description: 'TRUNCATE não é permitido' },
+  { pattern: /\bALTER\s+(TABLE|DATABASE|INDEX|VIEW|SCHEMA)\b/i, description: 'ALTER não é permitido' },
+  { pattern: /\bDELETE\s+FROM\s+\w+\s*(;|\s*$)/i, description: 'DELETE sem WHERE não é permitido' },
+  { pattern: /\bUPDATE\s+\w+\s+SET\s+[^;]+\s*(;|\s*$)(?!.*WHERE)/i, description: 'UPDATE sem WHERE não é permitido' },
+  { pattern: /\bCREATE\s+(DATABASE|SCHEMA)\b/i, description: 'CREATE DATABASE/SCHEMA não é permitido' },
+  { pattern: /\bGRANT\b|\bREVOKE\b/i, description: 'GRANT/REVOKE não é permitido' },
+  { pattern: /\bpg_sleep\b/i, description: 'pg_sleep não é permitido' },
+  { pattern: /;\s*(DROP|DELETE|TRUNCATE|ALTER)\b/i, description: 'Múltiplos comandos destrutivos não são permitidos' },
+];
+
+/**
+ * SECURITY F-07: Valida query contra padrões perigosos
+ */
+function validateSqlQuery(query: string): { valid: boolean; error?: string } {
+  const normalizedQuery = query.trim();
+
+  for (const { pattern, description } of DANGEROUS_SQL_PATTERNS) {
+    if (pattern.test(normalizedQuery)) {
+      return { valid: false, error: description };
+    }
+  }
+
+  return { valid: true };
+}
+
 interface SqlResponse {
   success: boolean;
   data?: unknown[];
@@ -53,6 +81,23 @@ export const POST = withApiHandler<SqlResponse>(async (context) => {
 
   const { query } = parsed.data;
   const trimmedQuery = query.trim();
+
+  // SECURITY F-07: Validar query contra padrões perigosos
+  const validation = validateSqlQuery(trimmedQuery);
+  if (!validation.valid) {
+    logger.warn('admin_sql_blocked', {
+      adminId: authResult.user.id,
+      adminEmail: authResult.user.email,
+      reason: validation.error,
+      queryPreview: trimmedQuery.substring(0, 200),
+    });
+
+    throw new ApiError({
+      code: 'forbidden',
+      message: validation.error || 'Comando SQL não permitido',
+      status: 403,
+    });
+  }
 
   // Log da execução para auditoria
   logger.info('admin_sql_execute', {

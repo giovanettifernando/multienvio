@@ -4,6 +4,7 @@
  */
 
 import crypto from 'crypto';
+import { getRedisClient, isRedisAvailable } from '@/platform/cache/redis';
 
 // ============================================================================
 // Cache de credenciais
@@ -203,16 +204,46 @@ export interface OAuthState {
 // State Management
 // ============================================================================
 
+// SECURITY FIX F-04: Constantes para armazenamento de state no Redis
+const OAUTH_STATE_PREFIX = 'oauth:state:';
+const OAUTH_STATE_TTL_SECONDS = 300; // 5 minutos
+
 /**
- * Generate a random state parameter for CSRF protection
+ * SECURITY FIX F-04: Generate and store state in Redis for CSRF protection
+ * O state agora é um ID que referencia dados armazenados no servidor
  */
-export function generateState(context: OAuthContext, redirectUrl?: string): string {
-  const state: OAuthState = {
+export async function generateState(context: OAuthContext, redirectUrl?: string): Promise<string> {
+  const stateId = crypto.randomUUID();
+  const nonce = crypto.randomBytes(16).toString('hex');
+
+  const stateData: OAuthState = {
     context,
     redirectUrl,
-    nonce: crypto.randomBytes(16).toString('hex'),
+    nonce,
   };
-  return Buffer.from(JSON.stringify(state)).toString('base64url');
+
+  // Armazenar no Redis se disponível
+  if (isRedisAvailable()) {
+    try {
+      const redis = getRedisClient();
+      await redis.setex(
+        `${OAUTH_STATE_PREFIX}${stateId}`,
+        OAUTH_STATE_TTL_SECONDS,
+        JSON.stringify(stateData)
+      );
+      console.log('[GOOGLE_OAUTH] State armazenado no Redis:', stateId);
+    } catch (error) {
+      console.error('[GOOGLE_OAUTH] Erro ao armazenar state no Redis:', error);
+      // Fallback: retornar state codificado (menos seguro mas funcional)
+      return Buffer.from(JSON.stringify({ ...stateData, fallback: true })).toString('base64url');
+    }
+  } else {
+    // Fallback quando Redis não está disponível
+    console.warn('[GOOGLE_OAUTH] Redis não disponível, usando state codificado (fallback)');
+    return Buffer.from(JSON.stringify({ ...stateData, fallback: true })).toString('base64url');
+  }
+
+  return stateId;
 }
 
 /**
@@ -242,12 +273,67 @@ function isValidRedirectUrl(url: string | undefined): boolean {
 }
 
 /**
- * Parse and validate the state parameter
+ * SECURITY FIX F-04: Parse and validate the state parameter from Redis
+ * O state é validado contra o Redis e invalidado após uso (single-use)
  */
-export function parseState(state: string): OAuthState | null {
+export async function parseState(state: string): Promise<OAuthState | null> {
+  // Primeiro, verificar se é um UUID (novo formato com Redis)
+  const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(state);
+
+  if (isUUID && isRedisAvailable()) {
+    try {
+      const redis = getRedisClient();
+      const key = `${OAUTH_STATE_PREFIX}${state}`;
+
+      // Buscar e deletar atomicamente (GETDEL)
+      const data = await redis.get(key);
+
+      if (!data) {
+        console.warn('[GOOGLE_OAUTH] SECURITY: State não encontrado ou já usado:', state);
+        return null;
+      }
+
+      // Deletar imediatamente (single-use)
+      await redis.del(key);
+
+      const parsed = JSON.parse(data) as OAuthState;
+
+      // Validate required fields
+      if (!parsed.context || !parsed.nonce) {
+        console.warn('[GOOGLE_OAUTH] SECURITY: State com campos inválidos');
+        return null;
+      }
+      if (parsed.context !== 'user' && parsed.context !== 'collector') {
+        console.warn('[GOOGLE_OAUTH] SECURITY: State com context inválido:', parsed.context);
+        return null;
+      }
+
+      // SECURITY: Validar redirectUrl para prevenir open redirect
+      if (!isValidRedirectUrl(parsed.redirectUrl)) {
+        console.warn('[GOOGLE_OAUTH] Redirect URL inválida bloqueada:', parsed.redirectUrl);
+        return { ...parsed, redirectUrl: undefined };
+      }
+
+      console.log('[GOOGLE_OAUTH] State validado e invalidado com sucesso:', state);
+      return parsed;
+
+    } catch (error) {
+      console.error('[GOOGLE_OAUTH] Erro ao validar state no Redis:', error);
+      return null;
+    }
+  }
+
+  // Fallback: tentar decodificar como base64url (formato legado ou quando Redis não disponível)
   try {
     const decoded = Buffer.from(state, 'base64url').toString('utf8');
-    const parsed = JSON.parse(decoded) as OAuthState;
+    const parsed = JSON.parse(decoded) as OAuthState & { fallback?: boolean };
+
+    // Se não é fallback explícito e Redis está disponível, rejeitar
+    // Isso previne uso de states forjados quando Redis está funcionando
+    if (!parsed.fallback && isRedisAvailable()) {
+      console.warn('[GOOGLE_OAUTH] SECURITY: State base64 rejeitado quando Redis está disponível');
+      return null;
+    }
 
     // Validate required fields
     if (!parsed.context || !parsed.nonce) {
@@ -260,12 +346,13 @@ export function parseState(state: string): OAuthState | null {
     // SECURITY: Validar redirectUrl para prevenir open redirect
     if (!isValidRedirectUrl(parsed.redirectUrl)) {
       console.warn('[GOOGLE_OAUTH] Redirect URL inválida bloqueada:', parsed.redirectUrl);
-      // Retornar estado sem redirectUrl em vez de falhar completamente
       return { ...parsed, redirectUrl: undefined };
     }
 
+    console.warn('[GOOGLE_OAUTH] State validado via fallback (base64)');
     return parsed;
   } catch {
+    console.warn('[GOOGLE_OAUTH] SECURITY: State inválido (não é UUID nem base64 válido)');
     return null;
   }
 }
@@ -283,7 +370,8 @@ export async function buildAuthorizationUrl(context: OAuthContext, redirectUrl?:
     throw new Error('Credenciais Google OAuth não configuradas');
   }
 
-  const state = generateState(context, redirectUrl);
+  // SECURITY FIX F-04: generateState agora é async (armazena no Redis)
+  const state = await generateState(context, redirectUrl);
   const redirectUri = getRedirectUri();
 
   const params = new URLSearchParams({

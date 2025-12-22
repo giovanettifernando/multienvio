@@ -50,6 +50,7 @@ export {
   type CheckoutOriginAddress,
   type CheckoutInput,
   type CheckoutResult,
+  type ValidatedQuote,
 
   // Funções auxiliares
   validateDocumentHasItems,
@@ -57,6 +58,7 @@ export {
   prepareDocumentData,
   generatePlatformTrackingCode,
   determineInitialStatus,
+  validateQuoteAndGetPrice, // SECURITY FIX F-01
 
   // Service principal
   saveRecipientIfRequested,

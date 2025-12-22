@@ -3,6 +3,7 @@ import { ApiError } from '@/platform/api/errors';
 import { prisma } from '@/platform/db/db';
 import { generatePublicTimeline, mapToPublicTrackingStatus, PublicStatusMessages } from '@/modules/shipments/application/public-tracking-status';
 import { ShipmentStatus } from '@/modules/shipments/application/shipment-status';
+import { syncCorreiosTracking } from '@/modules/tracking/application/sync-correios-tracking.service';
 
 /**
  * GET /api/public/track/[code]
@@ -20,7 +21,42 @@ export const GET = withApiHandler<unknown, { code: string }>(async ({ params, lo
     });
   }
 
-  // Buscar shipment pelo publicTrackingId
+  // Buscar shipment pelo publicTrackingId (primeira query para verificar se existe e se é Correios)
+  const shipmentBasic = await prisma.shipment.findFirst({
+    where: { publicTrackingId: code },
+    select: {
+      id: true,
+      carrier: true,
+      carrierTrackingCode: true,
+    },
+  });
+
+  if (!shipmentBasic) {
+    throw new ApiError({
+      code: 'NOT_FOUND',
+      message: 'Envio não encontrado',
+      status: 404,
+    });
+  }
+
+  // Se for dos Correios, sincronizar antes de retornar
+  if (shipmentBasic.carrier === 'Correios' && shipmentBasic.carrierTrackingCode) {
+    try {
+      logger.debug('public_track_sync_correios', {
+        shipmentId: shipmentBasic.id,
+        trackingCode: shipmentBasic.carrierTrackingCode,
+      });
+      await syncCorreiosTracking(shipmentBasic.carrierTrackingCode);
+    } catch (error) {
+      // Log do erro mas não falha a requisição - retorna dados do banco
+      logger.warn('public_track_sync_error', {
+        shipmentId: shipmentBasic.id,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+
+  // Buscar shipment completo (após sync, se aplicável)
   const shipment = await prisma.shipment.findFirst({
     where: { publicTrackingId: code },
     select: {
@@ -73,6 +109,8 @@ export const GET = withApiHandler<unknown, { code: string }>(async ({ params, lo
     },
   });
 
+  // Shipment sempre existe aqui (já verificamos acima antes do sync)
+  // Verificação para TypeScript
   if (!shipment) {
     throw new ApiError({
       code: 'NOT_FOUND',
@@ -86,11 +124,12 @@ export const GET = withApiHandler<unknown, { code: string }>(async ({ params, lo
 
   if (shipment.trackingEvents && shipment.trackingEvents.length > 0) {
     // Usar eventos reais do banco de dados
+    // Formato compatível com TrackingTimeline: type, description, city, uf, occurredAt
     events = shipment.trackingEvents.map((event) => ({
-      status: event.type,
-      title: mapToPublicTrackingStatus(event.type as ShipmentStatus),
+      type: event.type,
       description: event.description,
-      location: event.city && event.uf ? `${event.city}, ${event.uf}` : null,
+      city: event.city || null,
+      uf: event.uf || null,
       occurredAt: event.occurredAt.toISOString(),
     }));
   } else {
@@ -104,11 +143,12 @@ export const GET = withApiHandler<unknown, { code: string }>(async ({ params, lo
       destinationState: shipment.destinationState || undefined,
     });
 
+    // Converter formato da timeline fictícia para formato do TrackingTimeline
     events = publicTimeline.map((event) => ({
-      status: event.status,
-      title: event.title,
+      type: event.status,
       description: event.description,
-      location: event.location || null,
+      city: null,
+      uf: null,
       occurredAt: event.timestamp.toISOString(),
     }));
   }

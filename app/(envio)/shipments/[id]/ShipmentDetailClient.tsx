@@ -15,7 +15,8 @@ import { useQuery } from "@tanstack/react-query";
 import { TrackingTimeline } from "@/modules/tracking/ui/components/TrackingTimeline";
 import { PageShell } from '@/shared/ui/PageShell';
 import { ShipmentLabelPdfModal } from "@/modules/labels/ui/components";
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import { generatePublicTimeline, type PublicTrackingEvent } from "@/modules/shipments/application/public-tracking-status";
 
 const { Text } = Typography;
 
@@ -172,6 +173,35 @@ export default function ShipmentDetailClient() {
       message.success('Link público copiado!');
     }
   };
+
+  // Gerar timeline de eventos (usar eventos reais ou gerar timeline baseada no status)
+  const timelineEvents = useMemo(() => {
+    if (!shipment) return [];
+
+    // Se há eventos reais de rastreamento, usar eles
+    if (shipment.trackingEvents && shipment.trackingEvents.length > 0) {
+      return shipment.trackingEvents;
+    }
+
+    // Caso contrário, gerar timeline pública baseada no status atual
+    const publicTimeline = generatePublicTimeline({
+      createdAt: new Date(shipment.createdAt),
+      status: shipment.status,
+      originCity: undefined, // Não temos essa info no contexto do remetente
+      originState: undefined,
+      destinationCity: shipment.destinationCity || undefined,
+      destinationState: shipment.destinationState || undefined,
+    });
+
+    // Converter para o formato esperado pelo TrackingTimeline
+    return publicTimeline.map((event: PublicTrackingEvent) => ({
+      type: event.status,
+      description: event.title,
+      city: event.location?.split('/')[0] || null,
+      uf: event.location?.split('/')[1] || null,
+      occurredAt: event.timestamp.toISOString(),
+    }));
+  }, [shipment]);
 
   return (
     <PageShell

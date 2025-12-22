@@ -1,5 +1,6 @@
 import { withApiHandler } from '@/platform/api/handler';
 import { ApiError } from '@/platform/api/errors';
+import { getUserFromRequest } from '@/modules/auth/application/session';
 import { z } from 'zod';
 import type {
   InvoiceData,
@@ -322,6 +323,16 @@ const NFeParseSchema = z.object({
  * Faz o parse de um XML da NF-e e retorna os itens estruturados
  */
 export const POST = withApiHandler<ParseNfeResponse>(async (context) => {
+  // SECURITY F-08: Verificar autenticação (defesa em profundidade)
+  const session = await getUserFromRequest(context.req);
+  if (!session) {
+    throw new ApiError({
+      code: 'UNAUTHORIZED',
+      message: 'Autenticação necessária',
+      status: 401,
+    });
+  }
+
   const body = await context.req.json();
 
   const parsed = NFeParseSchema.safeParse(body);

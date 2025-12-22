@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+import DOMPurify from 'dompurify';
 import { ELCollapse, ELSpace, ELTypography, ELDivider, useELApp } from '@/shared/ui';
 const Collapse = ELCollapse;
 const Space = ELSpace;
@@ -135,7 +136,7 @@ export function SupportFAQ({
         <Space orientation="vertical" style={{ width: '100%' }}>
           <div
             style={{ whiteSpace: 'pre-wrap', lineHeight: 1.6 }}
-            dangerouslySetInnerHTML={{ __html: item.answer.replace(/\n/g, '<br/>') }}
+            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(item.answer.replace(/\n/g, '<br/>')) }}
           />
           <Divider style={{ margin: '12px 0' }} />
           {renderFeedbackButtons(item)}

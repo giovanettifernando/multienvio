@@ -17,6 +17,7 @@ import {
   getCorreiosConfigInfo,
   testCorreiosAuth,
 } from '@/platform/integrations/correios';
+import { syncCorreiosTracking } from '@/modules/tracking/application/sync-correios-tracking.service';
 import { withApiHandler } from '@/platform/api/handler';
 import { logger } from '@/platform/logging/logger';
 import { ApiError } from '@/platform/api/errors';
@@ -53,6 +54,14 @@ const testSchema = z.discriminatedUnion('type', [
   // Teste de rastreamento
   z.object({
     type: z.literal('tracking'),
+    codigoRastreio: z
+      .string()
+      .regex(/^[A-Z]{2}\d{9}[A-Z]{2}$/, 'Código de rastreio inválido (ex: NX000000000BR)'),
+  }),
+
+  // Sincronização de rastreamento (atualiza shipment + timeline)
+  z.object({
+    type: z.literal('sync'),
     codigoRastreio: z
       .string()
       .regex(/^[A-Z]{2}\d{9}[A-Z]{2}$/, 'Código de rastreio inválido (ex: NX000000000BR)'),
@@ -150,6 +159,9 @@ export const POST = withApiHandler<unknown>(async ({ req }) => {
 
     case 'tracking':
       return await testTracking(data, startTime);
+
+    case 'sync':
+      return await testSync(data, startTime);
 
     case 'prepostagem':
       return await testPrePostagem(data, startTime);
@@ -348,6 +360,56 @@ async function testDeadline(
         success: false,
         type: 'deadline',
         message: error instanceof Error ? error.message : 'Falha no cálculo de prazo',
+        latencyMs: latency,
+      },
+    };
+  }
+}
+
+/**
+ * Sincronização de rastreamento (atualiza shipment + timeline)
+ * Busca eventos dos Correios e sincroniza com o shipment no banco
+ */
+async function testSync(
+  data: Extract<TestInput, { type: 'sync' }>,
+  startTime: number
+) {
+  try {
+    const result = await syncCorreiosTracking(data.codigoRastreio);
+    const latency = Date.now() - startTime;
+
+    return {
+      data: {
+        success: result.success,
+        type: 'sync',
+        message: result.message,
+        result: {
+          codigo: result.trackingCode,
+          shipmentId: result.shipmentId,
+          eventsAdded: result.eventsAdded,
+          statusUpdated: result.statusUpdated,
+          previousStatus: result.previousStatus,
+          newStatus: result.newStatus,
+          events: result.events?.slice(0, 10).map((e) => ({
+            dataHora: e.dataHora,
+            descricao: e.descricao,
+            local: e.local,
+            cidade: e.cidade,
+            uf: e.uf,
+            isNew: e.isNew,
+          })),
+          totalEventos: result.events?.length || 0,
+        },
+        latencyMs: latency,
+      },
+    };
+  } catch (error) {
+    const latency = Date.now() - startTime;
+    return {
+      data: {
+        success: false,
+        type: 'sync',
+        message: error instanceof Error ? error.message : 'Falha na sincronização',
         latencyMs: latency,
       },
     };

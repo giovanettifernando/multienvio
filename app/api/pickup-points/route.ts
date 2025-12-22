@@ -6,6 +6,8 @@
  */
 
 import { withApiHandler } from '@/platform/api/handler';
+import { ApiError } from '@/platform/api/errors';
+import { getUserFromRequest } from '@/modules/auth/application/session';
 import {
   listPickupPoints,
   type PickupPoint,
@@ -14,6 +16,16 @@ import {
 type PickupPointsListResponse = PickupPoint[];
 
 export const GET = withApiHandler<PickupPointsListResponse>(async (context) => {
+  // SECURITY F-08: Verificar autenticação (defesa em profundidade)
+  const session = await getUserFromRequest(context.req);
+  if (!session) {
+    throw new ApiError({
+      code: 'UNAUTHORIZED',
+      message: 'Autenticação necessária',
+      status: 401,
+    });
+  }
+
   const { searchParams } = new URL(context.req.url);
   const cidade = searchParams.get('cidade') ?? undefined;
   const uf = searchParams.get('uf') ?? undefined;
