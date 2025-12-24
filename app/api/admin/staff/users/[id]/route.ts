@@ -1,6 +1,6 @@
 import { withApiHandler } from '@/platform/api/handler';
 import { ApiError } from '@/platform/api/errors';
-import { getAdminSessionFromRequest } from '@/modules/auth/application/admin-session';
+import { requireAdminSession } from '@/platform/auth/require-session';
 import { z } from 'zod';
 import { prisma } from '@/platform/db/db';
 import { AdminPermission, StaffStatus } from '@prisma/client';
@@ -75,14 +75,7 @@ function toApiUser(user: {
 export const GET = withApiHandler<StaffUserResponse, { id: string }>(async (context) => {
   const { req, params } = context;
 
-  const session = await getAdminSessionFromRequest(req);
-  if (!session) {
-    throw new ApiError({ code: 'unauthorized', message: 'Não autenticado', status: 401 });
-  }
-
-  if (!session.permissions.includes(AdminPermission.USUARIOS)) {
-    throw new ApiError({ code: 'forbidden', message: 'Permissão negada', status: 403 });
-  }
+  const session = await requireAdminSession(req, AdminPermission.USUARIOS);
 
   const { id } = await params;
   const user = await prisma.staffUser.findUnique({
@@ -112,14 +105,7 @@ export const GET = withApiHandler<StaffUserResponse, { id: string }>(async (cont
 export const PUT = withApiHandler<StaffUserResponse, { id: string }>(async (context) => {
   const { req, params } = context;
 
-  const session = await getAdminSessionFromRequest(req);
-  if (!session) {
-    throw new ApiError({ code: 'unauthorized', message: 'Não autenticado', status: 401 });
-  }
-
-  if (!session.permissions.includes(AdminPermission.USUARIOS)) {
-    throw new ApiError({ code: 'forbidden', message: 'Permissão negada', status: 403 });
-  }
+  const session = await requireAdminSession(req, AdminPermission.USUARIOS);
 
   const { id } = await params;
   const body = await req.json();
@@ -186,14 +172,7 @@ export const PUT = withApiHandler<StaffUserResponse, { id: string }>(async (cont
 export const DELETE = withApiHandler<StaffUserDeleteResponse, { id: string }>(async (context) => {
   const { req, params } = context;
 
-  const session = await getAdminSessionFromRequest(req);
-  if (!session) {
-    throw new ApiError({ code: 'unauthorized', message: 'Não autenticado', status: 401 });
-  }
-
-  if (!session.permissions.includes(AdminPermission.USUARIOS)) {
-    throw new ApiError({ code: 'forbidden', message: 'Permissão negada', status: 403 });
-  }
+  const session = await requireAdminSession(req, AdminPermission.USUARIOS);
 
   const { id } = await params;
 

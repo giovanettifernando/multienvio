@@ -7,8 +7,9 @@
  */
 
 import { z } from 'zod';
+import { requireAdminSession } from '@/platform/auth/require-session';
 import { prisma } from '@/platform/db/db';
-import { requireAdminUser } from '@/modules/auth/application/admin-helpers';
+
 import { AdminPermission, Prisma } from '@prisma/client';
 import { encrypt, decrypt } from '@/platform/integrations/shared/encryption.service';
 import { invalidateCorreiosConfigCache, clearTokenCache } from '@/platform/integrations/correios';
@@ -123,14 +124,8 @@ function processCredentials(
  *   - reveal=true: Retorna valores descriptografados
  */
 export const GET = withApiHandler(async ({ req }) => {
-  const authResult = await requireAdminUser(req, AdminPermission.INTEGRACOES);
-  if (authResult instanceof Response) {
-    throw new ApiError({
-      code: 'UNAUTHORIZED',
-      message: 'Não autorizado',
-      status: 401,
-    });
-  }
+  const session = await requireAdminSession(req, AdminPermission.INTEGRACOES);
+  
 
   const url = new URL(req.url);
   const shouldReveal = url.searchParams.get('reveal') === 'true';
@@ -204,14 +199,8 @@ export const GET = withApiHandler(async ({ req }) => {
  * Suporta credenciais separadas para cada ambiente
  */
 export const POST = withApiHandler(async ({ req }) => {
-  const authResult = await requireAdminUser(req, AdminPermission.INTEGRACOES);
-  if (authResult instanceof Response) {
-    throw new ApiError({
-      code: 'UNAUTHORIZED',
-      message: 'Não autorizado',
-      status: 401,
-    });
-  }
+  const session = await requireAdminSession(req, AdminPermission.INTEGRACOES);
+  
 
   const body = await req.json();
   const parsed = correiosConfigSchema.safeParse(body);

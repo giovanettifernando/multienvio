@@ -6,16 +6,6 @@ datasource db {
   provider = "postgresql"
 }
 
-model Role {
-  id        String   @id @default(uuid())
-  name      String   @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  users     User[]
-
-  @@map("roles")
-}
-
 model User {
   id                       String                    @id @default(uuid())
   name                     String
@@ -23,7 +13,6 @@ model User {
   passwordHash             String?
   phone                    String?
   status                   String                    @default("pending")
-  roleId                   String?
   lastLoginAt              DateTime?
   createdAt                DateTime                  @default(now())
   updatedAt                DateTime                  @updatedAt
@@ -54,7 +43,6 @@ model User {
   securityEvents           UserSecurityEvent[]
   packagingTemplates       PackagingTemplate[]
   recurringItems           RecurringItem[]
-  role                     Role?                     @relation(fields: [roleId], references: [id])
   wallet                   Wallet?
   pickupRequests           PickupRequest[]
   trackingCodeReservations TrackingCodeReservation[]
@@ -301,7 +289,6 @@ model Package {
 
 model PickupRequest {
   id                   String     @id @default(cuid())
-  companyId            String? // ID da empresa (se aplicável)
   userId               String // Usuário que solicitou a coleta
   collectorId          String? // ID do coletor atribuído
   shipmentId           String     @unique // Garantir 1 coleta por shipment
@@ -441,7 +428,7 @@ model Wallet {
   transactions   WalletTransaction[]
   user           User                @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([userId])
+  // Removido @@index([userId]) - redundante com @unique em userId
   @@map("wallets")
 }
 
@@ -825,6 +812,8 @@ model PaymentWebhook {
   updatedAt    DateTime       @updatedAt
   gateway      PaymentGateway @relation(fields: [gatewayId], references: [id], onDelete: Cascade)
 
+  // SECURITY: Garantir idempotência de webhooks por gateway + externalId
+  @@unique([gatewayId, externalId])
   @@index([gatewayId, status, nextRetryAt])
   @@index([externalId])
   @@index([createdAt])

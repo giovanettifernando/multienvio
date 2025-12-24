@@ -2,13 +2,15 @@ import { NextRequest } from 'next/server';
 import { withApiHandler } from '@/platform/api/handler';
 import { ApiError } from '@/platform/api/errors';
 import { z } from 'zod';
-import { getUserSessionFromRequest } from '@/modules/auth/application/user-session';
+import { requireUser } from '@/platform/auth/require-session';
 import {
   processCheckout,
   validateDocumentHasItems,
   type CheckoutInput,
 } from '@/modules/cart/application';
 import { enforceRateLimitByIP, RATE_LIMITS } from '@/platform/cache/rate-limit-redis';
+import { withIdempotency } from '@/platform/api/idempotency';
+import { logger } from '@/platform/logging/logger';
 
 /**
  * Tipos de resposta do checkout - Union discriminada por 'source'
@@ -140,10 +142,7 @@ export const POST = withApiHandler<CheckoutResponse>(async ({ req }) => {
   await enforceRateLimitByIP(req as NextRequest, 'checkout', RATE_LIMITS.CHECKOUT);
 
   // Autenticar usuário
-  const session = await getUserSessionFromRequest(req);
-  if (!session) {
-    throw new ApiError({ code: 'UNAUTHORIZED', message: 'Não autenticado', status: 401 });
-  }
+  const session = await requireUser(req);
 
   // Parse e validar payload
   const body = await req.json();
@@ -204,8 +203,24 @@ export const POST = withApiHandler<CheckoutResponse>(async ({ req }) => {
     solicitarColeta: data.solicitarColeta,
   };
 
-  // Processar checkout via service
-  const result = await processCheckout(checkoutInput);
+  // SECURITY: Idempotência para prevenir checkouts duplicados
+  // O cliente deve enviar um header X-Idempotency-Key único por checkout
+  const idempotencyKey = req.headers.get('x-idempotency-key');
+
+  // Processar checkout via service com idempotência
+  const { result, fromCache } = await withIdempotency(
+    idempotencyKey,
+    () => processCheckout(checkoutInput),
+    5 * 60 * 1000 // 5 minutos de cache
+  );
+
+  if (fromCache) {
+    logger.info({
+      event: 'checkout_idempotency_hit',
+      idempotencyKey,
+      shipmentId: result.shipmentId,
+    }, 'Checkout returned from idempotency cache');
+  }
 
   // Verificar se há integração de pagamento configurada
   const paymentGatewayEnabled = process.env.PAYMENT_GATEWAY_ENABLED === 'true';

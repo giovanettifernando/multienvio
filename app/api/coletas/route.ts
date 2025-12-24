@@ -1,6 +1,6 @@
 import { withApiHandler } from '@/platform/api/handler';
 import { ApiError } from '@/platform/api/errors';
-import { getUserFromRequest } from '@/modules/auth/application/session';
+import { requireUserSession } from '@/platform/auth/require-session';
 import { createPickupRequestSchema, listPickupsQuerySchema } from '@/shared/validation/pickup';
 import { logger } from '@/platform/logging/logger';
 import {
@@ -14,10 +14,7 @@ import type { PickupRequestsResponse } from '@/shared/types/pickup';
  * Lista pickup requests do usuário com filtros
  */
 export const GET = withApiHandler<PickupRequestsResponse>(async (context) => {
-  const session = await getUserFromRequest(context.req);
-  if (!session?.userId) {
-    throw new ApiError({ code: 'unauthorized', message: 'Não autenticado', status: 401 });
-  }
+  const session = await requireUserSession(context.req);
 
   const { searchParams } = new URL(context.req.url);
 
@@ -60,10 +57,7 @@ interface CreatePickupResponse {
  * Cria uma nova pickup request
  */
 export const POST = withApiHandler<CreatePickupResponse>(async (context) => {
-  const session = await getUserFromRequest(context.req);
-  if (!session?.userId) {
-    throw new ApiError({ code: 'unauthorized', message: 'Não autenticado', status: 401 });
-  }
+  const session = await requireUserSession(context.req);
 
   const body = await context.req.json();
 

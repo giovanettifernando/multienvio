@@ -24,6 +24,7 @@ import { correiosFetch, getCorreiosConfigAsync, validateCorreiosConfig } from '.
 import { CORREIOS_ENDPOINTS } from './constants';
 import { cepCache } from '@/platform/cache/cache';
 import { logger } from '@/platform/logging/logger';
+import { viaCepCircuitBreaker, CircuitBreakerError } from '../shared/circuit-breaker';
 
 /**
  * Resposta da API de CEP dos Correios
@@ -168,36 +169,51 @@ export async function consultarCepBrasilApi(cep: string): Promise<CepResult | nu
   }
 
   try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 8000);
+    // SECURITY: Circuit breaker protege contra chamadas a serviço indisponível
+    return await viaCepCircuitBreaker.execute(async () => {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
 
-    const response = await fetch(
-      `https://brasilapi.com.br/api/cep/v2/${normalized}`,
-      {
-        signal: controller.signal,
-        headers: { Accept: 'application/json' },
+      const response = await fetch(
+        `https://brasilapi.com.br/api/cep/v2/${normalized}`,
+        {
+          signal: controller.signal,
+          headers: { Accept: 'application/json' },
+        }
+      );
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        // Retornar null para 404/outros erros (não é falha do serviço)
+        if (response.status === 404) {
+          return null;
+        }
+        // 5xx é falha do serviço - throw para contar no circuit breaker
+        if (response.status >= 500) {
+          throw new Error(`BrasilAPI retornou ${response.status}`);
+        }
+        return null;
       }
-    );
 
-    clearTimeout(timeoutId);
+      const data = await response.json();
 
-    if (!response.ok) {
-      return null;
+      return {
+        cep: formatCep(data.cep),
+        logradouro: data.street || '',
+        complemento: '',
+        bairro: data.neighborhood || '',
+        cidade: data.city || '',
+        uf: data.state || '',
+        source: 'brasilapi' as const,
+      };
+    });
+  } catch (error) {
+    if (error instanceof CircuitBreakerError) {
+      logger.warn({ event: 'cep_brasilapi_circuit_open' }, 'BrasilAPI circuit breaker open');
+    } else {
+      console.warn('[consultarCepBrasilApi] Falha na consulta:', error);
     }
-
-    const data = await response.json();
-
-    return {
-      cep: formatCep(data.cep),
-      logradouro: data.street || '',
-      complemento: '',
-      bairro: data.neighborhood || '',
-      cidade: data.city || '',
-      uf: data.state || '',
-      source: 'brasilapi',
-    };
-  } catch {
-    console.warn('[consultarCepBrasilApi] Falha na consulta');
     return null;
   }
 }

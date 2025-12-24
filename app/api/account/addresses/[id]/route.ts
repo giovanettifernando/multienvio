@@ -5,7 +5,7 @@
 
 import { withApiHandler } from '@/platform/api/handler';
 import { ApiError } from '@/platform/api/errors';
-import { getUserFromRequest } from '@/modules/auth/application/session';
+import { requireUserSession } from '@/platform/auth/require-session';
 import { prisma } from '@/platform/db/db';
 import { AddressSchema } from '@/shared/validation/address';
 import { logger } from '@/platform/logging/logger';
@@ -41,10 +41,7 @@ type DeleteAddressResponse = {
  * Atualiza um endereço específico
  */
 export const PUT = withApiHandler<UpdateAddressResponse>(async (context) => {
-  const session = await getUserFromRequest(context.req);
-  if (!session?.userId) {
-    throw new ApiError({ code: 'unauthorized', message: 'Não autenticado', status: 401 });
-  }
+  const session = await requireUserSession(context.req);
 
   const id = context.params.id;
   const body = await context.req.json();
@@ -134,10 +131,7 @@ export const PUT = withApiHandler<UpdateAddressResponse>(async (context) => {
  * Deleta um endereço específico
  */
 export const DELETE = withApiHandler<DeleteAddressResponse>(async (context) => {
-  const session = await getUserFromRequest(context.req);
-  if (!session?.userId) {
-    throw new ApiError({ code: 'unauthorized', message: 'Não autenticado', status: 401 });
-  }
+  const session = await requireUserSession(context.req);
 
   const id = context.params.id;
 

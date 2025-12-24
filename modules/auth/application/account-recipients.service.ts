@@ -64,15 +64,42 @@ export type RecipientListResult = {
 const DEFAULT_PAGE_SIZE = 20;
 const MAX_PAGE_SIZE = 50;
 
+/**
+ * Contexto opcional para operações executadas por admin
+ * Quando presente, os logs incluem adminId e o evento é prefixado com "admin."
+ */
+export type AdminContext = {
+  adminId: string;
+  adminEmail: string;
+};
+
 type ServiceDeps = {
   prisma: PrismaClientLike;
   logger?: RequestLogger;
+  adminContext?: AdminContext;
 };
 
 function getDeps(overrides?: Partial<ServiceDeps>): ServiceDeps {
   return {
     prisma: overrides?.prisma ?? (prisma as unknown as PrismaClientLike),
     logger: overrides?.logger,
+    adminContext: overrides?.adminContext,
+  };
+}
+
+function getAuditEventName(baseEvent: string, adminContext?: AdminContext): string {
+  return adminContext ? `admin.${baseEvent}` : baseEvent;
+}
+
+function getAuditPayload(
+  basePayload: Record<string, unknown>,
+  adminContext?: AdminContext
+): Record<string, unknown> {
+  if (!adminContext) return basePayload;
+  return {
+    ...basePayload,
+    adminId: adminContext.adminId,
+    adminEmail: adminContext.adminEmail,
   };
 }
 
@@ -226,7 +253,7 @@ export async function createRecipient(
   input: NormalizedRecipientCreateInput,
   overrides?: Partial<ServiceDeps>,
 ): Promise<AccountRecipientDto> {
-  const { prisma: db, logger } = getDeps(overrides);
+  const { prisma: db, logger, adminContext } = getDeps(overrides);
 
   return db.$transaction(async (tx) => {
     await ensureNotDuplicate(tx, userId, input);
@@ -258,11 +285,10 @@ export async function createRecipient(
       },
     });
 
-    logger?.audit?.("account.recipient.created", {
-      userId,
-      recipientId: recipient.id,
-      isDefault: recipient.isDefault,
-    });
+    logger?.audit?.(
+      getAuditEventName("account.recipient.created", adminContext),
+      getAuditPayload({ userId, recipientId: recipient.id, isDefault: recipient.isDefault }, adminContext)
+    );
 
     return mapToDto(recipient);
   });
@@ -294,7 +320,7 @@ export async function updateRecipient(
   input: NormalizedRecipientUpdateInput,
   overrides?: Partial<ServiceDeps>,
 ): Promise<AccountRecipientDto> {
-  const { prisma: db, logger } = getDeps(overrides);
+  const { prisma: db, logger, adminContext } = getDeps(overrides);
 
   return db.$transaction(async (tx) => {
     const current = await tx.recipient.findUnique({ where: { id: recipientId } });
@@ -346,11 +372,10 @@ export async function updateRecipient(
       await promoteLatestRecipient(tx, userId);
     }
 
-    logger?.audit?.("account.recipient.updated", {
-      userId,
-      recipientId,
-      isDefault: updated.isDefault,
-    });
+    logger?.audit?.(
+      getAuditEventName("account.recipient.updated", adminContext),
+      getAuditPayload({ userId, recipientId, isDefault: updated.isDefault }, adminContext)
+    );
 
     return mapToDto(updated);
   });
@@ -361,7 +386,7 @@ export async function deleteRecipient(
   recipientId: string,
   overrides?: Partial<ServiceDeps>,
 ): Promise<void> {
-  const { prisma: db, logger } = getDeps(overrides);
+  const { prisma: db, logger, adminContext } = getDeps(overrides);
 
   await db.$transaction(async (tx) => {
     const current = await tx.recipient.findUnique({ where: { id: recipientId } });
@@ -379,10 +404,10 @@ export async function deleteRecipient(
       await promoteLatestRecipient(tx, userId);
     }
 
-    logger?.audit?.("account.recipient.deleted", {
-      userId,
-      recipientId,
-    });
+    logger?.audit?.(
+      getAuditEventName("account.recipient.deleted", adminContext),
+      getAuditPayload({ userId, recipientId }, adminContext)
+    );
   });
 }
 
@@ -391,7 +416,7 @@ export async function makeRecipientDefault(
   recipientId: string,
   overrides?: Partial<ServiceDeps>,
 ): Promise<AccountRecipientDto> {
-  const { prisma: db, logger } = getDeps(overrides);
+  const { prisma: db, logger, adminContext } = getDeps(overrides);
 
   return db.$transaction(async (tx) => {
     const current = await tx.recipient.findUnique({ where: { id: recipientId } });
@@ -409,10 +434,10 @@ export async function makeRecipientDefault(
       data: { isDefault: true },
     });
 
-    logger?.audit?.("account.recipient.set_default", {
-      userId,
-      recipientId,
-    });
+    logger?.audit?.(
+      getAuditEventName("account.recipient.set_default", adminContext),
+      getAuditPayload({ userId, recipientId }, adminContext)
+    );
 
     return mapToDto(updated);
   });

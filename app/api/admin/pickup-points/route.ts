@@ -3,8 +3,8 @@ import { ApiError } from '@/platform/api/errors';
 import { z } from 'zod';
 import bcrypt from 'bcrypt';
 import { prisma } from '@/platform/db/db';
-import { getAdminSessionFromRequest } from '@/modules/auth/application/admin-session';
-import { AdminPermission, PickupPointStatus, Prisma } from '@prisma/client';
+import { requireAdminSession } from '@/platform/auth/require-session';
+import { PickupPointStatus, Prisma } from '@prisma/client';
 import { Decimal } from '@prisma/client/runtime/client';
 
 type PickupPointApi = {
@@ -141,14 +141,7 @@ function toApiPickupPoint(point: {
 export const GET = withApiHandler<PickupPointsListResponse>(async (context) => {
   const { req, logger } = context;
 
-  const session = await getAdminSessionFromRequest(req);
-  if (!session) {
-    throw new ApiError({ code: 'unauthorized', message: 'Não autenticado', status: 401 });
-  }
-
-  if (!session.permissions.includes(AdminPermission.PONTOS_COLETA) && !session.isSuperAdmin) {
-    throw new ApiError({ code: 'forbidden', message: 'Acesso negado', status: 403 });
-  }
+  const session = await requireAdminSession(req);
 
   const { searchParams } = new URL(req.url);
   const status = searchParams.get('status');
@@ -224,14 +217,7 @@ export const GET = withApiHandler<PickupPointsListResponse>(async (context) => {
 export const POST = withApiHandler<PickupPointCreateResponse>(async (context) => {
   const { req, logger } = context;
 
-  const session = await getAdminSessionFromRequest(req);
-  if (!session) {
-    throw new ApiError({ code: 'unauthorized', message: 'Não autenticado', status: 401 });
-  }
-
-  if (!session.permissions.includes(AdminPermission.PONTOS_COLETA) && !session.isSuperAdmin) {
-    throw new ApiError({ code: 'forbidden', message: 'Acesso negado', status: 403 });
-  }
+  const session = await requireAdminSession(req);
 
   const body = await req.json();
   logger.debug('admin_pickup_points_create_body', { body });

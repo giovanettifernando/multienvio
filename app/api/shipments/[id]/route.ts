@@ -1,6 +1,6 @@
 import { withApiHandler } from '@/platform/api/handler';
 import { ApiError } from '@/platform/api/errors';
-import { getUserFromRequest } from '@/modules/auth/application/session';
+import { requireUserSession } from '@/platform/auth/require-session';
 import { prisma } from '@/platform/db/db';
 
 interface ShipmentVolume {
@@ -129,10 +129,7 @@ interface ShipmentDeleteResponse {
  * Retorna detalhes completos de um shipment
  */
 export const GET = withApiHandler<ShipmentDetail, { id: string }>(async (context) => {
-  const session = await getUserFromRequest(context.req);
-  if (!session?.userId) {
-    throw new ApiError({ code: 'unauthorized', message: 'Não autorizado', status: 401 });
-  }
+  const session = await requireUserSession(context.req);
 
   const shipmentId = context.params.id;
 
@@ -302,10 +299,7 @@ export const GET = withApiHandler<ShipmentDetail, { id: string }>(async (context
  * Deleta um shipment (apenas se ainda não foi pago/processado)
  */
 export const DELETE = withApiHandler<ShipmentDeleteResponse, { id: string }>(async (context) => {
-  const session = await getUserFromRequest(context.req);
-  if (!session?.userId) {
-    throw new ApiError({ code: 'unauthorized', message: 'Não autorizado', status: 401 });
-  }
+  const session = await requireUserSession(context.req);
 
   const shipmentId = context.params.id;
 

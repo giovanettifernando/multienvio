@@ -1,6 +1,6 @@
 import { withApiHandler } from '@/platform/api/handler';
 import { ApiError } from '@/platform/api/errors';
-import { getAdminSessionFromRequest } from '@/modules/auth/application/admin-session';
+import { requireAdminSession } from '@/platform/auth/require-session';
 import { prisma } from '@/platform/db/db';
 import { AdminPermission, StaffStatus } from '@prisma/client';
 
@@ -23,16 +23,8 @@ type AdminMeResponse = {
 export const GET = withApiHandler<AdminMeResponse>(async (context) => {
   const { req, logger } = context;
 
-  // Get admin session from cookie
-  const session = await getAdminSessionFromRequest(req);
-
-  if (!session) {
-    throw new ApiError({
-      code: 'unauthorized',
-      message: 'Não autenticado',
-      status: 401,
-    });
-  }
+  // Get admin session from cookie - no permission check needed for /me endpoint
+  const session = await requireAdminSession(req);
 
   // Find staff user in database
   const staffUser = await prisma.staffUser.findUnique({

@@ -1,6 +1,6 @@
 import { withApiHandler } from '@/platform/api/handler';
 import { ApiError } from '@/platform/api/errors';
-import { getAdminSessionFromRequest } from '@/modules/auth/application/admin-session';
+import { requireAdminSession } from '@/platform/auth/require-session';
 import { AdminPermission } from '@prisma/client';
 import { prisma } from '@/platform/db/db';
 import { z } from 'zod';
@@ -12,7 +12,6 @@ interface PickupRequestCollector {
 
 interface PickupRequestData {
   id: string;
-  companyId: string | null;
   userId: string;
   shipmentId: string;
   collectorId: string | null;
@@ -58,14 +57,7 @@ const PickupRequestSchema = z.object({
 export const POST = withApiHandler<PickupRequestResponse, { id: string }>(async (context) => {
   const { req, params } = context;
 
-  const session = await getAdminSessionFromRequest(req);
-  if (!session) {
-    throw new ApiError({ code: 'unauthorized', message: 'Não autenticado', status: 401 });
-  }
-
-  if (!session.permissions.includes(AdminPermission.OPERACOES)) {
-    throw new ApiError({ code: 'forbidden', message: 'Permissão negada', status: 403 });
-  }
+  await requireAdminSession(req, AdminPermission.OPERACOES);
 
   const { id: shipmentId } = await params;
   const body = await req.json();
@@ -188,14 +180,7 @@ export const POST = withApiHandler<PickupRequestResponse, { id: string }>(async 
 export const DELETE = withApiHandler<DeletePickupRequestResponse, { id: string }>(async (context) => {
   const { req, params } = context;
 
-  const session = await getAdminSessionFromRequest(req);
-  if (!session) {
-    throw new ApiError({ code: 'unauthorized', message: 'Não autenticado', status: 401 });
-  }
-
-  if (!session.permissions.includes(AdminPermission.OPERACOES)) {
-    throw new ApiError({ code: 'forbidden', message: 'Permissão negada', status: 403 });
-  }
+  await requireAdminSession(req, AdminPermission.OPERACOES);
 
   const { id: shipmentId } = await params;
 

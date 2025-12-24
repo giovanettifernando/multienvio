@@ -4,8 +4,8 @@
  * Testa se o webhook do Mercado Pago está configurado corretamente
  */
 
-import { requireAdminUser } from '@/modules/auth/application/admin-helpers';
 import { AdminPermission } from '@prisma/client';
+import { requireAdminSession } from '@/platform/auth/require-session';
 import { isMercadoPagoConfigured } from '@/platform/integrations/mercadopago';
 import { withApiHandler } from '@/platform/api/handler';
 import { ApiError } from '@/platform/api/errors';
@@ -14,14 +14,8 @@ import { ApiError } from '@/platform/api/errors';
  * POST - Testa webhook do Mercado Pago
  */
 export const POST = withApiHandler(async ({ req }) => {
-  const authResult = await requireAdminUser(req, AdminPermission.INTEGRACOES);
-  if (authResult instanceof Response) {
-    throw new ApiError({
-      code: 'UNAUTHORIZED',
-      message: 'Não autorizado',
-      status: 401,
-    });
-  }
+  const session = await requireAdminSession(req, AdminPermission.INTEGRACOES);
+  
 
   // Verificar se está configurado
   const isConfigured = await isMercadoPagoConfigured();

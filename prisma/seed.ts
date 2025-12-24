@@ -12,33 +12,18 @@ async function main() {
   await prisma.shipment.deleteMany();
   await prisma.address.deleteMany();
   await prisma.user.deleteMany();
-  await prisma.role.deleteMany();
+  // Role table está @deprecated - não limpar para evitar problemas em produção
 
   // Limpar staff tables
   await prisma.staffAuditLog.deleteMany();
   await prisma.staffUser.deleteMany();
   await prisma.staffRole.deleteMany();
 
-  // Criar roles
-  console.log('👥 Criando roles...');
-  const adminRole = await prisma.role.create({
-    data: {
-      name: 'admin',
-    },
-  });
-
-  const userRole = await prisma.role.create({
-    data: {
-      name: 'user',
-    },
-  });
-
-  console.log(`✅ Roles criadas: ${adminRole.name}, ${userRole.name}`);
-
   // Hash da senha do admin
   const adminPasswordHash = await bcrypt.hash('admin123', 10);
 
   // Criar usuário admin (já verificado)
+  // Nota: roleId está @deprecated - não associar roles em User
   console.log('🔐 Criando usuário administrador...');
   const adminUser = await prisma.user.create({
     data: {
@@ -50,7 +35,6 @@ async function main() {
       emailVerified: true,
       emailVerifiedAt: new Date(),
       termsAcceptedAt: new Date(),
-      roleId: adminRole.id,
       lastLoginAt: null,
     },
   });
@@ -71,7 +55,6 @@ async function main() {
       emailVerified: true,
       emailVerifiedAt: new Date(),
       termsAcceptedAt: new Date(),
-      roleId: userRole.id,
       lastLoginAt: null,
     },
   });

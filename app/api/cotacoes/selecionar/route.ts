@@ -1,6 +1,6 @@
 import { withApiHandler } from '@/platform/api/handler';
 import { ApiError } from '@/platform/api/errors';
-import { getUserFromRequest } from '@/modules/auth/application/session';
+import { requireUserSession } from '@/platform/auth/require-session';
 import { selectQuoteOption } from '@/modules/quotes/application/service';
 import {
   quoteSelectionSchema,
@@ -13,10 +13,7 @@ import type { QuoteSelectionResponse } from '@/shared/types/quote';
  * Selects a shipping option for a quote
  */
 export const POST = withApiHandler<QuoteSelectionResponse>(async (context) => {
-  const session = await getUserFromRequest(context.req);
-  if (!session?.userId) {
-    throw new ApiError({ code: 'unauthorized', message: 'Não autenticado', status: 401 });
-  }
+  const session = await requireUserSession(context.req);
 
   const body = (await context.req.json()) as unknown;
   const parsed = quoteSelectionSchema.safeParse(body);

@@ -15,7 +15,8 @@
 
 import { NextResponse } from 'next/server';
 import { withApiHandlerResponse } from '@/platform/api/handler';
-import { getUserFromRequest, removeAuthCookie, AUTH_COOKIE_NAME } from '@/modules/auth/application/session';
+import { requireUserSession } from '@/platform/auth/require-session';
+import { removeAuthCookie, AUTH_COOKIE_NAME } from '@/modules/auth/application/session';
 import { ApiError } from '@/platform/api/errors';
 import { enforceRateLimit } from '@/platform/cache/rate-limit-redis';
 import { changePasswordSchema } from '@/shared/validation/password-policy';
@@ -49,19 +50,7 @@ export const POST = withApiHandlerResponse(async (context) => {
 
   try {
     // 1. Autenticação
-    const currentUser = await getUserFromRequest(req);
-
-    if (!currentUser) {
-      return NextResponse.json(
-        {
-          ok: false,
-          code: 'unauthorized',
-          message: 'Não autenticado',
-        },
-        { status: 401 }
-      );
-    }
-
+    const currentUser = await requireUserSession(req);
     const userId = currentUser.userId;
 
     // 2. Rate limiting (por IP e por usuário)

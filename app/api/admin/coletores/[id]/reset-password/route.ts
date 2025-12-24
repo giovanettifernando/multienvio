@@ -6,8 +6,7 @@
 
 import { withApiHandler } from '@/platform/api/handler';
 import { ApiError } from '@/platform/api/errors';
-import { getAdminSessionFromRequest } from '@/modules/auth/application/admin-session';
-import { AdminPermission } from '@prisma/client';
+import { requireAdminSession } from '@/platform/auth/require-session';
 import { prisma } from '@/platform/db/db';
 import { SignJWT } from 'jose';
 import nodemailer from 'nodemailer';
@@ -30,14 +29,7 @@ interface PostResetPasswordResponse {
 export const POST = withApiHandler<PostResetPasswordResponse, { id: string }>(async (context) => {
   const { req, params, logger } = context;
 
-  const session = await getAdminSessionFromRequest(req);
-  if (!session) {
-    throw new ApiError({ code: 'unauthorized', message: 'Não autenticado', status: 401 });
-  }
-
-  if (!session.permissions.includes(AdminPermission.COLETORES)) {
-    throw new ApiError({ code: 'forbidden', message: 'Permissão negada', status: 403 });
-  }
+  const session = await requireAdminSession(req);
 
   const { id } = params;
 

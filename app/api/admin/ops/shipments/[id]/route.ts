@@ -1,9 +1,12 @@
 import { withApiHandler } from '@/platform/api/handler';
 import { ApiError } from '@/platform/api/errors';
-import { getAdminSessionFromRequest } from '@/modules/auth/application/admin-session';
+import { requireAdminSession } from '@/platform/auth/require-session';
 import { AdminPermission } from '@prisma/client';
 import { prisma } from '@/platform/db/db';
 import { z } from 'zod';
+import { ShipmentStatus } from '@/modules/shipments/application/shipment-status';
+import { isValidTransition } from '@/modules/shipments/application/status-migration';
+import { auditStatusChange } from '@/modules/shipments/application/shipment-audit';
 
 interface ShipmentDetailCollector {
   id: string;
@@ -12,7 +15,6 @@ interface ShipmentDetailCollector {
 
 interface ShipmentDetailPickupRequest {
   id: string;
-  companyId: string | null;
   userId: string;
   shipmentId: string;
   collectorId: string | null;
@@ -198,14 +200,7 @@ interface ShipmentUpdateResponse {
 export const GET = withApiHandler<ShipmentDetailResponse, { id: string }>(async (context) => {
   const { req, params } = context;
 
-  const session = await getAdminSessionFromRequest(req);
-  if (!session) {
-    throw new ApiError({ code: 'unauthorized', message: 'Não autenticado', status: 401 });
-  }
-
-  if (!session.permissions.includes(AdminPermission.OPERACOES)) {
-    throw new ApiError({ code: 'forbidden', message: 'Permissão negada', status: 403 });
-  }
+  await requireAdminSession(req, AdminPermission.OPERACOES);
 
   const { id } = await params;
 
@@ -330,14 +325,7 @@ const ShipmentUpdateSchema = z.object({
 export const PATCH = withApiHandler<ShipmentUpdateResponse, { id: string }>(async (context) => {
   const { req, params } = context;
 
-  const session = await getAdminSessionFromRequest(req);
-  if (!session) {
-    throw new ApiError({ code: 'unauthorized', message: 'Não autenticado', status: 401 });
-  }
-
-  if (!session.permissions.includes(AdminPermission.OPERACOES)) {
-    throw new ApiError({ code: 'forbidden', message: 'Permissão negada', status: 403 });
-  }
+  const session = await requireAdminSession(req, AdminPermission.OPERACOES);
 
   const { id } = await params;
   const body = await req.json();
@@ -352,12 +340,34 @@ export const PATCH = withApiHandler<ShipmentUpdateResponse, { id: string }>(asyn
     });
   }
 
+  // Buscar shipment atual para validações
+  const currentShipment = await prisma.shipment.findUnique({
+    where: { id },
+    select: { status: true, label: { select: { id: true } } },
+  });
+
+  if (!currentShipment) {
+    throw new ApiError({ code: 'not_found', message: 'Envio não encontrado', status: 404 });
+  }
+
   // Extract allowed fields for update
   const updateData: Record<string, unknown> = {};
   const validatedData = parsed.data;
 
-  // Status and carrier fields
-  if (validatedData.status !== undefined) updateData.status = validatedData.status;
+  // SECURITY: Validar transição de status usando a matriz
+  if (validatedData.status !== undefined) {
+    const fromStatus = currentShipment.status as ShipmentStatus;
+    const toStatus = validatedData.status as ShipmentStatus;
+
+    if (!isValidTransition(fromStatus, toStatus)) {
+      throw new ApiError({
+        code: 'invalid_transition',
+        message: `Transição de status não permitida: ${fromStatus} → ${toStatus}`,
+        status: 400,
+      });
+    }
+    updateData.status = validatedData.status;
+  }
   if (validatedData.carrier !== undefined) updateData.carrier = validatedData.carrier;
   if (validatedData.service !== undefined) updateData.service = validatedData.service;
   if (validatedData.carrierTrackingCode !== undefined)
@@ -370,14 +380,34 @@ export const PATCH = withApiHandler<ShipmentUpdateResponse, { id: string }>(asyn
   if (validatedData.pickupFee !== undefined) updateData.pickupFee = validatedData.pickupFee;
   if (validatedData.estimatedDays !== undefined) updateData.estimatedDays = validatedData.estimatedDays;
 
-  // Recipient fields
+  // SECURITY: Verifica se há alteração de destinatário/endereço após etiqueta gerada
+  const hasAddressOrRecipientChanges =
+    validatedData.recipientName !== undefined ||
+    validatedData.recipientPhone !== undefined ||
+    validatedData.recipientEmail !== undefined ||
+    validatedData.recipientDocument !== undefined ||
+    validatedData.destinationAddress !== undefined ||
+    validatedData.destinationNeighborhood !== undefined ||
+    validatedData.destinationCity !== undefined ||
+    validatedData.destinationState !== undefined ||
+    validatedData.destinationCep !== undefined;
+
+  if (hasAddressOrRecipientChanges && currentShipment.label) {
+    throw new ApiError({
+      code: 'cannot_edit',
+      message: 'Não é possível alterar destinatário ou endereço após a etiqueta ser gerada',
+      status: 400,
+    });
+  }
+
+  // Recipient fields (somente se etiqueta não foi gerada)
   if (validatedData.recipientName !== undefined) updateData.recipientName = validatedData.recipientName;
   if (validatedData.recipientPhone !== undefined) updateData.recipientPhone = validatedData.recipientPhone;
   if (validatedData.recipientEmail !== undefined) updateData.recipientEmail = validatedData.recipientEmail;
   if (validatedData.recipientDocument !== undefined)
     updateData.recipientDocument = validatedData.recipientDocument;
 
-  // Destination address fields
+  // Destination address fields (somente se etiqueta não foi gerada)
   if (validatedData.destinationAddress !== undefined)
     updateData.destinationAddress = validatedData.destinationAddress;
   if (validatedData.destinationNeighborhood !== undefined)
@@ -394,6 +424,24 @@ export const PATCH = withApiHandler<ShipmentUpdateResponse, { id: string }>(asyn
     where: { id },
     data: updateData,
   });
+
+  // SECURITY: Registrar auditoria para mudanças de status
+  if (validatedData.status !== undefined) {
+    const fromStatus = currentShipment.status as ShipmentStatus;
+    const toStatus = validatedData.status as ShipmentStatus;
+
+    await auditStatusChange({
+      shipmentId: id,
+      fromStatus,
+      toStatus,
+      source: 'admin',
+      actorId: session.staffId,
+      actorEmail: session.email,
+      metadata: {
+        updatedFields: Object.keys(updateData),
+      },
+    });
+  }
 
   return {
     data: {

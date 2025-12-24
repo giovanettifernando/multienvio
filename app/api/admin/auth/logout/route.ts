@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireAdminSession } from '@/platform/auth/require-session';
+import { AdminPermission } from '@prisma/client';
 import { withApiHandlerResponse } from '@/platform/api/handler';
 import { getAdminSessionFromRequest, createAdminCookieRemovalHeader } from '@/modules/auth/application/admin-session';
 import { staffSessionCache } from '@/platform/cache/cache';

@@ -2,10 +2,14 @@ import { NextRequest } from "next/server";
 import { Prisma } from "@prisma/client";
 import { ApiError } from "@/platform/api/errors";
 import { enforceRateLimit } from "@/platform/cache/rate-limit-redis";
-import { getUserFromRequest } from "@/modules/auth/application/session";
+import { requireUserSession } from "@/platform/auth/require-session";
+import { parsePositiveInteger } from "@/platform/api/params";
 import type { RequestContext } from "@/platform/api/types";
 import { RecipientValidationError } from '@/shared/validation/recipient';
 import { isDatabaseUnavailableError, schedulePrismaReconnect } from "@/platform/db/db";
+
+// Re-export para compatibilidade
+export { parsePositiveInteger };
 
 const WRITE_LIMIT = 10;
 const WRITE_WINDOW_MS = 60_000;
@@ -19,14 +23,7 @@ export function getClientIp(req: NextRequest): string {
 }
 
 export async function requireUserId(req: NextRequest) {
-  const session = await getUserFromRequest(req);
-  if (!session?.userId) {
-    throw new ApiError({
-      code: "unauthorized",
-      message: "Autenticação necessária.",
-      status: 401,
-    });
-  }
+  const session = await requireUserSession(req);
   return session.userId;
 }
 
@@ -37,15 +34,6 @@ export async function enforceRecipientWriteLimit(context: RequestContext) {
     limit: WRITE_LIMIT,
     windowMs: WRITE_WINDOW_MS,
   });
-}
-
-export function parsePositiveInteger(value: string | null, fallback: number) {
-  if (!value) return fallback;
-  const parsed = Number.parseInt(value, 10);
-  if (Number.isNaN(parsed) || parsed <= 0) {
-    return fallback;
-  }
-  return parsed;
 }
 
 function makeSchemaOutOfDateError(): never {

@@ -5,7 +5,7 @@
  * Roda em background - retorna imediatamente e processa em paralelo.
  */
 
-import { getUserFromRequest } from '@/modules/auth/application/session';
+import { requireUserSession } from '@/platform/auth/require-session';
 import { withApiHandler } from '@/platform/api/handler';
 import { ApiError } from '@/platform/api/errors';
 import { prisma } from '@/platform/db/db';
@@ -45,14 +45,7 @@ interface SyncResult {
  * POST - Inicia sincronização em background
  */
 export const POST = withApiHandler<SyncResult>(async ({ req }) => {
-  const session = await getUserFromRequest(req);
-  if (!session?.userId) {
-    throw new ApiError({
-      code: 'UNAUTHORIZED',
-      message: 'Não autorizado',
-      status: 401,
-    });
-  }
+  const session = await requireUserSession(req);
 
   const userId = session.userId;
 

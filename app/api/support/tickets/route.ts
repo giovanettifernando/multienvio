@@ -1,5 +1,6 @@
 import { withApiHandler } from '@/platform/api/handler';
 import { ApiError } from '@/platform/api/errors';
+import { parseArrayParam, parsePositiveInteger } from '@/platform/api/params';
 import { getUserFromRequest } from '@/modules/auth/application/session';
 import { createTicketForUser, listTicketsForUser } from '@/modules/support/application/service';
 import {
@@ -16,20 +17,6 @@ interface ListTicketsResponse {
   total: number;
 }
 
-
-function parseArrayParam(params: URLSearchParams, key: string): string[] {
-  const values = params.getAll(key);
-  if (!values.length) {
-    const single = params.get(key);
-    if (!single) return [];
-    values.push(single);
-  }
-  return values
-    .flatMap((value) => value.split(','))
-    .map((value) => value.trim())
-    .filter(Boolean);
-}
-
 export const GET = withApiHandler<ListTicketsResponse>(async (context) => {
   const session = await getUserFromRequest(context.req);
   if (!session?.userId) {
@@ -43,7 +30,7 @@ export const GET = withApiHandler<ListTicketsResponse>(async (context) => {
   const priorityValues = parseArrayParam(params, 'priority') as Priority[];
   const query = params.get('q') ?? undefined;
   const limitParam = params.get('limit');
-  const limit = limitParam ? parseInt(limitParam, 10) : undefined;
+  const limit = limitParam ? parsePositiveInteger(limitParam, 0) || undefined : undefined;
 
   const allTickets = await listTicketsForUser(session.userId, {
     status: statusValues.length ? statusValues : undefined,

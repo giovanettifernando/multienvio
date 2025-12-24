@@ -34,12 +34,9 @@ export const POST = withApiHandlerResponse(async (context) => {
 
     logger.info('login_attempt', { email: data.email });
 
-    // Buscar usuário por email com role
+    // Buscar usuário por email
     const dbUser = await prisma.user.findUnique({
       where: { email: data.email },
-      include: {
-        role: true,
-      },
     });
 
     // Mensagem genérica para não revelar se email existe
@@ -93,10 +90,11 @@ export const POST = withApiHandlerResponse(async (context) => {
     const tokenVersion = await sessionCache.getOrInitTokenVersion(dbUser.id);
 
     // Criar par de tokens JWT (access + refresh)
+    // Note: Role removido do modelo User - todos clientes são 'user'
     const { accessToken, refreshToken } = await signTokenPair({
       userId: dbUser.id,
       email: dbUser.email,
-      role: dbUser.role?.name || 'user',
+      role: 'user',
       tokenVersion,
     });
 
@@ -104,12 +102,14 @@ export const POST = withApiHandlerResponse(async (context) => {
     await sessionCache.set(dbUser.id, {
       userId: dbUser.id,
       email: dbUser.email,
-      role: dbUser.role?.name || 'user',
+      role: 'user',
       status: dbUser.status,
       tokenVersion,
     });
 
     // Mapear para o tipo User global (sem expor passwordHash)
+    // Note: AuthRole.ADMIN era controlado por User.role, mas agora removido
+    // Admin access é controlado por StaffUser.permissions
     const user: User = {
       id: dbUser.id,
       name: dbUser.name,
@@ -117,7 +117,7 @@ export const POST = withApiHandlerResponse(async (context) => {
       phone: dbUser.phone,
       avatarUrl: dbUser.avatarUrl,
       status: dbUser.status as UserStatus,
-      roles: dbUser.role?.name === 'admin' ? [AuthRole.ADMIN] : [],
+      roles: [], // Role removido do User - admin access via StaffUser
       lastLoginAt: dbUser.lastLoginAt?.toISOString() || null,
       createdAt: dbUser.createdAt.toISOString(),
       updatedAt: dbUser.updatedAt.toISOString(),

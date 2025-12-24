@@ -2,7 +2,7 @@
  * GET /api/admin/finance/reports/dre - Retorna dados do DRE
  */
 
-import { getAdminSessionFromRequest } from '@/modules/auth/application/admin-session';
+import { requireAdminSession } from '@/platform/auth/require-session';
 import { AdminPermission } from '@prisma/client';
 import { prisma } from '@/platform/db/db';
 import { DRE_CHART_OF_ACCOUNTS, CALCULATED_TOTALS } from '@/modules/admin/application/finance/dre';
@@ -37,14 +37,7 @@ interface DREResponse {
 }
 
 export const GET = withApiHandler<DREResponse>(async ({ req }) => {
-  const session = await getAdminSessionFromRequest(req);
-  if (!session) {
-    throw new ApiError({
-      code: 'UNAUTHORIZED',
-      message: 'Não autenticado',
-      status: 401,
-    });
-  }
+  const session = await requireAdminSession(req, AdminPermission.FINANCEIRO);
 
   if (!session.permissions.includes(AdminPermission.FINANCEIRO) && !session.isSuperAdmin) {
     throw new ApiError({

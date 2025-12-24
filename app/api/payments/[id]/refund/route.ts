@@ -11,7 +11,7 @@
 import { z } from 'zod';
 import { withApiHandler } from '@/platform/api/handler';
 import { ApiError } from '@/platform/api/errors';
-import { getUserFromRequest } from '@/modules/auth/application/session';
+import { requireUserSession } from '@/platform/auth/require-session';
 import { prisma } from '@/platform/db/db';
 import { refundPayment, getPaymentById, mapMercadoPagoStatus } from '@/platform/integrations/mercadopago';
 
@@ -36,10 +36,7 @@ type RefundPaymentResponse = {
 
 export const POST = withApiHandler<RefundPaymentResponse, { id: string }>(async (context) => {
   const { logger } = context;
-  const session = await getUserFromRequest(context.req);
-  if (!session?.userId) {
-    throw new ApiError({ code: 'unauthorized', message: 'Não autenticado', status: 401 });
-  }
+  const session = await requireUserSession(context.req);
 
   const { id } = await context.params;
 

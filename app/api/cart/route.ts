@@ -6,8 +6,7 @@
  */
 
 import { withApiHandler } from '@/platform/api/handler';
-import { ApiError } from '@/platform/api/errors';
-import { getUserFromRequest } from '@/modules/auth/application/session';
+import { requireUserSession } from '@/platform/auth/require-session';
 import {
   getOrCreateOpenCart,
   clearCart,
@@ -36,10 +35,7 @@ type DeleteCartResponse = {
  * Retorna o carrinho OPEN do usuário logado com seus itens
  */
 export const GET = withApiHandler<GetCartResponse>(async (context) => {
-  const session = await getUserFromRequest(context.req);
-  if (!session?.userId) {
-    throw new ApiError({ code: 'unauthorized', message: 'Não autorizado', status: 401 });
-  }
+  const session = await requireUserSession(context.req);
 
   const cart = await getOrCreateOpenCart(session.userId);
 
@@ -53,10 +49,7 @@ export const GET = withApiHandler<GetCartResponse>(async (context) => {
  * Limpa o carrinho do usuário (remove todos os itens)
  */
 export const DELETE = withApiHandler<DeleteCartResponse>(async (context) => {
-  const session = await getUserFromRequest(context.req);
-  if (!session?.userId) {
-    throw new ApiError({ code: 'unauthorized', message: 'Não autorizado', status: 401 });
-  }
+  const session = await requireUserSession(context.req);
 
   await clearCart(session.userId);
 

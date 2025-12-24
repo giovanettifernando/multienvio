@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { ApiError } from "@/platform/api/errors";
 import { enforceRateLimit } from "@/platform/cache/rate-limit-redis";
-import { getUserFromRequest } from "@/modules/auth/application/session";
+import { requireUserSession } from "@/platform/auth/require-session";
 import type { RequestContext } from "@/platform/api/types";
 import { CardValidationError } from '@/shared/validation/card';
 
@@ -20,14 +20,7 @@ export function getClientIp(req: NextRequest): string {
 }
 
 export async function requireUserId(req: NextRequest) {
-  const session = await getUserFromRequest(req);
-  if (!session?.userId) {
-    throw new ApiError({
-      code: "unauthorized",
-      message: "Autenticação necessária.",
-      status: 401,
-    });
-  }
+  const session = await requireUserSession(req);
   return session.userId;
 }
 

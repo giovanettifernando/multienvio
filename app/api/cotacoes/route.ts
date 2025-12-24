@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { withApiHandler } from '@/platform/api/handler';
 import { ApiError } from '@/platform/api/errors';
-import { getUserFromRequest } from '@/modules/auth/application/session';
+import { requireUserSession } from '@/platform/auth/require-session';
 import { createQuote, listQuotes } from '@/modules/quotes/application/service';
 import {
   quoteRequestSchema,
@@ -28,10 +28,7 @@ export const POST = withApiHandler<PostCotacoesResponse>(async (context) => {
   // Rate limiting by IP - 20 req/min (QUOTES preset - users make multiple quotes)
   await enforceRateLimitByIP(context.req as NextRequest, 'create_quote', RATE_LIMITS.QUOTES);
 
-  const session = await getUserFromRequest(context.req);
-  if (!session?.userId) {
-    throw new ApiError({ code: 'unauthorized', message: 'Não autenticado', status: 401 });
-  }
+  const session = await requireUserSession(context.req);
 
   // Parse and validate request body
   const body = (await context.req.json()) as unknown;
@@ -102,10 +99,7 @@ type GetCotacoesResponse = {
  * Lists user's quotes with pagination and filtering
  */
 export const GET = withApiHandler<GetCotacoesResponse>(async (context) => {
-  const session = await getUserFromRequest(context.req);
-  if (!session?.userId) {
-    throw new ApiError({ code: 'unauthorized', message: 'Não autenticado', status: 401 });
-  }
+  const session = await requireUserSession(context.req);
 
   // Parse query parameters
   const url = new URL(context.req.url);

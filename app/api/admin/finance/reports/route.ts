@@ -8,21 +8,14 @@
  */
 
 import { NextResponse } from 'next/server';
-import { getAdminSessionFromRequest } from '@/modules/auth/application/admin-session';
+import { requireAdminSession } from '@/platform/auth/require-session';
 import { requirePermission } from '@/modules/auth/application/permissions';
 import { AdminPermission } from '@prisma/client';
 import { withApiHandlerResponse } from '@/platform/api/handler';
 import { ApiError } from '@/platform/api/errors';
 
 export const GET = withApiHandlerResponse(async ({ req, logger }) => {
-  const session = await getAdminSessionFromRequest(req);
-  if (!session) {
-    throw new ApiError({
-      code: 'UNAUTHORIZED',
-      message: 'Não autenticado',
-      status: 401,
-    });
-  }
+  const session = await requireAdminSession(req, AdminPermission.FINANCEIRO);
 
   const permissionError = requirePermission(session, AdminPermission.FINANCEIRO);
   if (permissionError) {

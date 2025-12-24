@@ -4,9 +4,7 @@
  * Envia email de redefinição de senha para o ponto de coleta
  */
 
-import { getAdminSessionFromRequest } from '@/modules/auth/application/admin-session';
-import { requirePermission } from '@/modules/auth/application/permissions';
-import { AdminPermission } from '@prisma/client';
+import { requireAdminSession } from '@/platform/auth/require-session';
 import { prisma } from '@/platform/db/db';
 import { SignJWT } from 'jose';
 import nodemailer from 'nodemailer';
@@ -26,15 +24,7 @@ const JWT_SECRET = new TextEncoder().encode(JWT_SECRET_RAW);
  * Envia email de redefinição de senha
  */
 export const POST = withApiHandler<unknown, { id: string }>(async ({ req, params }) => {
-  const session = await getAdminSessionFromRequest(req);
-  if (!session) {
-    throw new ApiError({ code: 'UNAUTHORIZED', message: 'Não autenticado', status: 401 });
-  }
-
-  const permissionError = requirePermission(session, AdminPermission.PONTOS_COLETA);
-  if (permissionError) {
-    throw new ApiError({ code: 'FORBIDDEN', message: 'Acesso negado', status: 403 });
-  }
+  const session = await requireAdminSession(req);
 
   const { id } = params;
 

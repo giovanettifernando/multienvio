@@ -6,7 +6,8 @@
  */
 
 import { z } from 'zod';
-import { requireAdminUser } from '@/modules/auth/application/admin-helpers';
+import { requireAdminSession } from '@/platform/auth/require-session';
+
 import { AdminPermission } from '@prisma/client';
 import { withApiHandler } from '@/platform/api/handler';
 import { ApiError } from '@/platform/api/errors';
@@ -44,14 +45,8 @@ type SyncInput = z.infer<typeof syncSchema>;
  * POST - Sincroniza rastreamento dos Correios
  */
 export const POST = withApiHandler<unknown>(async ({ req }) => {
-  const authResult = await requireAdminUser(req, AdminPermission.INTEGRACOES);
-  if (authResult instanceof Response) {
-    throw new ApiError({
-      code: 'UNAUTHORIZED',
-      message: 'Não autorizado',
-      status: 401,
-    });
-  }
+  const session = await requireAdminSession(req, AdminPermission.INTEGRACOES);
+  
 
   // Validar payload
   const body = await req.json();

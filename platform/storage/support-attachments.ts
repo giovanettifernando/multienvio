@@ -1,6 +1,7 @@
 import { mkdir, writeFile } from 'fs/promises';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
+import { validateFileContent, SUPPORT_ALLOWED_EXTENSIONS } from './file-validation';
 
 const MAX_ATTACHMENT_SIZE = 10 * 1024 * 1024; // 10 MB
 const SUPPORT_UPLOAD_DIR =
@@ -45,6 +46,12 @@ export async function persistSupportAttachment(
   const ticketDir = await ensureSupportUploadDir(ticketId);
   const arrayBuffer = await file.arrayBuffer();
   const buffer = Buffer.from(arrayBuffer);
+
+  // SECURITY: Validar conteúdo do arquivo por magic bytes
+  const validation = validateFileContent(buffer, file.name, SUPPORT_ALLOWED_EXTENSIONS);
+  if (!validation.valid) {
+    throw new Error(validation.error || 'Tipo de arquivo não permitido');
+  }
 
   const parsedName = path.parse(file.name || 'arquivo');
   const safeName = sanitizeSegment(parsedName.name) || 'arquivo';

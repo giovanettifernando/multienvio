@@ -3,12 +3,18 @@
  *
  * Gerencia listagem de shipments do usuário com filtros e paginação.
  * Suporta injeção de dependências para testes unitários.
+ *
+ * CACHE: Usa SWR (Stale-While-Revalidate) para melhor UX:
+ * - Retorna dados cacheados imediatamente
+ * - Revalida em background se stale (>30s)
+ * - Força busca síncrona se expirado (>5min)
  */
 
 import { prisma as defaultPrisma } from '@/platform/db/db';
 import type { PrismaClient, Prisma } from '@prisma/client';
 import { ShipmentStatus } from './shipment-status';
 import { mapToUIStatus, getBackendStatusesForUIFilter, type UIShipmentStatus } from './status-labels-map';
+import { shipmentsCache } from '@/platform/cache/cache';
 
 // =============================================================================
 // Types & DTOs
@@ -72,12 +78,43 @@ const defaultDeps: ShipmentListServiceDeps = {
 
 /**
  * Lista shipments do usuário com filtros e paginação.
+ *
+ * CACHE: Usa SWR para melhor UX - retorna dados stale imediatamente
+ * enquanto revalida em background. Para bypass do cache em testes,
+ * passe deps customizados.
  */
 export async function listUserShipments(
   userId: string,
   filters: ShipmentListFilters,
   pagination: PaginationOptions,
   deps: ShipmentListServiceDeps = defaultDeps
+): Promise<PaginatedResult<ShipmentListItem>> {
+  const { page, limit } = pagination;
+
+  // Se deps customizados, não usar cache (para testes)
+  if (deps !== defaultDeps) {
+    return fetchShipmentsFromDb(userId, filters, pagination, deps);
+  }
+
+  // Usar cache com SWR
+  return shipmentsCache.getOrSetSWR(
+    userId,
+    filters,
+    page,
+    limit,
+    () => fetchShipmentsFromDb(userId, filters, pagination, deps)
+  );
+}
+
+/**
+ * Busca shipments diretamente do banco de dados.
+ * Função interna usada pelo cache e para testes.
+ */
+async function fetchShipmentsFromDb(
+  userId: string,
+  filters: ShipmentListFilters,
+  pagination: PaginationOptions,
+  deps: ShipmentListServiceDeps
 ): Promise<PaginatedResult<ShipmentListItem>> {
   const { prisma } = deps;
   const { q, status: statusParam } = filters;

@@ -6,8 +6,7 @@
 
 import { withApiHandler } from '@/platform/api/handler';
 import { ApiError } from '@/platform/api/errors';
-import { getAdminSessionFromRequest } from '@/modules/auth/application/admin-session';
-import { AdminPermission } from '@prisma/client';
+import { requireAdminSession } from '@/platform/auth/require-session';
 import { listCollectors, createCollector } from '@/modules/collectors/application/service';
 import { collectorFormSchema } from '@/modules/collectors/application/schemas';
 import type { CollectorFilters, CollectorListResponse, Collector } from '@/modules/collectors/application/types';
@@ -27,14 +26,7 @@ interface PostCollectorResponse {
 export const GET = withApiHandler<GetCollectorsResponse>(async (context) => {
   const { req, logger } = context;
 
-  const session = await getAdminSessionFromRequest(req);
-  if (!session) {
-    throw new ApiError({ code: 'unauthorized', message: 'Não autenticado', status: 401 });
-  }
-
-  if (!session.permissions.includes(AdminPermission.COLETORES)) {
-    throw new ApiError({ code: 'forbidden', message: 'Permissão negada', status: 403 });
-  }
+  const session = await requireAdminSession(req);
 
   const { searchParams } = new URL(req.url);
 
@@ -80,14 +72,7 @@ export const GET = withApiHandler<GetCollectorsResponse>(async (context) => {
 export const POST = withApiHandler<PostCollectorResponse>(async (context) => {
   const { req, logger } = context;
 
-  const session = await getAdminSessionFromRequest(req);
-  if (!session) {
-    throw new ApiError({ code: 'unauthorized', message: 'Não autenticado', status: 401 });
-  }
-
-  if (!session.permissions.includes(AdminPermission.COLETORES)) {
-    throw new ApiError({ code: 'forbidden', message: 'Permissão negada', status: 403 });
-  }
+  const session = await requireAdminSession(req);
 
   const body = await req.json();
 

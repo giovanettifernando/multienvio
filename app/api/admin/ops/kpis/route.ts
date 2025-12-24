@@ -1,11 +1,19 @@
+/**
+ * API de KPIs de Operações
+ *
+ * CACHE: Usa SWR (Stale-While-Revalidate) para UI responsiva:
+ * - Retorna dados cacheados imediatamente
+ * - Revalida em background se stale (>30s)
+ * - Força busca síncrona se expirado (>3min)
+ */
+
 import { withApiHandler } from '@/platform/api/handler';
-import { ApiError } from '@/platform/api/errors';
-import { getAdminSessionFromRequest } from '@/modules/auth/application/admin-session';
+import { requireAdminSession } from '@/platform/auth/require-session';
 import { AdminPermission } from '@prisma/client';
-import { canAccess } from '@/modules/auth/application/permissions';
 import type { OpsKpis } from '@/modules/admin/application/ops/types';
 import prisma from '@/platform/db/db';
 import { ShipmentStatus } from '@/modules/shipments/application/shipment-status';
+import { kpisCache } from '@/platform/cache/cache';
 
 // Grupos de status por KPI
 const STATUS_GROUPS = {
@@ -64,24 +72,19 @@ const STATUS_GROUPS = {
 };
 
 export const GET = withApiHandler<OpsKpis>(async (context) => {
-  const session = await getAdminSessionFromRequest(context.req);
-  if (!session) {
-    throw new ApiError({ code: 'unauthorized', message: 'Não autenticado', status: 401 });
-  }
+  await requireAdminSession(context.req, AdminPermission.OPERACOES);
 
-  const staffUser = await prisma.staffUser.findUnique({
-    where: { id: session.staffId },
-    select: { id: true, status: true, isSuperAdmin: true, permissions: true },
-  });
+  // Buscar KPIs com cache SWR
+  const kpis = await kpisCache.getOrSetSWR(fetchKpisFromDb);
 
-  if (!staffUser || staffUser.status !== 'ACTIVE') {
-    throw new ApiError({ code: 'forbidden', message: 'Acesso negado', status: 403 });
-  }
+  return { data: kpis };
+});
 
-  if (!canAccess(staffUser, AdminPermission.OPERACOES)) {
-    throw new ApiError({ code: 'forbidden', message: 'Sem permissão para operações', status: 403 });
-  }
-
+/**
+ * Busca KPIs diretamente do banco de dados.
+ * Função interna usada pelo cache.
+ */
+async function fetchKpisFromDb(): Promise<OpsKpis> {
   // Executar todas as contagens em paralelo
   const [backlog, inPickup, atPoC, inTransit, outForDelivery, exceptions, delivered, cancelled] =
     await Promise.all([
@@ -95,7 +98,7 @@ export const GET = withApiHandler<OpsKpis>(async (context) => {
       prisma.shipment.count({ where: { status: { in: STATUS_GROUPS.cancelled } } }),
     ]);
 
-  const kpis: OpsKpis = {
+  return {
     backlog,
     inPickup,
     atPoC,
@@ -105,6 +108,4 @@ export const GET = withApiHandler<OpsKpis>(async (context) => {
     delivered,
     cancelled,
   };
-
-  return { data: kpis };
-});
+}

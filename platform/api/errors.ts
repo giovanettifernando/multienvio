@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { ZodError } from "zod";
 import { schedulePrismaReconnect, isDatabaseUnavailableError } from "@/platform/db/db";
+import { CircuitBreakerError } from "@/platform/integrations/shared/circuit-breaker";
 
 export type ApiErrorInput = {
   code: string;
@@ -56,6 +57,17 @@ export function toApiError(error: unknown): ApiError {
   // Already an ApiError - return as is
   if (error instanceof ApiError) {
     return error;
+  }
+
+  // Circuit Breaker errors (external service temporarily unavailable)
+  if (error instanceof CircuitBreakerError) {
+    return new ApiError({
+      code: "SERVICE_UNAVAILABLE",
+      message: error.message,
+      status: 503,
+      details: { circuit: error.circuitName },
+      cause: error,
+    });
   }
 
   // Zod validation errors

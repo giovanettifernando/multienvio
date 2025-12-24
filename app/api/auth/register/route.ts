@@ -7,7 +7,6 @@ import { RegisterSchema } from '@/shared/validation/auth';
 import { prisma } from '@/platform/db/db';
 import { generateToken, hashToken } from '@/modules/auth/application/tokens';
 import { sendVerificationEmail } from '@/platform/email/mailer';
-import { getCachedRoleByName } from '@/platform/cache/cache';
 import { enforceRateLimitByIP, RATE_LIMITS } from '@/platform/cache/rate-limit-redis';
 
 interface RegisterResponse {
@@ -53,19 +52,8 @@ export const POST = withApiHandler<RegisterResponse>(async (context) => {
     const verificationToken = generateToken();
     const hashedVerificationToken = hashToken(verificationToken);
 
-    // Buscar role "user" padrão (com cache)
-    const userRole = await getCachedRoleByName('user');
-
-    if (!userRole) {
-      logger.error('register_role_missing');
-      throw new ApiError({
-        code: 'INTERNAL_ERROR',
-        message: 'Erro ao criar usuário',
-        status: 500,
-      });
-    }
-
     // Criar usuário com status pending até verificar email
+    // Note: Role removido do modelo User - todos são 'user' por padrão
     const user = await prisma.user.create({
       data: {
         name: data.name,
@@ -76,10 +64,6 @@ export const POST = withApiHandler<RegisterResponse>(async (context) => {
         emailVerified: false,
         emailVerificationToken: hashedVerificationToken,
         termsAcceptedAt: new Date(), // Record terms acceptance
-        roleId: userRole.id,
-      },
-      include: {
-        role: true,
       },
     });
 

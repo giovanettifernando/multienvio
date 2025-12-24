@@ -5,8 +5,8 @@
  */
 
 import { withApiHandler } from '@/platform/api/handler';
+import { requireAdminSession } from '@/platform/auth/require-session';
 import { ApiError } from '@/platform/api/errors';
-import { getAdminSessionFromRequest } from '@/modules/auth/application/admin-session';
 import { AdminPermission, EmailConfigStatus } from '@prisma/client';
 import { prisma } from '@/platform/db/db';
 import { encrypt, decrypt } from '@/platform/integrations/shared/encryption.service';
@@ -53,10 +53,7 @@ const EmailConfigSchema = z.object({
 export const GET = withApiHandler<EmailConfigGetResponse>(async (context) => {
   const { req } = context;
 
-  const session = await getAdminSessionFromRequest(req);
-  if (!session) {
-    throw new ApiError({ code: 'unauthorized', message: 'Não autenticado', status: 401 });
-  }
+  const session = await requireAdminSession(req, AdminPermission.CONFIGURACOES);
 
   if (!session.permissions.includes(AdminPermission.CONFIGURACOES)) {
     throw new ApiError({ code: 'forbidden', message: 'Permissão negada', status: 403 });
@@ -111,10 +108,7 @@ export const GET = withApiHandler<EmailConfigGetResponse>(async (context) => {
 export const POST = withApiHandler<EmailConfigPostResponse>(async (context) => {
   const { req } = context;
 
-  const session = await getAdminSessionFromRequest(req);
-  if (!session) {
-    throw new ApiError({ code: 'unauthorized', message: 'Não autenticado', status: 401 });
-  }
+  const session = await requireAdminSession(req, AdminPermission.CONFIGURACOES);
 
   if (!session.permissions.includes(AdminPermission.CONFIGURACOES)) {
     throw new ApiError({ code: 'forbidden', message: 'Permissão negada', status: 403 });

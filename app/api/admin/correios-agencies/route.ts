@@ -6,8 +6,8 @@
  */
 
 import { withApiHandler } from '@/platform/api/handler';
+import { requireAdminSession } from '@/platform/auth/require-session';
 import { ApiError } from '@/platform/api/errors';
-import { getAdminSessionFromRequest } from '@/modules/auth/application/admin-session';
 import { prisma } from '@/platform/db/db';
 import { AdminPermission, type CorreiosAgency, type CorreiosAgencyStatus, type CorreiosAgencyType } from '@prisma/client';
 
@@ -26,10 +26,7 @@ type CorreiosAgenciesResponse = {
 export const GET = withApiHandler<CorreiosAgenciesResponse>(async (context) => {
   const { req } = context;
 
-  const session = await getAdminSessionFromRequest(req);
-  if (!session) {
-    throw new ApiError({ code: 'unauthorized', message: 'Não autenticado', status: 401 });
-  }
+  const session = await requireAdminSession(req, AdminPermission.OPERACOES);
 
   if (!session.permissions.includes(AdminPermission.CONFIGURACOES)) {
     throw new ApiError({ code: 'forbidden', message: 'Permissão negada', status: 403 });

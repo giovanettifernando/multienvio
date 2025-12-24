@@ -1,6 +1,6 @@
 import { withApiHandler } from '@/platform/api/handler';
 import { ApiError } from '@/platform/api/errors';
-import { getUserFromRequest } from '@/modules/auth/application/session';
+import { requireUserSession } from '@/platform/auth/require-session';
 import { prisma } from '@/platform/db/db';
 import { userCache, CacheTTL } from '@/platform/cache/cache';
 import { UserStatus, AuthRole, type User } from '@/shared/types/contracts';
@@ -13,15 +13,7 @@ export const GET = withApiHandler<MeResponse>(async (context) => {
   const { req, logger } = context;
 
   // Obter sessão do cookie JWT diretamente do request (mais confiável que cookies() API)
-  const session = await getUserFromRequest(req);
-
-  if (!session) {
-    throw new ApiError({
-      code: 'unauthorized',
-      message: 'Não autenticado',
-      status: 401,
-    });
-  }
+  const session = await requireUserSession(req);
 
   // Verificar cache primeiro (TTL 5 minutos)
   // Usa userCache.get(userId) para garantir consistência com userCache.invalidate(userId)
@@ -41,9 +33,6 @@ export const GET = withApiHandler<MeResponse>(async (context) => {
   // Buscar usuário no banco
   const dbUser = await prisma.user.findUnique({
     where: { id: session.userId },
-    include: {
-      role: true,
-    },
   });
 
   if (!dbUser) {
@@ -66,6 +55,7 @@ export const GET = withApiHandler<MeResponse>(async (context) => {
   logger.info('auth_me_success', { userId: dbUser.id });
 
   // Mapear para o tipo User global (sem expor passwordHash)
+  // Note: Role removido do User - admin access via StaffUser.permissions
   const user: User = {
     id: dbUser.id,
     name: dbUser.name,
@@ -73,7 +63,7 @@ export const GET = withApiHandler<MeResponse>(async (context) => {
     phone: dbUser.phone,
     avatarUrl: dbUser.avatarUrl,
     status: dbUser.status as UserStatus,
-    roles: dbUser.role?.name === 'admin' ? [AuthRole.ADMIN] : [],
+    roles: [], // Role removido do User - admin access via StaffUser
     lastLoginAt: dbUser.lastLoginAt?.toISOString() || null,
     createdAt: dbUser.createdAt.toISOString(),
     updatedAt: dbUser.updatedAt.toISOString(),

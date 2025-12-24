@@ -4,23 +4,16 @@
  * Retorna informações detalhadas da carteira de um usuário (Admin)
  */
 
-import { NextResponse } from 'next/server';
 import { withApiHandler } from '@/platform/api/handler';
+import { requireAdminSession } from '@/platform/auth/require-session';
 import { ApiError } from '@/platform/api/errors';
 import { prisma } from '@/platform/db/db';
-import { requireAdminUser } from '@/modules/auth/application/admin-helpers';
+
 import { AdminPermission } from '@prisma/client';
 import { getTransactionDirection } from '@/modules/wallet/application/transaction-direction';
 
 export const GET = withApiHandler<unknown, { id: string }>(async ({ req, params }) => {
-  const authResult = await requireAdminUser(req, AdminPermission.CONTAS);
-  if (authResult instanceof NextResponse) {
-    throw new ApiError({
-      code: 'UNAUTHORIZED',
-      message: 'Não autorizado',
-      status: 401,
-    });
-  }
+  const session = await requireAdminSession(req, AdminPermission.CONTAS);
 
   const userId = params.id;
   const { searchParams } = new URL(req.url);

@@ -1,3 +1,14 @@
+/**
+ * Support Tickets Service
+ *
+ * Gerencia tickets de suporte com listagem, criação e atualizações.
+ *
+ * CACHE: Usa SWR (Stale-While-Revalidate) para listagem de tickets admin:
+ * - Retorna dados cacheados imediatamente
+ * - Revalida em background se stale (>15s)
+ * - Força busca síncrona se expirado (>2min)
+ */
+
 import { prisma } from '@/platform/db/db';
 import {
   type SupportTicket,
@@ -14,6 +25,7 @@ import {
   SupportPriority as DbPriority,
   SupportTicketStatus as DbStatus,
 } from '@prisma/client';
+import { ticketsCache } from '@/platform/cache/cache';
 
 type TicketRecord = Prisma.SupportTicketGetPayload<{
   include: {
@@ -320,10 +332,39 @@ export async function listTicketsForUser(userId: string, filters: TicketFilters 
   return mapTickets(records);
 }
 
+/**
+ * Lista tickets para admin com filtros e paginação.
+ *
+ * CACHE: Usa SWR para melhor UX - retorna dados stale imediatamente
+ * enquanto revalida em background.
+ */
 export async function listTicketsForAdmin(
   filters: TicketFilters = {},
   page = 1,
   pageSize = 20,
+): Promise<PaginatedTickets> {
+  // Usar cache com SWR
+  return ticketsCache.getOrSetSWR(
+    {
+      status: filters.status,
+      priority: filters.priority,
+      query: filters.query,
+      assignedTo: filters.assignedTo,
+    },
+    page,
+    pageSize,
+    () => fetchTicketsFromDb(filters, page, pageSize)
+  );
+}
+
+/**
+ * Busca tickets diretamente do banco de dados.
+ * Função interna usada pelo cache.
+ */
+async function fetchTicketsFromDb(
+  filters: TicketFilters,
+  page: number,
+  pageSize: number,
 ): Promise<PaginatedTickets> {
   const where = buildWhereForFilters(filters);
 

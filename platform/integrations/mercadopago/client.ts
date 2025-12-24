@@ -4,6 +4,8 @@
  * Referências:
  * - SDK Node.js: https://github.com/mercadopago/sdk-nodejs
  * - Documentação: https://www.mercadopago.com.ar/developers/en/docs/checkout-api/overview
+ *
+ * SECURITY: Protegido por Circuit Breaker para evitar sobrecarga em falhas
  */
 
 import { MercadoPagoConfig, Payment, CardToken, PaymentRefund } from 'mercadopago';
@@ -14,6 +16,10 @@ import type {
   ProcessedPaymentData,
 } from './types';
 import { PaymentMethod, TransactionStatus } from '@prisma/client';
+import {
+  mercadoPagoCircuitBreaker,
+  CircuitBreakerError,
+} from '../shared/circuit-breaker';
 
 /**
  * Inicializa cliente do Mercado Pago
@@ -137,9 +143,19 @@ export async function createPayment(
   }
 
   try {
-    const response = await payment.create({ body: paymentData });
+    // SECURITY: Circuit breaker protege contra chamadas a serviço indisponível
+    const response = await mercadoPagoCircuitBreaker.execute(async () => {
+      return await payment.create({ body: paymentData });
+    });
     return response as unknown as MercadoPagoPaymentResponse;
   } catch (error: unknown) {
+    // Converter CircuitBreakerError para mensagem amigável
+    if (error instanceof CircuitBreakerError) {
+      throw new Error(
+        'Serviço de pagamento temporariamente indisponível. Tente novamente em alguns minutos.'
+      );
+    }
+
     console.error('[MERCADO_PAGO] Erro ao criar pagamento:', error);
 
     // Extrair detalhes do erro do MP
@@ -162,9 +178,17 @@ export async function getPaymentById(paymentId: string): Promise<MercadoPagoPaym
   const payment = new Payment(client);
 
   try {
-    const response = await payment.get({ id: paymentId });
+    // SECURITY: Circuit breaker protege contra chamadas a serviço indisponível
+    const response = await mercadoPagoCircuitBreaker.execute(async () => {
+      return await payment.get({ id: paymentId });
+    });
     return response as unknown as MercadoPagoPaymentResponse;
   } catch (error: unknown) {
+    if (error instanceof CircuitBreakerError) {
+      throw new Error(
+        'Serviço de pagamento temporariamente indisponível. Tente novamente em alguns minutos.'
+      );
+    }
     const errorObj = error as { message?: string };
     throw new Error(`Erro ao buscar pagamento: ${errorObj.message || 'Erro desconhecido'}`);
   }
@@ -291,22 +315,25 @@ export async function createCardToken(cardData: {
   const cardholderName = config.sandboxMode ? 'APRO' : cardData.cardholderName;
 
   try {
-    const tokenData = await cardToken.create({
-      body: {
-        card_number: cardData.cardNumber,
-        expiration_month: cardData.expirationMonth,
-        expiration_year: cardData.expirationYear,
-        security_code: cardData.securityCode,
+    // SECURITY: Circuit breaker protege contra chamadas a serviço indisponível
+    const tokenData = await mercadoPagoCircuitBreaker.execute(async () => {
+      return await cardToken.create({
+        body: {
+          card_number: cardData.cardNumber,
+          expiration_month: cardData.expirationMonth,
+          expiration_year: cardData.expirationYear,
+          security_code: cardData.securityCode,
 
-        // @ts-ignore - MP SDK types are incomplete, cardholder is required
-        cardholder: {
-          name: cardholderName,
-          identification: {
-            type: cardData.identificationType,
-            number: cardData.identificationNumber,
+          // @ts-ignore - MP SDK types are incomplete, cardholder is required
+          cardholder: {
+            name: cardholderName,
+            identification: {
+              type: cardData.identificationType,
+              number: cardData.identificationNumber,
+            },
           },
         },
-      },
+      });
     });
 
     if (!tokenData.id) {
@@ -319,6 +346,11 @@ export async function createCardToken(cardData: {
       last_four_digits: tokenData.last_four_digits || '',
     };
   } catch (error: unknown) {
+    if (error instanceof CircuitBreakerError) {
+      throw new Error(
+        'Serviço de pagamento temporariamente indisponível. Tente novamente em alguns minutos.'
+      );
+    }
     const errorObj = error as { message?: string };
     throw new Error(`Erro ao criar token: ${errorObj.message || 'Erro desconhecido'}`);
   }
@@ -341,9 +373,12 @@ export async function refundPayment(
   const refund = new PaymentRefund(client);
 
   try {
-    const refundData = await refund.create({
-      payment_id: paymentId,
-      body: amount ? { amount } : {},
+    // SECURITY: Circuit breaker protege contra chamadas a serviço indisponível
+    const refundData = await mercadoPagoCircuitBreaker.execute(async () => {
+      return await refund.create({
+        payment_id: paymentId,
+        body: amount ? { amount } : {},
+      });
     });
 
     return {
@@ -352,8 +387,28 @@ export async function refundPayment(
       amount: refundData.amount ?? 0,
     };
   } catch (error: unknown) {
+    if (error instanceof CircuitBreakerError) {
+      throw new Error(
+        'Serviço de pagamento temporariamente indisponível. Tente novamente em alguns minutos.'
+      );
+    }
     console.error('[MERCADO_PAGO] Erro ao reembolsar pagamento:', error);
     const errorObj = error as { message?: string };
     throw new Error(`Erro ao reembolsar: ${errorObj.message || 'Erro desconhecido'}`);
   }
+}
+
+/**
+ * Retorna o estado atual do circuit breaker do Mercado Pago
+ * Útil para monitoramento e diagnóstico
+ */
+export function getMercadoPagoCircuitBreakerState(): 'CLOSED' | 'OPEN' | 'HALF_OPEN' {
+  return mercadoPagoCircuitBreaker.getState();
+}
+
+/**
+ * Reseta o circuit breaker do Mercado Pago (para admin/debug)
+ */
+export function resetMercadoPagoCircuitBreaker(): void {
+  mercadoPagoCircuitBreaker.reset();
 }

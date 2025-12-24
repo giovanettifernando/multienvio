@@ -215,7 +215,6 @@ export async function createPickupRequest(
 export function mapPickupsToDTO(pickups: any[]): PickupRequestWithShipment[] {
   return pickups.map((pickup) => ({
     id: pickup.id,
-    companyId: pickup.companyId,
     userId: pickup.userId,
     collectorId: pickup.collectorId,
     shipmentId: pickup.shipmentId,

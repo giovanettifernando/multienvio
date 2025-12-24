@@ -5,7 +5,7 @@
 
 import { withApiHandler } from '@/platform/api/handler';
 import { ApiError } from '@/platform/api/errors';
-import { getUserFromRequest } from '@/modules/auth/application/session';
+import { requireUserSession } from '@/platform/auth/require-session';
 import { prisma } from '@/platform/db/db';
 import { AddressSchema } from '@/shared/validation/address';
 import { logger } from '@/platform/logging/logger';
@@ -41,10 +41,7 @@ type CreateAddressResponse = {
  * Lista todos os endereços do usuário autenticado
  */
 export const GET = withApiHandler<GetAddressesResponse>(async (context) => {
-  const session = await getUserFromRequest(context.req);
-  if (!session?.userId) {
-    throw new ApiError({ code: 'unauthorized', message: 'Não autenticado', status: 401 });
-  }
+  const session = await requireUserSession(context.req);
 
   // Buscar endereços do usuário ordenados por: default primeiro, depois por data de criação
   const addresses = await prisma.address.findMany({
@@ -86,10 +83,7 @@ export const GET = withApiHandler<GetAddressesResponse>(async (context) => {
  * Cria um novo endereço para o usuário autenticado
  */
 export const POST = withApiHandler<CreateAddressResponse>(async (context) => {
-  const session = await getUserFromRequest(context.req);
-  if (!session?.userId) {
-    throw new ApiError({ code: 'unauthorized', message: 'Não autenticado', status: 401 });
-  }
+  const session = await requireUserSession(context.req);
 
   const body = await context.req.json();
 

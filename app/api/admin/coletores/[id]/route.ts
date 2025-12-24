@@ -7,8 +7,7 @@
 
 import { withApiHandler } from '@/platform/api/handler';
 import { ApiError } from '@/platform/api/errors';
-import { getAdminSessionFromRequest } from '@/modules/auth/application/admin-session';
-import { AdminPermission } from '@prisma/client';
+import { requireAdminSession } from '@/platform/auth/require-session';
 import {
   getCollectorById,
   updateCollector,
@@ -38,14 +37,7 @@ interface DeleteCollectorResponse {
 export const GET = withApiHandler<GetCollectorResponse, { id: string }>(async (context) => {
   const { req, params, logger } = context;
 
-  const session = await getAdminSessionFromRequest(req);
-  if (!session) {
-    throw new ApiError({ code: 'unauthorized', message: 'Não autenticado', status: 401 });
-  }
-
-  if (!session.permissions.includes(AdminPermission.COLETORES)) {
-    throw new ApiError({ code: 'forbidden', message: 'Permissão negada', status: 403 });
-  }
+  const session = await requireAdminSession(req);
 
   const { id } = params;
 
@@ -67,10 +59,7 @@ export const GET = withApiHandler<GetCollectorResponse, { id: string }>(async (c
 export const PATCH = withApiHandler<PatchCollectorResponse, { id: string }>(async (context) => {
   const { req, params, logger } = context;
 
-  const session = await getAdminSessionFromRequest(req);
-  if (!session) {
-    throw new ApiError({ code: 'unauthorized', message: 'Não autenticado', status: 401 });
-  }
+  const session = await requireAdminSession(req);
 
   const { id } = params;
   const body = await req.json();
@@ -110,10 +99,7 @@ export const PATCH = withApiHandler<PatchCollectorResponse, { id: string }>(asyn
 export const DELETE = withApiHandler<DeleteCollectorResponse, { id: string }>(async (context) => {
   const { req, params, logger } = context;
 
-  const session = await getAdminSessionFromRequest(req);
-  if (!session) {
-    throw new ApiError({ code: 'unauthorized', message: 'Não autenticado', status: 401 });
-  }
+  const session = await requireAdminSession(req);
 
   const { id } = params;
 

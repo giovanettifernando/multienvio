@@ -3,11 +3,11 @@
  */
 
 import { withApiHandler } from '@/platform/api/handler';
+import { requireAdminSession } from '@/platform/auth/require-session';
 import { ApiError } from '@/platform/api/errors';
 import { prisma } from '@/platform/db/db';
-import { requireAdminUser } from '@/modules/auth/application/admin-helpers';
+
 import { AdminPermission } from '@prisma/client';
-import { NextResponse } from 'next/server';
 
 interface AdminClientUpdateResponse {
   ok: boolean;
@@ -21,12 +21,9 @@ interface AdminClientDeleteResponse {
 export const PUT = withApiHandler<AdminClientUpdateResponse, { id: string }>(async (context) => {
   const { req, logger } = context;
 
-  const authResult = await requireAdminUser(req, AdminPermission.CONTAS);
-  if (authResult instanceof NextResponse) {
-    throw new ApiError({ code: 'unauthorized', message: 'Não autenticado ou sem permissão', status: 401 });
-  }
+  const session = await requireAdminSession(req, AdminPermission.CONTAS);
 
-  logger.info('admin_client_update', { adminId: authResult.user.id });
+  logger.info('admin_client_update', { adminId: session.staffId });
 
   // TODO: Implementar atualização real de cliente
   return { data: { ok: true } };
@@ -35,10 +32,7 @@ export const PUT = withApiHandler<AdminClientUpdateResponse, { id: string }>(asy
 export const DELETE = withApiHandler<AdminClientDeleteResponse, { id: string }>(async (context) => {
   const { req, params, logger } = context;
 
-  const authResult = await requireAdminUser(req, AdminPermission.CONTAS);
-  if (authResult instanceof NextResponse) {
-    throw new ApiError({ code: 'unauthorized', message: 'Não autenticado ou sem permissão', status: 401 });
-  }
+  const session = await requireAdminSession(req, AdminPermission.CONTAS);
 
   const { id: userId } = params;
 
@@ -58,8 +52,8 @@ export const DELETE = withApiHandler<AdminClientDeleteResponse, { id: string }>(
   });
 
   logger.info('admin_delete_user', {
-    adminId: authResult.user.id,
-    adminEmail: authResult.user.email,
+    adminId: session.staffId,
+    adminEmail: session.email,
     deletedUserId: userId,
     deletedUserEmail: user.email,
   });

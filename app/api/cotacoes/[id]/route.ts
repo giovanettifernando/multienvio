@@ -1,6 +1,6 @@
 import { withApiHandler } from '@/platform/api/handler';
 import { ApiError } from '@/platform/api/errors';
-import { getUserFromRequest } from '@/modules/auth/application/session';
+import { requireUserSession } from '@/platform/auth/require-session';
 import { getQuoteDetail, cancelQuote } from '@/modules/quotes/application/service';
 
 import type { QuoteStatus, DocumentType } from '@prisma/client';
@@ -60,10 +60,7 @@ type DeleteQuoteResponse = {
  * Gets detailed information about a specific quote
  */
 export const GET = withApiHandler<GetQuoteDetailResponse, { id: string }>(async (context) => {
-  const session = await getUserFromRequest(context.req);
-  if (!session?.userId) {
-    throw new ApiError({ code: 'unauthorized', message: 'Não autenticado', status: 401 });
-  }
+  const session = await requireUserSession(context.req);
 
   const id = context.params.id;
   const quote = await getQuoteDetail(session.userId, id);
@@ -108,10 +105,7 @@ export const GET = withApiHandler<GetQuoteDetailResponse, { id: string }>(async 
  * Cancels a quote
  */
 export const DELETE = withApiHandler<DeleteQuoteResponse, { id: string }>(async (context) => {
-  const session = await getUserFromRequest(context.req);
-  if (!session?.userId) {
-    throw new ApiError({ code: 'unauthorized', message: 'Não autenticado', status: 401 });
-  }
+  const session = await requireUserSession(context.req);
 
   const id = context.params.id;
   await cancelQuote(session.userId, id);

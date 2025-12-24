@@ -10,7 +10,7 @@
  * - status: 'pending' | 'paid' | 'all' (default: 'all')
  */
 
-import { getAdminSessionFromRequest } from '@/modules/auth/application/admin-session';
+import { requireAdminSession } from '@/platform/auth/require-session';
 import { AdminPermission, Prisma } from '@prisma/client';
 import { prisma } from '@/platform/db/db';
 import { withApiHandler } from '@/platform/api/handler';
@@ -59,14 +59,7 @@ const COMPLETED_PICKUP_STATUSES = ['COLLECTED', 'COMPLETED'];
 const COMPLETED_RECEPTION_STATUSES = ['RECEIVED', 'PROCESSED', 'ISSUE_REPORTED'];
 
 export const GET = withApiHandler<AccountsPayableResponse>(async ({ req }) => {
-  const session = await getAdminSessionFromRequest(req);
-  if (!session) {
-    throw new ApiError({
-      code: 'UNAUTHORIZED',
-      message: 'Não autenticado',
-      status: 401,
-    });
-  }
+  const session = await requireAdminSession(req, AdminPermission.FINANCEIRO);
 
   if (!session.permissions.includes(AdminPermission.FINANCEIRO) && !session.isSuperAdmin) {
     throw new ApiError({

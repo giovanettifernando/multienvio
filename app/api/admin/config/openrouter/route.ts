@@ -7,7 +7,8 @@
  */
 
 import { z } from 'zod';
-import { requireAdminUser } from '@/modules/auth/application/admin-helpers';
+import { requireAdminSession } from '@/platform/auth/require-session';
+
 import { AdminPermission } from '@prisma/client';
 import {
   getOpenRouterConfigSafe,
@@ -36,14 +37,8 @@ const openRouterConfigSchema = z.object({
  * Retorna dados mascarados (API key parcialmente oculta)
  */
 export const GET = withApiHandler(async ({ req }) => {
-  const authResult = await requireAdminUser(req, AdminPermission.INTEGRACOES);
-  if (authResult instanceof Response) {
-    throw new ApiError({
-      code: 'UNAUTHORIZED',
-      message: 'Não autorizado',
-      status: 401,
-    });
-  }
+  const session = await requireAdminSession(req, AdminPermission.INTEGRACOES);
+  
 
   const config = await getOpenRouterConfigSafe();
 
@@ -86,14 +81,8 @@ export const GET = withApiHandler(async ({ req }) => {
  * POST - Salva/atualiza configuração do OpenRouter
  */
 export const POST = withApiHandler(async ({ req }) => {
-  const authResult = await requireAdminUser(req, AdminPermission.INTEGRACOES);
-  if (authResult instanceof Response) {
-    throw new ApiError({
-      code: 'UNAUTHORIZED',
-      message: 'Não autorizado',
-      status: 401,
-    });
-  }
+  const session = await requireAdminSession(req, AdminPermission.INTEGRACOES);
+  
 
   const body = await req.json();
   const parsed = openRouterConfigSchema.safeParse(body);

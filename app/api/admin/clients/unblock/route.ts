@@ -1,9 +1,10 @@
 import { withApiHandler } from '@/platform/api/handler';
 import { ApiError } from '@/platform/api/errors';
-import { getAdminSessionFromRequest } from '@/modules/auth/application/admin-session';
+import { requireAdminSession } from '@/platform/auth/require-session';
 import { logClientStatusChange } from '@/platform/logging/audit-admin';
 import { rateLimitByUser, RATE_LIMITS } from '@/platform/cache/rate-limit-redis';
 import { z } from 'zod';
+import { AdminPermission } from '@prisma/client';
 
 interface AdminClientUnblockResponse {
   ok: boolean;
@@ -15,14 +16,7 @@ const AdminClientUnblockSchema = z.object({
 });
 
 export const POST = withApiHandler<AdminClientUnblockResponse>(async ({ req }) => {
-  const session = await getAdminSessionFromRequest(req);
-  if (!session) {
-    throw new ApiError({
-      code: 'UNAUTHORIZED',
-      message: 'Não autenticado',
-      status: 401,
-    });
-  }
+  const session = await requireAdminSession(req, AdminPermission.CONTAS);
 
   // Rate limiting (Redis distribuido)
   const rateLimitError = await rateLimitByUser(session.staffId, 'client_unblock', RATE_LIMITS.USER_MANAGEMENT);

@@ -79,6 +79,36 @@ const nextConfig: NextConfig = {
 
   // SECURITY: Headers de segurança
   async headers() {
+    // CSP directives - configuração para desenvolvimento e produção
+    const isDev = process.env.NODE_ENV === 'development';
+    const cspDirectives = [
+      // Base policies
+      "default-src 'self'",
+      // Scripts: self + inline para React/Next.js + eval em dev para HMR
+      // MercadoPago: sdk.mercadopago.com (SDK) + www.mercadopago.com (security.js)
+      `script-src 'self' 'unsafe-inline' ${isDev ? "'unsafe-eval'" : ''} https://sdk.mercadopago.com https://www.mercadopago.com https://www.googletagmanager.com https://www.google-analytics.com`,
+      // Styles: self + inline para Ant Design CSS-in-JS
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+      // Images: self + data URIs (para base64) + CDNs comuns
+      "img-src 'self' data: blob: https: http:",
+      // Fonts: self + Google Fonts
+      "font-src 'self' https://fonts.gstatic.com data:",
+      // Conexões: self + APIs externas
+      // MercadoPago security.js também conecta a mercadolibre.com para tracking
+      "connect-src 'self' https://api.mercadopago.com https://events.mercadopago.com https://www.mercadolibre.com https://api.correios.com.br https://apihom.correios.com.br https://viacep.com.br wss: ws:",
+      // Frames: Mercado Pago para checkout + blob: para PDFs em iframe
+      // MercadoPago security.js também cria frames para mercadolibre.com
+      "frame-src 'self' blob: https://www.mercadopago.com https://www.mercadopago.com.br https://www.mercadolibre.com",
+      // Form actions: self
+      "form-action 'self'",
+      // Base URI: self
+      "base-uri 'self'",
+      // Object/embed: none (segurança)
+      "object-src 'none'",
+      // Upgrade insecure requests em produção
+      ...(isDev ? [] : ["upgrade-insecure-requests"]),
+    ].filter(Boolean).join('; ');
+
     return [
       {
         // Aplicar a todas as rotas
@@ -103,6 +133,11 @@ const nextConfig: NextConfig = {
           {
             key: 'Strict-Transport-Security',
             value: 'max-age=31536000; includeSubDomains',
+          },
+          // SECURITY: Content Security Policy
+          {
+            key: 'Content-Security-Policy',
+            value: cspDirectives,
           },
         ],
       },

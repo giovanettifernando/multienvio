@@ -17,7 +17,7 @@ import { NextRequest } from 'next/server';
 import { withApiHandler } from '@/platform/api/handler';
 import { ApiError } from '@/platform/api/errors';
 import { z } from 'zod';
-import { getUserSessionFromRequest } from '@/modules/auth/application/user-session';
+import { requireUser } from '@/platform/auth/require-session';
 import { createCartShipmentsWithPayment, CartPaymentMethod } from '@/modules/cart/application/create-cart-shipments-with-payment.service';
 import { enforceRateLimitByIP, RATE_LIMITS } from '@/platform/cache/rate-limit-redis';
 import { logger } from '@/platform/logging/logger';
@@ -50,10 +50,7 @@ export const POST = withApiHandler<CartCheckoutPaidResponse>(async ({ req }) => 
   await enforceRateLimitByIP(req as NextRequest, 'checkout', RATE_LIMITS.CHECKOUT);
 
   // Autenticar usuário
-  const session = await getUserSessionFromRequest(req);
-  if (!session) {
-    throw new ApiError({ code: 'UNAUTHORIZED', message: 'Não autenticado', status: 401 });
-  }
+  const session = await requireUser(req);
 
   // Parse e validar payload
   const body = await req.json();

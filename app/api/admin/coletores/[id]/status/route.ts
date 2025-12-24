@@ -5,8 +5,7 @@
 
 import { withApiHandler } from '@/platform/api/handler';
 import { ApiError } from '@/platform/api/errors';
-import { getAdminSessionFromRequest } from '@/modules/auth/application/admin-session';
-import { AdminPermission } from '@prisma/client';
+import { requireAdminSession } from '@/platform/auth/require-session';
 import { updateCollectorStatus } from '@/modules/collectors/application/service';
 import type { Collector } from '@/modules/collectors/application/types';
 import { z } from 'zod';
@@ -27,14 +26,7 @@ interface PatchCollectorStatusResponse {
 export const PATCH = withApiHandler<PatchCollectorStatusResponse, { id: string }>(async (context) => {
   const { req, params, logger } = context;
 
-  const session = await getAdminSessionFromRequest(req);
-  if (!session) {
-    throw new ApiError({ code: 'unauthorized', message: 'Não autenticado', status: 401 });
-  }
-
-  if (!session.permissions.includes(AdminPermission.COLETORES)) {
-    throw new ApiError({ code: 'forbidden', message: 'Permissão negada', status: 403 });
-  }
+  const session = await requireAdminSession(req);
 
   const { id } = params;
   const body = await req.json();

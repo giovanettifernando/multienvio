@@ -5,7 +5,8 @@
  */
 
 import { z } from 'zod';
-import { requireAdminUser } from '@/modules/auth/application/admin-helpers';
+import { requireAdminSession } from '@/platform/auth/require-session';
+
 import { AdminPermission } from '@prisma/client';
 import { withApiHandler } from '@/platform/api/handler';
 import { ApiError } from '@/platform/api/errors';
@@ -32,14 +33,8 @@ interface GoogleOAuthTestResponse {
  * POST - Testa as credenciais
  */
 export const POST = withApiHandler<GoogleOAuthTestResponse>(async ({ req }) => {
-  const authResult = await requireAdminUser(req, AdminPermission.CONFIGURACOES);
-  if (authResult instanceof Response) {
-    throw new ApiError({
-      code: 'UNAUTHORIZED',
-      message: 'Não autorizado',
-      status: 401,
-    });
-  }
+  const session = await requireAdminSession(req, AdminPermission.CONFIGURACOES);
+  
 
   const body = await req.json();
   const parsed = testSchema.safeParse(body);

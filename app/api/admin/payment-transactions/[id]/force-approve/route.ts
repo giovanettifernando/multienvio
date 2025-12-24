@@ -6,8 +6,7 @@
  * Todas as ações são registradas no ledger para auditoria
  */
 
-import { requireAdminUser } from '@/modules/auth/application/admin-helpers';
-import { getAdminSessionFromRequest } from '@/modules/auth/application/admin-session';
+import { requireAdminSession } from '@/platform/auth/require-session';
 import { AdminPermission } from '@prisma/client';
 import { prisma } from '@/platform/db/db';
 import * as walletService from '@/modules/wallet/application/wallet.service';
@@ -21,24 +20,8 @@ const ForceApproveSchema = z.object({
 });
 
 export const POST = withApiHandler<unknown, { id: string }>(async ({ req, params }) => {
-  const authResult = await requireAdminUser(req, AdminPermission.INTEGRACOES);
-  if (authResult instanceof Response) {
-    throw new ApiError({
-      code: 'UNAUTHORIZED',
-      message: 'Não autorizado',
-      status: 401,
-    });
-  }
-
   // 🛡️ SECURITY FIX: Capturar informações do admin para audit trail
-  const adminSession = await getAdminSessionFromRequest(req);
-  if (!adminSession) {
-    throw new ApiError({
-      code: 'UNAUTHORIZED',
-      message: 'Sessão inválida',
-      status: 401,
-    });
-  }
+  const session = await requireAdminSession(req, AdminPermission.FINANCEIRO);
 
   const { id } = params;
 
@@ -102,8 +85,8 @@ export const POST = withApiHandler<unknown, { id: string }>(async ({ req, params
           ...(transaction.metadata as Record<string, unknown> || {}),
           forceApproved: true,
           forceApprovedAt: now.toISOString(),
-          forceApprovedBy: adminSession.staffId,
-          forceApprovedByEmail: adminSession.email,
+          forceApprovedBy: session.staffId,
+          forceApprovedByEmail: session.email,
           forceApprovalReason: reason,
         },
       },
@@ -122,8 +105,8 @@ export const POST = withApiHandler<unknown, { id: string }>(async ({ req, params
           paymentTransactionId: updated.id,
           previousStatus: transaction.status,
           newStatus: 'PAID',
-          adminId: adminSession.staffId,
-          adminEmail: adminSession.email,
+          adminId: session.staffId,
+          adminEmail: session.email,
           reason,
           userId: updated.userId,
           externalId: updated.externalId,
@@ -140,8 +123,8 @@ export const POST = withApiHandler<unknown, { id: string }>(async ({ req, params
   logger.info({
     event: 'admin_force_approve_payment',
     paymentId: id,
-    adminId: adminSession.staffId,
-    adminEmail: adminSession.email,
+    adminId: session.staffId,
+    adminEmail: session.email,
     reason,
   }, 'Payment manually approved');
 
@@ -161,7 +144,7 @@ export const POST = withApiHandler<unknown, { id: string }>(async ({ req, params
       event: 'admin_force_approve_wallet_credited',
       userId: result.userId,
       amount: result.amountCents / 100,
-      approvedBy: adminSession.email,
+      approvedBy: session.email,
     }, 'Wallet credited after manual approval');
   }
 
@@ -175,7 +158,7 @@ export const POST = withApiHandler<unknown, { id: string }>(async ({ req, params
         paidAt: result.paidAt,
       },
       audit: {
-        approvedBy: adminSession.email,
+        approvedBy: session.email,
         reason,
         timestamp: now.toISOString(),
       },

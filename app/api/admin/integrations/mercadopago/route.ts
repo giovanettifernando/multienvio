@@ -6,8 +6,9 @@
  */
 
 import { z } from 'zod';
+import { requireAdminSession } from '@/platform/auth/require-session';
 import { prisma } from '@/platform/db/db';
-import { requireAdminUser } from '@/modules/auth/application/admin-helpers';
+
 import { AdminPermission, IntegrationStatus } from '@prisma/client';
 import { encrypt, decrypt } from '@/platform/integrations/shared/encryption.service';
 import { invalidateConfigCache } from '@/platform/integrations/mercadopago';
@@ -60,14 +61,8 @@ type MercadoPagoConfigInput = z.infer<typeof mercadoPagoConfigSchema>;
  * GET - Busca configuração atual do Mercado Pago
  */
 export const GET = withApiHandler<MercadoPagoGetResponse>(async ({ req }) => {
-  const authResult = await requireAdminUser(req, AdminPermission.INTEGRACOES);
-  if (authResult instanceof Response) {
-    throw new ApiError({
-      code: 'UNAUTHORIZED',
-      message: 'Não autorizado',
-      status: 401,
-    });
-  }
+  const session = await requireAdminSession(req, AdminPermission.INTEGRACOES);
+  
 
   // Buscar gateway e credenciais
   const gateway = await prisma.paymentGateway.findFirst({
@@ -143,14 +138,8 @@ export const GET = withApiHandler<MercadoPagoGetResponse>(async ({ req }) => {
  * POST - Salva/atualiza configuração do Mercado Pago
  */
 export const POST = withApiHandler<MercadoPagoPostResponse>(async ({ req, logger }) => {
-  const authResult = await requireAdminUser(req, AdminPermission.INTEGRACOES);
-  if (authResult instanceof Response) {
-    throw new ApiError({
-      code: 'UNAUTHORIZED',
-      message: 'Não autorizado',
-      status: 401,
-    });
-  }
+  const session = await requireAdminSession(req, AdminPermission.INTEGRACOES);
+  
 
   // Validar payload
   const body = await req.json();

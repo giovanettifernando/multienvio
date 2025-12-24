@@ -6,9 +6,10 @@
  */
 
 import { z } from 'zod';
+import { requireAdminSession } from '@/platform/auth/require-session';
 import { withApiHandler } from '@/platform/api/handler';
 import { ApiError } from '@/platform/api/errors';
-import { requireAdminUser } from '@/modules/auth/application/admin-helpers';
+
 import { AdminPermission } from '@prisma/client';
 import { prisma } from '@/platform/db/db';
 
@@ -62,10 +63,8 @@ interface ArticleResponse {
 // ============================================================================
 
 export const GET = withApiHandler<ArticleListResponse>(async ({ req }) => {
-  const authResult = await requireAdminUser(req, AdminPermission.CONFIGURACOES);
-  if (authResult instanceof Response) {
-    throw new ApiError({ code: 'UNAUTHORIZED', message: 'Não autorizado', status: 401 });
-  }
+  const session = await requireAdminSession(req, AdminPermission.CONFIGURACOES);
+  
 
   const url = new URL(req.url);
   const category = url.searchParams.get('category');
@@ -126,10 +125,8 @@ export const GET = withApiHandler<ArticleListResponse>(async ({ req }) => {
 // ============================================================================
 
 export const POST = withApiHandler<ArticleResponse>(async ({ req }) => {
-  const authResult = await requireAdminUser(req, AdminPermission.CONFIGURACOES);
-  if (authResult instanceof Response) {
-    throw new ApiError({ code: 'UNAUTHORIZED', message: 'Não autorizado', status: 401 });
-  }
+  const session = await requireAdminSession(req, AdminPermission.CONFIGURACOES);
+  
 
   const body = await req.json();
   const parsed = articleSchema.safeParse(body);

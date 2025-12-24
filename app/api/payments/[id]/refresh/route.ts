@@ -7,7 +7,7 @@
 
 import { withApiHandler } from '@/platform/api/handler';
 import { ApiError } from '@/platform/api/errors';
-import { getUserFromRequest } from '@/modules/auth/application/session';
+import { requireUserSession } from '@/platform/auth/require-session';
 import { prisma } from '@/platform/db/db';
 import { updatePaymentFromMercadoPago } from '@/platform/integrations/mercadopago';
 
@@ -22,10 +22,7 @@ type RefreshPaymentResponse = {
 
 export const POST = withApiHandler<RefreshPaymentResponse, { id: string }>(async (context) => {
   const { logger } = context;
-  const session = await getUserFromRequest(context.req);
-  if (!session?.userId) {
-    throw new ApiError({ code: 'unauthorized', message: 'Não autorizado', status: 401 });
-  }
+  const session = await requireUserSession(context.req);
 
   const { id } = await context.params;
 

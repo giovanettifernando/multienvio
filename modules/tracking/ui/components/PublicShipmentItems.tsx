@@ -153,13 +153,11 @@ export function PublicShipmentItems({ volumes, shipmentInfo }: PublicShipmentIte
 
     return (
       <Card
-        title={
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-            <span>Detalhes do volume</span>
-            <DocumentPDFButton volume={volume} shipmentInfo={shipmentInfo} />
-          </div>
-        }
-        styles={{ body: { padding: "16px" } }}
+        header={{
+          title: "Detalhes do volume",
+          extra: <DocumentPDFButton volume={volume} shipmentInfo={shipmentInfo} />,
+        }}
+        padding="md"
       >
         {/* Dimensões do volume */}
         <VolumeDimensions volume={volume} />
@@ -335,7 +333,7 @@ export function PublicShipmentItems({ volumes, shipmentInfo }: PublicShipmentIte
   }));
 
   return (
-    <Card title="Detalhes dos volumes" styles={{ body: { padding: 0 } }}>
+    <Card header={{ title: "Detalhes dos volumes" }} padding="none">
       <Collapse
         items={collapseItems}
         defaultActiveKey={volumes.map(v => v.index.toString())}

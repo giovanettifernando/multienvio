@@ -1,12 +1,9 @@
 import { NextResponse } from 'next/server';
 import { withApiHandlerResponse } from '@/platform/api/handler';
 import { prisma } from '@/platform/db/db';
-import { getUserSessionFromRequest } from '@/modules/auth/application/user-session';
+import { requireUser } from '@/platform/auth/require-session';
 import { baixarRotuloPdf } from '@/platform/integrations/correios/prepostagem';
-import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
-import bwipjs from 'bwip-js';
-import { readFile } from 'fs/promises';
-import { join } from 'path';
+import { createEnvioLegalPdf } from '@/platform/labels/pdf-generator';
 
 /**
  * GET /api/packages/[id]/pdf
@@ -16,10 +13,7 @@ export const GET = withApiHandlerResponse<{ id: string }>(async (context) => {
   const { req, params, logger } = context;
 
   try {
-    const session = await getUserSessionFromRequest(req);
-    if (!session) {
-      return NextResponse.json({ message: 'Não autenticado' }, { status: 401 });
-    }
+    const session = await requireUser(req);
 
     const packageId = params.id;
 
@@ -32,6 +26,8 @@ export const GET = withApiHandlerResponse<{ id: string }>(async (context) => {
             id: true,
             senderId: true,
             platformTrackingCode: true,
+            status: true,
+            paymentMethod: true,
           },
         },
       },
@@ -46,7 +42,26 @@ export const GET = withApiHandlerResponse<{ id: string }>(async (context) => {
       return NextResponse.json({ message: 'Acesso negado' }, { status: 403 });
     }
 
-    // 3. Verificar se tem pré-postagem
+    // 3. SECURITY: Verificar se o envio foi pago
+    if (!pkg.shipment.paymentMethod) {
+      logger.warn('pdf_download_unpaid', { packageId, shipmentId: pkg.shipment.id });
+      return NextResponse.json(
+        { message: 'Envio não pago. Finalize o pagamento antes de baixar a etiqueta.' },
+        { status: 402 }
+      );
+    }
+
+    // 4. SECURITY: Verificar se o envio não está cancelado/expirado
+    const status = pkg.shipment.status;
+    if (status.includes('CANCEL') || status.includes('EXPIRED') || status.includes('RETURNED')) {
+      logger.warn('pdf_download_invalid_status', { packageId, shipmentId: pkg.shipment.id, status });
+      return NextResponse.json(
+        { message: 'Não é possível baixar etiqueta de envio cancelado ou expirado.' },
+        { status: 400 }
+      );
+    }
+
+    // 5. Verificar se tem pré-postagem
     if (!pkg.carrierPrePostageId) {
       return NextResponse.json(
         { message: 'Pré-postagem não gerada para este volume' },
@@ -72,7 +87,11 @@ export const GET = withApiHandlerResponse<{ id: string }>(async (context) => {
 
     // 5. Criar PDF final com header Envio Legal
     const platformTrackingCode = pkg.shipment.platformTrackingCode || '';
-    const finalPdf = await createEnvioLegalPdf(platformTrackingCode, pkg.packageNumber, [rotuloResult.content]);
+    const finalPdf = await createEnvioLegalPdf({
+      platformTrackingCode,
+      correioPdfBuffers: [rotuloResult.content],
+      packageNumber: pkg.packageNumber,
+    });
 
     logger.info('package_pdf_generated', { packageId, packageNumber: pkg.packageNumber });
 
@@ -100,10 +119,7 @@ export const HEAD = withApiHandlerResponse<{ id: string }>(async (context) => {
   const { req, params, logger } = context;
 
   try {
-    const session = await getUserSessionFromRequest(req);
-    if (!session) {
-      return new NextResponse(null, { status: 401 });
-    }
+    const session = await requireUser(req);
 
     const packageId = params.id;
 
@@ -134,148 +150,3 @@ export const HEAD = withApiHandlerResponse<{ id: string }>(async (context) => {
     return new NextResponse(null, { status: 500 });
   }
 });
-
-/**
- * Cria o PDF final com header Envio Legal + código de barras + PDF Correios
- */
-async function createEnvioLegalPdf(
-  platformTrackingCode: string,
-  packageNumber: number,
-  correioPdfBuffers: Buffer[]
-): Promise<Buffer> {
-  const pdfDoc = await PDFDocument.create();
-  const helveticaBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-
-  const headerHeight = 80;
-
-  // Carregar logo Envio Legal
-  let logoImage: Awaited<ReturnType<typeof pdfDoc.embedPng>> | null = null;
-  try {
-    const logoPath = join(process.cwd(), 'public', 'images', 'envio-legal-logo.png');
-    const logoBuffer = await readFile(logoPath);
-    logoImage = await pdfDoc.embedPng(logoBuffer);
-  } catch {
-    // Logo não encontrado, continua sem
-  }
-
-  // Gerar código de barras (Code128)
-  let barcodeImage: Awaited<ReturnType<typeof pdfDoc.embedPng>> | null = null;
-
-  if (platformTrackingCode) {
-    try {
-      const barcodePng = await bwipjs.toBuffer({
-        bcid: 'code128',
-        text: platformTrackingCode,
-        scale: 3,
-        height: 10,
-        includetext: false,
-      });
-      barcodeImage = await pdfDoc.embedPng(barcodePng);
-    } catch {
-      // Barcode falhou, continua sem
-    }
-  }
-
-  // Para cada PDF do Correios
-  for (const correioPdfBuffer of correioPdfBuffers) {
-    let correioDoc: PDFDocument;
-    try {
-      correioDoc = await PDFDocument.load(correioPdfBuffer);
-    } catch {
-      continue;
-    }
-
-    const correioPages = correioDoc.getPages();
-
-    for (const correioPage of correioPages) {
-      const pdfWidth = correioPage.getWidth();
-      const pdfHeight = correioPage.getHeight();
-
-      const pageWidth = pdfWidth;
-      const pageHeight = pdfHeight + headerHeight;
-
-      const page = pdfDoc.addPage([pageWidth, pageHeight]);
-
-      // === HEADER ENVIO LEGAL ===
-      const CONTENT_WIDTH = 320;
-      const headerCenterX = CONTENT_WIDTH / 2;
-
-      // Logo
-      const logoHeight = 28;
-      const logoWidth = logoHeight * 2.5;
-      if (logoImage) {
-        page.drawImage(logoImage, {
-          x: headerCenterX - logoWidth / 2,
-          y: pageHeight - 32,
-          width: logoWidth,
-          height: logoHeight,
-        });
-      }
-
-      // Código de barras
-      if (barcodeImage) {
-        const barcodeWidth = Math.min(200, CONTENT_WIDTH - 40);
-        const barcodeHeight = 25;
-        const barcodeX = headerCenterX - barcodeWidth / 2;
-        const barcodeY = pageHeight - 62;
-
-        page.drawImage(barcodeImage, {
-          x: barcodeX,
-          y: barcodeY,
-          width: barcodeWidth,
-          height: barcodeHeight,
-        });
-      }
-
-      // Texto "ENVIO LEGAL" + código + volume
-      const codeSize = 9;
-      const titleText = 'ENVIO LEGAL';
-      const volumeText = `Vol. ${packageNumber}`;
-      const titleWidth = helveticaBold.widthOfTextAtSize(titleText, codeSize);
-      const trackingWidth = helveticaBold.widthOfTextAtSize(platformTrackingCode || '', codeSize);
-      const volumeWidth = helveticaBold.widthOfTextAtSize(volumeText, codeSize);
-      const gap = 8;
-      const totalWidth = titleWidth + gap + trackingWidth + gap + volumeWidth;
-      const startX = headerCenterX - totalWidth / 2;
-
-      page.drawText(titleText, {
-        x: startX,
-        y: pageHeight - 77,
-        size: codeSize,
-        font: helveticaBold,
-        color: rgb(0, 0, 0),
-      });
-
-      if (platformTrackingCode) {
-        page.drawText(platformTrackingCode, {
-          x: startX + titleWidth + gap,
-          y: pageHeight - 77,
-          size: codeSize,
-          font: helveticaBold,
-          color: rgb(0, 0, 0),
-        });
-      }
-
-      page.drawText(volumeText, {
-        x: startX + titleWidth + gap + trackingWidth + gap,
-        y: pageHeight - 77,
-        size: codeSize,
-        font: helveticaBold,
-        color: rgb(0.4, 0.4, 0.4),
-      });
-
-      // === CONTEÚDO DO CORREIOS ===
-      const [embeddedPage] = await pdfDoc.embedPdf(correioDoc, [correioPages.indexOf(correioPage)]);
-
-      page.drawPage(embeddedPage, {
-        x: 0,
-        y: 0,
-        width: pdfWidth,
-        height: pdfHeight,
-      });
-    }
-  }
-
-  const pdfBytes = await pdfDoc.save();
-  return Buffer.from(pdfBytes);
-}

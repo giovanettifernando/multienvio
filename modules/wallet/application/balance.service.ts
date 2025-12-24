@@ -8,6 +8,7 @@
 import { prisma as defaultPrisma } from '@/platform/db/db';
 import type { PrismaClient } from '@prisma/client';
 import { getOrCreateWallet, centsToReais } from './wallet.service';
+import { getWalletBalance } from './ledger-balance.service';
 import { getCurrentMonthRange, calculatePeriodSummary } from './period-summary';
 import {
   getTransactionDirection,
@@ -100,12 +101,15 @@ export async function getWalletOverview(
     };
   });
 
+  // ARQUITETURA: Saldo calculado do ledger (fonte única de verdade)
+  const ledgerBalance = await getWalletBalance(wallet.id);
+
   return {
     balance: {
-      availableReais: centsToReais(wallet.availableCents),
-      availableCents: wallet.availableCents,
-      pendingReais: centsToReais(wallet.pendingCents),
-      pendingCents: wallet.pendingCents,
+      availableReais: centsToReais(ledgerBalance.availableCents),
+      availableCents: ledgerBalance.availableCents,
+      pendingReais: centsToReais(ledgerBalance.pendingCents),
+      pendingCents: ledgerBalance.pendingCents,
     },
     monthlySummary,
     latestTransactions: transactionsDTO,

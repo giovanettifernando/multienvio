@@ -6,7 +6,7 @@
 
 import { withApiHandler } from '@/platform/api/handler';
 import { ApiError } from '@/platform/api/errors';
-import { getUserFromRequest } from '@/modules/auth/application/session';
+import { requireUserSession } from '@/platform/auth/require-session';
 import { logger } from '@/platform/logging/logger';
 import { addCartItemSchema } from '@/modules/cart/dto/cart';
 import { addItem, type CartItemDto } from '@/modules/cart/application';
@@ -29,10 +29,7 @@ type PostCartItemResponse = {
  * Adiciona um item ao carrinho
  */
 export const POST = withApiHandler<PostCartItemResponse>(async (context) => {
-  const session = await getUserFromRequest(context.req);
-  if (!session?.userId) {
-    throw new ApiError({ code: 'unauthorized', message: 'Não autorizado', status: 401 });
-  }
+  const session = await requireUserSession(context.req);
 
   const body = await context.req.json();
 

@@ -6,7 +6,8 @@
  */
 
 import { z } from 'zod';
-import { requireAdminUser } from '@/modules/auth/application/admin-helpers';
+import { requireAdminSession } from '@/platform/auth/require-session';
+
 import { AdminPermission } from '@prisma/client';
 import { withApiHandler } from '@/platform/api/handler';
 import { ApiError } from '@/platform/api/errors';
@@ -45,14 +46,8 @@ const testCredentialsSchema = z.object({
  * Caso contrário, usa as credenciais salvas
  */
 export const POST = withApiHandler<TestConnectionResponse>(async ({ req }) => {
-  const authResult = await requireAdminUser(req, AdminPermission.INTEGRACOES);
-  if (authResult instanceof Response) {
-    throw new ApiError({
-      code: 'UNAUTHORIZED',
-      message: 'Não autorizado',
-      status: 401,
-    });
-  }
+  const session = await requireAdminSession(req, AdminPermission.INTEGRACOES);
+  
 
   const body = await req.json().catch(() => ({}));
   const parsed = testCredentialsSchema.safeParse(body);

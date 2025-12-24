@@ -1,148 +1,121 @@
 /**
- * PUT/DELETE /api/admin/clients/[id]/recipients/[recipientId]
+ * GET/PUT/DELETE /api/admin/clients/[id]/recipients/[recipientId]
  *
- * Atualiza ou remove destinatário de um usuário (Admin)
+ * Operações admin em destinatário específico do cliente.
+ * Usa o service unificado com AdminContext para audit logs.
  */
-
-import { NextResponse } from 'next/server';
-import { z } from 'zod';
+import { requireAdminSession } from '@/platform/auth/require-session';
 import { withApiHandler } from '@/platform/api/handler';
 import { ApiError } from '@/platform/api/errors';
 import { prisma } from '@/platform/db/db';
-import { requireAdminUser } from '@/modules/auth/application/admin-helpers';
 import { AdminPermission } from '@prisma/client';
-import { logger } from '@/platform/logging/logger';
+import {
+  getRecipient,
+  updateRecipient,
+  deleteRecipient,
+  type AccountRecipientDto,
+  type AdminContext,
+} from '@/modules/auth/application/account-recipients.service';
+import { validateRecipientUpdateInput } from '@/shared/validation/recipient';
 
-const recipientSchema = z.object({
-  name: z.string().min(2).optional(),
-  email: z.string().email().nullable().optional(),
-  document: z.string().nullable().optional(),
-  phone: z.string().nullable().optional(),
-  notes: z.string().nullable().optional(),
-  isDefault: z.boolean().optional(),
-  cep: z.string().min(8).max(8).optional(),
-  logradouro: z.string().min(1).optional(),
-  numero: z.string().min(1).optional(),
-  complemento: z.string().nullable().optional(),
-  bairro: z.string().min(1).optional(),
-  cidade: z.string().min(1).optional(),
-  uf: z.string().length(2).optional(),
-});
+type Params = { id: string; recipientId: string };
 
-// PUT - Atualizar destinatário
-export const PUT = withApiHandler<unknown, { id: string; recipientId: string }>(async ({ req, params }) => {
-  const authResult = await requireAdminUser(req, AdminPermission.CONTAS);
-  if (authResult instanceof NextResponse) {
+async function validateClientExists(clientId: string): Promise<string> {
+  const user = await prisma.user.findUnique({
+    where: { id: clientId },
+    select: { id: true },
+  });
+
+  if (!user) {
     throw new ApiError({
-      code: 'UNAUTHORIZED',
-      message: 'Não autorizado',
-      status: 401,
+      code: 'client_not_found',
+      message: 'Cliente não encontrado.',
+      status: 404,
     });
   }
 
-  const { id: userId, recipientId } = params;
-  const body = await req.json();
+  return user.id;
+}
 
-  const validation = recipientSchema.safeParse(body);
-  if (!validation.success) {
+export const GET = withApiHandler<AccountRecipientDto>(async ({ req, params, logger }) => {
+  const { id: clientId, recipientId } = params as Params;
+
+  await requireAdminSession(req, AdminPermission.CONTAS);
+
+  const userId = await validateClientExists(clientId);
+
+  const recipient = await getRecipient(userId, recipientId, { logger });
+
+  return {
+    data: recipient,
+    meta: { tags: ['admin', 'clients', 'recipients'] },
+  };
+});
+
+export const PUT = withApiHandler<AccountRecipientDto>(async ({ req, params, logger }) => {
+  const { id: clientId, recipientId } = params as Params;
+
+  const session = await requireAdminSession(req, AdminPermission.CONTAS);
+
+  const userId = await validateClientExists(clientId);
+
+  const adminContext: AdminContext = {
+    adminId: session.staffId,
+    adminEmail: session.email,
+  };
+
+  let payload: unknown;
+  try {
+    payload = await req.json();
+  } catch {
     throw new ApiError({
-      code: 'BAD_REQUEST',
-      message: 'Dados inválidos',
+      code: 'invalid_payload',
+      message: 'JSON inválido.',
       status: 400,
-      details: validation.error.flatten(),
     });
   }
 
-  // Verificar se destinatário existe e pertence ao usuário
-  const existing = await prisma.recipient.findFirst({
-    where: { id: recipientId, userId },
+  let normalized;
+  try {
+    normalized = validateRecipientUpdateInput(payload);
+  } catch (error) {
+    if (error instanceof Error) {
+      throw new ApiError({
+        code: 'validation_error',
+        message: error.message,
+        status: 400,
+      });
+    }
+    throw error;
+  }
+
+  const updated = await updateRecipient(userId, recipientId, normalized, {
+    logger,
+    adminContext,
   });
 
-  if (!existing) {
-    throw new ApiError({
-      code: 'NOT_FOUND',
-      message: 'Destinatário não encontrado',
-      status: 404,
-    });
-  }
-
-  const data = validation.data;
-
-  // Se for default, remover default de outros
-  if (data.isDefault) {
-    await prisma.recipient.updateMany({
-      where: { userId, isDefault: true, id: { not: recipientId } },
-      data: { isDefault: false },
-    });
-  }
-
-  const recipient = await prisma.recipient.update({
-    where: { id: recipientId },
-    data: {
-      ...(data.name && { name: data.name, nameSearch: data.name.toLowerCase() }),
-      ...(data.email !== undefined && { email: data.email }),
-      ...(data.document !== undefined && {
-        document: data.document?.replace(/\D/g, '') || null,
-      }),
-      ...(data.phone !== undefined && { phone: data.phone?.replace(/\D/g, '') || null }),
-      ...(data.notes !== undefined && { notes: data.notes }),
-      ...(data.isDefault !== undefined && { isDefault: data.isDefault }),
-      ...(data.cep && { cep: data.cep.replace(/\D/g, '') }),
-      ...(data.logradouro && { logradouro: data.logradouro }),
-      ...(data.numero && { numero: data.numero }),
-      ...(data.complemento !== undefined && { complemento: data.complemento }),
-      ...(data.bairro && { bairro: data.bairro }),
-      ...(data.cidade && { cidade: data.cidade }),
-      ...(data.uf && { uf: data.uf.toUpperCase() }),
-    },
-  });
-
-  logger.info({
-    event: 'admin_update_recipient',
-    adminId: authResult.user.id,
-    userId,
-    recipientId,
-  }, 'Admin updated recipient');
-
-  return { data: { message: 'Destinatário atualizado com sucesso', recipient } };
+  return {
+    data: updated,
+    meta: { tags: ['admin', 'clients', 'recipients'] },
+  };
 });
 
-// DELETE - Remover destinatário
-export const DELETE = withApiHandler<unknown, { id: string; recipientId: string }>(async ({ req, params }) => {
-  const authResult = await requireAdminUser(req, AdminPermission.CONTAS);
-  if (authResult instanceof NextResponse) {
-    throw new ApiError({
-      code: 'UNAUTHORIZED',
-      message: 'Não autorizado',
-      status: 401,
-    });
-  }
+export const DELETE = withApiHandler<{ success: boolean }>(async ({ req, params, logger }) => {
+  const { id: clientId, recipientId } = params as Params;
 
-  const { id: userId, recipientId } = params;
+  const session = await requireAdminSession(req, AdminPermission.CONTAS);
 
-  // Verificar se destinatário existe e pertence ao usuário
-  const existing = await prisma.recipient.findFirst({
-    where: { id: recipientId, userId },
-  });
+  const userId = await validateClientExists(clientId);
 
-  if (!existing) {
-    throw new ApiError({
-      code: 'NOT_FOUND',
-      message: 'Destinatário não encontrado',
-      status: 404,
-    });
-  }
+  const adminContext: AdminContext = {
+    adminId: session.staffId,
+    adminEmail: session.email,
+  };
 
-  await prisma.recipient.delete({
-    where: { id: recipientId },
-  });
+  await deleteRecipient(userId, recipientId, { logger, adminContext });
 
-  logger.info({
-    event: 'admin_delete_recipient',
-    adminId: authResult.user.id,
-    userId,
-    recipientId,
-  }, 'Admin deleted recipient');
-
-  return { data: { message: 'Destinatário removido com sucesso' } };
+  return {
+    data: { success: true },
+    meta: { tags: ['admin', 'clients', 'recipients'] },
+  };
 });

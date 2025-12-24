@@ -4,21 +4,15 @@
  * Sincroniza um pagamento específico com o Mercado Pago
  */
 
-import { requireAdminUser } from '@/modules/auth/application/admin-helpers';
 import { AdminPermission } from '@prisma/client';
+import { requireAdminSession } from '@/platform/auth/require-session';
 import { updatePaymentFromMercadoPago } from '@/platform/integrations/mercadopago/payments';
 import { withApiHandler } from '@/platform/api/handler';
 import { ApiError } from '@/platform/api/errors';
 
 export const POST = withApiHandler(async ({ req }) => {
-  const authResult = await requireAdminUser(req, AdminPermission.INTEGRACOES);
-  if (authResult instanceof Response) {
-    throw new ApiError({
-      code: 'UNAUTHORIZED',
-      message: 'Não autorizado',
-      status: 401,
-    });
-  }
+  const session = await requireAdminSession(req, AdminPermission.INTEGRACOES);
+  
 
   // Obter externalId do body
   const body = await req.json();

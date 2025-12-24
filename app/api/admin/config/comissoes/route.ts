@@ -5,13 +5,12 @@
  * Rotas de configuração das comissões da plataforma (Admin)
  */
 
-
-import { NextResponse } from 'next/server';
 import { z } from 'zod';
+import { requireAdminSession } from '@/platform/auth/require-session';
 import { withApiHandler } from '@/platform/api/handler';
 import { ApiError } from '@/platform/api/errors';
 import { prisma } from '@/platform/db/db';
-import { requireAdminUser } from '@/modules/auth/application/admin-helpers';
+
 import { AdminPermission } from '@prisma/client';
 
 /**
@@ -43,14 +42,7 @@ interface CommissionConfigResponse {
  * GET - Retorna a configuração atual de comissões
  */
 export const GET = withApiHandler<CommissionConfigResponse>(async ({ req }) => {
-  const authResult = await requireAdminUser(req, AdminPermission.CONFIGURACOES);
-  if (authResult instanceof NextResponse) {
-    throw new ApiError({
-      code: 'UNAUTHORIZED',
-      message: 'Não autorizado',
-      status: 401,
-    });
-  }
+  const session = await requireAdminSession(req, AdminPermission.CONFIGURACOES);
 
   // Buscar configuração ativa (singleton - pega a mais recente)
   const config = await prisma.platformCommission.findFirst({
@@ -87,14 +79,7 @@ export const GET = withApiHandler<CommissionConfigResponse>(async ({ req }) => {
  * POST - Salva a configuração de comissões
  */
 export const POST = withApiHandler(async ({ req }) => {
-  const authResult = await requireAdminUser(req, AdminPermission.CONFIGURACOES);
-  if (authResult instanceof NextResponse) {
-    throw new ApiError({
-      code: 'UNAUTHORIZED',
-      message: 'Não autorizado',
-      status: 401,
-    });
-  }
+  const session = await requireAdminSession(req, AdminPermission.CONFIGURACOES);
 
   const body = await req.json();
   const parsed = commissionConfigSchema.safeParse(body);
@@ -124,7 +109,7 @@ export const POST = withApiHandler(async ({ req }) => {
       data: {
         pickupFeeCommissionPercent,
         isActive,
-        updatedById: authResult.user.id,
+        updatedById: session.staffId,
       },
     });
   } else {
@@ -133,7 +118,7 @@ export const POST = withApiHandler(async ({ req }) => {
       data: {
         pickupFeeCommissionPercent,
         isActive,
-        updatedById: authResult.user.id,
+        updatedById: session.staffId,
       },
     });
   }

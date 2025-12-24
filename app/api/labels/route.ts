@@ -7,7 +7,7 @@
 
 import { withApiHandler } from '@/platform/api/handler';
 import { ApiError } from '@/platform/api/errors';
-import { getUserFromRequest } from '@/modules/auth/application/session';
+import { requireUserSession } from '@/platform/auth/require-session';
 import { listUserLabels, markLabelAsPrinted } from '@/modules/labels/application';
 import type { LabelsResponse, PrintStatus } from '@/shared/types/label';
 
@@ -15,10 +15,7 @@ import type { LabelsResponse, PrintStatus } from '@/shared/types/label';
  * GET /api/labels
  */
 export const GET = withApiHandler<LabelsResponse>(async (context) => {
-  const session = await getUserFromRequest(context.req);
-  if (!session?.userId) {
-    throw new ApiError({ code: 'unauthorized', message: 'Não autenticado', status: 401 });
-  }
+  const session = await requireUserSession(context.req);
 
   const { searchParams } = new URL(context.req.url);
   const page = parseInt(searchParams.get('page') ?? '1', 10);
@@ -48,10 +45,7 @@ interface LabelPrintUpdateResponse {
  * PATCH /api/labels?id=xxx
  */
 export const PATCH = withApiHandler<LabelPrintUpdateResponse>(async (context) => {
-  const session = await getUserFromRequest(context.req);
-  if (!session?.userId) {
-    throw new ApiError({ code: 'unauthorized', message: 'Não autenticado', status: 401 });
-  }
+  const session = await requireUserSession(context.req);
 
   const { searchParams } = new URL(context.req.url);
   const labelId = searchParams.get('id');

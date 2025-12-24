@@ -5,17 +5,13 @@
  */
 
 import { withApiHandler } from '@/platform/api/handler';
-import { ApiError } from '@/platform/api/errors';
-import { getUserFromRequest } from '@/modules/auth/application/session';
+import { requireUserSession } from '@/platform/auth/require-session';
 import { listUserShipments, type PaginatedResult, type ShipmentListItem } from '@/modules/shipments/application';
 
 type ShipmentListResponse = PaginatedResult<ShipmentListItem>;
 
 export const GET = withApiHandler<ShipmentListResponse>(async (context) => {
-  const session = await getUserFromRequest(context.req);
-  if (!session?.userId) {
-    throw new ApiError({ code: 'unauthorized', message: 'Não autorizado', status: 401 });
-  }
+  const session = await requireUserSession(context.req);
 
   const { searchParams } = new URL(context.req.url);
   const q = searchParams.get('q') ?? '';

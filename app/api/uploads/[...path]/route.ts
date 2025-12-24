@@ -3,7 +3,7 @@ import { readFile, stat } from 'fs/promises';
 import path from 'path';
 import { withApiHandlerResponse } from '@/platform/api/handler';
 import { ApiError } from '@/platform/api/errors';
-import { getUserFromRequest } from '@/modules/auth/application/session';
+import { requireUserSession } from '@/platform/auth/require-session';
 import { getAdminSessionFromRequest } from '@/modules/auth/application/admin-session';
 import { prisma } from '@/platform/db/db';
 
@@ -47,7 +47,15 @@ export const GET = withApiHandlerResponse<{ path: string[] }>(async ({ req, para
   }
 
   // SECURITY FIX F-05: Verificar autenticação
-  const userSession = await getUserFromRequest(req);
+  // Try user session first (most common case), fallback to admin session
+  let userSession;
+  try {
+    userSession = await requireUserSession(req);
+  } catch {
+    // If user auth fails, try admin auth
+    userSession = null;
+  }
+
   const adminSession = await getAdminSessionFromRequest(req);
 
   if (!userSession && !adminSession) {
@@ -103,12 +111,14 @@ export const GET = withApiHandlerResponse<{ path: string[] }>(async ({ req, para
     }
   }
 
-  // Construir caminho absoluto
-  const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
-  const filePath = path.join(uploadsDir, requestedPath);
+  // Construir caminho absoluto com proteção robusta contra path traversal
+  const uploadsDir = path.resolve(process.cwd(), 'public', 'uploads');
+  const filePath = path.resolve(uploadsDir, requestedPath);
 
-  // Verificar se o arquivo está dentro do diretório de uploads
-  if (!filePath.startsWith(uploadsDir)) {
+  // SECURITY: Verificar se o arquivo está dentro do diretório de uploads
+  // Usa path.sep para evitar match parcial (ex: /uploads-other/)
+  if (!filePath.startsWith(uploadsDir + path.sep) && filePath !== uploadsDir) {
+    logger.warn('path_traversal_attempt', { requestedPath, resolvedPath: filePath });
     throw new ApiError({
       code: 'ACCESS_DENIED',
       message: 'Access denied',

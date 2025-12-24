@@ -5,8 +5,7 @@
  */
 
 import { withApiHandler } from '@/platform/api/handler';
-import { ApiError } from '@/platform/api/errors';
-import { getAdminSessionFromRequest } from '@/modules/auth/application/admin-session';
+import { requireAdminSession } from '@/platform/auth/require-session';
 import { AdminPermission, WalletTxType } from '@prisma/client';
 import { prisma } from '@/platform/db/db';
 import type { Paged } from '@/modules/admin/application/finance/types';
@@ -45,22 +44,7 @@ type WalletTransactionsResponse = Paged<AdminWalletTransaction> & {
 };
 
 export const GET = withApiHandler<WalletTransactionsResponse>(async ({ req }) => {
-  const session = await getAdminSessionFromRequest(req);
-  if (!session) {
-    throw new ApiError({
-      code: 'UNAUTHORIZED',
-      message: 'Não autenticado',
-      status: 401,
-    });
-  }
-
-  if (!session.permissions.includes(AdminPermission.FINANCEIRO)) {
-    throw new ApiError({
-      code: 'FORBIDDEN',
-      message: 'Sem permissão para acessar finanças',
-      status: 403,
-    });
-  }
+  await requireAdminSession(req, AdminPermission.FINANCEIRO);
 
   const searchParams = req.nextUrl.searchParams;
   const page = parseInt(searchParams.get('page') || '1', 10);

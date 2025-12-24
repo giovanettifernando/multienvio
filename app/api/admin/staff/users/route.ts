@@ -1,6 +1,6 @@
 import { withApiHandler } from '@/platform/api/handler';
 import { ApiError } from '@/platform/api/errors';
-import { getAdminSessionFromRequest } from '@/modules/auth/application/admin-session';
+import { requireAdminSession } from '@/platform/auth/require-session';
 import { z } from 'zod';
 import { prisma } from '@/platform/db/db';
 import { AdminPermission, Prisma, StaffStatus } from '@prisma/client';
@@ -117,14 +117,7 @@ function toApiUser(user: {
 export const GET = withApiHandler<StaffUsersListResponse>(async (context) => {
   const { req } = context;
 
-  const session = await getAdminSessionFromRequest(req);
-  if (!session) {
-    throw new ApiError({ code: 'unauthorized', message: 'Não autenticado', status: 401 });
-  }
-
-  if (!session.permissions.includes(AdminPermission.USUARIOS)) {
-    throw new ApiError({ code: 'forbidden', message: 'Permissão negada', status: 403 });
-  }
+  const session = await requireAdminSession(req, AdminPermission.USUARIOS);
 
   const { searchParams } = new URL(req.url);
   const filters = filtersSchema.parse(Object.fromEntries(searchParams));
@@ -216,14 +209,7 @@ export const GET = withApiHandler<StaffUsersListResponse>(async (context) => {
 export const POST = withApiHandler<StaffUserCreateResponse>(async (context) => {
   const { req, logger } = context;
 
-  const session = await getAdminSessionFromRequest(req);
-  if (!session) {
-    throw new ApiError({ code: 'unauthorized', message: 'Não autenticado', status: 401 });
-  }
-
-  if (!session.permissions.includes(AdminPermission.USUARIOS)) {
-    throw new ApiError({ code: 'forbidden', message: 'Permissão negada', status: 403 });
-  }
+  const session = await requireAdminSession(req, AdminPermission.USUARIOS);
 
   const body = await req.json();
   const payload = createSchema.parse(body);

@@ -1,6 +1,6 @@
 import { withApiHandler } from '@/platform/api/handler';
 import { ApiError } from '@/platform/api/errors';
-import { getUserFromRequest } from '@/modules/auth/application/session';
+import { requireUserSession } from '@/platform/auth/require-session';
 import { prisma } from "@/platform/db/db";
 import { z } from 'zod';
 
@@ -80,10 +80,7 @@ interface LabelDetailResponse {
  * Busca detalhes completos de uma etiqueta para impressão
  */
 export const GET = withApiHandler<LabelDetailResponse, { id: string }>(async (context) => {
-  const session = await getUserFromRequest(context.req);
-  if (!session?.userId) {
-    throw new ApiError({ code: 'unauthorized', message: 'Não autenticado', status: 401 });
-  }
+  const session = await requireUserSession(context.req);
 
   const { id } = await context.params;
 
@@ -237,10 +234,7 @@ const LabelPrintUpdateSchema = z.object({
  * Atualiza status de impressão da etiqueta
  */
 export const PATCH = withApiHandler<LabelPrintUpdateResponse, { id: string }>(async (context) => {
-  const session = await getUserFromRequest(context.req);
-  if (!session?.userId) {
-    throw new ApiError({ code: 'unauthorized', message: 'Não autenticado', status: 401 });
-  }
+  const session = await requireUserSession(context.req);
 
   const { id } = await context.params;
   const body = await context.req.json();
@@ -274,17 +268,40 @@ export const PATCH = withApiHandler<LabelPrintUpdateResponse, { id: string }>(as
     throw new ApiError({ code: 'forbidden', message: 'Acesso negado', status: 403 });
   }
 
+  // SECURITY: isPrinted é monotônico - uma vez impressa, não pode ser desmarcada
+  if (isPrinted === false && label.isPrinted === true) {
+    throw new ApiError({
+      code: 'invalid_operation',
+      message: 'Não é possível desmarcar uma etiqueta já impressa',
+      status: 400,
+    });
+  }
+
+  // Se já está impressa, retorna sem modificar (idempotente)
+  if (label.isPrinted === true) {
+    return {
+      data: {
+        message: 'Etiqueta já estava marcada como impressa',
+        label: {
+          id: label.id,
+          isPrinted: label.isPrinted,
+          printedAt: label.printedAt?.toISOString(),
+        },
+      },
+    };
+  }
+
   const updated = await prisma.label.update({
     where: { id },
     data: {
-      isPrinted: isPrinted ?? true,
-      printedAt: isPrinted ? new Date() : null,
+      isPrinted: true,
+      printedAt: new Date(),
     },
   });
 
   return {
     data: {
-      message: isPrinted ? 'Etiqueta marcada como impressa' : 'Status de impressão atualizado',
+      message: 'Etiqueta marcada como impressa',
       label: {
         id: updated.id,
         isPrinted: updated.isPrinted,

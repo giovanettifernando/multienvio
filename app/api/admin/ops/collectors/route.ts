@@ -1,6 +1,5 @@
 import { withApiHandler } from '@/platform/api/handler';
-import { ApiError } from '@/platform/api/errors';
-import { getAdminSessionFromRequest } from '@/modules/auth/application/admin-session';
+import { requireAdminSession } from '@/platform/auth/require-session';
 import { AdminPermission } from '@prisma/client';
 import { prisma } from '@/platform/db/db';
 
@@ -15,14 +14,7 @@ interface CollectorItem {
 export const GET = withApiHandler<CollectorItem[]>(async (context) => {
   const { req } = context;
 
-  const session = await getAdminSessionFromRequest(req);
-  if (!session) {
-    throw new ApiError({ code: 'unauthorized', message: 'Não autenticado', status: 401 });
-  }
-
-  if (!session.permissions.includes(AdminPermission.OPERACOES)) {
-    throw new ApiError({ code: 'forbidden', message: 'Permissão negada', status: 403 });
-  }
+  await requireAdminSession(req, AdminPermission.OPERACOES);
 
   // Fetch only active collectors
   const collectors = await prisma.collector.findMany({

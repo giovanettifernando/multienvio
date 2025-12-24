@@ -1,6 +1,6 @@
 import { withApiHandler } from '@/platform/api/handler';
 import { ApiError } from '@/platform/api/errors';
-import { getAdminSessionFromRequest } from '@/modules/auth/application/admin-session';
+import { requireAdminSession } from '@/platform/auth/require-session';
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 import { prisma } from '@/platform/db/db';
@@ -17,14 +17,7 @@ type PasswordResetResponse = {
 export const POST = withApiHandler<PasswordResetResponse, { id: string }>(async (context) => {
   const { req, params } = context;
 
-  const session = await getAdminSessionFromRequest(req);
-  if (!session) {
-    throw new ApiError({ code: 'unauthorized', message: 'Não autenticado', status: 401 });
-  }
-
-  if (!session.permissions.includes(AdminPermission.USUARIOS)) {
-    throw new ApiError({ code: 'forbidden', message: 'Permissão negada', status: 403 });
-  }
+  const session = await requireAdminSession(req, AdminPermission.USUARIOS);
 
   // Rate limiting (Redis distribuido)
   const rateLimitError = await rateLimitByUser(session.staffId, 'password_reset', RATE_LIMITS.PASSWORD_RESET);

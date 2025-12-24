@@ -2,7 +2,7 @@ import { withApiHandler } from '@/platform/api/handler';
 import { ApiError } from '@/platform/api/errors';
 import { prisma } from '@/platform/db/db';
 import { Prisma } from '@prisma/client';
-import { getUserFromRequest } from '@/modules/auth/application/session';
+import { requireUserSession } from '@/platform/auth/require-session';
 import { ShipmentStatus, FINAL_STATUSES } from '@/modules/shipments/application/shipment-status';
 import { canBeCancelled, getNextCancellationStatus } from '@/modules/shipments/application/status-migration';
 import { refund as walletRefund, reaisToCents } from '@/modules/wallet/application/wallet.service';
@@ -54,10 +54,7 @@ interface CorreiosCancelResult {
  * - Cleanup na fase 4 é idempotente e pode ser retentado
  */
 export const POST = withApiHandler<ShipmentCancelResponse, { id: string }>(async (context) => {
-  const session = await getUserFromRequest(context.req);
-  if (!session?.userId) {
-    throw new ApiError({ code: 'unauthorized', message: 'Não autenticado', status: 401 });
-  }
+  const session = await requireUserSession(context.req);
 
   const id = context.params.id;
 

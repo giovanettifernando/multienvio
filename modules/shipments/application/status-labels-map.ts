@@ -16,6 +16,7 @@ export type UIShipmentStatus =
   | "Em trânsito"
   | "Em rota de entrega"
   | "Entregue"
+  | "Falha na coleta"
   | "Cancelado"
   | "Devolvido";
 
@@ -33,8 +34,9 @@ export function mapToUIStatus(status: ShipmentStatus): UIShipmentStatus {
     return "Aguardando coleta";
   }
 
+  // PICKUP_FAILED é diferente de cancelado - coleta pode ser reagendada
   if (status === ShipmentStatus.PICKUP_FAILED) {
-    return "Cancelado";
+    return "Falha na coleta";
   }
 
   if ([
@@ -181,9 +183,13 @@ export function getBackendStatusesForUIFilter(uiStatus: UIShipmentStatus): Shipm
         ShipmentStatus.DELIVERED_AT_DESTINATION_HUB,
       ];
 
-    case "Cancelado":
+    case "Falha na coleta":
       return [
         ShipmentStatus.PICKUP_FAILED,
+      ];
+
+    case "Cancelado":
+      return [
         ShipmentStatus.CANCELLATION_REQUESTED_BEFORE_HANDOFF,
         ShipmentStatus.CANCELLED_BEFORE_HANDOFF,
         ShipmentStatus.EXPIRED_NOT_POSTED,

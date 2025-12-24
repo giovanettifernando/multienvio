@@ -4,12 +4,12 @@
  * Atualiza o perfil de um usuário da plataforma (Admin)
  */
 
-import { NextResponse } from 'next/server';
 import { z } from 'zod';
+import { requireAdminSession } from '@/platform/auth/require-session';
 import { withApiHandler } from '@/platform/api/handler';
 import { ApiError } from '@/platform/api/errors';
 import { prisma } from '@/platform/db/db';
-import { requireAdminUser } from '@/modules/auth/application/admin-helpers';
+
 import { AdminPermission } from '@prisma/client';
 import { logger } from '@/platform/logging/logger';
 
@@ -26,14 +26,7 @@ const updateProfileSchema = z.object({
 });
 
 export const PUT = withApiHandler<unknown, { id: string }>(async ({ req, params }) => {
-  const authResult = await requireAdminUser(req, AdminPermission.CONTAS);
-  if (authResult instanceof NextResponse) {
-    throw new ApiError({
-      code: 'UNAUTHORIZED',
-      message: 'Não autorizado',
-      status: 401,
-    });
-  }
+  const session = await requireAdminSession(req, AdminPermission.CONTAS);
 
   const { id } = params;
   const body = await req.json();
@@ -116,7 +109,7 @@ export const PUT = withApiHandler<unknown, { id: string }>(async ({ req, params 
   // Log de auditoria
   logger.info({
     event: 'admin_update_profile',
-    adminId: authResult.user.id,
+    adminId: session.staffId,
     userId: id,
     changes: data,
   }, 'Admin updated user profile');

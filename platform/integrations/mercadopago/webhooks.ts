@@ -97,8 +97,18 @@ export async function validateWebhookSignature(
     hmac.update(manifest);
     const calculatedSignature = hmac.digest('hex');
 
-    // Comparar assinaturas
-    const isValid = calculatedSignature === v1;
+    // SECURITY: Comparar assinaturas usando timingSafeEqual para prevenir timing attacks
+    let isValid = false;
+    try {
+      const calculatedBuffer = Buffer.from(calculatedSignature, 'hex');
+      const v1Buffer = Buffer.from(v1, 'hex');
+
+      if (calculatedBuffer.length === v1Buffer.length) {
+        isValid = crypto.timingSafeEqual(calculatedBuffer, v1Buffer);
+      }
+    } catch {
+      isValid = false;
+    }
 
     if (!isValid) {
       // Não logar assinaturas completas para evitar exposição do webhook secret

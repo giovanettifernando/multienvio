@@ -5,7 +5,7 @@
  * Requer permissão INTEGRACOES ou superAdmin
  */
 
-import { getAdminSessionFromRequest } from '@/modules/auth/application/admin-session';
+import { requireAdminSession } from '@/platform/auth/require-session';
 import { canAccess } from '@/modules/auth/application/permissions';
 import { AdminPermission } from '@prisma/client';
 import { prisma } from '@/platform/db/db';
@@ -17,14 +17,7 @@ import { ApiError } from '@/platform/api/errors';
 export const maxDuration = 300;
 
 export const POST = withApiHandler(async ({ req }) => {
-  const session = await getAdminSessionFromRequest(req);
-  if (!session) {
-    throw new ApiError({
-      code: 'UNAUTHORIZED',
-      message: 'Não autenticado',
-      status: 401,
-    });
-  }
+  const session = await requireAdminSession(req, AdminPermission.CONFIGURACOES);
 
   const staff = await prisma.staffUser.findUnique({
     where: { id: session.staffId },
@@ -95,14 +88,7 @@ export const POST = withApiHandler(async ({ req }) => {
  * Retorna estatísticas da base FIPE local
  */
 export const GET = withApiHandler(async ({ req }) => {
-  const session = await getAdminSessionFromRequest(req);
-  if (!session) {
-    throw new ApiError({
-      code: 'UNAUTHORIZED',
-      message: 'Não autenticado',
-      status: 401,
-    });
-  }
+  const session = await requireAdminSession(req, AdminPermission.CONFIGURACOES);
 
   const staff = await prisma.staffUser.findUnique({
     where: { id: session.staffId },

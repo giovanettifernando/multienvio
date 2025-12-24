@@ -1,7 +1,8 @@
 import { z } from 'zod';
+import { requireAdminSession } from '@/platform/auth/require-session';
 import bcrypt from 'bcrypt';
 import { prisma } from '@/platform/db/db';
-import { requireAdminUser } from '@/modules/auth/application/admin-helpers';
+
 import { AdminPermission, Prisma, PickupPointStatus } from '@prisma/client';
 import { Decimal } from '@prisma/client/runtime/client';
 import { withApiHandler } from '@/platform/api/handler';
@@ -146,10 +147,8 @@ function toApiPickupPoint(point: {
  * GET /api/admin/pickup-points/[id] - Buscar ponto específico
  */
 export const GET = withApiHandler<GetPickupPointResponse, { id: string }>(async ({ req, params }) => {
-  const authResult = await requireAdminUser(req, AdminPermission.PONTOS_COLETA);
-  if (authResult instanceof Response) {
-    throw new ApiError({ code: 'UNAUTHORIZED', message: 'Não autorizado', status: 401 });
-  }
+  const session = await requireAdminSession(req, AdminPermission.PONTOS_COLETA);
+  
 
   const { id } = params;
 
@@ -168,10 +167,8 @@ export const GET = withApiHandler<GetPickupPointResponse, { id: string }>(async 
  * PATCH /api/admin/pickup-points/[id] - Atualizar ponto
  */
 export const PATCH = withApiHandler<PatchPickupPointResponse, { id: string }>(async ({ req, params }) => {
-  const authResult = await requireAdminUser(req, AdminPermission.PONTOS_COLETA);
-  if (authResult instanceof Response) {
-    throw new ApiError({ code: 'UNAUTHORIZED', message: 'Não autorizado', status: 401 });
-  }
+  const session = await requireAdminSession(req, AdminPermission.PONTOS_COLETA);
+  
 
   const { id } = params;
   const body = await req.json();
@@ -240,10 +237,8 @@ export const PATCH = withApiHandler<PatchPickupPointResponse, { id: string }>(as
  * DELETE /api/admin/pickup-points/[id] - Deletar ponto
  */
 export const DELETE = withApiHandler<DeletePickupPointResponse, { id: string }>(async ({ req, params }) => {
-  const authResult = await requireAdminUser(req, AdminPermission.PONTOS_COLETA);
-  if (authResult instanceof Response) {
-    throw new ApiError({ code: 'UNAUTHORIZED', message: 'Não autorizado', status: 401 });
-  }
+  const session = await requireAdminSession(req, AdminPermission.PONTOS_COLETA);
+  
 
   const { id } = params;
 

@@ -4,31 +4,13 @@
  * Lista recepções do ponto de coleta com filtro de período e estatísticas
  */
 
-import { getAdminSessionFromRequest } from '@/modules/auth/application/admin-session';
-import { canAccess } from '@/modules/auth/application/permissions';
-import { AdminPermission } from '@prisma/client';
+import { requireAdminSession } from '@/platform/auth/require-session';
 import { prisma } from '@/platform/db/db';
 import { withApiHandler } from '@/platform/api/handler';
 import { ApiError } from '@/platform/api/errors';
 
 export const GET = withApiHandler<unknown, { id: string }>(async ({ req, params }) => {
-  const session = await getAdminSessionFromRequest(req);
-  if (!session) {
-    throw new ApiError({ code: 'UNAUTHORIZED', message: 'Não autenticado', status: 401 });
-  }
-
-  const staff = await prisma.staffUser.findUnique({
-    where: { id: session.staffId },
-    select: { isSuperAdmin: true, permissions: true, status: true },
-  });
-
-  if (!staff || staff.status !== 'ACTIVE') {
-    throw new ApiError({ code: 'FORBIDDEN', message: 'Acesso negado', status: 403 });
-  }
-
-  if (!canAccess(staff, AdminPermission.PONTOS_COLETA)) {
-    throw new ApiError({ code: 'FORBIDDEN', message: 'Acesso negado', status: 403 });
-  }
+  const session = await requireAdminSession(req);
 
   const { id } = params;
   const { searchParams } = new URL(req.url);

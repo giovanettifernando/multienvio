@@ -1,6 +1,6 @@
 import { withApiHandler } from '@/platform/api/handler';
 import { ApiError } from '@/platform/api/errors';
-import { getCollectorSessionFromRequest } from '@/modules/auth/application/collector-session';
+import { requirePickupPointSession } from '@/platform/auth/require-session';
 import { prisma } from '@/platform/db/db';
 
 type CollectorMeResponse = {
@@ -28,15 +28,7 @@ type CollectorMeResponse = {
 export const GET = withApiHandler<CollectorMeResponse>(async (context) => {
   const { req, logger } = context;
 
-  const session = await getCollectorSessionFromRequest(req);
-
-  if (!session) {
-    throw new ApiError({
-      code: 'unauthorized',
-      message: 'Não autenticado',
-      status: 401,
-    });
-  }
+  const session = await requirePickupPointSession(req);
 
   // Buscar dados atualizados do ponto de coleta
   const point = await prisma.pickupPoint.findUnique({

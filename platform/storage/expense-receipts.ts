@@ -1,12 +1,14 @@
 import { mkdir, writeFile, unlink } from 'fs/promises';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
+import { validateFileContent } from './file-validation';
 
 const MAX_RECEIPT_SIZE = 10 * 1024 * 1024; // 10 MB
 const EXPENSE_UPLOAD_DIR =
   process.env.EXPENSE_UPLOAD_DIR ?? path.join(process.cwd(), 'public', 'uploads', 'expenses');
 
-const ALLOWED_EXTENSIONS = ['pdf', 'jpg', 'jpeg', 'png'];
+// Extensões permitidas para comprovantes de despesas
+const EXPENSE_ALLOWED_EXTENSIONS = ['.pdf', '.jpg', '.jpeg', '.png'];
 
 function sanitizeSegment(value: string): string {
   return value
@@ -41,16 +43,18 @@ export async function persistExpenseReceipt(
     throw new Error('O arquivo deve ter no máximo 10 MB.');
   }
 
-  const parsedName = path.parse(file.name || 'comprovante');
-  const ext = parsedName.ext.replace('.', '').toLowerCase();
-
-  if (!ALLOWED_EXTENSIONS.includes(ext)) {
-    throw new Error(`Extensão não permitida. Use: ${ALLOWED_EXTENSIONS.join(', ')}`);
-  }
-
   const uploadDir = await ensureExpenseUploadDir();
   const arrayBuffer = await file.arrayBuffer();
   const buffer = Buffer.from(arrayBuffer);
+
+  // SECURITY: Validar conteúdo do arquivo por magic bytes
+  const validation = validateFileContent(buffer, file.name, EXPENSE_ALLOWED_EXTENSIONS);
+  if (!validation.valid) {
+    throw new Error(validation.error || 'Tipo de arquivo não permitido');
+  }
+
+  const parsedName = path.parse(file.name || 'comprovante');
+  const ext = parsedName.ext.replace('.', '').toLowerCase();
 
   const safeName = sanitizeSegment(parsedName.name) || 'comprovante';
   const safeExt = sanitizeSegment(ext);

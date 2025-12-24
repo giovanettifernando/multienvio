@@ -7,8 +7,9 @@
  */
 
 import { z } from 'zod';
+import { requireAdminSession } from '@/platform/auth/require-session';
 import { prisma } from '@/platform/db/db';
-import { requireAdminUser } from '@/modules/auth/application/admin-helpers';
+
 import { AdminPermission } from '@prisma/client';
 import { withApiHandler } from '@/platform/api/handler';
 import { ApiError } from '@/platform/api/errors';
@@ -30,14 +31,8 @@ const updateFaqSchema = z.object({
  * GET - Busca FAQ específica por ID
  */
 export const GET = withApiHandler<unknown, { id: string }>(async ({ req, params }) => {
-  const authResult = await requireAdminUser(req, AdminPermission.CONFIGURACOES);
-  if (authResult instanceof Response) {
-    throw new ApiError({
-      code: 'UNAUTHORIZED',
-      message: 'Não autorizado',
-      status: 401,
-    });
-  }
+  const session = await requireAdminSession(req, AdminPermission.CONFIGURACOES);
+  
 
   const { id } = params;
 
@@ -68,14 +63,8 @@ export const GET = withApiHandler<unknown, { id: string }>(async ({ req, params 
  * PATCH - Atualiza FAQ existente
  */
 export const PATCH = withApiHandler<unknown, { id: string }>(async ({ req, params }) => {
-  const authResult = await requireAdminUser(req, AdminPermission.CONFIGURACOES);
-  if (authResult instanceof Response) {
-    throw new ApiError({
-      code: 'UNAUTHORIZED',
-      message: 'Não autorizado',
-      status: 401,
-    });
-  }
+  const session = await requireAdminSession(req, AdminPermission.CONFIGURACOES);
+  
 
   const { id } = params;
 
@@ -130,14 +119,8 @@ export const PATCH = withApiHandler<unknown, { id: string }>(async ({ req, param
  * DELETE - Remove FAQ (soft delete ou hard delete)
  */
 export const DELETE = withApiHandler<unknown, { id: string }>(async ({ req, params }) => {
-  const authResult = await requireAdminUser(req, AdminPermission.CONFIGURACOES);
-  if (authResult instanceof Response) {
-    throw new ApiError({
-      code: 'UNAUTHORIZED',
-      message: 'Não autorizado',
-      status: 401,
-    });
-  }
+  const session = await requireAdminSession(req, AdminPermission.CONFIGURACOES);
+  
 
   const { id } = params;
 

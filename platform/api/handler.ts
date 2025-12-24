@@ -74,9 +74,14 @@ export function withApiHandler<T = unknown, P extends Record<string, any> = Reco
       });
 
       const body = success(result.data, meta);
+
+      // SECURITY: Sempre incluir correlation ID na resposta para rastreabilidade
+      const responseHeaders = new Headers(result.headers);
+      responseHeaders.set("x-request-id", requestId);
+
       const init = {
         status: result.status ?? 200,
-        headers: result.headers,
+        headers: responseHeaders,
       };
 
       return NextResponse.json(body, init);
@@ -97,7 +102,10 @@ export function withApiHandler<T = unknown, P extends Record<string, any> = Reco
       });
 
       const body = failure(apiError, meta);
-      return NextResponse.json(body, { status: apiError.status ?? 500 });
+      const errorResponse = NextResponse.json(body, { status: apiError.status ?? 500 });
+      // SECURITY: Sempre incluir correlation ID na resposta de erro
+      errorResponse.headers.set("x-request-id", requestId);
+      return errorResponse;
     }
   };
 }

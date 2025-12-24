@@ -1,7 +1,6 @@
 import { prisma } from '@/platform/db/db';
-import { getAdminSessionFromRequest } from '@/modules/auth/application/admin-session';
-import { AdminPermission, PickupPointStatus } from '@prisma/client';
-import { canAccess } from '@/modules/auth/application/permissions';
+import { requireAdminSession } from '@/platform/auth/require-session';
+import { PickupPointStatus } from '@prisma/client';
 import { Decimal } from '@prisma/client/runtime/client';
 import { withApiHandler } from '@/platform/api/handler';
 import { ApiError } from '@/platform/api/errors';
@@ -60,27 +59,7 @@ function toApiPickupPoint(point: {
 
 // POST /api/admin/pickup-points/[id]/status - Toggle status
 export const POST = withApiHandler<unknown, { id: string }>(async ({ req, params }) => {
-  const session = await getAdminSessionFromRequest(req);
-  if (!session) {
-    throw new ApiError({ code: 'UNAUTHORIZED', message: 'Não autenticado', status: 401 });
-  }
-
-  const staffUser = await prisma.staffUser.findUnique({
-    where: { id: session.staffId },
-    select: { id: true, status: true, isSuperAdmin: true, permissions: true },
-  });
-
-  if (!staffUser) {
-    throw new ApiError({ code: 'NOT_FOUND', message: 'Usuário não encontrado', status: 404 });
-  }
-
-  if (staffUser.status !== 'ACTIVE') {
-    throw new ApiError({ code: 'FORBIDDEN', message: 'Conta inativa ou bloqueada', status: 403 });
-  }
-
-  if (!canAccess(staffUser, AdminPermission.PONTOS_COLETA)) {
-    throw new ApiError({ code: 'FORBIDDEN', message: 'Acesso negado', status: 403 });
-  }
+  const session = await requireAdminSession(req);
 
   const { id } = params;
 

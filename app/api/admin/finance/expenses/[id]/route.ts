@@ -6,7 +6,7 @@
 
 import { withApiHandler } from '@/platform/api/handler';
 import { ApiError } from '@/platform/api/errors';
-import { getAdminSessionFromRequest } from '@/modules/auth/application/admin-session';
+import { requireAdminSession } from '@/platform/auth/require-session';
 import { AdminPermission, ExpenseType, ExpenseCategory, ExpenseStatus, Prisma } from '@prisma/client';
 import { prisma } from '@/platform/db/db';
 import { persistExpenseReceipt, deleteExpenseReceipt } from '@/platform/storage/expense-receipts';
@@ -60,22 +60,7 @@ interface GetExpenseResponse {
 }
 
 export const GET = withApiHandler<GetExpenseResponse, { id: string }>(async ({ req, params }) => {
-  const session = await getAdminSessionFromRequest(req);
-  if (!session) {
-    throw new ApiError({
-      code: 'UNAUTHORIZED',
-      message: 'Não autenticado',
-      status: 401,
-    });
-  }
-
-  if (!session.permissions.includes(AdminPermission.FINANCEIRO)) {
-    throw new ApiError({
-      code: 'FORBIDDEN',
-      message: 'Sem permissão para acessar este recurso',
-      status: 403,
-    });
-  }
+  await requireAdminSession(req, AdminPermission.FINANCEIRO);
 
   const { id } = params;
 
@@ -105,22 +90,7 @@ interface UpdateExpenseResponse {
 }
 
 export const PUT = withApiHandler<UpdateExpenseResponse, { id: string }>(async ({ req, params }) => {
-  const session = await getAdminSessionFromRequest(req);
-  if (!session) {
-    throw new ApiError({
-      code: 'UNAUTHORIZED',
-      message: 'Não autenticado',
-      status: 401,
-    });
-  }
-
-  if (!session.permissions.includes(AdminPermission.FINANCEIRO)) {
-    throw new ApiError({
-      code: 'FORBIDDEN',
-      message: 'Sem permissão para acessar este recurso',
-      status: 403,
-    });
-  }
+  await requireAdminSession(req, AdminPermission.FINANCEIRO);
 
   const { id } = params;
 
@@ -227,22 +197,7 @@ interface DeleteExpenseResponse {
 }
 
 export const DELETE = withApiHandler<DeleteExpenseResponse, { id: string }>(async ({ req, params }) => {
-  const session = await getAdminSessionFromRequest(req);
-  if (!session) {
-    throw new ApiError({
-      code: 'UNAUTHORIZED',
-      message: 'Não autenticado',
-      status: 401,
-    });
-  }
-
-  if (!session.permissions.includes(AdminPermission.FINANCEIRO)) {
-    throw new ApiError({
-      code: 'FORBIDDEN',
-      message: 'Sem permissão para acessar este recurso',
-      status: 403,
-    });
-  }
+  await requireAdminSession(req, AdminPermission.FINANCEIRO);
 
   const { id } = params;
 

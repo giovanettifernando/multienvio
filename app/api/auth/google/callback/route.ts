@@ -22,7 +22,7 @@ import {
   ACCESS_TOKEN_MAX_AGE_SECONDS,
   REFRESH_TOKEN_MAX_AGE_SECONDS,
 } from '@/modules/auth/application/jwt-tokens';
-import { getCachedRoleByName, sessionCache } from '@/platform/cache/cache';
+import { sessionCache } from '@/platform/cache/cache';
 import type { RequestLogger } from '@/platform/api/types';
 
 // JWT secret for collector tokens - OBRIGATÓRIO, sem fallback
@@ -58,7 +58,6 @@ async function handleUserCallback(
     // Check if user exists with this googleId
     let user = await prisma.user.findUnique({
       where: { googleId },
-      include: { role: true },
     });
 
     if (user) {
@@ -76,7 +75,6 @@ async function handleUserCallback(
     // Check if user exists with this email but no googleId (link account)
     user = await prisma.user.findUnique({
       where: { email },
-      include: { role: true },
     });
 
     if (user) {
@@ -106,14 +104,7 @@ async function handleUserCallback(
       return { success: true, userId: user.id };
     }
 
-    // New user - create account (role lookup com cache)
-    const userRole = await getCachedRoleByName('user');
-
-    if (!userRole) {
-      logger.error('google_oauth_role_not_found');
-      return { success: false, error: 'Erro de configuração do sistema' };
-    }
-
+    // New user - create account
     const newUser = await prisma.user.create({
       data: {
         name,
@@ -124,7 +115,6 @@ async function handleUserCallback(
         status: 'active', // Auto-activate for Google auth
         emailVerified: true,
         emailVerifiedAt: new Date(),
-        roleId: userRole.id,
       },
     });
 
@@ -344,7 +334,6 @@ export const GET = withApiHandlerResponse(async (context) => {
       // Get user data for session
       const user = await prisma.user.findUnique({
         where: { id: result.userId },
-        include: { role: true },
       });
 
       if (!user) {
@@ -357,10 +346,11 @@ export const GET = withApiHandlerResponse(async (context) => {
       const tokenVersion = await sessionCache.getOrInitTokenVersion(user.id);
 
       // Create JWT token pair for session (access + refresh)
+      // Note: Role removed from User - use 'user' as default for all clients
       const { accessToken, refreshToken } = await signTokenPair({
         userId: user.id,
         email: user.email,
-        role: user.role?.name || 'user',
+        role: 'user',
         tokenVersion,
       });
 
@@ -368,7 +358,7 @@ export const GET = withApiHandlerResponse(async (context) => {
       await sessionCache.set(user.id, {
         userId: user.id,
         email: user.email,
-        role: user.role?.name || 'user',
+        role: 'user',
         status: user.status,
         tokenVersion,
       });

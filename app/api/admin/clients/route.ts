@@ -1,6 +1,5 @@
 import { withApiHandler } from '@/platform/api/handler';
-import { ApiError } from '@/platform/api/errors';
-import { getAdminSessionFromRequest } from '@/modules/auth/application/admin-session';
+import { requireAdminSession } from '@/platform/auth/require-session';
 import { AdminPermission } from '@prisma/client';
 import type { AdminClient, ClientsResponse } from '@/modules/admin/application/types';
 
@@ -14,15 +13,7 @@ import type { AdminClient, ClientsResponse } from '@/modules/admin/application/t
 export const GET = withApiHandler<ClientsResponse>(async (context) => {
   const { req, logger } = context;
 
-  const session = await getAdminSessionFromRequest(req);
-  if (!session) {
-    throw new ApiError({ code: 'unauthorized', message: 'Não autenticado', status: 401 });
-  }
-
-  // Check permission
-  if (!session.permissions.includes(AdminPermission.CONTAS)) {
-    throw new ApiError({ code: 'forbidden', message: 'Permissão negada', status: 403 });
-  }
+  const session = await requireAdminSession(req, AdminPermission.CONTAS);
 
   const searchParams = new URL(req.url).searchParams;
   const page = parseInt(searchParams.get('page') || '1');

@@ -7,8 +7,8 @@
  * Se precisar atualizar, basta cadastrar novos valores.
  */
 
-import { requireAdminUser } from '@/modules/auth/application/admin-helpers';
 import { AdminPermission } from '@prisma/client';
+import { requireAdminSession } from '@/platform/auth/require-session';
 import { prisma } from '@/platform/db/db';
 import { encrypt, decrypt } from '@/platform/integrations/shared/encryption.service';
 import { withApiHandler } from '@/platform/api/handler';
@@ -36,14 +36,8 @@ interface PaymentGatewayPostResponse {
  *   - reveal=true: Retorna accessToken e webhookSecret descriptografados
  */
 export const GET = withApiHandler<PaymentGatewayGetResponse>(async ({ req }) => {
-  const authResult = await requireAdminUser(req, AdminPermission.INTEGRACOES);
-  if (authResult instanceof Response) {
-    throw new ApiError({
-      code: 'UNAUTHORIZED',
-      message: 'Não autorizado',
-      status: 401,
-    });
-  }
+  const session = await requireAdminSession(req, AdminPermission.INTEGRACOES);
+  
 
   const url = new URL(req.url);
   const shouldReveal = url.searchParams.get('reveal') === 'true';
@@ -112,14 +106,8 @@ const PaymentGatewayConfigSchema = z.object({
  * POST - Salvar configuração
  */
 export const POST = withApiHandler<PaymentGatewayPostResponse>(async ({ req }) => {
-  const authResult = await requireAdminUser(req, AdminPermission.INTEGRACOES);
-  if (authResult instanceof Response) {
-    throw new ApiError({
-      code: 'UNAUTHORIZED',
-      message: 'Não autorizado',
-      status: 401,
-    });
-  }
+  const session = await requireAdminSession(req, AdminPermission.INTEGRACOES);
+  
 
   const body = await req.json();
 

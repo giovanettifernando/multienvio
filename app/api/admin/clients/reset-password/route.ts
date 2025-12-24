@@ -5,11 +5,10 @@
  */
 
 import crypto from 'crypto';
-import { NextResponse } from 'next/server';
 import { withApiHandler } from '@/platform/api/handler';
 import { ApiError } from '@/platform/api/errors';
 import { prisma } from '@/platform/db/db';
-import { requireAdminUser } from '@/modules/auth/application/admin-helpers';
+import { requireAdminSession } from '@/platform/auth/require-session';
 import { AdminPermission } from '@prisma/client';
 import { sendPasswordResetEmail } from '@/platform/email/mailer';
 import { z } from 'zod';
@@ -30,14 +29,7 @@ const AdminClientResetPasswordSchema = z.object({
 });
 
 export const POST = withApiHandler<AdminClientResetPasswordResponse>(async ({ req, logger }) => {
-  const authResult = await requireAdminUser(req, AdminPermission.CONTAS);
-  if (authResult instanceof NextResponse) {
-    throw new ApiError({
-      code: 'UNAUTHORIZED',
-      message: 'Não autorizado',
-      status: 401,
-    });
-  }
+  const session = await requireAdminSession(req, AdminPermission.CONTAS);
 
   const body = await req.json();
 
@@ -99,7 +91,7 @@ export const POST = withApiHandler<AdminClientResetPasswordResponse>(async ({ re
       results.push({ email: user.email, success: emailSent });
 
       logger.info('admin_reset_password_sent', {
-        adminId: authResult.user.id,
+        adminId: session.staffId,
         userId: user.id,
         userEmail: user.email,
         emailSent,

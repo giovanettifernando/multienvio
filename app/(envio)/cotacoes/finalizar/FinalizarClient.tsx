@@ -1115,7 +1115,8 @@ export default function FinalizarClient() {
       console.log('[CHECKOUT_FRONTEND] recipientData completo:', recipientData);
 
       const payload = {
-        quoteId: selection.selectionId,
+        // SECURITY FIX F-01: Enviar quoteId (ID da Quote), não selectionId (ID da QuoteSelection)
+        quoteId: selection.quoteId,
         recipient: {
           nome: recipientData.nome || "",
           telefone: recipientData.telefone,
@@ -1253,6 +1254,9 @@ export default function FinalizarClient() {
 
         // Preparar dados para o novo modal (sem criar shipment ainda)
         const checkoutData: CheckoutData = {
+          // SECURITY FIX F-01: quoteId obrigatório para validar preços no servidor
+          // IMPORTANTE: Usar selection.quoteId (ID da Quote), não selection.selectionId (ID da QuoteSelection)
+          quoteId: selection.quoteId,
           recipient: {
             nome: recipientData.nome || "",
             telefone: recipientData.telefone,

@@ -1,8 +1,12 @@
 import { withApiHandler } from '@/platform/api/handler';
 import { ApiError } from '@/platform/api/errors';
+import { validateHmacSignature } from '@/platform/api/webhook-auth';
 import { prisma } from "@/platform/db/db";
 import { z } from "zod";
 import type { TrackingEventType } from '@/shared/types/tracking';
+import { ShipmentStatus, FINAL_STATUSES } from '@/modules/shipments/application/shipment-status';
+import { isValidTransition } from '@/modules/shipments/application/status-migration';
+import { auditStatusChange } from '@/modules/shipments/application/shipment-audit';
 
 /**
  * Schema de validação para webhook de tracking
@@ -46,14 +50,45 @@ const carrierCodeMap: Record<string, TrackingEventType> = {
 };
 
 /**
+ * Mapeia tipos de evento para status de shipment
+ */
+const eventTypeToStatus: Partial<Record<TrackingEventType, ShipmentStatus>> = {
+  DELIVERED: ShipmentStatus.DELIVERED,
+  OUT_FOR_DELIVERY: ShipmentStatus.OUT_FOR_DELIVERY,
+  IN_TRANSIT: ShipmentStatus.IN_TRANSIT_TO_DESTINATION,
+  ISSUE: ShipmentStatus.DELIVERY_PROBLEM,
+};
+
+/**
  * POST /api/webhooks/tracking
  * Recebe eventos de rastreamento de transportadoras
- * Este endpoint deve ser protegido por autenticação de webhook em produção
+ * Protegido por autenticação HMAC
  */
 export const POST = withApiHandler(async (context) => {
+  const { req, logger } = context;
+
+  // SECURITY: Validar assinatura HMAC
+  const webhookSecret = process.env.TRACKING_WEBHOOK_SECRET;
+  const signature = req.headers.get('x-webhook-signature');
+
+  // Ler body como texto para validação de assinatura
+  const bodyText = await req.text();
+
+  // Em produção, a assinatura é obrigatória
+  if (webhookSecret && process.env.NODE_ENV === 'production') {
+    if (!validateHmacSignature(signature, bodyText, webhookSecret)) {
+      logger.warn('tracking_webhook_auth_failed', { hasSignature: !!signature });
+      throw new ApiError({
+        code: 'unauthorized',
+        message: 'Assinatura de webhook inválida',
+        status: 401,
+      });
+    }
+  }
+
   let rawPayload: unknown;
   try {
-    rawPayload = await context.req.json();
+    rawPayload = JSON.parse(bodyText);
   } catch {
     throw ApiError.badRequest("JSON inválido no corpo da requisição");
   }
@@ -67,20 +102,28 @@ export const POST = withApiHandler(async (context) => {
 
   const { shipmentId, code: carrierCode, description, city, uf, occurredAt } = parseResult.data;
 
-  // Verificar se o shipment existe
+  // Verificar se o shipment existe e buscar status atual
   const shipment = await prisma.shipment.findUnique({
     where: { id: shipmentId },
-    select: { id: true },
+    select: { id: true, status: true },
   });
 
   if (!shipment) {
     throw ApiError.notFound("Shipment não encontrado");
   }
 
+  const currentStatus = shipment.status as ShipmentStatus;
+
+  // SECURITY: Rejeitar eventos para shipments em status final
+  if ((FINAL_STATUSES as readonly ShipmentStatus[]).includes(currentStatus)) {
+    logger.warn('tracking_webhook_final_status', { shipmentId, status: currentStatus });
+    throw ApiError.badRequest(`Shipment em status final (${currentStatus}) não pode receber eventos`);
+  }
+
   // Mapear código da transportadora para tipo interno
   const eventType = carrierCodeMap[carrierCode] ?? carrierCodeMap[carrierCode.toUpperCase()] ?? "IN_TRANSIT";
 
-  // Criar evento de rastreamento
+  // Criar evento de rastreamento (sempre cria o evento)
   const trackingEvent = await prisma.trackingEvent.create({
     data: {
       shipmentId,
@@ -92,30 +135,48 @@ export const POST = withApiHandler(async (context) => {
     },
   });
 
-  // Atualizar status do shipment se necessário
-  if (eventType === "DELIVERED") {
-    await prisma.shipment.update({
-      where: { id: shipmentId },
-      data: {
-        status: "DELIVERED",
-        deliveredAt: occurredAt ? new Date(occurredAt) : new Date(),
-      },
-    });
-  } else if (eventType === "ISSUE" || eventType === "DELAYED") {
-    await prisma.shipment.update({
-      where: { id: shipmentId },
-      data: { status: eventType },
-    });
-  } else if (eventType === "IN_TRANSIT" || eventType === "OUT_FOR_DELIVERY") {
-    // Atualizar status apenas se não estiver em estado final
-    const currentShipment = await prisma.shipment.findUnique({
-      where: { id: shipmentId },
-      select: { status: true },
-    });
-    if (currentShipment && !["DELIVERED", "CANCELED", "RETURNED"].includes(currentShipment.status)) {
+  // Atualizar status do shipment se possível
+  const newStatus = eventTypeToStatus[eventType];
+
+  if (newStatus && newStatus !== currentStatus) {
+    // SECURITY: Validar transição usando a matriz
+    if (isValidTransition(currentStatus, newStatus)) {
+      const updateData: Record<string, unknown> = { status: newStatus };
+
+      // Adicionar deliveredAt se entregue
+      if (newStatus === ShipmentStatus.DELIVERED) {
+        updateData.deliveredAt = occurredAt ? new Date(occurredAt) : new Date();
+      }
+
       await prisma.shipment.update({
         where: { id: shipmentId },
-        data: { status: eventType },
+        data: updateData,
+      });
+
+      // SECURITY: Registrar auditoria
+      await auditStatusChange({
+        shipmentId,
+        fromStatus: currentStatus,
+        toStatus: newStatus,
+        source: 'webhook',
+        reason: description,
+        metadata: {
+          carrierCode,
+          eventType,
+          city,
+          uf,
+          occurredAt,
+        },
+      });
+
+      logger.info('tracking_status_updated', { shipmentId, from: currentStatus, to: newStatus });
+    } else {
+      // Transição inválida - apenas loga, não atualiza status
+      logger.warn('tracking_invalid_transition', {
+        shipmentId,
+        from: currentStatus,
+        to: newStatus,
+        eventType,
       });
     }
   }

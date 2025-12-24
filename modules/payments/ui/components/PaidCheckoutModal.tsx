@@ -55,6 +55,8 @@ interface WalletData {
  * Dados necessários para criar o shipment após confirmação de pagamento
  */
 export interface CheckoutData {
+  // SECURITY FIX F-01: quoteId obrigatório para validar preços no servidor
+  quoteId: string;
   recipient: {
     nome: string;
     telefone?: string | null;
@@ -212,6 +214,8 @@ export function PaidCheckoutModal({
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        // SECURITY FIX F-01: quoteId obrigatório para validar preços no servidor
+        quoteId: checkoutData.quoteId,
         trackingCode,
         paymentMethod,
         mercadoPagoPaymentId,

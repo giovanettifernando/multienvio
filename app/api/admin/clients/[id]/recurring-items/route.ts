@@ -4,12 +4,12 @@
  * Gerencia itens recorrentes de um usuário (Admin)
  */
 
-import { NextResponse } from 'next/server';
 import { z } from 'zod';
+import { requireAdminSession } from '@/platform/auth/require-session';
 import { withApiHandler } from '@/platform/api/handler';
 import { ApiError } from '@/platform/api/errors';
 import { prisma } from '@/platform/db/db';
-import { requireAdminUser } from '@/modules/auth/application/admin-helpers';
+
 import { AdminPermission } from '@prisma/client';
 import { logger } from '@/platform/logging/logger';
 
@@ -20,14 +20,7 @@ const itemSchema = z.object({
 
 // GET - Listar itens recorrentes
 export const GET = withApiHandler<unknown, { id: string }>(async ({ req, params }) => {
-  const authResult = await requireAdminUser(req, AdminPermission.CONTAS);
-  if (authResult instanceof NextResponse) {
-    throw new ApiError({
-      code: 'UNAUTHORIZED',
-      message: 'Não autorizado',
-      status: 401,
-    });
-  }
+  const session = await requireAdminSession(req, AdminPermission.CONTAS);
 
   const userId = params.id;
 
@@ -41,14 +34,7 @@ export const GET = withApiHandler<unknown, { id: string }>(async ({ req, params 
 
 // POST - Criar novo item recorrente
 export const POST = withApiHandler<unknown, { id: string }>(async ({ req, params }) => {
-  const authResult = await requireAdminUser(req, AdminPermission.CONTAS);
-  if (authResult instanceof NextResponse) {
-    throw new ApiError({
-      code: 'UNAUTHORIZED',
-      message: 'Não autorizado',
-      status: 401,
-    });
-  }
+  const session = await requireAdminSession(req, AdminPermission.CONTAS);
 
   const userId = params.id;
   const body = await req.json();
@@ -89,7 +75,7 @@ export const POST = withApiHandler<unknown, { id: string }>(async ({ req, params
 
   logger.info({
     event: 'admin_create_recurring_item',
-    adminId: authResult.user.id,
+    adminId: session.staffId,
     userId,
     itemId: item.id,
   }, 'Admin created recurring item');

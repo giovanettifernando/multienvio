@@ -22,21 +22,14 @@
  * }
  */
 
-import { getAdminSessionFromRequest } from '@/modules/auth/application/admin-session';
+import { requireAdminSession } from '@/platform/auth/require-session';
 import { AdminPermission } from '@prisma/client';
 import { listLowPrecisionCeps } from '@/platform/integrations/shared/cepLocation';
 import { withApiHandler } from '@/platform/api/handler';
 import { ApiError } from '@/platform/api/errors';
 
 export const GET = withApiHandler(async ({ req }) => {
-  const session = await getAdminSessionFromRequest(req);
-  if (!session) {
-    throw new ApiError({
-      code: 'UNAUTHORIZED',
-      message: 'Não autenticado',
-      status: 401,
-    });
-  }
+  const session = await requireAdminSession(req, AdminPermission.OPERACOES);
 
   if (!session.permissions.includes(AdminPermission.CONFIGURACOES) && !session.isSuperAdmin) {
     throw new ApiError({

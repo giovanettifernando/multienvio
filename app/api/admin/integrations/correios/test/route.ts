@@ -5,7 +5,8 @@
  */
 
 import { z } from 'zod';
-import { requireAdminUser } from '@/modules/auth/application/admin-helpers';
+import { requireAdminSession } from '@/platform/auth/require-session';
+
 import { AdminPermission } from '@prisma/client';
 import {
   getCorreiosConfigAsync,
@@ -104,14 +105,8 @@ type TestInput = z.infer<typeof testSchema>;
  * POST - Executa teste da integração
  */
 export const POST = withApiHandler<unknown>(async ({ req }) => {
-  const authResult = await requireAdminUser(req, AdminPermission.INTEGRACOES);
-  if (authResult instanceof Response) {
-    throw new ApiError({
-      code: 'UNAUTHORIZED',
-      message: 'Não autorizado',
-      status: 401,
-    });
-  }
+  const session = await requireAdminSession(req, AdminPermission.INTEGRACOES);
+  
 
   // Validar payload
   const body = await req.json();

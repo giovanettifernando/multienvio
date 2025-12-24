@@ -1,7 +1,7 @@
 import { Prisma } from '@prisma/client';
 import { withApiHandler } from '@/platform/api/handler';
 import { ApiError } from '@/platform/api/errors';
-import { getUserFromRequest } from '@/modules/auth/application/session';
+import { requireUserSession } from '@/platform/auth/require-session';
 import { prisma } from '@/platform/db/db';
 
 // Tipo para resposta POST /api/cart/[id]/unlock
@@ -31,11 +31,7 @@ type UnlockCartParams = {
  * quando o débito falha após criar shipments.
  */
 export const POST = withApiHandler<UnlockCartResponse, UnlockCartParams>(async (context) => {
-  const session = await getUserFromRequest(context.req);
-
-  if (!session?.userId) {
-    throw new ApiError({ code: 'unauthorized', message: 'Não autorizado', status: 401 });
-  }
+  const session = await requireUserSession(context.req);
 
   const { id: cartId } = await context.params;
 

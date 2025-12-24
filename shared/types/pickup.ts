@@ -2,7 +2,6 @@ export type PickupStatus = 'PENDING' | 'SCHEDULED' | 'FAILED' | 'CANCELED' | 'CO
 
 export interface PickupRequest {
   id: string;
-  companyId?: string | null;
   userId: string;
   collectorId?: string | null;
   shipmentId: string;

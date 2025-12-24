@@ -23,6 +23,10 @@ import {
   CorreiosAuthError,
 } from './types';
 import { CORREIOS_API_BASE, CORREIOS_ENDPOINTS } from './constants';
+import {
+  correiosCircuitBreaker,
+  CircuitBreakerError,
+} from '../shared/circuit-breaker';
 
 // Cache de configuração do banco (evita múltiplas queries)
 let dbConfigCache: CorreiosConfig | null = null;
@@ -284,6 +288,7 @@ export function clearTokenCache(): void {
  */
 async function fetchCorreiosToken(config: CorreiosConfig): Promise<TokenCache> {
   const url = `${config.apiBase}${CORREIOS_ENDPOINTS.token}`;
+  const AUTH_TIMEOUT_MS = 15000; // 15 segundos para autenticação
 
   // Montar Basic Auth
   const credentials = Buffer.from(`${config.usuario}:${config.senha}`).toString('base64');
@@ -293,6 +298,10 @@ async function fetchCorreiosToken(config: CorreiosConfig): Promise<TokenCache> {
     cartaoPostagem: config.cartaoPostagem.substring(0, 4) + '****',
     environment: config.environment,
   });
+
+  // SECURITY: AbortController com timeout para evitar requisições penduradas
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), AUTH_TIMEOUT_MS);
 
   try {
     const response = await fetch(url, {
@@ -305,7 +314,10 @@ async function fetchCorreiosToken(config: CorreiosConfig): Promise<TokenCache> {
       body: JSON.stringify({
         numero: config.cartaoPostagem,
       }),
+      signal: controller.signal,
     });
+
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       const errorText = await response.text().catch(() => 'Unknown error');
@@ -360,8 +372,20 @@ async function fetchCorreiosToken(config: CorreiosConfig): Promise<TokenCache> {
 
     return tokenData;
   } catch (error) {
+    clearTimeout(timeoutId);
+
     if (error instanceof CorreiosApiError) {
       throw error;
+    }
+
+    // SECURITY: Timeout na autenticação
+    if (error instanceof Error && error.name === 'AbortError') {
+      console.error('[CORREIOS_CLIENT] Token request timeout');
+      throw new CorreiosApiError(
+        'Timeout na autenticação com Correios',
+        408,
+        'AUTH_TIMEOUT'
+      );
     }
 
     console.error('[CORREIOS_CLIENT] Token fetch error:', error);
@@ -424,6 +448,11 @@ export async function testCorreiosAuth(): Promise<CorreiosAuthTestResult> {
     const url = `${config.apiBase}${CORREIOS_ENDPOINTS.token}`;
     const credentials = Buffer.from(`${config.usuario}:${config.senha}`).toString('base64');
 
+    // SECURITY: Timeout de 15 segundos para teste de autenticação
+    const TEST_TIMEOUT_MS = 15000;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), TEST_TIMEOUT_MS);
+
     const response = await fetch(url, {
       method: 'POST',
       headers: {
@@ -434,8 +463,10 @@ export async function testCorreiosAuth(): Promise<CorreiosAuthTestResult> {
       body: JSON.stringify({
         numero: config.cartaoPostagem,
       }),
+      signal: controller.signal,
     });
 
+    clearTimeout(timeoutId);
     const latencyMs = Date.now() - startTime;
 
     if (!response.ok) {
@@ -537,8 +568,34 @@ export interface CorreiosFetchOptions extends Omit<RequestInit, 'headers'> {
  * - Adiciona token Bearer automaticamente
  * - Trata erros de forma padronizada
  * - Suporta timeout
+ * - SECURITY: Protegido por Circuit Breaker para evitar sobrecarga em falhas
  */
 export async function correiosFetch<T = unknown>(
+  path: string,
+  options: CorreiosFetchOptions = {}
+): Promise<T> {
+  // Circuit breaker protege contra chamadas a serviço indisponível
+  try {
+    return await correiosCircuitBreaker.execute(async () => {
+      return await correiosFetchInternal<T>(path, options);
+    });
+  } catch (error) {
+    // Converter CircuitBreakerError para CorreiosApiError para manter interface consistente
+    if (error instanceof CircuitBreakerError) {
+      throw new CorreiosApiError(
+        'Serviço dos Correios temporariamente indisponível. Tente novamente em alguns minutos.',
+        503,
+        'CIRCUIT_BREAKER_OPEN'
+      );
+    }
+    throw error;
+  }
+}
+
+/**
+ * Implementação interna do fetch (chamada pelo circuit breaker)
+ */
+async function correiosFetchInternal<T = unknown>(
   path: string,
   options: CorreiosFetchOptions = {}
 ): Promise<T> {
@@ -606,8 +663,8 @@ export async function correiosFetch<T = unknown>(
         console.warn('[CORREIOS_CLIENT] Token expired, clearing cache...');
         clearTokenCache();
 
-        // Tentar novamente uma vez com novo token
-        return correiosFetch(path, { ...options, skipAuth: false });
+        // Tentar novamente uma vez com novo token (bypass circuit breaker para retry)
+        return correiosFetchInternal(path, { ...options, skipAuth: false });
       }
 
       throw new CorreiosApiError(
@@ -692,6 +749,7 @@ export function getCorreiosConfigInfo(): {
   cartaoPostagem: string;
   authMode: 'apiKey' | 'legacy' | 'invalid';
   errors: string[];
+  circuitBreakerState: 'CLOSED' | 'OPEN' | 'HALF_OPEN';
 } {
   const config = getCorreiosConfig();
   const validation = validateCorreiosConfig(config);
@@ -705,5 +763,13 @@ export function getCorreiosConfigInfo(): {
       : '(não configurado)',
     authMode: validation.authMode,
     errors: validation.errors,
+    circuitBreakerState: correiosCircuitBreaker.getState(),
   };
+}
+
+/**
+ * Reseta o circuit breaker dos Correios (para admin/debug)
+ */
+export function resetCorreiosCircuitBreaker(): void {
+  correiosCircuitBreaker.reset();
 }

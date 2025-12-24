@@ -1,29 +1,11 @@
 import { withApiHandler } from '@/platform/api/handler';
-import { ApiError } from '@/platform/api/errors';
-import { getAdminSessionFromRequest } from '@/modules/auth/application/admin-session';
+import { requireAdminSession } from '@/platform/auth/require-session';
 import { AdminPermission, Prisma } from '@prisma/client';
-import { canAccess } from '@/modules/auth/application/permissions';
 import type { Paged, OpsShipment } from '@/modules/admin/application/ops/types';
 import prisma from '@/platform/db/db';
 
 export const GET = withApiHandler<Paged<OpsShipment>>(async (context) => {
-  const session = await getAdminSessionFromRequest(context.req);
-  if (!session) {
-    throw new ApiError({ code: 'unauthorized', message: 'Não autenticado', status: 401 });
-  }
-
-  const staffUser = await prisma.staffUser.findUnique({
-    where: { id: session.staffId },
-    select: { id: true, status: true, isSuperAdmin: true, permissions: true },
-  });
-
-  if (!staffUser || staffUser.status !== 'ACTIVE') {
-    throw new ApiError({ code: 'forbidden', message: 'Acesso negado', status: 403 });
-  }
-
-  if (!canAccess(staffUser, AdminPermission.OPERACOES)) {
-    throw new ApiError({ code: 'forbidden', message: 'Sem permissão para operações', status: 403 });
-  }
+  await requireAdminSession(context.req, AdminPermission.OPERACOES);
 
   const searchParams = context.req.nextUrl.searchParams;
   const page = parseInt(searchParams.get('page') || '1');

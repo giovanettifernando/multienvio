@@ -4,12 +4,12 @@
  * Atualiza ou remove endereço de um usuário (Admin)
  */
 
-import { NextResponse } from 'next/server';
 import { z } from 'zod';
+import { requireAdminSession } from '@/platform/auth/require-session';
 import { withApiHandler } from '@/platform/api/handler';
 import { ApiError } from '@/platform/api/errors';
 import { prisma } from '@/platform/db/db';
-import { requireAdminUser } from '@/modules/auth/application/admin-helpers';
+
 import { AdminPermission } from '@prisma/client';
 import { logger } from '@/platform/logging/logger';
 
@@ -27,14 +27,7 @@ const addressSchema = z.object({
 
 // PUT - Atualizar endereço
 export const PUT = withApiHandler<unknown, { id: string; addressId: string }>(async ({ req, params }) => {
-  const authResult = await requireAdminUser(req, AdminPermission.CONTAS);
-  if (authResult instanceof NextResponse) {
-    throw new ApiError({
-      code: 'UNAUTHORIZED',
-      message: 'Não autorizado',
-      status: 401,
-    });
-  }
+  const session = await requireAdminSession(req, AdminPermission.CONTAS);
 
   const { id: userId, addressId } = params;
   const body = await req.json();
@@ -89,7 +82,7 @@ export const PUT = withApiHandler<unknown, { id: string; addressId: string }>(as
 
   logger.info({
     event: 'admin_update_address',
-    adminId: authResult.user.id,
+    adminId: session.staffId,
     userId,
     addressId,
   }, 'Admin updated address');
@@ -99,14 +92,7 @@ export const PUT = withApiHandler<unknown, { id: string; addressId: string }>(as
 
 // DELETE - Remover endereço
 export const DELETE = withApiHandler<unknown, { id: string; addressId: string }>(async ({ req, params }) => {
-  const authResult = await requireAdminUser(req, AdminPermission.CONTAS);
-  if (authResult instanceof NextResponse) {
-    throw new ApiError({
-      code: 'UNAUTHORIZED',
-      message: 'Não autorizado',
-      status: 401,
-    });
-  }
+  const session = await requireAdminSession(req, AdminPermission.CONTAS);
 
   const { id: userId, addressId } = params;
 
@@ -129,7 +115,7 @@ export const DELETE = withApiHandler<unknown, { id: string; addressId: string }>
 
   logger.info({
     event: 'admin_delete_address',
-    adminId: authResult.user.id,
+    adminId: session.staffId,
     userId,
     addressId,
   }, 'Admin deleted address');

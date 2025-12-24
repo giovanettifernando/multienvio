@@ -152,18 +152,179 @@ export function processCancellationInTransit(
 }
 
 /**
+ * Matriz de transições válidas entre status
+ * Define explicitamente quais transições são permitidas
+ */
+const TRANSITION_MATRIX: Record<ShipmentStatus, ShipmentStatus[]> = {
+  // ========================================
+  // FASE A - ORIGEM (Coleta/Postagem)
+  // ========================================
+
+  // Fluxo 1: Coleta no endereço do remetente
+  [ShipmentStatus.PICKUP_REQUESTED]: [
+    ShipmentStatus.PICKUP_SCHEDULED,
+    ShipmentStatus.AWAITING_PICKUP_AT_ORIGIN,
+    ShipmentStatus.CANCELLATION_REQUESTED_BEFORE_HANDOFF,
+  ],
+
+  [ShipmentStatus.PICKUP_SCHEDULED]: [
+    ShipmentStatus.AWAITING_PICKUP_AT_ORIGIN,
+    ShipmentStatus.PICKUP_FAILED,
+    ShipmentStatus.COLLECTED_FROM_SENDER,
+    ShipmentStatus.CANCELLATION_REQUESTED_BEFORE_HANDOFF,
+  ],
+
+  [ShipmentStatus.AWAITING_PICKUP_AT_ORIGIN]: [
+    ShipmentStatus.PICKUP_FAILED,
+    ShipmentStatus.COLLECTED_FROM_SENDER,
+    ShipmentStatus.CANCELLATION_REQUESTED_BEFORE_HANDOFF,
+  ],
+
+  [ShipmentStatus.PICKUP_FAILED]: [
+    ShipmentStatus.PICKUP_REQUESTED, // Reagendar
+    ShipmentStatus.AWAITING_PICKUP_AT_ORIGIN,
+    ShipmentStatus.CANCELLATION_REQUESTED_BEFORE_HANDOFF,
+  ],
+
+  [ShipmentStatus.COLLECTED_FROM_SENDER]: [
+    ShipmentStatus.IN_TRANSIT_TO_CARRIER_HUB,
+    ShipmentStatus.RECEIVED_AT_ORIGIN_HUB,
+  ],
+
+  [ShipmentStatus.IN_TRANSIT_TO_CARRIER_HUB]: [
+    ShipmentStatus.RECEIVED_AT_ORIGIN_HUB,
+    ShipmentStatus.CANCELLATION_REQUESTED_IN_TRANSIT,
+  ],
+
+  [ShipmentStatus.RECEIVED_AT_ORIGIN_HUB]: [
+    ShipmentStatus.IN_TRANSFER,
+    ShipmentStatus.IN_TRANSIT_TO_DESTINATION,
+    ShipmentStatus.CANCELLATION_REQUESTED_IN_TRANSIT,
+  ],
+
+  // Fluxo 2: Ponto de coleta
+  [ShipmentStatus.AWAITING_DROP_OFF_AT_POINT]: [
+    ShipmentStatus.DROPPED_OFF_AT_POINT,
+    ShipmentStatus.CANCELLATION_REQUESTED_BEFORE_HANDOFF,
+    ShipmentStatus.EXPIRED_NOT_POSTED,
+  ],
+
+  [ShipmentStatus.DROPPED_OFF_AT_POINT]: [
+    ShipmentStatus.AWAITING_CARRIER_PICKUP_AT_POINT,
+    ShipmentStatus.COLLECTED_FROM_POINT,
+  ],
+
+  [ShipmentStatus.AWAITING_CARRIER_PICKUP_AT_POINT]: [
+    ShipmentStatus.COLLECTED_FROM_POINT,
+  ],
+
+  [ShipmentStatus.COLLECTED_FROM_POINT]: [
+    ShipmentStatus.RECEIVED_AT_ORIGIN_HUB,
+    ShipmentStatus.IN_TRANSIT_TO_DESTINATION,
+  ],
+
+  // ========================================
+  // FASE B - TRANSPORTE
+  // ========================================
+
+  [ShipmentStatus.IN_TRANSFER]: [
+    ShipmentStatus.IN_TRANSIT_TO_DESTINATION,
+    ShipmentStatus.AT_DESTINATION_HUB,
+    ShipmentStatus.CANCELLATION_REQUESTED_IN_TRANSIT,
+  ],
+
+  [ShipmentStatus.IN_TRANSIT_TO_DESTINATION]: [
+    ShipmentStatus.AT_DESTINATION_HUB,
+    ShipmentStatus.OUT_FOR_DELIVERY,
+    ShipmentStatus.DELIVERED, // Entrega direta
+    ShipmentStatus.CANCELLATION_REQUESTED_IN_TRANSIT,
+  ],
+
+  [ShipmentStatus.AT_DESTINATION_HUB]: [
+    ShipmentStatus.OUT_FOR_DELIVERY,
+    ShipmentStatus.AWAITING_PICKUP_AT_DESTINATION_HUB,
+    ShipmentStatus.CANCELLATION_REQUESTED_IN_TRANSIT,
+  ],
+
+  [ShipmentStatus.OUT_FOR_DELIVERY]: [
+    ShipmentStatus.DELIVERED,
+    ShipmentStatus.DELIVERY_ATTEMPT_FAILED,
+    ShipmentStatus.DELIVERY_PROBLEM,
+    ShipmentStatus.CANCELLATION_REQUESTED_IN_TRANSIT,
+  ],
+
+  [ShipmentStatus.AWAITING_PICKUP_AT_DESTINATION_HUB]: [
+    ShipmentStatus.DELIVERED_AT_DESTINATION_HUB,
+    ShipmentStatus.RETURNING_TO_SENDER, // Não retirado
+    ShipmentStatus.CANCELLATION_REQUESTED_IN_TRANSIT,
+  ],
+
+  // ========================================
+  // FASE C - ENTREGA E PROBLEMAS
+  // ========================================
+
+  [ShipmentStatus.DELIVERED]: [], // FINAL
+
+  [ShipmentStatus.DELIVERED_AT_DESTINATION_HUB]: [], // FINAL
+
+  [ShipmentStatus.DELIVERY_ATTEMPT_FAILED]: [
+    ShipmentStatus.OUT_FOR_DELIVERY, // Nova tentativa
+    ShipmentStatus.DELIVERY_PROBLEM,
+    ShipmentStatus.RETURNING_TO_SENDER,
+  ],
+
+  [ShipmentStatus.DELIVERY_PROBLEM]: [
+    ShipmentStatus.OUT_FOR_DELIVERY, // Corrigido, nova tentativa
+    ShipmentStatus.RETURNING_TO_SENDER,
+  ],
+
+  // ========================================
+  // FASE D - CANCELAMENTO E RETORNO
+  // ========================================
+
+  [ShipmentStatus.CANCELLATION_REQUESTED_BEFORE_HANDOFF]: [
+    ShipmentStatus.CANCELLED_BEFORE_HANDOFF,
+  ],
+
+  [ShipmentStatus.CANCELLED_BEFORE_HANDOFF]: [], // FINAL
+
+  [ShipmentStatus.EXPIRED_NOT_POSTED]: [], // FINAL
+
+  [ShipmentStatus.CANCELLATION_REQUESTED_IN_TRANSIT]: [
+    ShipmentStatus.CANCELLED_IN_TRANSIT_RETURNING,
+  ],
+
+  [ShipmentStatus.CANCELLED_IN_TRANSIT_RETURNING]: [
+    ShipmentStatus.CANCELLED_IN_TRANSIT_RETURNED,
+  ],
+
+  [ShipmentStatus.CANCELLED_IN_TRANSIT_RETURNED]: [], // FINAL
+
+  [ShipmentStatus.RETURNING_TO_SENDER]: [
+    ShipmentStatus.RETURNED_TO_SENDER,
+  ],
+
+  [ShipmentStatus.RETURNED_TO_SENDER]: [], // FINAL
+};
+
+/**
  * Valida se uma transição de status é permitida
- * (implementação básica - pode ser expandida conforme regras de negócio)
+ * Usa a matriz de transições para validação rigorosa
  */
 export function isValidTransition(from: ShipmentStatus, to: ShipmentStatus): boolean {
-  // Transições sempre permitidas: para status de cancelamento
-  if (Object.values(ShipmentStatus).includes(to) && to.includes('CANCELL')) {
-    return canBeCancelled(from);
+  // Se o status é o mesmo, é válido (noop)
+  if (from === to) {
+    return true;
   }
 
-  // TODO: Implementar validações mais específicas conforme necessário
-  // Por enquanto, permite todas as transições
-  return true;
+  // Verificar se a transição está na matriz
+  const allowedTransitions = TRANSITION_MATRIX[from];
+  if (!allowedTransitions) {
+    // Status desconhecido
+    return false;
+  }
+
+  return allowedTransitions.includes(to);
 }
 
 /**

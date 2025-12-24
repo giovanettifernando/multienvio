@@ -14,6 +14,7 @@ import { prisma as defaultPrisma } from '@/platform/db/db';
 import { logger as defaultLogger } from '@/platform/logging/logger';
 import { ApiError } from '@/platform/api/errors';
 import type { PrismaClient, Prisma } from '@prisma/client';
+import { invalidateWalletBalanceCache } from './ledger-balance.service';
 
 // =============================================================================
 // Types & DTOs
@@ -498,8 +499,14 @@ export async function processDebit(
         balance: toReais(updatedWallet.availableCents),
         transactionId: transaction.id,
         shipmentIds: shipmentIdsToUpdate,
+        _walletId: wallet.id, // Para invalidação de cache
       };
     });
+
+    // ARQUITETURA: Invalidar cache após modificar ledger
+    if (result._walletId && !result.idempotent) {
+      await invalidateWalletBalanceCache(result._walletId);
+    }
 
     return result;
   } catch (txError) {

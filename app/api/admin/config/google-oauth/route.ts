@@ -6,8 +6,9 @@
  */
 
 import { z } from 'zod';
+import { requireAdminSession } from '@/platform/auth/require-session';
 import { prisma } from '@/platform/db/db';
-import { requireAdminUser } from '@/modules/auth/application/admin-helpers';
+
 import { AdminPermission } from '@prisma/client';
 import { encrypt, decrypt } from '@/platform/integrations/shared/encryption.service';
 import { withApiHandler } from '@/platform/api/handler';
@@ -28,14 +29,8 @@ const googleOAuthConfigSchema = z.object({
  *   - reveal=true: Retorna clientSecret descriptografado
  */
 export const GET = withApiHandler(async ({ req }) => {
-  const authResult = await requireAdminUser(req, AdminPermission.CONFIGURACOES);
-  if (authResult instanceof Response) {
-    throw new ApiError({
-      code: 'UNAUTHORIZED',
-      message: 'Não autorizado',
-      status: 401,
-    });
-  }
+  const session = await requireAdminSession(req, AdminPermission.CONFIGURACOES);
+  
 
   const url = new URL(req.url);
   const shouldReveal = url.searchParams.get('reveal') === 'true';
@@ -82,14 +77,8 @@ export const GET = withApiHandler(async ({ req }) => {
  * POST - Salva a configuração
  */
 export const POST = withApiHandler(async ({ req }) => {
-  const authResult = await requireAdminUser(req, AdminPermission.CONFIGURACOES);
-  if (authResult instanceof Response) {
-    throw new ApiError({
-      code: 'UNAUTHORIZED',
-      message: 'Não autorizado',
-      status: 401,
-    });
-  }
+  const session = await requireAdminSession(req, AdminPermission.CONFIGURACOES);
+  
 
   const body = await req.json();
   const parsed = googleOAuthConfigSchema.safeParse(body);

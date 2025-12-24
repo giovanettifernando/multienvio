@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { withApiHandlerResponse } from '@/platform/api/handler';
 import { ApiError } from '@/platform/api/errors';
 import { prisma } from '@/platform/db/db';
-import { getUserSessionFromRequest } from '@/modules/auth/application/user-session';
+import { requireUserSession } from '@/platform/auth/require-session';
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import { readFile } from 'fs/promises';
 import { join } from 'path';
@@ -13,14 +13,7 @@ import { formatCEP, formatCNPJ } from '@/shared/utils/masks';
  * Gera PDF do manifesto de coleta com dados do pickup request
  */
 export const GET = withApiHandlerResponse<{ id: string }>(async (context) => {
-  const session = await getUserSessionFromRequest(context.req);
-  if (!session) {
-    throw new ApiError({
-      code: 'UNAUTHORIZED',
-      message: 'Não autenticado',
-      status: 401
-    });
-  }
+  const session = await requireUserSession(context.req);
 
   const { id } = context.params;
 

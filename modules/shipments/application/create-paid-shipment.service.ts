@@ -395,11 +395,13 @@ export async function createPaidShipment(
 
   // 10) ENVIAR EMAIL AO DESTINATÁRIO (fora da transação, não bloqueia)
   if (!result.isIdempotent && recipient.email && recipient.email.trim() !== '') {
+    // Usar publicTrackingId para URL pública, fallback para platformTrackingCode
+    const trackingCodeForEmail = result.publicTrackingId || trackingCode;
     sendTrackingEmailAsync(
       userId,
       recipient.email,
       recipient.nome,
-      trackingCode,
+      trackingCodeForEmail,
       recipient.cidade,
       recipient.uf
     );

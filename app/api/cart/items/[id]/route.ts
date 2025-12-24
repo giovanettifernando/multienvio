@@ -7,7 +7,7 @@
 
 import { withApiHandler } from '@/platform/api/handler';
 import { ApiError } from '@/platform/api/errors';
-import { getUserFromRequest } from '@/modules/auth/application/session';
+import { requireUserSession } from '@/platform/auth/require-session';
 import { logger } from '@/platform/logging/logger';
 import { updateCartItemSchema } from '@/modules/cart/dto/cart';
 import { updateItem, deleteItem, type CartItemDto } from '@/modules/cart/application';
@@ -38,10 +38,7 @@ type CartItemParams = {
  * Atualiza um item do carrinho
  */
 export const PATCH = withApiHandler<PatchCartItemResponse, CartItemParams>(async (context) => {
-  const session = await getUserFromRequest(context.req);
-  if (!session?.userId) {
-    throw new ApiError({ code: 'unauthorized', message: 'Não autorizado', status: 401 });
-  }
+  const session = await requireUserSession(context.req);
 
   const itemId = context.params.id;
   const body = await context.req.json();
@@ -72,10 +69,7 @@ export const PATCH = withApiHandler<PatchCartItemResponse, CartItemParams>(async
  * Remove um item do carrinho
  */
 export const DELETE = withApiHandler<DeleteCartItemResponse, CartItemParams>(async (context) => {
-  const session = await getUserFromRequest(context.req);
-  if (!session?.userId) {
-    throw new ApiError({ code: 'unauthorized', message: 'Não autorizado', status: 401 });
-  }
+  const session = await requireUserSession(context.req);
 
   const itemId = context.params.id;
 

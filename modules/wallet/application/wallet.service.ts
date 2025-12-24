@@ -7,6 +7,10 @@
 
 import { prisma } from '@/platform/db/db';
 import { WalletTxType, WalletTxStatus } from '@prisma/client';
+import {
+  getWalletBalanceByUserId,
+  invalidateWalletBalanceCache,
+} from './ledger-balance.service';
 
 export interface WalletBalance {
   availableCents: number;
@@ -81,15 +85,19 @@ export async function getOrCreateWallet(userId: string) {
 
 /**
  * Obtém o saldo da carteira do usuário
+ *
+ * ARQUITETURA: Saldo é CALCULADO do ledger (WalletTransaction), não do campo wallet.availableCents.
+ * Isso garante que o saldo sempre corresponde às transações reais.
+ * Cache Redis é usado para performance.
  */
 export async function getBalance(userId: string): Promise<WalletBalance> {
-  const wallet = await getOrCreateWallet(userId);
+  const balance = await getWalletBalanceByUserId(userId);
 
   return {
-    availableCents: wallet.availableCents,
-    pendingCents: wallet.pendingCents,
-    availableReais: centsToReais(wallet.availableCents),
-    pendingReais: centsToReais(wallet.pendingCents),
+    availableCents: balance.availableCents,
+    pendingCents: balance.pendingCents,
+    availableReais: centsToReais(balance.availableCents),
+    pendingReais: centsToReais(balance.pendingCents),
   };
 }
 
@@ -273,6 +281,9 @@ export async function refund(
     }),
   ]);
 
+  // ARQUITETURA: Invalidar cache após modificar ledger
+  await invalidateWalletBalanceCache(wallet.id);
+
   return {
     id: transaction.id,
     type: transaction.type,
@@ -420,6 +431,9 @@ export async function creditFromGatewayTopup(
     }),
   ]);
 
+  // ARQUITETURA: Invalidar cache após modificar ledger
+  await invalidateWalletBalanceCache(wallet.id);
+
   console.log('[WALLET_SERVICE] Crédito de gateway aplicado:', {
     userId,
     walletTransactionId: walletTx.id,
@@ -522,6 +536,9 @@ export async function manualCredit(
     }),
   ]);
 
+  // ARQUITETURA: Invalidar cache após modificar ledger
+  await invalidateWalletBalanceCache(wallet.id);
+
   console.log('[WALLET_SERVICE] Crédito manual aplicado:', {
     userId,
     walletTransactionId: walletTx.id,
@@ -617,6 +634,9 @@ export async function manualDebit(
       },
     }),
   ]);
+
+  // ARQUITETURA: Invalidar cache após modificar ledger
+  await invalidateWalletBalanceCache(wallet.id);
 
   console.log('[WALLET_SERVICE] Débito manual aplicado:', {
     userId,

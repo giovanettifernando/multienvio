@@ -6,8 +6,9 @@
  */
 
 import { z } from 'zod';
+import { requireAdminSession } from '@/platform/auth/require-session';
 import { prisma } from '@/platform/db/db';
-import { requireAdminUser } from '@/modules/auth/application/admin-helpers';
+
 import { AdminPermission } from '@prisma/client';
 import type { FAQAudience } from '@prisma/client';
 import { withApiHandler } from '@/platform/api/handler';
@@ -30,14 +31,7 @@ const faqItemSchema = z.object({
  * GET - Lista todas as FAQs para administração
  */
 export const GET = withApiHandler(async ({ req }) => {
-  const authResult = await requireAdminUser(req, AdminPermission.CONFIGURACOES);
-  if (authResult instanceof Response) {
-    throw new ApiError({
-      code: 'UNAUTHORIZED',
-      message: 'Não autorizado',
-      status: 401,
-    });
-  }
+  const session = await requireAdminSession(req, AdminPermission.CONFIGURACOES);
 
   const { searchParams } = new URL(req.url);
   const audienceParam = searchParams.get('audience');
@@ -94,14 +88,7 @@ export const GET = withApiHandler(async ({ req }) => {
  * POST - Cria nova FAQ
  */
 export const POST = withApiHandler(async ({ req }) => {
-  const authResult = await requireAdminUser(req, AdminPermission.CONFIGURACOES);
-  if (authResult instanceof Response) {
-    throw new ApiError({
-      code: 'UNAUTHORIZED',
-      message: 'Não autorizado',
-      status: 401,
-    });
-  }
+  const session = await requireAdminSession(req, AdminPermission.CONFIGURACOES);
 
   const body = await req.json();
   const parsed = faqItemSchema.safeParse(body);
@@ -126,7 +113,7 @@ export const POST = withApiHandler(async ({ req }) => {
       audience,
       sortOrder,
       isActive,
-      createdBy: authResult.user.id,
+      createdBy: session.staffId,
     },
   });
 

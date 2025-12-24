@@ -8,9 +8,9 @@
  * which allows returning NextResponse directly instead of JSON format.
  */
 
-import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { requireAdminUser } from '@/modules/auth/application/admin-helpers';
+import { NextResponse } from 'next/server';
+import { requireAdminSession } from '@/platform/auth/require-session';
 import { AdminPermission } from '@prisma/client';
 import { withApiHandlerResponse } from '@/platform/api/handler';
 import { ApiError } from '@/platform/api/errors';
@@ -41,14 +41,7 @@ function isTrackingCode(codigo: string): boolean {
  * Aceita código de rastreio ou ID da pré-postagem
  */
 export const POST = withApiHandlerResponse(async ({ req, logger }) => {
-  const authResult = await requireAdminUser(req, AdminPermission.INTEGRACOES);
-  if (authResult instanceof NextResponse) {
-    throw new ApiError({
-      code: 'UNAUTHORIZED',
-      message: 'Não autorizado',
-      status: 401,
-    });
-  }
+  const session = await requireAdminSession(req, AdminPermission.INTEGRACOES);
 
   // Validar payload
   const body = await req.json();
