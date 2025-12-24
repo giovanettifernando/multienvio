@@ -42,7 +42,35 @@ export const POST = withApiHandler<AdminClientBlockResponse>(async ({ req }) => 
 
   const { clientId, reason } = parsed.data;
 
-  // TODO: Implementar bloqueio real do cliente no banco
+  const { prisma } = await import('@/platform/db/db');
+
+  // Verificar se o cliente existe
+  const client = await prisma.user.findUnique({
+    where: { id: clientId },
+    select: { id: true, status: true, email: true },
+  });
+
+  if (!client) {
+    throw new ApiError({
+      code: 'NOT_FOUND',
+      message: 'Cliente não encontrado',
+      status: 404,
+    });
+  }
+
+  if (client.status === 'blocked') {
+    throw new ApiError({
+      code: 'INVALID_STATE',
+      message: 'Cliente já está bloqueado',
+      status: 400,
+    });
+  }
+
+  // Atualizar status para bloqueado
+  await prisma.user.update({
+    where: { id: clientId },
+    data: { status: 'blocked' },
+  });
 
   // Audit log
   await logClientStatusChange(session.staffId, clientId, 'block', reason);

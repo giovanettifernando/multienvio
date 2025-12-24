@@ -97,48 +97,44 @@ export function PickupSchedule() {
       {pickups.length === 0 ? (
         <ELEmpty description="Nenhuma coleta agendada" />
       ) : (
-        <ELFlex direction="col" gap="sm">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
           {pickups.map((pickup, index) => (
             <div
               key={pickup.id}
               style={{ cursor: 'pointer' }}
               onClick={() => router.push(`/coletas/${pickup.id}`)}
             >
-              {index > 0 && <Divider style={{ margin: '8px 0' }} />}
-              <ELFlex justify="between" align="center" style={{ width: '100%' }} gap="md">
-                <ELFlex direction="col" style={{ flex: 1, minWidth: 0 }}>
-                  <ELFlex align="center" gap="sm">
-                    <CalendarOutlined style={{ fontSize: '12px', color: 'var(--el-text-muted, #98A2B3)' }} />
-                    <Text strong style={{ fontSize: '13px' }}>
+              {index > 0 && <Divider style={{ margin: '4px 0' }} />}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', width: '100%', gap: 8 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 2, flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <CalendarOutlined style={{ fontSize: '11px', color: 'var(--el-text-muted, #98A2B3)' }} />
+                    <Text strong style={{ fontSize: '12px' }}>
                       {formatScheduleDate(pickup.scheduleAt)}
                     </Text>
-                  </ELFlex>
-                  <ELFlex align="center" gap="sm">
-                    <EnvironmentOutlined style={{ fontSize: '12px', color: 'var(--el-text-muted, #98A2B3)' }} />
-                    <Text type="secondary" style={{ fontSize: '11px' }} ellipsis>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <EnvironmentOutlined style={{ fontSize: '11px', color: 'var(--el-text-muted, #98A2B3)' }} />
+                    <Text type="secondary" style={{ fontSize: '11px' }}>
                       {pickup.originCity && pickup.originUf
                         ? `${pickup.originCity}/${pickup.originUf}`
                         : pickup.originCep}
+                      {pickup.collector && ` • ${pickup.collector.name}`}
                     </Text>
-                    {pickup.collector && (
-                      <Text type="secondary" style={{ fontSize: '11px' }}>
-                        • {pickup.collector.name}
-                      </Text>
-                    )}
-                  </ELFlex>
-                  <Text type="secondary" style={{ fontSize: '11px' }} ellipsis>
+                  </div>
+                  <Text type="secondary" style={{ fontSize: '10px', marginLeft: 17 }}>
                     {pickup.shipment.trackingCode}
                     {pickup.shipment.carrier && ` • ${pickup.shipment.carrier}`}
                   </Text>
-                </ELFlex>
+                </div>
 
-                <Tag color="blue" style={{ fontSize: '10px' }}>
+                <Tag color="blue" style={{ fontSize: '10px', margin: 0 }}>
                   Agendada
                 </Tag>
-              </ELFlex>
+              </div>
             </div>
           ))}
-        </ELFlex>
+        </div>
       )}
     </ELCard>
   );

@@ -4,7 +4,7 @@ import bcrypt from 'bcrypt';
 import { withApiHandlerResponse } from '@/platform/api/handler';
 import { AdminLoginSchema } from '@/shared/validation/admin-auth';
 import { prisma } from '@/platform/db/db';
-import { adminSign, createAdminCookieHeader } from '@/modules/auth/application/admin-session';
+import { adminSign, ADMIN_AUTH_COOKIE_NAME, ADMIN_COOKIE_MAX_AGE_SECONDS } from '@/modules/auth/application/admin-session';
 import { logAdminLogin } from '@/platform/logging/audit-admin';
 import { AdminPermission, StaffStatus } from '@prisma/client';
 import { rateLimitByIPStrict, RATE_LIMITS } from '@/platform/cache/rate-limit-redis';
@@ -159,14 +159,32 @@ export const POST = withApiHandlerResponse<Record<string, never>>(async (context
 
     logger.info('admin_login_success', { staffId: staffUser.id });
 
-    // Create response with Set-Cookie header
+    // Create response
     const response = NextResponse.json({
       staff,
       message: 'Login realizado com sucesso',
     });
 
-    // Add admin auth cookie
-    response.headers.set('Set-Cookie', createAdminCookieHeader(token));
+    // Set cookies using response.cookies.set() for consistency
+    const isProduction = process.env.NODE_ENV === 'production';
+
+    // Admin auth cookie
+    response.cookies.set(ADMIN_AUTH_COOKIE_NAME, token, {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: 'lax',
+      path: '/',
+      maxAge: ADMIN_COOKIE_MAX_AGE_SECONDS,
+    });
+
+    // Last activity cookie para evitar timeout de inatividade logo após login
+    response.cookies.set('last_activity_admin', Date.now().toString(), {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 60 * 60 * 24, // 24 hours
+    });
 
     return response;
   } catch (error) {

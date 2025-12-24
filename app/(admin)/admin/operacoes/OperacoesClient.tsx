@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { Statistic, Row, Col, Flex, Skeleton, Alert } from 'antd';
+import { Statistic, Row, Col, Flex, Skeleton } from 'antd';
 import { ELCard, ELSelect, ELDatePicker, ELTabs } from '@/shared/ui';
 import { useQuery } from '@tanstack/react-query';
 
@@ -88,21 +88,9 @@ export default function OperacoesClient() {
       children: <ExceptionsTable dateStart={_period.dateStart} dateEnd={_period.dateEnd} />,
     },
     {
-      key: 'sla',
-      label: 'SLA & Capacidade',
-      children: (
-        <Alert
-          message="Funcionalidade em Desenvolvimento"
-          description="Monitoramento de SLAs e capacidade operacional estará disponível em breve."
-          type="info"
-          showIcon
-        />
-      ),
-    },
-    {
       key: 'events',
       label: 'Eventos/Webhooks',
-      children: <EventsTable />,
+      children: <EventsTable dateStart={_period.dateStart} dateEnd={_period.dateEnd} />,
     },
   ];
 

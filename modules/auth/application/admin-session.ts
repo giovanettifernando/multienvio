@@ -27,7 +27,7 @@ const JWT_ALGORITHM = 'HS256';
 // TTL configurável via env (default: 7 dias)
 const SESSION_TTL_DAYS = parseInt(process.env.ADMIN_SESSION_TTL_DAYS || '7', 10);
 const JWT_EXPIRATION = `${SESSION_TTL_DAYS}d`;
-const COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * SESSION_TTL_DAYS;
+export const ADMIN_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * SESSION_TTL_DAYS;
 
 const JWT_ISSUER = 'enviolegal-admin';
 const JWT_AUDIENCE = 'admin';
@@ -119,7 +119,7 @@ export function createAdminCookieHeader(token: string): string {
     ? 'Secure; SameSite=Lax'
     : 'SameSite=Lax';
 
-  return `${ADMIN_AUTH_COOKIE_NAME}=${token}; HttpOnly; ${cookieAttributes}; Path=/; Max-Age=${COOKIE_MAX_AGE_SECONDS}`;
+  return `${ADMIN_AUTH_COOKIE_NAME}=${token}; HttpOnly; ${cookieAttributes}; Path=/; Max-Age=${ADMIN_COOKIE_MAX_AGE_SECONDS}`;
 }
 
 /**

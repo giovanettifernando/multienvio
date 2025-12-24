@@ -595,8 +595,9 @@ export const sessionCache = {
       const newVersion = await redis.incr(this.tokenVersionKeyPrefixed(userId));
       // Renovar TTL após INCR
       await redis.expire(this.tokenVersionKeyPrefixed(userId), SESSION_TTL_SECONDS);
-      // Deletar dados da sessão (força re-fetch no próximo login)
-      await redis.del(this.keyPrefixed(userId));
+      // NÃO deletar a sessão aqui - o refresh-handler irá atualizá-la
+      // Deleção causava race condition onde a sessão era perdida entre
+      // incrementTokenVersion e o set() subsequente
       return newVersion;
     } catch (error) {
       openCircuitBreaker();
@@ -724,7 +725,9 @@ export const staffSessionCache = {
       const redis = getRedisClient();
       const newVersion = await redis.incr(this.tokenVersionKeyPrefixed(staffId));
       await redis.expire(this.tokenVersionKeyPrefixed(staffId), SESSION_TTL_SECONDS);
-      await redis.del(this.keyPrefixed(staffId));
+      // NÃO deletar a sessão aqui - o refresh-handler irá atualizá-la
+      // Deleção causava race condition onde a sessão era perdida entre
+      // incrementTokenVersion e o set() subsequente
       return newVersion;
     } catch (error) {
       openCircuitBreaker();
@@ -847,7 +850,9 @@ export const collectorSessionCache = {
       const redis = getRedisClient();
       const newVersion = await redis.incr(this.tokenVersionKeyPrefixed(collectorId));
       await redis.expire(this.tokenVersionKeyPrefixed(collectorId), SESSION_TTL_SECONDS);
-      await redis.del(this.keyPrefixed(collectorId));
+      // NÃO deletar a sessão aqui - o refresh-handler irá atualizá-la
+      // Deleção causava race condition onde a sessão era perdida entre
+      // incrementTokenVersion e o set() subsequente
       return newVersion;
     } catch (error) {
       openCircuitBreaker();
@@ -970,7 +975,9 @@ export const pickupPointSessionCache = {
       const redis = getRedisClient();
       const newVersion = await redis.incr(this.tokenVersionKeyPrefixed(pointId));
       await redis.expire(this.tokenVersionKeyPrefixed(pointId), SESSION_TTL_SECONDS);
-      await redis.del(this.keyPrefixed(pointId));
+      // NÃO deletar a sessão aqui - o refresh-handler irá atualizá-la
+      // Deleção causava race condition onde a sessão era perdida entre
+      // incrementTokenVersion e o set() subsequente
       return newVersion;
     } catch (error) {
       openCircuitBreaker();

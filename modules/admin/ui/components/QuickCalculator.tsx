@@ -1,8 +1,10 @@
 'use client';
 
-import { useEffect, useCallback } from 'react';
-import { Card, Form, Typography, Space, Flex, Row, Col } from 'antd';
-import { CalculatorOutlined, ArrowRightOutlined } from '@ant-design/icons';
+import { useEffect, useState } from 'react';
+import { Form, Typography, Space, Flex, Row, Col } from 'antd';
+import { ELCard } from '@/shared/ui/ELCard';
+import { ELChoicePills } from '@/shared/ui/ELChoicePills';
+import { CalculatorOutlined, ArrowRightOutlined, HomeOutlined, EditOutlined } from '@ant-design/icons';
 import { useRouter } from 'next/navigation';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { apiFetch } from '@/shared/utils/api-fetch';
@@ -58,9 +60,12 @@ async function fetchUserAddresses(): Promise<UserAddress[]> {
   return data.addresses || [];
 }
 
+type OriginMode = 'address' | 'cep';
+
 export function QuickCalculator() {
   const [form] = Form.useForm();
   const router = useRouter();
+  const [originMode, setOriginMode] = useState<OriginMode>('address');
 
   const addressesQuery = useQuery({
     queryKey: ["account", "addresses"],
@@ -72,13 +77,18 @@ export function QuickCalculator() {
   const defaultAddress = addresses.find((a) => a.isDefault) || addresses[0];
 
   useEffect(() => {
-    if (defaultAddress) {
+    if (defaultAddress && originMode === 'address') {
       const current = form.getFieldValue("originCep");
       if (!current) {
         form.setFieldsValue({ originCep: defaultAddress.cep });
       }
     }
-  }, [defaultAddress, form]);
+  }, [defaultAddress, form, originMode]);
+
+  // Limpar o campo de origem ao trocar de modo
+  useEffect(() => {
+    form.setFieldsValue({ originCep: originMode === 'address' && defaultAddress ? defaultAddress.cep : '' });
+  }, [originMode, defaultAddress, form]);
 
   const addressOptions = addresses.map((addr) => ({
     label: `${addr.label} (${addr.cidade}/${addr.uf})`,
@@ -86,6 +96,7 @@ export function QuickCalculator() {
   }));
 
   const hasNoAddresses = !addressesQuery.isLoading && addresses.length === 0;
+  const showCepInput = originMode === 'cep' || hasNoAddresses;
 
   const quoteMutation = useMutation({
     mutationFn: async (values: { originCep: string; destCep: string; weight: number; height?: number; width?: number; length?: number }) => {
@@ -128,52 +139,46 @@ export function QuickCalculator() {
     }
   };
 
+  const cardTitle = (
+    <Flex align="center" gap={8}>
+      <CalculatorOutlined />
+      <Text strong>Calculadora</Text>
+      <Text type="secondary" style={{ fontSize: 12, fontWeight: 400 }}>(cotação rápida)</Text>
+    </Flex>
+  );
+
   return (
     <>
-      <Card
-        title={
-          <Flex align="center" gap={8}>
-            <CalculatorOutlined />
-            <Text strong>Calculadora</Text>
-            <Text type="secondary" style={{ fontSize: 12, fontWeight: 400 }}>(cotação rápida)</Text>
-          </Flex>
-        }
-        variant="outlined"
-        size="small"
-        styles={{ body: { padding: '12px 16px' } }}
-      >
-        {hasNoAddresses ? (
-          <ELAlert
-            variant="info"
-            title="Cadastre endereços para realizar cotações"
-            description={
-              <ELButton
-                variant="link"
-                size="small"
-                style={{ padding: 0 }}
-                onClick={() => router.push("/minha-conta?tab=enderecos")}
-              >
-                Cadastrar em Minha Conta → Endereços
-              </ELButton>
-            }
-            style={{ marginBottom: 12 }}
-          />
-        ) : null}
-
+      <ELCard header={{ title: cardTitle }} size="small" padding="md">
         <Form
           form={form}
           layout="vertical"
           size="small"
           onFinish={(values) => quoteMutation.mutate(values)}
         >
+          {/* Seletor de modo de origem */}
+          {!hasNoAddresses && (
+            <div style={{ marginBottom: 12 }}>
+              <ELChoicePills
+                value={originMode}
+                onChange={setOriginMode}
+                size="small"
+                options={[
+                  { value: 'address', label: 'Usar endereço', icon: <HomeOutlined /> },
+                  { value: 'cep', label: 'Informar CEP', icon: <EditOutlined /> },
+                ]}
+              />
+            </div>
+          )}
+
           <Row gutter={[12, 12]}>
             <Col xs={24} sm={12}>
               <Form.Item
                 label={<Text style={{ fontSize: '12px' }}>CEP Origem</Text>}
                 name="originCep"
                 rules={[
-                  { required: true, message: hasNoAddresses ? 'Informe o CEP' : 'Selecione o endereço' },
-                  ...(hasNoAddresses ? [{
+                  { required: true, message: showCepInput ? 'Informe o CEP' : 'Selecione o endereço' },
+                  ...(showCepInput ? [{
                     validator: (_: unknown, value: string) => {
                       if (!value || isValidCep(value)) return Promise.resolve();
                       return Promise.reject(new Error('CEP inválido'));
@@ -182,7 +187,7 @@ export function QuickCalculator() {
                 ]}
                 style={{ marginBottom: 0 }}
               >
-                {hasNoAddresses ? (
+                {showCepInput ? (
                   <ELInput
                     placeholder="00000-000"
                     size="small"
@@ -200,6 +205,7 @@ export function QuickCalculator() {
                     size="small"
                     showSearch
                     optionFilterProp="label"
+                    style={{ fontSize: '12px' }}
                   />
                 )}
               </Form.Item>
@@ -208,10 +214,26 @@ export function QuickCalculator() {
               <Form.Item
                 label={<Text style={{ fontSize: '12px' }}>CEP Destino</Text>}
                 name="destCep"
-                rules={[{ required: true, message: 'Obrigatório' }]}
+                rules={[
+                  { required: true, message: 'Obrigatório' },
+                  {
+                    validator: (_: unknown, value: string) => {
+                      if (!value || isValidCep(value)) return Promise.resolve();
+                      return Promise.reject(new Error('CEP inválido'));
+                    }
+                  }
+                ]}
                 style={{ marginBottom: 0 }}
               >
-                <ELInput placeholder="00000-000" size="small" />
+                <ELInput
+                  placeholder="00000-000"
+                  size="small"
+                  maxLength={9}
+                  onChange={(e) => {
+                    const masked = maskCep(e.target.value);
+                    form.setFieldsValue({ destCep: masked });
+                  }}
+                />
               </Form.Item>
             </Col>
           </Row>
@@ -268,7 +290,7 @@ export function QuickCalculator() {
             Calcular
           </ELButton>
         </Form>
-      </Card>
+      </ELCard>
 
       <ELModal
         title="Opções de Envio"
@@ -286,7 +308,7 @@ export function QuickCalculator() {
             />
           ) : (
             (quoteMutation.data || []).map((result, index) => (
-              <Card key={index} size="small" variant="outlined">
+              <ELCard key={index} size="small" padding="sm">
                 <Flex justify="space-between" align="center">
                   <Space orientation="vertical" size={0}>
                     <Text strong>{result.carrier}</Text>
@@ -309,7 +331,7 @@ export function QuickCalculator() {
                     </ELButton>
                   </Space>
                 </Flex>
-              </Card>
+              </ELCard>
             ))
           )}
         </Space>

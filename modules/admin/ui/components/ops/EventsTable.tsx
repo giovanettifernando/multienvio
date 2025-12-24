@@ -24,7 +24,12 @@ const sourceColors: Record<OpsEvent['source'], string> = {
   manual: 'orange',
 };
 
-export default function EventsTable() {
+interface EventsTableProps {
+  dateStart?: string;
+  dateEnd?: string;
+}
+
+export default function EventsTable({ dateStart, dateEnd }: EventsTableProps) {
   const { message } = App.useApp();
   const queryClient = useQueryClient();
 
@@ -38,13 +43,15 @@ export default function EventsTable() {
 
   // Fetch events
   const { data, isLoading } = useQuery({
-    queryKey: ['admin', 'ops', 'events', page, pageSize, processedFilter, sourceFilter],
+    queryKey: ['admin', 'ops', 'events', page, pageSize, processedFilter, sourceFilter, dateStart, dateEnd],
     queryFn: () =>
       listEvents({
         page,
         pageSize,
         processed: processedFilter === 'true' ? true : processedFilter === 'false' ? false : undefined,
         source: sourceFilter,
+        dateStart,
+        dateEnd,
       }),
     placeholderData: (prev) => prev,
   });

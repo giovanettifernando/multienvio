@@ -154,8 +154,8 @@ export function ShipmentsSummaryCard({ shipments, loading }: ShipmentsSummaryCar
             style={{
               padding: '8px 12px',
               borderRadius: 6,
-              background: item.bgColor,
-              border: `1px solid ${item.color}20`,
+              background: '#fff',
+              border: `1px solid #e8e8e8`,
               cursor: 'pointer',
               transition: 'all 0.2s',
               flex: '1 1 auto',

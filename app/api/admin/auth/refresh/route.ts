@@ -18,7 +18,7 @@ import {
   adminVerify,
   adminSign,
   ADMIN_AUTH_COOKIE_NAME,
-  createAdminCookieHeader,
+  ADMIN_COOKIE_MAX_AGE_SECONDS,
   type AdminJWTPayload,
 } from '@/modules/auth/application/admin-session';
 import { staffSessionCache, type StaffSessionCacheData } from '@/platform/cache/cache';
@@ -58,9 +58,17 @@ export const POST = createRefreshHandler<AdminJWTPayload, StaffSessionCacheData>
     tokenVersion: newTokenVersion,
   }),
 
+  // Usar response.cookies.set() ao invés de headers.set('Set-Cookie', ...)
+  // para consistência com o cliente e evitar problemas com múltiplos cookies
   setAuthCookies: (response, tokens) => {
     if (typeof tokens !== 'string') return;
-    response.headers.set('Set-Cookie', createAdminCookieHeader(tokens));
+    response.cookies.set(ADMIN_AUTH_COOKIE_NAME, tokens, {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: 'lax',
+      path: '/',
+      maxAge: ADMIN_COOKIE_MAX_AGE_SECONDS,
+    });
   },
 
   clearAuthCookies: (response) => {

@@ -8,7 +8,6 @@ import {
   InboxOutlined,
   ClockCircleOutlined,
   PrinterOutlined,
-  SendOutlined,
   CarOutlined,
 } from '@ant-design/icons';
 import { useRouter } from 'next/navigation';
@@ -74,18 +73,9 @@ const STATUS_CONFIG: StatusConfig[] = [
     filterParam: 'Aguardando postagem',
   },
   {
-    key: 'posted',
-    label: 'Postados',
-    statuses: [UI_STATUSES.POSTADO],
-    icon: <SendOutlined />,
-    color: '#13c2c2',
-    bgColor: '#e6fffb',
-    filterParam: 'Postado',
-  },
-  {
     key: 'in_transit',
     label: 'Em trânsito',
-    statuses: [UI_STATUSES.EM_TRANSITO, UI_STATUSES.EM_ROTA_ENTREGA],
+    statuses: [UI_STATUSES.POSTADO, UI_STATUSES.EM_TRANSITO, UI_STATUSES.EM_ROTA_ENTREGA],
     icon: <CarOutlined />,
     color: '#722ed1',
     bgColor: '#f9f0ff',
@@ -153,8 +143,8 @@ export function ShipmentsStatusBoard({ shipments, loading }: ShipmentsStatusBoar
             style={{
               padding: '8px 12px',
               borderRadius: 6,
-              background: item.bgColor,
-              border: `1px solid ${item.color}20`,
+              background: '#fff',
+              border: `1px solid #e8e8e8`,
               cursor: 'pointer',
               transition: 'all 0.2s',
               flex: '1 1 auto',

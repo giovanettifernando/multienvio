@@ -2,14 +2,12 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { ELAlert } from '@/shared/ui/ELAlert';
-import { ELGrid, ELFlex } from '@/shared/ui/ELGrid';
+import { ELGrid } from '@/shared/ui/ELGrid';
 import { PageShell } from '@/shared/ui/PageShell';
 import { QuickCalculator } from '@/modules/dashboard/ui/components/QuickCalculator';
 import { ShipmentsStatusBoard } from '@/modules/dashboard/ui/components/ShipmentsStatusBoard';
 import { ShipmentsSummaryCard } from '@/modules/dashboard/ui/components/ShipmentsSummaryCard';
-import { WalletRecent } from '@/modules/dashboard/ui/components/WalletRecent';
-import { WalletCard } from '@/modules/dashboard/ui/components/WalletCard';
-import { SupportQuickView } from '@/modules/dashboard/ui/components/SupportQuickView';
+import { WalletUnified } from '@/modules/dashboard/ui/components/WalletUnified';
 import { PickupSchedule } from '@/modules/dashboard/ui/components/PickupSchedule';
 import { PendingPickupPointShipments } from '@/modules/dashboard/ui/components/PendingPickupPointShipments';
 import { apiFetch } from "@/shared/utils/api-fetch";
@@ -63,21 +61,15 @@ export default function OverviewClient() {
         />
       </ELGrid>
 
-      {/* Row 2: Calculadora + Carteira | Transações + Suporte */}
+      {/* Row 2: Calculadora | Carteira | Coletas agendadas */}
       <ELGrid variant="3" gap="md">
-        <ELFlex direction="col" gap="md">
-          <QuickCalculator />
-          <WalletCard />
-        </ELFlex>
-        <WalletRecent />
-        <SupportQuickView />
+        <QuickCalculator />
+        <WalletUnified />
+        <PickupSchedule />
       </ELGrid>
 
-      {/* Row 3: Coletas agendadas + Envios pendentes em pontos de coleta */}
-      <ELGrid variant="2" gap="md">
-        <PickupSchedule />
-        <PendingPickupPointShipments />
-      </ELGrid>
+      {/* Row 3: Envios pendentes em pontos de coleta */}
+      <PendingPickupPointShipments />
     </PageShell>
   );
 }

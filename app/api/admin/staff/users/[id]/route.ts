@@ -1,6 +1,7 @@
 import { withApiHandler } from '@/platform/api/handler';
 import { ApiError } from '@/platform/api/errors';
 import { requireAdminSession } from '@/platform/auth/require-session';
+import { logPermissionChange, logStatusChange, logAdminAction } from '@/platform/logging/audit-admin';
 import { z } from 'zod';
 import { prisma } from '@/platform/db/db';
 import { AdminPermission, StaffStatus } from '@prisma/client';
@@ -166,6 +167,27 @@ export const PUT = withApiHandler<StaffUserResponse, { id: string }>(async (cont
     },
   });
 
+  // Auditoria de alteracoes
+  const addedPermissions = permissions.filter((p) => !existing.permissions.includes(p));
+  const removedPermissions = existing.permissions.filter((p) => !permissions.includes(p));
+
+  if (addedPermissions.length > 0 || removedPermissions.length > 0) {
+    await logPermissionChange(session.staffId, id, addedPermissions, removedPermissions);
+  }
+
+  if (payload.status && payload.status !== existing.status) {
+    await logStatusChange(session.staffId, id, existing.status, payload.status);
+  }
+
+  if (payload.isSuperAdmin !== undefined && payload.isSuperAdmin !== existing.isSuperAdmin) {
+    await logAdminAction(
+      session.staffId,
+      payload.isSuperAdmin ? 'grant_super_admin' : 'revoke_super_admin',
+      'StaffUser',
+      id
+    );
+  }
+
   return { data: { user: toApiUser(updated) } };
 });
 
@@ -186,6 +208,9 @@ export const DELETE = withApiHandler<StaffUserDeleteResponse, { id: string }>(as
   }
 
   await prisma.staffUser.delete({ where: { id } });
+
+  // Auditoria de exclusao
+  await logAdminAction(session.staffId, 'delete_staff', 'StaffUser', id);
 
   return { data: { message: 'Usuário excluído com sucesso' } };
 });

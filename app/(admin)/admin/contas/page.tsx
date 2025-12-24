@@ -55,7 +55,6 @@ async function fetchAdminClients(): Promise<AdminClient[]> {
             pendingCents: true,
             transactions: {
               where: {
-                type: 'TOPUP',
                 status: 'CONFIRMED',
                 createdAt: {
                   gte: startOfMonth,
@@ -64,6 +63,7 @@ async function fetchAdminClients(): Promise<AdminClient[]> {
               },
               select: {
                 amountCents: true,
+                type: true,
               },
             },
           },
@@ -74,8 +74,18 @@ async function fetchAdminClients(): Promise<AdminClient[]> {
     return users.map((user) => {
       const walletAvailable = user.wallet?.availableCents ?? 0;
       const walletPending = user.wallet?.pendingCents ?? 0;
-      const creditsMonth =
-        user.wallet?.transactions.reduce((total, tx) => total + tx.amountCents, 0) ?? 0;
+      const transactions = user.wallet?.transactions ?? [];
+
+      // Creditos: TOPUP e REFUND
+      const creditsMonth = transactions
+        .filter((tx) => tx.type === 'TOPUP' || tx.type === 'REFUND')
+        .reduce((total, tx) => total + tx.amountCents, 0);
+
+      // Debitos: PURCHASE e WITHDRAW
+      const debitsMonth = transactions
+        .filter((tx) => tx.type === 'PURCHASE' || tx.type === 'WITHDRAW')
+        .reduce((total, tx) => total + tx.amountCents, 0);
+
       const type = resolveClientType(user.hasCompany, user.cnpj);
 
       return {
@@ -89,7 +99,7 @@ async function fetchAdminClients(): Promise<AdminClient[]> {
         status: mapClientStatus(user.status),
         walletBalance: walletAvailable,
         creditsMonth,
-        debitsMonth: null,
+        debitsMonth,
         walletPendingCents: walletPending,
       };
     });

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type PropsWithChildren } from "react";
+import { usePathname } from "next/navigation";
 import { App } from 'antd';
 import {
   QueryClient,
@@ -29,6 +30,10 @@ function handleAuthError(error: unknown) {
   // Evita redirect loop se já estiver em página de login ou auth
   const pathname = typeof window !== "undefined" ? window.location.pathname : "";
   const isAuthPage = pathname.includes("/login") || pathname.includes("/auth");
+  const isAdminPage = pathname.startsWith("/admin");
+
+  // Não interferir com autenticação do admin - ele tem seu próprio sistema
+  if (isAdminPage) return;
 
   if (typeof window !== "undefined" && !isAuthPage && !isRedirecting) {
     isRedirecting = true;
@@ -46,6 +51,9 @@ function handleAuthError(error: unknown) {
 }
 
 export function AppProviders({ children }: PropsWithChildren) {
+  const pathname = usePathname();
+  const isAdminRoute = pathname?.startsWith("/admin") ?? false;
+
   const [queryClient] = useState(
     () =>
       new QueryClient({
@@ -85,7 +93,8 @@ export function AppProviders({ children }: PropsWithChildren) {
   return (
     <QueryClientProvider client={queryClient}>
       <App>{children}</App>
-      <AssistantChat />
+      {/* AssistantChat só para área do cliente, não para admin */}
+      {!isAdminRoute && <AssistantChat />}
       {/* ReactQueryDevtools disabled due to Next.js 15 compatibility issue */}
       {/* {process.env.NODE_ENV === "development" ? (
         <ReactQueryDevtools initialIsOpen={false} />

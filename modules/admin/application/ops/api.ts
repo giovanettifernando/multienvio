@@ -185,6 +185,8 @@ export async function listEvents(p: ListParams): Promise<Paged<OpsEvent>> {
   if (p.pageSize) params.set('pageSize', p.pageSize.toString());
   if (p.processed !== undefined) params.set('processed', p.processed.toString());
   if (p.source) params.set('source', p.source);
+  if (p.dateStart) params.set('dateStart', p.dateStart);
+  if (p.dateEnd) params.set('dateEnd', p.dateEnd);
 
   const res = await fetch(`/api/admin/ops/events?${params}`, {
     credentials: 'include',
