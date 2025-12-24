@@ -16,7 +16,7 @@
 import { Prisma, Package, CartItem } from '@prisma/client';
 import { prisma } from '@/platform/db/db';
 import { createShipmentWithVolumes } from '@/modules/shipments/application/create-with-volumes';
-import { createInitialTrackingEvent } from '@/modules/tracking/application/create-event';
+// Eventos de rastreamento virão dos Correios via webhook/sync
 import { ShipmentStatus } from '@/modules/shipments/application/shipment-status';
 import { calculateCommissionsInCents } from '@/modules/quotes/application/commission';
 import { integrateWithCarrier } from '@/modules/shipments/application/carrier-integration';
@@ -640,8 +640,8 @@ async function createShipmentFromCartItem(
     }
   }
 
-  // Criar evento inicial de rastreamento
-  await createInitialTrackingEvent(tx, shipment.id, initialStatus, new Date());
+  // Eventos de rastreamento virão dos Correios via webhook/sync
+  // Não criar evento inicial genérico - API pública tem fallback para timeline vazia
 
   // Calcular total do item
   const itemTotals = item.totals as CartItemTotals;

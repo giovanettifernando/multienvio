@@ -17,7 +17,6 @@
 import { Prisma, Package } from '@prisma/client';
 import { prisma } from '@/platform/db/db';
 import { createShipmentWithVolumes } from '@/modules/shipments/application/create-with-volumes';
-import { createInitialTrackingEvent } from '@/modules/tracking/application/create-event';
 import { ShipmentStatus } from '@/modules/shipments/application/shipment-status';
 import { integrateWithCarrier } from '@/modules/shipments/application/carrier-integration';
 import { sendShipmentTrackingEmail } from '@/platform/email/mailer';
@@ -376,8 +375,8 @@ export async function createPaidShipment(
       pickupRequestId = pickupRequest.id;
     }
 
-    // 8) CRIAR EVENTO INICIAL DE RASTREAMENTO
-    await createInitialTrackingEvent(tx, shipment.id, initialStatus, new Date());
+    // 8) Eventos de rastreamento virão dos Correios via webhook/sync
+    // Não criar evento inicial genérico - API pública tem fallback para timeline vazia
 
     return {
       shipmentId: shipment.id,

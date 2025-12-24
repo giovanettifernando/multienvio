@@ -594,10 +594,6 @@ export default function FinalizarClient() {
       return "Preparando...";
     }
 
-    if (!hasAtLeastOneDocumentItem) {
-      return "Informe ao menos um item no documento do envio (Declaração de conteúdo ou Nota Fiscal).";
-    }
-
     if (!pickupAtOrigin && !pickupPointId) {
       return "Selecione um ponto de coleta ou ative a opção de coleta na origem.";
     }

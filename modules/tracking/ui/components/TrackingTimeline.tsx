@@ -69,13 +69,13 @@ export function TrackingTimeline({ events, title }: TrackingTimelineProps) {
           <br />
           {location && (
             <>
-              <Typography.Text type="secondary">
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
                 <EnvironmentOutlined /> {location}
               </Typography.Text>
               <br />
             </>
           )}
-          <Typography.Text type="secondary">
+          <Typography.Text type="secondary" style={{ fontSize: 12 }}>
             {new Date(event.occurredAt).toLocaleString("pt-BR", {
               dateStyle: "short",
               timeStyle: "short",
