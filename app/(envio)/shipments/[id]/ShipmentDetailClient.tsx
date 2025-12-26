@@ -615,6 +615,7 @@ export default function ShipmentDetailClient() {
             weight: v.weight,
           }))}
           labelId={shipment.label?.id}
+          hasDeclaration={(shipment.document as { type?: string } | null)?.type === 'DECLARACAO'}
         />
       )}
     </PageShell>

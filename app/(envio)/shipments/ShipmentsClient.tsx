@@ -158,6 +158,7 @@ export default function ShipmentsClient() {
   const { data: shipmentDetailForLabel } = useQuery<{
     label: { id: string; status: string } | null;
     volumes: Array<{ id: string; packageNumber: number; weight: number }>;
+    hasDeclaration: boolean;
   }>({
     queryKey: ['shipment-label-detail', selectedShipmentForLabel?.id],
     queryFn: async () => {
@@ -167,6 +168,7 @@ export default function ShipmentsClient() {
       }
       const json = await res.json();
       const data = json.data ?? json;
+      const document = data.document as { type?: string } | null;
       return {
         label: data.label,
         volumes: data.volumes?.map((v: { id: string; packageNumber: number; weight: number }) => ({
@@ -174,6 +176,7 @@ export default function ShipmentsClient() {
           packageNumber: v.packageNumber,
           weight: v.weight,
         })) || [],
+        hasDeclaration: document?.type === 'DECLARACAO',
       };
     },
     enabled: !!selectedShipmentForLabel?.id && labelModalOpen,
@@ -532,6 +535,7 @@ export default function ShipmentsClient() {
           trackingCode={selectedShipmentForLabel.trackingCode}
           volumes={shipmentDetailForLabel?.volumes || []}
           labelId={shipmentDetailForLabel?.label?.id}
+          hasDeclaration={shipmentDetailForLabel?.hasDeclaration}
         />
       )}
 

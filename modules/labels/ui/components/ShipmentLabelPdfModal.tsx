@@ -3,6 +3,7 @@
 /**
  * Modal para visualização e impressão de etiquetas de um shipment
  * Permite selecionar volumes individuais ou todos de uma vez
+ * A declaração de conteúdo (quando aplicável) é incluída automaticamente no PDF
  */
 
 import { useState, useRef, useCallback, useEffect } from "react";
@@ -39,6 +40,8 @@ export interface ShipmentLabelPdfModalProps {
   }>;
   /** ID da label associada ao shipment */
   labelId?: string;
+  /** Se o envio possui declaração de conteúdo (incluída automaticamente no PDF) */
+  hasDeclaration?: boolean;
 }
 
 type VolumeSelection = "all" | string; // "all" ou packageId
@@ -50,10 +53,12 @@ export function ShipmentLabelPdfModal({
   trackingCode,
   volumes,
   labelId,
+  hasDeclaration = false,
 }: ShipmentLabelPdfModalProps) {
   const { message } = App.useApp();
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
+  // Estados para etiqueta
   const [selectedVolume, setSelectedVolume] = useState<VolumeSelection>("all");
   const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -112,10 +117,12 @@ export function ShipmentLabelPdfModal({
 
   // Limpar ao fechar
   useEffect(() => {
-    if (!open && pdfBlobUrl) {
-      const baseUrl = pdfBlobUrl.split("#")[0];
-      URL.revokeObjectURL(baseUrl);
-      setPdfBlobUrl(null);
+    if (!open) {
+      if (pdfBlobUrl) {
+        const baseUrl = pdfBlobUrl.split("#")[0];
+        URL.revokeObjectURL(baseUrl);
+        setPdfBlobUrl(null);
+      }
       setSelectedVolume("all");
       setError(null);
     }
@@ -135,7 +142,7 @@ export function ShipmentLabelPdfModal({
     link.click();
   }, [pdfBlobUrl, selectedVolume, trackingCode, shipmentId, volumes]);
 
-  // Imprimir PDF
+  // Imprimir
   const handlePrint = useCallback(async () => {
     if (!iframeRef.current) return;
 
@@ -223,7 +230,11 @@ export function ShipmentLabelPdfModal({
       <ELAlert
         variant="info"
         title="Configuração de impressão"
-        description="Use papel para etiquetas 84.7 x 101.6 mm (padrão Correios). Configure a impressora sem margens e sem ajuste de escala."
+        description={
+          hasDeclaration
+            ? "Etiqueta inclui Declaração de Conteúdo. Use papel para etiquetas 84.7 x 101.6 mm (padrão Correios). Configure a impressora sem margens."
+            : "Use papel para etiquetas 84.7 x 101.6 mm (padrão Correios). Configure a impressora sem margens e sem ajuste de escala."
+        }
       />
 
       {/* Área de preview */}

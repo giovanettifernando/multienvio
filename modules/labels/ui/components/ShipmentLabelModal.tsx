@@ -4,6 +4,7 @@
  * Modal de impressão de etiquetas para envios
  * Suporta etiquetas Correios (formato oficial) e genéricas
  * Renderiza 1 etiqueta por volume
+ * Suporta visualização de Declaração de Conteúdo (PDF) para envios Correios
  */
 
 import { useRef, useCallback, useState, useEffect } from "react";
@@ -12,7 +13,7 @@ const Space = ELSpace;
 const Typography = ELTypography;
 const Divider = ELDivider;
 const Spin = ELSpin;
-import { PrinterOutlined, CloseOutlined, LoadingOutlined, FilePdfOutlined } from "@ant-design/icons";
+import { PrinterOutlined, CloseOutlined, LoadingOutlined, FilePdfOutlined, FileTextOutlined } from "@ant-design/icons";
 import { jsPDF } from "jspdf";
 import html2canvas from "html2canvas";
 import { LabelRenderer, type LabelData } from "./LabelRenderer";
@@ -20,6 +21,9 @@ import styles from "./ShipmentLabelModal.module.css";
 import { ELModal } from '@/shared/ui/ELModal';
 import { ELButton } from '@/shared/ui/ELButton';
 import { ELAlert } from '@/shared/ui/ELAlert';
+import { Radio } from 'antd';
+
+type TabType = 'etiqueta' | 'declaracao';
 
 export interface ShipmentLabelData {
   /** ID do envio */
@@ -92,6 +96,8 @@ export interface ShipmentLabelModalProps {
   title?: string;
   /** Callback após impressão */
   onPrint?: (shipmentId: string) => void;
+  /** Se o envio possui declaração de conteúdo (document.type === 'DECLARACAO') */
+  hasDeclaration?: boolean;
 }
 
 /**
@@ -127,12 +133,20 @@ export function ShipmentLabelModal({
   shipment,
   title = "Etiquetas de Envio",
   onPrint,
+  hasDeclaration = false,
 }: ShipmentLabelModalProps) {
   const printAreaRef = useRef<HTMLDivElement>(null);
   const pdfAreaRef = useRef<HTMLDivElement>(null);
+  const declaracaoIframeRef = useRef<HTMLIFrameElement>(null);
   const [printing, setPrinting] = useState(false);
   const [savingPdf, setSavingPdf] = useState(false);
   const [labelsReady, setLabelsReady] = useState(false);
+
+  // Estados para controle de tabs e declaração de conteúdo
+  const [activeTab, setActiveTab] = useState<TabType>('etiqueta');
+  const [declaracaoPdfUrl, setDeclaracaoPdfUrl] = useState<string | null>(null);
+  const [loadingDeclaracao, setLoadingDeclaracao] = useState(false);
+  const [declaracaoError, setDeclaracaoError] = useState<string | null>(null);
 
   // Reset estado quando modal abre/fecha
   useEffect(() => {
@@ -142,11 +156,48 @@ export function ShipmentLabelModal({
       return () => clearTimeout(timer);
     } else {
       setLabelsReady(false);
+      setActiveTab('etiqueta');
+      setDeclaracaoError(null);
     }
   }, [open, shipment]);
 
-  // Função para imprimir
-  const handlePrint = useCallback(async () => {
+  // Cleanup do URL da declaração quando fecha o modal
+  useEffect(() => {
+    return () => {
+      if (declaracaoPdfUrl) {
+        URL.revokeObjectURL(declaracaoPdfUrl);
+      }
+    };
+  }, [declaracaoPdfUrl]);
+
+  // Carregar PDF da declaração quando a tab for selecionada
+  useEffect(() => {
+    if (activeTab === 'declaracao' && shipment?.id && !declaracaoPdfUrl && !loadingDeclaracao) {
+      setLoadingDeclaracao(true);
+      setDeclaracaoError(null);
+
+      fetch(`/api/shipments/${shipment.id}/declaracao-conteudo`)
+        .then(async (res) => {
+          if (!res.ok) {
+            const errorText = await res.text();
+            throw new Error(errorText || 'Erro ao carregar declaração');
+          }
+          return res.blob();
+        })
+        .then((blob) => {
+          const url = URL.createObjectURL(blob);
+          setDeclaracaoPdfUrl(url);
+        })
+        .catch((err) => {
+          console.error('Erro ao carregar declaração:', err);
+          setDeclaracaoError('Não foi possível carregar a declaração de conteúdo.');
+        })
+        .finally(() => setLoadingDeclaracao(false));
+    }
+  }, [activeTab, shipment?.id, declaracaoPdfUrl, loadingDeclaracao]);
+
+  // Função para imprimir etiquetas
+  const handlePrintEtiqueta = useCallback(async () => {
     if (!printAreaRef.current || !shipment) return;
 
     setPrinting(true);
@@ -244,8 +295,51 @@ export function ShipmentLabelModal({
     }
   }, [shipment, onPrint]);
 
-  // Função para salvar como PDF
-  const handleSavePdf = useCallback(async () => {
+  // Função para imprimir declaração de conteúdo
+  const handlePrintDeclaracao = useCallback(async () => {
+    if (!declaracaoPdfUrl || !shipment) return;
+
+    setPrinting(true);
+
+    try {
+      // Criar iframe temporário para impressão do PDF
+      const iframe = document.createElement('iframe');
+      iframe.style.position = 'fixed';
+      iframe.style.right = '0';
+      iframe.style.bottom = '0';
+      iframe.style.width = '0';
+      iframe.style.height = '0';
+      iframe.style.border = 'none';
+      iframe.src = declaracaoPdfUrl;
+
+      document.body.appendChild(iframe);
+
+      iframe.onload = () => {
+        setTimeout(() => {
+          iframe.contentWindow?.print();
+          setTimeout(() => {
+            document.body.removeChild(iframe);
+            setPrinting(false);
+          }, 1000);
+        }, 500);
+      };
+    } catch (error) {
+      console.error("Erro na impressão da declaração:", error);
+      setPrinting(false);
+    }
+  }, [declaracaoPdfUrl, shipment]);
+
+  // Handler unificado de impressão
+  const handlePrint = useCallback(async () => {
+    if (activeTab === 'etiqueta') {
+      await handlePrintEtiqueta();
+    } else {
+      await handlePrintDeclaracao();
+    }
+  }, [activeTab, handlePrintEtiqueta, handlePrintDeclaracao]);
+
+  // Função para salvar etiqueta como PDF
+  const handleSavePdfEtiqueta = useCallback(async () => {
     if (!pdfAreaRef.current || !shipment) return;
 
     setSavingPdf(true);
@@ -302,6 +396,36 @@ export function ShipmentLabelModal({
     }
   }, [shipment]);
 
+  // Função para baixar declaração de conteúdo como PDF
+  const handleSavePdfDeclaracao = useCallback(async () => {
+    if (!declaracaoPdfUrl || !shipment) return;
+
+    setSavingPdf(true);
+
+    try {
+      const a = document.createElement('a');
+      a.href = declaracaoPdfUrl;
+      a.download = `declaracao-conteudo-${shipment.trackingCode || shipment.id}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error("Erro ao baixar declaração:", error);
+      alert("Erro ao baixar declaração. Tente novamente.");
+    } finally {
+      setSavingPdf(false);
+    }
+  }, [declaracaoPdfUrl, shipment]);
+
+  // Handler unificado de PDF
+  const handleSavePdf = useCallback(async () => {
+    if (activeTab === 'etiqueta') {
+      await handleSavePdfEtiqueta();
+    } else {
+      await handleSavePdfDeclaracao();
+    }
+  }, [activeTab, handleSavePdfEtiqueta, handleSavePdfDeclaracao]);
+
   // Se não há dados, não renderizar
   if (!shipment) {
     return null;
@@ -311,6 +435,11 @@ export function ShipmentLabelModal({
   const isCorreios = shipment.carrier.toLowerCase().includes("correios") ||
     shipment.carrier.toLowerCase().includes("sedex") ||
     shipment.carrier.toLowerCase().includes("pac");
+
+  // Determinar se os botões estão habilitados baseado na tab ativa
+  const isEtiquetaReady = activeTab === 'etiqueta' && labelsReady;
+  const isDeclaracaoReady = activeTab === 'declaracao' && !!declaracaoPdfUrl && !loadingDeclaracao;
+  const isCurrentTabReady = activeTab === 'etiqueta' ? isEtiquetaReady : isDeclaracaoReady;
 
   return (
     <ELModal
@@ -322,7 +451,7 @@ export function ShipmentLabelModal({
           <span>{title}</span>
         </Space>
       }
-      width={450}
+      width={hasDeclaration ? 550 : 450}
       footer={
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, flexWrap: "wrap" }}>
           <ELButton icon={<CloseOutlined />} onClick={onClose} disabled={printing || savingPdf}>
@@ -331,7 +460,7 @@ export function ShipmentLabelModal({
           <ELButton
             icon={savingPdf ? <LoadingOutlined spin /> : <FilePdfOutlined />}
             onClick={handleSavePdf}
-            disabled={!labelsReady || savingPdf || printing}
+            disabled={!isCurrentTabReady || savingPdf || printing}
             loading={savingPdf}
           >
             {savingPdf ? "Gerando..." : "PDF"}
@@ -340,7 +469,7 @@ export function ShipmentLabelModal({
             variant="primary"
             icon={printing ? <LoadingOutlined spin /> : <PrinterOutlined />}
             onClick={handlePrint}
-            disabled={!labelsReady || printing || savingPdf}
+            disabled={!isCurrentTabReady || printing || savingPdf}
             loading={printing}
           >
             {printing ? "Imprimindo..." : "Imprimir"}
@@ -368,45 +497,115 @@ export function ShipmentLabelModal({
 
       <Divider style={{ margin: "12px 0" }} />
 
-      {/* Aviso sobre impressão */}
-      <ELAlert
-        variant="info"
-        title="Configuração de impressão"
-        description={
-          isCorreios
-            ? "Use papel para etiquetas 84.7 x 101.6 mm (padrão Correios). Configure a impressora sem margens e sem ajuste de escala."
-            : "Configure a impressora conforme o tipo de etiqueta disponível. Recomendado: 84.7 x 101.6 mm."
-        }
-        style={{ marginBottom: 16 }}
-      />
-
-      {/* Estado de carregamento */}
-      {!labelsReady && (
-        <div className={styles.loadingContainer}>
-          <Spin indicator={<LoadingOutlined spin />} />
-          <Typography.Text type="secondary">Gerando códigos de barras...</Typography.Text>
+      {/* Tabs para alternar entre etiqueta e declaração */}
+      {hasDeclaration && isCorreios && (
+        <div style={{ marginBottom: 16 }}>
+          <Radio.Group
+            value={activeTab}
+            onChange={(e) => setActiveTab(e.target.value)}
+            optionType="button"
+            buttonStyle="solid"
+            size="middle"
+          >
+            <Radio.Button value="etiqueta">
+              <PrinterOutlined style={{ marginRight: 4 }} />
+              Etiqueta
+            </Radio.Button>
+            <Radio.Button value="declaracao">
+              <FileTextOutlined style={{ marginRight: 4 }} />
+              Declaração de Conteúdo
+            </Radio.Button>
+          </Radio.Group>
         </div>
       )}
 
-      {/* Preview das etiquetas */}
-      <div className={styles.previewContainer} style={{ opacity: labelsReady ? 1 : 0.5 }}>
-        <Typography.Text type="secondary" style={{ marginBottom: 8, display: "block" }}>
-          Visualização ({labels.length} etiqueta{labels.length > 1 ? "s" : ""}):
-        </Typography.Text>
+      {/* Conteúdo da tab Etiqueta */}
+      {activeTab === 'etiqueta' && (
+        <>
+          {/* Aviso sobre impressão */}
+          <ELAlert
+            variant="info"
+            title="Configuração de impressão"
+            description={
+              isCorreios
+                ? "Use papel para etiquetas 84.7 x 101.6 mm (padrão Correios). Configure a impressora sem margens e sem ajuste de escala."
+                : "Configure a impressora conforme o tipo de etiqueta disponível. Recomendado: 84.7 x 101.6 mm."
+            }
+            style={{ marginBottom: 16 }}
+          />
 
-        <div className={styles.labelsPreview}>
-          {labels.map((label, index) => (
-            <div key={label.id} className={styles.labelWrapper}>
-              <div className={styles.labelNumber}>
-                Volume {index + 1} de {labels.length}
-              </div>
-              <div className={styles.labelPreview}>
-                <LabelRenderer data={label} scale={0.42} showCutLine />
-              </div>
+          {/* Estado de carregamento */}
+          {!labelsReady && (
+            <div className={styles.loadingContainer}>
+              <Spin indicator={<LoadingOutlined spin />} />
+              <Typography.Text type="secondary">Gerando códigos de barras...</Typography.Text>
             </div>
-          ))}
-        </div>
-      </div>
+          )}
+
+          {/* Preview das etiquetas */}
+          <div className={styles.previewContainer} style={{ opacity: labelsReady ? 1 : 0.5 }}>
+            <Typography.Text type="secondary" style={{ marginBottom: 8, display: "block" }}>
+              Visualização ({labels.length} etiqueta{labels.length > 1 ? "s" : ""}):
+            </Typography.Text>
+
+            <div className={styles.labelsPreview}>
+              {labels.map((label, index) => (
+                <div key={label.id} className={styles.labelWrapper}>
+                  <div className={styles.labelNumber}>
+                    Volume {index + 1} de {labels.length}
+                  </div>
+                  <div className={styles.labelPreview}>
+                    <LabelRenderer data={label} scale={0.42} showCutLine />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Conteúdo da tab Declaração de Conteúdo */}
+      {activeTab === 'declaracao' && (
+        <>
+          {/* Aviso sobre impressão da declaração */}
+          <ELAlert
+            variant="info"
+            title="Declaração de Conteúdo"
+            description="Documento obrigatório para envios sem nota fiscal. Imprima em papel A4 e anexe ao pacote."
+            style={{ marginBottom: 16 }}
+          />
+
+          {/* Estado de carregamento da declaração */}
+          {loadingDeclaracao && (
+            <div className={styles.loadingContainer}>
+              <Spin indicator={<LoadingOutlined spin />} />
+              <Typography.Text type="secondary">Carregando declaração...</Typography.Text>
+            </div>
+          )}
+
+          {/* Erro ao carregar declaração */}
+          {declaracaoError && (
+            <ELAlert
+              variant="error"
+              title="Erro"
+              description={declaracaoError}
+              style={{ marginBottom: 16 }}
+            />
+          )}
+
+          {/* Preview do PDF da declaração */}
+          {declaracaoPdfUrl && !loadingDeclaracao && (
+            <div style={{ width: '100%', height: '400px', border: '1px solid #d9d9d9', borderRadius: 4 }}>
+              <iframe
+                ref={declaracaoIframeRef}
+                src={declaracaoPdfUrl}
+                style={{ width: '100%', height: '100%', border: 'none' }}
+                title="Declaração de Conteúdo"
+              />
+            </div>
+          )}
+        </>
+      )}
 
       {/* Área oculta para impressão */}
       <div style={{ position: "absolute", left: "-9999px", top: "-9999px" }}>

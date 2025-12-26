@@ -659,7 +659,17 @@ async function createShipmentFromCartItem(
 }
 
 /**
- * Integra com a transportadora de forma segura (não bloqueia checkout em caso de erro)
+ * Verifica se a transportadora é Correios
+ */
+function isCorreiosCarrier(carrier: string): boolean {
+  const normalized = carrier.toLowerCase().trim();
+  return normalized === 'correios';
+}
+
+/**
+ * Integra com a transportadora.
+ * CORREIOS: Integração OBRIGATÓRIA - lança erro se falhar
+ * OUTRAS: Best-effort (não bloqueia)
  */
 async function integrateWithCarrierSafely(
   tx: Prisma.TransactionClient,
@@ -675,86 +685,99 @@ async function integrateWithCarrierSafely(
     declaredValue: number;
   }
 ): Promise<void> {
-  try {
-    const user = await tx.user.findUnique({
-      where: { id: userId },
-      select: {
-        name: true,
-        razaoSocial: true,
-        email: true,
-        phone: true,
-        cpf: true,
-        cnpj: true,
-      },
-    });
+  const isCorreios = isCorreiosCarrier(params.carrier);
 
-    const senderDocumento =
-      (user?.cnpj && user.cnpj.trim() !== '' ? user.cnpj : null) ||
-      user?.cpf ||
-      '';
+  const user = await tx.user.findUnique({
+    where: { id: userId },
+    select: {
+      name: true,
+      razaoSocial: true,
+      email: true,
+      phone: true,
+      cpf: true,
+      cnpj: true,
+    },
+  });
 
-    const senderData = {
-      nome: user?.razaoSocial || user?.name || 'Remetente',
-      documento: senderDocumento.replace(/\D/g, ''),
-      telefone: user?.phone || undefined,
-      email: user?.email || undefined,
-      cep: params.originAddress.cep.replace(/\D/g, ''),
-      logradouro: params.originAddress.logradouro || undefined,
-      numero: params.originAddress.numero || undefined,
-      complemento: params.originAddress.complemento || undefined,
-      bairro: params.originAddress.bairro || undefined,
-      cidade: params.originAddress.cidade || undefined,
-      uf: params.originAddress.uf || undefined,
-    };
+  const senderDocumento =
+    (user?.cnpj && user.cnpj.trim() !== '' ? user.cnpj : null) ||
+    user?.cpf ||
+    '';
 
-    const recipientData = {
-      nome: params.destination.nome || params.destination.apelido || 'Destinatário',
-      documento: params.destination.documento,
-      telefone: params.destination.telefone,
-      email: params.destination.email,
-      cep: params.destination.cep,
-      logradouro: params.destination.logradouro,
-      numero: params.destination.numero,
-      complemento: params.destination.complemento,
-      bairro: params.destination.bairro,
-      cidade: params.destination.cidade,
-      uf: params.destination.uf,
-    };
+  const senderData = {
+    nome: user?.razaoSocial || user?.name || 'Remetente',
+    documento: senderDocumento.replace(/\D/g, ''),
+    telefone: user?.phone || undefined,
+    email: user?.email || undefined,
+    cep: params.originAddress.cep.replace(/\D/g, ''),
+    logradouro: params.originAddress.logradouro || undefined,
+    numero: params.originAddress.numero || undefined,
+    complemento: params.originAddress.complemento || undefined,
+    bairro: params.originAddress.bairro || undefined,
+    cidade: params.originAddress.cidade || undefined,
+    uf: params.originAddress.uf || undefined,
+  };
 
-    const integrationResult = await integrateWithCarrier(tx, {
-      shipmentId,
-      carrier: params.carrier,
-      serviceName: params.serviceName,
-      serviceCode: params.serviceCode,
-      packages,
-      sender: senderData,
-      recipient: recipientData,
-      declaredValue: params.declaredValue,
-      contentDescription: 'Mercadorias diversas',
-    });
+  const recipientData = {
+    nome: params.destination.nome || params.destination.apelido || 'Destinatário',
+    documento: params.destination.documento,
+    telefone: params.destination.telefone,
+    email: params.destination.email,
+    cep: params.destination.cep,
+    logradouro: params.destination.logradouro,
+    numero: params.destination.numero,
+    complemento: params.destination.complemento,
+    bairro: params.destination.bairro,
+    cidade: params.destination.cidade,
+    uf: params.destination.uf,
+  };
 
-    if (integrationResult.success) {
-      logger.info({
-        event: 'cart_carrier_integration_success',
+  const integrationResult = await integrateWithCarrier(tx, {
+    shipmentId,
+    carrier: params.carrier,
+    serviceName: params.serviceName,
+    serviceCode: params.serviceCode,
+    packages,
+    sender: senderData,
+    recipient: recipientData,
+    declaredValue: params.declaredValue,
+    contentDescription: 'Mercadorias diversas',
+  });
+
+  if (!integrationResult.success) {
+    if (isCorreios) {
+      // CORREIOS: Integração OBRIGATÓRIA
+      logger.error({
+        event: 'cart_correios_integration_failed_required',
         shipmentId,
         carrier: params.carrier,
-      }, 'Carrier integration successful');
+        errorMessage: integrationResult.errorMessage,
+      }, 'Correios integration failed - transaction will be rolled back');
+
+      throw Object.assign(
+        new Error(
+          integrationResult.errorMessage ||
+          'Não foi possível gerar a pré-postagem nos Correios. Por favor, tente novamente.'
+        ),
+        { code: 'CARRIER_INTEGRATION_FAILED' }
+      );
     } else {
+      // OUTRAS TRANSPORTADORAS: Best-effort
       logger.warn({
         event: 'cart_carrier_integration_failed',
         shipmentId,
         carrier: params.carrier,
         error: integrationResult.errorMessage,
-      }, 'Carrier integration failed (non-blocking)');
+      }, 'Carrier integration failed (non-blocking for non-Correios)');
     }
-  } catch (integrationError) {
-    logger.error({
-      event: 'cart_carrier_integration_error',
-      shipmentId,
-      carrier: params.carrier,
-      err: integrationError,
-    }, 'Carrier integration error (non-blocking)');
+    return;
   }
+
+  logger.info({
+    event: 'cart_carrier_integration_success',
+    shipmentId,
+    carrier: params.carrier,
+  }, 'Carrier integration successful');
 }
 
 /**
