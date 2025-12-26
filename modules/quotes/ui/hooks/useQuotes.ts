@@ -24,6 +24,7 @@ const parseQuoteResponse = (data: unknown): QuoteCalculateResponse => {
         expiresAt: candidate.expiresAt,
         results: candidate.results,
         pontosParceiros: candidate.pontosParceiros,
+        eligibility: candidate.eligibility,
       };
     }
   }
@@ -53,6 +54,8 @@ export const useQuoteCalculate = () =>
           hasQuoteId: !!parsed.quoteId,
           resultsCount: parsed.results?.length || 0,
           hasPontos: !!parsed.pontosParceiros,
+          hasEligibility: !!parsed.eligibility,
+          hasBlockingVolumes: parsed.eligibility?.hasBlockingVolumes,
         });
 
         return parsed;

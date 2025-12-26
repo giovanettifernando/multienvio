@@ -9,7 +9,7 @@ import {
   type QuoteRequest,
 } from '@/shared/validation/quote-backend';
 import { logger } from '@/platform/logging/logger';
-import type { QuoteResultItem, QuoteSummary, PartnerPoint } from '@/shared/types/quote';
+import type { QuoteResultItem, QuoteSummary, PartnerPoint, EligibilityResponse } from '@/shared/types/quote';
 import { enforceRateLimitByIP, RATE_LIMITS } from '@/platform/cache/rate-limit-redis';
 
 type PostCotacoesResponse = {
@@ -18,6 +18,7 @@ type PostCotacoesResponse = {
   expiresAt: string;
   results: QuoteResultItem[];
   pontosParceiros?: PartnerPoint[];
+  eligibility?: EligibilityResponse;
 };
 
 /**
@@ -65,6 +66,7 @@ export const POST = withApiHandler<PostCotacoesResponse>(async (context) => {
       expiresAt: result.expiresAt,
       results: result.results,
       pontosParceiros: result.pontosParceiros,
+      eligibility: result.eligibility,
     },
     status: 201,
   };

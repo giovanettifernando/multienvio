@@ -35,6 +35,8 @@ import {
   type CorreiosMultiVolumeQuoteResult,
   CorreiosApiError,
 } from './types';
+import { correiosVolumeValidator } from './correios-volume-validator';
+import type { VolumeInput, CarrierEligibility, VolumeValidationResult } from '../shared/volume-eligibility';
 
 // ============================================================================
 // Constantes
@@ -262,17 +264,29 @@ function multiVolumeResultToQuoteResult(
 }
 
 /**
+ * Resultado da cotação dos Correios com informações de elegibilidade
+ */
+export type CorreiosQuoteResult = {
+  results: QuoteResultItem[];
+  source: 'real' | 'error';
+  error?: string;
+  eligibility?: CarrierEligibility;
+};
+
+/**
  * Obtém cotações dos Correios para uma requisição do Envio Legal
  *
- * IMPORTANTE: Cada volume é cotado individualmente e os preços são somados.
- * Isso garante precificação correta quando cada volume gera uma etiqueta separada.
+ * IMPORTANTE:
+ * - Verifica elegibilidade dos volumes ANTES de chamar a API
+ * - Se algum volume não atender as regras, retorna vazio com info de elegibilidade
+ * - Cada volume é cotado individualmente e os preços são somados
  *
  * @param request Requisição de cotação do Envio Legal
- * @returns Array de QuoteResultItem com as opções dos Correios
+ * @returns Resultado com cotações e informações de elegibilidade
  */
 export async function quoteFromCorreios(
   request: QuoteRequest
-): Promise<{ results: QuoteResultItem[]; source: 'real' | 'error'; error?: string }> {
+): Promise<CorreiosQuoteResult> {
   const requestId = `correios_${Date.now()}`;
 
   console.log('[CORREIOS_ADAPTER] Starting quote:', {
@@ -282,7 +296,52 @@ export async function quoteFromCorreios(
     volumes: request.volumes.length,
   });
 
-  // Verificar se integração está configurada (usa versão async para carregar config do DB)
+  // 1. Converter volumes para formato de validação
+  const volumeInputs: VolumeInput[] = request.volumes.map((vol, index) => ({
+    index,
+    comprimentoCm: vol.comprimentoCm,
+    larguraCm: vol.larguraCm,
+    alturaCm: vol.alturaCm,
+    pesoKg: vol.pesoKg,
+  }));
+
+  // 2. Validar elegibilidade de todos os volumes
+  const volumeValidations = volumeInputs.map((v) =>
+    correiosVolumeValidator.validateVolume(v)
+  );
+  const isEligible = volumeValidations.every((r) => r.isValid);
+
+  // Construir objeto de elegibilidade
+  const eligibility: CarrierEligibility = {
+    carrierId: correiosVolumeValidator.carrierId,
+    carrierName: correiosVolumeValidator.carrierName,
+    isEligible,
+    volumeResults: volumeValidations,
+    overallReasons: isEligible
+      ? []
+      : [...new Set(volumeValidations.flatMap((r) => r.reasons))],
+  };
+
+  // 3. Se não elegível, retornar vazio com informações de validação
+  if (!isEligible) {
+    console.log('[CORREIOS_ADAPTER] Volumes not eligible:', {
+      requestId,
+      invalidVolumes: volumeValidations
+        .filter((r) => !r.isValid)
+        .map((r) => ({
+          index: r.volumeIndex,
+          reasons: r.reasons,
+        })),
+    });
+
+    return {
+      results: [],
+      source: 'real', // Não é erro, é decisão de negócio
+      eligibility,
+    };
+  }
+
+  // 4. Verificar se integração está configurada
   const isConfigured = await isCorreiosAvailableAsync();
   if (!isConfigured) {
     console.warn('[CORREIOS_ADAPTER] Integration not configured');
@@ -290,20 +349,22 @@ export async function quoteFromCorreios(
       results: [],
       source: 'error',
       error: 'INTEGRATION_DISABLED',
+      eligibility,
     };
   }
 
   try {
-    // Converter volumes para formato CorreiosVolumeQuoteInput
+    // 5. Converter volumes para formato CorreiosVolumeQuoteInput
+    // Agora usamos os valores originais pois já validamos que atendem os mínimos
     const volumesInput: CorreiosVolumeQuoteInput[] = request.volumes.map((vol, index) => ({
       packageNumber: index + 1,
       weight: vol.pesoKg,
-      width: Math.max(vol.larguraCm, 11),    // Mínimo 11cm
-      height: Math.max(vol.alturaCm, 2),     // Mínimo 2cm
-      length: Math.max(vol.comprimentoCm, 16), // Mínimo 16cm
+      width: vol.larguraCm,
+      height: vol.alturaCm,
+      length: vol.comprimentoCm,
     }));
 
-    // Cotar cada volume individualmente e somar os preços
+    // 6. Cotar cada volume individualmente e somar os preços
     const multiVolumeResults = await cotarMultiVolumeCorreios(
       request.origem.cep.replace(/\D/g, ''),
       request.destino.cep.replace(/\D/g, ''),
@@ -311,8 +372,7 @@ export async function quoteFromCorreios(
       request.seguro ?? undefined
     );
 
-    // Converter para formato do Envio Legal
-    // Filtrar apenas resultados válidos (preço > 0 e sem erros em todos os volumes)
+    // 7. Converter para formato do Envio Legal
     const results = multiVolumeResults
       .filter((r) => r.totalPrice > 0 && !r.hasErrors)
       .map(multiVolumeResultToQuoteResult);
@@ -327,6 +387,7 @@ export async function quoteFromCorreios(
     return {
       results,
       source: 'real',
+      eligibility,
     };
   } catch (error) {
     console.error('[CORREIOS_ADAPTER] Quote failed:', {
@@ -338,6 +399,7 @@ export async function quoteFromCorreios(
       results: [],
       source: 'error',
       error: error instanceof Error ? error.message : 'Erro desconhecido',
+      eligibility,
     };
   }
 }

@@ -10,7 +10,7 @@ const Row = ELRow;
 const Space = ELSpace;
 const Typography = ELTypography;
 const Upload = ELUpload;
-import { ELButton, ELCard, ELFormItem } from '@/shared/ui';
+import { ELButton, ELCard, ELFormItem, ELAlert } from '@/shared/ui';
 import {
   Controller,
   type Control,
@@ -22,6 +22,7 @@ import { useEffect, useRef, useState, startTransition } from "react";
 import type { QuoteFormValues } from "./quoteFormSchema";
 import { MinhasEmbalagensSelect } from "@/modules/quotes/ui/components/MinhasEmbalagensSelect";
 import type { PackagingTemplate } from "@/modules/quotes/ui/hooks";
+import type { EligibilityResponse } from "@/shared/types/quote";
 import styles from "@/app/(envio)/cotacoes/cotacoes.module.css";
 
 export const DEFAULT_CUBAGE_FACTOR = 6000;
@@ -44,6 +45,8 @@ type VolumesGridProps = {
   /** @deprecated No longer used - totals are computed internally */
   totals?: { pesoRealKg: number; pesoCubadoKg: number };
   disableRemove?: boolean;
+  /** Informações de elegibilidade da última cotação */
+  eligibility?: EligibilityResponse | null;
 };
 
 const formatNumber = (value: number) =>
@@ -79,6 +82,7 @@ function VolumeItem({
   volumeValue,
   canRemove,
   onRemove,
+  volumeEligibility,
 }: {
   index: number;
   field: FieldArrayWithId<QuoteFormValues, "volumes", "id">;
@@ -86,6 +90,7 @@ function VolumeItem({
   volumeValue: QuoteFormValues["volumes"][number];
   canRemove: boolean;
   onRemove: () => void;
+  volumeEligibility?: { hasAnyCarrier: boolean; reasons: string[] };
 }) {
   const { setValue, trigger } = useFormContext<QuoteFormValues>();
   const [selectedPackagingId, setSelectedPackagingId] = useState<string | undefined>();
@@ -376,6 +381,16 @@ function VolumeItem({
                 />
               </Col>
         </Row>
+
+        {/* Mensagem quando volume não tem nenhuma transportadora disponível */}
+        {volumeEligibility && !volumeEligibility.hasAnyCarrier && (
+          <ELAlert
+            type="error"
+            showIcon
+            message="Nenhuma transportadora atende estas características, exclua o volume ou informe dimensões válidas"
+            style={{ marginTop: 8 }}
+          />
+        )}
       </Space>
     </ELCard>
   );
@@ -390,6 +405,7 @@ export function VolumesGrid({
   onImport,
   maxCount,
   disableRemove,
+  eligibility,
 }: VolumesGridProps) {
   const { message } = App.useApp();
   const addDisabled = fields.length >= maxCount;
@@ -513,6 +529,10 @@ export function VolumesGrid({
       {fields.map((field, index) => {
         const volumeValue = values?.[index];
         const canRemove = !disableRemove && fields.length > 1;
+        // Buscar informações de elegibilidade para este volume
+        const volumeEligibility = eligibility?.volumeDetails?.find(
+          (v) => v.volumeIndex === index
+        );
         return (
           <VolumeItem
             key={field.id}
@@ -522,6 +542,7 @@ export function VolumesGrid({
             volumeValue={volumeValue}
             canRemove={canRemove}
             onRemove={() => onRemove(index)}
+            volumeEligibility={volumeEligibility}
           />
         );
       })}

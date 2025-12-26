@@ -256,9 +256,9 @@ export class CircuitBreakerError extends Error {
 // Instâncias pré-configuradas para integrações comuns
 export const correiosCircuitBreaker = new CircuitBreaker({
   name: 'correios',
-  failureThreshold: 3,
-  resetTimeoutMs: 60000, // 1 minuto
-  successThreshold: 2,
+  failureThreshold: 5,       // Mais tolerante a falhas ocasionais
+  resetTimeoutMs: 15000,     // 15s - Recupera mais rápido
+  successThreshold: 1,       // Menos testes necessários para fechar
   callTimeoutMs: 30000,
 });
 

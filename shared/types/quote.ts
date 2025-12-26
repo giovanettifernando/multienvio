@@ -168,10 +168,29 @@ export type QuoteTelemetry = {
   hasInsuranceValue?: boolean;
 };
 
+/**
+ * Informações de elegibilidade por volume
+ */
+export type VolumeEligibilityDetail = {
+  volumeIndex: number;
+  hasAnyCarrier: boolean;
+  reasons: string[];
+};
+
+/**
+ * Resposta de elegibilidade da cotação
+ */
+export type EligibilityResponse = {
+  hasBlockingVolumes: boolean;
+  blockingVolumeIndexes: number[];
+  volumeDetails: VolumeEligibilityDetail[];
+};
+
 export type QuoteCalculateResponse = {
   quoteId?: string; // ID retornado pela API (opcional para compatibilidade)
   createdAt?: string;
   expiresAt?: string;
   results: QuoteResultItem[];
   pontosParceiros?: PartnerPoint[];
+  eligibility?: EligibilityResponse;
 };

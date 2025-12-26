@@ -30,7 +30,7 @@ import { DataTable, type DataTableColumn } from '@/shared/ui/DataTable';
 import {
   ClockCircleOutlined,
 } from "@ant-design/icons";
-import type { QuoteResultItem, DocumentType } from '@/shared/types/quote';
+import type { QuoteResultItem, DocumentType, EligibilityResponse } from '@/shared/types/quote';
 import { ContentDeclarationModal } from "./ContentDeclarationModal";
 import { useQuoteSelection } from "@/modules/quotes/ui/hooks";
 import { useQuoteStore } from '@/modules/quotes/ui/state/useQuoteStore';
@@ -68,6 +68,8 @@ type QuoteResultsSectionProps = {
   error: string | null;
   onCalculate: () => void;
   canCalculate: boolean;
+  /** Informações de elegibilidade da última cotação */
+  eligibility?: EligibilityResponse | null;
 };
 
 type PendingSelection = {
@@ -114,6 +116,7 @@ export function QuoteResultsSection({
   error,
   onCalculate,
   canCalculate,
+  eligibility,
 }: QuoteResultsSectionProps) {
   const router = useRouter();
   const { message, modal } = App.useApp();
@@ -434,10 +437,19 @@ export function QuoteResultsSection({
               gap: 16,
             }}
           >
-            <Empty
-              description="Nenhuma cotação disponível para os parâmetros informados"
-              image={EL_EMPTY_PRESENTED_IMAGE_SIMPLE}
-            />
+            {eligibility?.hasBlockingVolumes ? (
+              <Alert
+                title="Algum dos volumes está fora das medidas das transportadoras. Revise para continuar."
+                type="warning"
+                showIcon
+                style={{ width: "100%" }}
+              />
+            ) : (
+              <Empty
+                description="Nenhuma cotação disponível para os parâmetros informados"
+                image={EL_EMPTY_PRESENTED_IMAGE_SIMPLE}
+              />
+            )}
             <ELButton variant="primary" onClick={onCalculate} disabled={!canCalculate}>
               Calcular novamente
             </ELButton>
@@ -604,6 +616,15 @@ export function QuoteResultsSection({
                 )}
               </Typography.Text>
             </div>
+          )}
+
+          {/* Aviso quando há volumes bloqueantes */}
+          {eligibility?.hasBlockingVolumes && (
+            <Alert
+              title="Algum dos volumes está fora das medidas das transportadoras. Revise para continuar."
+              type="warning"
+              showIcon
+            />
           )}
 
           <Alert

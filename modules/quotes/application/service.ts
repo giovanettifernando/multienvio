@@ -19,6 +19,16 @@ import {
   isCorreiosAvailableAsync,
 } from '@/platform/integrations/correios';
 import { applyShippingCommission } from './commission';
+import {
+  getEligibilityService,
+  type EligibilityService,
+} from '@/platform/integrations/shared/eligibility-service';
+import {
+  type VolumeInput,
+  type QuoteEligibilityResult,
+  type EligibilityApiResponse,
+  toEligibilityApiResponse,
+} from '@/platform/integrations/shared/volume-eligibility';
 
 /**
  * Service layer for quotation operations
@@ -36,6 +46,7 @@ export type CreateQuoteResult = {
   resumo: QuoteSummary;
   results: QuoteResultItem[];
   pontosParceiros?: PartnerPoint[];
+  eligibility?: EligibilityApiResponse;
 };
 
 export type QuoteDetail = Quote & {
@@ -73,75 +84,123 @@ export type QuoteDetail = Quote & {
 };
 
 // ============================================================================
-// Quote Calculation - Correios Only
+// Quote Calculation - With Eligibility Check
 // ============================================================================
 
 /**
- * Calcula cotações usando exclusivamente a integração dos Correios
- * Retorna erro se integração não disponível
+ * Resultado interno do cálculo de opções de frete
+ */
+type ShippingOptionsResult = {
+  results: QuoteResultItem[];
+  eligibility: QuoteEligibilityResult;
+};
+
+/**
+ * Calcula cotações verificando elegibilidade por transportadora
+ *
+ * Nova arquitetura:
+ * 1. Avalia elegibilidade de cada transportadora para todos os volumes
+ * 2. Só chama API de transportadoras elegíveis
+ * 3. Retorna informações de elegibilidade para feedback ao usuário
  */
 async function calculateShippingOptions(
   request: QuoteRequest
-): Promise<QuoteResultItem[]> {
+): Promise<ShippingOptionsResult> {
   const requestId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   const startTime = Date.now();
 
-  console.info(`[QUOTE][${requestId}] Starting Correios quote`, {
+  console.info(`[QUOTE][${requestId}] Starting quote with eligibility check`, {
     origin: request.origem.cep,
     dest: request.destino.cep,
     volumes: request.volumes.length,
   });
 
-  // Verificar se integração dos Correios está disponível (usando versão async para carregar config do DB)
-  const isAvailable = await isCorreiosAvailableAsync();
-  if (!isAvailable) {
-    console.error(`[QUOTE][${requestId}] Correios integration not available`);
-    throw new Error('Integração com os Correios não está configurada. Entre em contato com o suporte.');
-  }
+  // 1. Converter volumes para formato de validação
+  const volumeInputs: VolumeInput[] = request.volumes.map((vol, index) => ({
+    index,
+    comprimentoCm: vol.comprimentoCm,
+    larguraCm: vol.larguraCm,
+    alturaCm: vol.alturaCm,
+    pesoKg: vol.pesoKg,
+  }));
 
-  try {
-    // Chamar integração real dos Correios
-    const correiosResult = await quoteFromCorreios(request);
+  // 2. Avaliar elegibilidade de todas transportadoras
+  const eligibilityService = getEligibilityService();
+  const eligibility = eligibilityService.evaluateEligibility(volumeInputs);
 
-    const duration = Date.now() - startTime;
-    console.info(`[QUOTE][${requestId}] Correios quote completed (${duration}ms)`, {
-      source: correiosResult.source,
-      results: correiosResult.results.length,
-      error: correiosResult.error,
+  console.info(`[QUOTE][${requestId}] Eligibility evaluated`, {
+    hasBlockingVolumes: eligibility.hasBlockingVolumes,
+    blockingIndexes: eligibility.blockingVolumeIndexes,
+    carriers: eligibility.carriers.map((c) => ({
+      id: c.carrierId,
+      eligible: c.isEligible,
+    })),
+  });
+
+  // 3. Se há volumes bloqueantes (nenhuma transportadora aceita), retornar vazio
+  if (eligibility.hasBlockingVolumes) {
+    console.warn(`[QUOTE][${requestId}] Blocking volumes found`, {
+      blockingIndexes: eligibility.blockingVolumeIndexes,
+      reasons: eligibility.volumes
+        .filter((v) => !v.hasAnyCarrier)
+        .map((v) => ({ index: v.volumeIndex, reasons: v.consolidatedReasons })),
     });
 
-    // Se obteve resultados, retornar
-    if (correiosResult.results.length > 0) {
-      return correiosResult.results;
-    }
-
-    // Se não teve resultados, verificar qual foi o erro
-    const errorMessage = correiosResult.error || 'Nenhuma opção de frete disponível para este trecho';
-
-    // Traduzir erros comuns para mensagens amigáveis
-    if (errorMessage.includes('INTEGRATION_DISABLED')) {
-      throw new Error('Integração com os Correios não está configurada. Entre em contato com o suporte.');
-    }
-    if (errorMessage.includes('timeout') || errorMessage.includes('TIMEOUT')) {
-      throw new Error('Tempo limite excedido ao consultar os Correios. Tente novamente.');
-    }
-    if (errorMessage.includes('401') || errorMessage.includes('403') || errorMessage.includes('auth')) {
-      throw new Error('Erro de autenticação com os Correios. Entre em contato com o suporte.');
-    }
-
-    throw new Error(errorMessage);
-  } catch (error) {
-    const duration = Date.now() - startTime;
-    console.error(`[QUOTE][${requestId}] Correios quote failed (${duration}ms)`, {
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
-
-    // Repassar erro para tratamento adequado
-    if (error instanceof Error) {
-      throw error;
-    }
-    throw new Error('Erro ao consultar frete nos Correios. Tente novamente.');
+    return {
+      results: [],
+      eligibility,
+    };
   }
+
+  // 4. Cotar apenas transportadoras elegíveis
+  const results: QuoteResultItem[] = [];
+
+  // Correios
+  const correiosEligibility = eligibility.carriers.find(
+    (c) => c.carrierId === 'correios'
+  );
+
+  if (correiosEligibility?.isEligible) {
+    // Verificar se integração está configurada
+    const isAvailable = await isCorreiosAvailableAsync();
+
+    if (isAvailable) {
+      try {
+        const correiosResult = await quoteFromCorreios(request);
+
+        if (correiosResult.results.length > 0) {
+          results.push(...correiosResult.results);
+        }
+
+        console.info(`[QUOTE][${requestId}] Correios quote completed`, {
+          results: correiosResult.results.length,
+        });
+      } catch (error) {
+        console.error(`[QUOTE][${requestId}] Correios quote failed`, {
+          error: error instanceof Error ? error.message : 'Unknown error',
+        });
+        // Não propaga erro - outras transportadoras podem ter sucesso
+      }
+    } else {
+      console.warn(`[QUOTE][${requestId}] Correios not configured`);
+    }
+  } else {
+    console.info(`[QUOTE][${requestId}] Correios not eligible`, {
+      reasons: correiosEligibility?.overallReasons || [],
+    });
+  }
+
+  // Futuras transportadoras seriam adicionadas aqui...
+
+  const duration = Date.now() - startTime;
+  console.info(`[QUOTE][${requestId}] Quote completed (${duration}ms)`, {
+    totalResults: results.length,
+  });
+
+  return {
+    results,
+    eligibility,
+  };
 }
 
 // ============================================================================
@@ -159,13 +218,13 @@ export async function createQuote(
   const originCep = normalizeCep(request.origem.cep);
   const destCep = normalizeCep(request.destino.cep);
 
-  // Calculate shipping options
-  const shippingOptions = await calculateShippingOptions(request);
+  // Calculate shipping options with eligibility check
+  const shippingResult = await calculateShippingOptions(request);
 
   // Apply carrier commission to all shipping options
   // Por enquanto, apenas Correios esta integrado (slug: "correios")
   const optionsWithCommission = await Promise.all(
-    shippingOptions.map(async (option) => {
+    shippingResult.results.map(async (option) => {
       // Determinar o carrierSlug baseado no nome da transportadora
       const carrierSlug = option.carrier.toLowerCase().includes('correio') ? 'correios' : 'correios';
       const { finalPrice, commissionAmount } = await applyShippingCommission(option.preco, carrierSlug);
@@ -264,6 +323,7 @@ export async function createQuote(
     resumo,
     results,
     pontosParceiros: [], // TODO: Implement partner points lookup
+    eligibility: toEligibilityApiResponse(shippingResult.eligibility),
   };
 }
 

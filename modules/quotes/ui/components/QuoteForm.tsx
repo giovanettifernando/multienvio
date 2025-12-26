@@ -47,6 +47,7 @@ import type {
   QuoteResultItem,
   QuoteSummary,
   QuoteVolume,
+  EligibilityResponse,
 } from '@/shared/types/quote';
 import { useQuoteCalculate } from "@/modules/quotes/ui/hooks";
 import { fetchCepV2, normalizeCep, formatCep } from "@/platform/integrations/shared/brasilapi";
@@ -361,6 +362,7 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
   // Estado para resultados da cotação
   const [quoteResults, setQuoteResults] = useState<QuoteResultItem[] | null>(null);
   const [quoteError, setQuoteError] = useState<string | null>(null);
+  const [eligibility, setEligibility] = useState<EligibilityResponse | null>(null);
 
 
   // Atualização reativa do header de origem/destino
@@ -458,6 +460,79 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
     () => computeTotals(volumesValues),
     [volumesValues],
   );
+
+  // ============================================================================
+  // INVALIDAÇÃO AUTOMÁTICA DOS RESULTADOS
+  // ============================================================================
+  // Sempre que qualquer entrada que afeta o cálculo da cotação mudar,
+  // os resultados devem ser imediatamente limpos para evitar dados obsoletos.
+
+  // Observar todos os campos do formulário que afetam a cotação
+  const watchedOrigemCep = useWatch({ control, name: "origemCep" });
+  const watchedDestinoCep = useWatch({ control, name: "destinoCep" });
+  const watchedColeta = useWatch({ control, name: "coleta" });
+  const watchedDevolucao = useWatch({ control, name: "devolucao" });
+  const watchedSeguroValor = useWatch({ control, name: "seguroValor" });
+
+  // Ref para evitar limpeza na primeira renderização (montagem)
+  const isFirstRender = useRef(true);
+  const previousInputsRef = useRef<string | null>(null);
+
+  // Função para limpar todos os resultados da cotação
+  const clearQuoteResults = useCallback(() => {
+    setQuoteResults(null);
+    setQuoteError(null);
+    setEligibility(null);
+  }, []);
+
+  // Efeito que monitora TODAS as entradas e invalida resultados quando mudam
+  useEffect(() => {
+    // Criar uma representação serializada de todos os inputs relevantes
+    const currentInputs = JSON.stringify({
+      origemCep: watchedOrigemCep,
+      destinoCep: watchedDestinoCep,
+      coleta: watchedColeta,
+      devolucao: watchedDevolucao,
+      seguroValor: watchedSeguroValor,
+      volumes: volumesValues,
+      isReverse,
+      selectedRecipientId,
+      selectedOriginId,
+      destinationMode,
+    });
+
+    // Na primeira renderização, apenas salvar o estado inicial
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      previousInputsRef.current = currentInputs;
+      return;
+    }
+
+    // Se os inputs mudaram, limpar os resultados
+    if (previousInputsRef.current !== currentInputs) {
+      previousInputsRef.current = currentInputs;
+
+      // Só limpar se houver resultados para limpar
+      if (quoteResults !== null || quoteError !== null || eligibility !== null) {
+        clearQuoteResults();
+      }
+    }
+  }, [
+    watchedOrigemCep,
+    watchedDestinoCep,
+    watchedColeta,
+    watchedDevolucao,
+    watchedSeguroValor,
+    volumesValues,
+    isReverse,
+    selectedRecipientId,
+    selectedOriginId,
+    destinationMode,
+    quoteResults,
+    quoteError,
+    eligibility,
+    clearQuoteResults,
+  ]);
 
   const canSubmit =
     !calculateQuotes.isPending &&
@@ -987,12 +1062,20 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
         ? { results: response }
         : response;
 
+      // Salvar informações de elegibilidade
+      setEligibility(normalized.eligibility ?? null);
+
       if (!normalized.results.length) {
         setQuoteResults([]);
         setQuoteError(null);
-        message.warning(
-          "Nenhum serviço disponível para os parâmetros informados.",
-        );
+
+        // Mostrar toast apenas quando não há volumes bloqueantes
+        // (a mensagem de volumes bloqueantes já aparece no card e na área de resultados)
+        if (!normalized.eligibility?.hasBlockingVolumes) {
+          message.warning(
+            "Nenhum serviço disponível para os parâmetros informados.",
+          );
+        }
         return;
       }
 
@@ -1031,6 +1114,7 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
 
       setQuoteResults(null);
       setQuoteError(errorMessage);
+      setEligibility(null);
 
       if (errorMessage.includes("Validação falhou:")) {
         // Erro de validação - mostrar detalhes
@@ -1279,6 +1363,7 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
                       maxCount={MAX_VOLUMES}
                       totals={totals}
                       disableRemove={calculateQuotes.isPending}
+                      eligibility={eligibility}
                     />
                   </Space>
                 </Card>
@@ -1295,6 +1380,7 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
                   message.error('Preencha todos os campos obrigatórios corretamente.');
                 })}
                 canCalculate={canSubmit}
+                eligibility={eligibility}
               />
             </Col>
           </Row>
