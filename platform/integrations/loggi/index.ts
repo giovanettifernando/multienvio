@@ -77,3 +77,7 @@ export type { CreateLoggiShipmentInput } from './shipment';
 
 // Label
 export { printLoggiLabel } from './label';
+
+// Tracking
+export { getLoggiTracking } from './tracking';
+export type { LoggiTrackingPackage, LoggiTrackingStatus } from './types';

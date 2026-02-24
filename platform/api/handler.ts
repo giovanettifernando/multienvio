@@ -79,6 +79,11 @@ export function withApiHandler<T = unknown, P extends Record<string, any> = Reco
       const responseHeaders = new Headers(result.headers);
       responseHeaders.set("x-request-id", requestId);
 
+      // PERFORMANCE: Default Cache-Control for GET requests (if not already set by handler)
+      if (method === "GET" && !responseHeaders.has("Cache-Control")) {
+        responseHeaders.set("Cache-Control", "private, no-cache");
+      }
+
       const init = {
         status: result.status ?? 200,
         headers: responseHeaders,

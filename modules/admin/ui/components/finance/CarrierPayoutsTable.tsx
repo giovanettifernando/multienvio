@@ -455,30 +455,27 @@ export function CarrierPayoutsTable() {
             <Statistic
               title="Valor Bruto"
               value={data.summary.totalGrossReais}
-              precision={2}
               prefix={<DollarOutlined />}
-              suffix="R$"
               styles={{ content: { color: '#1890ff' } }}
+              formatter={(value) => formatBRL(Number(value))}
             />
           </Col>
           <Col xs={24} sm={12} md={6}>
             <Statistic
               title="Taxa Plataforma"
               value={data.summary.totalPlatformCommissionReais}
-              precision={2}
               prefix={<PercentageOutlined />}
-              suffix="R$"
               styles={{ content: { color: '#fa8c16' } }}
+              formatter={(value) => formatBRL(Number(value))}
             />
           </Col>
           <Col xs={24} sm={12} md={6}>
             <Statistic
               title="Total a Repassar"
               value={data.summary.totalNetPayoutReais}
-              precision={2}
               prefix={<TruckOutlined />}
-              suffix="R$"
               styles={{ content: { color: '#52c41a', fontWeight: 'bold' } }}
+              formatter={(value) => formatBRL(Number(value))}
             />
           </Col>
         </Row>

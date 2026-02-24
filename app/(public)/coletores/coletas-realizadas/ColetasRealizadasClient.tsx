@@ -15,6 +15,7 @@ const Form = ELForm;
 import { EnvironmentOutlined, InboxOutlined, PhoneOutlined, SearchOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import dayjs, { Dayjs } from 'dayjs';
 import { PageShell } from '@/shared/ui/PageShell';
+import { formatBRL } from '@/shared/utils/format';
 import { useQuery } from '@tanstack/react-query';
 
 const { Card, Button, Input, DatePicker } = { Card: ELCard, Button: ELButton, Input: ELInput, DatePicker: ELDatePicker };
@@ -220,7 +221,7 @@ function CompletedPickupCard({ pickup }: { pickup: CompletedPickup }) {
           <div style={{ fontSize: 12, color: '#8c8c8c' }}>Valor Declarado</div>
           <strong style={{ fontSize: 14 }}>
             {pickup.shipment.declaredValue
-              ? `R$ ${pickup.shipment.declaredValue.toFixed(2)}`
+              ? formatBRL(pickup.shipment.declaredValue)
               : 'N/A'}
           </strong>
         </Col>
@@ -445,7 +446,7 @@ export default function ColetasRealizadasClient() {
       dataIndex: ['shipment', 'declaredValue'],
       key: 'declaredValue',
       width: 130,
-      render: (value: number) => value ? `R$ ${value.toFixed(2)}` : 'N/A',
+      render: (value: number) => value ? formatBRL(value) : 'N/A',
     },
     {
       title: 'Data da Coleta',
@@ -462,7 +463,7 @@ export default function ColetasRealizadasClient() {
       render: (_, record: CompletedPickup) => {
         // Exibir comissão apenas se status for CONCLUIDA (entregue na transportadora)
         if (record.derivedStatus === 'CONCLUIDA' && record.shipment.pickupFee) {
-          return `R$ ${record.shipment.pickupFee.toFixed(2)}`;
+          return formatBRL(record.shipment.pickupFee);
         }
         return <span style={{ color: '#8c8c8c' }}>-</span>;
       },

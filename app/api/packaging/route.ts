@@ -40,7 +40,10 @@ export const GET = withApiHandler<PackagingListResponse>(async (context) => {
     updatedAt: t.updatedAt.toISOString(),
   }));
 
-  return { data: result };
+  return {
+    data: result,
+    headers: { 'Cache-Control': 'private, max-age=300' }, // 5min — embalagens mudam raramente
+  };
 });
 
 type PackagingCreateResponse = PackagingTemplate;

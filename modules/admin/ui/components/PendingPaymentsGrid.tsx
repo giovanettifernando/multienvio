@@ -5,9 +5,14 @@ import { Table, Tag, Tooltip, Space, App } from 'antd';
 import { ELButton, ELCard } from '@/shared/ui';
 import { ReloadOutlined, CheckOutlined, ThunderboltOutlined } from '@ant-design/icons';
 import type { TableProps } from 'antd';
+import { formatCentsAsBRL } from '@/shared/utils/format';
 
-import { formatDistanceToNow } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import dayjs from 'dayjs';
+import relativeTime from 'dayjs/plugin/relativeTime';
+import 'dayjs/locale/pt-br';
+
+dayjs.extend(relativeTime);
+dayjs.locale('pt-br');
 
 const { Card, Button } = { Card: ELCard, Button: ELButton };
 
@@ -120,7 +125,7 @@ export default function PendingPaymentsGrid() {
       key: 'amountCents',
       render: (cents) => (
         <span style={{ fontWeight: 500 }}>
-          R$ {(cents / 100).toFixed(2)}
+          {formatCentsAsBRL(cents)}
         </span>
       ),
       width: 120,
@@ -160,7 +165,7 @@ export default function PendingPaymentsGrid() {
       key: 'createdAt',
       render: (date) => (
         <Tooltip title={new Date(date).toLocaleString('pt-BR')}>
-          {formatDistanceToNow(new Date(date), { addSuffix: true, locale: ptBR })}
+          {dayjs(date).fromNow()}
         </Tooltip>
       ),
       width: 150,

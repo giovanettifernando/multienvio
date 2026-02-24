@@ -15,93 +15,11 @@ import {
   type DeclaracaoConteudoPayload,
   type DeclaracaoConteudoItem,
 } from '@/shared/docs/correios/declaracao-conteudo-pdf';
+import { isCorreiosCarrier } from '@/shared/utils/carrier';
+import { extractDeclarationItems, type ShipmentDocument } from '@/shared/docs/correios/declaration-items';
+import { formatEndereco } from '@/shared/utils/address';
 
 export const maxDuration = 30; // 30 segundos para gerar o PDF
-
-// Lista de carriers que são Correios
-const CORREIOS_CARRIERS = ['correios', 'sedex', 'pac', 'mini envios'];
-
-function isCorreiosCarrier(carrier: string | null): boolean {
-  if (!carrier) return false;
-  const normalizedCarrier = carrier.toLowerCase();
-  return CORREIOS_CARRIERS.some((c) => normalizedCarrier.includes(c));
-}
-
-interface DocumentDeclarationItem {
-  descricao?: string;
-  valorUnitario?: number;
-  quantidade?: number;
-}
-
-interface VolumeDeclaration {
-  volumeIndex?: number;
-  items?: DocumentDeclarationItem[];
-}
-
-interface ShipmentDocument {
-  type?: string;
-  declarationItems?: DocumentDeclarationItem[];
-  volumeDeclarations?: VolumeDeclaration[];
-}
-
-/**
- * Extrai itens de declaração do documento do shipment
- */
-function extractDeclarationItems(document: ShipmentDocument | null): DeclaracaoConteudoItem[] {
-  if (!document || document.type !== 'DECLARACAO') {
-    return [];
-  }
-
-  const items: DeclaracaoConteudoItem[] = [];
-
-  // Novo formato: volumeDeclarations
-  if (document.volumeDeclarations && Array.isArray(document.volumeDeclarations)) {
-    for (const vol of document.volumeDeclarations) {
-      if (vol.items && Array.isArray(vol.items)) {
-        for (const item of vol.items) {
-          if (item.descricao) {
-            items.push({
-              descricao: item.descricao,
-              quantidade: item.quantidade || 1,
-              valor: (item.valorUnitario || 0) * (item.quantidade || 1),
-            });
-          }
-        }
-      }
-    }
-  }
-
-  // Formato legado: declarationItems
-  if (items.length === 0 && document.declarationItems && Array.isArray(document.declarationItems)) {
-    for (const item of document.declarationItems) {
-      if (item.descricao) {
-        items.push({
-          descricao: item.descricao,
-          quantidade: item.quantidade || 1,
-          valor: (item.valorUnitario || 0) * (item.quantidade || 1),
-        });
-      }
-    }
-  }
-
-  return items;
-}
-
-/**
- * Formata endereço completo
- */
-function formatEndereco(address: {
-  logradouro: string;
-  numero: string;
-  complemento?: string | null;
-  bairro: string;
-}): string {
-  const parts = [address.logradouro];
-  if (address.numero) parts.push(address.numero);
-  if (address.complemento) parts.push(address.complemento);
-  parts.push(`- ${address.bairro}`);
-  return parts.join(', ').replace(', -', ' -');
-}
 
 export const GET = withApiHandlerResponse(async ({ req, params, logger }) => {
   const session = await requireUserSession(req);

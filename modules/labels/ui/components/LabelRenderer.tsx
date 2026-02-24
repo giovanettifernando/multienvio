@@ -13,15 +13,7 @@ import type {
 import { getRoutingSymbol } from "@/platform/integrations/correios/label-utils";
 import { EtiquetaCorreios } from "./EtiquetaCorreios";
 import { EtiquetaGenerica } from "./EtiquetaGenerica";
-
-// Transportadoras que usam o padrão Correios
-const CORREIOS_CARRIERS = [
-  "correios",
-  "sedex",
-  "pac",
-  "mini envios",
-  "jadlog", // Pode usar formato similar no futuro
-];
+import { isCorreiosCarrier } from '@/shared/utils/carrier';
 
 interface LabelData {
   /** Identificador único da etiqueta */
@@ -92,16 +84,6 @@ interface LabelRendererProps {
   showCutLine?: boolean;
   /** Escala de visualização */
   scale?: number;
-}
-
-/**
- * Verifica se a transportadora é Correios
- */
-function isCorreiosCarrier(carrier: string): boolean {
-  const normalized = carrier.toLowerCase().trim();
-  return CORREIOS_CARRIERS.some(
-    (c) => normalized.includes(c) || c.includes(normalized)
-  );
 }
 
 /**

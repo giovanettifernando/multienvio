@@ -1,222 +1,89 @@
 /**
  * GET/POST /api/cron/recipient-payment-expiration
  *
- * Cron job para expirar solicitacoes de pagamento pelo destinatario
+ * Trigger manual para expiração de pagamentos de destinatário.
+ * O processamento real acontece no worker BullMQ (payment.recipient-expiration).
  *
- * Funcionalidades:
- * - Expira requests pendentes que passaram do prazo (72h)
- * - Envia e-mails de notificacao para destinatarios
- * - Opcionalmente envia lembretes para requests proximos de expirar (24h)
+ * Este endpoint enfileira um job manual no BullMQ ao invés de processar inline.
+ * O job repeatable continua rodando a cada 1 hora via worker.
  *
- * Seguranca:
- * - Aceita apenas requisicoes com header X-Cron-Secret valido
- * - Ou requisicoes do Vercel Cron
- *
- * Uso:
- * - Configure um cron job para chamar este endpoint a cada hora
- * - Ex: curl -X POST -H "X-Cron-Secret: $SECRET" https://seusite.com/api/cron/recipient-payment-expiration
+ * Mantido para compatibilidade com Vercel Cron e triggers manuais.
  */
 
 import { withApiHandler } from '@/platform/api/handler';
 import { ApiError } from '@/platform/api/errors';
 import crypto from 'crypto';
-import {
-  expirePendingRequests,
-  getRequestsExpiringWithin,
-} from '@/modules/recipients/application/service';
-import {
-  sendRecipientPaymentExpiredEmail,
-  sendRecipientPaymentReminderEmail,
-} from '@/platform/email/recipient-payment';
-import { prisma } from '@/platform/db/db';
+import { getQueue, QUEUE_NAMES, JOB_PRIORITY } from '@/platform/queue';
+import type { RecipientPaymentExpirationJobPayload } from '@/platform/queue/types';
 import { logger } from '@/platform/logging/logger';
 
-export const maxDuration = 60; // 60 segundos de timeout
+export const maxDuration = 30;
 
-/**
- * SECURITY: Comparacao constant-time para evitar timing attacks
- */
 function secureCompare(a: string, b: string): boolean {
   if (!a || !b) return false;
-
   const aBuffer = Buffer.from(a);
   const bBuffer = Buffer.from(b);
-
   if (aBuffer.length !== bBuffer.length) {
     crypto.timingSafeEqual(aBuffer, Buffer.alloc(aBuffer.length));
     return false;
   }
-
   return crypto.timingSafeEqual(aBuffer, bBuffer);
 }
 
-/**
- * Valida se a requisicao e autorizada
- */
 function isAuthorized(headers: Headers): boolean {
-  // 1. Verificar secret do cron com comparacao constant-time
   const cronSecret = process.env.CRON_SECRET;
   const requestSecret = headers.get('x-cron-secret');
-
   if (cronSecret && requestSecret && secureCompare(requestSecret, cronSecret)) {
     return true;
   }
-
-  // 2. Verificar se e Vercel Cron (header especial)
-  const vercelCron = headers.get('x-vercel-cron');
-  if (vercelCron === '1') {
+  if (headers.get('x-vercel-cron') === '1') {
     return true;
   }
-
-  // 3. Em desenvolvimento, permitir sem autenticacao
   if (process.env.NODE_ENV === 'development') {
-    logger.warn({ event: 'recipient_payment_expiration_dev_access' }, 'Allowing dev access without auth');
     return true;
   }
-
   return false;
 }
 
-interface ExpirationResult {
+interface TriggerResponse {
   success: boolean;
   message: string;
+  jobId: string | null;
   timestamp: string;
-  expired: number;
-  reminders: number;
-  errors: string[];
-  duration: number;
 }
 
-async function processExpiration(): Promise<ExpirationResult> {
-  const startTime = Date.now();
-  const errors: string[] = [];
-  let expiredCount = 0;
-  let remindersCount = 0;
-
-  try {
-    // 1. Expirar requests que passaram do prazo
-    const expiredRequests = await expirePendingRequests();
-    expiredCount = expiredRequests.length;
-
-    logger.info({
-      event: 'recipient_payment_expired',
-      count: expiredCount,
-    }, `Expired ${expiredCount} recipient payment requests`);
-
-    // 2. Enviar e-mails de expiracao
-    for (const request of expiredRequests) {
-      try {
-        await sendRecipientPaymentExpiredEmail({
-          recipientName: request.recipientName,
-          recipientEmail: request.recipientEmail,
-          senderName: 'Remetente', // Buscar nome do remetente se necessario
-          originCity: request.originCity,
-          originState: request.originState,
-          destinationCity: request.destinationCity,
-          destinationState: request.destinationState,
-        });
-      } catch (emailError) {
-        const errorMsg = `Failed to send expiration email to ${request.recipientEmail}`;
-        logger.error({ event: 'recipient_payment_email_error', error: emailError, email: request.recipientEmail }, errorMsg);
-        errors.push(errorMsg);
-      }
-    }
-
-    // 3. Enviar lembretes para requests que vao expirar em 24h
-    const expiringRequests = await getRequestsExpiringWithin(24);
-
-    for (const request of expiringRequests) {
-      try {
-        // Buscar nome do remetente
-        const sender = await prisma.user.findUnique({
-          where: { id: request.senderId },
-          select: { name: true, razaoSocial: true },
-        });
-
-        const senderName = sender?.razaoSocial || sender?.name || 'Remetente';
-
-        await sendRecipientPaymentReminderEmail({
-          recipientName: request.recipientName,
-          recipientEmail: request.recipientEmail,
-          senderName,
-          paymentToken: request.paymentToken,
-          expiresAt: request.expiresAt,
-          totalCents: request.totalCents,
-          originCity: request.originCity,
-          originState: request.originState,
-          destinationCity: request.destinationCity,
-          destinationState: request.destinationState,
-        });
-
-        remindersCount++;
-      } catch (emailError) {
-        const errorMsg = `Failed to send reminder email to ${request.recipientEmail}`;
-        logger.error({ event: 'recipient_payment_reminder_error', error: emailError, email: request.recipientEmail }, errorMsg);
-        errors.push(errorMsg);
-      }
-    }
-
-    logger.info({
-      event: 'recipient_payment_reminders_sent',
-      count: remindersCount,
-    }, `Sent ${remindersCount} reminder emails`);
-
-  } catch (error) {
-    logger.error({ event: 'recipient_payment_expiration_error', error }, 'Error during expiration process');
-    errors.push(error instanceof Error ? error.message : 'Unknown error');
+async function triggerExpiration(headers: Headers): Promise<{ data: TriggerResponse }> {
+  if (!isAuthorized(headers)) {
+    throw ApiError.unauthorized('Não autorizado');
   }
 
-  const duration = Date.now() - startTime;
+  logger.info({ event: 'recipient_expiration_manual_trigger' }, 'Manual recipient expiration trigger via cron endpoint');
+
+  const queue = getQueue<RecipientPaymentExpirationJobPayload>(QUEUE_NAMES.PAYMENT_RECIPIENT_EXPIRATION);
+
+  const job = await queue.add(
+    'expire',
+    { trigger: 'manual' },
+    {
+      priority: JOB_PRIORITY.HIGH,
+      jobId: `recipient-expiration-manual-${Date.now()}`,
+    }
+  );
 
   return {
-    success: errors.length === 0,
-    message: `Expired ${expiredCount} requests, sent ${remindersCount} reminders`,
-    timestamp: new Date().toISOString(),
-    expired: expiredCount,
-    reminders: remindersCount,
-    errors,
-    duration,
+    data: {
+      success: true,
+      message: 'Job enfileirado para processamento pelo worker BullMQ',
+      jobId: job.id ?? null,
+      timestamp: new Date().toISOString(),
+    },
   };
 }
 
-// GET para facilitar testes manuais
-export const GET = withApiHandler<ExpirationResult>(async (context) => {
-  // Verificar autorizacao
-  if (!isAuthorized(context.req.headers)) {
-    throw ApiError.unauthorized('Nao autorizado');
-  }
-
-  logger.info({ event: 'recipient_payment_expiration_start' }, 'Starting recipient payment expiration job');
-
-  const result = await processExpiration();
-
-  logger.info({
-    event: 'recipient_payment_expiration_complete',
-    durationMs: result.duration,
-    expired: result.expired,
-    reminders: result.reminders,
-  }, 'Recipient payment expiration job completed');
-
-  return { data: result };
+export const GET = withApiHandler<TriggerResponse>(async (context) => {
+  return triggerExpiration(context.req.headers);
 });
 
-// POST para cron jobs
-export const POST = withApiHandler<ExpirationResult>(async (context) => {
-  // Verificar autorizacao
-  if (!isAuthorized(context.req.headers)) {
-    throw ApiError.unauthorized('Nao autorizado');
-  }
-
-  logger.info({ event: 'recipient_payment_expiration_start' }, 'Starting recipient payment expiration job');
-
-  const result = await processExpiration();
-
-  logger.info({
-    event: 'recipient_payment_expiration_complete',
-    durationMs: result.duration,
-    expired: result.expired,
-    reminders: result.reminders,
-  }, 'Recipient payment expiration job completed');
-
-  return { data: result };
+export const POST = withApiHandler<TriggerResponse>(async (context) => {
+  return triggerExpiration(context.req.headers);
 });

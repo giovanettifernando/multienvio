@@ -1,6 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Shipment, ShipmentStatus } from "@/shared/types/shipments";
-import { afterShipmentCreated } from "@/modules/shipments/application/after-create";
 import { apiFetch } from "@/platform/api/client";
 
 type ShipmentFilters = {
@@ -53,46 +52,6 @@ export function useShipments(filters?: ShipmentFilters) {
   });
 }
 
-/**
- * @deprecated ⚠️ HOOK OBSOLETO - NÃO USAR ⚠️
- *
- * O endpoint POST /api/shipments foi REMOVIDO e migrado para:
- * - /api/checkout (para criar shipment individual a partir de cotação)
- * - /api/cart/checkout (para criar múltiplos shipments do carrinho)
- *
- * Este hook só existe para compatibilidade e sempre retornará erro.
- *
- * Se você precisa criar shipments, use os fluxos de checkout apropriados:
- * - Para cotação única: navegar para /cotacoes/finalizar e usar executeCheckout
- * - Para carrinho: usar useCartCheckout hook
- *
- * @see /api/checkout - Endpoint de checkout individual
- * @see /api/cart/checkout - Endpoint de checkout em lote
- */
-export function useShipmentCreate() {
-  const queryClient = useQueryClient();
-  return useMutation({
-
-    mutationFn: async (_payload: Partial<Shipment>) => {
-      console.error(
-        '❌ ERRO: useShipmentCreate está obsoleto! POST /api/shipments foi removido.\n' +
-        'Use os fluxos de checkout apropriados:\n' +
-        '  - Checkout individual: /api/checkout\n' +
-        '  - Checkout de carrinho: /api/cart/checkout'
-      );
-      throw new Error(
-        'useShipmentCreate está obsoleto. O endpoint POST /api/shipments foi removido. ' +
-        'Use /api/checkout ou /api/cart/checkout para criar shipments.'
-      );
-    },
-    onSuccess: (shipment: Shipment) => {
-      // Este código nunca será executado devido ao erro acima
-      queryClient.invalidateQueries({ queryKey: ["shipments"] });
-      afterShipmentCreated(queryClient, shipment);
-    },
-  });
-}
-
 export function useCartClear() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -131,27 +90,15 @@ export function useShipmentCancel() {
  * Hook para buscar envios não concluídos (abertos)
  * Usado para vincular tickets de suporte a envios em andamento
  *
- * NOTA: Solicita até 100 envios abertos. Se o usuário tiver mais de 100 envios
- * em andamento, pode ser necessário implementar paginação ou busca.
+ * Usa filtro server-side "Abertos" que exclui Entregue/Cancelado/Devolvido no banco.
  */
 export function useOpenShipments() {
   return useQuery({
     queryKey: ["shipments", "open"],
-    queryFn: async () => {
-      // Solicitar até 100 registros para cobrir a maioria dos casos
-      const data = await apiFetch<ShipmentsResponse>("/api/shipments?limit=100");
-
-      // Filtrar apenas envios não concluídos/entregues/cancelados
-      const openItems = data.items?.filter(
-        (shipment: Shipment) =>
-          shipment.status !== "Entregue" &&
-          shipment.status !== "Cancelado"
-      ) ?? [];
-
-      return { items: openItems, pagination: data.pagination };
-    },
+    queryFn: () =>
+      apiFetch<ShipmentsResponse>("/api/shipments?status=Abertos&limit=100"),
     select: (data) => ({
-      items: data.items.map((shipment: Shipment) => ({
+      items: (data.items ?? []).map((shipment: Shipment) => ({
         trackingCode: shipment.trackingCode,
         recipientCityUf: shipment.recipientCityUf,
         status: shipment.status,

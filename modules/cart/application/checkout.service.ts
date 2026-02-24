@@ -20,6 +20,7 @@ import { ShipmentStatus } from '@/modules/shipments/application/shipment-status'
 import { integrateWithCarrier } from '@/modules/shipments/application/carrier-integration';
 import { logger } from '@/platform/logging/logger';
 import { ApiError } from '@/platform/api/errors';
+import { isCorreiosCarrier } from '@/shared/utils/carrier';
 
 // ============================================================================
 // TIPOS
@@ -562,14 +563,6 @@ export async function processCheckout(input: CheckoutInput): Promise<CheckoutRes
   // em /api/wallet/debit (não aqui, pois o shipment ainda não foi pago)
 
   return result;
-}
-
-/**
- * Verifica se a transportadora é Correios
- */
-function isCorreiosCarrier(carrier: string): boolean {
-  const normalized = carrier.toLowerCase().trim();
-  return normalized === 'correios';
 }
 
 /**

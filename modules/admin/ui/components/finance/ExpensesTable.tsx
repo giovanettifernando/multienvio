@@ -690,30 +690,27 @@ export function ExpensesTable() {
             <Statistic
               title="Valor Total"
               value={summary?.totalAmountReais || 0}
-              precision={2}
               prefix={<DollarOutlined />}
               styles={{ content: { color: '#1890ff' } }}
-              formatter={(value) => `R$ ${Number(value).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+              formatter={(value) => formatBRL(Number(value))}
             />
           </Col>
           <Col xs={24} sm={12} md={6}>
             <Statistic
               title="Pendentes"
               value={pendingAmount}
-              precision={2}
               prefix={<ClockCircleOutlined />}
               styles={{ content: { color: '#fa8c16' } }}
-              formatter={(value) => `R$ ${Number(value).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+              formatter={(value) => formatBRL(Number(value))}
             />
           </Col>
           <Col xs={24} sm={12} md={6}>
             <Statistic
               title="Pagas"
               value={paidAmount}
-              precision={2}
               prefix={<CheckCircleOutlined />}
               styles={{ content: { color: '#52c41a' } }}
-              formatter={(value) => `R$ ${Number(value).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+              formatter={(value) => formatBRL(Number(value))}
             />
           </Col>
         </Row>

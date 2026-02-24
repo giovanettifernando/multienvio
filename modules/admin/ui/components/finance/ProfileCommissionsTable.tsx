@@ -433,30 +433,27 @@ export function ProfileCommissionsTable() {
             <Statistic
               title="Comissão Realizada"
               value={data.summary.completedCommissionReais}
-              precision={2}
               prefix={<CheckCircleOutlined />}
-              suffix="R$"
               styles={{ content: { color: '#52c41a' } }}
+              formatter={(value) => formatBRL(Number(value))}
             />
           </Col>
           <Col xs={24} sm={12} md={5}>
             <Statistic
               title="Comissão Prevista"
               value={data.summary.pendingCommissionReais}
-              precision={2}
               prefix={<ClockCircleOutlined />}
-              suffix="R$"
               styles={{ content: { color: '#fa8c16' } }}
+              formatter={(value) => formatBRL(Number(value))}
             />
           </Col>
           <Col xs={24} sm={12} md={6}>
             <Statistic
               title="Total Geral"
               value={data.summary.totalCommissionReais}
-              precision={2}
               prefix={<DollarOutlined />}
-              suffix="R$"
               styles={{ content: { color: '#1890ff', fontWeight: 'bold' } }}
+              formatter={(value) => formatBRL(Number(value))}
             />
           </Col>
         </Row>

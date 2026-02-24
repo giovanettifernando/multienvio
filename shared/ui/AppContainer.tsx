@@ -1,5 +1,3 @@
-"use client";
-
 import { cn } from "@/shared/utils/cn";
 import styles from "./AppContainer.module.css";
 

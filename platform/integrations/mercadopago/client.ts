@@ -127,7 +127,6 @@ export async function createPayment(
     const additionalInfo = (paymentData.additional_info as Record<string, unknown>) || {};
     paymentData.additional_info = {
       ...additionalInfo,
-      // @ts-ignore - Campo para device fingerprint do MP
       ip_address: input.deviceSessionId,
     };
   }
@@ -324,7 +323,7 @@ export async function createCardToken(cardData: {
           expiration_year: cardData.expirationYear,
           security_code: cardData.securityCode,
 
-          // @ts-ignore - MP SDK types are incomplete, cardholder is required
+          // @ts-expect-error - MP SDK types are incomplete, cardholder is required
           cardholder: {
             name: cardholderName,
             identification: {

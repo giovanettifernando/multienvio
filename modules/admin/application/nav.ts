@@ -82,6 +82,12 @@ export const ADMIN_NAV: AdminNavItem[] = [
         href: "/admin/loggi",
         permissions: ["INTEGRACOES"],
       },
+      {
+        key: "workers",
+        label: "Workers",
+        href: "/admin/workers",
+        permissions: ["INTEGRACOES"],
+      },
     ],
   },
   {

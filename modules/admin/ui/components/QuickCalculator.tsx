@@ -15,6 +15,7 @@ import { ELModal } from '@/shared/ui/ELModal';
 import { ELAlert } from '@/shared/ui/ELAlert';
 import { ELTag } from '@/shared/ui/ELTag';
 import type { QuoteResultItem, QuoteCalculateResponse } from '@/shared/types/quote';
+import { formatBRL } from '@/shared/utils/format';
 
 const { Text } = Typography;
 
@@ -318,7 +319,7 @@ export function QuickCalculator() {
                   </Space>
                   <Space orientation="vertical" size={4} align="end">
                     <ELTag color="blue" style={{ margin: 0 }}>
-                      R$ {result.price.toFixed(2)}
+                      {formatBRL(result.price)}
                     </ELTag>
                     <ELButton
                       variant="link"

@@ -16,6 +16,13 @@ export async function register() {
     // Iniciar job de limpeza de reservas de códigos de rastreamento
     startCleanupJob();
 
+    // Auto-start BullMQ workers em dev (em produção, gerenciar via PM2/systemd)
+    if (process.env.NODE_ENV === 'development' && process.env.DISABLE_WORKERS !== 'true') {
+      const { startWorkerProcess } = await import('@/platform/queue/worker-manager');
+      const result = startWorkerProcess();
+      console.log(`[INSTRUMENTATION] Workers: ${result.message}`);
+    }
+
     console.log('[INSTRUMENTATION] Background jobs initialized');
   }
 }

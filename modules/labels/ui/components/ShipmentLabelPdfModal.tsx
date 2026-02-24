@@ -4,6 +4,7 @@
  * Modal para visualização e impressão de etiquetas de um shipment
  * Permite selecionar volumes individuais ou todos de uma vez
  * A declaração de conteúdo (quando aplicável) é incluída automaticamente no PDF
+ * Usa geração assíncrona via fila BullMQ com polling de status
  */
 
 import { useState, useRef, useCallback, useEffect } from "react";
@@ -22,6 +23,7 @@ import {
 import { ELModal } from '@/shared/ui/ELModal';
 import { ELButton } from '@/shared/ui/ELButton';
 import { ELAlert } from '@/shared/ui/ELAlert';
+import { useDocumentGeneration } from "../hooks/useDocumentGeneration";
 
 export interface ShipmentLabelPdfModalProps {
   /** Se o modal está aberto */
@@ -58,55 +60,51 @@ export function ShipmentLabelPdfModal({
   const { message } = App.useApp();
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
-  // Estados para etiqueta
+  // Estados
   const [selectedVolume, setSelectedVolume] = useState<VolumeSelection>("all");
   const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+
+  // Geração assíncrona via fila
+  const { status, downloadUrl, error, generate, reset } = useDocumentGeneration();
+  const loading = status === "queued" || status === "pending" || status === "processing";
+
+  // Quando downloadUrl estiver disponível, baixar blob para preview no iframe
+  useEffect(() => {
+    if (!downloadUrl) return;
+
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const response = await fetch(downloadUrl);
+        if (!response.ok) throw new Error("Erro ao baixar PDF gerado");
+        const blob = await response.blob();
+        if (cancelled) return;
+        setPdfBlobUrl(URL.createObjectURL(blob) + "#navpanes=0&view=FitH");
+      } catch (err) {
+        console.error("[LABEL_MODAL] download error", err);
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [downloadUrl]);
 
   // Carregar PDF quando modal abre ou seleção muda
   const loadPdf = useCallback(async () => {
     if (!open || !labelId) return;
 
-    setLoading(true);
-    setError(null);
-
     // Limpar URL anterior
     if (pdfBlobUrl) {
-      const baseUrl = pdfBlobUrl.split("#")[0];
-      URL.revokeObjectURL(baseUrl);
+      URL.revokeObjectURL(pdfBlobUrl.split("#")[0]);
       setPdfBlobUrl(null);
     }
 
-    try {
-      let url: string;
-
-      if (selectedVolume === "all") {
-        // Buscar PDF de todos os volumes (etiqueta completa)
-        url = `/api/labels/${labelId}/pdf`;
-      } else {
-        // Buscar PDF de volume individual
-        url = `/api/packages/${selectedVolume}/pdf`;
-      }
-
-      const response = await fetch(url);
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || "Etiqueta não disponível");
-      }
-
-      const blob = await response.blob();
-      const blobUrl = URL.createObjectURL(blob) + "#navpanes=0&view=FitH";
-      setPdfBlobUrl(blobUrl);
-    } catch (err) {
-      console.error("[LABEL_MODAL]", err);
-      const errorMsg = err instanceof Error ? err.message : "Erro ao carregar etiqueta";
-      setError(errorMsg);
-    } finally {
-      setLoading(false);
+    if (selectedVolume === "all") {
+      await generate("label", { labelId });
+    } else {
+      await generate("package", { packageId: selectedVolume });
     }
-  }, [open, labelId, selectedVolume, pdfBlobUrl]);
+  }, [open, labelId, selectedVolume, pdfBlobUrl, generate]);
 
   // Carregar PDF quando abre ou muda seleção
   useEffect(() => {
@@ -119,12 +117,11 @@ export function ShipmentLabelPdfModal({
   useEffect(() => {
     if (!open) {
       if (pdfBlobUrl) {
-        const baseUrl = pdfBlobUrl.split("#")[0];
-        URL.revokeObjectURL(baseUrl);
+        URL.revokeObjectURL(pdfBlobUrl.split("#")[0]);
         setPdfBlobUrl(null);
       }
       setSelectedVolume("all");
-      setError(null);
+      reset();
     }
   }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -254,7 +251,11 @@ export function ShipmentLabelPdfModal({
         {loading ? (
           <div style={{ textAlign: "center" }}>
             <Spin indicator={<LoadingOutlined spin style={{ fontSize: 32 }} />} />
-            <div style={{ marginTop: 12, color: "#666" }}>Carregando etiqueta...</div>
+            <div style={{ marginTop: 12, color: "#666" }}>
+              {status === "queued" && "Preparando geração..."}
+              {status === "pending" && "Na fila de processamento..."}
+              {status === "processing" && "Gerando PDF..."}
+            </div>
           </div>
         ) : error ? (
           <div style={{ textAlign: "center", padding: 24 }}>

@@ -8,6 +8,16 @@
 
 export enum ShipmentStatus {
   // ========================================
+  // FASE 0 - PROCESSAMENTO ASSÍNCRONO
+  // ========================================
+
+  /** Envio criado, aguardando integração com transportadora */
+  PROCESSING = 'PROCESSING',
+
+  /** Integração com transportadora falhou após todas as tentativas */
+  CREATION_FAILED = 'CREATION_FAILED',
+
+  // ========================================
   // FASE A - ORIGEM (Coleta/Postagem)
   // ========================================
 
@@ -206,6 +216,10 @@ export const FINAL_STATUSES = [
  * Mapeamento de labels amigáveis para exibição
  */
 export const ShipmentStatusLabels: Record<ShipmentStatus, string> = {
+  // Fase 0 - Processamento
+  [ShipmentStatus.PROCESSING]: 'Processando',
+  [ShipmentStatus.CREATION_FAILED]: 'Falha na criação',
+
   // Fase A - Origem
   [ShipmentStatus.PICKUP_REQUESTED]: 'Coleta solicitada',
   [ShipmentStatus.PICKUP_SCHEDULED]: 'Coleta agendada',
@@ -247,6 +261,10 @@ export const ShipmentStatusLabels: Record<ShipmentStatus, string> = {
  * Cores para exibição (compatível com Ant Design Tag)
  */
 export const ShipmentStatusColors: Record<ShipmentStatus, string> = {
+  // Fase 0 - Processamento
+  [ShipmentStatus.PROCESSING]: 'processing',
+  [ShipmentStatus.CREATION_FAILED]: 'red',
+
   // Fase A - Origem
   [ShipmentStatus.PICKUP_REQUESTED]: 'blue',
   [ShipmentStatus.PICKUP_SCHEDULED]: 'cyan',

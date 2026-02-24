@@ -264,7 +264,7 @@ export function SavedCardPaymentForm({
           cardData: {
             cardholderName: selectedCard.holderName,
           },
-          description: paymentDescription || `Recarga de carteira - R$ ${amount.toFixed(2)}`,
+          description: paymentDescription || `Recarga de carteira - ${formatBRL(amount)}`,
           metadata: {
             type: paymentType,
             cardId: selectedCardId,

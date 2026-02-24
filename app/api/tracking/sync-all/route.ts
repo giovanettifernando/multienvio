@@ -2,15 +2,13 @@
  * POST /api/tracking/sync-all
  *
  * Sincroniza rastreamento de todos os envios dos Correios do usuário.
- * Roda em background - retorna imediatamente e processa em paralelo.
+ * Enfileira jobs na fila TRACKING_CORREIOS e retorna 202.
  */
 
 import { requireUserSession } from '@/platform/auth/require-session';
 import { withApiHandler } from '@/platform/api/handler';
-import { ApiError } from '@/platform/api/errors';
 import { prisma } from '@/platform/db/db';
-import { syncCorreiosTracking } from '@/modules/tracking/application/sync-correios-tracking.service';
-import { logger } from '@/platform/logging/logger';
+import { getQueue, QUEUE_NAMES, type TrackingJobPayload } from '@/platform/queue';
 
 // Status que indicam envio ainda em andamento (precisa sincronizar)
 const ACTIVE_STATUSES = [
@@ -37,12 +35,12 @@ const ACTIVE_STATUSES = [
 
 interface SyncResult {
   started: boolean;
-  shipmentsToSync: number;
+  shipmentsEnqueued: number;
   message: string;
 }
 
 /**
- * POST - Inicia sincronização em background
+ * POST - Enfileira sincronização de rastreamento via BullMQ
  */
 export const POST = withApiHandler<SyncResult>(async ({ req }) => {
   const session = await requireUserSession(req);
@@ -60,7 +58,6 @@ export const POST = withApiHandler<SyncResult>(async ({ req }) => {
     select: {
       id: true,
       carrierTrackingCode: true,
-      status: true,
     },
   });
 
@@ -68,65 +65,37 @@ export const POST = withApiHandler<SyncResult>(async ({ req }) => {
     return {
       data: {
         started: false,
-        shipmentsToSync: 0,
+        shipmentsEnqueued: 0,
         message: 'Nenhum envio dos Correios pendente para sincronizar',
       },
     };
   }
 
-  logger.info({
-    userId,
-    shipmentsCount: shipmentsToSync.length,
-  }, 'tracking_sync_all_started');
+  // Enfileirar um job por shipment na fila de tracking Correios
+  const queue = getQueue<TrackingJobPayload>(QUEUE_NAMES.TRACKING_CORREIOS);
 
-  // Executar sincronização em background (não aguarda)
-  // Usamos Promise.allSettled para não falhar se um falhar
-  setImmediate(async () => {
-    const results = await Promise.allSettled(
-      shipmentsToSync.map(async (shipment) => {
-        if (!shipment.carrierTrackingCode) return null;
-        try {
-          const result = await syncCorreiosTracking(shipment.carrierTrackingCode);
-          return {
-            shipmentId: shipment.id,
-            trackingCode: shipment.carrierTrackingCode,
-            success: result.success,
-            eventsAdded: result.eventsAdded,
-            statusUpdated: result.statusUpdated,
-          };
-        } catch (error) {
-          logger.error({
-            shipmentId: shipment.id,
-            trackingCode: shipment.carrierTrackingCode,
-            error: error instanceof Error ? error.message : 'Unknown error',
-          }, 'tracking_sync_error');
-          return {
-            shipmentId: shipment.id,
-            trackingCode: shipment.carrierTrackingCode,
-            success: false,
-            error: error instanceof Error ? error.message : 'Unknown error',
-          };
-        }
-      })
-    );
+  const jobs = shipmentsToSync
+    .filter((s) => s.carrierTrackingCode)
+    .map((shipment) => ({
+      name: 'sync-user-request',
+      data: {
+        shipmentId: shipment.id,
+        trackingCode: shipment.carrierTrackingCode!,
+        carrier: 'correios' as const,
+      },
+      opts: {
+        jobId: `tracking-user-${shipment.id}-${Date.now()}`,
+      },
+    }));
 
-    const successCount = results.filter(
-      (r) => r.status === 'fulfilled' && r.value?.success
-    ).length;
-
-    logger.info({
-      userId,
-      total: shipmentsToSync.length,
-      success: successCount,
-      failed: shipmentsToSync.length - successCount,
-    }, 'tracking_sync_all_completed');
-  });
+  await queue.addBulk(jobs);
 
   return {
+    status: 202,
     data: {
       started: true,
-      shipmentsToSync: shipmentsToSync.length,
-      message: `Sincronização iniciada para ${shipmentsToSync.length} envio(s)`,
+      shipmentsEnqueued: jobs.length,
+      message: `Sincronização enfileirada para ${jobs.length} envio(s)`,
     },
   };
 });

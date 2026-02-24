@@ -14,7 +14,6 @@ export function MercadoPagoSecurity() {
     // Limpar variável global ao desmontar (para evitar stale data)
     return () => {
       if (typeof window !== "undefined") {
-        // @ts-ignore - variável global criada pelo script do MP
         window.MP_DEVICE_SESSION_ID = undefined;
       }
     };
@@ -39,7 +38,6 @@ export function getDeviceSessionId(): string | undefined {
   if (typeof window === "undefined") {
     return undefined;
   }
-  // @ts-ignore - variável global criada pelo script do MP
   return window.MP_DEVICE_SESSION_ID;
 }
 

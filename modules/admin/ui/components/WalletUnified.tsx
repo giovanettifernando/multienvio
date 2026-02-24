@@ -17,6 +17,7 @@ import AddFundsModal from '@/modules/wallet/ui/components/AddFundsModal';
 import { ELButton } from '@/shared/ui/ELButton';
 import { ELFlex } from '@/shared/ui/ELGrid';
 import { ELEmpty } from '@/shared/ui/ELEmpty';
+import { formatBRL } from '@/shared/utils/format';
 
 const { Text } = Typography;
 
@@ -87,8 +88,7 @@ export function WalletUnified() {
               <Statistic
                 title={<Text type="secondary" style={{ fontSize: 11 }}>Saldo disponível</Text>}
                 value={balance}
-                precision={2}
-                prefix="R$"
+                formatter={(value) => formatBRL(Number(value))}
                 styles={{
                   content: {
                     fontSize: 20,
@@ -156,7 +156,7 @@ export function WalletUnified() {
                           whiteSpace: 'nowrap',
                         }}
                       >
-                        {credit ? '+' : '-'}R$ {Math.abs(tx.amountReais).toFixed(2)}
+                        {credit ? '+' : '-'}{formatBRL(Math.abs(tx.amountReais))}
                       </Text>
                     </div>
                   </div>

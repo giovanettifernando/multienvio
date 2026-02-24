@@ -7,6 +7,7 @@ const Spin = ELSpin;
 const Space = ELSpace;
 const Typography = ELTypography;
 const App = { useApp: useELApp };
+import { formatBRL } from "@/shared/utils/format";
 import {
   QrcodeOutlined,
   CreditCardOutlined,
@@ -20,7 +21,6 @@ import { ELModal } from '@/shared/ui/ELModal';
 import { ELButton } from '@/shared/ui/ELButton';
 import { ELAlert } from '@/shared/ui/ELAlert';
 import { RecipientCardPaymentForm } from "@/modules/payments/ui/components/RecipientCardPaymentForm";
-import { formatBRL } from "@/shared/utils/format";
 
 const { Text } = Typography;
 
@@ -266,7 +266,7 @@ export function RecipientPaymentModal({
             payer: {
               email: email,
             },
-            description: description || `Pagamento de frete - R$ ${amount.toFixed(2)}`,
+            description: description || `Pagamento de frete - ${formatBRL(amount)}`,
             deviceSessionId,
           }),
         });

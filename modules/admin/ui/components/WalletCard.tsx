@@ -9,6 +9,7 @@ import { useWalletTransactions } from "@/modules/wallet/ui/hooks";
 import { ELButton } from '@/shared/ui/ELButton';
 import { ELCard } from '@/shared/ui/ELCard';
 import { ELFlex } from '@/shared/ui/ELGrid';
+import { formatBRL } from '@/shared/utils/format';
 
 const { Text } = Typography;
 
@@ -57,8 +58,7 @@ export function WalletCard() {
               <Statistic
                 title={<Text type="secondary" style={{ fontSize: 11 }}>Saldo disponível</Text>}
                 value={balance}
-                precision={2}
-                prefix="R$"
+                formatter={(value) => formatBRL(Number(value))}
                 styles={{ content: {
                   fontSize: 22,
                   fontWeight: 600,
@@ -71,7 +71,7 @@ export function WalletCard() {
                   <Text type="secondary" style={{ fontSize: 11 }}>30 dias</Text>
                 </ELFlex>
                 <Text strong style={{ fontSize: 13 }}>
-                  R$ {last30DaysSpend.toFixed(2)}
+                  {formatBRL(last30DaysSpend)}
                 </Text>
                 {isLowBalance && (
                   <Text type="danger" style={{ fontSize: 10 }}>

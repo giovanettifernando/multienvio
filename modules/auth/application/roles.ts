@@ -1,5 +1,3 @@
-"use client";
-
 import type { AdminPermissionKey } from "@/modules/auth/application/types";
 
 export interface Role {

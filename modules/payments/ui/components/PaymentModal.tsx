@@ -354,7 +354,7 @@ export function PaymentModal({
             payer: {
               email: user?.email || "usuario@example.com",
             },
-            description: description || `Pagamento - R$ ${amount.toFixed(2)}`,
+            description: description || `Pagamento - ${formatBRL(amount)}`,
             deviceSessionId, // Device fingerprint para antifraude
             metadata: {
               type: mode === "topup" ? "wallet_topup" : "checkout_payment",

@@ -12,6 +12,7 @@ const App = { useApp: useELApp };
 import { ELButton } from '@/shared/ui/ELButton';
 import { ELGrid, ELGridSpanFull } from '@/shared/ui/ELGrid';
 import { ShareAltOutlined, CopyOutlined, PrinterOutlined } from "@ant-design/icons";
+import { formatBRL } from "@/shared/utils/format";
 import { useQuery } from "@tanstack/react-query";
 import { TrackingTimeline } from "@/modules/tracking/ui/components/TrackingTimeline";
 import { PageShell } from '@/shared/ui/PageShell';
@@ -319,13 +320,13 @@ export default function ShipmentDetailClient() {
               <div>
                 <Text type="secondary">Valor do frete</Text>
                 <div style={{ marginTop: 4 }}>
-                  {shipment.freightCost ? `R$ ${shipment.freightCost.toFixed(2)}` : 'Não informado'}
+                  {shipment.freightCost ? formatBRL(shipment.freightCost) : 'Não informado'}
                 </div>
               </div>
               <div>
                 <Text type="secondary">Valor declarado</Text>
                 <div style={{ marginTop: 4 }}>
-                  {shipment.declaredValue ? `R$ ${shipment.declaredValue.toFixed(2)}` : 'Não informado'}
+                  {shipment.declaredValue ? formatBRL(shipment.declaredValue) : 'Não informado'}
                 </div>
               </div>
               <div>
@@ -389,14 +390,14 @@ export default function ShipmentDetailClient() {
                               dataIndex: 'valorUnitario',
                               width: 120,
                               align: 'right',
-                              render: (val) => (val ? `R$ ${val.toFixed(2)}` : '-'),
+                              render: (val) => (val ? formatBRL(val) : '-'),
                             },
                             {
                               title: 'Subtotal',
                               dataIndex: 'subtotal',
                               width: 120,
                               align: 'right',
-                              render: (val) => (val ? `R$ ${val.toFixed(2)}` : '-'),
+                              render: (val) => (val ? formatBRL(val) : '-'),
                             },
                           ]}
                           summary={(data) => {
@@ -407,7 +408,7 @@ export default function ShipmentDetailClient() {
                                   <strong>Total:</strong>
                                 </Table.Summary.Cell>
                                 <Table.Summary.Cell index={1} align="right">
-                                  <strong>R$ {total.toFixed(2)}</strong>
+                                  <strong>{formatBRL(total)}</strong>
                                 </Table.Summary.Cell>
                               </Table.Summary.Row>
                             );
@@ -500,14 +501,14 @@ export default function ShipmentDetailClient() {
                             dataIndex: 'valorUnitario',
                             width: 120,
                             align: 'right',
-                            render: (val) => (val ? `R$ ${val.toFixed(2)}` : '-'),
+                            render: (val) => (val ? formatBRL(val) : '-'),
                           },
                           {
                             title: 'Subtotal',
                             dataIndex: 'subtotal',
                             width: 120,
                             align: 'right',
-                            render: (val) => (val ? `R$ ${val.toFixed(2)}` : '-'),
+                            render: (val) => (val ? formatBRL(val) : '-'),
                           },
                         ]}
                         summary={(data) => {
@@ -518,7 +519,7 @@ export default function ShipmentDetailClient() {
                                 <strong>Total:</strong>
                               </Table.Summary.Cell>
                               <Table.Summary.Cell index={1} align="right">
-                                <strong>R$ {total.toFixed(2)}</strong>
+                                <strong>{formatBRL(total)}</strong>
                               </Table.Summary.Cell>
                             </Table.Summary.Row>
                           );
@@ -560,14 +561,14 @@ export default function ShipmentDetailClient() {
                         dataIndex: 'valorUnitario',
                         width: 120,
                         align: 'right',
-                        render: (val) => (val ? `R$ ${val.toFixed(2)}` : '-'),
+                        render: (val) => (val ? formatBRL(val) : '-'),
                       },
                       {
                         title: 'Subtotal',
                         dataIndex: 'subtotal',
                         width: 120,
                         align: 'right',
-                        render: (val) => (val ? `R$ ${val.toFixed(2)}` : '-'),
+                        render: (val) => (val ? formatBRL(val) : '-'),
                       },
                     ]}
                     summary={(data) => {
@@ -578,7 +579,7 @@ export default function ShipmentDetailClient() {
                             <strong>Total:</strong>
                           </Table.Summary.Cell>
                           <Table.Summary.Cell index={1} align="right">
-                            <strong>R$ {total.toFixed(2)}</strong>
+                            <strong>{formatBRL(total)}</strong>
                           </Table.Summary.Cell>
                         </Table.Summary.Row>
                       );

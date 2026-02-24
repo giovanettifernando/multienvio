@@ -14,6 +14,7 @@ import {
   useELApp,
   EL_EMPTY_PRESENTED_IMAGE_SIMPLE,
 } from '@/shared/ui';
+import { formatBRL } from '@/shared/utils/format';
 const Alert = ELAlert;
 const Avatar = ELAvatar;
 const Empty = ELEmpty;
@@ -517,7 +518,7 @@ export function QuoteResultsSection({
       width: 100,
       render: (value: unknown) => (
         <Typography.Text strong style={{ color: "#52c41a" }}>
-          R$ {(value as number).toFixed(2)}
+          {formatBRL(value as number)}
         </Typography.Text>
       ),
       sorter: (a: QuoteResultItem, b: QuoteResultItem) => a.preco - b.preco,

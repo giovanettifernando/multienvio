@@ -34,6 +34,7 @@ import { useCheckoutStore } from '@/modules/cart/ui/state/checkout';
 import type { FinalizeFormValues } from '@/shared/types/quoteFinalize';
 import type { PickupPoint } from "@/modules/pickup-points/application/types";
 import { matchesSearch } from "@/shared/utils/string";
+import { isCorreiosCarrier } from '@/shared/utils/carrier';
 import { calculateDistance, getUFCoordinates, formatDistance } from "@/shared/utils/geo";
 import { MapModal } from "./MapModal";
 import { usePickupPoints } from "@/modules/pickup-points/ui/hooks";
@@ -61,10 +62,7 @@ export function PostingUnitPicker() {
   const [hasFetchedPreferences, setHasFetchedPreferences] = useState(false);
 
   // Verificar se a transportadora selecionada é Correios
-  const isCorreiosCarrier = useMemo(() => {
-    const carrier = selection?.result?.carrier;
-    return carrier ? carrier.toLowerCase().includes('correios') : false;
-  }, [selection?.result?.carrier]);
+  const isCorreios = useMemo(() => isCorreiosCarrier(selection?.result?.carrier ?? null), [selection?.result?.carrier]);
 
   // Buscar agências dos Correios quando carrier é Correios
   const originUf = results?.resumo?.origemUf;
@@ -75,7 +73,7 @@ export function PostingUnitPicker() {
   } = useCorreiosAgencies({
     uf: originUf,
     municipio: originMunicipio,
-    enabled: isCorreiosCarrier && !!originUf,
+    enabled: isCorreios && !!originUf,
     limit: 50,
   });
 
@@ -520,7 +518,7 @@ export function PostingUnitPicker() {
       </ELCard>
 
       {/* Card separado para Agências dos Correios (quando carrier é Correios) - apenas informativo */}
-      {isCorreiosCarrier && (
+      {isCorreios && (
         <ELCard
           header={{
             title: (

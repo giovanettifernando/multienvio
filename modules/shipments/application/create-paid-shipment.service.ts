@@ -21,6 +21,8 @@ import { ShipmentStatus } from '@/modules/shipments/application/shipment-status'
 import { integrateWithCarrier } from '@/modules/shipments/application/carrier-integration';
 import { sendShipmentTrackingEmail } from '@/platform/email/mailer';
 import { logger } from '@/platform/logging/logger';
+import { getQueue, QUEUE_NAMES, JOB_PRIORITY } from '@/platform/queue';
+import type { ShipmentCreateJobPayload } from '@/platform/queue/types';
 import {
   CheckoutRecipient,
   CheckoutVolume,
@@ -31,6 +33,7 @@ import {
   determineInitialStatus,
   saveRecipientIfRequested,
 } from '@/modules/cart/application/checkout.service';
+import { isCorreiosCarrier } from '@/shared/utils/carrier';
 
 // ============================================================================
 // TIPOS
@@ -271,7 +274,7 @@ export async function createPaidShipment(
       }, 'Wallet debited successfully');
     }
 
-    // 3) CRIAR SHIPMENT com código reservado e paymentMethod já definido
+    // 3) CRIAR SHIPMENT com status PROCESSING (integração com transportadora é assíncrona)
     const { shipment, packages } = await createShipmentWithVolumes(tx, {
       shipment: {
         platformTrackingCode: trackingCode,
@@ -308,7 +311,7 @@ export async function createPaidShipment(
             amount: totalCost,
           },
         },
-        status: initialStatus,
+        status: ShipmentStatus.PROCESSING,
         paymentMethod, // JÁ DEFINIDO (não mais null)
       },
       volumes: volumes.map((vol) => ({
@@ -324,15 +327,16 @@ export async function createPaidShipment(
       trackingCode,
       shipmentId: shipment.id,
       paymentMethod,
-    }, 'Shipment created with payment confirmed');
+      status: ShipmentStatus.PROCESSING,
+    }, 'Shipment created with PROCESSING status — carrier integration will be async');
 
-    // 4) CRIAR ETIQUETA
+    // 4) CRIAR ETIQUETA (status pending — será preenchida pelo worker)
     const label = await tx.label.create({
       data: {
         shipmentId: shipment.id,
         carrier,
         service,
-        status: 'issued', // Já emitida (pagamento confirmado)
+        status: 'pending', // Será atualizada pelo worker após integração
         priceCents: Math.round(freightCost * 100),
         currency: 'BRL',
         trackingCode,
@@ -354,11 +358,7 @@ export async function createPaidShipment(
       },
     });
 
-    // 6) INTEGRAÇÃO COM TRANSPORTADORA (OBRIGATÓRIA)
-    // Se a pré-postagem falhar, a transação inteira é revertida
-    await integrateWithCarrierRequired(tx, input, shipment.id, packages, declaredValue);
-
-    // 7) CRIAR PICKUP REQUEST SE SOLICITADO
+    // 6) CRIAR PICKUP REQUEST SE SOLICITADO
     let pickupRequestId: string | null = null;
     if (solicitarColeta) {
       const pickupRequest = await tx.pickupRequest.create({
@@ -376,9 +376,6 @@ export async function createPaidShipment(
       pickupRequestId = pickupRequest.id;
     }
 
-    // 8) Eventos de rastreamento virão dos Correios via webhook/sync
-    // Não criar evento inicial genérico - API pública tem fallback para timeline vazia
-
     return {
       shipmentId: shipment.id,
       trackingCode: shipment.platformTrackingCode,
@@ -390,21 +387,52 @@ export async function createPaidShipment(
     };
   });
 
-  // 9) SALVAR DESTINATÁRIO RECORRENTE (fora da transação)
+  // 7) SALVAR DESTINATÁRIO RECORRENTE (fora da transação)
   await saveRecipientIfRequested(userId, recipient);
 
-  // 10) ENVIAR EMAIL AO DESTINATÁRIO (fora da transação, não bloqueia)
-  if (!result.isIdempotent && recipient.email && recipient.email.trim() !== '') {
-    // Usar publicTrackingId para URL pública, fallback para platformTrackingCode
-    const trackingCodeForEmail = result.publicTrackingId || trackingCode;
-    sendTrackingEmailAsync(
-      userId,
-      recipient.email,
-      recipient.nome,
-      trackingCodeForEmail,
-      recipient.cidade,
-      recipient.uf
+  // 8) ENFILEIRAR JOB DE INTEGRAÇÃO COM TRANSPORTADORA (assíncrono via BullMQ)
+  if (!result.isIdempotent) {
+    const originAddr = originAddress || {
+      cep: originCep,
+      logradouro: undefined,
+      numero: undefined,
+      complemento: undefined,
+      bairro: undefined,
+      cidade: originCidade,
+      uf: originUf,
+    };
+
+    const queue = getQueue<ShipmentCreateJobPayload>(QUEUE_NAMES.SHIPMENT_CREATE);
+    await queue.add(
+      'create',
+      {
+        shipmentId: result.shipmentId,
+        userId,
+        carrier,
+        service,
+        declaredValue,
+        targetStatus: initialStatus, // Status após integração (PICKUP_REQUESTED ou AWAITING_DROP_OFF_AT_POINT)
+        originAddress: {
+          cep: originAddr.cep || originCep,
+          logradouro: originAddr.logradouro,
+          numero: originAddr.numero,
+          complemento: originAddr.complemento,
+          bairro: originAddr.bairro,
+          cidade: originAddr.cidade || originCidade,
+          uf: originAddr.uf || originUf,
+        },
+      },
+      {
+        priority: JOB_PRIORITY.HIGH,
+        jobId: `shipment-create-${result.shipmentId}`,
+      }
     );
+
+    logger.info({
+      event: 'shipment_create_job_enqueued',
+      shipmentId: result.shipmentId,
+      carrier,
+    }, 'Carrier integration job enqueued');
   }
 
   logger.info({
@@ -480,14 +508,6 @@ async function buildCarrierIntegrationData(
   };
 
   return { senderData, recipientData };
-}
-
-/**
- * Verifica se a transportadora é Correios
- */
-function isCorreiosCarrier(carrier: string): boolean {
-  const normalized = carrier.toLowerCase().trim();
-  return normalized === 'correios';
 }
 
 /**

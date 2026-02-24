@@ -75,6 +75,7 @@ export const GET = withApiHandler<GetAddressesResponse>(async (context) => {
         updatedAt: addr.updatedAt.toISOString(),
       })),
     },
+    headers: { 'Cache-Control': 'private, max-age=300' }, // 5min — endereços mudam raramente
   };
 });
 

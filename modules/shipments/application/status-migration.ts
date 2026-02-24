@@ -157,6 +157,18 @@ export function processCancellationInTransit(
  */
 const TRANSITION_MATRIX: Record<ShipmentStatus, ShipmentStatus[]> = {
   // ========================================
+  // FASE 0 - PROCESSAMENTO ASSÍNCRONO
+  // ========================================
+
+  [ShipmentStatus.PROCESSING]: [
+    ShipmentStatus.PICKUP_REQUESTED,
+    ShipmentStatus.AWAITING_DROP_OFF_AT_POINT,
+    ShipmentStatus.CREATION_FAILED,
+  ],
+
+  [ShipmentStatus.CREATION_FAILED]: [], // FINAL
+
+  // ========================================
   // FASE A - ORIGEM (Coleta/Postagem)
   // ========================================
 

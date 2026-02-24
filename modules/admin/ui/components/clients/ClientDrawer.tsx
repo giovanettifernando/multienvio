@@ -105,14 +105,13 @@ export function ClientDrawer({ open, client, onClose, onStatusChange }: ClientDr
             <Statistic title="Total de Envios" value={totalShipments} />
           </Col>
           <Col span={8}>
-            <Statistic title="Saldo em Carteira" value={walletAvailable} precision={2} prefix="R$" />
+            <Statistic title="Saldo em Carteira" value={walletAvailable} formatter={(value) => formatBRL(Number(value))} />
           </Col>
           <Col span={8}>
             <Statistic
               title="Balanço do Mês"
               value={monthBalance}
-              precision={2}
-              prefix="R$"
+              formatter={(value) => formatBRL(Number(value))}
               styles={{ content: {
                 color: monthBalanceCents >= 0 ? '#3f8600' : '#cf1322',
               } }}

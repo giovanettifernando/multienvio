@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { PrinterOutlined, DownloadOutlined, CloseOutlined } from '@ant-design/icons';
 import { ELModal, ELSpin, ELSpace, ELApp, useELApp } from '@/shared/ui';
 const { Spin, Space, App } = { Spin: ELSpin, Space: ELSpace, App: ELApp };
@@ -11,17 +11,8 @@ import type { LabelItem, PackageItem } from '@/shared/types/label';
 import { PageShell } from '@/shared/ui/PageShell';
 import { useQueryClient } from '@tanstack/react-query';
 import { ELButton } from '@/shared/ui/ELButton';
-
-// Verificar se é transportadora Correios
-function isCorreiosCarrier(carrier: string): boolean {
-  const normalized = carrier.toLowerCase();
-  return (
-    normalized.includes('correios') ||
-    normalized.includes('sedex') ||
-    normalized.includes('pac') ||
-    normalized === 'correios'
-  );
-}
+import { isCorreiosCarrier } from '@/shared/utils/carrier';
+import { useDocumentGeneration } from '@/modules/labels/ui/hooks/useDocumentGeneration';
 
 // Tipo para dados completos da etiqueta retornados pela API
 interface LabelDetailResponse {
@@ -75,10 +66,17 @@ interface LabelDetailResponse {
   };
 }
 
+const STATUS_MESSAGES: Record<string, string> = {
+  queued: 'Preparando geração...',
+  pending: 'Na fila de processamento...',
+  processing: 'Gerando PDF...',
+};
+
 export default function EtiquetasClient() {
   const { message } = useELApp();
   const queryClient = useQueryClient();
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const { status: docStatus, downloadUrl, error: docError, generate, reset: resetDoc } = useDocumentGeneration();
 
   // Estado para modal legado (não-Correios)
   const [selectedLabelId, setSelectedLabelId] = useState<string | null>(null);
@@ -94,7 +92,39 @@ export default function EtiquetasClient() {
   const [pdfLabelId, setPdfLabelId] = useState<string | null>(null);
   const [pdfPackageId, setPdfPackageId] = useState<string | null>(null);
   const [pdfFileName, setPdfFileName] = useState<string>('etiqueta');
-  const [loadingLabel, setLoadingLabel] = useState(false);
+
+  const isGenerating = docStatus === 'queued' || docStatus === 'pending' || docStatus === 'processing';
+
+  // Quando o download estiver pronto, buscar o blob e mostrar no iframe
+  useEffect(() => {
+    if (!downloadUrl) return;
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const response = await fetch(downloadUrl);
+        if (!response.ok) throw new Error('Falha ao baixar PDF');
+        const blob = await response.blob();
+        if (cancelled) return;
+        const blobUrl = URL.createObjectURL(blob) + '#navpanes=0&view=FitH';
+        setPdfBlobUrl(blobUrl);
+        setPdfModalOpen(true);
+      } catch (err) {
+        if (!cancelled) {
+          message.error('Erro ao carregar PDF gerado');
+        }
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [downloadUrl, message]);
+
+  // Mostrar erro da geração assíncrona
+  useEffect(() => {
+    if (docError) {
+      message.error(docError);
+    }
+  }, [docError, message]);
 
   const handlePrintStatusChange = useCallback((labelId: string, isPrinted: boolean) => {
     queryClient.invalidateQueries({ queryKey: ['labels'] });
@@ -102,37 +132,16 @@ export default function EtiquetasClient() {
 
   // Handler para abrir etiqueta
   const handleOpenLabel = useCallback(async (record: LabelItem) => {
-    // Verificar se é Correios
     if (isCorreiosCarrier(record.carrier)) {
-      // Para Correios, mostrar PDF no modal
-      setLoadingLabel(true);
-      try {
-        const url = `/api/labels/${record.id}/pdf`;
+      setPdfLabelId(record.id);
+      setPdfPackageId(null);
+      setPdfFileName(`etiqueta_${record.trackingCode || record.id}`);
 
-        // Buscar PDF como blob
-        const response = await fetch(url);
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.message || 'Etiqueta não disponível');
-        }
+      const result = await generate('label', { labelId: record.id });
 
-        // Criar blob URL para o iframe
-        // Adiciona #navpanes=0 para esconder o painel de miniaturas do PDF viewer
-        const blob = await response.blob();
-        const blobUrl = URL.createObjectURL(blob) + '#navpanes=0&view=FitH';
-
-        // Abrir modal com PDF
-        setPdfBlobUrl(blobUrl);
-        setPdfLabelId(record.id);
-        setPdfPackageId(null);
-        setPdfFileName(`etiqueta_${record.trackingCode || record.id}`);
-        setPdfModalOpen(true);
-      } catch (error) {
-        console.error('[LABEL_OPEN]', error);
-        const errorMsg = error instanceof Error ? error.message : 'Erro ao carregar etiqueta';
-
-        // Fallback: tentar abrir modal alternativo se o PDF não estiver disponível
-        if (errorMsg.includes('Pré-postagem não gerada')) {
+      // Se falhou e é pré-postagem, tentar fallback
+      if (!result) {
+        if (docError?.includes('Pré-postagem não gerada')) {
           message.warning('Pré-postagem ainda não gerada. Usando visualização alternativa...');
           try {
             const response = await fetch(`/api/labels/${record.id}`);
@@ -176,62 +185,31 @@ export default function EtiquetasClient() {
               };
               setCorreiosShipment(shipmentData);
               setCorreiosModalOpen(true);
-            } else {
-              message.error(errorMsg);
             }
           } catch {
-            message.error(errorMsg);
+            // fallback já mostrou warning
           }
-        } else {
-          message.error(errorMsg);
         }
-      } finally {
-        setLoadingLabel(false);
       }
     } else {
-      // Usar modal legado para outras transportadoras
       setSelectedLabelId(record.id);
       setLegacyModalOpen(true);
     }
-  }, [message]);
+  }, [generate, docError, message]);
 
   // Handler para abrir etiqueta de volume individual
   const handleOpenPackage = useCallback(async (pkg: PackageItem, label: LabelItem) => {
-    setLoadingLabel(true);
-    try {
-      const url = `/api/packages/${pkg.id}/pdf`;
-
-      // Buscar PDF como blob
-      const response = await fetch(url);
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Etiqueta não disponível');
-      }
-
-      // Criar blob URL para o iframe
-      const blob = await response.blob();
-      const blobUrl = URL.createObjectURL(blob) + '#navpanes=0&view=FitH';
-
-      // Abrir modal com PDF
-      setPdfBlobUrl(blobUrl);
-      setPdfLabelId(label.id);
-      setPdfPackageId(pkg.id);
-      setPdfFileName(`etiqueta_${label.trackingCode || label.id}_vol${pkg.packageNumber}`);
-      setPdfModalOpen(true);
-    } catch (error) {
-      console.error('[PACKAGE_OPEN]', error);
-      const errorMsg = error instanceof Error ? error.message : 'Erro ao carregar etiqueta do volume';
-      message.error(errorMsg);
-    } finally {
-      setLoadingLabel(false);
-    }
-  }, [message]);
+    setPdfLabelId(label.id);
+    setPdfPackageId(pkg.id);
+    setPdfFileName(`etiqueta_${label.trackingCode || label.id}_vol${pkg.packageNumber}`);
+    await generate('package', { packageId: pkg.id });
+  }, [generate]);
 
   // Fechar modal PDF e limpar blob URL
   const handleClosePdfModal = useCallback(() => {
     setPdfModalOpen(false);
+    resetDoc();
     if (pdfBlobUrl) {
-      // Remove hash fragment antes de revogar o blob URL
       const blobUrlBase = pdfBlobUrl.split('#')[0];
       URL.revokeObjectURL(blobUrlBase);
     }
@@ -239,13 +217,12 @@ export default function EtiquetasClient() {
     setPdfLabelId(null);
     setPdfPackageId(null);
     setPdfFileName('etiqueta');
-  }, [pdfBlobUrl]);
+  }, [pdfBlobUrl, resetDoc]);
 
   // Download PDF
   const handleDownloadPdf = useCallback(() => {
     if (pdfBlobUrl) {
       const link = document.createElement('a');
-      // Remove hash fragment para download
       link.href = pdfBlobUrl.split('#')[0];
       link.download = `${pdfFileName}.pdf`;
       link.click();
@@ -258,7 +235,6 @@ export default function EtiquetasClient() {
       try {
         iframeRef.current.contentWindow?.print();
 
-        // Marcar como impressa
         if (pdfLabelId) {
           await fetch(`/api/labels/${pdfLabelId}`, {
             method: 'PATCH',
@@ -292,7 +268,7 @@ export default function EtiquetasClient() {
   return (
     <App>
       <PageShell title="Etiquetas" gap="md">
-        <Spin spinning={loadingLabel} tip="Carregando etiqueta...">
+        <Spin spinning={isGenerating} tip={STATUS_MESSAGES[docStatus] || 'Carregando etiqueta...'}>
           <LabelsTable onOpenLabel={handleOpenLabel} onOpenPackage={handleOpenPackage} />
         </Spin>
 

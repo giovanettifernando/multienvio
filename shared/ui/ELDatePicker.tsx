@@ -19,7 +19,6 @@ export interface ELRangePickerProps extends Omit<RangePickerProps, 'locale'> {}
 
 function DatePickerBase({
   className,
-  popupClassName,
   size,
   format,
   ...props
@@ -30,7 +29,7 @@ function DatePickerBase({
       locale={locale}
       format={format ?? "DD/MM/YYYY"}
       className={cn(styles.datePicker, className)}
-      popupClassName={cn(styles.popup, popupClassName)}
+      classNames={{ popup: { root: styles.popup } }}
       size={size ?? "middle"}
     />
   );
@@ -38,7 +37,6 @@ function DatePickerBase({
 
 function ELRangePicker({
   className,
-  popupClassName,
   size,
   format,
   ...props
@@ -49,7 +47,7 @@ function ELRangePicker({
       locale={locale}
       format={format ?? "DD/MM/YYYY"}
       className={cn(styles.datePicker, styles.rangePicker, className)}
-      popupClassName={cn(styles.popup, popupClassName)}
+      classNames={{ popup: { root: styles.popup } }}
       size={size ?? "middle"}
     />
   );

@@ -22,6 +22,7 @@ import { calculateCommissionsInCents } from '@/modules/quotes/application/commis
 import { integrateWithCarrier } from '@/modules/shipments/application/carrier-integration';
 import { sendShipmentTrackingEmail } from '@/platform/email/mailer';
 import { logger } from '@/platform/logging/logger';
+import { isCorreiosCarrier } from '@/shared/utils/carrier';
 
 // ============================================================================
 // TYPES
@@ -656,14 +657,6 @@ async function createShipmentFromCartItem(
     destinationCity: destination.cidade,
     destinationState: destination.uf,
   };
-}
-
-/**
- * Verifica se a transportadora é Correios
- */
-function isCorreiosCarrier(carrier: string): boolean {
-  const normalized = carrier.toLowerCase().trim();
-  return normalized === 'correios';
 }
 
 /**

@@ -39,7 +39,9 @@ export interface LoggiAuthTestResult {
 /** Representação monetária da Loggi: units = parte inteira, nanos = fração (× 10^9) */
 export interface LoggiMoney {
   currencyCode: string;
-  units: number;
+  /** Parte inteira — API retorna como string */
+  units: string | number;
+  /** Fracao em nano (10^9) */
   nanos: number;
 }
 

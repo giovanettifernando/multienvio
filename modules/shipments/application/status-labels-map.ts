@@ -18,7 +18,8 @@ export type UIShipmentStatus =
   | "Entregue"
   | "Falha na coleta"
   | "Cancelado"
-  | "Devolvido";
+  | "Devolvido"
+  | "Abertos";
 
 /**
  * Mapeia status do enum completo para status simplificados da UI
@@ -202,6 +203,34 @@ export function getBackendStatusesForUIFilter(uiStatus: UIShipmentStatus): Shipm
         ShipmentStatus.CANCELLED_IN_TRANSIT_RETURNED,
         ShipmentStatus.RETURNING_TO_SENDER,
         ShipmentStatus.RETURNED_TO_SENDER,
+      ];
+
+    case "Abertos":
+      return [
+        // Aguardando coleta
+        ShipmentStatus.PICKUP_REQUESTED,
+        ShipmentStatus.PICKUP_SCHEDULED,
+        ShipmentStatus.AWAITING_PICKUP_AT_ORIGIN,
+        // Falha na coleta (pode ser reagendada)
+        ShipmentStatus.PICKUP_FAILED,
+        // Aguardando postagem
+        ShipmentStatus.AWAITING_DROP_OFF_AT_POINT,
+        ShipmentStatus.DROPPED_OFF_AT_POINT,
+        ShipmentStatus.AWAITING_CARRIER_PICKUP_AT_POINT,
+        // Postado
+        ShipmentStatus.RECEIVED_AT_ORIGIN_HUB,
+        // Em trânsito
+        ShipmentStatus.COLLECTED_FROM_SENDER,
+        ShipmentStatus.IN_TRANSIT_TO_CARRIER_HUB,
+        ShipmentStatus.COLLECTED_FROM_POINT,
+        ShipmentStatus.IN_TRANSFER,
+        ShipmentStatus.IN_TRANSIT_TO_DESTINATION,
+        ShipmentStatus.AT_DESTINATION_HUB,
+        // Em rota de entrega
+        ShipmentStatus.OUT_FOR_DELIVERY,
+        ShipmentStatus.AWAITING_PICKUP_AT_DESTINATION_HUB,
+        ShipmentStatus.DELIVERY_ATTEMPT_FAILED,
+        ShipmentStatus.DELIVERY_PROBLEM,
       ];
 
     default:

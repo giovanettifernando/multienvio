@@ -114,6 +114,7 @@ export const GET = withApiHandler<CorreiosAgenciesResponse>(async (context) => {
       uf,
       municipio: municipio || null,
     },
+    headers: { 'Cache-Control': 'private, max-age=86400' }, // 1 dia — agências raramente mudam
   };
 });
 

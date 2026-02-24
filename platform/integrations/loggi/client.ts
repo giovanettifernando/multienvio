@@ -225,22 +225,47 @@ async function getLoggiToken(config: LoggiConfig): Promise<string> {
     }
   }
 
-  console.log('[LOGGI_CLIENT] Requesting new token via SDK:', {
-    apiBase: config.apiBase,
+  const authUrl = `${config.apiBase}${LOGGI_ENDPOINTS.authV2}`;
+
+  console.log('[LOGGI_CLIENT] Requesting new token:', {
+    authUrl,
     clientId: config.clientId,
   });
 
-  // Dynamic import para evitar problema do Turbopack com es5-ext (#)
-  const loggiPlatform = (await import('@api/loggi-platform')).default;
-
-  // Configurar server URL do SDK baseado no ambiente
-  loggiPlatform.server(config.apiBase);
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 30_000);
 
   try {
-    const { data } = await loggiPlatform.authenticateV2({
-      client_id: config.clientId,
-      client_secret: config.clientSecret,
+    const response = await fetch(authUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        client_id: config.clientId,
+        client_secret: config.clientSecret,
+      }),
+      signal: controller.signal,
     });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      let errorBody = '';
+      try {
+        errorBody = await response.text();
+      } catch { /* ignore */ }
+
+      console.error('[LOGGI_CLIENT] Auth failed:', {
+        status: response.status,
+        statusText: response.statusText,
+        body: errorBody,
+      });
+
+      throw new LoggiAuthError(
+        `HTTP ${response.status}: ${errorBody || response.statusText}`
+      );
+    }
+
+    const data = await response.json() as LoggiTokenResponse;
 
     if (!data.idToken) {
       throw new LoggiAuthError('Token não retornado pela API');
@@ -253,12 +278,17 @@ async function getLoggiToken(config: LoggiConfig): Promise<string> {
       expiresAt: new Date(Date.now() + expiresInMs),
     };
 
-    console.log('[LOGGI_CLIENT] Token obtido via SDK, expira em', data.expiresIn, 'segundos');
+    console.log('[LOGGI_CLIENT] Token obtido, expira em', data.expiresIn, 'segundos');
 
     return data.idToken;
   } catch (error) {
-    // Mapear erros do SDK para LoggiAuthError
+    clearTimeout(timeoutId);
+
     if (error instanceof LoggiAuthError) throw error;
+
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new LoggiAuthError('Timeout na autenticação (30s)');
+    }
 
     const errorMsg = error instanceof Error ? error.message : String(error);
     throw new LoggiAuthError(`Loggi Auth Error: ${errorMsg}`);

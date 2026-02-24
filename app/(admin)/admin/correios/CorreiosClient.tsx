@@ -20,7 +20,7 @@ import {
   message,
   Badge,
 } from 'antd';
-import { inputNumberFormatterBRL, inputNumberParserBRL } from '@/shared/utils/format';
+import { inputNumberFormatterBRL, inputNumberParserBRL, formatBRL } from '@/shared/utils/format';
 import {
   SaveOutlined,
   ApiOutlined,
@@ -461,9 +461,9 @@ function ConfigTab() {
           <span style={{ color: '#999' }}>&rarr;</span>
           <span>Final:</span>
           <Text strong style={{ color: '#52c41a' }}>
-            R$ {finalPrice.toFixed(2)}
+            {formatBRL(finalPrice)}
           </Text>
-          <Tag color="blue">+R$ {commissionAmount.toFixed(2)}</Tag>
+          <Tag color="blue">+{formatBRL(commissionAmount)}</Tag>
         </Space>
       </Card>
 

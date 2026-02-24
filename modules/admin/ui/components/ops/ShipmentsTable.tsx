@@ -9,6 +9,7 @@ import type { OpsShipment } from '@/modules/admin/application/ops/types';
 import { listShipments } from '@/modules/admin/application/ops/api';
 import ShipmentDetailDrawer from './ShipmentDetailDrawer';
 import { DataTable, type DataTableColumn } from '@/shared/ui/DataTable';
+import { formatBRL } from '@/shared/utils/format';
 
 const { RangePicker } = DatePicker;
 
@@ -258,7 +259,7 @@ export default function ShipmentsTable({ dateStart, dateEnd }: ShipmentsTablePro
         <div>
           <div>{record.weight.toFixed(2)} kg</div>
           <div style={{ fontSize: 12, color: '#666' }}>
-            R$ {record.declaredValue.toFixed(2)}
+            {formatBRL(record.declaredValue)}
           </div>
         </div>
       ),
@@ -270,7 +271,7 @@ export default function ShipmentsTable({ dateStart, dateEnd }: ShipmentsTablePro
       width: 100,
       render: (cost: unknown) => {
         const c = cost as number | null;
-        return c !== null ? `R$ ${c.toFixed(2)}` : '—';
+        return c !== null ? formatBRL(c) : '—';
       },
     },
     {

@@ -10,6 +10,7 @@ import { ELButton } from '@/shared/ui/ELButton';
 import { ELCard } from '@/shared/ui/ELCard';
 import { ELFlex } from '@/shared/ui/ELGrid';
 import { ELEmpty } from '@/shared/ui/ELEmpty';
+import { formatBRL } from '@/shared/utils/format';
 
 const { Text } = Typography;
 
@@ -120,7 +121,7 @@ export function WalletRecent() {
                     fontSize: '14px',
                   }}
                 >
-                  {credit ? '+' : '-'}R$ {Math.abs(tx.amountReais).toFixed(2)}
+                  {credit ? '+' : '-'}{formatBRL(Math.abs(tx.amountReais))}
                 </Text>
               </ELFlex>
             </div>

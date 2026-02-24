@@ -51,8 +51,8 @@ export interface LoggiCotacaoInput {
  * Converte LoggiMoney para valor em reais
  */
 export function loggiMoneyToReais(money: LoggiMoney): number {
-  const units = money.units || 0;
-  const nanos = money.nanos || 0;
+  const units = Number(money.units) || 0;
+  const nanos = Number(money.nanos) || 0;
   return units + nanos / 1_000_000_000;
 }
 

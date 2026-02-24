@@ -1,20 +1,21 @@
 /**
  * POST /api/admin/fipe/sync
  *
- * Dispara sincronização manual da base FIPE
- * Requer permissão INTEGRACOES ou superAdmin
+ * Enfileira sincronização da base FIPE via BullMQ.
+ * Retorna 202 imediatamente — o worker processa em background.
+ * Requer permissão INTEGRACOES ou superAdmin.
  */
 
 import { requireAdminSession } from '@/platform/auth/require-session';
 import { canAccess } from '@/modules/auth/application/permissions';
 import { AdminPermission } from '@prisma/client';
 import { prisma } from '@/platform/db/db';
-import { syncFipeBrandsAndModels, getFipeStats, type SyncOptions } from '@/platform/integrations/fipe';
+import { getFipeStats } from '@/platform/integrations/fipe';
 import { withApiHandler } from '@/platform/api/handler';
 import { ApiError } from '@/platform/api/errors';
+import { getQueue, QUEUE_NAMES, type FipeSyncJobPayload } from '@/platform/queue';
 
-// Timeout maior para sync (5 minutos)
-export const maxDuration = 300;
+type FipeVehicleType = 'cars' | 'motorcycles' | 'trucks';
 
 export const POST = withApiHandler(async ({ req }) => {
   const session = await requireAdminSession(req, AdminPermission.CONFIGURACOES);
@@ -32,7 +33,6 @@ export const POST = withApiHandler(async ({ req }) => {
     });
   }
 
-  // Requer permissão INTEGRACOES ou superAdmin
   if (!canAccess(staff, AdminPermission.INTEGRACOES)) {
     throw new ApiError({
       code: 'FORBIDDEN',
@@ -42,42 +42,46 @@ export const POST = withApiHandler(async ({ req }) => {
   }
 
   // Parse body para opções
-  let options: SyncOptions = { vehicleTypes: ['cars'] };
+  let vehicleTypes: FipeVehicleType[] = ['cars'];
+  let forceUpdate = false;
 
   try {
     const body = await req.json();
     if (body.vehicleTypes && Array.isArray(body.vehicleTypes)) {
-      options.vehicleTypes = body.vehicleTypes.filter(
+      vehicleTypes = body.vehicleTypes.filter(
         (t: string) => ['cars', 'motorcycles', 'trucks'].includes(t)
-      );
+      ) as FipeVehicleType[];
     }
-    if (typeof body.deactivateOld === 'boolean') {
-      options.deactivateOld = body.deactivateOld;
+    if (typeof body.forceUpdate === 'boolean') {
+      forceUpdate = body.forceUpdate;
     }
   } catch {
     // Corpo vazio ou inválido, usa defaults
   }
 
-  // Executar sync
-  const result = await syncFipeBrandsAndModels(options);
+  // Enfileirar um job 'brands' por tipo de veículo
+  const queue = getQueue<FipeSyncJobPayload>(QUEUE_NAMES.FIPE_SYNC);
 
-  // Buscar estatísticas atualizadas
-  const stats = await getFipeStats();
+  const jobs = vehicleTypes.map((vt) => ({
+    name: 'brands',
+    data: {
+      mode: 'brands' as const,
+      vehicleType: vt,
+      forceUpdate,
+    },
+    opts: {
+      jobId: `fipe-brands-${vt}-${Date.now()}`,
+    },
+  }));
+
+  await queue.addBulk(jobs);
 
   return {
+    status: 202,
     data: {
-      success: result.errors.length === 0,
-      result: {
-        referenceCode: result.referenceCode,
-        referenceMonth: result.referenceMonth,
-        vehicleTypes: result.vehicleTypes,
-        brands: result.brands,
-        models: result.models,
-        durationMs: result.durationMs,
-        errorsCount: result.errors.length,
-      },
-      stats,
-      errors: result.errors.length > 0 ? result.errors.slice(0, 20) : undefined,
+      message: `Sincronização FIPE enfileirada para ${vehicleTypes.length} tipo(s) de veículo`,
+      vehicleTypes,
+      jobsEnqueued: jobs.length,
     },
   };
 });

@@ -48,6 +48,8 @@ model User {
   trackingCodeReservations TrackingCodeReservation[]
   recipientPaymentRequests RecipientPaymentRequest[]
   assistantChatSessions    AssistantChatSession[]
+  notifications            Notification[]
+  generatedDocuments       GeneratedDocument[]
 
   // Removidos índices redundantes: email, emailVerificationToken, googleId já são @unique
   @@map("users")
@@ -1681,4 +1683,58 @@ model KnowledgeBaseArticle {
   @@index([isPublished])
   @@index([category])
   @@map("knowledge_base_articles")
+}
+
+// ============================================================================
+// Notifications (Notificações in-app)
+// ============================================================================
+
+/// Notificação in-app para o usuário (Fase 3 BullMQ)
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  type      String   // SHIPMENT_CREATED, SHIPMENT_STATUS_CHANGED, SHIPMENT_CREATION_FAILED, PAYMENT_CONFIRMED, LABEL_READY, RECONCILIATION_DIVERGENCE
+  title     String
+  message   String   @db.Text
+  isRead    Boolean  @default(false) @map("is_read")
+  metadata  Json?
+  createdAt DateTime @default(now()) @map("created_at")
+  readAt    DateTime? @map("read_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@index([userId, createdAt])
+  @@map("notifications")
+}
+
+// ============================================================================
+// Generated Documents (PDFs gerados assincronamente)
+// ============================================================================
+
+/// Documento gerado em background (PDF de etiqueta, extrato, batch)
+model GeneratedDocument {
+  id           String    @id @default(cuid())
+  userId       String    @map("user_id")
+  documentType String    @map("document_type") // label, package, statement, batch_labels
+  status       String    @default("PENDING")   // PENDING, PROCESSING, COMPLETED, FAILED
+  jobId        String?   @unique @map("job_id")
+  referenceId  String?   @map("reference_id")  // labelId, packageId, walletId, ou IDs concatenados
+  fileName     String?   @map("file_name")
+  filePath     String?   @map("file_path")     // Caminho relativo no filesystem
+  contentType  String?   @default("application/pdf") @map("content_type")
+  sizeBytes    Int?      @map("size_bytes")
+  errorMessage String?   @map("error_message") @db.Text
+  metadata     Json?
+  expiresAt    DateTime  @map("expires_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  completedAt  DateTime? @map("completed_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@index([userId, documentType, createdAt])
+  @@index([expiresAt])
+  @@index([referenceId, documentType])
+  @@map("generated_documents")
 }

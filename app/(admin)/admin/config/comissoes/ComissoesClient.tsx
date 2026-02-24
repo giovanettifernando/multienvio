@@ -24,7 +24,7 @@ import {
   CalculatorOutlined,
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { inputNumberFormatterBRL, inputNumberParserBRL } from '@/shared/utils/format';
+import { inputNumberFormatterBRL, inputNumberParserBRL, formatBRL } from '@/shared/utils/format';
 
 const { Title, Text } = Typography;
 
@@ -113,12 +113,11 @@ function CommissionSimulator({
             <Statistic
               title="Valor para cliente"
               value={pickupWithCommission}
-              precision={2}
-              prefix="R$"
+              formatter={(value) => formatBRL(Number(value))}
               styles={{ content: { color: '#52c41a' } }}
             />
             <Text type="secondary" style={{ fontSize: 12 }}>
-              +R$ {pickupCommission.toFixed(2)} de comissão ({pickupPercent}%)
+              +{formatBRL(pickupCommission)} de comissão ({pickupPercent}%)
             </Text>
           </Col>
         </Row>

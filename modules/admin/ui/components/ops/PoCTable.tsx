@@ -67,7 +67,7 @@ export default function PoCTable() {
       dataIndex: 'commissionPerItem',
       key: 'commissionPerItem',
       width: 120,
-      render: (value: unknown) => `R$ ${(value as number).toFixed(2)}`,
+      render: (value: unknown) => formatBRL(value as number),
     },
     {
       title: 'Capacidade Diária',

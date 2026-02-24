@@ -1,0 +1,24 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "lib": ["esnext"],
+    "types": ["node"],
+    "noEmit": true
+  },
+  "include": [
+    "workers/**/*.ts",
+    "platform/queue/**/*.ts",
+    "platform/db/**/*.ts",
+    "platform/integrations/**/*.ts",
+    "platform/email/**/*.ts",
+    "modules/tracking/**/*.ts",
+    "modules/recipients/**/*.ts",
+    "modules/wallet/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "app",
+    "shared/ui",
+    "**/*.test.ts"
+  ]
+}

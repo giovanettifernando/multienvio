@@ -323,30 +323,27 @@ export function AccountsPayableTable() {
             <Statistic
               title="Valor Total"
               value={summary.totalAmountReais}
-              precision={2}
               prefix={<DollarOutlined />}
               styles={{ content: { color: '#1890ff' } }}
-              formatter={(value) => `R$ ${Number(value).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+              formatter={(value) => formatBRL(Number(value))}
             />
           </Col>
           <Col xs={24} sm={12} md={6}>
             <Statistic
               title="Pendentes"
               value={summary.pendingAmountReais}
-              precision={2}
               prefix={<ClockCircleOutlined />}
               styles={{ content: { color: '#fa8c16' } }}
-              formatter={(value) => `R$ ${Number(value).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+              formatter={(value) => formatBRL(Number(value))}
             />
           </Col>
           <Col xs={24} sm={12} md={6}>
             <Statistic
               title="Pagos"
               value={summary.paidAmountReais}
-              precision={2}
               prefix={<CheckCircleOutlined />}
               styles={{ content: { color: '#52c41a' } }}
-              formatter={(value) => `R$ ${Number(value).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+              formatter={(value) => formatBRL(Number(value))}
             />
           </Col>
         </Row>

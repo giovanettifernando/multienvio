@@ -9,6 +9,7 @@ const Result = ELResult;
 import { PrinterOutlined, DownloadOutlined, ReloadOutlined } from "@ant-design/icons";
 import { ELModal } from '@/shared/ui/ELModal';
 import { ELButton } from '@/shared/ui/ELButton';
+import { useDocumentGeneration } from '@/modules/labels/ui/hooks/useDocumentGeneration';
 
 interface StatementPDFModalProps {
   open: boolean;
@@ -27,10 +28,12 @@ export default function StatementPDFModal({
 }: StatementPDFModalProps) {
   const { message } = App.useApp();
   const iframeRef = useRef<HTMLIFrameElement>(null);
-  const [isDownloading, setIsDownloading] = useState(false);
+  const { status: docStatus, downloadUrl, error: docError, generate, reset: resetDoc } = useDocumentGeneration();
   const [htmlContent, setHtmlContent] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const isDownloading = docStatus === 'queued' || docStatus === 'pending' || docStatus === 'processing';
 
   const loadContent = useCallback(async () => {
     setIsLoading(true);
@@ -67,11 +70,43 @@ export default function StatementPDFModal({
     if (open) {
       loadContent();
     } else {
-      // Limpar estado quando fechar
       setHtmlContent(null);
       setError(null);
+      resetDoc();
     }
-  }, [open, loadContent]);
+  }, [open, loadContent, resetDoc]);
+
+  // Quando o download assíncrono estiver pronto, baixar o blob
+  useEffect(() => {
+    if (!downloadUrl) return;
+
+    (async () => {
+      try {
+        const response = await fetch(downloadUrl);
+        if (!response.ok) throw new Error('Falha ao baixar PDF');
+
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `extrato-carteira-${dateFrom}-${dateTo}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        message.success("Download do PDF iniciado!");
+      } catch {
+        message.error("Erro ao baixar PDF. Tente novamente.");
+      }
+    })();
+  }, [downloadUrl, dateFrom, dateTo, message]);
+
+  // Mostrar erro da geração
+  useEffect(() => {
+    if (docError) {
+      message.error(docError);
+    }
+  }, [docError, message]);
 
   const handlePrint = () => {
     if (iframeRef.current && iframeRef.current.contentWindow) {
@@ -85,43 +120,7 @@ export default function StatementPDFModal({
   };
 
   const handleDownload = async () => {
-    setIsDownloading(true);
-    try {
-      // Construir URL do endpoint de download (PDF binário)
-      const downloadParams = new URLSearchParams();
-      downloadParams.set('dateFrom', dateFrom);
-      downloadParams.set('dateTo', dateTo);
-      if (search) {
-        downloadParams.set('search', search);
-      }
-      const downloadUrl = `/api/wallet/statement/download?${downloadParams.toString()}`;
-
-      // Fazer download direto do PDF via fetch
-      const response = await fetch(downloadUrl);
-
-      if (!response.ok) {
-        throw new Error("Falha ao gerar PDF");
-      }
-
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `extrato-carteira-${dateFrom}-${dateTo}.pdf`;
-
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-
-      URL.revokeObjectURL(url);
-
-      message.success("Download do PDF iniciado!");
-    } catch (error) {
-      message.error("Erro ao baixar PDF. Tente novamente.");
-      console.error("Download error:", error);
-    } finally {
-      setIsDownloading(false);
-    }
+    await generate('statement', { dateFrom, dateTo, search });
   };
 
   const renderContent = () => {

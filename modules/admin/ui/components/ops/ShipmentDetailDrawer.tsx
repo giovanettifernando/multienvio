@@ -20,7 +20,7 @@ import {
   Divider,
   DatePicker,
 } from 'antd';
-import { inputNumberFormatterBRL, inputNumberParserBRL } from '@/shared/utils/format';
+import { inputNumberFormatterBRL, inputNumberParserBRL, formatBRL, formatCentsAsBRL } from '@/shared/utils/format';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   EditOutlined,
@@ -440,13 +440,13 @@ export default function ShipmentDetailDrawer({
                 <Descriptions.Item label="Serviço">{shipment.service || '—'}</Descriptions.Item>
                 <Descriptions.Item label="Peso">{shipment.weight.toFixed(2)} kg</Descriptions.Item>
                 <Descriptions.Item label="Valor Declarado">
-                  R$ {shipment.declaredValue.toFixed(2)}
+                  {formatBRL(shipment.declaredValue)}
                 </Descriptions.Item>
                 <Descriptions.Item label="Custo do Frete">
-                  {shipment.freightCost ? `R$ ${shipment.freightCost.toFixed(2)}` : '—'}
+                  {shipment.freightCost ? formatBRL(shipment.freightCost) : '—'}
                 </Descriptions.Item>
                 <Descriptions.Item label="Taxa de Coleta">
-                  {shipment.pickupFee ? `R$ ${shipment.pickupFee.toFixed(2)}` : '—'}
+                  {shipment.pickupFee ? formatBRL(shipment.pickupFee) : '—'}
                 </Descriptions.Item>
                 <Descriptions.Item label="Prazo Estimado">
                   {shipment.estimatedDays ? `${shipment.estimatedDays} dias` : '—'}
@@ -723,7 +723,7 @@ export default function ShipmentDetailDrawer({
                   <Tag>{shipment.label.status}</Tag>
                 </Descriptions.Item>
                 <Descriptions.Item label="Preço">
-                  R$ {(shipment.label.priceCents / 100).toFixed(2)}
+                  {formatCentsAsBRL(shipment.label.priceCents)}
                 </Descriptions.Item>
                 <Descriptions.Item label="Código de Rastreio">
                   {shipment.label.trackingCode || '—'}
