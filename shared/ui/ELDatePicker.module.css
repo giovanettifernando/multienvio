@@ -58,15 +58,15 @@
   }
 }
 
-/* Popup do calendário */
-:global(.ant-picker-dropdown) {
+/* Popup do calendário (portaled) */
+.popup {
   font-family: inherit;
 }
 
-:global(.ant-picker-dropdown .ant-picker-cell-selected .ant-picker-cell-inner) {
+.popup :global(.ant-picker-cell-selected .ant-picker-cell-inner) {
   background: var(--el-color-primary);
 }
 
-:global(.ant-picker-dropdown .ant-picker-today-btn) {
+.popup :global(.ant-picker-today-btn) {
   color: var(--el-color-primary);
 }

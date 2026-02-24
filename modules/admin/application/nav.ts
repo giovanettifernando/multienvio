@@ -70,6 +70,18 @@ export const ADMIN_NAV: AdminNavItem[] = [
         href: "/admin/correios",
         permissions: ["INTEGRACOES"],
       },
+      {
+        key: "jt",
+        label: "J&T Express",
+        href: "/admin/jt",
+        permissions: ["INTEGRACOES"],
+      },
+      {
+        key: "loggi",
+        label: "Loggi",
+        href: "/admin/loggi",
+        permissions: ["INTEGRACOES"],
+      },
     ],
   },
   {

@@ -1,0 +1,77 @@
+{
+   "customerCode":"J0086024890", // Código do cliente (TMS)
+   "digest":"Ff7zH26YZH/5mIXbVbfywA==", // Assinatura do bizContent
+   "txlogisticId":"12879431", // Pedido interno e/ou código da etiqueta do cliente
+   "expressType":"EZ", // Por padrão, deve ser informado ‘EZ’ e está atrelada à tabela de preços
+   "orderType":"2", // Por padrão, informar a opção ‘2’ e está atrelado ao modelo de cobrança mensal
+   "serviceType":"02", // Por padrão, informar a opção ‘02’ e está atrelado ao modelo de operação que é atendido
+   "deliveryType":"03", // Por padrão, informar a opção ‘03’ e está atrelado ao modelo de entrega
+   "sender":{
+      "name":"Teste de Homologação", // Nome e/ou Razão Social da empresa (emissor)
+      "company":"Homologação", // Nome da empresa (emissor)
+      "postCode":"88104765", // CEP do emissor
+      "mailBox":"site@teste.com.br", // e-mail da empresa
+      "taxNumber":"20972566000192", // CNPJ do emissor
+      "mobile":"11000000000", // Celular do emissor
+      "phone":"11000000000", // Telefone de contato do emissor
+      "prov":"SP", // Estado do emissor
+      "city":"SAO PAULO", // Cidade do emissor
+      "street":"RUA TESTE", // Rua do emissor
+      "streetNumber":"12", // Número do logradouro (emissor)
+      "address":"RUA TESTE, 12 - SALA 1", // Complemento (caso não haja a informação, preencher com 'SEM COMPLEMENTO')
+      "areaCode":"11", // Código da área
+      "ieNumber":"131740832976", // Inscrição estadual do emissor
+      "area":"CENTRO" // Bairro
+   },
+   "receiver":{
+      "name":"HOMOLOGAÇÃO TESTE", // Nome e/ou Razão Social da empresa (destinatário)
+      "postCode":"86010010", // CEP do destinatário
+      "mailBox":"homolog@teste.com.br", // e-mail do destinatário
+      "taxNumber":"12956025040", // CPF ou CNPJ do destinatário
+      "mobile":"11111111111", // Celular do destinatário
+      "phone":"11111111111", // Telefone do destinatário
+      "prov":"PR", // Estado do destinatário
+      "city":"LONDRINA", // Cidade do destinatário
+      "street":"PRAÇA GABRIEL MARTINS", // Rua do destinatário
+      "streetNumber":"12", // Número do logradouro (destinatário)
+      "address":"PRAÇA GABRIEL MARTINS, 12, ", // Complemento (caso não haja a informação, preencher com 'SEM COMPLEMENTO')
+      "areaCode":"41", // Código da área
+      "ieNumber":"0000000", // Inscrição estadual (caso seja uma pessoa física, informar 'ISENTO')
+      "area":"CENTRO" // Bairro do destinatário
+   },
+   "translate":{
+      "name":"Teste de Homologação", // Nome e/ou Razão Social da empresa
+      "company":"Homologação", // Nome da empresa
+      "postCode":"88104765", // CEP
+      "mailBox":"site@teste.com.br", // e-mail
+      "taxNumber":"20972566000192", // CNPJ
+      "mobile":"11000000000", // Celular
+      "phone":"11000000000", // Telefone de contato
+      "prov":"SP", // Estado
+      "city":"SAO PAULO", // Cidade
+      "street":"RUA TESTE", // Rua
+      "streetNumber":"12", // Número do logradouro
+      "address":"RUA TESTE, 12 - SALA 1", // Complemento (caso não haja a informação, preencher com 'SEM COMPLEMENTO')
+      "areaCode":"11", // Código da área
+      "ieNumber":"131740832976", // Inscrição estadual
+      "area":"CENTRO" // Bairro
+   },
+   "goodsType":"bm000008",
+   "weight":"3.53", // Peso bruto (com o separador de casas decimais com ponto '.')
+   "totalQuantity":1, // Quantidade de volumes
+   "items":[
+      {
+         "itemType":"bm000008", /// Tipo do item
+         "itemName":"TESTE PRODUTO 1", // Nome do item
+         "number":"1", // Quantidade de itens
+         "desc":"PRODUTO TESTE 1", // Descrição do item
+         "itemNcm":"85176234" // NCM do item
+      }
+   ],
+   "invoiceNumber":"345134", // Número da NF
+   "invoiceSerialNumber":"11", // Série da NF
+   "invoiceMoney":"5324.48", // Valor da NF (com o separador de casas decimais com ponto '.')
+   "taxCode":"0012208400862", // Número do pedido interno do cliente
+   "invoiceAccessKey":"42221083064471000597550110003451341497166847", // Chave da NF
+   "invoiceIssueDate":"2023-07-19 13:13:12" // Data de emissão da NF
+}

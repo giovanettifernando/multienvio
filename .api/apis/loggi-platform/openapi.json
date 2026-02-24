@@ -1,0 +1,480 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Authentication",
+    "version": "v1",
+    "description": "Autenticação OAuth2 para acesso às APIs da Loggi."
+  },
+  "servers": [
+    {
+      "url": "https://stg.api.loggi.com"
+    },
+    {
+      "url": "https://api.loggi.com"
+    }
+  ],
+  "paths": {
+    "/oauth2/token": {
+      "post": {
+        "summary": "Autenticação V1",
+        "description": "Solicitação e atualização de token. O campo **idToken** deve ser informado no **Header** _Authorization_ de cada requisição às APIs da Loggi.\n\n### ATENÇÃO!</h2>\n<div class=\"warning-docs\">\n  ⚠️ <em>  Esta api de autenticação está depreciada, por favor utilize a <a href=\"/reference/authenticatev2\">versão 2</a> da api de autenticação.</em>\n</div>",
+        "operationId": "AuthenticateV1",
+        "responses": {
+          "200": {
+            "description": "Criação ou atualização de token com sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Objeto que representa os dados de autenticação OAuth2",
+                  "properties": {
+                    "idToken": {
+                      "type": "string",
+                      "description": "Token de autenticação. Deve ser informado no campo Auhtorization de cada endpoint.",
+                      "example": "eyJraWQiOiJIWTlqQk43Y2pJajYzN2RobUZ6"
+                    },
+                    "expiresIn": {
+                      "type": "string",
+                      "description": "Tempo de expiração do token em segundos.",
+                      "example": "300"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Mensagem do cliente não segue a especificação",
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": 3,
+                  "message": "Mensagem do cliente não segue a especificação",
+                  "details": []
+                },
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "format": "int32",
+                      "description": "Código numérico referente à falha.\n\nCANCELLED = 1\n\nUNKNOWN = 2\n\nINVALID_ARGUMENT = 3\n\nDEADLINE_EXCEEDED = 4\n\nNOT_FOUND = 5\n\nALREADY_EXISTS = 6\n\nPERMISSION_DENIED = 7\n\nRESOURCE_EXHAUSTED = 8\n\nFAILED_PRECONDITION = 9\n\nABORTED = 10\n\nOUT_OF_RANGE = 11\n\nUNIMPLEMENTED = 12\n\nINTERNAL = 13\n\nUNAVAILABLE = 14\n\nDATA_LOSS = 15\n\nUNAUTHENTICATED = 16",
+                      "example": 14
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Texto pequeno informativo sobre a falha.",
+                      "example": "Requisição com credenciais inválidas."
+                    },
+                    "details": {
+                      "type": "array",
+                      "description": "Detalhes sobre a falha. Nesta versão da API, ainda não está sendo retornado, mas deve ser considerado um array de objetos de tipos distintos.",
+                      "items": {},
+                      "example": []
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Falha de autenticação",
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": 16,
+                  "message": "Falha de autenticação",
+                  "details": []
+                },
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "format": "int32",
+                      "description": "Código numérico referente à falha.\n\nCANCELLED = 1\n\nUNKNOWN = 2\n\nINVALID_ARGUMENT = 3\n\nDEADLINE_EXCEEDED = 4\n\nNOT_FOUND = 5\n\nALREADY_EXISTS = 6\n\nPERMISSION_DENIED = 7\n\nRESOURCE_EXHAUSTED = 8\n\nFAILED_PRECONDITION = 9\n\nABORTED = 10\n\nOUT_OF_RANGE = 11\n\nUNIMPLEMENTED = 12\n\nINTERNAL = 13\n\nUNAVAILABLE = 14\n\nDATA_LOSS = 15\n\nUNAUTHENTICATED = 16",
+                      "example": 14
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Texto pequeno informativo sobre a falha.",
+                      "example": "Requisição com credenciais inválidas."
+                    },
+                    "details": {
+                      "type": "array",
+                      "description": "Detalhes sobre a falha. Nesta versão da API, ainda não está sendo retornado, mas deve ser considerado um array de objetos de tipos distintos.",
+                      "items": {},
+                      "example": []
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sem autorização para acessar o serviço",
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": 7,
+                  "message": "Falha de autorização",
+                  "details": []
+                },
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "format": "int32",
+                      "description": "Código numérico referente à falha.\n\nCANCELLED = 1\n\nUNKNOWN = 2\n\nINVALID_ARGUMENT = 3\n\nDEADLINE_EXCEEDED = 4\n\nNOT_FOUND = 5\n\nALREADY_EXISTS = 6\n\nPERMISSION_DENIED = 7\n\nRESOURCE_EXHAUSTED = 8\n\nFAILED_PRECONDITION = 9\n\nABORTED = 10\n\nOUT_OF_RANGE = 11\n\nUNIMPLEMENTED = 12\n\nINTERNAL = 13\n\nUNAVAILABLE = 14\n\nDATA_LOSS = 15\n\nUNAUTHENTICATED = 16",
+                      "example": 14
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Texto pequeno informativo sobre a falha.",
+                      "example": "Requisição com credenciais inválidas."
+                    },
+                    "details": {
+                      "type": "array",
+                      "description": "Detalhes sobre a falha. Nesta versão da API, ainda não está sendo retornado, mas deve ser considerado um array de objetos de tipos distintos.",
+                      "items": {},
+                      "example": []
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Requisições massivas bloqueadas",
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": 8,
+                  "message": "Requisições massivas bloqueadas",
+                  "details": []
+                },
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "format": "int32",
+                      "description": "Código numérico referente à falha.\n\nCANCELLED = 1\n\nUNKNOWN = 2\n\nINVALID_ARGUMENT = 3\n\nDEADLINE_EXCEEDED = 4\n\nNOT_FOUND = 5\n\nALREADY_EXISTS = 6\n\nPERMISSION_DENIED = 7\n\nRESOURCE_EXHAUSTED = 8\n\nFAILED_PRECONDITION = 9\n\nABORTED = 10\n\nOUT_OF_RANGE = 11\n\nUNIMPLEMENTED = 12\n\nINTERNAL = 13\n\nUNAVAILABLE = 14\n\nDATA_LOSS = 15\n\nUNAUTHENTICATED = 16",
+                      "example": 14
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Texto pequeno informativo sobre a falha.",
+                      "example": "Requisição com credenciais inválidas."
+                    },
+                    "details": {
+                      "type": "array",
+                      "description": "Detalhes sobre a falha. Nesta versão da API, ainda não está sendo retornado, mas deve ser considerado um array de objetos de tipos distintos.",
+                      "items": {},
+                      "example": []
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erro interno",
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": 13,
+                  "message": "Erro interno",
+                  "details": []
+                },
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "format": "int32",
+                      "description": "Código numérico referente à falha.\n\nCANCELLED = 1\n\nUNKNOWN = 2\n\nINVALID_ARGUMENT = 3\n\nDEADLINE_EXCEEDED = 4\n\nNOT_FOUND = 5\n\nALREADY_EXISTS = 6\n\nPERMISSION_DENIED = 7\n\nRESOURCE_EXHAUSTED = 8\n\nFAILED_PRECONDITION = 9\n\nABORTED = 10\n\nOUT_OF_RANGE = 11\n\nUNIMPLEMENTED = 12\n\nINTERNAL = 13\n\nUNAVAILABLE = 14\n\nDATA_LOSS = 15\n\nUNAUTHENTICATED = 16",
+                      "example": 14
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Texto pequeno informativo sobre a falha.",
+                      "example": "Requisição com credenciais inválidas."
+                    },
+                    "details": {
+                      "type": "array",
+                      "description": "Detalhes sobre a falha. Nesta versão da API, ainda não está sendo retornado, mas deve ser considerado um array de objetos de tipos distintos.",
+                      "items": {},
+                      "example": []
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Serviço temporariamente indisponível",
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": 14,
+                  "message": "Serviço temporariamente indisponível",
+                  "details": []
+                },
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "format": "int32",
+                      "description": "Código numérico referente à falha.\n\nCANCELLED = 1\n\nUNKNOWN = 2\n\nINVALID_ARGUMENT = 3\n\nDEADLINE_EXCEEDED = 4\n\nNOT_FOUND = 5\n\nALREADY_EXISTS = 6\n\nPERMISSION_DENIED = 7\n\nRESOURCE_EXHAUSTED = 8\n\nFAILED_PRECONDITION = 9\n\nABORTED = 10\n\nOUT_OF_RANGE = 11\n\nUNIMPLEMENTED = 12\n\nINTERNAL = 13\n\nUNAVAILABLE = 14\n\nDATA_LOSS = 15\n\nUNAUTHENTICATED = 16",
+                      "example": 14
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Texto pequeno informativo sobre a falha.",
+                      "example": "Requisição com credenciais inválidas."
+                    },
+                    "details": {
+                      "type": "array",
+                      "description": "Detalhes sobre a falha. Nesta versão da API, ainda não está sendo retornado, mas deve ser considerado um array de objetos de tipos distintos.",
+                      "items": {},
+                      "example": []
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "client_id",
+                  "client_secret"
+                ],
+                "properties": {
+                  "client_id": {
+                    "type": "string",
+                    "description": "Id do cliente cadastrado na Loggi.",
+                    "example": "loggi_cliente_xpto"
+                  },
+                  "client_secret": {
+                    "type": "string",
+                    "description": "Chave secreta gerada pela Loggi.",
+                    "example": "PaSsWoRd!St@ong&R"
+                  }
+                },
+                "description": "Objeto que representa os parâmetros para obtenção de um Token de acesso."
+              }
+            }
+          }
+        },
+        "tags": [
+          "AuthAPI"
+        ]
+      }
+    },
+    "/v2/oauth2/token": {
+      "post": {
+        "tags": [
+          "AuthAPI"
+        ],
+        "summary": "Autenticação V2",
+        "description": "Solicitação de token para as APIs da Loggi.",
+        "operationId": "AuthenticateV2",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "client_id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "title": "Client Id"
+                  },
+                  "client_secret": {
+                    "type": "string",
+                    "minLength": 1,
+                    "title": "Client Secret"
+                  }
+                },
+                "type": "object",
+                "required": [
+                  "client_id",
+                  "client_secret"
+                ],
+                "title": "ServiceAccountTokenRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Return the JWT Token for the service account",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "idToken": {
+                      "type": "string",
+                      "title": "Idtoken"
+                    },
+                    "expiresIn": {
+                      "type": "string",
+                      "title": "Expiresin"
+                    }
+                  },
+                  "type": "object",
+                  "required": [
+                    "idToken",
+                    "expiresIn"
+                  ],
+                  "title": "ServiceAccountTokenResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "description": "Uma referência de URI que identifica o tipo de problema."
+                    },
+                    "title": {
+                      "type": "string",
+                      "description": "Um resumo curto e legível para humanos do tipo de problema."
+                    },
+                    "status": {
+                      "type": "integer",
+                      "description": "O código de status HTTP gerado."
+                    },
+                    "detail": {
+                      "type": "string",
+                      "description": "Uma explicação legível para humanos específica para esta ocorrência do problema."
+                    },
+                    "instance": {
+                      "type": "string",
+                      "description": "Uma referência de URI que identifica a ocorrência específica do problema."
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "OAuth2": {
+        "type": "oauth2",
+        "description": "Autenticação OAuth 2.0 para clientes da API.",
+        "flows": {
+          "clientCredentials": {
+            "tokenUrl": "https://api.loggi.com/v2/oauth2/token",
+            "scopes": {}
+          }
+        }
+      }
+    },
+    "schemas": {
+      "ErrorMessage": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Código numérico referente à falha.\n\nCANCELLED = 1\n\nUNKNOWN = 2\n\nINVALID_ARGUMENT = 3\n\nDEADLINE_EXCEEDED = 4\n\nNOT_FOUND = 5\n\nALREADY_EXISTS = 6\n\nPERMISSION_DENIED = 7\n\nRESOURCE_EXHAUSTED = 8\n\nFAILED_PRECONDITION = 9\n\nABORTED = 10\n\nOUT_OF_RANGE = 11\n\nUNIMPLEMENTED = 12\n\nINTERNAL = 13\n\nUNAVAILABLE = 14\n\nDATA_LOSS = 15\n\nUNAUTHENTICATED = 16",
+            "example": 14
+          },
+          "message": {
+            "type": "string",
+            "description": "Texto pequeno informativo sobre a falha.",
+            "example": "Requisição com credenciais inválidas."
+          },
+          "details": {
+            "type": "array",
+            "description": "Detalhes sobre a falha. Nesta versão da API, ainda não está sendo retornado, mas deve ser considerado um array de objetos de tipos distintos.",
+            "items": {},
+            "example": []
+          }
+        }
+      },
+      "ServiceAccountTokenRequest": {
+        "properties": {
+          "client_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Client Id"
+          },
+          "client_secret": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Client Secret"
+          }
+        },
+        "type": "object",
+        "required": [
+          "client_id",
+          "client_secret"
+        ],
+        "title": "ServiceAccountTokenRequest"
+      },
+      "ServiceAccountTokenResponse": {
+        "properties": {
+          "idToken": {
+            "type": "string",
+            "title": "Idtoken"
+          },
+          "expiresIn": {
+            "type": "string",
+            "title": "Expiresin"
+          }
+        },
+        "type": "object",
+        "required": [
+          "idToken",
+          "expiresIn"
+        ],
+        "title": "ServiceAccountTokenResponse"
+      },
+      "Problem": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "description": "Uma referência de URI que identifica o tipo de problema."
+          },
+          "title": {
+            "type": "string",
+            "description": "Um resumo curto e legível para humanos do tipo de problema."
+          },
+          "status": {
+            "type": "integer",
+            "description": "O código de status HTTP gerado."
+          },
+          "detail": {
+            "type": "string",
+            "description": "Uma explicação legível para humanos específica para esta ocorrência do problema."
+          },
+          "instance": {
+            "type": "string",
+            "description": "Uma referência de URI que identifica a ocorrência específica do problema."
+          }
+        },
+        "type": "object"
+      }
+    }
+  }
+}

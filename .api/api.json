@@ -1,0 +1,11 @@
+{
+  "version": "1.0",
+  "apis": [
+    {
+      "identifier": "loggi-platform",
+      "source": "@loggi-platform/v1.9#7py423v4m5lbht6s",
+      "integrity": "sha512-7wa9yjlN8QvSInFhVvGtlI6Rgkk1cn8RxPBFXtSTxvvUIIQbdwMoSHU4AWe/CGX2ITtfVHaKDguPT1Ts06TFDA==",
+      "installerVersion": "6.1.3"
+    }
+  ]
+}

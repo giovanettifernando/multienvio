@@ -190,7 +190,77 @@ async function calculateShippingOptions(
     });
   }
 
-  // Futuras transportadoras seriam adicionadas aqui...
+  // J&T Express
+  const jtEligibility = eligibility.carriers.find(
+    (c) => c.carrierId === 'jt'
+  );
+
+  if (jtEligibility?.isEligible) {
+    const { isJTAvailableAsync, quoteFromJT } = await import(
+      '@/platform/integrations/jt'
+    );
+    const isAvailable = await isJTAvailableAsync();
+
+    if (isAvailable) {
+      try {
+        const jtResult = await quoteFromJT(request);
+
+        if (jtResult.results.length > 0) {
+          results.push(...jtResult.results);
+        }
+
+        console.info(`[QUOTE][${requestId}] J&T quote completed`, {
+          results: jtResult.results.length,
+        });
+      } catch (error) {
+        console.error(`[QUOTE][${requestId}] J&T quote failed`, {
+          error: error instanceof Error ? error.message : 'Unknown error',
+        });
+      }
+    } else {
+      console.warn(`[QUOTE][${requestId}] J&T not configured`);
+    }
+  } else if (jtEligibility) {
+    console.info(`[QUOTE][${requestId}] J&T not eligible`, {
+      reasons: jtEligibility.overallReasons || [],
+    });
+  }
+
+  // Loggi
+  const loggiEligibility = eligibility.carriers.find(
+    (c) => c.carrierId === 'loggi'
+  );
+
+  if (loggiEligibility?.isEligible) {
+    const { isLoggiAvailableAsync, quoteFromLoggi } = await import(
+      '@/platform/integrations/loggi'
+    );
+    const isAvailable = await isLoggiAvailableAsync();
+
+    if (isAvailable) {
+      try {
+        const loggiResult = await quoteFromLoggi(request);
+
+        if (loggiResult.results.length > 0) {
+          results.push(...loggiResult.results);
+        }
+
+        console.info(`[QUOTE][${requestId}] Loggi quote completed`, {
+          results: loggiResult.results.length,
+        });
+      } catch (error) {
+        console.error(`[QUOTE][${requestId}] Loggi quote failed`, {
+          error: error instanceof Error ? error.message : 'Unknown error',
+        });
+      }
+    } else {
+      console.warn(`[QUOTE][${requestId}] Loggi not configured`);
+    }
+  } else if (loggiEligibility) {
+    console.info(`[QUOTE][${requestId}] Loggi not eligible`, {
+      reasons: loggiEligibility.overallReasons || [],
+    });
+  }
 
   const duration = Date.now() - startTime;
   console.info(`[QUOTE][${requestId}] Quote completed (${duration}ms)`, {
@@ -222,11 +292,13 @@ export async function createQuote(
   const shippingResult = await calculateShippingOptions(request);
 
   // Apply carrier commission to all shipping options
-  // Por enquanto, apenas Correios esta integrado (slug: "correios")
   const optionsWithCommission = await Promise.all(
     shippingResult.results.map(async (option) => {
-      // Determinar o carrierSlug baseado no nome da transportadora
-      const carrierSlug = option.carrier.toLowerCase().includes('correio') ? 'correios' : 'correios';
+      // Determinar o carrierSlug baseado no ID da opção
+      const carrierSlug = option.id.startsWith('loggi-') ? 'loggi'
+        : option.id.startsWith('jt-') ? 'jt'
+        : option.carrier.toLowerCase().includes('correio') ? 'correios'
+        : 'correios';
       const { finalPrice, commissionAmount } = await applyShippingCommission(option.preco, carrierSlug);
       return {
         ...option,

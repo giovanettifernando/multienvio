@@ -1,0 +1,183 @@
+using Newtonsoft.Json;
+using RestSharp;
+using System.Net;
+using System.Security.Cryptography;
+using System.Text;
+
+public class Program
+{
+    #region | Constantes
+
+    //Inserir credenciais 
+    public const string privateKey = "a0a1047cce70493c9d5d29704f05d0d9";
+    public const string apiAccount = "292508153084379141";
+    public const string urlCreateOrder = "https://demoopenapi.jtjms-br.com/webopenplatformapi/api/order/addOrder";
+    public const string CustomerCode = "[INSERIR SEU CUSTOMER CODE]";
+    public const string Pwd = "[INSERIR SUA SENHA]";
+
+    #endregion
+
+    public class Item
+    {
+        public string itemType { get; set; }
+        public string itemName { get; set; }
+        public string ncm { get; set; }
+        public string desc { get; set; }
+    }
+
+    public static void Main()
+    {
+        string businessSignature = BodySignature();
+        SendRequest(businessSignature);
+    }
+
+
+    public static string BodySignature()
+    {
+        string pwdHashMd5 = GerarHashMd5(Pwd + "jadada236t2").ToUpper();
+
+        string bodyHash = GerarHashMd5(CustomerCode + pwdHashMd5 + privateKey).ToUpper();
+        string businessSignature = System.Convert.ToBase64String(FromHex(bodyHash));
+        Console.WriteLine("Business parameter signature " + businessSignature);
+        return businessSignature;
+    }
+
+    public static string HeaderSignature(object payload)
+    {
+        string json = JsonConvert.SerializeObject(payload, Newtonsoft.Json.Formatting.None);
+        string headerHash = GerarHashMd5(json + privateKey);
+        string headerSignature = System.Convert.ToBase64String(FromHex(headerHash.ToUpper()));
+        Console.WriteLine("Headers signature " + headerSignature);
+        return headerSignature;
+    }
+
+    public static void SendRequest(string businessSignature)
+    {
+        #region | Payload
+        var payLoad = new
+        {
+            customerCode = CustomerCode,
+            digest = businessSignature,
+            txlogisticId = "Pedido123",
+            expressType = "EZ",
+            orderType = "2",
+            serviceType = "02",
+            deliveryType = "03",
+            sender = new
+            {
+                name = "EmnpresaTeste 123",
+                postCode = "03322000",
+                mailBox = "teste321@teste.com.br",
+                taxNumber = "27091613000138",
+                mobile = "11995558078",
+                phone = "1137818692",
+                prov = "SP",
+                city = "Sao Paulo",
+                street = "Rua Azevedo Soares",
+                streetNumber = "719",
+                address = "Rua Azevedo Soares 719, Vila Gomes Cardim, Sao Paulo - SP",
+                ieNumber = "818214598441",
+                area = "Vila Gomes Cardim"
+            },
+            receiver = new
+            {
+                name = "Tiago César Pereira",
+                postCode = "05223140",
+                mailBox = "tiago.cesar.pereira@teste.com.br",
+                taxNumber = "925.914.468-06",
+                mobile = "11995724172",
+                phone = "11995724172",
+                prov = "SP",
+                city = "Sao Paulo",
+                street = "Rua Líber",
+                streetNumber = "324",
+                address = "Rua Líber 324, Jardim Adelfiore, Sao Paulo - SP",
+                ieNumber = "isento",
+                area = "Jardim Adelfiore"
+            },
+            //Coleção de dados de coleta.
+            translate = new
+            {
+                name = "EmnpresaTeste 123",
+                postCode = "03322000",
+                mailBox = "teste321@teste.com.br",
+                taxNumber = "27091613000138",
+                mobile = "11995558078",
+                phone = "1137818692",
+                prov = "SP",
+                city = "Sao Paulo",
+                street = "Rua Azevedo Soares",
+                streetNumber = "719",
+                address = "Rua Azevedo Soares 719, Vila Gomes Cardim, Sao Paulo - SP",
+                ieNumber = "818214598441",
+                area = "Vila Gomes Cardim"
+            },
+            goodsType = "bm000006",
+            weight = "2",
+            totalQuantity = 2,
+            items = new List<Item>()
+            {
+                new Item () {itemType = "bm000006",itemName = "item teste 1",desc = "descricao do item 1", ncm = "40022099"},
+                new Item () {itemType = "bm000006",itemName = "456789",desc = "descricao do item 1", ncm = "40022099"}
+            },
+            invoiceNumber = "1234",
+            invoiceSerialNumber = "1",
+            invoiceMoney = "5916.09",
+            taxCode = "000123456",
+            invoiceAccessKey = "35211219112842112363550010000012341156065270",
+            invoiceIssueDate = "2023-03-20 00:13:12"
+        };
+        #endregion
+
+        string headerSignature = HeaderSignature(payLoad);
+
+        Dictionary<string, string> headers = new Dictionary<string, string>();
+        headers.Add("timestamp", "1565238848921");
+        headers.Add("apiAccount", apiAccount);
+        headers.Add("digest", headerSignature);
+        headers.Add("Content-Type", "application/x-www-form-urlencoded");
+
+        RestClient restClient = new RestClient(urlCreateOrder);
+        RestRequest request = new RestRequest();
+        headers.ToList().ForEach(x => request.AddHeader(x.Key, x.Value));
+        Dictionary<string, string> bodyRequest = new Dictionary<string, string>();
+        bodyRequest.Add("bizContent", JsonConvert.SerializeObject(payLoad, Formatting.None));
+        bodyRequest.ToList().ForEach(x => request.AddParameter(x.Key, x.Value));
+        request.Method = Method.Post;
+        RestResponse response = restClient.Execute(request);
+        if (response.Content == null)
+            throw new InvalidOperationException("Resposta vazia.");
+
+        HttpStatusCode[] httpStatuscode = new HttpStatusCode[] { HttpStatusCode.Accepted, HttpStatusCode.Created, HttpStatusCode.OK, HttpStatusCode.PartialContent };
+
+        if (!httpStatuscode.Contains(response.StatusCode))
+            throw new InvalidOperationException("Resposta inválida: Código: " + response.StatusCode + " objeto: " + response.Content);
+
+        var responseJMS = JsonConvert.DeserializeObject(response.Content);
+        Console.WriteLine("resposta da API: " + responseJMS);
+    }
+
+    public static string GerarHashMd5(string input)
+    {
+        MD5 md5Hash = MD5.Create();
+        byte[] data = md5Hash.ComputeHash(Encoding.UTF8.GetBytes(input));
+        StringBuilder sBuilder = new StringBuilder();
+        for (int i = 0; i < data.Length; i++)
+        {
+            sBuilder.Append(data[i].ToString("x2"));
+        }
+        return sBuilder.ToString();
+    }
+
+
+    public static byte[] FromHex(string hex)
+    {
+        hex = hex.Replace("-", "");
+        byte[] raw = new byte[hex.Length / 2];
+        for (int i = 0; i < raw.Length; i++)
+        {
+            raw[i] = Convert.ToByte(hex.Substring(i * 2, 2), 16);
+        }
+        return raw;
+    }
+}

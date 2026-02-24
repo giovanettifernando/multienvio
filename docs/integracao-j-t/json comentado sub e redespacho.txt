@@ -1,0 +1,72 @@
+{
+   "customerCode":"J0086024926",// Código do cliente (TMS)
+   "digest":"d\/bBxXAgQ\/I0exMKoN\/u4g==",// Assinatura do bizContent
+   "txlogisticId":"GURI1650901329BR", // Pedido interno e/ou código da etiqueta do cliente
+   "expressType":"EZ", // Por padrão, deve ser informado ‘EZ’ e está atrelada à tabela de preço
+   "orderType":"2", // Por padrão, informar a opção ‘2’ e está atrelado ao modelo de cobrança mensal
+   "serviceType":"02", // Por padrão, informar a opção ‘02’ e está atrelado ao modelo de operação que é atendido
+   "deliveryType":"03", // Por padrão, informar a opção ‘03’ e está atrelado ao modelo de entrega
+   "sender":{
+      "name":"teste teste teste", // Nome e/ou Razão Social da empresa (emissor)
+      "postCode":"84950-000",// CEP do emissor"
+      "taxNumber":"44258379000100", // CNPJ do emissor
+      "mobile":"4335283817", // Telefone do emissor
+      "phone":"4335283-817", // Celular do emisso
+      "prov":"PR", // Estado do emissor 
+      "city":"Wenceslau Braz", // Cidade do emissor
+      "street":"SIT SAO PEDRO", // LOGRADOURO do emissor
+      "streetNumber":"SN",// Número do logradouro (emissor)
+      "address":"SN", // Complemento (caso não haja a informação, preencher com 'SEM COMPLEMENTO')
+      "areaCode":"11",
+      "ieNumber":"9096577840", // Inscrição estadual DO EMISSOR
+      "area":"PATRIMONIO SAO MIGUEL" // Bairro
+   },
+   "receiver":{
+      "name":"VIGESIMO SETIMO", // Nome e/ou Razão Social da empresa (destinatário)
+      "postCode":"82515-000", // CEP do destinatário
+      "taxNumber":"10194500000165", // CPF ou CNPJ do destinatário
+      "mobile":"(41) 98805-9020", // Telefone do destinatário
+      "phone":"(41) 98805-9020", // Celular do destinatário
+      "prov":"PR",//Estado do Destinatário
+      "city":"Curitiba", // Cidade do destinatário
+      "street":"Avenida Prefeito Erasto Gaertner", // LOGRADOURO do destinatário
+      "streetNumber":"1874", // Número do logradouro (destinatário)
+      "address":", SETOR ALMOXARIFADO", // Complemento (caso não haja a informação, preencher com 'SEM COMPLEMENTO')
+      "ieNumber":"ISENTO", // Inscrição estadual do destinatário 
+      "area":"Bacacheri" // Bairro do destinatário
+   },
+   "translate":{ //  (Campo destinado a coleta / pode ser os mesmos dados do Sender( Obrigatório o preenchimento)
+      "name":"teste teste teste", // Nome e/ou Razão Social da empresa"
+      "postCode":"86480000", // CEP
+      "taxNumber":"42363946000162", // CNPJ
+      "phone":"(15) 998315494",  // Celular
+      "prov":"PR", PAULO", // Cidade 
+      "city":"CONSELHEIRO MAIRINCK", // Cidade
+      "street":"R VEREADOR XAVIER DA SILVA", // LOGRADOURO
+      "streetNumber":"27", // Número
+      "address":"CASA ", // Complemento (caso não haja a informação, preencher com 'SEM COMPLEMENTO')
+      "ieNumber":"9100679075", // Inscrição estadual
+      "area":"CENTRO" // Bairro
+   },
+   "goodsType":"bm000006", (classificação do produto)
+   "weight":"15", // Peso bruto (com o separador de casas decimais com ponto '.')"
+   "totalQuantity":1, // Quantidade de volumes (Caso seja um pedido multiplo, deve ser incluido a tag "ORDERINFORMATION"
+   "items":[
+      {
+         "itemType":"bm000008",  // Tipo do item
+         "itemName":"TESTE PRODUTO 1",   // Nome do item
+         "number":"1", // (Numero de itentificação de item)
+         "desc":"PRODUTO TESTE 1",  // DESCRIÇÃO DO ITEM
+         "itemNcm":"85176234"  // NCM do item
+      }
+   ],
+   "invoiceNumber":"259", // Número da NF
+   "invoiceSerialNumber":"1", // Série da NF
+   "invoiceMoney":"1489", // Valor da NF (com o separador de casas decimais com ponto '.')
+   "taxCode":"10700875000150", // Número do pedido interno do cliente
+   "documentCteKey":"41240142363946000162570010000000031625928122", // Número do CTE (nº de identificação, se for NFe não precisa desse campo)
+   "cteKey":"41240142363946000162570010000000031625928122", // numero da chave de CTe (tipo de arquivo Cte, se for NFe não precisa desse campo)
+   "invoiceType":"CTe ", // tipo do arquivo ( NF-e /Ct-e)
+   "invoiceAccessKey":"41240144258379000100550010000002591000002627", // Chave de NF-e
+   "invoiceIssueDate":"2022-10-26 16:13:12" // Data de emissão da NF/CT-e"
+}

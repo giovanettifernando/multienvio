@@ -33,6 +33,7 @@
   "dependencies": {
     "@ant-design/icons": "^6.1.0",
     "@ant-design/nextjs-registry": "^1.2.0",
+    "@api/loggi-platform": "file:.api/apis/loggi-platform",
     "@hookform/resolvers": "^5.2.2",
     "@mercadopago/sdk-react": "^1.0.6",
     "@prisma/adapter-pg": "^7.0.1",

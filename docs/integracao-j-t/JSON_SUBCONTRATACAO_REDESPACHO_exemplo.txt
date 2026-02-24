@@ -1,0 +1,72 @@
+{
+   "customerCode":"J0086024926",
+   "digest":"d\/bBxXAgQ\/I0exMKoN\/u4g==",
+   "txlogisticId":"GURI1653901329BR",
+   "expressType":"EZ", 
+   "orderType":"2", 
+   "serviceType":"02", 
+   "deliveryType":"03", 
+   "sender":{
+      "name":"LANCA PRODUTOS - COMERCIO E SERVICOS LTDA",
+      "postCode":"84950-000",
+      "taxNumber":"44258379000100",
+      "mobile":"4335283817",
+      "phone":"4335283-817",
+      "prov":"PR",
+      "city":"Wenceslau Braz",
+      "street":"SIT SAO PEDRO",
+      "streetNumber":"SN",
+      "address":"SIT SAO PEDRO SN",
+      "areaCode":"11",
+      "ieNumber":"9096577840",
+      "area":"PATRIMONIO SAO MIGUEL"
+   },
+   "receiver":{
+      "name":"VIGESIMO SETIMO BATALHAO LOGISTICO",
+      "postCode":"82515-000",
+      "taxNumber":"10194500000165",
+      "mobile":"(41) 98805-9020",
+      "phone":"(41) 98805-9020",
+      "prov":"PR",
+      "city":"Curitiba",
+      "street":"Avenida Prefeito Erasto Gaertner",
+      "streetNumber":"1874",
+      "address":"Avenida Prefeito Erasto Gaertner 1874, SETOR ALMOXARIFADO", 
+      "ieNumber":"ISENTO",
+      "area":"Bacacheri"
+   },
+   "translate":{
+      "name":"RONALDO RODRIGUES DA SILVA",
+      "postCode":"86480000",
+      "taxNumber":"42363946000162",
+      "phone":"(15) 998315494",
+      "prov":"PR",
+      "city":"CONSELHEIRO MAIRINCK",
+      "street":"R VEREADOR XAVIER DA SILVA",
+      "streetNumber":"27",
+      "address":"R VEREADOR XAVIER DA SILVA 27, CASA",
+      "ieNumber":"9100679075",
+      "area":"CENTRO"
+   },
+   "goodsType":"bm000006",
+   "weight":"15",
+   "totalQuantity":1,
+   "items":[
+      {
+         "itemType":"bm000008", 
+         "itemName":"TESTE PRODUTO 1", 
+         "number":"1", 
+         "desc":"PRODUTO TESTE 1", 
+         "itemNcm":"85176234" 
+      }
+   ],
+   "invoiceNumber":"259", 
+   "invoiceSerialNumber":"1", 
+   "invoiceMoney":"1489", 
+   "taxCode":"10700875000150", 
+   "documentCteKey":"41240142363946000162570010000000031625928122",
+   "cteKey":"41240142363946000162570010000000031625928122", 
+   "invoiceType":"CTe ",
+   "invoiceAccessKey":"41240144258379000100550010000002591000002627",
+   "invoiceIssueDate":"2022-10-26 16:13:12"
+}

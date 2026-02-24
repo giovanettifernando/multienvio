@@ -277,3 +277,19 @@ export const viaCepCircuitBreaker = new CircuitBreaker({
   successThreshold: 1,
   callTimeoutMs: 5000,
 });
+
+export const jtCircuitBreaker = new CircuitBreaker({
+  name: 'jt',
+  failureThreshold: 5,
+  resetTimeoutMs: 15000,
+  successThreshold: 1,
+  callTimeoutMs: 30000,
+});
+
+export const loggiCircuitBreaker = new CircuitBreaker({
+  name: 'loggi',
+  failureThreshold: 5,
+  resetTimeoutMs: 15000,
+  successThreshold: 1,
+  callTimeoutMs: 30000,
+});

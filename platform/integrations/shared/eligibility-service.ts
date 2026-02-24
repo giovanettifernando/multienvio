@@ -20,6 +20,8 @@ import type {
   QuoteEligibilityResult,
 } from './volume-eligibility';
 import { correiosVolumeValidator } from '../correios/correios-volume-validator';
+import { jtVolumeValidator } from '../jt/jt-volume-validator';
+import { loggiVolumeValidator } from '../loggi/loggi-volume-validator';
 
 // ============================================================================
 // Serviço de Elegibilidade
@@ -31,6 +33,8 @@ export class EligibilityService {
   constructor() {
     // Registrar validadores padrão
     this.registerValidator(correiosVolumeValidator);
+    this.registerValidator(jtVolumeValidator);
+    this.registerValidator(loggiVolumeValidator);
   }
 
   /**
