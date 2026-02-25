@@ -172,18 +172,6 @@ export async function safeRedisCommand<T>(
 }
 
 /**
- * Fecha a conexao Redis (para testes e shutdown)
- */
-export async function closeRedis(): Promise<void> {
-  if (state.redisClient) {
-    await state.redisClient.quit();
-    state.redisClient = null;
-    state.isConnected = false;
-    state.connectionError = null;
-  }
-}
-
-/**
  * Health check do Redis
  */
 export async function redisHealthCheck(): Promise<{

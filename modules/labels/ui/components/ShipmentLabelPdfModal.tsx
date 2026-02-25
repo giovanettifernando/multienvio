@@ -113,6 +113,15 @@ export function ShipmentLabelPdfModal({
     }
   }, [open, labelId, selectedVolume]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Etiqueta expirada: fechar modal e mostrar toast amigável
+  useEffect(() => {
+    if (error && error.startsWith("[LABEL_EXPIRED]")) {
+      const friendlyMessage = error.replace("[LABEL_EXPIRED]", "");
+      onClose();
+      message.warning(friendlyMessage, 6);
+    }
+  }, [error]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Limpar ao fechar
   useEffect(() => {
     if (!open) {
@@ -257,7 +266,7 @@ export function ShipmentLabelPdfModal({
               {status === "processing" && "Gerando PDF..."}
             </div>
           </div>
-        ) : error ? (
+        ) : error && !error.startsWith("[LABEL_EXPIRED]") ? (
           <div style={{ textAlign: "center", padding: 24 }}>
             <Typography.Text type="danger">{error}</Typography.Text>
             <br />

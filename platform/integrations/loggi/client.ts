@@ -187,26 +187,6 @@ export function invalidateLoggiConfigCache(): void {
   tokenCache = null;
 }
 
-/**
- * Retorna informações da configuração (para admin)
- */
-export async function getLoggiConfigInfo(): Promise<{
-  configured: boolean;
-  environment: string;
-  apiBase: string;
-  hasCredentials: boolean;
-}> {
-  const config = await getLoggiConfigAsync();
-  const validation = validateLoggiConfig(config);
-
-  return {
-    configured: validation.valid,
-    environment: config.environment,
-    apiBase: config.apiBase,
-    hasCredentials: !!config.clientId && !!config.clientSecret,
-  };
-}
-
 // ============================================================================
 // Token OAuth2
 // ============================================================================
@@ -304,6 +284,22 @@ export interface LoggiFetchOptions {
   timeout?: number;
   /** HTTP method (default: POST) */
   method?: 'GET' | 'POST' | 'PATCH';
+  /** Pular circuit breaker (útil para operações que não devem afetar o CB principal) */
+  skipCircuitBreaker?: boolean;
+}
+
+/**
+ * Reseta o circuit breaker da Loggi (útil para recuperação manual)
+ */
+export function resetLoggiCircuitBreaker(): void {
+  loggiCircuitBreaker.reset();
+}
+
+/**
+ * Retorna o estado atual do circuit breaker da Loggi
+ */
+export function getLoggiCircuitBreakerState(): string {
+  return loggiCircuitBreaker.getState();
 }
 
 /**
@@ -314,6 +310,11 @@ export async function loggiFetch<T = unknown>(
   body?: Record<string, unknown> | null,
   options: LoggiFetchOptions = {}
 ): Promise<T> {
+  // Se skipCircuitBreaker, chamar diretamente sem proteção do CB
+  if (options.skipCircuitBreaker) {
+    return await loggiFetchInternal<T>(endpoint, body, options);
+  }
+
   try {
     return await loggiCircuitBreaker.execute(async () => {
       return await loggiFetchInternal<T>(endpoint, body, options);
@@ -355,10 +356,13 @@ async function loggiFetchInternal<T = unknown>(
   // Obter token
   const token = await getLoggiToken(config);
 
+  const bodyStr = body ? JSON.stringify(body) : '';
   console.log('[LOGGI_CLIENT] Request:', {
     url,
     method,
     companyId: config.companyId,
+    bodyLength: bodyStr.length,
+    body: bodyStr.length > 2000 ? bodyStr.substring(0, 2000) + '...' : bodyStr,
   });
 
   const controller = new AbortController();
@@ -398,10 +402,12 @@ async function loggiFetchInternal<T = unknown>(
 
       const errorMsg = errorData?.message || `HTTP ${response.status}`;
       const errorCode = errorData?.code || response.status;
+      const errorDetails = errorData?.details;
 
       console.error('[LOGGI_CLIENT] API error:', {
         code: errorCode,
         msg: errorMsg,
+        details: errorDetails,
         url,
       });
 
@@ -411,7 +417,7 @@ async function loggiFetchInternal<T = unknown>(
         throw new LoggiAuthError(errorMsg);
       }
 
-      throw new LoggiApiError(errorCode, errorMsg);
+      throw new LoggiApiError(errorCode, errorMsg, errorDetails);
     }
 
     const data = await response.json() as T;
@@ -484,9 +490,3 @@ export async function testLoggiAuth(): Promise<LoggiAuthTestResult> {
   }
 }
 
-/**
- * Reseta o circuit breaker da Loggi
- */
-export function resetLoggiCircuitBreaker(): void {
-  loggiCircuitBreaker.reset();
-}

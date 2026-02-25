@@ -256,19 +256,3 @@ export function isValidTrackingCode(codigo: string): boolean {
   return regex.test(codigo.trim().toUpperCase());
 }
 
-/**
- * Extrai o país de origem do código de rastreio
- */
-export function getTrackingCountry(codigo: string): string {
-  if (!isValidTrackingCode(codigo)) {
-    return '';
-  }
-  return codigo.trim().toUpperCase().slice(-2);
-}
-
-/**
- * Verifica se é um código de rastreio brasileiro
- */
-export function isBrazilianTrackingCode(codigo: string): boolean {
-  return getTrackingCountry(codigo) === 'BR';
-}

@@ -89,24 +89,6 @@ export function buildPattern(type: KeyType, ...parts: (string | number)[]): stri
   return buildKey(type, ...parts);
 }
 
-/**
- * Extrai o tipo e partes de uma chave (para debugging)
- */
-export function parseKey(key: string): { env: string; type: string; parts: string[] } | null {
-  const segments = key.split(':');
-  if (segments.length < 2) return null;
-
-  const [env, type, ...parts] = segments;
-  return { env, type, parts };
-}
-
-/**
- * Verifica se uma chave pertence ao environment atual
- */
-export function isCurrentEnvKey(key: string): boolean {
-  return key.startsWith(`${getPrefix()}:`);
-}
-
 // ============================================================================
 // KEY BUILDERS ESPECÍFICOS (para retrocompatibilidade e type-safety)
 // ============================================================================
@@ -177,7 +159,3 @@ export const Keys = {
   },
 } as const;
 
-// Export o prefixo atual para debugging
-export function getCurrentEnvPrefix(): string {
-  return getPrefix();
-}

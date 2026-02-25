@@ -43,6 +43,7 @@ const STATUS_OPTIONS: Array<ShipmentStatus | "Todos"> = [
   "Postado",
   "Em trânsito",
   "Em rota de entrega",
+  "Problema na entrega",
   "Entregue",
   "Cancelado",
   "Devolvido",
@@ -54,6 +55,7 @@ const STATUS_VARIANTS: Record<ShipmentStatus, StatusVariant> = {
   Postado: "processing",
   "Em trânsito": "processing",
   "Em rota de entrega": "warning",
+  "Problema na entrega": "danger",
   Entregue: "success",
   Cancelado: "danger",
   Devolvido: "warning",
@@ -269,8 +271,8 @@ export default function ShipmentsClient() {
         sorter: (a, b) => {
           const statusOrder: Record<ShipmentStatus, number> = {
             "Aguardando coleta": 1, "Aguardando postagem": 2, "Postado": 3,
-            "Em trânsito": 4, "Em rota de entrega": 5, "Entregue": 6,
-            "Cancelado": 7, "Devolvido": 8,
+            "Em trânsito": 4, "Em rota de entrega": 5, "Problema na entrega": 6,
+            "Entregue": 7, "Cancelado": 8, "Devolvido": 9,
           };
           return (statusOrder[a.status] || 0) - (statusOrder[b.status] || 0);
         },

@@ -197,7 +197,7 @@ export function DataTable<T extends object>({
                   showTotal: pagination?.showTotal,
                 }
           }
-          scroll={{ x: scrollX, y: scrollY }}
+          scroll={scrollX || scrollY ? { x: scrollX, y: scrollY } : undefined}
           expandable={expandable}
           locale={
             locale ?? {

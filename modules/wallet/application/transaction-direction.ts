@@ -53,13 +53,6 @@ export function getTransactionTypeLabel(type: WalletTxType): string {
 }
 
 /**
- * Obter cor para tipo de transação (Ant Design colors)
- */
-export function getTransactionColor(direction: TransactionDirection): string {
-  return direction === 'credit' ? 'success' : 'error';
-}
-
-/**
  * Formatar valor com sinal (+/-)
  */
 export function formatTransactionAmount(

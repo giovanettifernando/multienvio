@@ -112,8 +112,8 @@ const QUEUE_CONFIGS: Record<QueueName, QueueConfig> = {
 
   [QUEUE_NAMES.LABEL_GENERATE]: {
     defaultJobOptions: {
-      attempts: 3,
-      backoff: { type: 'exponential', delay: 15_000 },
+      attempts: 6,
+      backoff: { type: 'exponential', delay: 30_000 }, // 30s, 60s, 120s, 240s, 480s → ~15min total
       removeOnComplete: { age: 86_400, count: 2000 },
       removeOnFail: false,
     },

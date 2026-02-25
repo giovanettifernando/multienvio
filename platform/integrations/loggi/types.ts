@@ -281,12 +281,15 @@ export interface LoggiTrackingResponse {
 // ============================================================================
 
 export class LoggiApiError extends Error {
+  public details?: unknown[];
   constructor(
     public code: string | number,
     message: string,
+    details?: unknown[],
   ) {
     super(`Loggi API Error [${code}]: ${message}`);
     this.name = 'LoggiApiError';
+    this.details = details;
   }
 }
 

@@ -187,33 +187,6 @@ export async function updateCepManual(
 }
 
 /**
- * Remove a flag de override manual de um CEP
- *
- * Permite que o CEP seja re-geocodificado automaticamente no futuro.
- *
- * @param rawCep CEP a ter o override removido
- * @returns Registro atualizado
- */
-export async function removeCepManualOverride(rawCep: string) {
-  const cep = normalizeCep(rawCep);
-
-  console.log(`[CEP_LOCATION] Removendo override manual do CEP ${cep}`);
-
-  const updated = await prisma.cepLocation.update({
-    where: { cep },
-    data: {
-      manualOverride: false,
-      manualOverrideReason: null,
-      updatedAt: new Date(),
-    },
-  });
-
-  console.log(`[CEP_LOCATION] ✅ Override manual removido. CEP pode ser re-geocodificado.`);
-
-  return updated;
-}
-
-/**
  * Busca um CEP em cep_locations
  *
  * @param rawCep CEP a ser buscado

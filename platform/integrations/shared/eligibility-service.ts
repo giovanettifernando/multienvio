@@ -214,9 +214,3 @@ export function getEligibilityService(): EligibilityService {
   return eligibilityServiceInstance;
 }
 
-/**
- * Reseta a instância global (útil para testes)
- */
-export function resetEligibilityService(): void {
-  eligibilityServiceInstance = null;
-}

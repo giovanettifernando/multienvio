@@ -23,6 +23,8 @@ import { integrateWithCarrier } from '@/modules/shipments/application/carrier-in
 import { sendShipmentTrackingEmail } from '@/platform/email/mailer';
 import { logger } from '@/platform/logging/logger';
 import { isCorreiosCarrier } from '@/shared/utils/carrier';
+import { getQueue, QUEUE_NAMES, JOB_PRIORITY } from '@/platform/queue';
+import type { LabelGenerateJobPayload } from '@/platform/queue';
 
 // ============================================================================
 // TYPES
@@ -167,6 +169,9 @@ export async function createCartShipmentsWithPayment(
     paymentMethod,
     mercadoPagoPaymentId,
   } = input;
+
+  // Track non-Correios shipments for post-transaction LABEL_GENERATE enqueue
+  const nonCorreiosShipments: Array<{ shipmentId: string; carrier: string }> = [];
 
   // Validar que temos códigos para todos os itens
   if (reservedTrackingCodes.length !== itemIds.length) {
@@ -367,6 +372,7 @@ export async function createCartShipmentsWithPayment(
     const shipmentsData: Array<{
       shipmentId: string;
       trackingCode: string;
+      publicTrackingId: string | null;
       recipientEmail: string | null;
       recipientName: string;
       destinationCity: string;
@@ -392,11 +398,18 @@ export async function createCartShipmentsWithPayment(
       shipmentsData.push({
         shipmentId: shipmentResult.shipmentId,
         trackingCode,
+        publicTrackingId: shipmentResult.publicTrackingId,
         recipientEmail: shipmentResult.recipientEmail,
         recipientName: shipmentResult.recipientName,
         destinationCity: shipmentResult.destinationCity,
         destinationState: shipmentResult.destinationState,
       });
+
+      // Track non-Correios carriers for label generation
+      const selectedQuote = item.selectedQuote as unknown as CartItemQuote;
+      if (selectedQuote?.carrier && !isCorreiosCarrier(selectedQuote.carrier)) {
+        nonCorreiosShipments.push({ shipmentId: shipmentResult.shipmentId, carrier: selectedQuote.carrier });
+      }
 
       // Marcar reserva como usada
       await tx.trackingCodeReservation.updateMany({
@@ -452,6 +465,27 @@ export async function createCartShipmentsWithPayment(
     sendCartTrackingEmailsAsync(userId, result._shipmentsData || []);
   }
 
+  // 9) Enfileirar LABEL_GENERATE para carriers não-Correios
+  if (!result.isIdempotent && nonCorreiosShipments.length > 0) {
+    for (const { shipmentId, carrier } of nonCorreiosShipments) {
+      try {
+        const labelQueue = getQueue<LabelGenerateJobPayload>(QUEUE_NAMES.LABEL_GENERATE);
+        const isLoggi = carrier.toLowerCase() === 'loggi';
+        await labelQueue.add('generate', { shipmentId, carrier }, {
+          priority: JOB_PRIORITY.HIGH,
+          jobId: `label-${shipmentId}`,
+          delay: isLoggi ? 60_000 : 0,
+        });
+      } catch (err) {
+        logger.warn({
+          event: 'label_generate_enqueue_failed',
+          shipmentId,
+          error: err instanceof Error ? err.message : String(err),
+        }, 'Failed to enqueue LABEL_GENERATE');
+      }
+    }
+  }
+
   logger.info({
     event: 'create_cart_shipments_success',
     shipmentIds: result.shipmentIds,
@@ -493,6 +527,7 @@ async function createShipmentFromCartItem(
   recipientName: string;
   destinationCity: string;
   destinationState: string;
+  publicTrackingId: string | null;
 }> {
   const originAddress = item.originAddress as unknown as CartItemOriginAddress;
   const destination = item.destination as unknown as CartItemDestination;
@@ -656,6 +691,7 @@ async function createShipmentFromCartItem(
     recipientName: destination.nome || destination.apelido || 'Destinatário',
     destinationCity: destination.cidade,
     destinationState: destination.uf,
+    publicTrackingId: shipment.publicTrackingId,
   };
 }
 
@@ -781,6 +817,7 @@ async function sendCartTrackingEmailsAsync(
   shipmentsData: Array<{
     shipmentId: string;
     trackingCode: string;
+    publicTrackingId: string | null;
     recipientEmail: string | null;
     recipientName: string;
     destinationCity: string;
@@ -807,7 +844,8 @@ async function sendCartTrackingEmailsAsync(
           shipment.trackingCode,
           senderName,
           shipment.destinationCity,
-          shipment.destinationState
+          shipment.destinationState,
+          shipment.publicTrackingId,
         );
 
         if (sent) {

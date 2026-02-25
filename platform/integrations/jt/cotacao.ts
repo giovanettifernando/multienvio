@@ -98,27 +98,3 @@ export async function cotarJT(input: JTCotacaoInput): Promise<JTCostTimeResponse
   return response;
 }
 
-/**
- * Cotação simplificada — retorna apenas preço e prazo
- */
-export async function cotarJTSimples(
-  destCep: string,
-  pesoKg: number,
-  originCep?: string
-): Promise<{ precoReais: number; prazoDias: number; seguroReais: number }> {
-  const response = await cotarJT({
-    destCep,
-    pesoKg,
-    originCep,
-  });
-
-  const cost = parseFloat(response.data?.cost || '0');
-  const aging = response.data?.aging || 0;
-  const riskPremiumFee = parseFloat(response.data?.riskPremiumFee || '0');
-
-  return {
-    precoReais: cost,
-    prazoDias: aging,
-    seguroReais: riskPremiumFee,
-  };
-}

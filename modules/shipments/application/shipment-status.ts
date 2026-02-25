@@ -129,55 +129,6 @@ export enum ShipmentStatus {
 }
 
 /**
- * Grupos de status por fase do ciclo de vida
- */
-export const StatusPhases = {
-  /** Status da Fase A - Origem */
-  ORIGIN: [
-    ShipmentStatus.PICKUP_REQUESTED,
-    ShipmentStatus.PICKUP_SCHEDULED,
-    ShipmentStatus.AWAITING_PICKUP_AT_ORIGIN,
-    ShipmentStatus.PICKUP_FAILED,
-    ShipmentStatus.COLLECTED_FROM_SENDER,
-    ShipmentStatus.IN_TRANSIT_TO_CARRIER_HUB,
-    ShipmentStatus.RECEIVED_AT_ORIGIN_HUB,
-    ShipmentStatus.AWAITING_DROP_OFF_AT_POINT,
-    ShipmentStatus.DROPPED_OFF_AT_POINT,
-    ShipmentStatus.AWAITING_CARRIER_PICKUP_AT_POINT,
-    ShipmentStatus.COLLECTED_FROM_POINT,
-  ] as const,
-
-  /** Status da Fase B - Transporte */
-  TRANSPORT: [
-    ShipmentStatus.IN_TRANSFER,
-    ShipmentStatus.IN_TRANSIT_TO_DESTINATION,
-    ShipmentStatus.AT_DESTINATION_HUB,
-    ShipmentStatus.OUT_FOR_DELIVERY,
-    ShipmentStatus.AWAITING_PICKUP_AT_DESTINATION_HUB,
-  ] as const,
-
-  /** Status da Fase C - Entrega */
-  DELIVERY: [
-    ShipmentStatus.DELIVERED,
-    ShipmentStatus.DELIVERED_AT_DESTINATION_HUB,
-    ShipmentStatus.DELIVERY_ATTEMPT_FAILED,
-    ShipmentStatus.DELIVERY_PROBLEM,
-  ] as const,
-
-  /** Status da Fase D - Cancelamento e Retorno */
-  CANCELLATION: [
-    ShipmentStatus.CANCELLATION_REQUESTED_BEFORE_HANDOFF,
-    ShipmentStatus.CANCELLED_BEFORE_HANDOFF,
-    ShipmentStatus.EXPIRED_NOT_POSTED,
-    ShipmentStatus.CANCELLATION_REQUESTED_IN_TRANSIT,
-    ShipmentStatus.CANCELLED_IN_TRANSIT_RETURNING,
-    ShipmentStatus.CANCELLED_IN_TRANSIT_RETURNED,
-    ShipmentStatus.RETURNING_TO_SENDER,
-    ShipmentStatus.RETURNED_TO_SENDER,
-  ] as const,
-} as const;
-
-/**
  * Status que permitem cancelamento antes da transportadora assumir
  */
 export const CANCELLABLE_BEFORE_HANDOFF = [
@@ -257,47 +208,3 @@ export const ShipmentStatusLabels: Record<ShipmentStatus, string> = {
   [ShipmentStatus.RETURNED_TO_SENDER]: 'Devolvido ao remetente',
 };
 
-/**
- * Cores para exibição (compatível com Ant Design Tag)
- */
-export const ShipmentStatusColors: Record<ShipmentStatus, string> = {
-  // Fase 0 - Processamento
-  [ShipmentStatus.PROCESSING]: 'processing',
-  [ShipmentStatus.CREATION_FAILED]: 'red',
-
-  // Fase A - Origem
-  [ShipmentStatus.PICKUP_REQUESTED]: 'blue',
-  [ShipmentStatus.PICKUP_SCHEDULED]: 'cyan',
-  [ShipmentStatus.AWAITING_PICKUP_AT_ORIGIN]: 'geekblue',
-  [ShipmentStatus.PICKUP_FAILED]: 'red',
-  [ShipmentStatus.COLLECTED_FROM_SENDER]: 'purple',
-  [ShipmentStatus.IN_TRANSIT_TO_CARRIER_HUB]: 'blue',
-  [ShipmentStatus.RECEIVED_AT_ORIGIN_HUB]: 'green',
-  [ShipmentStatus.AWAITING_DROP_OFF_AT_POINT]: 'orange',
-  [ShipmentStatus.DROPPED_OFF_AT_POINT]: 'cyan',
-  [ShipmentStatus.AWAITING_CARRIER_PICKUP_AT_POINT]: 'geekblue',
-  [ShipmentStatus.COLLECTED_FROM_POINT]: 'purple',
-
-  // Fase B - Transporte
-  [ShipmentStatus.IN_TRANSFER]: 'blue',
-  [ShipmentStatus.IN_TRANSIT_TO_DESTINATION]: 'blue',
-  [ShipmentStatus.AT_DESTINATION_HUB]: 'cyan',
-  [ShipmentStatus.OUT_FOR_DELIVERY]: 'gold',
-  [ShipmentStatus.AWAITING_PICKUP_AT_DESTINATION_HUB]: 'lime',
-
-  // Fase C - Entrega
-  [ShipmentStatus.DELIVERED]: 'green',
-  [ShipmentStatus.DELIVERED_AT_DESTINATION_HUB]: 'green',
-  [ShipmentStatus.DELIVERY_ATTEMPT_FAILED]: 'orange',
-  [ShipmentStatus.DELIVERY_PROBLEM]: 'red',
-
-  // Fase D - Cancelamento
-  [ShipmentStatus.CANCELLATION_REQUESTED_BEFORE_HANDOFF]: 'orange',
-  [ShipmentStatus.CANCELLED_BEFORE_HANDOFF]: 'red',
-  [ShipmentStatus.EXPIRED_NOT_POSTED]: 'default',
-  [ShipmentStatus.CANCELLATION_REQUESTED_IN_TRANSIT]: 'orange',
-  [ShipmentStatus.CANCELLED_IN_TRANSIT_RETURNING]: 'volcano',
-  [ShipmentStatus.CANCELLED_IN_TRANSIT_RETURNED]: 'red',
-  [ShipmentStatus.RETURNING_TO_SENDER]: 'magenta',
-  [ShipmentStatus.RETURNED_TO_SENDER]: 'red',
-};

@@ -767,9 +767,3 @@ export function getCorreiosConfigInfo(): {
   };
 }
 
-/**
- * Reseta o circuit breaker dos Correios (para admin/debug)
- */
-export function resetCorreiosCircuitBreaker(): void {
-  correiosCircuitBreaker.reset();
-}

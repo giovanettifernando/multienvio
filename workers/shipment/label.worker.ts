@@ -56,8 +56,7 @@ async function processLabelGenerate(job: Job<LabelGenerateJobPayload>): Promise<
   }
 
   if (carrierNormalized === 'loggi') {
-    // Loggi: etiqueta é gerada junto com o shipment async
-    log.info({ shipmentId }, 'Loggi label — generated during shipment creation');
+    await generateLoggiLabel(job, shipmentId, label.id);
     return;
   }
 
@@ -121,6 +120,59 @@ async function generateJTLabel(
     }
   } catch (error) {
     log.error({ shipmentId, billCode, error: (error as Error).message }, 'Failed to generate J&T label');
+    throw error; // Retry via BullMQ
+  }
+}
+
+/**
+ * Busca etiqueta da Loggi via printLoggiLabel API
+ */
+async function generateLoggiLabel(
+  job: Job<LabelGenerateJobPayload>,
+  shipmentId: string,
+  labelId: string,
+): Promise<void> {
+  const log = createJobLogger(job);
+
+  // Buscar packages com loggiKeys (armazenados em carrierPrePostageId)
+  const packages = await prisma.package.findMany({
+    where: { shipmentId },
+    select: { carrierPrePostageId: true },
+  });
+
+  const loggiKeys = packages
+    .map((p) => p.carrierPrePostageId)
+    .filter((k): k is string => k != null);
+
+  if (loggiKeys.length === 0) {
+    log.warn({ shipmentId }, 'No Loggi keys found — cannot generate label');
+    return;
+  }
+
+  try {
+    const { printLoggiLabel } = await import('../../platform/integrations/loggi/label');
+    const { result, durationMs } = await withDuration(() =>
+      printLoggiLabel(loggiKeys, 'LABEL_LAYOUT_A4')
+    );
+
+    if (result.success?.content) {
+      await prisma.label.update({
+        where: { id: labelId },
+        data: {
+          fileBase64: result.success.content,
+          contentType: 'application/pdf',
+        },
+      });
+      log.info({ shipmentId, loggiKeysCount: loggiKeys.length, durationMs }, 'Loggi label generated successfully');
+    } else if (result.failure?.length > 0) {
+      const errors = result.failure.map((f) => `${f.loggiKey}: ${f.status?.message}`).join('; ');
+      log.warn({ shipmentId, errors }, 'Loggi label generation had failures');
+      throw new Error(`Loggi label failures: ${errors}`);
+    } else {
+      log.warn({ shipmentId }, 'Loggi printLabel returned no content');
+    }
+  } catch (error) {
+    log.error({ shipmentId, error: (error as Error).message }, 'Failed to generate Loggi label');
     throw error; // Retry via BullMQ
   }
 }

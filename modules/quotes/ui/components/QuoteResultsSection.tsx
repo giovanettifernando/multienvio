@@ -29,6 +29,7 @@ import { ELCard } from '@/shared/ui/ELCard';
 import { ELModal } from '@/shared/ui/ELModal';
 import { DataTable, type DataTableColumn } from '@/shared/ui/DataTable';
 import {
+  CheckCircleOutlined,
   ClockCircleOutlined,
 } from "@ant-design/icons";
 import type { QuoteResultItem, DocumentType, EligibilityResponse } from '@/shared/types/quote';
@@ -481,7 +482,7 @@ export function QuoteResultsSection({
                 shape="square"
                 size={28}
                 src={iconUrl}
-                style={{ backgroundColor: "#fff", border: "1px solid #e5e7eb", flexShrink: 0 }}
+                style={{ backgroundColor: "#fff", border: "1px solid #e5e7eb", flexShrink: 0, borderRadius: 4 }}
                 onError={() => {
                   handleIconError(slug);
                   return false;
@@ -493,7 +494,7 @@ export function QuoteResultsSection({
               <Avatar
                 shape="square"
                 size={28}
-                style={{ backgroundColor: "#1d39c4", color: "#fff", flexShrink: 0 }}
+                style={{ backgroundColor: "#1d39c4", color: "#fff", flexShrink: 0, borderRadius: 4 }}
               >
                 {buildAvatarLabel(carrierName)}
               </Avatar>
@@ -539,7 +540,6 @@ export function QuoteResultsSection({
       title: "Ação",
       key: "action",
       width: 100,
-      fixed: "right",
       isActions: true,
       render: (_: unknown, record: QuoteResultItem) => (
         <ELButton
@@ -556,68 +556,43 @@ export function QuoteResultsSection({
 
   return (
     <>
-      <ELCard style={{ height: "100%" }} padding="md">
-        <Space orientation="vertical" size={16} style={{ width: "100%" }}>
+      <ELCard padding="md">
+        <Space orientation="vertical" size={12} style={{ width: "100%" }}>
           <Flex justify="space-between" align="center" wrap="wrap" gap={8}>
-            <Typography.Title level={5} style={{ marginBottom: 0 }}>
+            <Typography.Text strong style={{ fontSize: 16 }}>
               Resultados da cotação
-            </Typography.Title>
-            <ELButton onClick={onCalculate} disabled={!canCalculate}>
+            </Typography.Text>
+            <ELButton onClick={onCalculate} disabled={!canCalculate} size="small">
               Recalcular
             </ELButton>
           </Flex>
-          {/* Expiration warning - compact style */}
-          {timeRemaining && (
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-                padding: '6px 12px',
-                borderRadius: 6,
-                background: timeRemaining === "expirado"
-                  ? '#fff2f0'
-                  : isExpiringSoon
-                    ? '#fffbe6'
-                    : '#fafafa',
-                border: `1px solid ${
-                  timeRemaining === "expirado"
-                    ? '#ffccc7'
-                    : isExpiringSoon
-                      ? '#ffe58f'
-                      : '#e8e8e8'
-                }`,
-              }}
-            >
-              <ClockCircleOutlined
+
+          {/* Linha compacta: contagem + tempo restante */}
+          <Flex justify="space-between" align="center" wrap="wrap" gap={8}>
+            <Typography.Text style={{ fontSize: 13, color: '#52c41a' }}>
+              <CheckCircleOutlined style={{ marginRight: 4 }} />
+              {results?.length || 0} {results?.length === 1 ? "cotação encontrada" : "cotações encontradas"}
+            </Typography.Text>
+            {timeRemaining && (
+              <Typography.Text
                 style={{
-                  fontSize: 14,
+                  fontSize: 12,
                   color: timeRemaining === "expirado"
                     ? '#ff4d4f'
                     : isExpiringSoon
                       ? '#faad14'
                       : '#8c8c8c'
                 }}
-              />
-              <Typography.Text
-                style={{
-                  fontSize: 13,
-                  margin: 0,
-                  color: timeRemaining === "expirado"
-                    ? '#ff4d4f'
-                    : '#595959'
-                }}
               >
+                <ClockCircleOutlined style={{ marginRight: 4 }} />
                 {timeRemaining === "expirado" ? (
-                  <>Cotação expirada – recalcule para obter valores atualizados</>
+                  <>Expirada – recalcule</>
                 ) : (
-                  <>
-                    Tempo restante: <Typography.Text strong style={{ fontSize: 13 }}>{timeRemaining}</Typography.Text> – valores válidos por 30 minutos
-                  </>
+                  <>{timeRemaining} restante</>
                 )}
               </Typography.Text>
-            </div>
-          )}
+            )}
+          </Flex>
 
           {/* Aviso quando há volumes bloqueantes */}
           {eligibility?.hasBlockingVolumes && (
@@ -628,19 +603,13 @@ export function QuoteResultsSection({
             />
           )}
 
-          <Alert
-            title={`${results?.length || 0} ${results?.length === 1 ? "cotação encontrada" : "cotações encontradas"}`}
-            type="success"
-            showIcon
-          />
-
           <DataTable
             data={results || []}
             columns={columns}
             rowKey="id"
             pagination={false}
             compact
-            scrollX={700}
+            scrollX={undefined}
             enableMobileCards
           />
         </Space>

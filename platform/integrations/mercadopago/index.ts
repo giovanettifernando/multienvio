@@ -20,10 +20,9 @@ export type {
   ProcessedPaymentData,
   MercadoPagoWebhookPayload,
   WebhookHeaders,
-  MercadoPagoApiError,
 } from './types';
 
-export { MP_STATUS_MAP, MP_METHOD_MAP, STATUS_DETAIL_MESSAGES, getStatusDetailMessage } from './types';
+export { STATUS_DETAIL_MESSAGES, getStatusDetailMessage } from './types';
 
 // Client
 export {
@@ -55,18 +54,13 @@ export {
 
 // Cards & Customers
 export type {
-  CreateCustomerInput,
-  MercadoPagoCustomer,
   CreateCardInput,
   MercadoPagoCard,
   CreatePaymentWithSavedCardInput,
 } from './cards';
 export {
-  createCustomer,
-  getCustomer,
   createCard,
   listCards,
   deleteCard,
   createPaymentWithSavedCard,
-  mapMercadoPagoCardBrand,
 } from './cards';

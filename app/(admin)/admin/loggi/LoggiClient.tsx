@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, startTransition, useMemo } from 'react';
+import { useState, useEffect, useRef, useCallback, startTransition, useMemo } from 'react';
 import {
   Card,
   Form,
@@ -19,6 +19,7 @@ import {
   Badge,
   Row,
   Col,
+  Progress,
 } from 'antd';
 import { inputNumberFormatterBRL, inputNumberParserBRL } from '@/shared/utils/format';
 import {
@@ -31,6 +32,8 @@ import {
   CloudOutlined,
   SendOutlined,
   DownloadOutlined,
+  LoadingOutlined,
+  ReloadOutlined,
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
@@ -122,6 +125,7 @@ export default function LoggiClient() {
   const queryClient = useQueryClient();
   const [form] = Form.useForm();
   const [activeTab, setActiveTab] = useState('config');
+  const [resettingCB, setResettingCB] = useState(false);
 
   // Fetch config
   const { data: config, isLoading, error } = useQuery({
@@ -198,10 +202,29 @@ export default function LoggiClient() {
               ? <Badge status="success" text="Configurado" />
               : <Badge status="default" text="Não configurado" />}
           </Space>
-          <EnvironmentBadge
-            environment={config?.activeEnvironment || 'sandbox'}
-            configured={config?.configured || false}
-          />
+          <Space>
+            <Button
+              size="small"
+              danger
+              onClick={async () => {
+                setResettingCB(true);
+                try {
+                  const result = await runTest({ type: 'reset-cb' });
+                  message.success(result.message || 'Circuit breaker resetado');
+                } catch {
+                  message.error('Erro ao resetar circuit breaker');
+                }
+                setResettingCB(false);
+              }}
+              loading={resettingCB}
+            >
+              Reset Circuit Breaker
+            </Button>
+            <EnvironmentBadge
+              environment={config?.activeEnvironment || 'sandbox'}
+              configured={config?.configured || false}
+            />
+          </Space>
         </div>
 
         {/* Tabs */}
@@ -601,26 +624,173 @@ interface ShipmentResult {
     hasLabel?: boolean;
     labelLatencyMs?: number;
     labelBase64?: string;
+    quoteInfo?: {
+      quotationsCount: number;
+      quoteLatencyMs: number;
+      selectedService: string;
+    };
+    apiErrorDetails?: unknown[];
   };
   latencyMs?: number;
   loggiApiResponse?: unknown;
 }
+
+const LABEL_POLL_INTERVAL_S = 20;
+const LABEL_INITIAL_WAIT_S = 30;
+const LABEL_MAX_ATTEMPTS = 10;
 
 function ShipmentTestTab() {
   const [form] = Form.useForm();
   const [testResult, setTestResult] = useState<ShipmentResult | null>(null);
   const [testing, setTesting] = useState(false);
 
+  // Label polling state
+  const [labelPolling, setLabelPolling] = useState(false);
+  const [labelCountdown, setLabelCountdown] = useState(0);
+  const [labelAttempt, setLabelAttempt] = useState(0);
+  const [labelError, setLabelError] = useState<string | null>(null);
+  const [labelRawResponse, setLabelRawResponse] = useState<Record<string, unknown> | null>(null);
+  const pollingRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Tracking state
+  const [checkingStatus, setCheckingStatus] = useState(false);
+  const [trackingResult, setTrackingResult] = useState<TestResult | null>(null);
+
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollingRef.current) clearTimeout(pollingRef.current);
+      if (countdownRef.current) clearInterval(countdownRef.current);
+    };
+  }, []);
+
+  const tryFetchLabel = useCallback(async (loggiKey: string, trackingCode: string | undefined, attempt: number): Promise<boolean> => {
+    setLabelAttempt(attempt);
+    setLabelError(null);
+    setLabelRawResponse(null);
+
+    let trackingStatus = '';
+
+    // Step 1: Check tracking (informational — does NOT block label attempt)
+    if (trackingCode) {
+      try {
+        const trackResult = await runTest({ type: 'tracking', trackingCode }) as TestResult;
+        if (trackResult.success) {
+          const status = (trackResult.result as Record<string, unknown>)?.status as Record<string, unknown> | undefined;
+          trackingStatus = status?.highLevelStatus
+            ? `Tracking OK: ${status.highLevelStatus}`
+            : 'Tracking OK (sem status)';
+        } else {
+          trackingStatus = `Tracking falhou: ${trackResult.message || 'erro'}`;
+        }
+      } catch {
+        trackingStatus = 'Tracking: erro de conexao';
+      }
+    }
+
+    // Step 2: Always try to generate label regardless of tracking result
+    try {
+      const result = await runTest({ type: 'label', loggiKey }) as TestResult;
+      const rawInfo: Record<string, unknown> = {
+        ...(result.loggiApiResponse ? { labelApi: result.loggiApiResponse } : { labelResult: result.result }),
+      };
+      if (trackingStatus) rawInfo.trackingStatus = trackingStatus;
+      setLabelRawResponse(rawInfo);
+
+      if (result.success && (result.result as Record<string, unknown>)?.labelBase64) {
+        const labelBase64 = (result.result as Record<string, unknown>).labelBase64 as string;
+        const labelLatencyMs = (result.result as Record<string, unknown>).labelLatencyMs as number | undefined;
+        setTestResult((prev) => prev ? {
+          ...prev,
+          result: {
+            ...prev.result,
+            hasLabel: true,
+            labelBase64,
+            labelLatencyMs,
+          },
+        } : prev);
+        message.success('Etiqueta gerada com sucesso!');
+        return true;
+      }
+      const errorMsg = result.message || 'Etiqueta sem conteudo';
+      setLabelError(trackingStatus ? `${errorMsg} | ${trackingStatus}` : errorMsg);
+      return false;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Erro desconhecido';
+      setLabelError(trackingStatus ? `${msg} | ${trackingStatus}` : msg);
+      return false;
+    }
+  }, []);
+
+  const startLabelPolling = useCallback((loggiKey: string, trackingCode: string | undefined, initialWaitS: number) => {
+    setLabelPolling(true);
+    setLabelCountdown(initialWaitS);
+    setLabelAttempt(0);
+    setLabelError(null);
+
+    // Countdown timer
+    let remaining = initialWaitS;
+    countdownRef.current = setInterval(() => {
+      remaining -= 1;
+      setLabelCountdown(remaining);
+      if (remaining <= 0 && countdownRef.current) {
+        clearInterval(countdownRef.current);
+        countdownRef.current = null;
+      }
+    }, 1000);
+
+    // Schedule first attempt after initial wait
+    const poll = async (attempt: number) => {
+      if (attempt > LABEL_MAX_ATTEMPTS) {
+        setLabelPolling(false);
+        setLabelError('Limite de tentativas atingido. No fluxo assincrono da Loggi, a etiqueta so fica disponivel apos webhook de confirmacao. Use "Verificar Status" para checar o estado do pacote.');
+        return;
+      }
+
+      const success = await tryFetchLabel(loggiKey, trackingCode, attempt);
+      if (success) {
+        setLabelPolling(false);
+        return;
+      }
+
+      // Schedule next attempt
+      setLabelCountdown(LABEL_POLL_INTERVAL_S);
+      let nextRemaining = LABEL_POLL_INTERVAL_S;
+      countdownRef.current = setInterval(() => {
+        nextRemaining -= 1;
+        setLabelCountdown(nextRemaining);
+        if (nextRemaining <= 0 && countdownRef.current) {
+          clearInterval(countdownRef.current);
+          countdownRef.current = null;
+        }
+      }, 1000);
+
+      pollingRef.current = setTimeout(() => poll(attempt + 1), LABEL_POLL_INTERVAL_S * 1000);
+    };
+
+    pollingRef.current = setTimeout(() => poll(1), initialWaitS * 1000);
+  }, [tryFetchLabel]);
+
+  const stopLabelPolling = useCallback(() => {
+    setLabelPolling(false);
+    if (pollingRef.current) { clearTimeout(pollingRef.current); pollingRef.current = null; }
+    if (countdownRef.current) { clearInterval(countdownRef.current); countdownRef.current = null; }
+  }, []);
+
   const handleCreateShipment = async () => {
     try {
       const values = await form.validateFields();
       setTesting(true);
       setTestResult(null);
+      setTrackingResult(null);
+      stopLabelPolling();
+      setLabelRawResponse(null);
 
       const result = await runTest({
         type: 'shipment',
         shipmentData: {
-          externalServiceId: values.externalServiceId || 'DLVR-DROF-DOOR-STAN-01',
+          externalServiceId: values.externalServiceId || undefined,
           sender: {
             name: values.sender_name,
             phoneNumber: values.sender_phone?.replace(/\D/g, '') || '',
@@ -664,6 +834,11 @@ function ShipmentTestTab() {
       }) as ShipmentResult;
 
       setTestResult(result);
+
+      // Auto-start label polling if shipment was created successfully
+      if (result.success && result.result?.loggiKey && !result.result?.hasLabel) {
+        startLabelPolling(result.result.loggiKey, result.result.trackingCode, LABEL_INITIAL_WAIT_S);
+      }
     } catch (err) {
       if (err instanceof Error) {
         setTestResult({
@@ -674,6 +849,21 @@ function ShipmentTestTab() {
       }
     }
     setTesting(false);
+  };
+
+  const handleCheckStatus = async () => {
+    const trackingCode = testResult?.result?.trackingCode;
+    if (!trackingCode) return;
+
+    setCheckingStatus(true);
+    setTrackingResult(null);
+    try {
+      const result = await runTest({ type: 'tracking', trackingCode });
+      setTrackingResult(result);
+    } catch (err) {
+      message.error(err instanceof Error ? err.message : 'Erro ao verificar status');
+    }
+    setCheckingStatus(false);
   };
 
   const handleDownloadLabel = () => {
@@ -691,12 +881,24 @@ function ShipmentTestTab() {
     window.open(url, '_blank');
   };
 
+  const handleManualRetryLabel = async () => {
+    const loggiKey = testResult?.result?.loggiKey;
+    if (!loggiKey) return;
+
+    stopLabelPolling();
+    setLabelPolling(true);
+    const success = await tryFetchLabel(loggiKey, testResult?.result?.trackingCode, labelAttempt + 1);
+    setLabelPolling(false);
+  };
+
   return (
     <Space direction="vertical" size="middle" style={{ width: '100%' }}>
-      <Text>
-        Testa a criação de shipment (envio assíncrono) na API da Loggi. Se criado com sucesso,
-        a etiqueta será gerada automaticamente.
-      </Text>
+      <Alert
+        type="info"
+        message="Fluxo assincrono"
+        description="Na Loggi, envios sao criados de forma assincrona. A etiqueta so fica disponivel apos a Loggi processar o pacote (confirmacao via webhook). No teste, fazemos polling do tracking para verificar quando o pacote existe, e entao tentamos gerar a etiqueta."
+        style={{ marginBottom: 16 }}
+      />
 
       <Form
         form={form}
@@ -710,9 +912,8 @@ function ShipmentTestTab() {
           sender_complemento: 'Sala 1',
           sender_bairro: 'Bela Vista',
           sender_cep: '01310-100',
-          sender_cidade: 'São Paulo',
+          sender_cidade: 'Sao Paulo',
           sender_uf: 'SP',
-          externalServiceId: 'DLVR-DROF-DOOR-STAN-01',
           freightType: 'FREIGHT_TYPE_ECONOMIC',
           weightKg: 1,
           lengthCm: 20,
@@ -722,7 +923,7 @@ function ShipmentTestTab() {
       >
         {/* Remetente */}
         <Card
-          title={<><Tag color="blue">Remetente</Tag> Dados do remetente (pré-preenchido)</>}
+          title={<><Tag color="blue">Remetente</Tag> Dados do remetente (pre-preenchido)</>}
           size="small"
           style={{ marginBottom: 16 }}
         >
@@ -750,8 +951,8 @@ function ShipmentTestTab() {
               </Form.Item>
             </Col>
             <Col span={4}>
-              <Form.Item label="Número" name="sender_numero" rules={[{ required: true }]}>
-                <Input />
+              <Form.Item label="Numero" name="sender_numero" rules={[{ required: true }, { max: 8, message: 'Max 8 caracteres' }]}>
+                <Input maxLength={8} />
               </Form.Item>
             </Col>
             <Col span={6}>
@@ -784,16 +985,16 @@ function ShipmentTestTab() {
           </Row>
         </Card>
 
-        {/* Destinatário */}
+        {/* Destinatario */}
         <Card
-          title={<><Tag color="green">Destinatário</Tag> Dados do destinatário</>}
+          title={<><Tag color="green">Destinatario</Tag> Dados do destinatario</>}
           size="small"
           style={{ marginBottom: 16 }}
         >
           <Row gutter={12}>
             <Col span={8}>
               <Form.Item label="Nome" name="receiver_name" rules={[{ required: true }]}>
-                <Input placeholder="Nome do destinatário" />
+                <Input placeholder="Nome do destinatario" />
               </Form.Item>
             </Col>
             <Col span={6}>
@@ -803,7 +1004,7 @@ function ShipmentTestTab() {
             </Col>
             <Col span={6}>
               <Form.Item label="CPF/CNPJ" name="receiver_taxId">
-                <Input placeholder="Somente números" />
+                <Input placeholder="Somente numeros" />
               </Form.Item>
             </Col>
             <Col span={4}>
@@ -819,8 +1020,8 @@ function ShipmentTestTab() {
               </Form.Item>
             </Col>
             <Col span={4}>
-              <Form.Item label="Número" name="receiver_numero" rules={[{ required: true }]}>
-                <Input placeholder="Nº" />
+              <Form.Item label="Numero" name="receiver_numero" rules={[{ required: true }, { max: 8, message: 'Max 8 caracteres' }]}>
+                <Input maxLength={8} placeholder="N" />
               </Form.Item>
             </Col>
             <Col span={6}>
@@ -861,14 +1062,18 @@ function ShipmentTestTab() {
         >
           <Row gutter={12}>
             <Col span={10}>
-              <Form.Item label="External Service ID" name="externalServiceId">
-                <Input placeholder="DLVR-DROF-DOOR-STAN-01" />
+              <Form.Item
+                label="External Service ID (auto via cotacao)"
+                name="externalServiceId"
+                tooltip="Deixe vazio para obter automaticamente via cotacao"
+              >
+                <Input placeholder="(auto — obtido via cotacao)" />
               </Form.Item>
             </Col>
             <Col span={14}>
               <Form.Item label="Tipo de frete" name="freightType">
                 <Radio.Group>
-                  <Radio value="FREIGHT_TYPE_ECONOMIC">Econômico</Radio>
+                  <Radio value="FREIGHT_TYPE_ECONOMIC">Economico</Radio>
                   <Radio value="FREIGHT_TYPE_EXPRESS">Expresso</Radio>
                 </Radio.Group>
               </Form.Item>
@@ -906,17 +1111,17 @@ function ShipmentTestTab() {
         >
           <Row gutter={12}>
             <Col span={16}>
-              <Form.Item label="Chave de Acesso NF-e (44 dígitos)" name="invoiceKey">
+              <Form.Item label="Chave de Acesso NF-e (44 digitos)" name="invoiceKey">
                 <Input placeholder="Chave de acesso da NF-e" />
               </Form.Item>
             </Col>
             <Col span={4}>
-              <Form.Item label="Série" name="invoiceSeries">
+              <Form.Item label="Serie" name="invoiceSeries">
                 <Input placeholder="001" />
               </Form.Item>
             </Col>
             <Col span={4}>
-              <Form.Item label="Nº NF" name="invoiceNumber">
+              <Form.Item label="N NF" name="invoiceNumber">
                 <Input placeholder="000001" />
               </Form.Item>
             </Col>
@@ -935,7 +1140,7 @@ function ShipmentTestTab() {
           </Row>
         </Card>
 
-        {/* Botão */}
+        {/* Botoes */}
         <Form.Item>
           <Space>
             <Button
@@ -952,25 +1157,108 @@ function ShipmentTestTab() {
                 icon={<DownloadOutlined />}
                 onClick={handleDownloadLabel}
                 size="large"
+                type="primary"
+                ghost
               >
                 Baixar Etiqueta (PDF)
+              </Button>
+            )}
+            {testResult?.success && testResult?.result?.loggiKey && !testResult?.result?.hasLabel && !labelPolling && (
+              <Button
+                icon={<ReloadOutlined />}
+                onClick={handleManualRetryLabel}
+                size="large"
+              >
+                Tentar Gerar Etiqueta
+              </Button>
+            )}
+            {testResult?.success && testResult?.result?.trackingCode && (
+              <Button
+                icon={<SearchOutlined />}
+                onClick={handleCheckStatus}
+                loading={checkingStatus}
+                size="large"
+              >
+                Verificar Status
               </Button>
             )}
           </Space>
         </Form.Item>
       </Form>
 
+      {/* Label Polling Status */}
+      {labelPolling && testResult?.success && !testResult?.result?.hasLabel && (
+        <Alert
+          type="info"
+          icon={<LoadingOutlined />}
+          message="Aguardando etiqueta..."
+          description={
+            <Space direction="vertical" size="small" style={{ width: '100%' }}>
+              <Text>
+                Verificando tracking → gerando etiqueta. Tentativa {labelAttempt}/{LABEL_MAX_ATTEMPTS}.
+              </Text>
+              {labelCountdown > 0 && (
+                <Space>
+                  <Progress
+                    type="circle"
+                    size={40}
+                    percent={Math.round((1 - labelCountdown / (labelAttempt === 0 ? LABEL_INITIAL_WAIT_S : LABEL_POLL_INTERVAL_S)) * 100)}
+                    format={() => `${labelCountdown}s`}
+                  />
+                  <Text type="secondary">
+                    {labelAttempt === 0
+                      ? 'Aguardando processamento inicial...'
+                      : `Proxima tentativa em ${labelCountdown}s...`}
+                  </Text>
+                </Space>
+              )}
+              {labelError && <Text type="warning">{labelError}</Text>}
+              {labelRawResponse && (
+                <pre style={{ fontSize: 11, maxHeight: 200, overflow: 'auto', background: '#f5f5f5', padding: 8, borderRadius: 4 }}>
+                  {JSON.stringify(labelRawResponse, null, 2)}
+                </pre>
+              )}
+              <Button size="small" onClick={stopLabelPolling}>Cancelar polling</Button>
+            </Space>
+          }
+          showIcon
+        />
+      )}
+
+      {/* Label fetch error (when polling stopped) */}
+      {!labelPolling && labelError && testResult?.success && !testResult?.result?.hasLabel && (
+        <Alert
+          type="warning"
+          message="Etiqueta ainda nao disponivel"
+          description={
+            <Space direction="vertical">
+              <Text>{labelError}</Text>
+              <Text type="secondary">Tentativas realizadas: {labelAttempt}/{LABEL_MAX_ATTEMPTS}</Text>
+              {labelRawResponse && (
+                <>
+                  <Text type="secondary">Resposta da API Loggi:</Text>
+                  <pre style={{ fontSize: 11, maxHeight: 200, overflow: 'auto', background: '#f5f5f5', padding: 8, borderRadius: 4 }}>
+                    {JSON.stringify(labelRawResponse, null, 2)}
+                  </pre>
+                </>
+              )}
+            </Space>
+          }
+          showIcon
+        />
+      )}
+
       {/* Resultado */}
       {testResult && (
         <Alert
           type={testResult.success ? 'success' : 'error'}
           icon={testResult.success ? <CheckCircleOutlined /> : <CloseCircleOutlined />}
-          message={testResult.success ? 'Shipment Criado' : 'Falha na Criação'}
+          message={testResult.success ? 'Shipment Criado' : 'Falha na Criacao'}
           description={
             <Space direction="vertical">
               <Text>{testResult.message}</Text>
               {testResult.latencyMs != null && (
-                <Text type="secondary">Latência total: {testResult.latencyMs}ms</Text>
+                <Text type="secondary">Latencia total: {testResult.latencyMs}ms</Text>
               )}
               {!!testResult.result && (
                 <Card size="small" style={{ marginTop: 8 }}>
@@ -982,6 +1270,8 @@ function ShipmentTestTab() {
                       shipmentLatencyMs: testResult.result.shipmentLatencyMs,
                       hasLabel: testResult.result.hasLabel,
                       labelLatencyMs: testResult.result.labelLatencyMs,
+                      quoteInfo: testResult.result.quoteInfo,
+                      apiErrorDetails: testResult.result.apiErrorDetails,
                     }, null, 2)}
                   </pre>
                 </Card>
@@ -992,6 +1282,34 @@ function ShipmentTestTab() {
                   <Text type="secondary">Resposta bruta da API:</Text>
                   <pre style={{ fontSize: 11, maxHeight: 300, overflow: 'auto', background: '#f5f5f5', padding: 8, borderRadius: 4 }}>
                     {JSON.stringify(testResult.loggiApiResponse, null, 2)}
+                  </pre>
+                </>
+              )}
+            </Space>
+          }
+          showIcon
+        />
+      )}
+
+      {trackingResult && (
+        <Alert
+          type={trackingResult.success ? 'info' : 'error'}
+          message={trackingResult.success ? 'Status do Rastreamento' : 'Falha no Rastreamento'}
+          description={
+            <Space direction="vertical">
+              <Text>{trackingResult.message}</Text>
+              {trackingResult.latencyMs != null && <Text type="secondary">Latencia: {trackingResult.latencyMs}ms</Text>}
+              {!!trackingResult.result && (
+                <pre style={{ fontSize: 12, maxHeight: 300, overflow: 'auto', background: '#f5f5f5', padding: 8, borderRadius: 4 }}>
+                  {JSON.stringify(trackingResult.result, null, 2)}
+                </pre>
+              )}
+              {!!trackingResult.loggiApiResponse && (
+                <>
+                  <Divider style={{ margin: '8px 0' }} />
+                  <Text type="secondary">Resposta bruta:</Text>
+                  <pre style={{ fontSize: 11, maxHeight: 300, overflow: 'auto', background: '#f5f5f5', padding: 8, borderRadius: 4 }}>
+                    {JSON.stringify(trackingResult.loggiApiResponse, null, 2)}
                   </pre>
                 </>
               )}

@@ -46,23 +46,6 @@ export async function logAdminLogin(staffId: string, email: string, ip?: string)
 }
 
 /**
- * Log de criação de novo staff
- */
-export async function logStaffCreation(
-  actorId: string,
-  newStaffId: string,
-  newStaffEmail: string
-): Promise<void> {
-  await logAdminAction(
-    actorId,
-    'create_staff',
-    'StaffUser',
-    newStaffId,
-    { email: newStaffEmail }
-  );
-}
-
-/**
  * Log de alteração de role
  */
 export async function logRoleChange(
@@ -112,81 +95,6 @@ export async function logPasswordReset(
     entityType,
     targetUserId,
     { timestamp: new Date().toISOString() }
-  );
-}
-
-/**
- * Log de operação financeira
- */
-export async function logFinanceOperation(
-  actorId: string,
-  operation: string,
-  entityType: string,
-  entityId: string,
-  amount?: number,
-  additionalData?: Record<string, unknown>
-): Promise<void> {
-  await logAdminAction(
-    actorId,
-    `finance_${operation}`,
-    entityType,
-    entityId,
-    { amount, ...additionalData }
-  );
-}
-
-/**
- * Log de aprovação de comissão
- */
-export async function logCommissionApproval(
-  actorId: string,
-  commissionId: string,
-  amount: number
-): Promise<void> {
-  await logFinanceOperation(
-    actorId,
-    'approve_commission',
-    'Commission',
-    commissionId,
-    amount
-  );
-}
-
-/**
- * Log de pagamento aprovado
- */
-export async function logPayoutApproval(
-  actorId: string,
-  payoutId: string,
-  amount: number,
-  recipientId: string
-): Promise<void> {
-  await logFinanceOperation(
-    actorId,
-    'approve_payout',
-    'Payout',
-    payoutId,
-    amount,
-    { recipientId }
-  );
-}
-
-/**
- * Log de ajuste manual no ledger
- */
-export async function logLedgerAdjustment(
-  actorId: string,
-  userId: string,
-  amount: number,
-  reason: string
-): Promise<void> {
-  await logFinanceOperation(
-    actorId,
-    'ledger_adjustment',
-    'Ledger',
-    userId,
-    amount,
-    { reason }
   );
 }
 

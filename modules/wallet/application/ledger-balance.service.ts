@@ -233,25 +233,6 @@ export async function invalidateWalletBalanceCache(walletId: string): Promise<vo
   }, 'Balance cache invalidated');
 }
 
-/**
- * Invalida cache por userId
- */
-export async function invalidateWalletBalanceCacheByUserId(
-  userId: string,
-  deps: LedgerBalanceServiceDeps = { prisma: defaultPrisma }
-): Promise<void> {
-  const { prisma } = deps;
-
-  const wallet = await prisma.wallet.findUnique({
-    where: { userId },
-    select: { id: true },
-  });
-
-  if (wallet) {
-    await invalidateWalletBalanceCache(wallet.id);
-  }
-}
-
 // ============================================================================
 // RECONCILIATION (para verificar consistência com campo legado)
 // ============================================================================

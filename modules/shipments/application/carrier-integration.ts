@@ -19,6 +19,12 @@ import {
   type VolumePrePostagemInput,
   type CorreiosShipmentMetadata,
 } from '@/platform/integrations/correios';
+import {
+  createLoggiShipment,
+  isLoggiAvailableAsync,
+  cotarLoggi,
+  type CreateLoggiShipmentInput,
+} from '@/platform/integrations/loggi';
 
 // Mapeamento de nomes de serviço para códigos dos Correios
 const CORREIOS_SERVICE_CODE_MAP: Record<string, string> = {
@@ -148,10 +154,9 @@ export async function integrateWithCarrier(
     return await integrateWithCorreios(tx, input);
   }
 
-  // Outras transportadoras podem ser adicionadas aqui
-  // if (carrierNormalized === 'jadlog') {
-  //   return await integrateWithJadlog(tx, input);
-  // }
+  if (carrierNormalized === 'loggi') {
+    return await integrateWithLoggi(tx, input);
+  }
 
   // Transportadora não suportada - retorna sucesso sem integração
   console.log('[CARRIER_INTEGRATION] Carrier not supported for integration:', carrier);
@@ -420,4 +425,260 @@ function resolveCorreiosServiceCode(
   }
 
   return null;
+}
+
+/**
+ * Integração específica com Loggi
+ */
+async function integrateWithLoggi(
+  tx: Omit<PrismaClient, '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'>,
+  input: CarrierIntegrationInput
+): Promise<CarrierIntegrationResult> {
+  const { shipmentId, packages, sender, recipient, serviceName, serviceCode } = input;
+
+  console.log('[CARRIER_INTEGRATION_LOGGI] Starting Loggi integration:', {
+    shipmentId,
+    serviceName,
+    serviceCode,
+    packagesCount: packages.length,
+  });
+
+  try {
+    // 1. Verificar se Loggi está configurada
+    const isAvailable = await isLoggiAvailableAsync();
+    if (!isAvailable) {
+      console.warn('[CARRIER_INTEGRATION_LOGGI] Loggi not configured');
+      return {
+        success: false,
+        carrier: 'Loggi',
+        errorMessage: 'Integração da Loggi não está configurada',
+      };
+    }
+
+    // 2. Resolver externalServiceId (vem do serviceCode via quote metadata)
+    let externalServiceId: string | undefined = serviceCode;
+    if (!externalServiceId) {
+      // Fallback: re-quote to find the externalServiceId
+      console.log('[CARRIER_INTEGRATION_LOGGI] No externalServiceId in metadata — re-quoting to find it');
+      externalServiceId = await resolveLoggiExternalServiceId(
+        sender.cep,
+        recipient.cep,
+        packages,
+        serviceName,
+      ) ?? undefined;
+    }
+    if (!externalServiceId) {
+      console.error('[CARRIER_INTEGRATION_LOGGI] Could not resolve externalServiceId:', {
+        serviceName,
+        serviceCode,
+      });
+      return {
+        success: false,
+        carrier: 'Loggi',
+        errorMessage: 'ID do serviço Loggi não disponível. Tente novamente.',
+      };
+    }
+
+    // 3. Montar input para a API da Loggi
+    const loggiInput: CreateLoggiShipmentInput = {
+      externalServiceId,
+      sender: {
+        name: sender.nome,
+        phoneNumber: sender.telefone,
+        federalTaxId: sender.documento.replace(/\D/g, ''),
+        address: {
+          logradouro: sender.logradouro || '',
+          numero: sender.numero || 'S/N',
+          complemento: sender.complemento,
+          bairro: sender.bairro || '',
+          cep: sender.cep.replace(/\D/g, ''),
+          cidade: sender.cidade || '',
+          uf: sender.uf || '',
+        },
+      },
+      receiver: {
+        name: recipient.nome,
+        email: recipient.email,
+        phoneNumber: recipient.telefone,
+        federalTaxId: (recipient.documento || sender.documento).replace(/\D/g, ''),
+        address: {
+          logradouro: recipient.logradouro,
+          numero: recipient.numero || 'S/N',
+          complemento: recipient.complemento,
+          bairro: recipient.bairro || '',
+          cep: recipient.cep.replace(/\D/g, ''),
+          cidade: recipient.cidade,
+          uf: recipient.uf,
+        },
+      },
+      packages: packages.map((pkg) => ({
+        freightType: resolveLoggiFreightAndPickup(serviceName).freightType,
+        weightG: Math.round(Number(pkg.weight) * 1000),
+        lengthCm: Math.round(Number(pkg.length)),
+        widthCm: Math.round(Number(pkg.width)),
+        heightCm: Math.round(Number(pkg.height)),
+        contentDeclaration: {
+          totalValue: String(input.declaredValue || 1),
+          description: input.contentDescription || 'Mercadorias diversas',
+        },
+      })),
+    };
+
+    console.log('[CARRIER_INTEGRATION_LOGGI] Calling createLoggiShipment:', {
+      externalServiceId,
+      packagesCount: loggiInput.packages.length,
+    });
+
+    // 4. Criar shipment na Loggi
+    const response = await createLoggiShipment(loggiInput);
+
+    if (!response.packages || response.packages.length === 0) {
+      return {
+        success: false,
+        carrier: 'Loggi',
+        errorMessage: 'Loggi não retornou pacotes na resposta',
+      };
+    }
+
+    // 5. Atualizar packages no banco com tracking codes e loggiKeys
+    const packageUpdates: CarrierIntegrationResult['packageUpdates'] = [];
+    const loggiKeys: string[] = [];
+
+    for (let i = 0; i < response.packages.length; i++) {
+      const loggiPkg = response.packages[i];
+      const pkg = packages[i]; // Match by position
+
+      if (pkg && loggiPkg) {
+        loggiKeys.push(loggiPkg.loggiKey);
+
+        await tx.package.update({
+          where: { id: pkg.id },
+          data: {
+            carrierTrackingCode: loggiPkg.trackingCode,
+            // Store loggiKey in carrierPrePostageId for later label generation
+            carrierPrePostageId: loggiPkg.loggiKey,
+          },
+        });
+
+        packageUpdates.push({
+          packageId: pkg.id,
+          packageNumber: pkg.packageNumber,
+          carrierTrackingCode: loggiPkg.trackingCode,
+          carrierPrePostageId: loggiPkg.loggiKey,
+        });
+
+        console.log('[CARRIER_INTEGRATION_LOGGI] Package updated:', {
+          packageId: pkg.id,
+          packageNumber: pkg.packageNumber,
+          trackingCode: loggiPkg.trackingCode,
+          loggiKey: loggiPkg.loggiKey,
+        });
+      }
+    }
+
+    // 6. Atualizar shipment com código de rastreio principal
+    const primaryTrackingCode = response.packages[0].trackingCode;
+    await tx.shipment.update({
+      where: { id: shipmentId },
+      data: {
+        carrierTrackingCode: primaryTrackingCode,
+        carrierMetadata: {
+          loggiKeys,
+          externalServiceId,
+        } as object,
+      },
+    });
+
+    // 7. Atualizar label com tracking code
+    await tx.label.updateMany({
+      where: { shipmentId },
+      data: {
+        trackingCode: primaryTrackingCode,
+      },
+    });
+
+    console.log('[CARRIER_INTEGRATION_LOGGI] Integration succeeded:', {
+      shipmentId,
+      primaryTrackingCode,
+      loggiKeysCount: loggiKeys.length,
+    });
+
+    return {
+      success: true,
+      carrier: 'Loggi',
+      primaryTrackingCode,
+      packageUpdates,
+    };
+  } catch (error) {
+    console.error('[CARRIER_INTEGRATION_LOGGI] Integration failed:', error);
+    return {
+      success: false,
+      carrier: 'Loggi',
+      errorMessage: error instanceof Error ? error.message : 'Erro na integração com Loggi',
+    };
+  }
+}
+
+/**
+ * Re-quotes Loggi to find the externalServiceId for a given service name
+ */
+async function resolveLoggiExternalServiceId(
+  originCep: string,
+  destCep: string,
+  packages: Package[],
+  serviceName?: string,
+): Promise<string | null> {
+  try {
+    const { freightType: targetFreightType, pickupType: targetPickupType } = resolveLoggiFreightAndPickup(serviceName);
+    const quoteResponse = await cotarLoggi({
+      originCep: originCep.replace(/\D/g, ''),
+      destCep: destCep.replace(/\D/g, ''),
+      packages: packages.map((pkg) => ({
+        weightG: Math.round(Number(pkg.weight) * 1000),
+        lengthCm: Math.round(Number(pkg.length)),
+        widthCm: Math.round(Number(pkg.width)),
+        heightCm: Math.round(Number(pkg.height)),
+      })),
+    });
+
+    // Find the matching quotation by freightType + pickupType
+    const allQuotations = quoteResponse.packagesQuotations?.[0]?.quotations || [];
+    const match = (targetPickupType
+        ? allQuotations.find((q) => q.freightType === targetFreightType && q.pickupType === targetPickupType)
+        : null)
+      || allQuotations.find((q) => q.freightType === targetFreightType)
+      || allQuotations[0]; // Fallback to first available
+
+    if (match?.externalServiceId) {
+      console.log('[CARRIER_INTEGRATION_LOGGI] Resolved externalServiceId via re-quote:', {
+        externalServiceId: match.externalServiceId,
+        freightType: match.freightType,
+      });
+      return match.externalServiceId;
+    }
+
+    console.warn('[CARRIER_INTEGRATION_LOGGI] No matching quotation found in re-quote');
+    return null;
+  } catch (error) {
+    console.error('[CARRIER_INTEGRATION_LOGGI] Re-quote failed:', error);
+    return null;
+  }
+}
+
+/**
+ * Resolve o tipo de frete e pickup da Loggi a partir do nome do serviço
+ */
+function resolveLoggiFreightAndPickup(serviceName?: string): { freightType: string; pickupType?: string } {
+  if (!serviceName) return { freightType: 'FREIGHT_TYPE_ECONOMIC' };
+  const normalized = serviceName.toLowerCase();
+  const freightType = normalized.includes('express') ? 'FREIGHT_TYPE_EXPRESS' : 'FREIGHT_TYPE_ECONOMIC';
+
+  let pickupType: string | undefined;
+  if (normalized.includes('postagem') || normalized.includes('drop')) {
+    pickupType = 'PICKUP_TYPE_DROP_OFF';
+  } else if (normalized.includes('coleta') || normalized.includes('spot')) {
+    pickupType = 'PICKUP_TYPE_SPOT';
+  }
+
+  return { freightType, pickupType };
 }

@@ -45,15 +45,11 @@ export {
   jtFetch,
   testJTAuth,
   getJTConfigInfo,
-  resetJTCircuitBreaker,
-  generatePasswordHash,
-  generateBodyDigest,
-  generateHeaderDigest,
 } from './client';
 export type { JTAuthTestResult } from './client';
 
 // Cotação
-export { cotarJT, cotarJTSimples } from './cotacao';
+export { cotarJT } from './cotacao';
 export type { JTCotacaoInput } from './cotacao';
 
 // Adapter

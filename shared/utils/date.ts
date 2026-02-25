@@ -5,9 +5,6 @@
 
 import dayjs from 'dayjs';
 
-/** Offset de Brasília em minutos (UTC-3) */
-const BRASILIA_OFFSET_MINUTES = -180;
-
 // ============================================================================
 // Helpers de formatação para UI
 // ============================================================================
@@ -32,17 +29,6 @@ export function formatDateBR(date: Date | string | null | undefined): string {
 export function formatDateTimeBR(date: Date | string | null | undefined): string {
   if (!date) return '-';
   return dayjs(date).format('DD/MM/YYYY HH:mm');
-}
-
-/**
- * Formata uma data de forma curta (DD/MM/YY)
- * @param date - Data em formato ISO string, Date ou null/undefined
- * @returns String formatada ou "—" para valores nulos
- * @example formatDateShortBR("2024-01-15") // "15/01/24"
- */
-export function formatDateShortBR(date: Date | string | null | undefined): string {
-  if (!date) return '—';
-  return dayjs(date).format('DD/MM/YY');
 }
 
 /**
@@ -71,44 +57,3 @@ export function endOfDayBrasilia(dateString: string): Date {
   return date;
 }
 
-/**
- * Retorna o mês da data em UTC-3 (Brasília)
- * @returns Mês 1-12
- */
-export function getMonthBrasilia(date: Date): number {
-  // Ajustar pelo offset de Brasília
-  const brasiliaDate = new Date(date.getTime() + BRASILIA_OFFSET_MINUTES * 60 * 1000);
-  return brasiliaDate.getUTCMonth() + 1;
-}
-
-/**
- * Retorna o ano da data em UTC-3 (Brasília)
- */
-export function getYearBrasilia(date: Date): number {
-  const brasiliaDate = new Date(date.getTime() + BRASILIA_OFFSET_MINUTES * 60 * 1000);
-  return brasiliaDate.getUTCFullYear();
-}
-
-/**
- * Converte uma data para ISO string em UTC-3
- */
-export function toISOBrasilia(date: Date): string {
-  const brasiliaDate = new Date(date.getTime() - BRASILIA_OFFSET_MINUTES * 60 * 1000);
-  return brasiliaDate.toISOString().replace('Z', '-03:00');
-}
-
-/**
- * Parse de parâmetros de data para filtros de período
- * Retorna datas ajustadas para UTC-3
- */
-export function parseDateRangeParams(
-  dateStart: string | null,
-  dateEnd: string | null
-): { startDate: Date; endDate: Date } | null {
-  if (!dateStart && !dateEnd) return null;
-
-  return {
-    startDate: dateStart ? startOfDayBrasilia(dateStart) : new Date(0),
-    endDate: dateEnd ? endOfDayBrasilia(dateEnd) : new Date(),
-  };
-}

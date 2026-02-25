@@ -150,50 +150,6 @@ export interface WebhookHeaders {
 }
 
 /**
- * Mapeamento de status do Mercado Pago para status interno
- */
-export const MP_STATUS_MAP: Record<string, TransactionStatus> = {
-  // Pendentes
-  pending: 'PENDING',
-  in_process: 'PENDING',
-  in_mediation: 'PENDING',
-
-  // Aprovados
-  approved: 'PAID',
-  authorized: 'AUTHORIZED',
-
-  // Cancelados/Rejeitados
-  rejected: 'FAILED',
-  cancelled: 'CANCELED',
-  refunded: 'REFUNDED',
-  charged_back: 'CHARGEBACK',
-};
-
-/**
- * Mapeamento de payment_type_id do MP para PaymentMethod interno
- */
-export const MP_METHOD_MAP: Record<string, PaymentMethod> = {
-  credit_card: 'CREDIT_CARD',
-  debit_card: 'DEBIT_CARD',
-  account_money: 'WALLET',
-  ticket: 'BOLETO',
-  bank_transfer: 'PIX',
-};
-
-/**
- * Erro da API do Mercado Pago
- */
-export interface MercadoPagoApiError {
-  status: number;
-  error: string;
-  message: string;
-  cause?: Array<{
-    code: string;
-    description: string;
-  }>;
-}
-
-/**
  * Mapeamento de status_detail para mensagens amigáveis ao usuário
  *
  * @see https://www.mercadopago.com.br/developers/pt/docs/checkout-api/response-handling/handle-responses

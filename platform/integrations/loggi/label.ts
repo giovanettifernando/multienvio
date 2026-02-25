@@ -36,6 +36,8 @@ export async function printLoggiLabel(
 
   console.log('[LOGGI_LABEL] Printing label:', { loggiKeys, layout });
 
+  // Labels bypass circuit breaker — 500 errors from async label generation
+  // should NOT block shipment creation or other operations
   const response = await loggiFetch<LoggiLabelResponse>(
     LOGGI_ENDPOINTS.label,
     {
@@ -44,6 +46,7 @@ export async function printLoggiLabel(
       format: LOGGI_LABEL_FORMATS.PDF,
       layout: layout || LOGGI_LABEL_LAYOUTS.A4,
     },
+    { skipCircuitBreaker: true },
   );
 
   console.log('[LOGGI_LABEL] Label response:', {

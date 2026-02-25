@@ -141,7 +141,12 @@ export async function cotarLoggi(input: LoggiCotacaoInput): Promise<LoggiQuoteRe
 
   const response = await loggiFetch<LoggiQuoteResponse>(
     LOGGI_ENDPOINTS.quote,
-    { shipFrom, shipTo, packages },
+    {
+      shipFrom,
+      shipTo,
+      packages,
+      pickupTypes: ['PICKUP_TYPE_SPOT', 'PICKUP_TYPE_DROP_OFF'],
+    },
   );
 
   const totalQuotations = response.packagesQuotations?.reduce(

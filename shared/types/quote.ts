@@ -1,13 +1,5 @@
 export type CEP = string;
 
-export type CepLookupResult = {
-  cep: CEP;
-  valido: boolean;
-  cidade?: string;
-  uf?: string;
-  mensagemErro?: string;
-};
-
 export type QuoteVolume = {
   id: string;
   comprimentoCm: number;
@@ -49,6 +41,8 @@ export type QuoteResultItem = {
   preco: number;
   exigeSeguro?: boolean;
   source?: 'real' | 'error' | 'quote'; // 'real' = API, 'error' = falha, 'quote' = cotação selecionada
+  /** Carrier-specific external service ID (e.g. Loggi externalServiceId) */
+  externalServiceId?: string;
 };
 
 export type QuoteSummary = {
@@ -155,17 +149,6 @@ export type UnitFilters = {
   cep?: CEP;
   ampliarAlcance?: boolean;
   estadosProximos?: boolean;
-};
-
-export type QuoteTelemetry = {
-  volumesCount: number;
-  pesoTotalKg: number;
-  pesoCubadoTotalKg: number;
-  ordenacao?: "price" | "prazo";
-  coleta: boolean;
-  devolucao: boolean;
-  docType?: DocumentType;
-  hasInsuranceValue?: boolean;
 };
 
 /**

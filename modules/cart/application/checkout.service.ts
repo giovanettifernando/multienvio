@@ -21,6 +21,8 @@ import { integrateWithCarrier } from '@/modules/shipments/application/carrier-in
 import { logger } from '@/platform/logging/logger';
 import { ApiError } from '@/platform/api/errors';
 import { isCorreiosCarrier } from '@/shared/utils/carrier';
+import { getQueue, QUEUE_NAMES, JOB_PRIORITY } from '@/platform/queue';
+import type { LabelGenerateJobPayload } from '@/platform/queue';
 
 // ============================================================================
 // TIPOS
@@ -125,6 +127,8 @@ export interface CheckoutInput {
   estimatedDays: number;
   freightCost: number;
   solicitarColeta?: boolean;
+  /** Carrier-specific external service ID (e.g. Loggi externalServiceId) */
+  externalServiceId?: string;
 }
 
 export interface CheckoutResult {
@@ -153,6 +157,8 @@ export interface ValidatedQuote {
   estimatedDays: number;
   carrier: string;
   service: string;
+  /** Carrier-specific external service ID (e.g. Loggi externalServiceId) */
+  externalServiceId?: string;
 }
 
 export async function validateQuoteAndGetPrice(
@@ -167,6 +173,7 @@ export async function validateQuoteAndGetPrice(
     },
     include: {
       selection: true,
+      options: true,
     },
   });
 
@@ -231,6 +238,10 @@ export async function validateQuoteAndGetPrice(
     }
   }
 
+  // Extract externalServiceId from the selected option metadata (for Loggi)
+  const selectedOption = quote.options.find((o) => o.id === quote.selection!.optionId);
+  const optionMeta = selectedOption?.metadata as { externalServiceId?: string } | null;
+
   return {
     quoteId: quote.id,
     freightCostCents: serverFreightCostCents,
@@ -238,6 +249,7 @@ export async function validateQuoteAndGetPrice(
     estimatedDays: quote.selection.deliveryDays,
     carrier: quote.selection.carrierName,
     service: quote.selection.serviceName,
+    externalServiceId: optionMeta?.externalServiceId,
   };
 }
 
@@ -422,6 +434,9 @@ export async function processCheckout(input: CheckoutInput): Promise<CheckoutRes
   const serverFreightCost = validatedQuote.freightCost;
   const serverEstimatedDays = validatedQuote.estimatedDays;
 
+  // Pass carrier-specific external service ID (e.g. Loggi)
+  input.externalServiceId = validatedQuote.externalServiceId;
+
   const platformTrackingCode = generatePlatformTrackingCode();
   const declaredValue = calculateDeclaredValue(input.document, input.insuranceValue);
   const documentData = prepareDocumentData(input.document);
@@ -556,6 +571,35 @@ export async function processCheckout(input: CheckoutInput): Promise<CheckoutRes
     };
   });
 
+  // Enfileirar LABEL_GENERATE para carriers não-Correios (Loggi, J&T, etc.)
+  // O label worker busca o PDF da etiqueta via API da transportadora
+  if (!result.isIdempotent && !isCorreiosCarrier(input.carrier)) {
+    try {
+      const labelQueue = getQueue<LabelGenerateJobPayload>(QUEUE_NAMES.LABEL_GENERATE);
+      // Loggi async-shipments: etiqueta só fica disponível após processamento async (~1min)
+      const isLoggi = input.carrier.toLowerCase() === 'loggi';
+      await labelQueue.add('generate', {
+        shipmentId: result.shipmentId,
+        carrier: input.carrier,
+      }, {
+        priority: JOB_PRIORITY.HIGH,
+        jobId: `label-${result.shipmentId}`,
+        delay: isLoggi ? 60_000 : 0, // 60s de delay para Loggi
+      });
+      logger.info({
+        event: 'label_generate_enqueued',
+        shipmentId: result.shipmentId,
+        carrier: input.carrier,
+      }, 'LABEL_GENERATE job enqueued after checkout');
+    } catch (err) {
+      logger.warn({
+        event: 'label_generate_enqueue_failed',
+        shipmentId: result.shipmentId,
+        error: err instanceof Error ? err.message : String(err),
+      }, 'Failed to enqueue LABEL_GENERATE — label can be generated manually');
+    }
+  }
+
   // Salvar destinatário recorrente (fora da transação)
   await saveRecipientIfRequested(input.userId, input.recipient);
 
@@ -634,7 +678,7 @@ async function integrateWithCarrierSafely(
     shipmentId,
     carrier: input.carrier,
     serviceName: input.service,
-    serviceCode: undefined,
+    serviceCode: input.externalServiceId,
     packages,
     sender: senderData,
     recipient: recipientData,

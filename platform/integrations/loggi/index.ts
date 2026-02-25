@@ -47,10 +47,8 @@ export {
   validateLoggiConfig,
   isLoggiConfigured,
   invalidateLoggiConfigCache,
-  getLoggiConfigInfo,
   loggiFetch,
   testLoggiAuth,
-  resetLoggiCircuitBreaker,
 } from './client';
 
 // Cotação

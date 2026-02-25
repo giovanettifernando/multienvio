@@ -1,390 +1,293 @@
 {
   "openapi": "3.0.0",
   "info": {
-    "title": "Authentication",
-    "version": "v1",
-    "description": "Autenticação OAuth2 para acesso às APIs da Loggi."
+    "title": "Loggi Platform API",
+    "version": "v1.9",
+    "description": "SDK unificado para todas as APIs da Loggi: autenticação, cotação, envio assíncrono, etiquetas e rastreamento."
   },
   "servers": [
     {
-      "url": "https://stg.api.loggi.com"
+      "url": "https://stg.api.loggi.com",
+      "description": "Sandbox / Staging"
     },
     {
-      "url": "https://api.loggi.com"
+      "url": "https://api.loggi.com",
+      "description": "Produção"
     }
   ],
   "paths": {
-    "/oauth2/token": {
-      "post": {
-        "summary": "Autenticação V1",
-        "description": "Solicitação e atualização de token. O campo **idToken** deve ser informado no **Header** _Authorization_ de cada requisição às APIs da Loggi.\n\n### ATENÇÃO!</h2>\n<div class=\"warning-docs\">\n  ⚠️ <em>  Esta api de autenticação está depreciada, por favor utilize a <a href=\"/reference/authenticatev2\">versão 2</a> da api de autenticação.</em>\n</div>",
-        "operationId": "AuthenticateV1",
-        "responses": {
-          "200": {
-            "description": "Criação ou atualização de token com sucesso",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "description": "Objeto que representa os dados de autenticação OAuth2",
-                  "properties": {
-                    "idToken": {
-                      "type": "string",
-                      "description": "Token de autenticação. Deve ser informado no campo Auhtorization de cada endpoint.",
-                      "example": "eyJraWQiOiJIWTlqQk43Y2pJajYzN2RobUZ6"
-                    },
-                    "expiresIn": {
-                      "type": "string",
-                      "description": "Tempo de expiração do token em segundos.",
-                      "example": "300"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Mensagem do cliente não segue a especificação",
-            "content": {
-              "application/json": {
-                "example": {
-                  "code": 3,
-                  "message": "Mensagem do cliente não segue a especificação",
-                  "details": []
-                },
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "code": {
-                      "type": "integer",
-                      "format": "int32",
-                      "description": "Código numérico referente à falha.\n\nCANCELLED = 1\n\nUNKNOWN = 2\n\nINVALID_ARGUMENT = 3\n\nDEADLINE_EXCEEDED = 4\n\nNOT_FOUND = 5\n\nALREADY_EXISTS = 6\n\nPERMISSION_DENIED = 7\n\nRESOURCE_EXHAUSTED = 8\n\nFAILED_PRECONDITION = 9\n\nABORTED = 10\n\nOUT_OF_RANGE = 11\n\nUNIMPLEMENTED = 12\n\nINTERNAL = 13\n\nUNAVAILABLE = 14\n\nDATA_LOSS = 15\n\nUNAUTHENTICATED = 16",
-                      "example": 14
-                    },
-                    "message": {
-                      "type": "string",
-                      "description": "Texto pequeno informativo sobre a falha.",
-                      "example": "Requisição com credenciais inválidas."
-                    },
-                    "details": {
-                      "type": "array",
-                      "description": "Detalhes sobre a falha. Nesta versão da API, ainda não está sendo retornado, mas deve ser considerado um array de objetos de tipos distintos.",
-                      "items": {},
-                      "example": []
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Falha de autenticação",
-            "content": {
-              "application/json": {
-                "example": {
-                  "code": 16,
-                  "message": "Falha de autenticação",
-                  "details": []
-                },
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "code": {
-                      "type": "integer",
-                      "format": "int32",
-                      "description": "Código numérico referente à falha.\n\nCANCELLED = 1\n\nUNKNOWN = 2\n\nINVALID_ARGUMENT = 3\n\nDEADLINE_EXCEEDED = 4\n\nNOT_FOUND = 5\n\nALREADY_EXISTS = 6\n\nPERMISSION_DENIED = 7\n\nRESOURCE_EXHAUSTED = 8\n\nFAILED_PRECONDITION = 9\n\nABORTED = 10\n\nOUT_OF_RANGE = 11\n\nUNIMPLEMENTED = 12\n\nINTERNAL = 13\n\nUNAVAILABLE = 14\n\nDATA_LOSS = 15\n\nUNAUTHENTICATED = 16",
-                      "example": 14
-                    },
-                    "message": {
-                      "type": "string",
-                      "description": "Texto pequeno informativo sobre a falha.",
-                      "example": "Requisição com credenciais inválidas."
-                    },
-                    "details": {
-                      "type": "array",
-                      "description": "Detalhes sobre a falha. Nesta versão da API, ainda não está sendo retornado, mas deve ser considerado um array de objetos de tipos distintos.",
-                      "items": {},
-                      "example": []
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Sem autorização para acessar o serviço",
-            "content": {
-              "application/json": {
-                "example": {
-                  "code": 7,
-                  "message": "Falha de autorização",
-                  "details": []
-                },
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "code": {
-                      "type": "integer",
-                      "format": "int32",
-                      "description": "Código numérico referente à falha.\n\nCANCELLED = 1\n\nUNKNOWN = 2\n\nINVALID_ARGUMENT = 3\n\nDEADLINE_EXCEEDED = 4\n\nNOT_FOUND = 5\n\nALREADY_EXISTS = 6\n\nPERMISSION_DENIED = 7\n\nRESOURCE_EXHAUSTED = 8\n\nFAILED_PRECONDITION = 9\n\nABORTED = 10\n\nOUT_OF_RANGE = 11\n\nUNIMPLEMENTED = 12\n\nINTERNAL = 13\n\nUNAVAILABLE = 14\n\nDATA_LOSS = 15\n\nUNAUTHENTICATED = 16",
-                      "example": 14
-                    },
-                    "message": {
-                      "type": "string",
-                      "description": "Texto pequeno informativo sobre a falha.",
-                      "example": "Requisição com credenciais inválidas."
-                    },
-                    "details": {
-                      "type": "array",
-                      "description": "Detalhes sobre a falha. Nesta versão da API, ainda não está sendo retornado, mas deve ser considerado um array de objetos de tipos distintos.",
-                      "items": {},
-                      "example": []
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Requisições massivas bloqueadas",
-            "content": {
-              "application/json": {
-                "example": {
-                  "code": 8,
-                  "message": "Requisições massivas bloqueadas",
-                  "details": []
-                },
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "code": {
-                      "type": "integer",
-                      "format": "int32",
-                      "description": "Código numérico referente à falha.\n\nCANCELLED = 1\n\nUNKNOWN = 2\n\nINVALID_ARGUMENT = 3\n\nDEADLINE_EXCEEDED = 4\n\nNOT_FOUND = 5\n\nALREADY_EXISTS = 6\n\nPERMISSION_DENIED = 7\n\nRESOURCE_EXHAUSTED = 8\n\nFAILED_PRECONDITION = 9\n\nABORTED = 10\n\nOUT_OF_RANGE = 11\n\nUNIMPLEMENTED = 12\n\nINTERNAL = 13\n\nUNAVAILABLE = 14\n\nDATA_LOSS = 15\n\nUNAUTHENTICATED = 16",
-                      "example": 14
-                    },
-                    "message": {
-                      "type": "string",
-                      "description": "Texto pequeno informativo sobre a falha.",
-                      "example": "Requisição com credenciais inválidas."
-                    },
-                    "details": {
-                      "type": "array",
-                      "description": "Detalhes sobre a falha. Nesta versão da API, ainda não está sendo retornado, mas deve ser considerado um array de objetos de tipos distintos.",
-                      "items": {},
-                      "example": []
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Erro interno",
-            "content": {
-              "application/json": {
-                "example": {
-                  "code": 13,
-                  "message": "Erro interno",
-                  "details": []
-                },
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "code": {
-                      "type": "integer",
-                      "format": "int32",
-                      "description": "Código numérico referente à falha.\n\nCANCELLED = 1\n\nUNKNOWN = 2\n\nINVALID_ARGUMENT = 3\n\nDEADLINE_EXCEEDED = 4\n\nNOT_FOUND = 5\n\nALREADY_EXISTS = 6\n\nPERMISSION_DENIED = 7\n\nRESOURCE_EXHAUSTED = 8\n\nFAILED_PRECONDITION = 9\n\nABORTED = 10\n\nOUT_OF_RANGE = 11\n\nUNIMPLEMENTED = 12\n\nINTERNAL = 13\n\nUNAVAILABLE = 14\n\nDATA_LOSS = 15\n\nUNAUTHENTICATED = 16",
-                      "example": 14
-                    },
-                    "message": {
-                      "type": "string",
-                      "description": "Texto pequeno informativo sobre a falha.",
-                      "example": "Requisição com credenciais inválidas."
-                    },
-                    "details": {
-                      "type": "array",
-                      "description": "Detalhes sobre a falha. Nesta versão da API, ainda não está sendo retornado, mas deve ser considerado um array de objetos de tipos distintos.",
-                      "items": {},
-                      "example": []
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "Serviço temporariamente indisponível",
-            "content": {
-              "application/json": {
-                "example": {
-                  "code": 14,
-                  "message": "Serviço temporariamente indisponível",
-                  "details": []
-                },
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "code": {
-                      "type": "integer",
-                      "format": "int32",
-                      "description": "Código numérico referente à falha.\n\nCANCELLED = 1\n\nUNKNOWN = 2\n\nINVALID_ARGUMENT = 3\n\nDEADLINE_EXCEEDED = 4\n\nNOT_FOUND = 5\n\nALREADY_EXISTS = 6\n\nPERMISSION_DENIED = 7\n\nRESOURCE_EXHAUSTED = 8\n\nFAILED_PRECONDITION = 9\n\nABORTED = 10\n\nOUT_OF_RANGE = 11\n\nUNIMPLEMENTED = 12\n\nINTERNAL = 13\n\nUNAVAILABLE = 14\n\nDATA_LOSS = 15\n\nUNAUTHENTICATED = 16",
-                      "example": 14
-                    },
-                    "message": {
-                      "type": "string",
-                      "description": "Texto pequeno informativo sobre a falha.",
-                      "example": "Requisição com credenciais inválidas."
-                    },
-                    "details": {
-                      "type": "array",
-                      "description": "Detalhes sobre a falha. Nesta versão da API, ainda não está sendo retornado, mas deve ser considerado um array de objetos de tipos distintos.",
-                      "items": {},
-                      "example": []
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "client_id",
-                  "client_secret"
-                ],
-                "properties": {
-                  "client_id": {
-                    "type": "string",
-                    "description": "Id do cliente cadastrado na Loggi.",
-                    "example": "loggi_cliente_xpto"
-                  },
-                  "client_secret": {
-                    "type": "string",
-                    "description": "Chave secreta gerada pela Loggi.",
-                    "example": "PaSsWoRd!St@ong&R"
-                  }
-                },
-                "description": "Objeto que representa os parâmetros para obtenção de um Token de acesso."
-              }
-            }
-          }
-        },
-        "tags": [
-          "AuthAPI"
-        ]
-      }
-    },
     "/v2/oauth2/token": {
       "post": {
-        "tags": [
-          "AuthAPI"
-        ],
+        "tags": ["AuthAPI"],
         "summary": "Autenticação V2",
-        "description": "Solicitação de token para as APIs da Loggi.",
-        "operationId": "AuthenticateV2",
+        "description": "Solicitação de token OAuth2 para as APIs da Loggi.",
+        "operationId": "requestOAuthToken",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "properties": {
-                  "client_id": {
-                    "type": "string",
-                    "minLength": 1,
-                    "title": "Client Id"
-                  },
-                  "client_secret": {
-                    "type": "string",
-                    "minLength": 1,
-                    "title": "Client Secret"
-                  }
-                },
-                "type": "object",
-                "required": [
-                  "client_id",
-                  "client_secret"
-                ],
-                "title": "ServiceAccountTokenRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Return the JWT Token for the service account",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "properties": {
-                    "idToken": {
-                      "type": "string",
-                      "title": "Idtoken"
-                    },
-                    "expiresIn": {
-                      "type": "string",
-                      "title": "Expiresin"
-                    }
-                  },
-                  "type": "object",
-                  "required": [
-                    "idToken",
-                    "expiresIn"
-                  ],
-                  "title": "ServiceAccountTokenResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Validation Error",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "properties": {
-                    "type": {
-                      "type": "string",
-                      "description": "Uma referência de URI que identifica o tipo de problema."
-                    },
-                    "title": {
-                      "type": "string",
-                      "description": "Um resumo curto e legível para humanos do tipo de problema."
-                    },
-                    "status": {
-                      "type": "integer",
-                      "description": "O código de status HTTP gerado."
-                    },
-                    "detail": {
-                      "type": "string",
-                      "description": "Uma explicação legível para humanos específica para esta ocorrência do problema."
-                    },
-                    "instance": {
-                      "type": "string",
-                      "description": "Uma referência de URI que identifica a ocorrência específica do problema."
-                    }
-                  },
-                  "type": "object"
-                }
+                "$ref": "#/components/schemas/AuthRequest"
               }
             }
           }
+        },
+        "responses": {
+          "200": {
+            "description": "Token gerado com sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponse"
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/Error400" },
+          "401": { "$ref": "#/components/responses/Error401" },
+          "403": { "$ref": "#/components/responses/Error403" },
+          "429": { "$ref": "#/components/responses/Error429" },
+          "500": { "$ref": "#/components/responses/Error500" },
+          "503": { "$ref": "#/components/responses/Error503" }
+        }
+      }
+    },
+    "/v1/companies/{company_id}/quotations": {
+      "post": {
+        "tags": ["FreightPriceQuotation"],
+        "summary": "Criar Cotação",
+        "description": "Disponibiliza opções de preços e prazos da Loggi em tempo real conforme as características do envio.",
+        "operationId": "quote",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/CompanyId" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuoteRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Cotação realizada com sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuoteResponse"
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/Error400" },
+          "401": { "$ref": "#/components/responses/Error401" },
+          "403": { "$ref": "#/components/responses/Error403" },
+          "404": { "$ref": "#/components/responses/Error404" },
+          "429": { "$ref": "#/components/responses/Error429" },
+          "500": { "$ref": "#/components/responses/Error500" },
+          "503": { "$ref": "#/components/responses/Error503" }
+        }
+      }
+    },
+    "/v1/companies/{company_id}/async-shipments": {
+      "post": {
+        "tags": ["AsyncShipments"],
+        "summary": "Criar Envio Assíncrono",
+        "description": "Cria envios de forma assíncrona. Retorna loggiKey e trackingCode para cada pacote. O processamento é feito em background — aguarde webhook ou polling para confirmar.",
+        "operationId": "createAsyncShipment",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/CompanyId" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ShipmentRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Envio criado com sucesso (processamento assíncrono)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShipmentResponse"
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/Error400" },
+          "401": { "$ref": "#/components/responses/Error401" },
+          "403": { "$ref": "#/components/responses/Error403" },
+          "429": { "$ref": "#/components/responses/Error429" },
+          "500": { "$ref": "#/components/responses/Error500" },
+          "503": { "$ref": "#/components/responses/Error503" }
+        }
+      }
+    },
+    "/v1/companies/{company_id}/labels": {
+      "post": {
+        "tags": ["Labels"],
+        "summary": "Criar Etiqueta",
+        "description": "Gera etiquetas em PDF (base64 ou URL) a partir dos loggiKeys retornados pela criação de shipment. Disponível somente após confirmação do processamento do pacote.",
+        "operationId": "createLabel",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/CompanyId" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LabelRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Etiqueta gerada com sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LabelResponse"
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/Error400" },
+          "401": { "$ref": "#/components/responses/Error401" },
+          "403": { "$ref": "#/components/responses/Error403" },
+          "429": { "$ref": "#/components/responses/Error429" },
+          "500": { "$ref": "#/components/responses/Error500" },
+          "503": { "$ref": "#/components/responses/Error503" }
+        }
+      }
+    },
+    "/v1/companies/{company_id}/packages/{tracking_code}/tracking": {
+      "get": {
+        "tags": ["Tracking"],
+        "summary": "Consultar Rastreamento",
+        "description": "Consulta o rastreamento de um pacote pelo tracking code.",
+        "operationId": "getTracking",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/CompanyId" },
+          {
+            "name": "tracking_code",
+            "in": "path",
+            "required": true,
+            "description": "Código de rastreamento do pacote",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Rastreamento consultado com sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrackingResponse"
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/Error400" },
+          "401": { "$ref": "#/components/responses/Error401" },
+          "403": { "$ref": "#/components/responses/Error403" },
+          "404": { "$ref": "#/components/responses/Error404" },
+          "429": { "$ref": "#/components/responses/Error429" },
+          "500": { "$ref": "#/components/responses/Error500" },
+          "503": { "$ref": "#/components/responses/Error503" }
         }
       }
     }
   },
   "components": {
     "securitySchemes": {
-      "OAuth2": {
-        "type": "oauth2",
-        "description": "Autenticação OAuth 2.0 para clientes da API.",
-        "flows": {
-          "clientCredentials": {
-            "tokenUrl": "https://api.loggi.com/v2/oauth2/token",
-            "scopes": {}
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Token JWT obtido via /v2/oauth2/token"
+      }
+    },
+    "parameters": {
+      "CompanyId": {
+        "name": "company_id",
+        "in": "path",
+        "required": true,
+        "description": "Código numérico fornecido pela Loggi para identificar o cliente.",
+        "schema": {
+          "type": "string"
+        }
+      }
+    },
+    "responses": {
+      "Error400": {
+        "description": "Mensagem do cliente não segue a especificação",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ErrorMessage" }
+          }
+        }
+      },
+      "Error401": {
+        "description": "Falha de autenticação",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ErrorMessage" }
+          }
+        }
+      },
+      "Error403": {
+        "description": "Sem autorização para acessar o serviço",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ErrorMessage" }
+          }
+        }
+      },
+      "Error404": {
+        "description": "Recurso não encontrado",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ErrorMessage" }
+          }
+        }
+      },
+      "Error429": {
+        "description": "Requisições massivas bloqueadas",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ErrorMessage" }
+          }
+        }
+      },
+      "Error500": {
+        "description": "Erro interno",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ErrorMessage" }
+          }
+        }
+      },
+      "Error503": {
+        "description": "Serviço temporariamente indisponível",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ErrorMessage" }
           }
         }
       }
@@ -396,84 +299,573 @@
           "code": {
             "type": "integer",
             "format": "int32",
-            "description": "Código numérico referente à falha.\n\nCANCELLED = 1\n\nUNKNOWN = 2\n\nINVALID_ARGUMENT = 3\n\nDEADLINE_EXCEEDED = 4\n\nNOT_FOUND = 5\n\nALREADY_EXISTS = 6\n\nPERMISSION_DENIED = 7\n\nRESOURCE_EXHAUSTED = 8\n\nFAILED_PRECONDITION = 9\n\nABORTED = 10\n\nOUT_OF_RANGE = 11\n\nUNIMPLEMENTED = 12\n\nINTERNAL = 13\n\nUNAVAILABLE = 14\n\nDATA_LOSS = 15\n\nUNAUTHENTICATED = 16",
-            "example": 14
+            "description": "Código numérico referente à falha (gRPC). CANCELLED=1, UNKNOWN=2, INVALID_ARGUMENT=3, DEADLINE_EXCEEDED=4, NOT_FOUND=5, ALREADY_EXISTS=6, PERMISSION_DENIED=7, RESOURCE_EXHAUSTED=8, FAILED_PRECONDITION=9, ABORTED=10, OUT_OF_RANGE=11, UNIMPLEMENTED=12, INTERNAL=13, UNAVAILABLE=14, DATA_LOSS=15, UNAUTHENTICATED=16"
           },
           "message": {
             "type": "string",
-            "description": "Texto pequeno informativo sobre a falha.",
-            "example": "Requisição com credenciais inválidas."
+            "description": "Texto pequeno informativo sobre a falha."
           },
           "details": {
             "type": "array",
-            "description": "Detalhes sobre a falha. Nesta versão da API, ainda não está sendo retornado, mas deve ser considerado um array de objetos de tipos distintos.",
-            "items": {},
-            "example": []
+            "description": "Detalhes sobre a falha.",
+            "items": {}
           }
         }
       },
-      "ServiceAccountTokenRequest": {
+      "AuthRequest": {
+        "type": "object",
+        "required": ["client_id", "client_secret"],
         "properties": {
           "client_id": {
             "type": "string",
             "minLength": 1,
-            "title": "Client Id"
+            "description": "Id do cliente cadastrado na Loggi."
           },
           "client_secret": {
             "type": "string",
             "minLength": 1,
-            "title": "Client Secret"
+            "description": "Chave secreta gerada pela Loggi."
           }
-        },
-        "type": "object",
-        "required": [
-          "client_id",
-          "client_secret"
-        ],
-        "title": "ServiceAccountTokenRequest"
+        }
       },
-      "ServiceAccountTokenResponse": {
+      "AuthResponse": {
+        "type": "object",
+        "required": ["idToken", "expiresIn"],
         "properties": {
           "idToken": {
             "type": "string",
-            "title": "Idtoken"
+            "description": "Token JWT. Informar no header Authorization de cada requisição."
           },
           "expiresIn": {
             "type": "string",
-            "title": "Expiresin"
+            "description": "Tempo de expiração do token em segundos."
           }
-        },
-        "type": "object",
-        "required": [
-          "idToken",
-          "expiresIn"
-        ],
-        "title": "ServiceAccountTokenResponse"
+        }
       },
-      "Problem": {
+      "Money": {
+        "type": "object",
+        "required": ["currencyCode", "units", "nanos"],
         "properties": {
-          "type": {
+          "currencyCode": {
             "type": "string",
-            "description": "Uma referência de URI que identifica o tipo de problema."
+            "description": "Código ISO 4217 (ex: BRL)."
           },
-          "title": {
+          "units": {
             "type": "string",
-            "description": "Um resumo curto e legível para humanos do tipo de problema."
+            "description": "Parte inteira do valor.",
+            "format": "int64"
           },
-          "status": {
+          "nanos": {
             "type": "integer",
-            "description": "O código de status HTTP gerado."
-          },
-          "detail": {
-            "type": "string",
-            "description": "Uma explicação legível para humanos específica para esta ocorrência do problema."
-          },
-          "instance": {
-            "type": "string",
-            "description": "Uma referência de URI que identifica a ocorrência específica do problema."
+            "format": "int32",
+            "description": "Fração em nanos (centavos × 10^7). Ex: R$ 87,35 → nanos: 350000000"
           }
-        },
-        "type": "object"
+        }
+      },
+      "CorreiosAddress": {
+        "type": "object",
+        "required": ["logradouro", "cep", "cidade", "uf"],
+        "properties": {
+          "logradouro": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "Nome da rua."
+          },
+          "numero": {
+            "type": "string",
+            "maxLength": 8,
+            "description": "Número do endereço. S/N se não tiver."
+          },
+          "complemento": {
+            "type": "string",
+            "maxLength": 128,
+            "description": "Complemento do endereço."
+          },
+          "bairro": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "description": "Bairro."
+          },
+          "cep": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 8,
+            "description": "CEP com 8 dígitos."
+          },
+          "cidade": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32,
+            "description": "Cidade."
+          },
+          "uf": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 2,
+            "description": "UF com 2 caracteres."
+          }
+        }
+      },
+      "QuoteRequest": {
+        "type": "object",
+        "required": ["shipFrom", "shipTo"],
+        "properties": {
+          "shipFrom": {
+            "type": "object",
+            "description": "Endereço de origem.",
+            "properties": {
+              "correios": { "$ref": "#/components/schemas/CorreiosAddress" }
+            }
+          },
+          "shipTo": {
+            "type": "object",
+            "description": "Endereço de destino.",
+            "properties": {
+              "correios": { "$ref": "#/components/schemas/CorreiosAddress" }
+            }
+          },
+          "packages": {
+            "type": "array",
+            "description": "Lista de pacotes para cotação.",
+            "items": {
+              "type": "object",
+              "required": ["weightG", "lengthCm", "widthCm", "heightCm", "goodsValue"],
+              "properties": {
+                "weightG": {
+                  "type": "integer",
+                  "format": "int32",
+                  "maximum": 30000,
+                  "description": "Peso em gramas (máx 30000)."
+                },
+                "lengthCm": {
+                  "type": "integer",
+                  "format": "int32",
+                  "maximum": 100,
+                  "description": "Comprimento em cm (máx 100)."
+                },
+                "widthCm": {
+                  "type": "integer",
+                  "format": "int32",
+                  "maximum": 100,
+                  "description": "Largura em cm (máx 100)."
+                },
+                "heightCm": {
+                  "type": "integer",
+                  "format": "int32",
+                  "maximum": 100,
+                  "description": "Altura em cm (máx 100)."
+                },
+                "goodsValue": {
+                  "$ref": "#/components/schemas/Money"
+                }
+              }
+            }
+          },
+          "externalServiceIds": {
+            "type": "array",
+            "description": "IDs de serviço externo (SISUs). Não preencher junto com pickupTypes.",
+            "items": { "type": "string" }
+          },
+          "pickupTypes": {
+            "type": "array",
+            "description": "Tipos de coleta. Não preencher junto com externalServiceIds.",
+            "items": {
+              "type": "string",
+              "enum": ["PICKUP_TYPE_SPOT", "PICKUP_TYPE_DEDICATED", "PICKUP_TYPE_MILK_RUN", "PICKUP_TYPE_DROP_OFF"]
+            }
+          }
+        }
+      },
+      "QuoteResponse": {
+        "type": "object",
+        "properties": {
+          "packagesQuotations": {
+            "type": "object",
+            "properties": {
+              "quotations": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "price": {
+                      "type": "object",
+                      "properties": {
+                        "totalAmount": { "$ref": "#/components/schemas/Money" },
+                        "baseAmount": { "$ref": "#/components/schemas/Money" }
+                      }
+                    },
+                    "sloInDays": {
+                      "type": "integer",
+                      "format": "int32",
+                      "description": "Prazo de entrega em dias."
+                    },
+                    "freightType": {
+                      "type": "string",
+                      "enum": ["FREIGHT_TYPE_EXPRESS", "FREIGHT_TYPE_ECONOMIC"]
+                    },
+                    "freightTypeLabel": {
+                      "type": "string",
+                      "description": "Label do tipo de entrega (ex: Loggi Econômico)."
+                    },
+                    "pickup_type": {
+                      "type": "string",
+                      "enum": ["PICKUP_TYPE_SPOT", "PICKUP_TYPE_DEDICATED", "PICKUP_TYPE_MILK_RUN", "PICKUP_TYPE_DROP_OFF"]
+                    },
+                    "externalServiceIds": {
+                      "type": "string",
+                      "description": "Identificador externo do serviço (SISU)."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "ShipmentParty": {
+        "type": "object",
+        "required": ["name", "federalTaxId", "address"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Nome completo."
+          },
+          "email": {
+            "type": "string",
+            "description": "Email."
+          },
+          "phoneNumber": {
+            "type": "string",
+            "description": "Telefone com DDD."
+          },
+          "federalTaxId": {
+            "type": "string",
+            "description": "CPF ou CNPJ."
+          },
+          "stateTaxId": {
+            "type": "string",
+            "description": "Inscrição estadual."
+          },
+          "address": {
+            "type": "object",
+            "properties": {
+              "instructions": {
+                "type": "string",
+                "description": "Instruções de entrega."
+              },
+              "correiosAddress": {
+                "$ref": "#/components/schemas/CorreiosAddress"
+              }
+            }
+          }
+        }
+      },
+      "Invoice": {
+        "type": "object",
+        "required": ["key", "series", "number", "totalValue"],
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "Chave da NF-e (44 dígitos)."
+          },
+          "series": {
+            "type": "string",
+            "description": "Série da NF-e."
+          },
+          "number": {
+            "type": "string",
+            "description": "Número da NF-e."
+          },
+          "totalValue": {
+            "type": "string",
+            "description": "Valor total da NF-e."
+          },
+          "icms": {
+            "type": "string",
+            "enum": ["ICMS_TAXED", "ICMS_NOT_TAXED", "ICMS_FREE"],
+            "description": "Tipo de ICMS."
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "description": { "type": "string" }
+              }
+            }
+          }
+        }
+      },
+      "ContentDeclaration": {
+        "type": "object",
+        "required": ["totalValue", "description"],
+        "properties": {
+          "totalValue": {
+            "type": "string",
+            "description": "Valor total declarado."
+          },
+          "description": {
+            "type": "string",
+            "description": "Descrição do conteúdo."
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "description": { "type": "string" },
+                "quantity": { "type": "integer" },
+                "unitaryValue": { "type": "string" },
+                "unitaryWeightG": { "type": "integer" }
+              }
+            }
+          }
+        }
+      },
+      "ShipmentRequest": {
+        "type": "object",
+        "required": ["externalServiceId", "shipFrom", "shipTo", "packages"],
+        "properties": {
+          "externalServiceId": {
+            "type": "string",
+            "description": "Identificador externo do serviço (SISU) obtido na cotação."
+          },
+          "shipFrom": {
+            "$ref": "#/components/schemas/ShipmentParty"
+          },
+          "shipTo": {
+            "$ref": "#/components/schemas/ShipmentParty"
+          },
+          "returnTo": {
+            "$ref": "#/components/schemas/ShipmentParty"
+          },
+          "shippingCompany": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "federalTaxId": { "type": "string" }
+            }
+          },
+          "packages": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["freightType", "weightG", "lengthCm", "widthCm", "heightCm"],
+              "properties": {
+                "trackingCode": {
+                  "type": "string",
+                  "description": "Código de rastreamento (opcional, Loggi pode gerar)."
+                },
+                "barcode": { "type": "string" },
+                "freightType": {
+                  "type": "string",
+                  "enum": ["FREIGHT_TYPE_EXPRESS", "FREIGHT_TYPE_ECONOMIC"]
+                },
+                "weightG": {
+                  "type": "integer",
+                  "format": "int32",
+                  "maximum": 30000,
+                  "description": "Peso em gramas."
+                },
+                "lengthCm": {
+                  "type": "integer",
+                  "format": "int32",
+                  "maximum": 100
+                },
+                "widthCm": {
+                  "type": "integer",
+                  "format": "int32",
+                  "maximum": 100
+                },
+                "heightCm": {
+                  "type": "integer",
+                  "format": "int32",
+                  "maximum": 100
+                },
+                "sequence": { "type": "string" },
+                "packaged": { "type": "boolean" },
+                "labelled": { "type": "boolean" },
+                "documentTypes": {
+                  "type": "array",
+                  "description": "Documentos fiscais do pacote. Obrigatório: invoice ou contentDeclaration.",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "subPackageNumber": { "type": "string" },
+                      "invoice": { "$ref": "#/components/schemas/Invoice" },
+                      "contentDeclaration": { "$ref": "#/components/schemas/ContentDeclaration" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "ShipmentResponse": {
+        "type": "object",
+        "properties": {
+          "packages": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "trackingCode": {
+                  "type": "string",
+                  "description": "Código de rastreamento do pacote."
+                },
+                "barcode": {
+                  "type": "string",
+                  "description": "Código de barras."
+                },
+                "loggiKey": {
+                  "type": "string",
+                  "description": "Chave interna da Loggi (usado para gerar etiquetas)."
+                },
+                "sequence": { "type": "string" }
+              }
+            }
+          }
+        }
+      },
+      "LabelRequest": {
+        "type": "object",
+        "required": ["loggiKeys", "responseType"],
+        "properties": {
+          "loggiKeys": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Lista de loggiKeys dos pacotes."
+          },
+          "responseType": {
+            "type": "string",
+            "enum": ["LABEL_RESPONSE_TYPE_BASE_64", "LABEL_RESPONSE_TYPE_URL"],
+            "description": "Tipo de resposta: base64 ou URL."
+          },
+          "format": {
+            "type": "string",
+            "enum": ["LABEL_FORMAT_PDF"],
+            "description": "Formato da etiqueta."
+          },
+          "layout": {
+            "type": "string",
+            "enum": ["LABEL_LAYOUT_A4", "LABEL_LAYOUT_A6"],
+            "description": "Tamanho da etiqueta."
+          }
+        }
+      },
+      "LabelResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "object",
+            "properties": {
+              "content": {
+                "type": "string",
+                "description": "PDF em base64 (quando responseType = BASE_64)."
+              },
+              "url": {
+                "type": "string",
+                "description": "URL do PDF (quando responseType = URL)."
+              },
+              "createdTime": {
+                "type": "string",
+                "description": "Data/hora de criação."
+              }
+            }
+          },
+          "failure": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "loggiKey": { "type": "string" },
+                "status": {
+                  "type": "object",
+                  "properties": {
+                    "code": { "type": "integer" },
+                    "message": { "type": "string" },
+                    "details": {
+                      "type": "array",
+                      "items": {}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "TrackingStatus": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "description": "Código numérico do status."
+          },
+          "highLevelStatus": {
+            "type": "string",
+            "description": "Status de alto nível (ex: IN_TRANSIT, DELIVERED)."
+          },
+          "description": {
+            "type": "string",
+            "description": "Descrição textual do status."
+          },
+          "actionRequired": {
+            "type": "object",
+            "properties": {
+              "reasonLabel": { "type": "string" },
+              "reasonDescription": { "type": "string" }
+            }
+          },
+          "updatedTime": {
+            "type": "string",
+            "description": "Data/hora da atualização."
+          }
+        }
+      },
+      "TrackingResponse": {
+        "type": "object",
+        "properties": {
+          "packages": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "loggiKey": { "type": "string" },
+                "trackingCode": { "type": "string" },
+                "status": { "$ref": "#/components/schemas/TrackingStatus" },
+                "location": {
+                  "type": "object",
+                  "properties": {
+                    "city": { "type": "string" },
+                    "state": { "type": "string" }
+                  }
+                },
+                "promisedDate": { "type": "string" },
+                "requestTime": { "type": "string" },
+                "trackingHistory": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/TrackingStatus" }
+                },
+                "deliveryInformation": {
+                  "type": "object",
+                  "properties": {
+                    "receiverName": { "type": "string" },
+                    "receiverDocument": { "type": "string" },
+                    "locationDescription": { "type": "string" },
+                    "links": {
+                      "type": "array",
+                      "items": { "type": "string" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     }
   }

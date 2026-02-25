@@ -797,47 +797,6 @@ export async function buscarPrePostagemPorRastreio(
   }
 }
 
-/**
- * Consulta status de um lote de pré-postagem
- *
- * Útil quando o código de rastreio não é retornado imediatamente
- */
-export async function consultarLotePrePostagem(
-  idLote: string
-): Promise<PrePostagemResult[]> {
-  console.log('[CORREIOS_PREPOSTAGEM] Querying batch:', { idLote });
-
-  try {
-    const response = await correiosFetch<CorreiosPrePostagemLoteResponse>(
-      `${CORREIOS_ENDPOINTS.prePostagemConsulta}/${idLote}`,
-      {
-        method: 'GET',
-      }
-    );
-
-    const results: PrePostagemResult[] = [];
-
-    if (response.objetosPostais) {
-      for (const obj of response.objetosPostais) {
-        results.push({
-          success: !!obj.codigoObjeto,
-          idLote: response.idLote,
-          codigoRastreio: obj.codigoObjeto,
-          idObjeto: obj.idObjeto,
-          status: obj.status,
-          erros: obj.erros?.map((e) => ({ codigo: e.codigo, mensagem: e.mensagem })),
-          bruto: obj,
-        });
-      }
-    }
-
-    return results;
-  } catch (error) {
-    console.error('[CORREIOS_PREPOSTAGEM] Failed to query batch:', error);
-    throw error;
-  }
-}
-
 // ============================================================================
 // Etiquetas
 // ============================================================================
@@ -884,32 +843,6 @@ export async function baixarEtiqueta(
       erro: error instanceof Error ? error.message : 'Erro ao baixar etiqueta',
     };
   }
-}
-
-/**
- * Baixa etiquetas para múltiplos códigos de rastreio
- *
- * @param codigos Array de códigos SRO
- * @param formato Formato desejado
- * @returns Array de resultados
- */
-export async function baixarEtiquetasLote(
-  codigos: string[],
-  formato: EtiquetaFormato = 'pdf'
-): Promise<EtiquetaResult[]> {
-  // Baixar em paralelo (limite de concorrência para não sobrecarregar)
-  const CONCURRENT_LIMIT = 3;
-  const results: EtiquetaResult[] = [];
-
-  for (let i = 0; i < codigos.length; i += CONCURRENT_LIMIT) {
-    const batch = codigos.slice(i, i + CONCURRENT_LIMIT);
-    const batchResults = await Promise.all(
-      batch.map((codigo) => baixarEtiqueta(codigo, formato))
-    );
-    results.push(...batchResults);
-  }
-
-  return results;
 }
 
 // ============================================================================

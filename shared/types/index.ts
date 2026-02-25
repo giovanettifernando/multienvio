@@ -22,13 +22,11 @@ export type { Invoice as BillingInvoice } from './billing';
 
 // Other domain types without conflicts
 export * from './cart';
-export * from './dashboard';
 export * from './order';
 export * from './quote';
 export * from './quoteFinalize';
 export * from './support';
 export * from './tracking';
-export * from './validations';
 export * from './wallet';
 export * from './wallet-statement';
 export * from './correios-label';

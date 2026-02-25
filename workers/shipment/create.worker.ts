@@ -86,15 +86,18 @@ async function processShipmentCreate(job: Job<ShipmentCreateJobPayload>): Promis
       uf: originAddress.uf || undefined,
     };
 
+    // Parse do endereço concatenado: "logradouro, numero, complemento"
+    const destParts = (shipment.destinationAddress || '').split(',').map((s) => s.trim());
+
     const recipientData = {
       nome: shipment.recipientName || '',
       documento: shipment.recipientDocument || undefined,
       telefone: shipment.recipientPhone || undefined,
       email: shipment.recipientEmail || undefined,
       cep: shipment.destinationCep.replace(/\D/g, ''),
-      logradouro: shipment.destinationAddress || '',
-      numero: undefined as string | undefined,
-      complemento: undefined as string | undefined,
+      logradouro: destParts[0] || '',
+      numero: destParts[1] || 'S/N',
+      complemento: destParts[2] || undefined,
       bairro: shipment.destinationNeighborhood || undefined,
       cidade: shipment.destinationCity || '',
       uf: shipment.destinationState || '',
@@ -152,9 +155,11 @@ async function enqueueChildJobs(
 ): Promise<void> {
   // Label generation (para carriers que precisam de etapa separada)
   const labelQueue = getQueue<LabelGenerateJobPayload>(QUEUE_NAMES.LABEL_GENERATE);
+  const isLoggi = carrier.toLowerCase() === 'loggi';
   await labelQueue.add('generate', { shipmentId, carrier }, {
     priority: JOB_PRIORITY.HIGH,
     jobId: `label-${shipmentId}`,
+    delay: isLoggi ? 60_000 : 0, // Loggi async-shipments: etiqueta disponível após processamento
   });
 
   // Email de tracking para o destinatário (via sendShipmentTrackingEmail direto)
@@ -176,7 +181,6 @@ async function enqueueChildJobs(
         select: { name: true, razaoSocial: true },
       });
       const senderName = sender?.razaoSocial || sender?.name || 'Remetente';
-      const trackingCode = shipment.publicTrackingId || shipment.platformTrackingCode;
 
       // Enviar via mailer diretamente (já tem retry no worker)
       try {
@@ -184,10 +188,11 @@ async function enqueueChildJobs(
         await sendShipmentTrackingEmail(
           recipientEmail,
           recipientName || 'Destinatário',
-          trackingCode,
+          shipment.platformTrackingCode,
           senderName,
           shipment.destinationCity || '',
           shipment.destinationState || '',
+          shipment.publicTrackingId,
         );
       } catch {
         // Falha no email não deve bloquear o fluxo do shipment

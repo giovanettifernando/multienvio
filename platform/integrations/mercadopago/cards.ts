@@ -10,7 +10,7 @@
  * - Save Cards: https://www.mercadopago.com.br/developers/pt/docs/checkout-api/payment-methods/cards/save-cards
  */
 
-import { MercadoPagoConfig, Customer, CustomerCard } from 'mercadopago';
+import { MercadoPagoConfig, CustomerCard } from 'mercadopago';
 import { getMercadoPagoConfig } from './config';
 
 /**
@@ -127,67 +127,6 @@ export interface CreatePaymentWithSavedCardInput {
     firstName?: string;
     lastName?: string;
   };
-}
-
-/**
- * Cria um Customer no Mercado Pago
- *
- * @param input Dados do customer
- * @returns Customer criado no MP
- */
-export async function createCustomer(
-  input: CreateCustomerInput
-): Promise<MercadoPagoCustomer> {
-  const { client } = await getClient();
-  const customer = new Customer(client);
-
-  console.log('[MP_CARDS] Criando customer:', {
-    email: input.email,
-    firstName: input.firstName,
-    lastName: input.lastName,
-  });
-
-  try {
-    const result = await customer.create({
-      body: {
-        email: input.email,
-        first_name: input.firstName,
-        last_name: input.lastName,
-        phone: input.phone,
-        identification: input.identification,
-        description: input.description || 'Cliente Envio Legal',
-      },
-    });
-
-    console.log('[MP_CARDS] Customer criado:', {
-      id: result.id,
-      email: result.email,
-    });
-
-    return result as MercadoPagoCustomer;
-  } catch (error) {
-    console.error('[MP_CARDS] Erro ao criar customer:', error);
-    throw new Error(`Erro ao criar customer no Mercado Pago: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
-  }
-}
-
-/**
- * Busca Customer no Mercado Pago por ID
- *
- * @param customerId ID do customer no MP
- * @returns Customer encontrado
- */
-export async function getCustomer(customerId: string): Promise<MercadoPagoCustomer> {
-  const { client } = await getClient();
-  const customer = new Customer(client);
-
-  try {
-    const result = await customer.get({ customerId });
-    return result as MercadoPagoCustomer;
-  } catch (error) {
-    console.error('[MP_CARDS] Erro ao buscar customer:', error);
-    throw new Error(`Customer não encontrado: ${customerId}`);
-  }
 }
 
 /**
@@ -348,18 +287,3 @@ export async function createPaymentWithSavedCard(
   }
 }
 
-/**
- * Mapeia brand do Mercado Pago para CardBrand do Prisma
- */
-export function mapMercadoPagoCardBrand(paymentMethodId: string): string {
-  const brandMap: Record<string, string> = {
-    'visa': 'VISA',
-    'master': 'MASTERCARD',
-    'mastercard': 'MASTERCARD',
-    'elo': 'ELO',
-    'amex': 'AMEX',
-    'hipercard': 'HIPERCARD',
-  };
-
-  return brandMap[paymentMethodId.toLowerCase()] || 'OTHER';
-}

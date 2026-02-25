@@ -188,7 +188,7 @@ async function fetchShipmentsFromDb(
 /**
  * Maps database shipments to list DTOs.
  */
-export function mapShipmentsToListItems(shipments: any[]): ShipmentListItem[] {
+function mapShipmentsToListItems(shipments: any[]): ShipmentListItem[] {
   return shipments.map((s) => {
     const hasVolumeDivergence = s.packages.some((pkg: { hasDivergence: boolean }) => pkg.hasDivergence);
 

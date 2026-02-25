@@ -63,7 +63,7 @@ function md5Base64(input: string): string {
  * Gera o hash da senha J&T
  * MD5(password + "jadada236t2") → uppercase
  */
-export function generatePasswordHash(password: string): string {
+function generatePasswordHash(password: string): string {
   return md5(password + JT_PASSWORD_SALT).toUpperCase();
 }
 
@@ -71,7 +71,7 @@ export function generatePasswordHash(password: string): string {
  * Gera o digest do body (vai DENTRO do JSON no campo "digest")
  * Base64(MD5(customerCode + passwordHash + privateKey))
  */
-export function generateBodyDigest(
+function generateBodyDigest(
   customerCode: string,
   passwordHash: string,
   privateKey: string
@@ -83,7 +83,7 @@ export function generateBodyDigest(
  * Gera o digest do header (vai no header HTTP "digest")
  * Base64(MD5(jsonPayload + privateKey))
  */
-export function generateHeaderDigest(
+function generateHeaderDigest(
   jsonPayload: string,
   privateKey: string
 ): string {
@@ -524,9 +524,3 @@ export function getJTConfigInfo(): {
   };
 }
 
-/**
- * Reseta o circuit breaker da J&T
- */
-export function resetJTCircuitBreaker(): void {
-  jtCircuitBreaker.reset();
-}

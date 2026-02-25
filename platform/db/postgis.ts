@@ -353,32 +353,3 @@ export async function findNearestCollectorByCep(originCep: string): Promise<{
   };
 }
 
-/**
- * Limpa entradas antigas do cache de CEPs
- * @param olderThanDays Remover entradas mais antigas que X dias
- * @returns Número de entradas removidas
- */
-export async function cleanOldCepCache(olderThanDays = 90): Promise<number> {
-  const cutoffDate = new Date();
-  cutoffDate.setDate(cutoffDate.getDate() - olderThanDays);
-
-  // PROTEÇÃO: Não deletar dados da Base dos Dados ou com override manual
-  const result = await prisma.cepLocation.deleteMany({
-    where: {
-      updatedAt: {
-        lt: cutoffDate,
-      },
-      // Proteger dados da Base dos Dados
-      provider: {
-        not: 'basedosdados',
-      },
-      // Proteger overrides manuais
-      manualOverride: false,
-    },
-  });
-
-  console.log(`[PostGIS] Cleaned ${result.count} old CEP cache entries (older than ${olderThanDays} days)`);
-  console.log(`[PostGIS] Protected entries (basedosdados + manual overrides) were preserved`);
-
-  return result.count;
-}

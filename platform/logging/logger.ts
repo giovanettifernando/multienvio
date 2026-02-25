@@ -141,9 +141,6 @@ function wrapPinoLogger(pinoInstance: pino.Logger): LoggerInterface {
 
 export const logger = wrapPinoLogger(pinoLogger);
 
-// Export do logger pino nativo para casos que precisem de acesso direto
-export const pinoInstance = pinoLogger;
-
 // ============================================================================
 // LOGGER PARA REQUESTS (com correlation ID)
 // ============================================================================
@@ -178,29 +175,6 @@ export function createRequestLogger(context: RequestLogContext) {
 // ============================================================================
 
 /**
- * Log de erro com stack trace
- */
-export function logError(
-  log: LoggerInterface,
-  error: Error | unknown,
-  context?: Record<string, unknown>
-) {
-  const err = error instanceof Error ? error : new Error(String(error));
-  log.error(
-    {
-      event: 'error',
-      err: {
-        message: err.message,
-        name: err.name,
-        stack: isDev ? err.stack : undefined,
-      },
-      ...context,
-    },
-    err.message
-  );
-}
-
-/**
  * Log de auditoria (ações importantes)
  */
 export function logAudit(
@@ -211,31 +185,6 @@ export function logAudit(
   log.info(
     { event: 'audit', action, ...details },
     `Audit: ${action}`
-  );
-}
-
-/**
- * Log de integração externa
- */
-export function logExternalCall(
-  log: LoggerInterface,
-  service: string,
-  operation: string,
-  success: boolean,
-  durationMs?: number,
-  details?: Record<string, unknown>
-) {
-  const logFn = success ? log.info.bind(log) : log.error.bind(log);
-  logFn(
-    {
-      event: 'external_call',
-      service,
-      operation,
-      success,
-      durationMs,
-      ...details,
-    },
-    `${service}.${operation} - ${success ? 'sucesso' : 'falha'}${durationMs ? ` (${durationMs}ms)` : ''}`
   );
 }
 

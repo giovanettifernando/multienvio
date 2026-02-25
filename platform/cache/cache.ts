@@ -1039,50 +1039,6 @@ export const collectorCache = {
 };
 
 // ============================================================================
-// CACHE STATISTICS (para monitoramento)
-// ============================================================================
-
-let cacheHits = 0;
-let cacheMisses = 0;
-
-/**
- * Obtém estatísticas do cache
- */
-export function getCacheStats(): {
-  hits: number;
-  misses: number;
-  hitRate: number;
-} {
-  const total = cacheHits + cacheMisses;
-  return {
-    hits: cacheHits,
-    misses: cacheMisses,
-    hitRate: total > 0 ? cacheHits / total : 0,
-  };
-}
-
-/**
- * Reseta estatísticas do cache
- */
-export function resetCacheStats(): void {
-  cacheHits = 0;
-  cacheMisses = 0;
-}
-
-/**
- * Versão de cacheGet com tracking de estatísticas
- */
-export async function cacheGetWithStats<T>(key: string): Promise<T | null> {
-  const value = await cacheGet<T>(key);
-  if (value !== null) {
-    cacheHits++;
-  } else {
-    cacheMisses++;
-  }
-  return value;
-}
-
-// ============================================================================
 // CEP CACHE HELPER
 // ============================================================================
 

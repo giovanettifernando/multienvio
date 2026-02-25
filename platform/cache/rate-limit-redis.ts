@@ -550,28 +550,3 @@ export const RATE_LIMITS = {
   PUBLIC_API: { windowMs: 60000, maxRequests: 10 },  // 10 req/min
 } as const;
 
-// ============================================================================
-// METRICAS (para observabilidade)
-// ============================================================================
-
-let metricsEnabled = false;
-let fallbackCount = 0;
-let redisCount = 0;
-
-export function enableMetrics(): void {
-  metricsEnabled = true;
-}
-
-export function getMetrics(): { fallbackCount: number; redisCount: number; ratio: number } {
-  const total = fallbackCount + redisCount;
-  return {
-    fallbackCount,
-    redisCount,
-    ratio: total > 0 ? redisCount / total : 1,
-  };
-}
-
-export function resetMetrics(): void {
-  fallbackCount = 0;
-  redisCount = 0;
-}

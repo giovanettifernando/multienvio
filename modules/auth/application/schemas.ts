@@ -53,7 +53,3 @@ export const toggleStatusSchema = z.object({
   status: z.enum(["active", "blocked"]),
 });
 
-export type AdminUserFormData = z.infer<typeof adminUserSchema>;
-export type UpdateAdminUserFormData = z.infer<typeof updateAdminUserSchema>;
-export type AdminUserFiltersData = z.infer<typeof filtersSchema>;
-export type ToggleStatusData = z.infer<typeof toggleStatusSchema>;

@@ -12,7 +12,6 @@ export * from './ELStatusTag';
 export * from './ELFormItem';
 export * from './ELSkeleton';
 export * from './ELGrid';
-export * from './ELTableToolbar';
 export * from './ELTabs';
 export * from './ELSegmented';
 export * from './ELInputNumber';

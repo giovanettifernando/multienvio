@@ -93,6 +93,7 @@ async function sendTrackingEmailsForShipments(
       where: { id: { in: shipmentIds } },
       select: {
         platformTrackingCode: true,
+        publicTrackingId: true,
         recipientName: true,
         recipientEmail: true,
         destinationCity: true,
@@ -118,7 +119,8 @@ async function sendTrackingEmailsForShipments(
           shipment.platformTrackingCode,
           senderName,
           shipment.destinationCity,
-          shipment.destinationState
+          shipment.destinationState,
+          shipment.publicTrackingId,
         );
 
         if (sent) {

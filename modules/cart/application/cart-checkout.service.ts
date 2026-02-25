@@ -21,6 +21,9 @@ import { calculateCommissionsInCents } from '@/modules/quotes/application/commis
 import { integrateWithCarrier } from '@/modules/shipments/application/carrier-integration';
 import { logger } from '@/platform/logging/logger';
 import { ApiError } from '@/platform/api/errors';
+import { isCorreiosCarrier } from '@/shared/utils/carrier';
+import { getQueue, QUEUE_NAMES, JOB_PRIORITY } from '@/platform/queue';
+import type { LabelGenerateJobPayload } from '@/platform/queue';
 
 // ============================================================================
 // TYPES
@@ -572,7 +575,10 @@ async function cleanupProcessedItems(
  * 7. Atualiza meta do carrinho
  */
 export async function processCartCheckout(input: CartCheckoutInput): Promise<CartCheckoutResult> {
-  return prisma.$transaction(async (tx) => {
+  // Track carriers for post-transaction LABEL_GENERATE enqueue
+  const nonCorreiosShipments: Array<{ shipmentId: string; carrier: string }> = [];
+
+  const result = await prisma.$transaction(async (tx) => {
     // Buscar carrinho OPEN
     const cart = await tx.cart.findFirst({
       where: {
@@ -636,8 +642,12 @@ export async function processCartCheckout(input: CartCheckoutInput): Promise<Car
     let totalAmount = 0;
 
     for (const item of itemsToCheckout) {
+      const selectedQuote = item.selectedQuote as unknown as CartItemQuote;
       const { shipmentId, itemTotal } = await createShipmentFromCartItem(tx, input.userId, item);
       shipmentIds.push(shipmentId);
+      if (!isCorreiosCarrier(selectedQuote.carrier)) {
+        nonCorreiosShipments.push({ shipmentId, carrier: selectedQuote.carrier });
+      }
       totalAmount += itemTotal;
     }
 
@@ -664,4 +674,27 @@ export async function processCartCheckout(input: CartCheckoutInput): Promise<Car
       totalAmount,
     };
   });
+
+  // Enfileirar LABEL_GENERATE para carriers não-Correios (após commit da transação)
+  if (!result.idempotent && nonCorreiosShipments.length > 0) {
+    for (const { shipmentId, carrier } of nonCorreiosShipments) {
+      try {
+        const labelQueue = getQueue<LabelGenerateJobPayload>(QUEUE_NAMES.LABEL_GENERATE);
+        const isLoggi = carrier.toLowerCase() === 'loggi';
+        await labelQueue.add('generate', { shipmentId, carrier }, {
+          priority: JOB_PRIORITY.HIGH,
+          jobId: `label-${shipmentId}`,
+          delay: isLoggi ? 60_000 : 0,
+        });
+      } catch (err) {
+        logger.warn({
+          event: 'label_generate_enqueue_failed',
+          shipmentId,
+          error: err instanceof Error ? err.message : String(err),
+        }, 'Failed to enqueue LABEL_GENERATE');
+      }
+    }
+  }
+
+  return result;
 }

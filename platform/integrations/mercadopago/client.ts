@@ -397,17 +397,3 @@ export async function refundPayment(
   }
 }
 
-/**
- * Retorna o estado atual do circuit breaker do Mercado Pago
- * Útil para monitoramento e diagnóstico
- */
-export function getMercadoPagoCircuitBreakerState(): 'CLOSED' | 'OPEN' | 'HALF_OPEN' {
-  return mercadoPagoCircuitBreaker.getState();
-}
-
-/**
- * Reseta o circuit breaker do Mercado Pago (para admin/debug)
- */
-export function resetMercadoPagoCircuitBreaker(): void {
-  mercadoPagoCircuitBreaker.reset();
-}

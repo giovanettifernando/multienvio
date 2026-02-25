@@ -412,6 +412,8 @@ export async function sendStaffTempPasswordEmail(
 
 /**
  * Send shipment tracking email to recipient
+ * @param trackingCode - Human-readable tracking code (platformTrackingCode) displayed to the user
+ * @param publicTrackingId - CUID used in the tracking URL (/rastreio/[code]). Falls back to trackingCode if not provided.
  */
 export async function sendShipmentTrackingEmail(
   to: string,
@@ -419,10 +421,11 @@ export async function sendShipmentTrackingEmail(
   trackingCode: string,
   senderName: string,
   destinationCity: string,
-  destinationState: string
+  destinationState: string,
+  publicTrackingId?: string | null
 ): Promise<boolean> {
   const baseUrl = getEmailBaseUrl();
-  const trackingUrl = `${baseUrl}/rastreio/${trackingCode}`;
+  const trackingUrl = `${baseUrl}/rastreio/${publicTrackingId || trackingCode}`;
 
   const html = `
     <!DOCTYPE html>

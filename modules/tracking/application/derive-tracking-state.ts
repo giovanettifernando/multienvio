@@ -150,6 +150,11 @@ export function getEventPhase(event: TrackingEventInput): TrackingPhase {
   // Estas têm precedência sobre o código pois são mais confiáveis
   // ============================================
 
+  // "Etiqueta expirada" => PROBLEM (prazo expirou sem entrega)
+  if (descNorm.includes('etiqueta') && descNorm.includes('expirada')) {
+    return TrackingPhase.PROBLEM;
+  }
+
   // "Etiqueta emitida" => SEMPRE AWAITING_DROP_OFF
   if (descNorm.includes('etiqueta') && descNorm.includes('emitida')) {
     return TrackingPhase.AWAITING_DROP_OFF;
@@ -341,17 +346,11 @@ export function deriveCorreiosTrackingState(events: TrackingEventInput[]): Deriv
 // Função auxiliar para logging de eventos desconhecidos
 // ============================================================================
 
-let logUnknownEventsEnabled = false;
-
-export function enableUnknownEventsLogging(enabled: boolean): void {
-  logUnknownEventsEnabled = enabled;
-}
-
 export function logUnknownEvents(
   trackingCode: string,
   unknownEvents: Array<{ codigo: string | null; descricao: string }>
 ): void {
-  if (!logUnknownEventsEnabled || unknownEvents.length === 0) {
+  if (unknownEvents.length === 0) {
     return;
   }
 

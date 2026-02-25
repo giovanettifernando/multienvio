@@ -99,6 +99,7 @@ export const POST = withApiHandler<PayResponse>(async (context) => {
       recipientEmail: fullRequest.recipientEmail,
       senderName: fullRequest.sender.razaoSocial || fullRequest.sender.name,
       trackingCode: result.platformTrackingCode,
+      publicTrackingId: result.publicTrackingId,
       totalCents: fullRequest.totalCents,
       originCity: fullRequest.originCity,
       originState: fullRequest.originState,

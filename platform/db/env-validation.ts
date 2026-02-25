@@ -290,17 +290,6 @@ export function getEnv(name: string, fallback?: string): string {
 }
 
 /**
- * Get validated environment (after validateEnv has been called)
- * @throws if validation hasn't been performed yet
- */
-export function getValidatedEnv(): ValidatedEnv {
-  if (!validated || !cachedEnv) {
-    throw new Error('Environment not validated yet. Call validateEnv() first.');
-  }
-  return cachedEnv;
-}
-
-/**
  * Check if required integrations are configured
  */
 export const integrations = {

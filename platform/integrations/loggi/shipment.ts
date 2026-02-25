@@ -18,6 +18,23 @@ import { LOGGI_ENDPOINTS } from './constants';
 import { loggiFetch } from './client';
 
 // ============================================================================
+// Limites de campo da API Loggi
+// ============================================================================
+
+function sanitizeAddress(addr: LoggiCorreiosAddress): LoggiCorreiosAddress {
+  return {
+    ...addr,
+    numero: (addr.numero || 'S/N').substring(0, 8),
+    logradouro: (addr.logradouro || '').substring(0, 100),
+    bairro: (addr.bairro || '').substring(0, 72),
+    complemento: addr.complemento ? addr.complemento.substring(0, 30) : undefined,
+    cidade: (addr.cidade || '').substring(0, 50),
+    uf: (addr.uf || '').substring(0, 2),
+    cep: (addr.cep || '').replace(/\D/g, '').substring(0, 8),
+  };
+}
+
+// ============================================================================
 // Input simplificado
 // ============================================================================
 
@@ -93,7 +110,7 @@ export async function createLoggiShipment(
       federalTaxId: input.sender.federalTaxId,
       address: {
         instructions: input.sender.instructions || '',
-        correiosAddress: input.sender.address,
+        correiosAddress: sanitizeAddress(input.sender.address),
       },
     },
     shipTo: {
@@ -104,7 +121,7 @@ export async function createLoggiShipment(
       stateTaxId: input.receiver.stateTaxId,
       address: {
         instructions: input.receiver.instructions || '',
-        correiosAddress: input.receiver.address,
+        correiosAddress: sanitizeAddress(input.receiver.address),
       },
     },
     packages: input.packages.map((pkg) => ({
@@ -116,21 +133,26 @@ export async function createLoggiShipment(
       heightCm: pkg.heightCm,
       packaged: true,
       labelled: true,
-      documentTypes: pkg.invoice ? [{
-        invoice: {
-          key: pkg.invoice.key,
-          series: pkg.invoice.series,
-          number: pkg.invoice.number,
-          totalValue: pkg.invoice.totalValue,
-          icms: pkg.invoice.icms || 'ICMS_NOT_TAXED',
-          items: pkg.invoice.items,
-        },
-      }] : pkg.contentDeclaration ? [{
-        contentDeclaration: {
-          totalValue: pkg.contentDeclaration.totalValue,
-          description: pkg.contentDeclaration.description,
-        },
-      }] : undefined,
+      documentTypes: [{
+        ...(pkg.invoice
+          ? {
+              invoice: {
+                key: pkg.invoice.key,
+                series: pkg.invoice.series,
+                number: pkg.invoice.number,
+                totalValue: pkg.invoice.totalValue,
+                icms: pkg.invoice.icms || 'ICMS_NOT_TAXED',
+                items: pkg.invoice.items,
+              },
+            }
+          : {
+              contentDeclaration: {
+                totalValue: pkg.contentDeclaration?.totalValue || '1',
+                description: pkg.contentDeclaration?.description || 'Mercadorias diversas',
+              },
+            }
+        ),
+      }],
     })),
   };
 

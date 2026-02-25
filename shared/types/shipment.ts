@@ -12,6 +12,7 @@ export type ShipmentStatus =
   | "postado"
   | "em_transito"
   | "em_rota_de_entrega"
+  | "problema_na_entrega"
   | "entregue"
   | "pendente";
 

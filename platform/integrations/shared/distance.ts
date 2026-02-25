@@ -238,14 +238,3 @@ function determinarConfiabilidade(
   };
 }
 
-/**
- * Wrapper para manter compatibilidade com código existente
- * @deprecated Use calcularDistancia() para obter informações completas de precisão
- */
-export async function calcularDistanciaSimples(
-  cepOrigem: string,
-  cepDestino: string
-): Promise<number | null> {
-  const resultado = await calcularDistancia(cepOrigem, cepDestino);
-  return resultado.distanciaKm;
-}

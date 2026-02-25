@@ -113,13 +113,3 @@ export function startCleanupJob(): void {
   cleanupIntervalId.unref();
 }
 
-/**
- * Para o job de limpeza (usado em testes ou shutdown graceful)
- */
-export function stopCleanupJob(): void {
-  if (cleanupIntervalId) {
-    clearInterval(cleanupIntervalId);
-    cleanupIntervalId = null;
-    logger.info({ event: 'tracking_code_cleanup_stopped' }, 'Cleanup job stopped');
-  }
-}

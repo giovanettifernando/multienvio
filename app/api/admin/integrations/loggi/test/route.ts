@@ -10,10 +10,12 @@ import { requireAdminSession } from '@/platform/auth/require-session';
 import { AdminPermission } from '@prisma/client';
 import { withApiHandler } from '@/platform/api/handler';
 import { ApiError } from '@/platform/api/errors';
-import { testLoggiAuth } from '@/platform/integrations/loggi/client';
+import { testLoggiAuth, resetLoggiCircuitBreaker, getLoggiCircuitBreakerState } from '@/platform/integrations/loggi/client';
 import { cotarLoggi, loggiMoneyToReais } from '@/platform/integrations/loggi/cotacao';
-import { createLoggiShipment } from '@/platform/integrations/loggi/shipment';
+import { createLoggiShipment, type CreateLoggiShipmentInput } from '@/platform/integrations/loggi/shipment';
 import { printLoggiLabel } from '@/platform/integrations/loggi/label';
+import { getLoggiTracking } from '@/platform/integrations/loggi/tracking';
+import { LoggiApiError, type LoggiQuotation } from '@/platform/integrations/loggi/types';
 
 const addressSchema = z.object({
   logradouro: z.string(),
@@ -26,7 +28,10 @@ const addressSchema = z.object({
 });
 
 const testSchema = z.object({
-  type: z.enum(['auth', 'quote', 'shipment']),
+  type: z.enum(['auth', 'quote', 'shipment', 'label', 'label-sdk', 'tracking', 'reset-cb']),
+  // Campos para geração de etiqueta / rastreamento
+  loggiKey: z.string().optional(),
+  trackingCode: z.string().optional(),
   // Campos para teste de cotação
   cepOrigem: z.string().optional(),
   cepDestino: z.string().optional(),
@@ -173,12 +178,59 @@ export const POST = withApiHandler<Record<string, unknown>>(async ({ req }) => {
         });
       }
 
-      const externalServiceId = shipmentData.externalServiceId || 'DLVR-DROF-DOOR-STAN-01';
       const startTime = Date.now();
+      let externalServiceId = shipmentData.externalServiceId;
+      let quoteInfo: { quotations: LoggiQuotation[]; quoteLatencyMs: number } | undefined;
+      let shipmentInput: CreateLoggiShipmentInput | undefined;
 
       try {
-        // 1. Criar shipment
-        const shipmentResponse = await createLoggiShipment({
+        // 1. Auto-resolve externalServiceId via cotação se não fornecido ou usando default
+
+        if (!externalServiceId || externalServiceId === 'DLVR-DROF-DOOR-STAN-01') {
+          const quoteStart = Date.now();
+          const quoteResponse = await cotarLoggi({
+            originCep: shipmentData.sender.address.cep,
+            destCep: shipmentData.receiver.address.cep,
+            packages: [{
+              weightG: shipmentData.weightG,
+              lengthCm: shipmentData.lengthCm,
+              widthCm: shipmentData.widthCm,
+              heightCm: shipmentData.heightCm,
+            }],
+          });
+
+          const allQuotations = quoteResponse.packagesQuotations?.[0]?.quotations || [];
+          const quoteLatencyMs = Date.now() - quoteStart;
+
+          // Find matching freight type or use first available
+          const targetFreightType = shipmentData.freightType;
+          const matched = allQuotations.find((q) => q.freightType === targetFreightType);
+          const selected = matched || allQuotations[0];
+
+          if (!selected) {
+            return {
+              data: {
+                success: false,
+                type: 'shipment',
+                message: 'Nenhuma cotação encontrada para esta rota. Verifique os CEPs.',
+                result: { quoteLatencyMs },
+                latencyMs: Date.now() - startTime,
+              },
+            };
+          }
+
+          externalServiceId = selected.externalServiceId;
+          quoteInfo = { quotations: allQuotations, quoteLatencyMs };
+
+          console.log('[LOGGI_TEST] Auto-resolved externalServiceId via quote:', {
+            externalServiceId,
+            freightType: selected.freightType,
+            sloInDays: selected.sloInDays,
+          });
+        }
+
+        // 2. Construir input do shipment
+        shipmentInput = {
           externalServiceId,
           sender: {
             name: shipmentData.sender.name,
@@ -190,7 +242,7 @@ export const POST = withApiHandler<Record<string, unknown>>(async ({ req }) => {
             name: shipmentData.receiver.name,
             email: shipmentData.receiver.email,
             phoneNumber: shipmentData.receiver.phoneNumber,
-            federalTaxId: shipmentData.receiver.federalTaxId || '00000000000',
+            federalTaxId: shipmentData.receiver.federalTaxId || '12345678909',
             address: shipmentData.receiver.address,
           },
           packages: [{
@@ -206,8 +258,15 @@ export const POST = withApiHandler<Record<string, unknown>>(async ({ req }) => {
               totalValue: String(shipmentData.invoiceTotalValue || 5000),
               icms: shipmentData.invoiceIcms || '00',
             } : undefined,
+            contentDeclaration: !shipmentData.invoiceKey ? {
+              totalValue: '1',
+              description: 'Mercadorias diversas (teste)',
+            } : undefined,
           }],
-        });
+        };
+
+        // 3. Criar shipment
+        const shipmentResponse = await createLoggiShipment(shipmentInput);
 
         const shipmentLatencyMs = Date.now() - startTime;
 
@@ -216,21 +275,8 @@ export const POST = withApiHandler<Record<string, unknown>>(async ({ req }) => {
         const loggiKey = firstPkg?.loggiKey;
         const trackingCode = firstPkg?.trackingCode;
 
-        // 2. Se obteve loggiKey, tentar gerar etiqueta
-        let labelBase64: string | undefined;
-        let labelLatencyMs: number | undefined;
-
-        if (loggiKey) {
-          const labelStart = Date.now();
-          try {
-            const labelResponse = await printLoggiLabel([loggiKey]);
-            labelBase64 = labelResponse.success?.content;
-            labelLatencyMs = Date.now() - labelStart;
-          } catch (labelError) {
-            console.error('[LOGGI_TEST] Label generation failed:', labelError);
-          }
-        }
-
+        // NÃO tentar gerar etiqueta imediatamente — Loggi processa async-shipments
+        // em background. A etiqueta só estará disponível após processamento (~30-60s).
         const totalLatencyMs = Date.now() - startTime;
 
         return {
@@ -238,16 +284,19 @@ export const POST = withApiHandler<Record<string, unknown>>(async ({ req }) => {
             success: true,
             type: 'shipment',
             message: loggiKey
-              ? `Shipment criado. LoggiKey: ${loggiKey}${trackingCode ? `, Tracking: ${trackingCode}` : ''}`
+              ? `Shipment criado (async). LoggiKey: ${loggiKey}${trackingCode ? `, Tracking: ${trackingCode}` : ''}. Aguarde ~60s para gerar etiqueta.`
               : 'Shipment criado mas sem loggiKey retornado',
             result: {
               externalServiceId,
               loggiKey,
               trackingCode,
               shipmentLatencyMs,
-              hasLabel: !!labelBase64,
-              labelLatencyMs,
-              labelBase64,
+              hasLabel: false,
+              quoteInfo: quoteInfo ? {
+                quotationsCount: quoteInfo.quotations.length,
+                quoteLatencyMs: quoteInfo.quoteLatencyMs,
+                selectedService: externalServiceId,
+              } : undefined,
             },
             latencyMs: totalLatencyMs,
             loggiApiResponse: shipmentResponse,
@@ -255,16 +304,262 @@ export const POST = withApiHandler<Record<string, unknown>>(async ({ req }) => {
         };
       } catch (error) {
         const latencyMs = Date.now() - startTime;
+        const apiDetails = error instanceof LoggiApiError ? error.details : undefined;
         return {
           data: {
             success: false,
             type: 'shipment',
             message: error instanceof Error ? error.message : 'Erro desconhecido',
-            result: { externalServiceId },
+            result: {
+              externalServiceId: externalServiceId ?? shipmentData.externalServiceId,
+              quoteInfo: quoteInfo ? {
+                quotationsCount: quoteInfo.quotations.length,
+                quoteLatencyMs: quoteInfo.quoteLatencyMs,
+                selectedService: externalServiceId,
+              } : undefined,
+              apiErrorDetails: apiDetails,
+            },
             latencyMs,
+            // Incluir payload enviado para debug
+            loggiApiResponse: {
+              error: error instanceof Error ? error.message : String(error),
+              requestPayload: shipmentInput ? JSON.parse(JSON.stringify(shipmentInput)) : undefined,
+            },
           },
         };
       }
+    }
+
+    case 'label': {
+      const loggiKey = parsed.data.loggiKey;
+      if (!loggiKey) {
+        throw new ApiError({
+          code: 'VALIDATION_ERROR',
+          message: 'loggiKey é obrigatório para gerar etiqueta',
+          status: 400,
+        });
+      }
+
+      const startTime = Date.now();
+      try {
+        const labelResponse = await printLoggiLabel([loggiKey]);
+        const labelBase64 = labelResponse.success?.content;
+        const failures = labelResponse.failure;
+        const latencyMs = Date.now() - startTime;
+
+        let labelMessage = 'Etiqueta gerada com sucesso';
+        if (!labelBase64) {
+          if (failures?.length) {
+            const failureDetail = failures.map((f) =>
+              `${f.loggiKey}: [${f.status?.code}] ${f.status?.message}`
+            ).join('; ');
+            labelMessage = `Etiqueta com falha: ${failureDetail}`;
+          } else {
+            labelMessage = 'Etiqueta sem conteudo na resposta (pode estar em processamento)';
+          }
+        }
+
+        return {
+          data: {
+            success: !!labelBase64,
+            type: 'label',
+            message: labelMessage,
+            result: {
+              loggiKey,
+              hasLabel: !!labelBase64,
+              labelBase64,
+              labelLatencyMs: latencyMs,
+              failures: failures?.length ? failures : undefined,
+            },
+            latencyMs,
+            loggiApiResponse: labelResponse,
+          },
+        };
+      } catch (error) {
+        const latencyMs = Date.now() - startTime;
+        const apiDetails = error instanceof LoggiApiError ? error.details : undefined;
+        const errorCode = error instanceof LoggiApiError ? error.code : undefined;
+        return {
+          data: {
+            success: false,
+            type: 'label',
+            message: error instanceof Error ? error.message : 'Erro desconhecido',
+            result: { loggiKey, apiErrorDetails: apiDetails },
+            latencyMs,
+            loggiApiResponse: {
+              error: error instanceof Error ? error.message : String(error),
+              errorCode,
+              details: apiDetails,
+            },
+          },
+        };
+      }
+    }
+
+    case 'label-sdk': {
+      const loggiKey = parsed.data.loggiKey;
+      if (!loggiKey) {
+        throw new ApiError({
+          code: 'VALIDATION_ERROR',
+          message: 'loggiKey é obrigatório para gerar etiqueta via SDK',
+          status: 400,
+        });
+      }
+
+      const startTime = Date.now();
+      try {
+        // Usar o SDK oficial @api/loggi-platform
+        const loggiPlatform = (await import('@api/loggi-platform')).default;
+        const { getLoggiConfigAsync } = await import('@/platform/integrations/loggi/client');
+
+        const config = await getLoggiConfigAsync();
+
+        // Configurar server e autenticar via SDK
+        loggiPlatform.server(config.apiBase);
+
+        const authResponse = await loggiPlatform.requestOAuthToken({
+          client_id: config.clientId,
+          client_secret: config.clientSecret,
+        });
+
+        const token = authResponse.data?.idToken;
+        if (!token) {
+          return {
+            data: {
+              success: false,
+              type: 'label-sdk',
+              message: 'SDK Auth: token não retornado',
+              result: { authResponse: authResponse.data },
+              latencyMs: Date.now() - startTime,
+            },
+          };
+        }
+
+        // Setar token no SDK
+        loggiPlatform.auth(token);
+
+        // Gerar etiqueta via SDK unificado
+        const labelResponse = await loggiPlatform.createLabel(
+          {
+            loggiKeys: [loggiKey],
+            responseType: 'LABEL_RESPONSE_TYPE_BASE_64',
+            format: 'LABEL_FORMAT_PDF',
+            layout: 'LABEL_LAYOUT_A4',
+          },
+          { company_id: config.companyId },
+        );
+
+        const latencyMs = Date.now() - startTime;
+        const labelData = labelResponse.data;
+        const labelBase64 = labelData?.success?.content;
+
+        return {
+          data: {
+            success: !!labelBase64,
+            type: 'label-sdk',
+            message: labelBase64
+              ? 'Etiqueta gerada com sucesso via SDK!'
+              : `SDK retornou resposta sem conteudo${labelData?.failure?.length ? ` (${labelData.failure.length} falha(s))` : ''}`,
+            result: {
+              loggiKey,
+              hasLabel: !!labelBase64,
+              labelBase64,
+              labelLatencyMs: latencyMs,
+              failures: labelData?.failure,
+            },
+            latencyMs,
+            loggiApiResponse: labelData,
+          },
+        };
+      } catch (error: unknown) {
+        const latencyMs = Date.now() - startTime;
+        // SDK errors podem ter .data ou .status
+        const sdkError = error as { status?: number; data?: unknown; message?: string };
+        return {
+          data: {
+            success: false,
+            type: 'label-sdk',
+            message: sdkError.message || (error instanceof Error ? error.message : 'Erro desconhecido'),
+            result: { loggiKey },
+            latencyMs,
+            loggiApiResponse: {
+              status: sdkError.status,
+              data: sdkError.data,
+              error: error instanceof Error ? error.message : String(error),
+            },
+          },
+        };
+      }
+    }
+
+    case 'tracking': {
+      const trackCode = parsed.data.trackingCode;
+      if (!trackCode) {
+        throw new ApiError({
+          code: 'VALIDATION_ERROR',
+          message: 'trackingCode é obrigatório para rastreamento',
+          status: 400,
+        });
+      }
+
+      const startTime = Date.now();
+      try {
+        const trackingResponse = await getLoggiTracking(trackCode, { skipCircuitBreaker: true });
+        const latencyMs = Date.now() - startTime;
+        const pkg = trackingResponse.packages?.[0];
+
+        return {
+          data: {
+            success: true,
+            type: 'tracking',
+            message: pkg?.status
+              ? `Status: ${pkg.status.highLevelStatus} (code ${pkg.status.code}) — ${pkg.status.description}`
+              : 'Resposta sem status',
+            result: {
+              trackingCode: trackCode,
+              loggiKey: pkg?.loggiKey,
+              status: pkg?.status,
+              location: pkg?.location,
+              promisedDate: pkg?.promisedDate,
+              historyCount: pkg?.trackingHistory?.length || 0,
+            },
+            latencyMs,
+            loggiApiResponse: trackingResponse,
+          },
+        };
+      } catch (error) {
+        const latencyMs = Date.now() - startTime;
+        const apiDetails = error instanceof LoggiApiError ? error.details : undefined;
+        const errorCode = error instanceof LoggiApiError ? error.code : undefined;
+        return {
+          data: {
+            success: false,
+            type: 'tracking',
+            message: error instanceof Error ? error.message : 'Erro desconhecido',
+            result: { trackingCode: trackCode, apiErrorDetails: apiDetails },
+            latencyMs,
+            loggiApiResponse: {
+              error: error instanceof Error ? error.message : String(error),
+              errorCode,
+              details: apiDetails,
+            },
+          },
+        };
+      }
+    }
+
+    case 'reset-cb': {
+      const previousState = getLoggiCircuitBreakerState();
+      resetLoggiCircuitBreaker();
+      return {
+        data: {
+          success: true,
+          type: 'reset-cb',
+          message: `Circuit breaker resetado: ${previousState} → CLOSED`,
+          result: { previousState, currentState: 'CLOSED' },
+          latencyMs: 0,
+        },
+      };
     }
   }
 });

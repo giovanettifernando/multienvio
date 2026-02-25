@@ -350,6 +350,7 @@ export async function createQuote(
           metadata: {
             exigeSeguro: option.exigeSeguro,
             platformCommissionCents: option.comissaoCentavos, // Registro explícito da comissão
+            ...(option.externalServiceId ? { externalServiceId: option.externalServiceId } : {}),
           },
         })),
       },
@@ -694,30 +695,4 @@ export async function cancelQuote(userId: string, quoteId: string): Promise<void
     where: { id: quoteId },
     data: { status: 'CANCELED' },
   });
-}
-
-// ============================================================================
-// Expire Old Quotes (Background Job)
-// ============================================================================
-
-/**
- * Expires quotes that are past their expiration time
- * Should be called periodically by a background job
- */
-export async function expireOldQuotes(): Promise<number> {
-  const result = await prisma.quote.updateMany({
-    where: {
-      status: {
-        in: ['DRAFT', 'SELECTED'],
-      },
-      expiresAt: {
-        lt: new Date(),
-      },
-    },
-    data: {
-      status: 'EXPIRED',
-    },
-  });
-
-  return result.count;
 }

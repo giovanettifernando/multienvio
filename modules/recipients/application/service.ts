@@ -372,6 +372,7 @@ export async function processRecipientPayment(
       success: true,
       shipmentId: shipment.id,
       platformTrackingCode: trackingCode,
+      publicTrackingId: shipment.publicTrackingId,
     };
   });
 

@@ -250,30 +250,6 @@ export interface User {
 // ============================================================================
 
 /**
- * Labels de exibição para ShipmentStatus
- */
-export const SHIPMENT_STATUS_LABELS: Record<ShipmentStatus, string> = {
-  [ShipmentStatus.CRIADO]: "Criado",
-  [ShipmentStatus.ETIQUETA_EMITIDA]: "Etiqueta Emitida",
-  [ShipmentStatus.POSTADO]: "Postado",
-  [ShipmentStatus.EM_TRANSPORTE]: "Em Transporte",
-  [ShipmentStatus.ENTREGUE]: "Entregue",
-  [ShipmentStatus.CANCELADO]: "Cancelado",
-};
-
-/**
- * Cores (Ant Design) para ShipmentStatus
- */
-export const SHIPMENT_STATUS_COLORS: Record<ShipmentStatus, string> = {
-  [ShipmentStatus.CRIADO]: "default",
-  [ShipmentStatus.ETIQUETA_EMITIDA]: "blue",
-  [ShipmentStatus.POSTADO]: "cyan",
-  [ShipmentStatus.EM_TRANSPORTE]: "processing",
-  [ShipmentStatus.ENTREGUE]: "success",
-  [ShipmentStatus.CANCELADO]: "error",
-};
-
-/**
  * Labels de exibição para CollectionStatus
  */
 export const COLLECTION_STATUS_LABELS: Record<CollectionStatus, string> = {

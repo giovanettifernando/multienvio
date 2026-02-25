@@ -143,6 +143,7 @@ export interface ProcessPaymentResult {
   success: boolean;
   shipmentId?: string;
   platformTrackingCode?: string;
+  publicTrackingId?: string | null;
   error?: string;
 }
 

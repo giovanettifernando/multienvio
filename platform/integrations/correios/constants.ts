@@ -85,34 +85,6 @@ export const SERVICO_ADICIONAL = {
 // Códigos de Serviço Comuns (exemplos - variam por contrato)
 // ============================================================================
 
-/**
- * ATENÇÃO: Estes códigos são EXEMPLOS baseados em contratos típicos.
- * Os códigos reais dependem do seu contrato específico com os Correios.
- * Consulte a resposta do token ou o portal CWS para obter os códigos corretos.
- */
-export const SERVICOS_CORREIOS_EXEMPLO = {
-  // SEDEX (expressos)
-  SEDEX: '03220',
-  SEDEX_10: '03158',
-  SEDEX_12: '03140',
-  SEDEX_HOJE: '03204',
-  SEDEX_GRANDES_FORMATOS: '03212',
-
-  // PAC (econômicos)
-  PAC: '03298',
-  PAC_GRANDES_FORMATOS: '03328',
-
-  // Mini Envios
-  MINI_ENVIOS: '04227',
-
-  // Logística Reversa
-  SEDEX_LOGISTICA_REVERSA: '04677',
-  PAC_LOGISTICA_REVERSA: '04685',
-
-  // Impresso
-  IMPRESSO: '20010',
-} as const;
-
 // ============================================================================
 // Configuração Padrão de Serviços
 // ============================================================================

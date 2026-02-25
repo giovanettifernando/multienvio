@@ -32,13 +32,6 @@ export interface CorreiosServiceConfig {
   ordemExibicao: number;
 }
 
-export interface CorreiosContractConfig {
-  cartaoPostagem: string;
-  contrato: string;
-  dr: number;
-  servicos: CorreiosServiceConfig[];
-}
-
 // ============================================================================
 // Token (Autenticação)
 // ============================================================================
@@ -385,17 +378,6 @@ export interface CorreiosRotuloResponse {
   erros?: Array<{
     codigo: string;
     mensagem: string;
-  }>;
-}
-
-export interface CorreiosReciboResponse {
-  idRecibo: string;
-  status: string;
-  dataCriacao?: string;
-  idLote?: string;
-  objetos?: Array<{
-    codigoObjeto: string;
-    status?: string;
   }>;
 }
 

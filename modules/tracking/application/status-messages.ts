@@ -3,7 +3,7 @@
  * Usado na timeline de rastreamento público
  */
 
-export const PUBLIC_STATUS_MESSAGES: Record<string, string> = {
+const PUBLIC_STATUS_MESSAGES: Record<string, string> = {
   // Status de shipment
   pending_payment: 'Aguardando pagamento',
   awaiting_pickup: 'Aguardando coleta',
@@ -38,16 +38,3 @@ export const PUBLIC_STATUS_MESSAGES: Record<string, string> = {
 export function getPublicStatusMessage(statusOrType: string): string {
   return PUBLIC_STATUS_MESSAGES[statusOrType] || PUBLIC_STATUS_MESSAGES[statusOrType.toUpperCase()] || 'Atualização de status';
 }
-
-/**
- * Tipos de evento para icones/cores na timeline
- */
-export const EVENT_TYPES = {
-  CREATED: 'CREATED',
-  POSTED: 'POSTED',
-  IN_TRANSIT: 'IN_TRANSIT',
-  OUT_FOR_DELIVERY: 'OUT_FOR_DELIVERY',
-  DELIVERED: 'DELIVERED',
-  EXCEPTION: 'EXCEPTION',
-  CANCELLED: 'CANCELLED',
-} as const;

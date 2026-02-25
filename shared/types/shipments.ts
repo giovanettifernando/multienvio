@@ -8,6 +8,7 @@ export type ShipmentStatus =
   | "Postado"
   | "Em trânsito"
   | "Em rota de entrega"
+  | "Problema na entrega"
   | "Entregue"
   | "Cancelado"
   | "Devolvido";

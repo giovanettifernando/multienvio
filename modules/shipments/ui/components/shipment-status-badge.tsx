@@ -26,6 +26,10 @@ const STATUS_CONFIG: Record<ShipmentStatus, StatusConfig> = {
     label: "Em rota de entrega",
     color: "gold",
   },
+  problema_na_entrega: {
+    label: "Problema na entrega",
+    color: "red",
+  },
   entregue: {
     label: "Entregue",
     color: "green",

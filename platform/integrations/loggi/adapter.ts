@@ -15,7 +15,7 @@ import type { LoggiQuoteResponse, LoggiQuotation } from './types';
 import { cotarLoggi, loggiMoneyToReais } from './cotacao';
 import { getLoggiConfigAsync, validateLoggiConfig } from './client';
 import { loggiVolumeValidator } from './loggi-volume-validator';
-import { LOGGI_CARRIER_SLUG, LOGGI_CARRIER_NAME, LOGGI_FREIGHT_TYPES } from './constants';
+import { LOGGI_CARRIER_SLUG, LOGGI_CARRIER_NAME, LOGGI_FREIGHT_TYPES, LOGGI_PICKUP_TYPES } from './constants';
 import type { VolumeInput, CarrierEligibility } from '../shared/volume-eligibility';
 
 // ============================================================================
@@ -30,17 +30,38 @@ export { LOGGI_CARRIER_NAME };
 // ============================================================================
 
 /**
- * Mapeia freightType para um ID de serviço interno
+ * Mapeia freightType + pickupType para um ID de serviço interno único
  */
-function freightTypeToServiceId(freightType: string): string {
-  switch (freightType) {
-    case LOGGI_FREIGHT_TYPES.EXPRESS:
-      return `${LOGGI_CARRIER_ID}-express`;
-    case LOGGI_FREIGHT_TYPES.ECONOMIC:
-      return `${LOGGI_CARRIER_ID}-economic`;
-    default:
-      return `${LOGGI_CARRIER_ID}-${freightType.replace('FREIGHT_TYPE_', '').toLowerCase()}`;
+function quotationToServiceId(freightType: string, pickupType: string): string {
+  const freight = freightType === LOGGI_FREIGHT_TYPES.EXPRESS
+    ? 'express'
+    : freightType === LOGGI_FREIGHT_TYPES.ECONOMIC
+      ? 'economic'
+      : freightType.replace('FREIGHT_TYPE_', '').toLowerCase();
+
+  const pickup = pickupType === LOGGI_PICKUP_TYPES.DROP_OFF
+    ? 'dropoff'
+    : pickupType === LOGGI_PICKUP_TYPES.SPOT
+      ? 'spot'
+      : pickupType.replace('PICKUP_TYPE_', '').toLowerCase();
+
+  return `${LOGGI_CARRIER_ID}-${freight}-${pickup}`;
+}
+
+/**
+ * Gera label legível para a modalidade (freight + pickup)
+ */
+function quotationToLabel(quotation: LoggiQuotation): string {
+  // Remove prefixo "Loggi " do label pois a coluna "Transportadora" já exibe "Loggi"
+  const raw = quotation.freightTypeLabel || quotation.freightType;
+  const base = raw.replace(/^Loggi\s+/i, '');
+  if (quotation.pickupType === LOGGI_PICKUP_TYPES.DROP_OFF) {
+    return `${base} (Postagem)`;
   }
+  if (quotation.pickupType === LOGGI_PICKUP_TYPES.SPOT) {
+    return `${base} (Coleta)`;
+  }
+  return base;
 }
 
 /**
@@ -54,13 +75,14 @@ function loggiQuotationToQuoteResult(quotation: LoggiQuotation): QuoteResultItem
   if (preco <= 0) return null;
 
   return {
-    id: freightTypeToServiceId(quotation.freightType),
+    id: quotationToServiceId(quotation.freightType, quotation.pickupType),
     carrier: LOGGI_CARRIER_NAME,
-    modalidade: quotation.freightTypeLabel || quotation.freightType,
+    modalidade: quotationToLabel(quotation),
     prazoDias: quotation.sloInDays || 0,
     preco,
     exigeSeguro: false,
     source: 'real',
+    externalServiceId: quotation.externalServiceId,
   };
 }
 

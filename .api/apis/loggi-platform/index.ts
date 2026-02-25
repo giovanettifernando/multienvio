@@ -10,7 +10,7 @@ class SDK {
 
   constructor() {
     this.spec = Oas.init(definition);
-    this.core = new APICore(this.spec, 'loggi-platform/v1 (api/6.1.3)');
+    this.core = new APICore(this.spec, 'loggi-platform/v1.9 (api/6.1.3)');
   }
 
   /**
@@ -74,35 +74,50 @@ class SDK {
   }
 
   /**
-   * Solicitação e atualização de token. O campo **idToken** deve ser informado no **Header**
-   * _Authorization_ de cada requisição às APIs da Loggi.
+   * Autenticação OAuth2 V2. Retorna idToken e expiresIn.
    *
-   * ### ATENÇÃO!</h2>
-   * <div class="warning-docs">
-   *   ⚠️ <em>  Esta api de autenticação está depreciada, por favor utilize a <a
-   * href="/reference/authenticatev2">versão 2</a> da api de autenticação.</em>
-   * </div>
-   *
-   * @summary Autenticação V1
-   * @throws FetchError<400, types.AuthenticateV1Response400> Mensagem do cliente não segue a especificação
-   * @throws FetchError<401, types.AuthenticateV1Response401> Falha de autenticação
-   * @throws FetchError<403, types.AuthenticateV1Response403> Sem autorização para acessar o serviço
-   * @throws FetchError<429, types.AuthenticateV1Response429> Requisições massivas bloqueadas
-   * @throws FetchError<500, types.AuthenticateV1Response500> Erro interno
-   * @throws FetchError<503, types.AuthenticateV1Response503> Serviço temporariamente indisponível
+   * @summary Criar/Atualizar Token
    */
-  authenticateV1(body: types.AuthenticateV1BodyParam): Promise<FetchResponse<200, types.AuthenticateV1Response200>> {
-    return this.core.fetch('/oauth2/token', 'post', body);
+  requestOAuthToken(body: types.RequestOAuthTokenBodyParam): Promise<FetchResponse<200, types.RequestOAuthTokenResponse200>> {
+    return this.core.fetch('/v2/oauth2/token', 'post', body);
   }
 
   /**
-   * Solicitação de token para as APIs da Loggi.
+   * Cotação de frete. Retorna opções de preço e prazo.
    *
-   * @summary Autenticação V2
-   * @throws FetchError<400, types.AuthenticateV2Response400> Validation Error
+   * @summary Criar Cotação
    */
-  authenticateV2(body: types.AuthenticateV2BodyParam): Promise<FetchResponse<200, types.AuthenticateV2Response200>> {
-    return this.core.fetch('/v2/oauth2/token', 'post', body);
+  quote(body: types.QuoteBodyParam, metadata: types.QuoteMetadataParam): Promise<FetchResponse<200, types.QuoteResponse200>> {
+    return this.core.fetch('/v1/companies/{company_id}/quotations', 'post', body, metadata);
+  }
+
+  /**
+   * Cria envios de forma assíncrona. Retorna loggiKey e trackingCode para cada pacote.
+   * O processamento é feito em background — aguarde webhook ou polling para confirmar.
+   *
+   * @summary Criar Envio Assíncrono
+   */
+  createAsyncShipment(body: types.CreateAsyncShipmentBodyParam, metadata: types.CreateAsyncShipmentMetadataParam): Promise<FetchResponse<200, types.CreateAsyncShipmentResponse200>> {
+    return this.core.fetch('/v1/companies/{company_id}/async-shipments', 'post', body, metadata);
+  }
+
+  /**
+   * Gera etiquetas em PDF (base64 ou URL) a partir dos loggiKeys.
+   * Disponível somente após confirmação do processamento do pacote.
+   *
+   * @summary Criar Etiqueta
+   */
+  createLabel(body: types.CreateLabelBodyParam, metadata: types.CreateLabelMetadataParam): Promise<FetchResponse<200, types.CreateLabelResponse200>> {
+    return this.core.fetch('/v1/companies/{company_id}/labels', 'post', body, metadata);
+  }
+
+  /**
+   * Consulta o rastreamento de um pacote pelo tracking code.
+   *
+   * @summary Consultar Rastreamento
+   */
+  getTracking(metadata: types.GetTrackingMetadataParam): Promise<FetchResponse<200, types.GetTrackingResponse200>> {
+    return this.core.fetch('/v1/companies/{company_id}/packages/{tracking_code}/tracking', 'get', metadata);
   }
 }
 
@@ -111,4 +126,55 @@ const createSDK = (() => { return new SDK(); })()
 
 export default createSDK;
 
-export type { AuthenticateV1BodyParam, AuthenticateV1Response200, AuthenticateV1Response400, AuthenticateV1Response401, AuthenticateV1Response403, AuthenticateV1Response429, AuthenticateV1Response500, AuthenticateV1Response503, AuthenticateV2BodyParam, AuthenticateV2Response200, AuthenticateV2Response400 } from './types';
+export type {
+  // Auth
+  RequestOAuthTokenBodyParam,
+  RequestOAuthTokenResponse200,
+  RequestOAuthTokenResponse400,
+  RequestOAuthTokenResponse401,
+  RequestOAuthTokenResponse403,
+  RequestOAuthTokenResponse429,
+  RequestOAuthTokenResponse500,
+  RequestOAuthTokenResponse503,
+  // Quote
+  QuoteBodyParam,
+  QuoteMetadataParam,
+  QuoteResponse200,
+  QuoteResponse400,
+  QuoteResponse401,
+  QuoteResponse403,
+  QuoteResponse404,
+  QuoteResponse429,
+  QuoteResponse500,
+  QuoteResponse503,
+  // Async Shipment
+  CreateAsyncShipmentBodyParam,
+  CreateAsyncShipmentMetadataParam,
+  CreateAsyncShipmentResponse200,
+  CreateAsyncShipmentResponse400,
+  CreateAsyncShipmentResponse401,
+  CreateAsyncShipmentResponse403,
+  CreateAsyncShipmentResponse429,
+  CreateAsyncShipmentResponse500,
+  CreateAsyncShipmentResponse503,
+  // Label
+  CreateLabelBodyParam,
+  CreateLabelMetadataParam,
+  CreateLabelResponse200,
+  CreateLabelResponse400,
+  CreateLabelResponse401,
+  CreateLabelResponse403,
+  CreateLabelResponse429,
+  CreateLabelResponse500,
+  CreateLabelResponse503,
+  // Tracking
+  GetTrackingMetadataParam,
+  GetTrackingResponse200,
+  GetTrackingResponse400,
+  GetTrackingResponse401,
+  GetTrackingResponse403,
+  GetTrackingResponse404,
+  GetTrackingResponse429,
+  GetTrackingResponse500,
+  GetTrackingResponse503,
+} from './types';

@@ -209,6 +209,7 @@ export interface RecipientPaymentConfirmedEmailData {
   recipientEmail: string;
   senderName: string;
   trackingCode: string;
+  publicTrackingId?: string | null;
   totalCents: number;
   originCity: string;
   originState: string;
@@ -226,7 +227,7 @@ export async function sendRecipientPaymentConfirmedEmail(
   data: RecipientPaymentConfirmedEmailData
 ): Promise<boolean> {
   const baseUrl = getEmailBaseUrl();
-  const trackingUrl = `${baseUrl}/rastreio/${data.trackingCode}`;
+  const trackingUrl = `${baseUrl}/rastreio/${data.publicTrackingId || data.trackingCode}`;
   const totalFormatted = formatCurrency(data.totalCents / 100);
 
   const html = `

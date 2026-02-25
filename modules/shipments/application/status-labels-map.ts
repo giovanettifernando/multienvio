@@ -15,6 +15,7 @@ export type UIShipmentStatus =
   | "Postado"
   | "Em trânsito"
   | "Em rota de entrega"
+  | "Problema na entrega"
   | "Entregue"
   | "Falha na coleta"
   | "Cancelado"
@@ -89,19 +90,14 @@ export function mapToUIStatus(status: ShipmentStatus): UIShipmentStatus {
     return "Entregue";
   }
 
-  // NOTA: Mapeamento simplificado por limitação da UI
-  // Idealmente, estes status teriam suas próprias categorias na UI:
-  // - DELIVERY_ATTEMPT_FAILED (laranja): "Tentativa de entrega falhou" (ex: destinatário ausente)
-  // - DELIVERY_PROBLEM (vermelho): "Problema na entrega" (ex: endereço incorreto)
-  //
-  // Por enquanto, são agrupados em "Em rota de entrega" pois o fluxo de entrega
-  // ainda está ativo (transportadora tentará reentrega). Usuários podem ver
-  // o status detalhado ao clicar no envio.
-  if ([
-    ShipmentStatus.DELIVERY_ATTEMPT_FAILED,
-    ShipmentStatus.DELIVERY_PROBLEM,
-  ].includes(status)) {
-    return "Em rota de entrega"; // Ainda tentando entregar
+  // Tentativa de entrega falhou - ainda pode haver reentrega
+  if (status === ShipmentStatus.DELIVERY_ATTEMPT_FAILED) {
+    return "Em rota de entrega";
+  }
+
+  // Problema na entrega - etiqueta expirada, endereço incorreto, etc.
+  if (status === ShipmentStatus.DELIVERY_PROBLEM) {
+    return "Problema na entrega";
   }
 
   // Fase D - Cancelamento
@@ -175,6 +171,10 @@ export function getBackendStatusesForUIFilter(uiStatus: UIShipmentStatus): Shipm
         ShipmentStatus.OUT_FOR_DELIVERY,
         ShipmentStatus.AWAITING_PICKUP_AT_DESTINATION_HUB,
         ShipmentStatus.DELIVERY_ATTEMPT_FAILED,
+      ];
+
+    case "Problema na entrega":
+      return [
         ShipmentStatus.DELIVERY_PROBLEM,
       ];
 
@@ -230,6 +230,7 @@ export function getBackendStatusesForUIFilter(uiStatus: UIShipmentStatus): Shipm
         ShipmentStatus.OUT_FOR_DELIVERY,
         ShipmentStatus.AWAITING_PICKUP_AT_DESTINATION_HUB,
         ShipmentStatus.DELIVERY_ATTEMPT_FAILED,
+        // Problema na entrega
         ShipmentStatus.DELIVERY_PROBLEM,
       ];
 
