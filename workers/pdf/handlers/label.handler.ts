@@ -25,6 +25,7 @@ import {
 } from '../../../shared/docs/correios/declaracao-conteudo-pdf';
 import type { JobLogger } from '../../../platform/queue/helpers';
 import { withRetry, CORREIOS_RETRY_CONFIG } from '../../../shared/utils/retry';
+import { CorreiosApiError } from '../../../platform/integrations/correios/types';
 import { formatEndereco } from '../../../shared/utils/address';
 import { extractDeclarationItems, type ShipmentDocument } from '../../../shared/docs/correios/declaration-items';
 
@@ -42,6 +43,14 @@ async function baixarRotuloPdfComRetry(
     },
     {
       ...CORREIOS_RETRY_CONFIG,
+      // Não retentar quando circuit breaker está aberto: ele gerencia a recuperação
+      // sozinho (resetTimeoutMs: 15s) e os retries (~3s) nunca alcançam esse window.
+      shouldRetry: (error) => {
+        if (error instanceof CorreiosApiError && error.errorCode === 'CIRCUIT_BREAKER_OPEN') {
+          return false;
+        }
+        return true;
+      },
       onRetry: (attempt, delay, error) => {
         log.warn({ prePostageId, attempt, delayMs: delay, error: error instanceof Error ? error.message : String(error) },
           'Retrying Correios PDF download');
