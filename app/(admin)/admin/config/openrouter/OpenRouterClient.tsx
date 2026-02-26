@@ -29,6 +29,8 @@ import {
   SendOutlined,
   CodeOutlined,
   ToolOutlined,
+  EyeOutlined,
+  EyeInvisibleOutlined,
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
@@ -222,6 +224,10 @@ export default function OpenRouterClient() {
   const [modelsError, setModelsError] = useState<string | null>(null);
   const [models, setModels] = useState<ModelsResponse | null>(null);
 
+  // API Key reveal state
+  const [apiKeyVisible, setApiKeyVisible] = useState(false);
+  const [revealLoading, setRevealLoading] = useState(false);
+
   // Playground state
   const [playgroundMessage, setPlaygroundMessage] = useState('');
   const [playgroundUseTools, setPlaygroundUseTools] = useState(false);
@@ -301,6 +307,36 @@ export default function OpenRouterClient() {
       httpReferer: values.httpReferer || null,
       xTitle: values.xTitle || null,
     });
+  };
+
+  const handleToggleApiKeyVisibility = async () => {
+    if (apiKeyVisible) {
+      // Voltar a mostrar mascarado
+      if (config?.apiKey) {
+        form.setFieldsValue({ apiKey: config.apiKey });
+      }
+      setApiKeyVisible(false);
+      return;
+    }
+
+    // Buscar chave real do servidor
+    setRevealLoading(true);
+    try {
+      const res = await fetch('/api/admin/config/openrouter?reveal=true');
+      if (!res.ok) throw new Error('Erro ao revelar chave');
+      const json = await res.json();
+      const data = json.data ?? json;
+      if (data.apiKey && !data.apiKey.includes('***')) {
+        form.setFieldsValue({ apiKey: data.apiKey });
+        setApiKeyVisible(true);
+      } else {
+        message.error('Não foi possível revelar a API Key');
+      }
+    } catch {
+      message.error('Erro ao buscar API Key');
+    } finally {
+      setRevealLoading(false);
+    }
   };
 
   const handleTest = async () => {
@@ -451,10 +487,23 @@ export default function OpenRouterClient() {
               rules={[{ required: true, message: 'API Key é obrigatória' }]}
               extra="Chave de API do OpenRouter (formato: sk-or-v1-...)"
             >
-              <Input.Password
+              <Input
                 placeholder="sk-or-v1-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
                 size="large"
+                type={apiKeyVisible ? 'text' : 'password'}
                 style={{ fontFamily: 'monospace' }}
+                suffix={
+                  config?.configured ? (
+                    <Button
+                      type="text"
+                      size="small"
+                      loading={revealLoading}
+                      icon={apiKeyVisible ? <EyeInvisibleOutlined /> : <EyeOutlined />}
+                      onClick={handleToggleApiKeyVisibility}
+                      style={{ color: '#8c8c8c' }}
+                    />
+                  ) : null
+                }
               />
             </Form.Item>
 

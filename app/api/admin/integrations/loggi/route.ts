@@ -59,6 +59,7 @@ function processCredentials(
   clientId: string;
   clientSecret: string;
   companyId: string;
+  clientSecretDecryptionFailed: boolean;
   configured: boolean;
 } {
   if (!credential) {
@@ -66,6 +67,7 @@ function processCredentials(
       clientId: '',
       clientSecret: '',
       companyId: '',
+      clientSecretDecryptionFailed: false,
       configured: false,
     };
   }
@@ -73,12 +75,14 @@ function processCredentials(
   const customData = (credential.customHeaders as Record<string, unknown>) || {};
 
   let clientSecretValue = '';
+  let clientSecretDecryptionFailed = false;
   if (credential.password) {
     try {
       const decrypted = decrypt(credential.password);
       clientSecretValue = shouldReveal ? decrypted : (decrypted.length > 0 ? '***' : '');
     } catch {
-      clientSecretValue = '***';
+      clientSecretDecryptionFailed = true;
+      clientSecretValue = '';
     }
   }
 
@@ -88,6 +92,7 @@ function processCredentials(
     clientId: credential.clientId || '',
     clientSecret: clientSecretValue,
     companyId,
+    clientSecretDecryptionFailed,
     configured: !!(credential.clientId && credential.password && companyId),
   };
 }
@@ -109,7 +114,7 @@ export const GET = withApiHandler(async ({ req }) => {
     return {
       data: {
         configured: false,
-        activeEnvironment: 'sandbox' as const,
+        activeEnvironment: 'sandbox' as 'sandbox' | 'production',
         production: { configured: false, clientId: '', clientSecret: '', companyId: '' },
         sandbox: { configured: false, clientId: '', clientSecret: '', companyId: '' },
         shippingCommissionPercent: null as number | null,
@@ -137,7 +142,7 @@ export const GET = withApiHandler(async ({ req }) => {
   return {
     data: {
       configured: productionData.configured || sandboxData.configured,
-      activeEnvironment: carrier.environment === 'SANDBOX' ? 'sandbox' : 'production',
+      activeEnvironment: (carrier.environment === 'SANDBOX' ? 'sandbox' : 'production') as 'sandbox' | 'production',
       production: productionData,
       sandbox: sandboxData,
       shippingCommissionPercent: carrier.shippingCommissionPercent

@@ -32,6 +32,7 @@ import {
   CloudOutlined,
   SendOutlined,
   DownloadOutlined,
+  WarningOutlined,
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
@@ -46,6 +47,8 @@ interface EnvironmentCredentials {
   password: string;
   apiAccount: string;
   privateKey: string;
+  passwordDecryptionFailed?: boolean;
+  privateKeyDecryptionFailed?: boolean;
   configured: boolean;
 }
 
@@ -301,6 +304,16 @@ function ConfigTab({ config, form, onSave, saving }: {
         size="small"
         style={{ marginBottom: 16 }}
       >
+        {(config?.sandbox?.passwordDecryptionFailed || config?.sandbox?.privateKeyDecryptionFailed) && (
+          <Alert
+            type="error"
+            icon={<WarningOutlined />}
+            message="Erro ao descriptografar credenciais"
+            description="Uma ou mais credenciais armazenadas não puderam ser descriptografadas. A ENCRYPTION_KEY do servidor pode ter mudado. Insira os valores novamente para corrigir."
+            showIcon
+            style={{ marginBottom: 16 }}
+          />
+        )}
         <Form.Item label="Customer Code" name="sandbox_customerCode">
           <Input placeholder="Ex: J0086032240" />
         </Form.Item>
@@ -321,6 +334,16 @@ function ConfigTab({ config, form, onSave, saving }: {
         size="small"
         style={{ marginBottom: 16 }}
       >
+        {(config?.production?.passwordDecryptionFailed || config?.production?.privateKeyDecryptionFailed) && (
+          <Alert
+            type="error"
+            icon={<WarningOutlined />}
+            message="Erro ao descriptografar credenciais"
+            description="Uma ou mais credenciais armazenadas não puderam ser descriptografadas. A ENCRYPTION_KEY do servidor pode ter mudado. Insira os valores novamente para corrigir."
+            showIcon
+            style={{ marginBottom: 16 }}
+          />
+        )}
         <Form.Item label="Customer Code" name="prod_customerCode">
           <Input placeholder="Ex: J0086032240" />
         </Form.Item>

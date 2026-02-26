@@ -34,6 +34,7 @@ import {
   DownloadOutlined,
   LoadingOutlined,
   ReloadOutlined,
+  WarningOutlined,
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
@@ -47,6 +48,7 @@ interface EnvironmentCredentials {
   clientId: string;
   clientSecret: string;
   companyId: string;
+  clientSecretDecryptionFailed?: boolean;
   configured: boolean;
 }
 
@@ -354,6 +356,16 @@ function ConfigTab({ config, form, onSave, saving }: {
         size="small"
         style={{ marginBottom: 16 }}
       >
+        {config?.sandbox?.clientSecretDecryptionFailed && (
+          <Alert
+            type="error"
+            icon={<WarningOutlined />}
+            message="Erro ao descriptografar credenciais"
+            description="O Client Secret armazenado não pôde ser descriptografado. A ENCRYPTION_KEY do servidor pode ter mudado. Insira o valor novamente para corrigir."
+            showIcon
+            style={{ marginBottom: 16 }}
+          />
+        )}
         <Form.Item label="Client ID" name="sandbox_clientId">
           <Input placeholder="Client ID fornecido pela Loggi" />
         </Form.Item>
@@ -371,6 +383,16 @@ function ConfigTab({ config, form, onSave, saving }: {
         size="small"
         style={{ marginBottom: 16 }}
       >
+        {config?.production?.clientSecretDecryptionFailed && (
+          <Alert
+            type="error"
+            icon={<WarningOutlined />}
+            message="Erro ao descriptografar credenciais"
+            description="O Client Secret armazenado não pôde ser descriptografado. A ENCRYPTION_KEY do servidor pode ter mudado. Insira o valor novamente para corrigir."
+            showIcon
+            style={{ marginBottom: 16 }}
+          />
+        )}
         <Form.Item label="Client ID" name="prod_clientId">
           <Input placeholder="Client ID fornecido pela Loggi" />
         </Form.Item>

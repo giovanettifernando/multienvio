@@ -62,21 +62,25 @@ export const GET = withApiHandler<PaymentGatewayGetResponse>(async ({ req }) => 
 
   // Descriptografar valores se reveal=true
   let accessTokenValue = '';
+  let accessTokenDecryptionFailed = false;
   if (credential.accessToken) {
     try {
       const decrypted = decrypt(credential.accessToken);
       accessTokenValue = shouldReveal ? decrypted : (decrypted.length > 0 ? '***configurado***' : '');
     } catch {
+      accessTokenDecryptionFailed = true;
       accessTokenValue = shouldReveal ? '' : '***';
     }
   }
 
   let webhookSecretValue = '';
+  let webhookSecretDecryptionFailed = false;
   if (credential.secretKey) {
     try {
       const decrypted = decrypt(credential.secretKey);
       webhookSecretValue = shouldReveal ? decrypted : (decrypted.length > 0 ? '***configurado***' : '');
     } catch {
+      webhookSecretDecryptionFailed = true;
       webhookSecretValue = shouldReveal ? '' : '***';
     }
   }
@@ -89,6 +93,8 @@ export const GET = withApiHandler<PaymentGatewayGetResponse>(async ({ req }) => 
     webhookSecret: webhookSecretValue,
     hasAccessToken: Boolean(credential.accessToken),
     hasWebhookSecret: Boolean(credential.secretKey),
+    accessTokenDecryptionFailed,
+    webhookSecretDecryptionFailed,
   };
 
   return { data: { config } };

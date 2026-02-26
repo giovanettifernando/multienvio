@@ -33,6 +33,7 @@ import {
   CloudOutlined,
   DownloadOutlined,
   PictureOutlined,
+  WarningOutlined,
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
@@ -48,6 +49,8 @@ interface EnvironmentCredentials {
   cartaoPostagem: string;
   contrato?: string;
   dr?: string;
+  apiKey?: string;
+  passwordDecryptionFailed?: boolean;
   configured: boolean;
 }
 
@@ -137,9 +140,11 @@ function EnvironmentBadge({ environment, configured }: { environment: 'sandbox' 
 function CredentialsForm({
   prefix,
   environment,
+  passwordDecryptionFailed,
 }: {
   prefix: string;
   environment: 'sandbox' | 'production';
+  passwordDecryptionFailed?: boolean;
 }) {
   const isSandbox = environment === 'sandbox';
   const cwsUrl = isSandbox ? 'https://cwshom.correios.com.br' : 'https://cws.correios.com.br';
@@ -148,7 +153,6 @@ function CredentialsForm({
     <>
       <Alert
         type="info"
-        title={`Credenciais para ${isSandbox ? 'Homologação (Sandbox)' : 'Produção'}`}
         description={
           <>
             Obtenha suas credenciais no portal{' '}
@@ -160,6 +164,17 @@ function CredentialsForm({
         showIcon
         style={{ marginBottom: 16 }}
       />
+
+      {passwordDecryptionFailed && (
+        <Alert
+          type="error"
+          icon={<WarningOutlined />}
+          message="Erro ao descriptografar credenciais"
+          description="A senha armazenada não pôde ser descriptografada. Isso pode indicar que a ENCRYPTION_KEY do servidor é diferente da usada ao salvar. Insira a senha novamente para corrigir."
+          showIcon
+          style={{ marginBottom: 16 }}
+        />
+      )}
 
       <Form.Item
         name={[prefix, 'username']}
@@ -176,9 +191,10 @@ function CredentialsForm({
         rules={[{ required: false }]}
         extra="Código gerado no portal CWS."
       >
-        <Input
+        <Input.Password
           placeholder="Código de acesso"
           style={{ fontFamily: 'monospace' }}
+          visibilityToggle
         />
       </Form.Item>
 
@@ -189,6 +205,19 @@ function CredentialsForm({
         extra="Número do cartão de postagem do contrato"
       >
         <Input placeholder="0000000000" maxLength={15} />
+      </Form.Item>
+
+      <Form.Item
+        name={[prefix, 'apiKey']}
+        label="API Key (CWS)"
+        rules={[{ required: false }]}
+        extra="Chave de API do portal CWS — alternativa ao Código de Acesso"
+      >
+        <Input.Password
+          placeholder="Deixe em branco se não usar API Key"
+          style={{ fontFamily: 'monospace' }}
+          visibilityToggle
+        />
       </Form.Item>
 
       <Collapse size="small" style={{ marginTop: 8 }}>
@@ -255,6 +284,7 @@ function ConfigTab() {
           cartaoPostagem: config.production?.cartaoPostagem || '',
           contrato: config.production?.contrato || '',
           dr: config.production?.dr || '',
+          apiKey: config.production?.apiKey || '',
         },
         sandbox: {
           username: config.sandbox?.username || '',
@@ -262,6 +292,7 @@ function ConfigTab() {
           cartaoPostagem: config.sandbox?.cartaoPostagem || '',
           contrato: config.sandbox?.contrato || '',
           dr: config.sandbox?.dr || '',
+          apiKey: config.sandbox?.apiKey || '',
         },
       });
       initializedRef.current = true;
@@ -507,6 +538,7 @@ function ConfigTab() {
         <CredentialsForm
           prefix="production"
           environment="production"
+          passwordDecryptionFailed={config?.production?.passwordDecryptionFailed}
         />
       </Card>
 
@@ -526,6 +558,7 @@ function ConfigTab() {
         <CredentialsForm
           prefix="sandbox"
           environment="sandbox"
+          passwordDecryptionFailed={config?.sandbox?.passwordDecryptionFailed}
         />
       </Card>
 

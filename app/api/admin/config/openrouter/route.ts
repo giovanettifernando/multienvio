@@ -40,7 +40,9 @@ export const GET = withApiHandler(async ({ req }) => {
   const session = await requireAdminSession(req, AdminPermission.INTEGRACOES);
   
 
-  const config = await getOpenRouterConfigSafe();
+  const reveal = req.nextUrl?.searchParams?.get('reveal') === 'true'
+    || new URL(req.url).searchParams.get('reveal') === 'true';
+  const config = await getOpenRouterConfigSafe(reveal);
 
   if (!config) {
     return {

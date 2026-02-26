@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { Card, Form, Input, Select, Button, Space, App, Spin, Alert } from 'antd';
-import { SaveOutlined, ReloadOutlined } from '@ant-design/icons';
+import { SaveOutlined, ReloadOutlined, WarningOutlined } from '@ant-design/icons';
 
 interface GatewayConfig {
   environment: 'SANDBOX' | 'PRODUCTION';
@@ -10,6 +10,8 @@ interface GatewayConfig {
   accessToken: string;
   applicationId?: string;
   webhookSecret?: string;
+  accessTokenDecryptionFailed?: boolean;
+  webhookSecretDecryptionFailed?: boolean;
 }
 
 export default function PaymentGatewayConfig() {
@@ -17,6 +19,7 @@ export default function PaymentGatewayConfig() {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [decryptionFailed, setDecryptionFailed] = useState({ accessToken: false, webhookSecret: false });
 
   const loadConfig = useCallback(async () => {
     setLoading(true);
@@ -36,6 +39,10 @@ export default function PaymentGatewayConfig() {
           applicationId: data.config.applicationId || '',
           accessToken: data.config.accessToken || '',
           webhookSecret: data.config.webhookSecret || '',
+        });
+        setDecryptionFailed({
+          accessToken: Boolean(data.config.accessTokenDecryptionFailed),
+          webhookSecret: Boolean(data.config.webhookSecretDecryptionFailed),
         });
       }
     } catch {
@@ -123,6 +130,20 @@ export default function PaymentGatewayConfig() {
           style={{ marginBottom: 24 }}
         />
 
+        {(decryptionFailed.accessToken || decryptionFailed.webhookSecret) && (
+          <Alert
+            type="error"
+            icon={<WarningOutlined />}
+            message="Erro ao descriptografar credenciais"
+            description={`${[
+              decryptionFailed.accessToken && 'Access Token',
+              decryptionFailed.webhookSecret && 'Webhook Secret',
+            ].filter(Boolean).join(' e ')} não ${decryptionFailed.accessToken && decryptionFailed.webhookSecret ? 'puderam' : 'pôde'} ser descriptografado. A ENCRYPTION_KEY do servidor pode ter mudado. Insira o valor novamente para corrigir.`}
+            showIcon
+            style={{ marginBottom: 24 }}
+          />
+        )}
+
         <Form
           form={form}
           layout="vertical"
@@ -162,10 +183,11 @@ export default function PaymentGatewayConfig() {
             name="accessToken"
             tooltip="Token de acesso para autenticação no backend"
           >
-            <Input
+            <Input.Password
               placeholder="APP_USR-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
               style={{ fontFamily: 'monospace' }}
               autoComplete="new-password"
+              visibilityToggle
             />
           </Form.Item>
 
@@ -185,10 +207,11 @@ export default function PaymentGatewayConfig() {
             name="webhookSecret"
             tooltip="Secret para validar assinatura dos webhooks"
           >
-            <Input
+            <Input.Password
               placeholder="Secret do webhook"
               style={{ fontFamily: 'monospace' }}
               autoComplete="new-password"
+              visibilityToggle
             />
           </Form.Item>
 

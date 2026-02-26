@@ -2,6 +2,8 @@ import type { AccountStatus, AdminClient, ClientType } from '@/modules/admin/app
 import { formatCNPJ, formatCPF } from '@/shared/utils/masks';
 import { AdminClientsPage } from '@/modules/admin/ui/components/clients/AdminClientsPage';
 
+export const dynamic = 'force-dynamic';
+
 
 function mapClientStatus(status: string): AccountStatus {
   if (status === 'active') return 'active';
@@ -49,6 +51,7 @@ async function fetchAdminClients(): Promise<AdminClient[]> {
         hasCompany: true,
         cpf: true,
         cnpj: true,
+        emailVerified: true,
         wallet: {
           select: {
             availableCents: true,
@@ -101,6 +104,7 @@ async function fetchAdminClients(): Promise<AdminClient[]> {
         creditsMonth,
         debitsMonth,
         walletPendingCents: walletPending,
+        emailVerified: user.emailVerified,
       };
     });
   } catch (error) {

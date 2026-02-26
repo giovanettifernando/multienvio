@@ -62,6 +62,8 @@ function processCredentials(
   password: string;
   apiAccount: string;
   privateKey: string;
+  passwordDecryptionFailed: boolean;
+  privateKeyDecryptionFailed: boolean;
   configured: boolean;
 } {
   if (!credential) {
@@ -70,6 +72,8 @@ function processCredentials(
       password: '',
       apiAccount: '',
       privateKey: '',
+      passwordDecryptionFailed: false,
+      privateKeyDecryptionFailed: false,
       configured: false,
     };
   }
@@ -77,22 +81,26 @@ function processCredentials(
   const customData = (credential.customHeaders as Record<string, unknown>) || {};
 
   let passwordValue = '';
+  let passwordDecryptionFailed = false;
   if (credential.password) {
     try {
       const decrypted = decrypt(credential.password);
       passwordValue = shouldReveal ? decrypted : (decrypted.length > 0 ? '***' : '');
     } catch {
-      passwordValue = '***';
+      passwordDecryptionFailed = true;
+      passwordValue = '';
     }
   }
 
   let privateKeyValue = '';
+  let privateKeyDecryptionFailed = false;
   if (customData.privateKey) {
     try {
       const decrypted = decrypt(customData.privateKey as string);
       privateKeyValue = shouldReveal ? decrypted : (decrypted.length > 0 ? '***' : '');
     } catch {
-      privateKeyValue = '***';
+      privateKeyDecryptionFailed = true;
+      privateKeyValue = '';
     }
   }
 
@@ -101,6 +109,8 @@ function processCredentials(
     password: passwordValue,
     apiAccount: credential.clientId || '',
     privateKey: privateKeyValue,
+    passwordDecryptionFailed,
+    privateKeyDecryptionFailed,
     configured: !!(credential.username && credential.password && credential.clientId && customData.privateKey),
   };
 }
@@ -122,7 +132,7 @@ export const GET = withApiHandler(async ({ req }) => {
     return {
       data: {
         configured: false,
-        activeEnvironment: 'sandbox' as const,
+        activeEnvironment: 'sandbox' as 'sandbox' | 'production',
         production: { configured: false, customerCode: '', password: '', apiAccount: '', privateKey: '' },
         sandbox: { configured: false, customerCode: '', password: '', apiAccount: '', privateKey: '' },
         shippingCommissionPercent: null as number | null,
@@ -150,7 +160,7 @@ export const GET = withApiHandler(async ({ req }) => {
   return {
     data: {
       configured: productionData.configured || sandboxData.configured,
-      activeEnvironment: carrier.environment === 'SANDBOX' ? 'sandbox' : 'production',
+      activeEnvironment: (carrier.environment === 'SANDBOX' ? 'sandbox' : 'production') as 'sandbox' | 'production',
       production: productionData,
       sandbox: sandboxData,
       shippingCommissionPercent: carrier.shippingCommissionPercent

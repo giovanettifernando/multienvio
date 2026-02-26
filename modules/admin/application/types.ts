@@ -15,6 +15,7 @@ export interface AdminClient {
   debitsMonth: number;       // Débitos no mês (centavos)
   walletPendingCents?: number; // Saldo pendente em centavos (opcional)
   totalShipments?: number; // Total de envios do cliente (opcional)
+  emailVerified?: boolean; // Email confirmado
 }
 
 export interface ClientsQuery {

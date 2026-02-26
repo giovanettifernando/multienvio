@@ -5,9 +5,9 @@ import { useRouter } from 'next/navigation';
 import { App, Flex, Space, Table, Tag } from 'antd';
 import type { TableProps } from 'antd';
 import { useMutation } from '@tanstack/react-query';
-import { DeleteOutlined, EyeOutlined, KeyOutlined, LockOutlined, UnlockOutlined } from '@ant-design/icons';
+import { DeleteOutlined, EyeOutlined, KeyOutlined, LockOutlined, MailOutlined, UnlockOutlined } from '@ant-design/icons';
 import type { AccountStatus, AdminClient, ClientType } from '@/modules/admin/application/types';
-import { blockAccounts, deleteAccount, resetPassword, unblockAccounts } from '@/modules/admin/application/api/clients';
+import { blockAccounts, deleteAccount, resendVerificationEmail, resetPassword, unblockAccounts } from '@/modules/admin/application/api/clients';
 import { ELButton, ELInput, ELPopconfirm, ELSelect } from '@/shared/ui';
 import { formatCentsAsBRL } from '@/shared/utils/format';
 
@@ -40,6 +40,7 @@ export function ClientsTable({ clients, onViewClient, onStatusChange, onDelete }
   const [q, setQ] = useState('');
   const [type, setType] = useState<ClientType | 'all'>('all');
   const [status, setStatus] = useState<AccountStatus | 'all'>('all');
+  const [emailFilter, setEmailFilter] = useState<'all' | 'verified' | 'unverified'>('all');
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
 
   const normalizedQuery = useMemo(() => q.trim().toLowerCase(), [q]);
@@ -49,9 +50,13 @@ export function ClientsTable({ clients, onViewClient, onStatusChange, onDelete }
     return clients.filter((client) => {
       const matchesType = type === 'all' || client.type === type;
       const matchesStatus = status === 'all' || client.status === status;
+      const matchesEmail =
+        emailFilter === 'all' ||
+        (emailFilter === 'verified' && client.emailVerified !== false) ||
+        (emailFilter === 'unverified' && client.emailVerified === false);
 
       if (!normalizedQuery && !normalizedDigits) {
-        return matchesType && matchesStatus;
+        return matchesType && matchesStatus && matchesEmail;
       }
 
       const nameMatch = client.name.toLowerCase().includes(normalizedQuery);
@@ -61,9 +66,9 @@ export function ClientsTable({ clients, onViewClient, onStatusChange, onDelete }
           client.document.replace(/\D/g, '').includes(normalizedDigits)
         : false;
 
-      return matchesType && matchesStatus && (nameMatch || emailMatch || documentMatch);
+      return matchesType && matchesStatus && matchesEmail && (nameMatch || emailMatch || documentMatch);
     });
-  }, [clients, normalizedDigits, normalizedQuery, status, type]);
+  }, [clients, emailFilter, normalizedDigits, normalizedQuery, status, type]);
 
   // Calcular página válida inline (corrige página se ficou maior que o máximo)
   const maxPage = Math.max(1, Math.ceil(filteredClients.length / pageSize) || 1);
@@ -123,6 +128,21 @@ export function ClientsTable({ clients, onViewClient, onStatusChange, onDelete }
     },
   });
 
+  const resendVerificationMutation = useMutation({
+    mutationFn: resendVerificationEmail,
+    onSuccess: (data) => {
+      if (data.emailSent) {
+        message.success('Email de verificacao reenviado com sucesso');
+      } else {
+        message.warning('Nao foi possivel enviar o email. Tente novamente.');
+      }
+    },
+    onError: (error) => {
+      const msg = error instanceof Error ? error.message : 'Falha ao reenviar email';
+      message.error(msg);
+    },
+  });
+
   const handleBlock = (ids: string[]) => {
     blockMutation.mutate(ids);
   };
@@ -155,8 +175,13 @@ export function ClientsTable({ clients, onViewClient, onStatusChange, onDelete }
     {
       title: 'E-mail',
       dataIndex: 'email',
-      width: 220,
-      ellipsis: true,
+      width: 260,
+      render: (email: string, record) => (
+        <Space size={4}>
+          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{email}</span>
+          {record.emailVerified === false && <Tag color="red" style={{ marginInlineEnd: 0 }}>Nao verificado</Tag>}
+        </Space>
+      ),
     },
     {
       title: 'Saldo em carteira',
@@ -176,7 +201,7 @@ export function ClientsTable({ clients, onViewClient, onStatusChange, onDelete }
       title: 'Ações',
       key: 'actions',
       fixed: 'right',
-      width: 260,
+      width: 340,
       render: (_, record) => (
         <Space size="small">
           <ELButton
@@ -187,6 +212,23 @@ export function ClientsTable({ clients, onViewClient, onStatusChange, onDelete }
           >
             Ver detalhes
           </ELButton>
+          {record.emailVerified === false && (
+            <ELPopconfirm
+              title="Reenviar email de verificacao?"
+              onConfirm={() => resendVerificationMutation.mutate(record.id)}
+              okText="Sim"
+              cancelText="Nao"
+            >
+              <ELButton
+                variant="link"
+                size="small"
+                icon={<MailOutlined />}
+                disabled={resendVerificationMutation.isPending}
+              >
+                Reenviar email
+              </ELButton>
+            </ELPopconfirm>
+          )}
           {record.status === 'blocked' ? (
             <ELPopconfirm
               title="Desbloquear conta?"
@@ -302,6 +344,19 @@ export function ClientsTable({ clients, onViewClient, onStatusChange, onDelete }
             { label: 'Suspenso', value: 'suspended' },
           ]}
         />
+        <ELSelect
+          value={emailFilter}
+          onChange={(v) => {
+            setPage(1);
+            setEmailFilter(v);
+          }}
+          style={{ width: 180 }}
+          options={[
+            { label: 'Todos emails', value: 'all' },
+            { label: 'Verificado', value: 'verified' },
+            { label: 'Nao verificado', value: 'unverified' },
+          ]}
+        />
       </Flex>
 
       {hasSelection && (
@@ -343,7 +398,7 @@ export function ClientsTable({ clients, onViewClient, onStatusChange, onDelete }
         rowKey="id"
         dataSource={paginatedClients}
         columns={columns}
-        loading={blockMutation.isPending || unblockMutation.isPending || deleteMutation.isPending}
+        loading={blockMutation.isPending || unblockMutation.isPending || deleteMutation.isPending || resendVerificationMutation.isPending}
         rowSelection={rowSelection}
         scroll={{ x: 980, y: 'calc(100vh - 400px)' }}
         pagination={{

@@ -28,6 +28,7 @@ const environmentCredentialsSchema = z.object({
   cartaoPostagem: z.string().optional(),
   contrato: z.string().optional(),
   dr: z.string().optional(),
+  apiKey: z.string().optional(),
 });
 
 /**
@@ -83,6 +84,8 @@ function processCredentials(
   cartaoPostagem: string;
   contrato: string;
   dr: string;
+  apiKey: string;
+  passwordDecryptionFailed: boolean;
   configured: boolean;
 } {
   if (!credential) {
@@ -92,6 +95,8 @@ function processCredentials(
       cartaoPostagem: '',
       contrato: '',
       dr: '',
+      apiKey: '',
+      passwordDecryptionFailed: false,
       configured: false,
     };
   }
@@ -99,12 +104,24 @@ function processCredentials(
   const customData = (credential.customHeaders as Record<string, unknown>) || {};
 
   let passwordValue = '';
+  let passwordDecryptionFailed = false;
   if (credential.password) {
     try {
       const decrypted = decrypt(credential.password);
       passwordValue = shouldReveal ? decrypted : (decrypted.length > 0 ? '***' : '');
     } catch {
-      passwordValue = '***';
+      passwordDecryptionFailed = true;
+      passwordValue = '';
+    }
+  }
+
+  let apiKeyValue = '';
+  if (customData.apiKey) {
+    try {
+      const decrypted = decrypt(customData.apiKey as string);
+      apiKeyValue = shouldReveal ? decrypted : (decrypted.length > 0 ? '***' : '');
+    } catch {
+      apiKeyValue = '';
     }
   }
 
@@ -114,6 +131,8 @@ function processCredentials(
     cartaoPostagem: credential.clientId || '',
     contrato: (customData.contrato as string) || '',
     dr: (customData.dr as string) || '',
+    apiKey: apiKeyValue,
+    passwordDecryptionFailed,
     configured: !!(credential.username && credential.password && credential.clientId),
   };
 }
@@ -139,7 +158,7 @@ export const GET = withApiHandler(async ({ req }) => {
     return {
       data: {
         configured: false,
-        activeEnvironment: 'sandbox' as const,
+        activeEnvironment: 'sandbox' as 'sandbox' | 'production',
         production: { configured: false, username: '', password: '', cartaoPostagem: '', contrato: '', dr: '' },
         sandbox: { configured: false, username: '', password: '', cartaoPostagem: '', contrato: '', dr: '' },
         servicos: [] as unknown[],
@@ -180,7 +199,7 @@ export const GET = withApiHandler(async ({ req }) => {
   return {
     data: {
       configured: productionData.configured || sandboxData.configured,
-      activeEnvironment: carrier.environment === 'SANDBOX' ? 'sandbox' : 'production',
+      activeEnvironment: (carrier.environment === 'SANDBOX' ? 'sandbox' : 'production') as 'sandbox' | 'production',
       production: productionData,
       sandbox: sandboxData,
       servicos: (customData.servicos || []) as unknown[],
@@ -359,11 +378,32 @@ async function saveEnvironmentCredentials(
     return;
   }
 
-  // Montar customHeaders
+  // Recuperar apiKey existente se vier mascarada, ou usar o valor novo
+  const existingCustomData = (existingCred?.customHeaders as Record<string, unknown>) || {};
+  let finalApiKey: string | undefined = credentials.apiKey || undefined;
+  if (credentials.apiKey === '***' && existingCustomData.apiKey) {
+    // Preservar o apiKey criptografado existente — será re-usado abaixo como já encriptado
+    finalApiKey = undefined; // sinaliza para copiar o valor encriptado original
+  }
+
+  // Montar customHeaders (preserva servicos existentes se não foram enviados)
+  const existingServicos = existingCustomData.servicos;
   const customHeaders: Record<string, unknown> = {};
   if (credentials.contrato) customHeaders.contrato = credentials.contrato;
   if (credentials.dr) customHeaders.dr = credentials.dr;
-  if (servicos && servicos.length > 0) customHeaders.servicos = servicos;
+  if (servicos && servicos.length > 0) {
+    customHeaders.servicos = servicos;
+  } else if (existingServicos) {
+    customHeaders.servicos = existingServicos;
+  }
+  // apiKey: novo valor encriptado, ou preservar o existente já encriptado
+  if (finalApiKey) {
+    customHeaders.apiKey = encrypt(finalApiKey);
+  } else if (credentials.apiKey === '***' && existingCustomData.apiKey) {
+    customHeaders.apiKey = existingCustomData.apiKey; // copia já encriptado
+  } else if (existingCustomData.apiKey && !credentials.apiKey) {
+    customHeaders.apiKey = existingCustomData.apiKey; // preserva se não enviado
+  }
 
   // Desativar credenciais antigas deste ambiente
   await tx.carrierCredential.updateMany({

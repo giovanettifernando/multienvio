@@ -68,6 +68,20 @@ export async function resetPassword(ids: string[]): Promise<{ ok: boolean }> {
   return extractData<{ ok: boolean }>(res);
 }
 
+export async function resendVerificationEmail(id: string): Promise<{ ok: boolean; message: string; emailSent: boolean }> {
+  const res = await fetch('/api/admin/clients/resend-verification', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ id }),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.message ?? body.error?.message ?? 'Falha ao reenviar email de verificacao');
+  }
+  return extractData<{ ok: boolean; message: string; emailSent: boolean }>(res);
+}
+
 export async function deleteAccount(id: string): Promise<{ ok: boolean; message: string }> {
   const res = await fetch(`/api/admin/clients/${id}`, {
     method: 'DELETE',
