@@ -41,11 +41,16 @@ export function jtCotacaoToQuoteResult(
 ): QuoteResultItem | null {
   if (!response.data) return null;
 
-  const cost = parseFloat(response.data.cost || '0');
+  let cost = parseFloat(response.data.cost || '0');
   const aging = response.data.aging || 0;
 
-  // Ignorar cotações com preço zero
-  if (cost <= 0) return null;
+  // TODO: REMOVER - Workaround temporário para homologação J&T.
+  // Credenciais de homologação sempre retornam custo 0.
+  // Atribuímos R$100 provisoriamente para não descartar a cotação.
+  if (cost <= 0) {
+    console.warn('[JT_ADAPTER] Custo zero retornado (homologação). Usando valor provisório de R$100.');
+    cost = 100;
+  }
 
   const id = `${JT_CARRIER_ID}-${productType}`;
 

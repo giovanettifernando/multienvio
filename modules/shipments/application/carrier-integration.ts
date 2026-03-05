@@ -25,6 +25,11 @@ import {
   cotarLoggi,
   type CreateLoggiShipmentInput,
 } from '@/platform/integrations/loggi';
+import {
+  createJTOrder,
+  isJTAvailableAsync,
+  type JTSenderReceiver,
+} from '@/platform/integrations/jt';
 
 // Mapeamento de nomes de serviço para códigos dos Correios
 const CORREIOS_SERVICE_CODE_MAP: Record<string, string> = {
@@ -156,6 +161,10 @@ export async function integrateWithCarrier(
 
   if (carrierNormalized === 'loggi') {
     return await integrateWithLoggi(tx, input);
+  }
+
+  if (carrierNormalized === 'j&t' || carrierNormalized === 'jt') {
+    return await integrateWithJT(tx, input);
   }
 
   // Transportadora não suportada - retorna sucesso sem integração
@@ -681,4 +690,176 @@ function resolveLoggiFreightAndPickup(serviceName?: string): { freightType: stri
   }
 
   return { freightType, pickupType };
+}
+
+/**
+ * Integração específica com J&T Express
+ */
+async function integrateWithJT(
+  tx: Omit<PrismaClient, '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'>,
+  input: CarrierIntegrationInput
+): Promise<CarrierIntegrationResult> {
+  const { shipmentId, packages, sender, recipient } = input;
+
+  console.log('[CARRIER_INTEGRATION_JT] Starting J&T integration:', {
+    shipmentId,
+    packagesCount: packages.length,
+  });
+
+  try {
+    // 1. Verificar se J&T está configurada
+    const isAvailable = await isJTAvailableAsync();
+    if (!isAvailable) {
+      console.warn('[CARRIER_INTEGRATION_JT] J&T not configured');
+      return {
+        success: false,
+        carrier: 'J&T',
+        errorMessage: 'Integração da J&T não está configurada',
+      };
+    }
+
+    // 2. Montar dados de remetente e destinatário no formato J&T
+    const jtSender: JTSenderReceiver = {
+      name: sender.nome,
+      postCode: sender.cep.replace(/\D/g, ''),
+      taxNumber: sender.documento.replace(/\D/g, ''),
+      mobile: sender.telefone?.replace(/\D/g, '') || undefined,
+      phone: sender.telefone?.replace(/\D/g, '') || undefined,
+      mailBox: sender.email || undefined,
+      prov: sender.uf || '',
+      city: sender.cidade || '',
+      street: sender.logradouro || '',
+      streetNumber: sender.numero || undefined,
+      address: sender.complemento || undefined,
+      area: sender.bairro || undefined,
+      areaCode: sender.telefone?.replace(/\D/g, '').substring(0, 2) || undefined,
+    };
+
+    const jtReceiver: JTSenderReceiver = {
+      name: recipient.nome,
+      postCode: recipient.cep.replace(/\D/g, ''),
+      taxNumber: (recipient.documento || sender.documento).replace(/\D/g, ''),
+      mobile: recipient.telefone?.replace(/\D/g, '') || undefined,
+      phone: recipient.telefone?.replace(/\D/g, '') || undefined,
+      mailBox: recipient.email || undefined,
+      prov: recipient.uf,
+      city: recipient.cidade,
+      street: recipient.logradouro,
+      streetNumber: recipient.numero || undefined,
+      address: recipient.complemento || undefined,
+      area: recipient.bairro || undefined,
+      areaCode: recipient.telefone?.replace(/\D/g, '').substring(0, 2) || undefined,
+    };
+
+    // 3. Calcular peso total
+    const pesoTotalKg = packages.reduce((sum, pkg) => sum + Number(pkg.weight), 0);
+
+    // 4. Buscar platformTrackingCode para usar como txlogisticId
+    const shipment = await tx.shipment.findUnique({
+      where: { id: shipmentId },
+      select: { platformTrackingCode: true },
+    });
+
+    const txlogisticId = shipment?.platformTrackingCode || `EL-${shipmentId}`;
+
+    console.log('[CARRIER_INTEGRATION_JT] Calling createJTOrder:', {
+      txlogisticId,
+      pesoTotalKg,
+    });
+
+    // 5. Criar pedido na J&T
+    const orderResponse = await createJTOrder({
+      txlogisticId,
+      sender: jtSender,
+      receiver: jtReceiver,
+      weight: pesoTotalKg,
+      height: packages[0] ? Math.round(Number(packages[0].height)) : undefined,
+      width: packages[0] ? Math.round(Number(packages[0].width)) : undefined,
+      length: packages[0] ? Math.round(Number(packages[0].length)) : undefined,
+      totalQuantity: packages.length,
+      items: [{
+        itemName: input.contentDescription || 'Mercadorias diversas',
+        number: packages.length,
+      }],
+    });
+
+    const billCode = orderResponse.data?.billCode
+      || orderResponse.data?.orderList?.[0]?.billCode;
+
+    if (!billCode) {
+      console.error('[CARRIER_INTEGRATION_JT] No billCode returned:', orderResponse);
+      return {
+        success: false,
+        carrier: 'J&T',
+        errorMessage: 'J&T não retornou código de rastreio (billCode)',
+      };
+    }
+
+    // 6. Atualizar packages com o billCode (usado pelo label worker)
+    const packageUpdates: CarrierIntegrationResult['packageUpdates'] = [];
+
+    for (const pkg of packages) {
+      await tx.package.update({
+        where: { id: pkg.id },
+        data: {
+          carrierTrackingCode: billCode,
+        },
+      });
+
+      packageUpdates.push({
+        packageId: pkg.id,
+        packageNumber: pkg.packageNumber,
+        carrierTrackingCode: billCode,
+        carrierPrePostageId: billCode,
+      });
+
+      console.log('[CARRIER_INTEGRATION_JT] Package updated:', {
+        packageId: pkg.id,
+        packageNumber: pkg.packageNumber,
+        billCode,
+      });
+    }
+
+    // 7. Atualizar shipment com código de rastreio
+    await tx.shipment.update({
+      where: { id: shipmentId },
+      data: {
+        carrierTrackingCode: billCode,
+        carrierMetadata: {
+          billCode,
+          txlogisticId,
+          sortingCode: orderResponse.data?.sortingCode,
+          lastCenterName: orderResponse.data?.lastCenterName,
+        } as object,
+      },
+    });
+
+    // 8. Atualizar label com tracking code
+    await tx.label.updateMany({
+      where: { shipmentId },
+      data: {
+        trackingCode: billCode,
+      },
+    });
+
+    console.log('[CARRIER_INTEGRATION_JT] Integration succeeded:', {
+      shipmentId,
+      billCode,
+      txlogisticId,
+    });
+
+    return {
+      success: true,
+      carrier: 'J&T',
+      primaryTrackingCode: billCode,
+      packageUpdates,
+    };
+  } catch (error) {
+    console.error('[CARRIER_INTEGRATION_JT] Integration failed:', error);
+    return {
+      success: false,
+      carrier: 'J&T',
+      errorMessage: error instanceof Error ? error.message : 'Erro na integração com J&T',
+    };
+  }
 }
