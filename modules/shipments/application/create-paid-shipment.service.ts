@@ -57,6 +57,8 @@ export interface CreatePaidShipmentInput {
   totalCost: number; // Valor total a ser debitado (frete + taxa de coleta)
   solicitarColeta?: boolean;
   paymentMethod: PaymentMethod;
+  /** ID externo do serviço (ex: externalServiceId da Loggi) */
+  externalServiceId?: string;
   // Dados específicos para pagamento MercadoPago
   mercadoPagoPaymentId?: string;
   // Dados de taxa de coleta (pickup fee)
@@ -408,6 +410,7 @@ export async function createPaidShipment(
         service,
         declaredValue,
         targetStatus: initialStatus, // Status após integração (PICKUP_REQUESTED ou AWAITING_DROP_OFF_AT_POINT)
+        externalServiceId: input.externalServiceId,
         originAddress: {
           cep: originAddr.cep || originCep,
           logradouro: originAddr.logradouro,

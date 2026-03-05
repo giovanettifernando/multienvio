@@ -77,6 +77,8 @@ export interface ShipmentCreateJobPayload {
   declaredValue: number;
   /** Status alvo após integração com transportadora */
   targetStatus: string;
+  /** ID externo do serviço (ex: externalServiceId da Loggi) */
+  externalServiceId?: string;
   /** Dados da origem (não armazenados totalmente no shipment) */
   originAddress: {
     cep: string;

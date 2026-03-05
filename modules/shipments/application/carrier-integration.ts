@@ -527,7 +527,8 @@ async function integrateWithLoggi(
         widthCm: Math.round(Number(pkg.width)),
         heightCm: Math.round(Number(pkg.height)),
         contentDeclaration: {
-          totalValue: String(input.declaredValue || 1),
+          // Loggi espera totalValue em reais (string), máximo 15000
+          totalValue: String(Math.min(input.declaredValue || 1, 15000)),
           description: input.contentDescription || 'Mercadorias diversas',
         },
       })),

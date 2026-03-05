@@ -28,7 +28,7 @@ const LOCK_TTL_MS = 120_000; // 2 min lock por shipment
 
 async function processShipmentCreate(job: Job<ShipmentCreateJobPayload>): Promise<void> {
   const log = createJobLogger(job);
-  const { shipmentId, userId, carrier, service, declaredValue, targetStatus, originAddress } = job.data;
+  const { shipmentId, userId, carrier, service, declaredValue, targetStatus, originAddress, externalServiceId } = job.data;
 
   log.info({ shipmentId, carrier }, 'Starting carrier integration for shipment');
 
@@ -109,6 +109,7 @@ async function processShipmentCreate(job: Job<ShipmentCreateJobPayload>): Promis
         shipmentId,
         carrier,
         serviceName: service,
+        serviceCode: externalServiceId,
         packages: shipment.packages,
         sender: senderData,
         recipient: recipientData,

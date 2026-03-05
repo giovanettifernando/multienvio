@@ -45,8 +45,8 @@ export function jtCotacaoToQuoteResult(
   const aging = response.data.aging || 0;
 
   // TODO: REMOVER - Workaround temporário para homologação J&T.
-  // Credenciais de homologação sempre retornam custo 0.
-  // Atribuímos R$100 provisoriamente para não descartar a cotação.
+  // Credenciais de homologação sempre retornam custo 0 e prazo 0.
+  // Atribuímos valores provisórios para não descartar a cotação.
   if (cost <= 0) {
     console.warn('[JT_ADAPTER] Custo zero retornado (homologação). Usando valor provisório de R$100.');
     cost = 100;

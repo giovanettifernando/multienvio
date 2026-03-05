@@ -240,6 +240,7 @@ export const POST = withApiHandler<CreatePaidShipmentResponse>(async ({ req }) =
       pickupPointId: data.pickupPointId,
       carrier: data.carrier,
       service: data.service,
+      externalServiceId: validatedQuote.externalServiceId,
       originCep: data.originCep,
       originCidade: data.originCidade,
       originUf: data.originUf,

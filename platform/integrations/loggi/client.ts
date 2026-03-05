@@ -404,12 +404,8 @@ async function loggiFetchInternal<T = unknown>(
       const errorCode = errorData?.code || response.status;
       const errorDetails = errorData?.details;
 
-      console.error('[LOGGI_CLIENT] API error:', {
-        code: errorCode,
-        msg: errorMsg,
-        details: errorDetails,
-        url,
-      });
+      console.error('[LOGGI_CLIENT] API error — code:', errorCode, 'msg:', errorMsg, 'url:', url);
+      console.error('[LOGGI_CLIENT] API error details:', JSON.stringify(errorDetails, null, 2));
 
       if (response.status === 401 || response.status === 403) {
         // Limpar token cache para forçar renovação
