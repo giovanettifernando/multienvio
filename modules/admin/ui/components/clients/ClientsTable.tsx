@@ -86,6 +86,7 @@ export function ClientsTable({ clients, onViewClient, onStatusChange, onDelete }
       ids.forEach((id) => onStatusChange(id, 'blocked'));
       message.success('Contas bloqueadas com sucesso');
       setSelectedRowKeys([]);
+      router.refresh();
     },
     onError: () => {
       message.error('Falha ao bloquear contas');
@@ -98,6 +99,7 @@ export function ClientsTable({ clients, onViewClient, onStatusChange, onDelete }
       ids.forEach((id) => onStatusChange(id, 'active'));
       message.success('Contas desbloqueadas com sucesso');
       setSelectedRowKeys([]);
+      router.refresh();
     },
     onError: () => {
       message.error('Falha ao desbloquear contas');
@@ -121,6 +123,7 @@ export function ClientsTable({ clients, onViewClient, onStatusChange, onDelete }
       onDelete(id);
       message.success('Conta excluída com sucesso');
       setSelectedRowKeys([]);
+      router.refresh();
     },
     onError: (error) => {
       const msg = error instanceof Error ? error.message : 'Falha ao excluir conta';
