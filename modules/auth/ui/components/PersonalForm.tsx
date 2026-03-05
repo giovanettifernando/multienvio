@@ -32,7 +32,7 @@ import { isValidCNPJ, isValidCPF } from '@/shared/validation/validators';
 const formSchema = z
   .object({
     fullName: z.string().trim().min(3, "Informe o nome completo."),
-    email: z.string().trim().email("E-mail inválido."),
+    email: z.string().trim(),
     phone: z.string().min(1, "Informe o telefone."),
     cpf: z.string().min(1, "Informe o CPF."),
     hasCompany: z.boolean(),
@@ -290,6 +290,22 @@ export default function PersonalForm() {
 
   if (profileQuery.isLoading) {
     return <Spin size="large" style={{ display: "block", textAlign: "center", padding: 40 }} />;
+  }
+
+  if (profileQuery.isError) {
+    return (
+      <Alert
+        type="error"
+        showIcon
+        message="Não foi possível carregar seus dados"
+        description="Ocorreu um erro ao buscar suas informações. Tente novamente."
+        actions={
+          <ELButton variant="text" onClick={() => profileQuery.refetch()}>
+            Tentar novamente
+          </ELButton>
+        }
+      />
+    );
   }
 
   return (

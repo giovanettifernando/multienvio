@@ -1,190 +1,133 @@
 /**
- * /api/account/profile - Adapter endpoint for PersonalForm
+ * /api/account/profile - Endpoint for PersonalForm
  *
- * This endpoint maps between the frontend Profile type and the backend /api/account/me endpoint.
+ * Maps between the frontend Profile type and the database User model.
+ * Acessa o Prisma diretamente (sem fetch server-to-server).
  *
  * Frontend Profile structure:
  * - fullName, email, phone, cpf, hasCompany, company, avatarDataUrl
  *
- * Backend /api/account/me structure:
- * - name, email, phone, cpf, avatarUrl
- *
- * Flow:
- * 1. GET: Fetch from /api/account/me → transform to Profile → return
- * 2. PUT: Receive Profile → transform to backend format → save to /api/account/me → return
+ * Database User fields:
+ * - name, email, phone, cpf, avatarUrl, hasCompany, cnpj, razaoSocial
  */
 
 import { withApiHandler } from '@/platform/api/handler';
 import { ApiError } from '@/platform/api/errors';
+import { requireUserSession } from '@/platform/auth/require-session';
+import { prisma } from '@/platform/db/db';
+import { UpdateProfileSchema } from '@/shared/validation/profile';
+import { userCache } from '@/platform/cache/cache';
 import type { Profile } from '@/shared/types/account';
-import { z } from 'zod';
 
 type GetProfileResponse = Profile;
-
 type UpdateProfileResponse = Profile;
 
-const UpdateProfileSchema = z.object({
-  fullName: z.string().min(1, 'Nome completo é obrigatório').max(200, 'Nome muito longo'),
-  email: z.string().email('E-mail inválido'),
-  phone: z.string().optional(),
-  cpf: z.string().optional(),
-  hasCompany: z.boolean().optional(),
-  company: z.object({
-    cnpj: z.string().min(1, 'CNPJ é obrigatório'),
-    razaoSocial: z.string().min(1, 'Razão Social é obrigatória'),
-  }).nullable().optional(),
-  avatarDataUrl: z.string().nullable().optional(),
-});
+const USER_SELECT = {
+  name: true,
+  email: true,
+  phone: true,
+  cpf: true,
+  avatarUrl: true,
+  hasCompany: true,
+  cnpj: true,
+  razaoSocial: true,
+} as const;
 
-function resolveBaseUrl(reqUrl: string): string {
-  const rawEnv = process.env.NEXT_PUBLIC_APP_URL?.trim();
-
-  if (rawEnv) {
-    const sanitized = rawEnv.replace(/^['"`]+|['"`]+$/g, "");
-    try {
-      const url = new URL(sanitized);
-      return url.origin;
-    } catch {
-      // Fallback to request origin
-    }
-  }
-
-  return new URL(reqUrl).origin;
-}
-
-function resolveMeEndpoint(reqUrl: string): string {
-  const baseUrl = resolveBaseUrl(reqUrl);
-  return new URL("/api/account/me", baseUrl).toString();
+function userToProfile(user: {
+  name: string;
+  email: string;
+  phone: string | null;
+  cpf: string | null;
+  avatarUrl: string | null;
+  hasCompany: boolean;
+  cnpj: string | null;
+  razaoSocial: string | null;
+}): Profile {
+  return {
+    fullName: user.name || '',
+    email: user.email || '',
+    phone: user.phone || '',
+    cpf: user.cpf || '',
+    hasCompany: user.hasCompany || false,
+    company: user.hasCompany && user.cnpj ? {
+      cnpj: user.cnpj,
+      razaoSocial: user.razaoSocial || '',
+    } : null,
+    avatarDataUrl: user.avatarUrl || null,
+  };
 }
 
 /**
  * GET /api/account/profile
- * Fetches user data from /api/account/me and transforms it to Profile format
+ * Fetches user data directly from database and transforms to Profile format
  */
 export const GET = withApiHandler<GetProfileResponse>(async (context) => {
-  const cookieHeader = context.req.headers.get('cookie') || '';
-  const meEndpoint = resolveMeEndpoint(context.req.url);
+  const session = await requireUserSession(context.req);
 
-  const response = await fetch(meEndpoint, {
-    headers: { 'Cookie': cookieHeader },
-    cache: 'no-store',
+  const user = await prisma.user.findUnique({
+    where: { id: session.userId },
+    select: USER_SELECT,
   });
 
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ message: 'Failed to fetch profile' }));
+  if (!user) {
     throw new ApiError({
-      code: 'upstream_error',
-      message: error.message || 'Failed to fetch profile',
-      status: response.status,
+      code: 'not_found',
+      message: 'Usuário não encontrado',
+      status: 404,
     });
   }
 
-  const json = await response.json();
-
-  // Handle standardized API response { data: { success, user }, error, meta }
-  const data = json.data ?? json;
-
-  if (!data.user) {
-    throw new ApiError({
-      code: 'invalid_response',
-      message: 'Invalid response from server',
-      status: 500,
-    });
-  }
-
-  const user = data.user;
-
-  const profile: Profile = {
-    fullName: user.name || '',
-    email: user.email || '',
-    phone: user.phone || '',
-    cpf: user.cpf || '',
-    hasCompany: user.hasCompany || false,
-    company: user.hasCompany && user.cnpj ? {
-      cnpj: user.cnpj,
-      razaoSocial: user.razaoSocial || '',
-    } : null,
-    avatarDataUrl: user.avatarUrl || null,
-  };
-
-  return { data: profile };
+  return { data: userToProfile(user) };
 });
 
 /**
  * PUT /api/account/profile
- * Receives Profile data, transforms it, and saves to /api/account/me
+ * Receives Profile data, validates, and saves directly to database
  */
 export const PUT = withApiHandler<UpdateProfileResponse>(async (context) => {
+  const session = await requireUserSession(context.req);
   const body = await context.req.json();
-  const parsed = UpdateProfileSchema.safeParse(body);
-  if (!parsed.success) {
+
+  // Transform from frontend Profile format to backend format
+  const payload = {
+    name: body.fullName?.trim() || '',
+    phone: body.phone || null,
+    cpf: body.cpf || null,
+    avatarUrl: body.avatarDataUrl || null,
+    hasCompany: body.hasCompany || false,
+    cnpj: body.company?.cnpj || null,
+    razaoSocial: body.company?.razaoSocial || null,
+  };
+
+  // Validate with backend schema
+  const validation = UpdateProfileSchema.safeParse(payload);
+  if (!validation.success) {
     throw new ApiError({
       code: 'VALIDATION_ERROR',
-      message: 'Dados inválidos',
+      message: validation.error.issues[0]?.message || 'Dados inválidos',
       status: 400,
-      details: parsed.error.flatten(),
+      details: validation.error.flatten(),
     });
   }
-  const profile = parsed.data;
-  const cookieHeader = context.req.headers.get('cookie') || '';
 
-  const payload = {
-    name: profile.fullName?.trim() || '',
-    phone: profile.phone || null,
-    cpf: profile.cpf || null,
-    avatarUrl: profile.avatarDataUrl || null,
-    hasCompany: profile.hasCompany || false,
-    cnpj: profile.company?.cnpj || null,
-    razaoSocial: profile.company?.razaoSocial || null,
-  };
+  const validated = validation.data;
 
-  const meEndpoint = resolveMeEndpoint(context.req.url);
-  const response = await fetch(meEndpoint, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-      'Cookie': cookieHeader,
+  const updatedUser = await prisma.user.update({
+    where: { id: session.userId },
+    data: {
+      name: validated.name,
+      phone: validated.phone,
+      cpf: validated.cpf,
+      avatarUrl: validated.avatarUrl,
+      hasCompany: validated.hasCompany,
+      cnpj: validated.cnpj,
+      razaoSocial: validated.razaoSocial,
     },
-    body: JSON.stringify(payload),
-    cache: 'no-store',
+    select: USER_SELECT,
   });
 
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ message: 'Failed to save profile' }));
-    throw new ApiError({
-      code: 'upstream_error',
-      message: error.message || 'Failed to save profile',
-      status: response.status,
-    });
-  }
+  // Invalidar cache do usuário
+  userCache.invalidate(session.userId).catch(() => {});
 
-  const json = await response.json();
-
-  // Handle standardized API response { data: { success, user }, error, meta }
-  const data = json.data ?? json;
-
-  if (!data.user) {
-    throw new ApiError({
-      code: 'invalid_response',
-      message: 'Invalid response from server',
-      status: 500,
-    });
-  }
-
-  const user = data.user;
-
-  const savedProfile: Profile = {
-    fullName: user.name || '',
-    email: user.email || '',
-    phone: user.phone || '',
-    cpf: user.cpf || '',
-    hasCompany: user.hasCompany || false,
-    company: user.hasCompany && user.cnpj ? {
-      cnpj: user.cnpj,
-      razaoSocial: user.razaoSocial || '',
-    } : null,
-    avatarDataUrl: user.avatarUrl || null,
-  };
-
-  return { data: savedProfile };
+  return { data: userToProfile(updatedUser) };
 });
