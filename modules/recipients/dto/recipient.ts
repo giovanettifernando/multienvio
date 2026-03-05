@@ -9,15 +9,15 @@ import {
 const RecipientBaseSchema = z
   .object({
     name: z.string(),
-    email: z.string().optional(),
-    document: z.string().optional(),
-    phone: z.string().optional(),
-    notes: z.string().max(280).optional(),
+    email: z.string().nullish(),
+    document: z.string().nullish(),
+    phone: z.string().nullish(),
+    notes: z.string().max(280).nullish(),
     isDefault: z.boolean().optional(),
     cep: z.string(),
     logradouro: z.string(),
     numero: z.string(),
-    complemento: z.string().optional(),
+    complemento: z.string().nullish(),
     bairro: z.string(),
     cidade: z.string(),
     uf: z.string(),
@@ -80,7 +80,7 @@ function buildSearchName(value: string) {
     .toLowerCase();
 }
 
-function normalizeEmail(value: string | undefined) {
+function normalizeEmail(value: string | null | undefined) {
   if (!value) return null;
   const trimmed = value.trim().toLowerCase();
   if (!trimmed) return null;
@@ -92,7 +92,7 @@ function normalizeEmail(value: string | undefined) {
   return parsed.data;
 }
 
-function normalizeDocument(value: string | undefined) {
+function normalizeDocument(value: string | null | undefined) {
   if (!value) return null;
   const digits = value.replace(/\D/g, "");
   if (!digits) return null;
@@ -113,7 +113,7 @@ function normalizeDocument(value: string | undefined) {
   throw new RecipientValidationError("Documento inválido.", digits.length < 14 ? "invalid_cpf" : "invalid_cnpj");
 }
 
-function normalizePhone(value: string | undefined) {
+function normalizePhone(value: string | null | undefined) {
   if (!value) return null;
   const cleaned = value.replace(/\D/g, "");
   if (!cleaned) return null;
@@ -153,8 +153,8 @@ function normalizeUf(value: string) {
   return upper;
 }
 
-function normalizeOptional(value: string | undefined) {
-  if (value === undefined) return null;
+function normalizeOptional(value: string | null | undefined) {
+  if (value === undefined || value === null) return null;
   const trimmed = collapseSpaces(value);
   return trimmed.length ? trimmed : null;
 }
@@ -169,8 +169,8 @@ function assertRequiredField(value: string, label: string) {
 function toCreatePayload(data: z.infer<typeof RecipientBaseSchema>): NormalizedRecipientCreateInput {
   const name = normalizeName(data.name);
   const email = normalizeEmail(data.email);
-  const document = normalizeDocument(data.document ?? undefined);
-  const phone = normalizePhone(data.phone ?? undefined);
+  const document = normalizeDocument(data.document);
+  const phone = normalizePhone(data.phone);
   const notes = normalizeOptional(data.notes);
   const cep = normalizeCep(data.cep);
   const logradouro = assertRequiredField(data.logradouro, "Logradouro");

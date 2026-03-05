@@ -102,7 +102,8 @@ export function RecipientSelect({
         onChange?.(result.id, result);
       }
     } catch (error) {
-      message.error("Erro ao salvar destinatário");
+      const msg = error instanceof Error ? error.message : "Erro ao salvar destinatário";
+      message.error(msg);
       console.error(error);
     }
   };
