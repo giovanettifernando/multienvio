@@ -63,13 +63,13 @@
 ## Testing setup
 - Node test runner via node --test and ts-node register (tests/register.js).
   Evidence: package.json:15-21; tests/register.js:1-48
-- Playwright e2e config (desktop + mobile, webServer uses npm run dev).
+- Playwright e2e config (desktop + mobile, webServer uses pnpm dev).
   Evidence: playwright.config.ts:1-35
 - Vitest config exists (globals, node env, tests/**/*.test.ts), but scripts use node --test.
   Evidence: vitest.config.ts:1-16; package.json:15-21
 
 ## CI workflow
-- Forms inventory audit workflow uses Node 20 and runs npm run audit:forms.
+- Forms inventory audit workflow uses Node 20 and runs pnpm audit:forms.
   Evidence: .github/workflows/forms-inventory.yml:15-25
 
 ## Prisma CLI config

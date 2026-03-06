@@ -314,7 +314,7 @@ Este relatório apresenta uma análise completa do código da aplicação Envio 
 
 **Plano de Ação:**
 1. **Curto Prazo (1 semana):**
-   - Configurar `npm audit` em CI/CD
+   - Configurar `pnpm audit` em CI/CD
    - Executar auditoria de dependências
    - Atualizar dependências com vulnerabilidades críticas
 
@@ -444,7 +444,7 @@ Este relatório apresenta uma análise completa do código da aplicação Envio 
 
 ### Segurança
 - **Dependências:** Dependabot ou Snyk
-- **Auditoria:** npm audit, OWASP ZAP
+- **Auditoria:** pnpm audit, OWASP ZAP
 - **Secrets:** Vault ou AWS Secrets Manager
 
 ### Performance

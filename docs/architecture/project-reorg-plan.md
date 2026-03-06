@@ -51,7 +51,7 @@ Arquitetura final pretendida:
 **Fase 4 – Testes e governança final ✅ CONCLUÍDA**
 - ✅ Suítes consolidadas em `tests/` com estrutura `unit/`, `integration/`, `e2e/`, `obsolete/`.
 - ✅ Node.js test runner para unit/integration; Playwright para e2e.
-- ✅ Scripts de teste atualizados em `package.json` (`npm test`, `npm run test:e2e`).
+- ✅ Scripts de teste atualizados em `package.json` (`pnpm test`, `pnpm test:e2e`).
 - ✅ Lint de boundaries configurado em ESLint.
 - ✅ Testes de módulos deletados (mercadopago, system-status) movidos para `obsolete/`.
 - Aceite: CI roda suíte única; regras de lint ativas.

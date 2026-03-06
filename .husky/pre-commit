@@ -6,7 +6,7 @@
 # 1. Verificação de arquivos sensíveis no staging
 # 2. Type checking (TypeScript)
 # 3. Linting (ESLint)
-# 4. Auditoria de segurança (npm audit - apenas high/critical)
+# 4. Auditoria de segurança (pnpm audit - apenas high/critical)
 #
 
 # Cores
@@ -77,10 +77,10 @@ TS_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(ts|tsx)
 
 if [ -n "$TS_FILES" ]; then
   # Executar tsc com timeout de 60 segundos
-  if ! timeout 60 npx tsc --noEmit 2>/dev/null; then
+  if ! timeout 60 pnpm tsc --noEmit 2>/dev/null; then
     echo ""
     echo "${RED}❌ ERRO: Erros de TypeScript detectados${NC}"
-    echo "Execute 'npx tsc --noEmit' para ver os detalhes"
+    echo "Execute 'pnpm tsc --noEmit' para ver os detalhes"
     exit 1
   fi
   echo "✓ TypeScript OK"
@@ -96,10 +96,10 @@ echo "🔍 Executando ESLint..."
 
 if [ -n "$STAGED_FILES" ]; then
   # ESLint apenas nos arquivos staged (ignora avisos, falha em erros)
-  if ! npx eslint $STAGED_FILES --quiet --max-warnings=0 2>/dev/null; then
+  if ! pnpm eslint $STAGED_FILES --quiet --max-warnings=0 2>/dev/null; then
     echo ""
     echo "${YELLOW}⚠️  Avisos de ESLint detectados${NC}"
-    echo "Execute 'npm run lint' para ver os detalhes"
+    echo "Execute 'pnpm lint' para ver os detalhes"
     # Não bloqueia o commit por warnings, apenas erros
   fi
   echo "✓ ESLint OK"
@@ -111,10 +111,10 @@ echo ""
 # ─────────────────────────────────────────────────────────────────
 # 5. Auditoria de segurança (apenas critical/high)
 # ─────────────────────────────────────────────────────────────────
-echo "🛡️  Verificando vulnerabilidades npm..."
+echo "🛡️  Verificando vulnerabilidades..."
 
-# npm audit com nível critical apenas (high são monitorados mas não bloqueiam)
-AUDIT_OUTPUT=$(npm audit --json 2>/dev/null || true)
+# pnpm audit com nível critical apenas (high são monitorados mas não bloqueiam)
+AUDIT_OUTPUT=$(pnpm audit --json 2>/dev/null || true)
 CRITICAL=$(echo "$AUDIT_OUTPUT" | jq -r '.metadata.vulnerabilities.critical // 0' 2>/dev/null || echo "0")
 HIGH=$(echo "$AUDIT_OUTPUT" | jq -r '.metadata.vulnerabilities.high // 0' 2>/dev/null || echo "0")
 
@@ -123,7 +123,7 @@ if [ "$CRITICAL" -gt 0 ]; then
   echo "${RED}❌ ERRO: Vulnerabilidades críticas detectadas${NC}"
   echo "   Critical: $CRITICAL"
   echo ""
-  echo "Execute 'npm audit' para detalhes ou 'npm audit fix' para corrigir"
+  echo "Execute 'pnpm audit' para detalhes ou 'pnpm audit --fix' para corrigir"
   exit 1
 fi
 

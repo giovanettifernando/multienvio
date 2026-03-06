@@ -295,7 +295,7 @@ app/(admin)/admin/
 
 ## Próximos Passos
 
-1. **Testar build**: `npm run build`
+1. **Testar build**: `pnpm build`
 2. **Verificar runtime**: Testar navegação em todas as páginas admin
 3. **Validar autenticação**: Confirmar que o fluxo de login/logout funciona
 4. **Performance check**: Medir bundle size antes/depois

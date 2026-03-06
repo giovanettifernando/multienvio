@@ -366,14 +366,14 @@ Harmonização completa do estilo visual entre os módulos Admin e Cliente da pl
 
 ### Build
 ```bash
-npm run build
+pnpm build
 ```
 **Status**: ✅ Passou
 **Output**: Compilação limpa em 16.7s
 
 ### Lint
 ```bash
-npx eslint . --max-warnings=999
+eslint . --max-warnings=999
 ```
 **Status**: ✅ Aprovado
 **Warnings**: 50+ avisos não-críticos (variáveis não usadas, hooks deps)
@@ -381,14 +381,14 @@ npx eslint . --max-warnings=999
 
 ### Dev Server
 ```bash
-npm run dev
+pnpm dev
 ```
 **Status**: ✅ Funcional
 **Acesso**: http://localhost:3000
 
 ### Formatação (recomendado)
 ```bash
-npx prettier --write "**/*.{ts,tsx,js,jsx,css,md}"
+prettier --write "**/*.{ts,tsx,js,jsx,css,md}"
 ```
 
 ---

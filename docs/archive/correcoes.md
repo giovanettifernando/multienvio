@@ -227,12 +227,12 @@ const response = await fetch('/api/auth/login', {
 
 ### 1. Instalar dependências
 ```bash
-npm install
+pnpm install
 ```
 
 ### 2. Iniciar desenvolvimento
 ```bash
-npm run dev
+pnpm dev
 ```
 
 ### 3. Testar login
@@ -241,8 +241,8 @@ npm run dev
 
 ### 4. Build de produção
 ```bash
-npm run build
-npm start
+pnpm build
+pnpm start
 ```
 
 ---

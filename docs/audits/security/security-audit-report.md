@@ -2,7 +2,7 @@
 
 ## Resumo executivo
 - Escopo: Next.js/Node/Prisma/Postgres monorepo. Foco em AppSec, bypasses e código legado.
-- Comandos executados: `npm audit --production` (0 vulnerabilidades); buscas `rg` para TODO/HACK/mocks, console logs, eval/child_process, Prisma raw, cookies/JWT.
+- Comandos executados: `pnpm audit --production` (0 vulnerabilidades); buscas `rg` para TODO/HACK/mocks, console logs, eval/child_process, Prisma raw, cookies/JWT.
 - Principais riscos: uso de segredos JWT padrão/hardcoded em rotas de reset/OAuth, rate limit fail-open com fallback local, uso de rótulos/etiquetas mock em emissão de PDF de remessa pós-pagamento.
 
 ## Vulnerabilidades e achados
@@ -45,7 +45,7 @@
 - **File handling / path traversal / open redirect:** Etiqueta mock (Medium) em fluxo de arquivos; sem path traversal visto.
 - **Exposição de dados sensíveis:** Logs verbosos (Low).
 - **Rate limit/brute force:** Fail-open (Medium).
-- **Dependências vulneráveis:** `npm audit --production` → 0 vulnerabilidades.
+- **Dependências vulneráveis:** `pnpm audit --production` → 0 vulnerabilidades.
 - **Mocks / bypass:** JWT secret fallback (High); label PDF mock (Medium); múltiplos “mock_*” logs em rotas admin (sem efeito direto, mas indica rotas simuladas).
 - **Código deprecated/obsoleto:** Não mapeado completo; ver plano de limpeza.
 
@@ -97,7 +97,7 @@ const result = await prisma.$queryRawUnsafe<{ distance_m: number }[]>(`
 5. Migrar consultas `queryRawUnsafe` para variantes parametrizadas.
 
 ## Notas adicionais
-- `npm audit --production` retornou **0 vulnerabilidades**.
+- `pnpm audit --production` retornou **0 vulnerabilidades**.
 - Buscas de TODO/HACK/mock mostraram vários marcadores “mock_*” em rotas admin; avaliar se rotas estão em uso real antes de produção.
 
 

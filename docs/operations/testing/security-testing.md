@@ -4,7 +4,7 @@ Este documento descreve como testar a funcionalidade de alteração de senha imp
 
 ## Pré-requisitos
 
-1. Servidor Next.js rodando (`npm run dev`)
+1. Servidor Next.js rodando (`pnpm dev`)
 2. Banco de dados PostgreSQL configurado e migrações aplicadas
 3. Usuário cadastrado e autenticado no sistema
 4. Cookie de sessão válido (fazer login antes)
@@ -14,7 +14,7 @@ Este documento descreve como testar a funcionalidade de alteração de senha imp
 Os testes unitários validam a lógica de negócio sem necessidade do servidor:
 
 ```bash
-npx tsx tests/security-change-password.test.ts
+tsx tests/security-change-password.test.ts
 ```
 
 ### O que é testado:
@@ -29,7 +29,7 @@ npx tsx tests/security-change-password.test.ts
 ### 1. Iniciar o servidor
 
 ```bash
-npm run dev
+pnpm dev
 ```
 
 ### 2. Fazer login e obter cookie de sessão
@@ -348,7 +348,7 @@ Importe a coleção de requisições para testar via interface gráfica:
 Acompanhe os logs do servidor durante os testes:
 
 ```bash
-npm run dev | grep -i "change-password\|security"
+pnpm dev | grep -i "change-password\|security"
 ```
 
 ## Referências

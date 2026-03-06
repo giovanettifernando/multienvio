@@ -40,8 +40,8 @@ Voce esta trabalhando no projeto **Envio Legal** (Next.js App Router). Prioridad
 - CSP e headers definidos em `next.config.ts`.
 
 ### Testes
-- Unit/Integration: Node test runner (`npm run test:unit`, `npm run test:integration`).
-- E2E: Playwright (`npm run test:e2e`).
+- Unit/Integration: Node test runner (`pnpm test:unit`, `pnpm test:integration`).
+- E2E: Playwright (`pnpm test:e2e`).
 
 ### Deploy
 - Migrations via Prisma.

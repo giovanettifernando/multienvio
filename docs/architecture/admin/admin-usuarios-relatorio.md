@@ -388,19 +388,19 @@ Implementação completa do CRUD de usuários administrativos com sistema granul
 
 ### Build
 ```bash
-npm run build
+pnpm build
 ```
 **Status**: ✅ Passou em 11.4s
 
 ### Lint
 ```bash
-npx eslint . --max-warnings=999
+eslint . --max-warnings=999
 ```
 **Status**: ✅ Aprovado (apenas warnings não-críticos)
 
 ### Dev
 ```bash
-npm run dev
+pnpm dev
 ```
 **Acesso**: http://localhost:3000/admin/login
 

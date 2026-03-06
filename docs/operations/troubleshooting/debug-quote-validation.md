@@ -173,7 +173,7 @@ Console > Filter: [FORM] ou [HOOK]
 
 **Server Console (Terminal):**
 ```bash
-npm run dev
+pnpm dev
 # Logs aparecem no terminal
 # Filter: [API] ou [QUOTE]
 ```

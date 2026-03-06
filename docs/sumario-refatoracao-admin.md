@@ -195,7 +195,7 @@ app/(admin)/admin/
 ## Próximos Passos
 
 ### Testes Recomendados
-1. ✅ Build: `npm run build`
+1. ✅ Build: `pnpm build`
 2. ⏳ Runtime: Testar navegação em todas as páginas admin
 3. ⏳ Autenticação: Validar login/logout
 4. ⏳ Permissões: Verificar controle de acesso

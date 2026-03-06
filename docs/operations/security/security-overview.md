@@ -143,7 +143,7 @@ export async function checkRateLimit(key: string, config: RateLimitConfig) {
 
 **Opção 3: Upstash Rate Limit**
 ```bash
-npm install @upstash/ratelimit @upstash/redis
+pnpm install @upstash/ratelimit @upstash/redis
 ```
 
 ### 2. Validação de IP Real
@@ -172,7 +172,7 @@ function getRealIP(request: NextRequest): string {
 ### 3. Migration Check no Startup
 
 **Situação Atual:**
-O sistema executa `npx prisma migrate status` no startup, o que pode:
+O sistema executa `prisma migrate status` no startup, o que pode:
 - Atrasar cold starts em serverless
 - Bloquear se o comando ficar lento
 - Causar overhead desnecessário

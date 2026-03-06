@@ -48,10 +48,10 @@ Guia rapido (1-2 paginas) para iniciar uma feature nova com o padrao atual.
 7) **Log e audit** para operacoes sensiveis. Evidencias: `platform/logging/logger.ts`, `platform/logging/audit-admin.ts`, `modules/shipments/application/shipment-audit.ts`.
 
 ### 3) Comandos principais
-- Dev: `npm run dev` (Webpack) ou `npm run dev:turbo` (Turbopack). Evidencia: `package.json`.
-- Build: `npm run build` (ou `npm run build:webpack`). Evidencia: `package.json`.
-- DB (Prisma): `npm run db:migrate`, `npm run db:push`, `npm run db:seed`, `npm run db:studio`. Evidencia: `package.json`.
-- Testes: `npm run test:unit`, `npm run test:integration`, `npm run test:e2e`. Evidencia: `package.json`.
+- Dev: `pnpm dev` (Webpack) ou `pnpm dev:turbo` (Turbopack). Evidencia: `package.json`.
+- Build: `pnpm build` (ou `pnpm build:webpack`). Evidencia: `package.json`.
+- DB (Prisma): `pnpm db:migrate`, `pnpm db:push`, `pnpm db:seed`, `pnpm db:studio`. Evidencia: `package.json`.
+- Testes: `pnpm test:unit`, `pnpm test:integration`, `pnpm test:e2e`. Evidencia: `package.json`.
 
 ### 4) Checklist minimo (rapido)
 - [ ] Zod schema definido e usado no handler. Evidencias: `shared/validation/*`, `app/api/**/route.ts`.

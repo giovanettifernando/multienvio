@@ -552,7 +552,7 @@ async function createShipmentFromCartItem(
   const freightCostCents = Math.round(selectedQuote.price * 100);
   const pickupFeeCents = Math.round(pickupFeeAmount * 100);
   // Determinar carrierSlug baseado no nome da transportadora
-  const carrierSlug = selectedQuote.carrier.toLowerCase().includes('correio') ? 'correios' : 'correios';
+  const carrierSlug = selectedQuote.carrier.toLowerCase().includes('correio') ? 'correios' : selectedQuote.carrier.toLowerCase();
   const { shippingCommissionCents, pickupCommissionCents } = await calculateCommissionsInCents(
     freightCostCents,
     pickupFeeCents,

@@ -28,7 +28,7 @@
 
 ## Recomendações iniciais (prioridade)
 1) Preparar ambiente de teste e2e: definir `NEXTAUTH_SECRET`, `JWT_SECRET`, `ADMIN_JWT_SECRET`, `COLLECTOR_JWT_SECRET` e um `DATABASE_URL` acessível em dev; popular `TEST_REMETENTE_EMAIL`/`TEST_REMETENTE_PASSWORD` para login real ou provisionar um usuário de teste.
-2) Reexecutar a suíte após o ambiente estar completo: `npm run test:e2e -- --grep "@responsive" --project=chromium-desktop --project=chromium-mobile`.
+2) Reexecutar a suíte após o ambiente estar completo: `pnpm test:e2e -- --grep "@responsive" --project=chromium-desktop --project=chromium-mobile`.
 3) Opcional: expor modo de mocks para SSR/API nas rotas usadas pelas páginas do remetente (`/api/shipments`, `/api/wallet`, `/api/coletas`, `/api/support`, `/api/labels`) para permitir validação de layout sem dependência de backend real.
 
 ## Artefatos criados
@@ -39,5 +39,5 @@
 
 ## Como rodar novamente
 ```bash
-npm run test:e2e -- --grep "@responsive" --project=chromium-desktop --project=chromium-mobile
+pnpm test:e2e -- --grep "@responsive" --project=chromium-desktop --project=chromium-mobile
 ```

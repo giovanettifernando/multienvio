@@ -8,10 +8,10 @@
 - Postgres local via Docker Compose. Evidencia: `_infra/postgres/docker-compose.yml`.
 
 ## 3) Build e start
-- `npm run build`, `npm run start`, `npm run dev`/`dev:turbo`. Evidencia: `package.json`.
+- `pnpm build`, `pnpm start`, `pnpm dev`/`dev:turbo`. Evidencia: `package.json`.
 
 ## 4) Migrations
-- `npx prisma migrate dev`/`deploy` conforme scripts. Evidencia: `package.json`.
+- `prisma migrate dev`/`deploy` conforme scripts. Evidencia: `package.json`.
 - Checagem de migrations no startup (pode ser desativada). Evidencia: `platform/db/db.ts`.
 
 ## 5) Logs

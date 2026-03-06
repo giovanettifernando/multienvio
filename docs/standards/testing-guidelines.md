@@ -11,9 +11,9 @@
 - E2E: `tests/e2e/**/*.spec.ts`. Evidencia: `playwright.config.ts`.
 
 ## 3) Como rodar
-- `npm run test:unit`
-- `npm run test:integration`
-- `npm run test:e2e`
+- `pnpm test:unit`
+- `pnpm test:integration`
+- `pnpm test:e2e`
 
 ## 4) Checklist minimo de testes por feature
 - [ ] Unit para regra de negocio principal.

@@ -14,7 +14,7 @@ Escopo: aplicacao Remetente (UI + API usadas por ela) e modulo /admin (UI + /api
 |F-07|High|Execucao arbitraria de SQL por admin com permissao ampla|Baixa/Media|P2|Endpoint `/api/admin/sql` usa `$queryRawUnsafe` com permissao CONFIGURACOES|
 |F-08|Medium (condicional)|Rotas sem auth no handler dependem de proxy/middleware|Media (se proxy nao ativo)|P2|Alguns endpoints nao validam sessao e dependem do `proxy.ts`|
 
-Observacao: `npm audit --json` nao reportou vulnerabilidades nas dependencias.
+Observacao: `pnpm audit --json` nao reportou vulnerabilidades nas dependencias.
 
 ## Mapa de Superficie de Ataque
 
@@ -243,7 +243,7 @@ Fluxos criticos (/admin):
 - Uploads: RISCO (arquivos em `/public/uploads`)
 - Rate limiting em login/checkout: OK (com gaps fora do core)
 - Headers de seguranca (CSP/HSTS/etc): OK (headers em `next.config.ts`)
-- Dependencias: OK (`npm audit --json` sem achados)
+- Dependencias: OK (`pnpm audit --json` sem achados)
 
 ## Plano de Acao Sugerido (priorizado)
 1) Bloquear manipulacao de preco (P0)
