@@ -104,7 +104,7 @@ export default function CotacoesClient() {
   if (companyLoading || walletLoading || !hasHydrated) {
     return (
       <PageShell
-        title="Cotar envio"
+        title="Calculadora de frete"
         description="Compare serviços e crie etiquetas de forma rápida com os dados da sua empresa."
       >
         <ELCard>
@@ -118,7 +118,7 @@ export default function CotacoesClient() {
   if (!canQuote) {
     return (
       <PageShell
-        title="Cotar envio"
+        title="Calculadora de frete"
         description="Compare serviços e crie etiquetas de forma rápida com os dados da sua empresa."
       >
         <ELCard>
@@ -146,7 +146,7 @@ export default function CotacoesClient() {
   if (!company) {
     return (
       <PageShell
-        title="Cotar envio"
+        title="Calculadora de frete"
         description="Compare serviços e crie etiquetas de forma rápida com os dados da sua empresa."
       >
         <ELCard>
@@ -165,7 +165,7 @@ export default function CotacoesClient() {
 
   return (
     <PageShell
-      title="Cotar envio"
+      title="Calculadora de frete"
       description="Compare serviços e crie etiquetas de forma rápida com os dados da sua empresa."
     >
       <ELCard>

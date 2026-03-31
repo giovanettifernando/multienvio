@@ -1,16 +1,15 @@
 "use client";
 
 import { DeleteOutlined, DownloadOutlined, PlusOutlined, UploadOutlined } from "@ant-design/icons";
-import { useELApp, ELCol, ELForm, ELInputNumber, ELRow, ELSpace, ELTypography, ELUpload } from '@/shared/ui';
+import { useELApp, ELForm, ELInputNumber, ELSpace, ELTypography, ELUpload, ELTooltip } from '@/shared/ui';
+const Tooltip = ELTooltip;
 const App = { useApp: useELApp };
-const Col = ELCol;
 const Form = ELForm;
 const InputNumber = ELInputNumber;
-const Row = ELRow;
 const Space = ELSpace;
 const Typography = ELTypography;
 const Upload = ELUpload;
-import { ELButton, ELCard, ELFormItem, ELAlert } from '@/shared/ui';
+import { ELButton, ELCard, ELAlert } from '@/shared/ui';
 import {
   Controller,
   type Control,
@@ -206,181 +205,76 @@ function VolumeItem({
           />
         </Form.Item>
 
-              <Row gutter={[12, 8]}>
-              <Col xs={24} sm={12} md={6}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 12px' }}>
                 <Controller
                   control={control}
                   name={`volumes.${index}.comprimentoCm`}
                   render={({ field: controllerField, fieldState }) => {
-                    const showError =
-                      fieldState.error &&
-                      (fieldState.isDirty || fieldState.isTouched);
+                    const showError = fieldState.error && (fieldState.isDirty || fieldState.isTouched);
                     return (
                       <Form.Item
-                        label={
-                          <div style={{ lineHeight: "1.2" }}>
-                            <div className={styles.fieldLabelSm}>Comprimento</div>
-                            <Typography.Text type="secondary" style={{ fontSize: "10px" }}>
-                              cm
-                            </Typography.Text>
-                          </div>
-                        }
+                        label={<span className={styles.fieldLabelSm} style={{ whiteSpace: 'nowrap' }}>Compr. (cm)</span>}
                         validateStatus={showError ? "error" : undefined}
                         help={showError ? fieldState.error?.message : undefined}
+                        style={{ marginBottom: 0 }}
                       >
-                        <InputNumber
-                          {...controllerField}
-                          value={controllerField.value ?? undefined}
-                          min={0}
-                          step={1}
-                          precision={0}
-                          placeholder="0"
-                          parser={parseDecimal}
-                          status={showError ? "error" : undefined}
-                          onChange={(value) =>
-                            controllerField.onChange(value ?? undefined)
-                          }
-                          style={{ width: "100%" }}
-                        />
+                        <InputNumber {...controllerField} value={controllerField.value ?? undefined} min={0} step={1} precision={0} placeholder="0" parser={parseDecimal} status={showError ? "error" : undefined} onChange={(value) => controllerField.onChange(value ?? undefined)} style={{ width: "100%" }} />
                       </Form.Item>
                     );
                   }}
                 />
-              </Col>
-              <Col xs={24} sm={12} md={6}>
                 <Controller
                   control={control}
                   name={`volumes.${index}.larguraCm`}
                   render={({ field: controllerField, fieldState }) => {
-                    const showError =
-                      fieldState.error &&
-                      (fieldState.isDirty || fieldState.isTouched);
+                    const showError = fieldState.error && (fieldState.isDirty || fieldState.isTouched);
                     return (
                       <Form.Item
-                        label={
-                          <div style={{ lineHeight: "1.2" }}>
-                            <div className={styles.fieldLabelSm}>Largura</div>
-                            <Typography.Text type="secondary" style={{ fontSize: "10px" }}>
-                              cm
-                            </Typography.Text>
-                          </div>
-                        }
+                        label={<span className={styles.fieldLabelSm}>Largura (cm)</span>}
                         validateStatus={showError ? "error" : undefined}
                         help={showError ? fieldState.error?.message : undefined}
+                        style={{ marginBottom: 0 }}
                       >
-                        <InputNumber
-                          {...controllerField}
-                          value={controllerField.value ?? undefined}
-                          min={0}
-                          step={1}
-                          precision={0}
-                          placeholder="0"
-                          parser={parseDecimal}
-                          status={showError ? "error" : undefined}
-                          onChange={(value) =>
-                            controllerField.onChange(value ?? undefined)
-                          }
-                          style={{ width: "100%" }}
-                        />
+                        <InputNumber {...controllerField} value={controllerField.value ?? undefined} min={0} step={1} precision={0} placeholder="0" parser={parseDecimal} status={showError ? "error" : undefined} onChange={(value) => controllerField.onChange(value ?? undefined)} style={{ width: "100%" }} />
                       </Form.Item>
                     );
                   }}
                 />
-              </Col>
-              <Col xs={24} sm={12} md={6}>
                 <Controller
                   control={control}
                   name={`volumes.${index}.alturaCm`}
                   render={({ field: controllerField, fieldState }) => {
-                    const showError =
-                      fieldState.error &&
-                      (fieldState.isDirty || fieldState.isTouched);
+                    const showError = fieldState.error && (fieldState.isDirty || fieldState.isTouched);
                     return (
                       <Form.Item
-                        label={
-                          <div style={{ lineHeight: "1.2" }}>
-                            <div className={styles.fieldLabelSm}>Altura</div>
-                            <Typography.Text type="secondary" style={{ fontSize: "10px" }}>
-                              cm
-                            </Typography.Text>
-                          </div>
-                        }
+                        label={<span className={styles.fieldLabelSm}>Altura (cm)</span>}
                         validateStatus={showError ? "error" : undefined}
                         help={showError ? fieldState.error?.message : undefined}
+                        style={{ marginBottom: 0 }}
                       >
-                        <InputNumber
-                          {...controllerField}
-                          value={controllerField.value ?? undefined}
-                          min={0}
-                          step={1}
-                          precision={0}
-                          placeholder="0"
-                          parser={parseDecimal}
-                          status={showError ? "error" : undefined}
-                          onChange={(value) =>
-                            controllerField.onChange(value ?? undefined)
-                          }
-                          style={{ width: "100%" }}
-                        />
+                        <InputNumber {...controllerField} value={controllerField.value ?? undefined} min={0} step={1} precision={0} placeholder="0" parser={parseDecimal} status={showError ? "error" : undefined} onChange={(value) => controllerField.onChange(value ?? undefined)} style={{ width: "100%" }} />
                       </Form.Item>
                     );
                   }}
                 />
-              </Col>
-              <Col xs={24} sm={12} md={6}>
                 <Controller
                   control={control}
                   name={`volumes.${index}.pesoKg`}
                   render={({ field: controllerField, fieldState }) => {
-                    const showError =
-                      fieldState.error &&
-                      (fieldState.isDirty || fieldState.isTouched);
+                    const showError = fieldState.error && (fieldState.isDirty || fieldState.isTouched);
                     return (
                       <Form.Item
-                        label={
-                          <div style={{ lineHeight: "1.2" }}>
-                            <div className={styles.fieldLabelSm}>Peso</div>
-                            <Typography.Text type="secondary" style={{ fontSize: "10px" }}>
-                              kg
-                            </Typography.Text>
-                          </div>
-                        }
+                        label={<span className={styles.fieldLabelSm}>Peso (kg)</span>}
                         validateStatus={showError ? "error" : undefined}
                         help={showError ? fieldState.error?.message : undefined}
+                        style={{ marginBottom: 0 }}
                       >
-                        <InputNumber
-                          {...controllerField}
-                          ref={pesoInputRef}
-                          value={controllerField.value ?? undefined}
-                          min={0}
-                          step={0.1}
-                          precision={2}
-                          placeholder="0,00"
-                          parser={parseDecimal}
-                          status={showError ? "error" : undefined}
-                          onChange={(value) =>
-                            controllerField.onChange(value ?? undefined)
-                          }
-                          onFocus={(e) => {
-                            // Selecionar todo o texto ao receber foco para facilitar digitação
-                            e.target.select();
-                          }}
-                          onBlur={async () => {
-                            // Forçar recálculo do peso cubado ao sair do campo
-                            controllerField.onBlur();
-
-                            // Trigger para forçar recálculo dos totais
-                            // Isso garante que o watch() no componente pai detecte a mudança
-                            await trigger(`volumes.${index}.pesoKg`);
-                          }}
-                          style={{ width: "100%" }}
-                        />
+                        <InputNumber {...controllerField} ref={pesoInputRef} value={controllerField.value ?? undefined} min={0} step={0.1} precision={2} placeholder="0,00" parser={parseDecimal} status={showError ? "error" : undefined} onChange={(value) => controllerField.onChange(value ?? undefined)} onFocus={(e) => e.target.select()} onBlur={async () => { controllerField.onBlur(); await trigger(`volumes.${index}.pesoKg`); }} style={{ width: "100%" }} />
                       </Form.Item>
                     );
                   }}
                 />
-              </Col>
-        </Row>
+              </div>
 
         {/* Mensagem quando volume não tem nenhuma transportadora disponível */}
         {volumeEligibility && !volumeEligibility.hasAnyCarrier && (
@@ -507,24 +401,28 @@ export function VolumesGrid({
   return (
     <Space orientation="vertical" size={12} style={{ width: "100%" }}>
       {/* Botões de importação */}
-      <Space size={8}>
-        <ELButton
-          size="small"
-          icon={<DownloadOutlined />}
-          onClick={handleDownloadTemplate}
-        >
-          Baixar modelo
-        </ELButton>
+      <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+        <Tooltip title="Baixar modelo CSV">
+          <ELButton
+            size="small"
+            icon={<DownloadOutlined />}
+            onClick={handleDownloadTemplate}
+          >
+            Baixar modelo
+          </ELButton>
+        </Tooltip>
         <Upload
           accept=".csv"
           showUploadList={false}
           beforeUpload={handleImportCSV}
         >
-          <ELButton size="small" icon={<UploadOutlined />}>
-            Importar volumes
-          </ELButton>
+          <Tooltip title="Importar volumes via CSV">
+            <ELButton size="small" icon={<UploadOutlined />}>
+              Importar volumes
+            </ELButton>
+          </Tooltip>
         </Upload>
-      </Space>
+      </div>
 
       {fields.map((field, index) => {
         const volumeValue = values?.[index];

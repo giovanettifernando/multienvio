@@ -1,11 +1,8 @@
 "use client";
 
-import React from "react";
-import { ELSpace, ELTypography, ELRow, ELCol } from '@/shared/ui';
+import { ELSpace, ELTypography } from '@/shared/ui';
 const Space = ELSpace;
 const Typography = ELTypography;
-const Row = ELRow;
-const Col = ELCol;
 import { PlusOutlined, WarningOutlined } from "@ant-design/icons";
 import { useWallet } from "@/modules/wallet/ui/hooks";
 import { formatNumberBR } from "@/shared/utils/format";
@@ -26,48 +23,39 @@ export default function BalanceCard({ onAddFunds, onResolveDebt }: BalanceCardPr
 
   return (
     <ELCard loading={isLoading}>
-      <Row gutter={[16, 16]}>
-        <Col xs={24} md={12} lg={16}>
-          <Space orientation="vertical" size="small" style={{ width: "100%" }}>
-            {/* Saldo disponível - destaque forte */}
-            <Typography.Text type="secondary" style={{ fontSize: 14 }}>
-              Saldo disponível
-            </Typography.Text>
-            <Typography.Title
-              level={1}
-              style={{
-                margin: 0,
-                fontSize: "clamp(28px, 4vw, 42px)",
-                fontWeight: 700,
-                color: hasNegativeBalance ? "#ff4d4f" : "#1890ff",
-                lineHeight: 1.2
-              }}
-            >
-              {hasNegativeBalance ? "-" : ""} R$ {formatNumberBR(Math.abs(available))}
-            </Typography.Title>
+      <Space orientation="vertical" size={12} style={{ width: "100%" }}>
+        <Typography.Text type="secondary" style={{ fontSize: 14 }}>
+          Saldo disponível
+        </Typography.Text>
+        <Typography.Title
+          level={1}
+          style={{
+            margin: 0,
+            fontSize: "clamp(28px, 4vw, 42px)",
+            fontWeight: 700,
+            color: hasNegativeBalance ? "#ff4d4f" : "#1890ff",
+            lineHeight: 1.2,
+          }}
+        >
+          {hasNegativeBalance ? "-" : ""} R$ {formatNumberBR(Math.abs(available))}
+        </Typography.Title>
 
-            {/* Saldo pendente (se houver) */}
-            {pending > 0 && (
-              <Typography.Text type="secondary" style={{ fontSize: 13 }}>
-                + R$ {formatNumberBR(pending)} pendente
-              </Typography.Text>
-            )}
-          </Space>
-        </Col>
+        {pending > 0 && (
+          <Typography.Text type="secondary" style={{ fontSize: 13 }}>
+            + R$ {formatNumberBR(pending)} pendente
+          </Typography.Text>
+        )}
 
-        <Col xs={24} md={12} lg={8} style={{ display: 'flex', alignItems: 'center' }}>
-          {/* Botão de adicionar saldo */}
-          <ELButton
-            variant="primary"
-            icon={<PlusOutlined />}
-            onClick={onAddFunds}
-            block
-            loading={isLoading}
-          >
-            Adicionar saldo
-          </ELButton>
-        </Col>
-      </Row>
+        <ELButton
+          variant="primary"
+          icon={<PlusOutlined />}
+          onClick={onAddFunds}
+          block
+          loading={isLoading}
+        >
+          Adicionar saldo
+        </ELButton>
+      </Space>
 
       {/* Banner de saldo negativo */}
       {hasNegativeBalance && (

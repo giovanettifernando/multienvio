@@ -1,7 +1,11 @@
 import { PrismaClient } from '@prisma/client';
+import { PrismaPg } from '@prisma/adapter-pg';
+import pg from 'pg';
 import * as bcrypt from 'bcrypt';
 
-const prisma = new PrismaClient();
+const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
+const adapter = new PrismaPg(pool);
+const prisma = new PrismaClient({ adapter });
 
 async function main() {
   console.log('🌱 Iniciando seed do banco de dados...');
@@ -65,7 +69,7 @@ async function main() {
   console.log('📍 Criando endereços de exemplo...');
   await prisma.address.create({
     data: {
-      cep: '01310-100',
+      cep: '01310100',
       logradouro: 'Avenida Paulista',
       numero: '1578',
       complemento: 'Andar 5',
@@ -78,7 +82,7 @@ async function main() {
 
   await prisma.address.create({
     data: {
-      cep: '20040-020',
+      cep: '20040020',
       logradouro: 'Avenida Rio Branco',
       numero: '156',
       complemento: null,

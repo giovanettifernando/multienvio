@@ -40,25 +40,20 @@ type RecipientModalProps = {
   onCancel: () => void;
 };
 
-// Estilos para layout horizontal
-const rowStyle: React.CSSProperties = {
+const formStyle: React.CSSProperties = {
+  padding: "16px 15px 0",
   display: "flex",
-  alignItems: "center",
-  marginBottom: 16,
-  gap: 8,
+  flexDirection: "column",
+  gap: 12,
 };
 
-const labelStyle: React.CSSProperties = {
-  minWidth: 130,
-  textAlign: "right",
-  lineHeight: "32px",
-  flexShrink: 0,
-  whiteSpace: "nowrap",
+const fieldLabel: React.CSSProperties = {
+  fontSize: 13,
+  color: "#374151",
+  marginBottom: 4,
+  display: "block",
 };
 
-const inputWrapperStyle: React.CSSProperties = {
-  flex: 1,
-};
 
 export function RecipientModal({
   open,
@@ -132,216 +127,122 @@ export function RecipientModal({
       size="md"
     >
       <FormProvider {...form}>
-        <div style={{ paddingTop: 16 }}>
+        <div style={formStyle}>
+
           {/* Nome do destinatário */}
-          <div style={rowStyle}>
-            <div style={labelStyle}>
-              <span style={{ color: "#ff4d4f" }}>*</span> Nome do destinatário:
-            </div>
-            <div style={inputWrapperStyle}>
-              <Controller
-                name="name"
-                control={form.control}
-                render={({ field, fieldState }) => (
-                  <div>
-                    <Input {...field} placeholder="Nome completo ou razão social" status={fieldState.error ? "error" : undefined} />
-                    {fieldState.error && <div style={{ color: "#ff4d4f", fontSize: 12 }}>{fieldState.error.message}</div>}
-                  </div>
-                )}
-              />
-            </div>
+          <div>
+            <label style={fieldLabel}><span style={{ color: "#ff4d4f" }}>*</span> Nome do destinatário</label>
+            <Controller name="name" control={form.control} render={({ field, fieldState }) => (
+              <div>
+                <Input {...field} placeholder="Nome completo ou razão social" status={fieldState.error ? "error" : undefined} />
+                {fieldState.error && <div style={{ color: "#ff4d4f", fontSize: 12 }}>{fieldState.error.message}</div>}
+              </div>
+            )} />
           </div>
 
           {/* CPF/CNPJ e Telefone */}
-          <div style={rowStyle}>
-            <div style={labelStyle}>CPF/CNPJ:</div>
-            <div style={{ width: 170 }}>
-              <Controller
-                name="doc"
-                control={form.control}
-                render={({ field }) => (
-                  <Input
-                    {...field}
-                    placeholder="000.000.000-00"
-                    inputMode="numeric"
-                    onChange={(e) => {
-                      const digits = onlyDigits(e.target.value);
-                      const masked = digits.length > 11 ? maskCNPJ(digits) : maskCPF(digits);
-                      field.onChange(masked);
-                    }}
-                  />
-                )}
-              />
-            </div>
-            <div style={{ whiteSpace: "nowrap" }}>Telefone:</div>
+          <div style={{ display: "flex", gap: 12 }}>
             <div style={{ flex: 1 }}>
-              <Controller
-                name="phone"
-                control={form.control}
-                render={({ field }) => (
-                  <Input
-                    {...field}
-                    placeholder="(00) 00000-0000"
-                    inputMode="tel"
-                    onChange={(e) => field.onChange(maskPhone(e.target.value))}
-                  />
-                )}
-              />
+              <label style={fieldLabel}>CPF/CNPJ</label>
+              <Controller name="doc" control={form.control} render={({ field }) => (
+                <Input {...field} placeholder="000.000.000-00" inputMode="numeric"
+                  onChange={(e) => { const d = onlyDigits(e.target.value); field.onChange(d.length > 11 ? maskCNPJ(d) : maskCPF(d)); }} />
+              )} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <label style={fieldLabel}>Telefone</label>
+              <Controller name="phone" control={form.control} render={({ field }) => (
+                <Input {...field} placeholder="(00) 00000-0000" inputMode="tel"
+                  onChange={(e) => field.onChange(maskPhone(e.target.value))} />
+              )} />
             </div>
           </div>
 
           {/* E-mail */}
-          <div style={rowStyle}>
-            <div style={labelStyle}>E-mail:</div>
-            <div style={inputWrapperStyle}>
-              <Controller
-                name="email"
-                control={form.control}
-                render={({ field, fieldState }) => (
-                  <div>
-                    <Input {...field} type="email" placeholder="email@exemplo.com" status={fieldState.error ? "error" : undefined} />
-                    {fieldState.error && <div style={{ color: "#ff4d4f", fontSize: 12 }}>{fieldState.error.message}</div>}
-                  </div>
-                )}
-              />
-            </div>
+          <div>
+            <label style={fieldLabel}>E-mail</label>
+            <Controller name="email" control={form.control} render={({ field, fieldState }) => (
+              <div>
+                <Input {...field} type="email" placeholder="email@exemplo.com" status={fieldState.error ? "error" : undefined} />
+                {fieldState.error && <div style={{ color: "#ff4d4f", fontSize: 12 }}>{fieldState.error.message}</div>}
+              </div>
+            )} />
           </div>
 
           {/* CEP */}
-          <div style={rowStyle}>
-            <div style={labelStyle}>
-              <span style={{ color: "#ff4d4f" }}>*</span> CEP:
-            </div>
-            <div style={inputWrapperStyle}>
-              <CepInput
-                name="cep"
-                label=""
-                required
-                targets={{
-                  city: "cidade",
-                  state: "uf",
-                  street: "logradouro",
-                  neighborhood: "bairro",
-                }}
-              />
-            </div>
+          <div>
+            <label style={fieldLabel}><span style={{ color: "#ff4d4f" }}>*</span> CEP</label>
+            <CepInput name="cep" label="" required targets={{ city: "cidade", state: "uf", street: "logradouro", neighborhood: "bairro" }} />
           </div>
 
           {/* Logradouro */}
-          <div style={rowStyle}>
-            <div style={labelStyle}>
-              <span style={{ color: "#ff4d4f" }}>*</span> Logradouro:
-            </div>
-            <div style={inputWrapperStyle}>
-              <Controller
-                name="logradouro"
-                control={form.control}
-                render={({ field, fieldState }) => (
-                  <div>
-                    <Input {...field} placeholder="Rua, Avenida, etc." disabled status={fieldState.error ? "error" : undefined} />
-                    {fieldState.error && <div style={{ color: "#ff4d4f", fontSize: 12 }}>{fieldState.error.message}</div>}
-                  </div>
-                )}
-              />
-            </div>
+          <div>
+            <label style={fieldLabel}><span style={{ color: "#ff4d4f" }}>*</span> Logradouro</label>
+            <Controller name="logradouro" control={form.control} render={({ field, fieldState }) => (
+              <div>
+                <Input {...field} placeholder="Rua, Avenida, etc." disabled status={fieldState.error ? "error" : undefined} />
+                {fieldState.error && <div style={{ color: "#ff4d4f", fontSize: 12 }}>{fieldState.error.message}</div>}
+              </div>
+            )} />
           </div>
 
           {/* Número e Complemento */}
-          <div style={rowStyle}>
-            <div style={labelStyle}>
-              <span style={{ color: "#ff4d4f" }}>*</span> Número:
+          <div style={{ display: "flex", gap: 12 }}>
+            <div style={{ width: 100 }}>
+              <label style={fieldLabel}><span style={{ color: "#ff4d4f" }}>*</span> Número</label>
+              <Controller name="numero" control={form.control} render={({ field, fieldState }) => (
+                <Input {...field} placeholder="123" inputMode="numeric" status={fieldState.error ? "error" : undefined} />
+              )} />
             </div>
-            <div style={{ width: 80 }}>
-              <Controller
-                name="numero"
-                control={form.control}
-                render={({ field, fieldState }) => (
-                  <Input {...field} placeholder="123" inputMode="numeric" status={fieldState.error ? "error" : undefined} />
-                )}
-              />
-            </div>
-            <div style={{ whiteSpace: "nowrap" }}>Complemento:</div>
             <div style={{ flex: 1 }}>
-              <Controller
-                name="complemento"
-                control={form.control}
-                render={({ field }) => (
-                  <Input {...field} placeholder="Apto, sala, etc. (opcional)" />
-                )}
-              />
+              <label style={fieldLabel}>Complemento</label>
+              <Controller name="complemento" control={form.control} render={({ field }) => (
+                <Input {...field} placeholder="Apto, sala, etc. (opcional)" />
+              )} />
             </div>
           </div>
 
           {/* Bairro */}
-          <div style={rowStyle}>
-            <div style={labelStyle}>
-              <span style={{ color: "#ff4d4f" }}>*</span> Bairro:
-            </div>
-            <div style={inputWrapperStyle}>
-              <Controller
-                name="bairro"
-                control={form.control}
-                render={({ field, fieldState }) => (
-                  <div>
-                    <Input {...field} placeholder="Bairro" disabled status={fieldState.error ? "error" : undefined} />
-                    {fieldState.error && <div style={{ color: "#ff4d4f", fontSize: 12 }}>{fieldState.error.message}</div>}
-                  </div>
-                )}
-              />
-            </div>
+          <div>
+            <label style={fieldLabel}><span style={{ color: "#ff4d4f" }}>*</span> Bairro</label>
+            <Controller name="bairro" control={form.control} render={({ field, fieldState }) => (
+              <div>
+                <Input {...field} placeholder="Bairro" disabled status={fieldState.error ? "error" : undefined} />
+                {fieldState.error && <div style={{ color: "#ff4d4f", fontSize: 12 }}>{fieldState.error.message}</div>}
+              </div>
+            )} />
           </div>
 
           {/* Cidade e UF */}
-          <div style={rowStyle}>
-            <div style={labelStyle}>
-              <span style={{ color: "#ff4d4f" }}>*</span> Cidade:
-            </div>
+          <div style={{ display: "flex", gap: 12 }}>
             <div style={{ flex: 1 }}>
-              <Controller
-                name="cidade"
-                control={form.control}
-                render={({ field, fieldState }) => (
-                  <Input {...field} placeholder="Cidade" disabled status={fieldState.error ? "error" : undefined} />
-                )}
-              />
+              <label style={fieldLabel}><span style={{ color: "#ff4d4f" }}>*</span> Cidade</label>
+              <Controller name="cidade" control={form.control} render={({ field, fieldState }) => (
+                <Input {...field} placeholder="Cidade" disabled status={fieldState.error ? "error" : undefined} />
+              )} />
             </div>
-            <div style={{ whiteSpace: "nowrap" }}>
-              <span style={{ color: "#ff4d4f" }}>*</span> UF:
-            </div>
-            <div style={{ width: 60 }}>
-              <Controller
-                name="uf"
-                control={form.control}
-                render={({ field, fieldState }) => (
-                  <Input {...field} placeholder="SP" maxLength={2} disabled status={fieldState.error ? "error" : undefined} />
-                )}
-              />
+            <div style={{ width: 70 }}>
+              <label style={fieldLabel}><span style={{ color: "#ff4d4f" }}>*</span> UF</label>
+              <Controller name="uf" control={form.control} render={({ field, fieldState }) => (
+                <Input {...field} placeholder="SP" maxLength={2} disabled status={fieldState.error ? "error" : undefined} />
+              )} />
             </div>
           </div>
 
           {/* Observações */}
-          <div style={{ ...rowStyle, alignItems: "flex-start" }}>
-            <div style={{ ...labelStyle, paddingTop: 4 }}>Observações:</div>
-            <div style={inputWrapperStyle}>
-              <Controller
-                name="notes"
-                control={form.control}
-                render={({ field, fieldState }) => (
-                  <div>
-                    <Input.TextArea
-                      {...field}
-                      rows={3}
-                      maxLength={280}
-                      showCount
-                      placeholder="Informações adicionais (opcional)"
-                      status={fieldState.error ? "error" : undefined}
-                    />
-                    {fieldState.error && <div style={{ color: "#ff4d4f", fontSize: 12 }}>{fieldState.error.message}</div>}
-                  </div>
-                )}
-              />
-            </div>
+          <div>
+            <label style={fieldLabel}>Observações</label>
+            <Controller name="notes" control={form.control} render={({ field, fieldState }) => (
+              <div>
+                <Input.TextArea {...field} rows={3} maxLength={280} placeholder="Informações adicionais (opcional)" status={fieldState.error ? "error" : undefined} />
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 2 }}>
+                  {fieldState.error ? <span style={{ color: "#ff4d4f", fontSize: 12 }}>{fieldState.error.message}</span> : <span />}
+                  <span style={{ color: '#98A2B3', fontSize: 12 }}>{(field.value?.length ?? 0)} / 280</span>
+                </div>
+              </div>
+            )} />
           </div>
+
         </div>
       </FormProvider>
     </ELModal>

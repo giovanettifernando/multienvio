@@ -183,11 +183,11 @@
 
 @media (max-height: 800px) {
   .actionBar {
-    padding: var(--el-spacing-xs, 4px) 0;
+    padding: var(--el-spacing-xs, 4px) var(--el-spacing-lg, 16px);
   }
 
   .variant-default {
-    padding: var(--el-spacing-sm, 8px) 0;
+    padding: var(--el-spacing-sm, 8px) var(--el-spacing-lg, 16px);
   }
 
   .content {

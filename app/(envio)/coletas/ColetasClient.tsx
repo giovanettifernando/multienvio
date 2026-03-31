@@ -142,25 +142,17 @@ export default function ColetasClient() {
     <PageShell title="Gerenciar Coletas" gap="md">
       <div className={tableStyles.wrapper}>
         <ELCard>
-          <ActionBar
-            extraActions={[
-              {
-                key: "refresh",
-                label: "Atualizar",
-                onClick: () => refetch(),
-                disabled: isLoading,
-              },
-            ]}
-          >
+          <ActionBar>
             <ELInput.Search
               allowClear
               placeholder="Buscar por código de rastreio"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onSearch={(value) => setSearchQuery(value)}
+              style={{ flex: 1, minWidth: 0 }}
             />
             <ELSelect
-              style={{ minWidth: 140 }}
+              style={{ minWidth: 140, flexShrink: 0 }}
               value={status}
               onChange={setStatus}
               options={STATUS_OPTIONS}
@@ -171,8 +163,15 @@ export default function ColetasClient() {
               placeholder={["Data início", "Data fim"]}
               value={dateRange}
               onChange={(dates) => setDateRange(dates as [Dayjs | null, Dayjs | null])}
-              style={{ minWidth: 220 }}
+              style={{ minWidth: 220, flexShrink: 0 }}
             />
+            <ELButton
+              onClick={() => refetch()}
+              disabled={isLoading}
+              style={{ flexShrink: 0 }}
+            >
+              Atualizar
+            </ELButton>
           </ActionBar>
 
           <DataTable<PickupRequestWithShipment>

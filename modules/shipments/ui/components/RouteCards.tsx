@@ -34,8 +34,8 @@ export function RouteCards({
   isReverse,
   originCard,
   destinationCard,
-  originHeader = { step: 1, label: "Origem", icon: "origin" },
-  destinationHeader = { step: 2, label: "Destino", icon: "destination" },
+  originHeader = { step: 1, label: "Remetente", icon: "origin" },
+  destinationHeader = { step: 2, label: "Destinatário", icon: "destination" },
 }: RouteCardsProps) {
   const { token } = useELTheme();
   const screens = useBreakpoint();

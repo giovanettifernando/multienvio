@@ -1,11 +1,7 @@
 "use client";
 
-import React from "react";
-import { ELCard, ELRow, ELCol, ELStatistic, ELTypography } from '@/shared/ui';
+import { ELCard, ELTypography } from '@/shared/ui';
 const Card = ELCard;
-const Row = ELRow;
-const Col = ELCol;
-const Statistic = ELStatistic;
 const Typography = ELTypography;
 import { ArrowUpOutlined, ArrowDownOutlined } from "@ant-design/icons";
 import type { PeriodSummary } from '@/shared/types/wallet-statement';
@@ -35,35 +31,35 @@ export default function PeriodSummaryCard({ summary, loading }: PeriodSummaryCar
       }
       loading={loading}
     >
-      <Row gutter={[16, 16]}>
-        <Col xs={24} sm={8}>
-          <Statistic
-            title="Créditos"
-            value={formatCurrencyBRL(summary.totalCredits)}
-            suffix={<ArrowUpOutlined style={{ fontSize: 14, color: '#52c41a' }} />}
-            styles={{ content: { color: '#52c41a', fontSize: 18 } }}
-          />
-        </Col>
-        <Col xs={24} sm={8}>
-          <Statistic
-            title="Débitos"
-            value={formatCurrencyBRL(summary.totalDebits)}
-            suffix={<ArrowDownOutlined style={{ fontSize: 14, color: '#ff4d4f' }} />}
-            styles={{ content: { color: '#ff4d4f', fontSize: 18 } }}
-          />
-        </Col>
-        <Col xs={24} sm={8}>
-          <Statistic
-            title="Saldo do Período"
-            value={formatCurrencyBRL(summary.netAmount)}
-            styles={{ content: {
-              color: summary.netAmount >= 0 ? '#52c41a' : '#ff4d4f',
-              fontSize: 18,
-              fontWeight: 600
-            } }}
-          />
-        </Col>
-      </Row>
+      <div style={{ display: 'flex', gap: 16 }}>
+        {/* Créditos */}
+        <div style={{ flex: 1 }}>
+          <div style={{ minHeight: 40, display: 'flex', alignItems: 'flex-end', paddingBottom: 4 }}>
+            <Text type="secondary" style={{ fontSize: 13 }}>Créditos</Text>
+          </div>
+          <Text strong style={{ fontSize: 16, color: '#52c41a', whiteSpace: 'nowrap' }}>
+            {formatCurrencyBRL(summary.totalCredits)} <ArrowUpOutlined style={{ fontSize: 12 }} />
+          </Text>
+        </div>
+        {/* Débitos */}
+        <div style={{ flex: 1 }}>
+          <div style={{ minHeight: 40, display: 'flex', alignItems: 'flex-end', paddingBottom: 4 }}>
+            <Text type="secondary" style={{ fontSize: 13 }}>Débitos</Text>
+          </div>
+          <Text strong style={{ fontSize: 16, color: '#ff4d4f', whiteSpace: 'nowrap' }}>
+            {formatCurrencyBRL(summary.totalDebits)} <ArrowDownOutlined style={{ fontSize: 12 }} />
+          </Text>
+        </div>
+        {/* Saldo do Período */}
+        <div style={{ flex: 1 }}>
+          <div style={{ minHeight: 40, display: 'flex', alignItems: 'flex-end', paddingBottom: 4 }}>
+            <Text type="secondary" style={{ fontSize: 13 }}>Saldo do Período</Text>
+          </div>
+          <Text strong style={{ fontSize: 16, color: summary.netAmount >= 0 ? '#52c41a' : '#ff4d4f', whiteSpace: 'nowrap' }}>
+            {formatCurrencyBRL(summary.netAmount)}
+          </Text>
+        </div>
+      </div>
       <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid #f0f0f0' }}>
         <Text type="secondary" style={{ fontSize: 12 }}>
           {summary.transactionCount} transaç{summary.transactionCount === 1 ? 'ão' : 'ões'} no período

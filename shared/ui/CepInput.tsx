@@ -1,6 +1,7 @@
 "use client";
 
-import { Input, Form, Spin } from "antd";
+import { Form, Spin } from "antd";
+import { ELInput as Input } from "@/shared/ui/ELInput";
 import { useController, useFormContext } from "react-hook-form";
 import { useRef, useState } from "react";
 import {

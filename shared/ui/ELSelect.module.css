@@ -3,9 +3,13 @@
  * Altura 36px, bordas suaves, foco com anel
  */
 
+.select,
+.select :global(.ant-select-selector) {
+  border-radius: var(--el-radius-base, 12px) !important;
+}
+
 .select :global(.ant-select-selector) {
   height: 36px !important;
-  border-radius: var(--el-radius-base, 12px) !important;
   border: 1px solid var(--el-border-medium, #D0D5DD) !important;
   padding-inline: 12px !important;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
@@ -26,6 +30,33 @@
 .select :global(.ant-select-selection-item) {
   display: flex;
   align-items: center;
+  font-size: var(--el-font-size-base, 14px) !important;
   font-weight: var(--el-font-weight-medium, 500);
   color: var(--el-text-primary, #111827) !important;
+}
+
+/* Dropdown popup — font size igual ao input */
+:global(.el-select-dropdown) :global(.ant-select-item) {
+  font-size: var(--el-font-size-base, 14px) !important;
+}
+
+/* Tags de seleção múltipla — pill limpo, sem borda feia */
+.select :global(.ant-select-multiple .ant-select-selection-item) {
+  background: var(--el-color-primary-tint, #E6EEF7) !important;
+  border: none !important;
+  border-radius: 6px !important;
+  padding: 0 6px !important;
+  height: 22px !important;
+  line-height: 22px !important;
+  color: var(--el-color-primary, #0B4EA3) !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  margin-block: 1px !important;
+}
+
+.select :global(.ant-select-multiple .ant-select-selection-item-remove) {
+  color: var(--el-color-primary, #0B4EA3) !important;
+  font-size: 10px !important;
+  display: flex;
+  align-items: center;
 }

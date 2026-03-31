@@ -84,14 +84,14 @@ export function WalletUnified() {
         <ELFlex direction="col" gap="sm">
           {/* Saldo */}
           {wallet ? (
-            <Flex justify="space-between" align="center">
+            <Flex vertical gap={10}>
               <Statistic
                 title={<Text type="secondary" style={{ fontSize: 11 }}>Saldo disponível</Text>}
                 value={balance}
                 formatter={(value) => formatBRL(Number(value))}
                 styles={{
                   content: {
-                    fontSize: 20,
+                    fontSize: 22,
                     fontWeight: 600,
                     color: isLowBalance ? 'var(--el-color-error, #D64545)' : 'var(--el-color-primary, #0B4EA3)',
                   },
@@ -102,6 +102,7 @@ export function WalletUnified() {
                 size="small"
                 icon={<PlusOutlined />}
                 onClick={() => setModalOpen(true)}
+                block
               >
                 Adicionar créditos
               </ELButton>

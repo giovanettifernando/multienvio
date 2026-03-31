@@ -68,8 +68,8 @@ export function NewTicketList({
 }: NewTicketListProps) {
   void autoRefresh;
   const [query, setQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<Status[]>([]);
-  const [priorityFilter, setPriorityFilter] = useState<Priority[]>([]);
+  const [statusFilter, setStatusFilter] = useState<Status | undefined>(undefined);
+  const [priorityFilter, setPriorityFilter] = useState<Priority | undefined>(undefined);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(audience === 'admin' ? 20 : 10);
   const { message } = App.useApp();
@@ -78,8 +78,8 @@ export function NewTicketList({
     audience,
     filters: {
       query,
-      status: statusFilter.length > 0 ? statusFilter : undefined,
-      priority: priorityFilter.length > 0 ? priorityFilter : undefined,
+      status: statusFilter ? [statusFilter] : undefined,
+      priority: priorityFilter ? [priorityFilter] : undefined,
       requesterEmail: filterByEmail,
     },
     page: audience === 'admin' ? page : undefined,
@@ -186,55 +186,50 @@ export function NewTicketList({
 
   return (
     <Space orientation="vertical" style={{ width: '100%' }} size="middle">
-      <Space style={{ width: '100%', justifyContent: 'space-between' }} align="start" wrap>
-        <Space wrap>
-          <ELInput
-            placeholder="Buscar por assunto, descrição ou solicitante"
-            prefix={<SearchOutlined />}
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            style={{ width: 300 }}
-            allowClear
-          />
-          <ELSelect
-            mode="multiple"
-            placeholder="Filtrar por status"
-            style={{ minWidth: 200 }}
-            value={statusFilter}
-            onChange={setStatusFilter}
-            options={[
-              { value: 'aberto', label: 'Aberto' },
-              { value: 'em_atendimento', label: 'Em Atendimento' },
-              { value: 'resolvido', label: 'Resolvido' },
-              { value: 'fechado', label: 'Fechado' },
-            ]}
-            allowClear
-          />
-          <ELSelect
-            mode="multiple"
-            placeholder="Filtrar por prioridade"
-            style={{ minWidth: 200 }}
-            value={priorityFilter}
-            onChange={setPriorityFilter}
-            options={[
-              { value: 'baixa', label: 'Baixa' },
-              { value: 'media', label: 'Média' },
-              { value: 'alta', label: 'Alta' },
-              { value: 'critica', label: 'Crítica' },
-            ]}
-            allowClear
-          />
-        </Space>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+        <ELInput
+          placeholder="Buscar por assunto, descrição ou solicitante"
+          prefix={<SearchOutlined />}
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          style={{ flex: 1, minWidth: 200 }}
+          allowClear
+        />
+        <ELSelect
+          placeholder="Filtrar por status"
+          style={{ minWidth: 160, flexShrink: 0, height: 36 }}
+          value={statusFilter}
+          onChange={(v) => setStatusFilter(v as Status | undefined)}
+          options={[
+            { value: 'aberto', label: 'Aberto' },
+            { value: 'em_atendimento', label: 'Em Atendimento' },
+            { value: 'resolvido', label: 'Resolvido' },
+            { value: 'fechado', label: 'Fechado' },
+          ]}
+          allowClear
+        />
+        <ELSelect
+          placeholder="Filtrar por prioridade"
+          style={{ minWidth: 160, flexShrink: 0, height: 36 }}
+          value={priorityFilter}
+          onChange={(v) => setPriorityFilter(v as Priority | undefined)}
+          options={[
+            { value: 'baixa', label: 'Baixa' },
+            { value: 'media', label: 'Média' },
+            { value: 'alta', label: 'Alta' },
+            { value: 'critica', label: 'Crítica' },
+          ]}
+          allowClear
+        />
         <ELButton
           icon={<ReloadOutlined />}
-          onClick={() => {
-            void ticketsQuery.refetch();
-          }}
+          onClick={() => { void ticketsQuery.refetch(); }}
           loading={ticketsQuery.isFetching}
+          style={{ flexShrink: 0 }}
         >
           Atualizar
         </ELButton>
-      </Space>
+      </div>
 
       <DataTable<SupportTicket>
         data={tickets}

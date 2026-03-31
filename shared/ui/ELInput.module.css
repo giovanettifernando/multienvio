@@ -7,7 +7,11 @@
   border-radius: var(--el-radius-base, 12px) !important;
   border: 1px solid var(--el-border-medium, #D0D5DD) !important;
   padding-inline: 12px !important;
+  padding-block: 0 !important;
   height: 36px !important;
+  line-height: 36px !important;
+  display: flex !important;
+  align-items: center !important;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
@@ -70,8 +74,10 @@ textarea.input,
 .search :global(.ant-input-affix-wrapper) {
   border-radius: var(--el-radius-base, 12px) !important;
   border: 1px solid var(--el-border-medium, #D0D5DD) !important;
-  height: 40px !important;
+  height: 36px !important;
   padding: 0 12px !important;
+  display: flex !important;
+  align-items: center !important;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
   background: var(--el-color-surface, #FFFFFF);
 }
@@ -88,6 +94,8 @@ textarea.input,
 
 .search :global(.ant-input) {
   height: 100% !important;
+  padding-block: 0 !important;
+  line-height: 36px !important;
   font-size: var(--el-font-size-base, 14px);
   color: var(--el-text-primary, #111827);
 }

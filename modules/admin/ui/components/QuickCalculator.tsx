@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Form, Typography, Space, Flex, Row, Col } from 'antd';
+import { Form, Typography, Space, Flex } from 'antd';
 import { ELCard } from '@/shared/ui/ELCard';
 import { ELChoicePills } from '@/shared/ui/ELChoicePills';
 import { CalculatorOutlined, ArrowRightOutlined, HomeOutlined, EditOutlined } from '@ant-design/icons';
@@ -75,24 +75,14 @@ export function QuickCalculator() {
   });
 
   const addresses = addressesQuery.data || [];
-  const defaultAddress = addresses.find((a) => a.isDefault) || addresses[0];
-
-  useEffect(() => {
-    if (defaultAddress && originMode === 'address') {
-      const current = form.getFieldValue("originCep");
-      if (!current) {
-        form.setFieldsValue({ originCep: defaultAddress.cep });
-      }
-    }
-  }, [defaultAddress, form, originMode]);
 
   // Limpar o campo de origem ao trocar de modo
   useEffect(() => {
-    form.setFieldsValue({ originCep: originMode === 'address' && defaultAddress ? defaultAddress.cep : '' });
-  }, [originMode, defaultAddress, form]);
+    form.setFieldsValue({ originCep: '' });
+  }, [originMode, form]);
 
   const addressOptions = addresses.map((addr) => ({
-    label: `${addr.label} (${addr.cidade}/${addr.uf})`,
+    label: addr.label ? `${addr.label} (${addr.cidade}/${addr.uf})` : `${addr.cidade}/${addr.uf}`,
     value: addr.cep,
   }));
 
@@ -141,10 +131,9 @@ export function QuickCalculator() {
   };
 
   const cardTitle = (
-    <Flex align="center" gap={8}>
+    <Flex align="center" gap={8} wrap="wrap">
       <CalculatorOutlined />
-      <Text strong>Calculadora</Text>
-      <Text type="secondary" style={{ fontSize: 12, fontWeight: 400 }}>(cotação rápida)</Text>
+      <Text strong style={{ whiteSpace: 'nowrap' }}>Calculadora de frete</Text>
     </Flex>
   );
 
@@ -172,112 +161,103 @@ export function QuickCalculator() {
             </div>
           )}
 
-          <Row gutter={[12, 12]}>
-            <Col xs={24} sm={12}>
-              <Form.Item
-                label={<Text style={{ fontSize: '12px' }}>CEP Origem</Text>}
-                name="originCep"
-                rules={[
-                  { required: true, message: showCepInput ? 'Informe o CEP' : 'Selecione o endereço' },
-                  ...(showCepInput ? [{
-                    validator: (_: unknown, value: string) => {
-                      if (!value || isValidCep(value)) return Promise.resolve();
-                      return Promise.reject(new Error('CEP inválido'));
-                    }
-                  }] : [])
-                ]}
-                style={{ marginBottom: 0 }}
-              >
-                {showCepInput ? (
-                  <ELInput
-                    placeholder="00000-000"
-                    size="small"
-                    maxLength={9}
-                    onChange={(e) => {
-                      const masked = maskCep(e.target.value);
-                      form.setFieldsValue({ originCep: masked });
-                    }}
-                  />
-                ) : (
-                  <ELSelect
-                    placeholder="Selecione o endereço"
-                    options={addressOptions}
-                    loading={addressesQuery.isLoading}
-                    size="small"
-                    showSearch
-                    optionFilterProp="label"
-                    style={{ fontSize: '12px' }}
-                  />
-                )}
-              </Form.Item>
-            </Col>
-            <Col xs={24} sm={12}>
-              <Form.Item
-                label={<Text style={{ fontSize: '12px' }}>CEP Destino</Text>}
-                name="destCep"
-                rules={[
-                  { required: true, message: 'Obrigatório' },
-                  {
-                    validator: (_: unknown, value: string) => {
-                      if (!value || isValidCep(value)) return Promise.resolve();
-                      return Promise.reject(new Error('CEP inválido'));
-                    }
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '4px' }}>
+            <Form.Item
+              label={<Text style={{ fontSize: '12px', whiteSpace: 'nowrap' }}>CEP de origem</Text>}
+              name="originCep"
+              rules={[
+                { required: true, message: showCepInput ? 'Informe o CEP' : 'Selecione' },
+                ...(showCepInput ? [{
+                  validator: (_: unknown, value: string) => {
+                    if (!value || isValidCep(value)) return Promise.resolve();
+                    return Promise.reject(new Error('CEP inválido'));
                   }
-                ]}
-                style={{ marginBottom: 0 }}
-              >
+                }] : [])
+              ]}
+              style={{ marginBottom: 0 }}
+            >
+              {showCepInput ? (
                 <ELInput
                   placeholder="00000-000"
                   size="small"
                   maxLength={9}
                   onChange={(e) => {
                     const masked = maskCep(e.target.value);
-                    form.setFieldsValue({ destCep: masked });
+                    form.setFieldsValue({ originCep: masked });
                   }}
                 />
-              </Form.Item>
-            </Col>
-          </Row>
+              ) : (
+                <ELSelect
+                  placeholder="Endereço"
+                  options={addressOptions}
+                  loading={addressesQuery.isLoading}
+                  showSearch
+                  optionFilterProp="label"
+                  style={{
+                    width: '100%',
+                    height: 36,
+                  }}
+                />
+              )}
+            </Form.Item>
 
-          <Row gutter={[12, 12]} style={{ marginTop: 12 }}>
-            <Col xs={12} sm={12} md={6}>
-              <Form.Item
-                label={<Text style={{ fontSize: '12px' }}>Peso (kg)</Text>}
-                name="weight"
-                rules={[{ required: true, message: 'Obrigatório' }]}
-                style={{ marginBottom: 0 }}
-              >
-                <ELInput type="number" placeholder="0.5" size="small" step="0.1" style={{ minWidth: 70 }} />
-              </Form.Item>
-            </Col>
-            <Col xs={12} sm={12} md={6}>
-              <Form.Item
-                label={<Text style={{ fontSize: '12px' }}>Altura</Text>}
-                name="height"
-                style={{ marginBottom: 0 }}
-              >
-                <ELInput type="number" placeholder="cm" size="small" style={{ minWidth: 70 }} />
-              </Form.Item>
-            </Col>
-            <Col xs={12} sm={12} md={6}>
-              <Form.Item
-                label={<Text style={{ fontSize: '12px' }}>Largura</Text>}
-                name="width"
-                style={{ marginBottom: 0 }}
-              >
-                <ELInput type="number" placeholder="cm" size="small" style={{ minWidth: 70 }} />
-              </Form.Item>
-            </Col>
-            <Col xs={12} sm={12} md={6}>
-              <Form.Item
-                label={<Text style={{ fontSize: '12px' }}>Comp.</Text>}
-                name="length"
-                style={{ marginBottom: 0 }}
-              >
-                <ELInput type="number" placeholder="cm" size="small" style={{ minWidth: 70 }} />
-              </Form.Item>
-            </Col>
-          </Row>
+            <Form.Item
+              label={<Text style={{ fontSize: '12px', whiteSpace: 'nowrap' }}>CEP de destino</Text>}
+              name="destCep"
+              rules={[
+                { required: true, message: 'Obrigatório' },
+                {
+                  validator: (_: unknown, value: string) => {
+                    if (!value || isValidCep(value)) return Promise.resolve();
+                    return Promise.reject(new Error('CEP inválido'));
+                  }
+                }
+              ]}
+              style={{ marginBottom: 0 }}
+            >
+              <ELInput
+                placeholder="00000-000"
+                size="small"
+                maxLength={9}
+                onChange={(e) => {
+                  const masked = maskCep(e.target.value);
+                  form.setFieldsValue({ destCep: masked });
+                }}
+              />
+            </Form.Item>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '4px 8px', marginTop: 4 }}>
+            <Form.Item
+              label={<Text style={{ fontSize: '11px', whiteSpace: 'nowrap' }}>Peso (kg)</Text>}
+              name="weight"
+              rules={[{ required: true, message: 'Obrigatório' }]}
+              style={{ marginBottom: 0 }}
+            >
+              <ELInput type="number" placeholder="kg" size="small" step="0.1" />
+            </Form.Item>
+            <Form.Item
+              label={<Text style={{ fontSize: '11px', whiteSpace: 'nowrap' }}>Alt. (cm)</Text>}
+              name="height"
+              style={{ marginBottom: 0 }}
+            >
+              <ELInput type="number" placeholder="cm" size="small" />
+            </Form.Item>
+            <Form.Item
+              label={<Text style={{ fontSize: '11px', whiteSpace: 'nowrap' }}>Larg. (cm)</Text>}
+              name="width"
+              style={{ marginBottom: 0 }}
+            >
+              <ELInput type="number" placeholder="cm" size="small" />
+            </Form.Item>
+            <Form.Item
+              label={<Text style={{ fontSize: '11px', whiteSpace: 'nowrap' }}>Comp. (cm)</Text>}
+              name="length"
+              style={{ marginBottom: 0 }}
+            >
+              <ELInput type="number" placeholder="cm" size="small" />
+            </Form.Item>
+          </div>
 
           <ELButton
             variant="primary"
@@ -286,7 +266,7 @@ export function QuickCalculator() {
             icon={<CalculatorOutlined />}
             block
             size="small"
-            style={{ marginTop: 12 }}
+            style={{ marginTop: 8 }}
           >
             Calcular
           </ELButton>

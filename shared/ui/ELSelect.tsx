@@ -13,6 +13,7 @@ export function ELSelect<ValueType = unknown>({
     <Select
       {...props}
       className={cn(styles.select, className)}
+      popupClassName={cn("el-select-dropdown", props.popupClassName)}
       size={size ?? "middle"}
       showSearch={props.showSearch ?? false}
       popupMatchSelectWidth={popupMatchSelectWidth ?? false}

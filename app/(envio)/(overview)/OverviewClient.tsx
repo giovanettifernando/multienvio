@@ -6,7 +6,6 @@ import { ELGrid } from '@/shared/ui/ELGrid';
 import { PageShell } from '@/shared/ui/PageShell';
 import { QuickCalculator } from '@/modules/dashboard/ui/components/QuickCalculator';
 import { ShipmentsStatusBoard } from '@/modules/dashboard/ui/components/ShipmentsStatusBoard';
-import { ShipmentsSummaryCard } from '@/modules/dashboard/ui/components/ShipmentsSummaryCard';
 import { WalletUnified } from '@/modules/dashboard/ui/components/WalletUnified';
 import { PickupSchedule } from '@/modules/dashboard/ui/components/PickupSchedule';
 import { PendingPickupPointShipments } from '@/modules/dashboard/ui/components/PendingPickupPointShipments';
@@ -49,17 +48,11 @@ export default function OverviewClient() {
         />
       )}
 
-      {/* Row 1: Status de envios (filas ativas) + Resumo (entregues/cancelados) */}
-      <ELGrid variant="dashboard" gap="md">
-        <ShipmentsStatusBoard
-          shipments={shipmentsQuery.data ?? []}
-          loading={shipmentsQuery.isLoading}
-        />
-        <ShipmentsSummaryCard
-          shipments={shipmentsQuery.data ?? []}
-          loading={shipmentsQuery.isLoading}
-        />
-      </ELGrid>
+      {/* Row 1: Status de envios unificado */}
+      <ShipmentsStatusBoard
+        shipments={shipmentsQuery.data ?? []}
+        loading={shipmentsQuery.isLoading}
+      />
 
       {/* Row 2: Calculadora | Carteira | Coletas agendadas */}
       <ELGrid variant="3" gap="md">

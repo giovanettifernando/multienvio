@@ -407,9 +407,10 @@ export default function ShipmentsClient() {
               value={query}
               onChange={(event) => handleQueryChange(event.target.value)}
               onSearch={(value) => handleQueryChange(value)}
+              style={{ flex: 1, minWidth: 0 }}
             />
             <ELSelect
-              style={{ minWidth: 180 }}
+              style={{ width: 180, flexShrink: 0 }}
               placeholder="Filtrar por status"
               value={status}
               onChange={handleStatusChange}
