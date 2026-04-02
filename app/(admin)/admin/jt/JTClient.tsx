@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, startTransition } from 'react';
+import { useState, startTransition, useEffect } from 'react';
 import {
   Card,
   Form,
@@ -91,7 +91,7 @@ async function saveConfig(data: Record<string, unknown>): Promise<{ message: str
   });
   if (!res.ok) {
     const err = await res.json();
-    throw new Error(err.message || 'Erro ao salvar');
+    throw new Error(err.error?.message || err.message || 'Erro ao salvar');
   }
   const json = await res.json();
   return json.data ?? json;
@@ -252,23 +252,28 @@ function ConfigTab({ config, form, onSave, saving }: {
   onSave: () => void;
   saving: boolean;
 }) {
+  useEffect(() => {
+    if (config) {
+      form.setFieldsValue({
+        activeEnvironment: config.activeEnvironment || 'sandbox',
+        carrierIconPath: config.carrierIconPath || '',
+        shippingCommissionPercent: config.shippingCommissionPercent ?? null,
+        prod_customerCode: config.production?.customerCode || '',
+        prod_password: config.production?.password || '',
+        prod_apiAccount: config.production?.apiAccount || '',
+        prod_privateKey: config.production?.privateKey || '',
+        sandbox_customerCode: config.sandbox?.customerCode || '',
+        sandbox_password: config.sandbox?.password || '',
+        sandbox_apiAccount: config.sandbox?.apiAccount || '',
+        sandbox_privateKey: config.sandbox?.privateKey || '',
+      });
+    }
+  }, [config, form]);
+
   return (
     <Form
       form={form}
       layout="vertical"
-      initialValues={{
-        activeEnvironment: config?.activeEnvironment || 'sandbox',
-        carrierIconPath: config?.carrierIconPath || '',
-        shippingCommissionPercent: config?.shippingCommissionPercent ?? null,
-        prod_customerCode: config?.production?.customerCode || '',
-        prod_password: config?.production?.password || '',
-        prod_apiAccount: config?.production?.apiAccount || '',
-        prod_privateKey: config?.production?.privateKey || '',
-        sandbox_customerCode: config?.sandbox?.customerCode || '',
-        sandbox_password: config?.sandbox?.password || '',
-        sandbox_apiAccount: config?.sandbox?.apiAccount || '',
-        sandbox_privateKey: config?.sandbox?.privateKey || '',
-      }}
     >
       {/* Ícone */}
       <Form.Item label="URL do ícone da transportadora" name="carrierIconPath">

@@ -1,6 +1,6 @@
 import {
   HomeOutlined,
-  CalculatorOutlined,
+  SearchOutlined,
   ShoppingCartOutlined,
   // FileAddOutlined, // TODO: Descomentar quando reativar menu Etiquetas
   ReconciliationOutlined,
@@ -36,8 +36,8 @@ export const sidebarItems: SidebarItem[] = [
   },
   {
     key: 'quote',
-    icon: CalculatorOutlined,
-    label: 'Calculadora de frete',
+    icon: SearchOutlined,
+    label: 'Cotar',
     href: '/cotacoes',
   },
   {
