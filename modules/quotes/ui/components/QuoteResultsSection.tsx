@@ -34,6 +34,7 @@ import {
 } from "@ant-design/icons";
 import type { QuoteResultItem, DocumentType, EligibilityResponse } from '@/shared/types/quote';
 import { ContentDeclarationModal } from "./ContentDeclarationModal";
+import { CarrierTermsModal } from "./CarrierTermsModal";
 import { useQuoteSelection } from "@/modules/quotes/ui/hooks";
 import { useQuoteStore } from '@/modules/quotes/ui/state/useQuoteStore';
 import { useShallow } from "zustand/react/shallow";
@@ -132,6 +133,8 @@ export function QuoteResultsSection({
     })),
   );
 
+  const [termsModalOpen, setTermsModalOpen] = useState(false);
+  const [pendingTermsResult, setPendingTermsResult] = useState<QuoteResultItem | null>(null);
   const [insuranceModalOpen, setInsuranceModalOpen] = useState(false);
   const [insuranceInput, setInsuranceInput] = useState<number | null>(null);
   const [pendingSelection, setPendingSelection] =
@@ -285,7 +288,7 @@ export function QuoteResultsSection({
     }
   };
 
-  const handleSelectClick = (result: QuoteResultItem) => {
+  const proceedAfterTerms = (result: QuoteResultItem) => {
     if (!storeResults) return;
     if (needsInsuranceValue(result)) {
       setInsuranceInput(storeResults.resumo.seguroValor ?? null);
@@ -293,6 +296,25 @@ export function QuoteResultsSection({
       return;
     }
     confirmSelection(result, storeResults.resumo.seguroValor ?? null);
+  };
+
+  const handleSelectClick = (result: QuoteResultItem) => {
+    if (!storeResults) return;
+    setPendingTermsResult(result);
+    setTermsModalOpen(true);
+  };
+
+  const handleTermsConfirm = () => {
+    setTermsModalOpen(false);
+    if (pendingTermsResult) {
+      proceedAfterTerms(pendingTermsResult);
+      setPendingTermsResult(null);
+    }
+  };
+
+  const handleTermsCancel = () => {
+    setTermsModalOpen(false);
+    setPendingTermsResult(null);
   };
 
   const handleDeclarationAgree = ({ remember }: { remember: boolean }) => {
@@ -658,6 +680,13 @@ export function QuoteResultsSection({
         onAgree={handleDeclarationAgree}
         onSendNfe={handleDeclarationNfe}
         onClose={handleDeclarationClose}
+      />
+
+      <CarrierTermsModal
+        open={termsModalOpen}
+        carrierName={pendingTermsResult?.carrier ?? ""}
+        onConfirm={handleTermsConfirm}
+        onCancel={handleTermsCancel}
       />
     </>
   );
