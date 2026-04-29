@@ -18,6 +18,7 @@ import type {
 import { LoggiApiError } from './types';
 import { LOGGI_ENDPOINTS, LOGGI_LIMITS } from './constants';
 import { loggiFetch } from './client';
+import { consultarCep } from '@/platform/integrations/correios';
 
 // ============================================================================
 // Input
@@ -67,18 +68,20 @@ export function centavosToLoggiMoney(centavos: number): LoggiMoney {
 }
 
 /**
- * Monta endereço mínimo a partir de CEP (formato correios)
+ * Resolve CEP via Correios/BrasilAPI e monta endereço real para a Loggi.
+ * Se a resolução falhar, lança erro para não cotar rotas com dados inválidos.
  */
-function cepToAddress(cep: string): LoggiAddress {
+async function cepToAddress(cep: string): Promise<LoggiAddress> {
   const cleanCep = cep.replace(/\D/g, '');
+  const result = await consultarCep(cleanCep);
   return {
     correios: {
-      logradouro: 'Consulta CEP',
+      logradouro: result.logradouro || 'Rua',
       numero: 'S/N',
-      bairro: 'Centro',
+      bairro: result.bairro || 'Centro',
       cep: cleanCep,
-      cidade: 'Cidade',
-      uf: 'XX',
+      cidade: result.cidade,
+      uf: result.uf,
     },
   };
 }
@@ -113,9 +116,11 @@ export async function cotarLoggi(input: LoggiCotacaoInput): Promise<LoggiQuoteRe
     }
   }
 
-  // Montar payload
-  const shipFrom = cepToAddress(originCep);
-  const shipTo = cepToAddress(destCep);
+  // Resolver endereços reais via Correios/BrasilAPI em paralelo
+  const [shipFrom, shipTo] = await Promise.all([
+    cepToAddress(originCep),
+    cepToAddress(destCep),
+  ]);
 
   const packages: LoggiQuotePackage[] = input.packages.map((pkg) => {
     const result: LoggiQuotePackage = {

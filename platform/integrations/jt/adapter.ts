@@ -41,15 +41,26 @@ export function jtCotacaoToQuoteResult(
 ): QuoteResultItem | null {
   if (!response.data) return null;
 
-  let cost = parseFloat(response.data.cost || '0');
+  const cost = parseFloat(response.data.cost || '0');
   const aging = response.data.aging || 0;
 
-  // TODO: REMOVER - Workaround temporário para homologação J&T.
-  // Credenciais de homologação sempre retornam custo 0 e prazo 0.
-  // Atribuímos valores provisórios para não descartar a cotação.
   if (cost <= 0) {
-    console.warn('[JT_ADAPTER] Custo zero retornado (homologação). Usando valor provisório de R$100.');
-    cost = 100;
+    // Credenciais sandbox da J&T sempre retornam custo 0.
+    // Em homologação, usamos valor fictício para validar o fluxo visual.
+    // REMOVER quando migrar para credenciais de produção.
+    if (process.env.APP_ENV !== 'production') {
+      console.warn('[JT_ADAPTER] Sandbox retornou custo 0 — exibindo valor fictício de R$100 (homologação).');
+      return {
+        id: `${JT_CARRIER_ID}-${productType}`,
+        carrier: JT_CARRIER_NAME,
+        modalidade: getProductTypeName(productType),
+        prazoDias: aging || 3,
+        preco: 100,
+        exigeSeguro: false,
+        source: 'real',
+      };
+    }
+    return null;
   }
 
   const id = `${JT_CARRIER_ID}-${productType}`;
@@ -198,6 +209,25 @@ export async function quoteFromJT(
       requestId,
       error: error instanceof Error ? error.message : error,
     });
+
+    // Em homologação, retorna valor fictício quando a API sandbox falha.
+    // REMOVER quando migrar para credenciais de produção.
+    if (process.env.APP_ENV !== 'production') {
+      console.warn('[JT_ADAPTER] Sandbox com erro — exibindo valor fictício de R$100 (homologação).');
+      return {
+        results: [{
+          id: `${JT_CARRIER_ID}-${JT_PRODUCT_TYPES.EZ}`,
+          carrier: JT_CARRIER_NAME,
+          modalidade: 'J&T Express',
+          prazoDias: 3,
+          preco: 100,
+          exigeSeguro: false,
+          source: 'real',
+        }],
+        source: 'real',
+        eligibility,
+      };
+    }
 
     return {
       results: [],

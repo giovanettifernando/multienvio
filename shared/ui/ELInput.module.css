@@ -42,6 +42,14 @@ textarea.input,
   box-shadow: 0 0 0 3px var(--el-color-primary-tint, #E6EEF7);
 }
 
+/* Neutraliza o fundo azul do autopreenchimento do browser */
+:global(input:-webkit-autofill),
+:global(input:-webkit-autofill:hover),
+:global(input:-webkit-autofill:focus) {
+  transition: background-color 9999s ease-in-out 0s !important;
+  -webkit-text-fill-color: var(--el-text-primary, #111827) !important;
+}
+
 .password :global(.ant-input) {
   border-radius: var(--el-radius-base, 12px) !important;
   border: 1px solid var(--el-border-medium, #D0D5DD) !important;
