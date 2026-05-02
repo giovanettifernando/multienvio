@@ -34,7 +34,7 @@ import { useCheckoutStore } from '@/modules/cart/ui/state/checkout';
 import type { FinalizeFormValues } from '@/shared/types/quoteFinalize';
 import type { PickupPoint } from "@/modules/pickup-points/application/types";
 import { matchesSearch } from "@/shared/utils/string";
-import { isCorreiosCarrier } from '@/shared/utils/carrier';
+import { isCorreiosCarrier, isLoggiCarrier } from '@/shared/utils/carrier';
 import { calculateDistance, getUFCoordinates, formatDistance } from "@/shared/utils/geo";
 import { MapModal } from "./MapModal";
 import { usePickupPoints } from "@/modules/pickup-points/ui/hooks";
@@ -63,6 +63,10 @@ export function PostingUnitPicker() {
 
   // Verificar se a transportadora selecionada é Correios
   const isCorreios = useMemo(() => isCorreiosCarrier(selection?.result?.carrier ?? null), [selection?.result?.carrier]);
+
+  // Verificar se é Loggi com serviço de postagem (drop-off)
+  const isLoggi = useMemo(() => isLoggiCarrier(selection?.result?.carrier ?? null), [selection?.result?.carrier]);
+  const isLoggiDropoff = useMemo(() => isLoggi && (selection?.result?.id?.includes('dropoff') ?? false), [isLoggi, selection?.result?.id]);
 
   // Buscar agências dos Correios quando carrier é Correios
   const originUf = results?.resumo?.origemUf;
@@ -392,6 +396,32 @@ export function PostingUnitPicker() {
   // Se coleta na origem está ativa, não exibir bloco
   if (pickupAtOrigin) {
     return null;
+  }
+
+  // Loggi com postagem (drop-off): exibir mensagem informativa com link
+  if (isLoggiDropoff) {
+    return (
+      <ELCard header={{ title: "Unidade de postagem" }}>
+        <Alert
+          type="info"
+          showIcon
+          message="Encontre o Loggi Ponto mais próximo"
+          description={
+            <span>
+              Para postar seu pacote, consulte o{' '}
+              <a
+                href="https://www.loggi.com/loggiponto/#loggi-ponto"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                site da Loggi
+              </a>
+              {' '}e encontre a unidade de postagem mais próxima do seu endereço.
+            </span>
+          }
+        />
+      </ELCard>
+    );
   }
 
   return (

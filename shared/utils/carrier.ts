@@ -15,3 +15,8 @@ export function isCorreiosCarrier(carrier: string | null): boolean {
   const normalized = carrier.toLowerCase().trim();
   return CORREIOS_CARRIERS.some((c) => normalized.includes(c));
 }
+
+export function isLoggiCarrier(carrier: string | null): boolean {
+  if (!carrier) return false;
+  return carrier.toLowerCase().trim().includes('loggi');
+}
