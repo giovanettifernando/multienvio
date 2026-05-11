@@ -240,10 +240,7 @@ export default function CollectorDetailClient() {
       }
     }
 
-    if (cnhFileArray.length === 0) {
-      throw new Error("É necessário enviar pelo menos 1 arquivo da CNH");
-    }
-
+    // Documentos são opcionais no admin
     // Process CRLV file
     const crlvFile = crlvFiles[0];
     let crlvUrl: string | null = null;
@@ -256,12 +253,6 @@ export default function CollectorDetailClient() {
         throw new Error("Erro ao enviar arquivo do CRLV");
       }
     }
-
-    if (!crlvUrl) {
-      throw new Error("Arquivo do CRLV é obrigatório");
-    }
-
-    const crlvFileArray = [{ uid: crlvFile.uid, name: crlvFile.name, url: crlvUrl, status: "done" as const }];
 
     // Process address proof file
     const addressFile = addressProofFiles[0];
@@ -276,15 +267,13 @@ export default function CollectorDetailClient() {
       }
     }
 
-    if (!addressUrl) {
-      throw new Error("Comprovante de endereço PF é obrigatório");
-    }
-
-    const addressFileArray = [{ uid: addressFile.uid, name: addressFile.name, url: addressUrl, status: "done" as const }];
-
     setValue("documents.cnhFiles", cnhFileArray, { shouldValidate: false });
-    setValue("documents.crlvFile", crlvFileArray, { shouldValidate: false });
-    setValue("documents.pfAddressProofFile", addressFileArray, { shouldValidate: false });
+    if (crlvFile) {
+      setValue("documents.crlvFile", [{ uid: crlvFile.uid, name: crlvFile.name, url: crlvUrl ?? undefined, status: "done" as const }], { shouldValidate: false });
+    }
+    if (addressFile) {
+      setValue("documents.pfAddressProofFile", [{ uid: addressFile.uid, name: addressFile.name, url: addressUrl ?? undefined, status: "done" as const }], { shouldValidate: false });
+    }
   };
 
   const handleSave = async () => {
