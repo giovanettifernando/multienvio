@@ -901,6 +901,7 @@ model Collector {
   pickupFeeType            PickupFeeType        @default(FIXED) // Tipo de taxa de coleta
   pickupFixedFee           Float? // Taxa fixa de coleta
   pickupFeePerKm           Float? // Taxa de coleta por km
+  pickupFeeMinimum         Float? // Taxa mínima de coleta (piso)
   bankMethodKind           BankMethodKind
   bankPixType              PixKeyType?
   bankPixKey               String?

@@ -93,6 +93,13 @@ export async function calculatePickupFee(
     // Arredondar taxa base para 2 casas decimais
     baseFeeAmount = Math.round(baseFeeAmount * 100) / 100;
 
+    // Aplicar taxa mínima se configurada
+    const minimum = nearestCollector.pickupFeeMinimum ?? 0;
+    if (minimum > 0 && baseFeeAmount < minimum) {
+      console.log(`[PICKUP_FEE] Minimum fee applied: R$ ${baseFeeAmount} → R$ ${minimum}`);
+      baseFeeAmount = minimum;
+    }
+
     // 4. Aplicar comissão da plataforma sobre a taxa de coleta
     const { finalFee: feeAmount, commissionAmount, commissionPercent } = await applyPickupFeeCommission(baseFeeAmount);
 

@@ -80,6 +80,13 @@ export interface Documents {
   }>;
 }
 
+export interface CollectorPickupFee {
+  type: 'FIXED' | 'PER_KM';
+  fixedFee: number | null;
+  feePerKm: number | null;
+  minimum: number | null;
+}
+
 export interface Collector {
   id: string;
   status: CollectorStatus;
@@ -89,6 +96,7 @@ export interface Collector {
   documents: Documents;
   commission: CommissionModel;
   bank: BankMethod;
+  pickupFee: CollectorPickupFee;
   createdAt: string;
   updatedAt: string;
 }

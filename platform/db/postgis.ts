@@ -241,6 +241,7 @@ export async function findNearestCollectorByCep(originCep: string): Promise<{
   pickupFeeType: string;
   pickupFixedFee: number | null;
   pickupFeePerKm: number | null;
+  pickupFeeMinimum: number | null;
   precision?: string;
   provider?: string;
 } | null> {
@@ -262,6 +263,7 @@ export async function findNearestCollectorByCep(originCep: string): Promise<{
     pickupFeeType: string;
     pickupFixedFee: number | null;
     pickupFeePerKm: number | null;
+    pickupFeeMinimum: number | null;
     distance_m: number;
   };
 
@@ -277,6 +279,7 @@ export async function findNearestCollectorByCep(originCep: string): Promise<{
         c."pickupFeeType",
         c."pickupFixedFee",
         c."pickupFeePerKm",
+        c."pickupFeeMinimum",
         ST_SetSRID(ST_MakePoint(cl_pf.longitude, cl_pf.latitude), 4326)::geography as geom,
         'PF' as source
       FROM collectors c
@@ -298,6 +301,7 @@ export async function findNearestCollectorByCep(originCep: string): Promise<{
         c."pickupFeeType",
         c."pickupFixedFee",
         c."pickupFeePerKm",
+        c."pickupFeeMinimum",
         ST_SetSRID(ST_MakePoint(cl_pj.longitude, cl_pj.latitude), 4326)::geography as geom,
         'PJ' as source
       FROM collectors c
@@ -320,6 +324,7 @@ export async function findNearestCollectorByCep(originCep: string): Promise<{
       cl."pickupFeeType",
       cl."pickupFixedFee",
       cl."pickupFeePerKm",
+      cl."pickupFeeMinimum",
       ST_Distance(origin.geom, cl.geom) AS distance_m
     FROM collector_locations cl
     CROSS JOIN origin
@@ -348,6 +353,7 @@ export async function findNearestCollectorByCep(originCep: string): Promise<{
     pickupFeeType: row.pickupFeeType,
     pickupFixedFee: row.pickupFixedFee,
     pickupFeePerKm: row.pickupFeePerKm,
+    pickupFeeMinimum: row.pickupFeeMinimum,
     precision: originCoords.precision,
     provider: originCoords.provider,
   };

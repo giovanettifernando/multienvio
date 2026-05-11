@@ -6,7 +6,7 @@
 import { prisma } from '@/platform/db/db';
 import type { Collector, CollectorFilters, CollectorListResponse } from './types';
 import type { CollectorFormSchemaType } from './schemas';
-import { Prisma, PixKeyType, AccountType } from '@prisma/client';
+import { Prisma, PixKeyType, AccountType, PickupFeeType } from '@prisma/client';
 
 /**
  * Mapeia o modelo Prisma para o tipo de Collector do frontend
@@ -57,6 +57,10 @@ function mapPrismaToCollector(dbCollector: Prisma.CollectorGetPayload<{
     bankAccountType,
     bankHolderName,
     bankHolderCnpj,
+    pickupFeeType,
+    pickupFixedFee,
+    pickupFeePerKm,
+    pickupFeeMinimum,
     createdAt,
     updatedAt,
     documents,
@@ -166,6 +170,12 @@ function mapPrismaToCollector(dbCollector: Prisma.CollectorGetPayload<{
     },
     commission,
     bank,
+    pickupFee: {
+      type: pickupFeeType === 'FIXED' ? 'FIXED' : 'PER_KM',
+      fixedFee: pickupFixedFee,
+      feePerKm: pickupFeePerKm,
+      minimum: pickupFeeMinimum,
+    },
     createdAt: createdAt.toISOString(),
     updatedAt: updatedAt.toISOString(),
   };
@@ -264,7 +274,7 @@ export async function getCollectorById(id: string): Promise<Collector | null> {
  * Cria um novo coletor
  */
 export async function createCollector(data: CollectorFormSchemaType): Promise<Collector> {
-  const { pf, pj, vehicle, documents, commission, bank } = data;
+  const { pf, pj, vehicle, documents, commission, bank, pickupFee } = data;
 
   // Prepare commission data
   const commissionData =
@@ -340,6 +350,10 @@ export async function createCollector(data: CollectorFormSchemaType): Promise<Co
       vehicleYear: vehicle.year ?? null,
       ...commissionData,
       ...bankData,
+      pickupFeeType: (pickupFee?.type ?? 'FIXED') as PickupFeeType,
+      pickupFixedFee: pickupFee?.type === 'FIXED' ? (pickupFee.fixedFee ?? null) : null,
+      pickupFeePerKm: pickupFee?.type === 'PER_KM' ? (pickupFee.feePerKm ?? null) : null,
+      pickupFeeMinimum: pickupFee?.minimum ?? null,
       documents: {
         create: [
           ...documents.cnhFiles.map((file) => ({
@@ -373,7 +387,7 @@ export async function updateCollector(
   id: string,
   data: CollectorFormSchemaType
 ): Promise<Collector> {
-  const { pf, pj, vehicle, documents, commission, bank } = data;
+  const { pf, pj, vehicle, documents, commission, bank, pickupFee } = data;
 
   // Prepare commission data
   const commissionData =
@@ -453,6 +467,10 @@ export async function updateCollector(
       vehicleYear: vehicle.year ?? null,
       ...commissionData,
       ...bankData,
+      pickupFeeType: (pickupFee?.type ?? 'FIXED') as PickupFeeType,
+      pickupFixedFee: pickupFee?.type === 'FIXED' ? (pickupFee.fixedFee ?? null) : null,
+      pickupFeePerKm: pickupFee?.type === 'PER_KM' ? (pickupFee.feePerKm ?? null) : null,
+      pickupFeeMinimum: pickupFee?.minimum ?? null,
       documents: {
         create: [
           ...documents.cnhFiles.map((file) => ({

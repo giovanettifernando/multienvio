@@ -151,7 +151,15 @@ export const documentsSchema = z.object({
   pfAddressProofFile: z.array(fileRefSchema).optional().default([]),
 });
 
-// 5) Financeiro (PIX/Transferência + Comissão)
+// 5a) Taxa de Coleta (o que o cliente paga)
+const pickupFeeFormSchema = z.object({
+  type: z.enum(['FIXED', 'PER_KM']).default('FIXED'),
+  fixedFee: z.number().min(0).optional().nullable().default(null),
+  feePerKm: z.number().min(0).optional().nullable().default(null),
+  minimum: z.number().min(0).optional().nullable().default(null),
+}).default({ type: 'FIXED', fixedFee: null, feePerKm: null, minimum: null });
+
+// 5b) Financeiro (PIX/Transferência + Comissão)
 const requiresTwoDecimals = (value: number) => {
   if (!Number.isFinite(value)) return false;
   const normalized = Math.round(value * 100);
@@ -240,6 +248,7 @@ export const collectorFormSchema = z.object({
   documents: documentsSchema,
   bank: bankSchema,
   commission: commissionSchema,
+  pickupFee: pickupFeeFormSchema,
 });
 
 export type CollectorFormSchemaType = z.infer<typeof collectorFormSchema>;
@@ -284,6 +293,7 @@ export const publicRegistrationSchema = z.object({
   documents: documentsSchema,
   bank: bankSchema,
   commission: commissionSchema,
+  pickupFee: pickupFeeFormSchema,
 });
 
 export type PublicRegistrationSchemaType = z.infer<typeof publicRegistrationSchema>;
