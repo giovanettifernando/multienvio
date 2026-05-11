@@ -78,9 +78,6 @@ const defaultValues: CollectorFormInput = {
     amount: 0,
   },
   pickupFee: {
-    type: 'FIXED' as const,
-    fixedFee: null,
-    feePerKm: null,
     minimum: null,
   },
   bank: {
@@ -165,9 +162,6 @@ export default function CollectorDrawer({
         documents: editCollector.documents,
         commission: editCollector.commission,
         pickupFee: {
-          type: (editCollector.pickupFee?.type ?? 'FIXED') as 'FIXED' | 'PER_KM',
-          fixedFee: editCollector.pickupFee?.fixedFee ?? null,
-          feePerKm: editCollector.pickupFee?.feePerKm ?? null,
           minimum: editCollector.pickupFee?.minimum ?? null,
         },
         bank: editCollector.bank,

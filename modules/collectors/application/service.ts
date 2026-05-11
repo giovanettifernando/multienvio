@@ -350,9 +350,9 @@ export async function createCollector(data: CollectorFormSchemaType): Promise<Co
       vehicleYear: vehicle.year ?? null,
       ...commissionData,
       ...bankData,
-      pickupFeeType: (pickupFee?.type ?? 'FIXED') as PickupFeeType,
-      pickupFixedFee: pickupFee?.type === 'FIXED' ? (pickupFee.fixedFee ?? null) : null,
-      pickupFeePerKm: pickupFee?.type === 'PER_KM' ? (pickupFee.feePerKm ?? null) : null,
+      pickupFeeType: (commission.kind === 'fixa' ? 'FIXED' : 'PER_KM') as PickupFeeType,
+      pickupFixedFee: commission.kind === 'fixa' ? (commission.amount ?? null) : null,
+      pickupFeePerKm: commission.kind === 'porKm' ? (commission.amountPerKm ?? null) : null,
       pickupFeeMinimum: pickupFee?.minimum ?? null,
       documents: {
         create: [
@@ -467,9 +467,9 @@ export async function updateCollector(
       vehicleYear: vehicle.year ?? null,
       ...commissionData,
       ...bankData,
-      pickupFeeType: (pickupFee?.type ?? 'FIXED') as PickupFeeType,
-      pickupFixedFee: pickupFee?.type === 'FIXED' ? (pickupFee.fixedFee ?? null) : null,
-      pickupFeePerKm: pickupFee?.type === 'PER_KM' ? (pickupFee.feePerKm ?? null) : null,
+      pickupFeeType: (commission.kind === 'fixa' ? 'FIXED' : 'PER_KM') as PickupFeeType,
+      pickupFixedFee: commission.kind === 'fixa' ? (commission.amount ?? null) : null,
+      pickupFeePerKm: commission.kind === 'porKm' ? (commission.amountPerKm ?? null) : null,
       pickupFeeMinimum: pickupFee?.minimum ?? null,
       documents: {
         create: [

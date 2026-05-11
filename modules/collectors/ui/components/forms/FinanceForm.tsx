@@ -13,7 +13,6 @@ export default function FinanceForm() {
 
   const commissionKind = watch('commission.kind');
   const bankKind = watch('bank.kind');
-  const pickupFeeType = watch('pickupFee.type');
 
   const commissionLabel = commissionKind === 'fixa' ? 'Valor por coleta (R$)' : 'Valor por km (R$)';
   const commissionPlaceholder = commissionKind === 'fixa' ? 'R$ 7,50 por coleta' : 'R$ 1,20 por km';
@@ -98,73 +97,6 @@ export default function FinanceForm() {
             />
           )}
         </ELFormItem>
-      </div>
-
-      {/* Seção de Taxa de Coleta */}
-      <div>
-        <Title level={5}>Taxa de Coleta</Title>
-        <ELFormItem label="Tipo de taxa">
-          <ELSegmented
-            value={pickupFeeType ?? 'FIXED'}
-            onChange={(value) => {
-              setValue('pickupFee.type', value as 'FIXED' | 'PER_KM', { shouldDirty: true });
-              setValue('pickupFee.fixedFee', null, { shouldDirty: true });
-              setValue('pickupFee.feePerKm', null, { shouldDirty: true });
-            }}
-            options={[
-              { label: 'Valor fixo por coleta', value: 'FIXED' },
-              { label: 'Valor por quilômetro', value: 'PER_KM' },
-            ]}
-          />
-        </ELFormItem>
-
-        {pickupFeeType === 'FIXED' || !pickupFeeType ? (
-          <ELFormItem label="Valor por coleta (R$)" help="Valor cobrado do cliente por coleta">
-            <Controller
-              name="pickupFee.fixedFee"
-              control={control}
-              render={({ field }) => (
-                <InputNumber
-                  {...field}
-                  value={field.value ?? undefined}
-                  onChange={(v) => field.onChange(v ?? null)}
-                  min={0}
-                  step={0.01}
-                  precision={2}
-                  prefix="R$"
-                  decimalSeparator=","
-                  formatter={inputNumberFormatterBRL}
-                  parser={inputNumberParserBRL}
-                  placeholder="R$ 15,00"
-                  style={{ width: 220 }}
-                />
-              )}
-            />
-          </ELFormItem>
-        ) : (
-          <ELFormItem label="Valor por km (R$)" help="Valor cobrado do cliente por quilômetro">
-            <Controller
-              name="pickupFee.feePerKm"
-              control={control}
-              render={({ field }) => (
-                <InputNumber
-                  {...field}
-                  value={field.value ?? undefined}
-                  onChange={(v) => field.onChange(v ?? null)}
-                  min={0}
-                  step={0.01}
-                  precision={2}
-                  prefix="R$"
-                  decimalSeparator=","
-                  formatter={inputNumberFormatterBRL}
-                  parser={inputNumberParserBRL}
-                  placeholder="R$ 1,50"
-                  style={{ width: 220 }}
-                />
-              )}
-            />
-          </ELFormItem>
-        )}
 
         <ELFormItem label="Taxa mínima (R$)" help="Valor mínimo cobrado, independente da distância">
           <Controller

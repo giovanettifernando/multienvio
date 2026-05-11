@@ -151,13 +151,10 @@ export const documentsSchema = z.object({
   pfAddressProofFile: z.array(fileRefSchema).optional().default([]),
 });
 
-// 5a) Taxa de Coleta (o que o cliente paga)
+// 5a) Taxa mínima de coleta (piso; tipo e valor derivados do modelo de comissão)
 const pickupFeeFormSchema = z.object({
-  type: z.enum(['FIXED', 'PER_KM']).default('FIXED'),
-  fixedFee: z.number().min(0).optional().nullable().default(null),
-  feePerKm: z.number().min(0).optional().nullable().default(null),
   minimum: z.number().min(0).optional().nullable().default(null),
-}).default({ type: 'FIXED', fixedFee: null, feePerKm: null, minimum: null });
+}).default({ minimum: null });
 
 // 5b) Financeiro (PIX/Transferência + Comissão)
 const requiresTwoDecimals = (value: number) => {
