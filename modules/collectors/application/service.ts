@@ -320,6 +320,7 @@ export async function createCollector(data: CollectorFormSchemaType): Promise<Co
   const dbCollector = await prisma.collector.create({
     data: {
       status: 'ACTIVE',
+      pfEmailVerified: true,
       pfNome: pf.nome,
       pfCpf: pf.cpf.replace(/\D/g, ''),
       pfEmail: pf.email,
