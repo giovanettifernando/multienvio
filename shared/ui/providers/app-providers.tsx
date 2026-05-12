@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, type PropsWithChildren } from "react";
-import { usePathname } from "next/navigation";
 import { App } from 'antd';
 import {
   QueryClient,
@@ -9,7 +8,6 @@ import {
   QueryCache,
   MutationCache,
 } from "@tanstack/react-query";
-import { AssistantChat } from "@/modules/assistant/ui/components";
 
 // Flag para evitar múltiplos redirects simultâneos
 let isRedirecting = false;
@@ -51,9 +49,6 @@ function handleAuthError(error: unknown) {
 }
 
 export function AppProviders({ children }: PropsWithChildren) {
-  const pathname = usePathname();
-  const isAdminRoute = pathname?.startsWith("/admin") ?? false;
-
   const [queryClient] = useState(
     () =>
       new QueryClient({
@@ -93,8 +88,8 @@ export function AppProviders({ children }: PropsWithChildren) {
   return (
     <QueryClientProvider client={queryClient}>
       <App>{children}</App>
-      {/* AssistantChat só para área do cliente, não para admin */}
-      {!isAdminRoute && <AssistantChat />}
+      {/* AssistantChat desabilitado temporariamente */}
+      {/* {!isAdminRoute && <AssistantChat />} */}
       {/* ReactQueryDevtools disabled due to Next.js 15 compatibility issue */}
       {/* {process.env.NODE_ENV === "development" ? (
         <ReactQueryDevtools initialIsOpen={false} />

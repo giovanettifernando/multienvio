@@ -457,24 +457,43 @@ function ConfigTab() {
         style={{ marginBottom: 16, borderColor: '#1890ff33' }}
         headStyle={{ background: '#e6f7ff' }}
       >
-        <Form.Item
-          name="shippingCommissionPercent"
-          label="Percentual de comissao (%)"
-          extra="Percentual aplicado sobre o valor do frete nas cotacoes dos Correios"
-          rules={[
-            { type: 'number', min: 0, message: 'Comissao nao pode ser negativa' },
-            { type: 'number', max: 100, message: 'Comissao nao pode exceder 100%' },
-          ]}
-        >
-          <InputNumber
-            min={0}
-            max={100}
-            precision={2}
-            step={0.5}
-            style={{ width: 150 }}
-            addonAfter="%"
-          />
-        </Form.Item>
+        <Space align="start" wrap>
+          <Form.Item
+            name="shippingCommissionPercent"
+            label="Percentual de comissao (%)"
+            extra="Percentual aplicado sobre o valor do frete nas cotacoes dos Correios"
+            rules={[
+              { type: 'number', min: 0, message: 'Comissao nao pode ser negativa' },
+              { type: 'number', max: 100, message: 'Comissao nao pode exceder 100%' },
+            ]}
+          >
+            <InputNumber
+              min={0}
+              max={100}
+              precision={2}
+              step={0.5}
+              style={{ width: 150 }}
+              addonAfter="%"
+            />
+          </Form.Item>
+          <Form.Item
+            name="shippingCommissionPercent2"
+            label="Percentual de Comissão (%)"
+            rules={[
+              { type: 'number', min: 0, message: 'Nao pode ser negativo' },
+              { type: 'number', max: 100, message: 'Nao pode exceder 100%' },
+            ]}
+          >
+            <InputNumber
+              min={0}
+              max={100}
+              precision={2}
+              step={0.5}
+              style={{ width: 150 }}
+              addonAfter="%"
+            />
+          </Form.Item>
+        </Space>
 
         {/* Simulador */}
         <Divider style={{ margin: '12px 0' }} />

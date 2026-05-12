@@ -36,7 +36,7 @@ export function InsuranceInput({ control }: InsuranceInputProps) {
           <div>
             <Flex align="center" gap={8}>
               <Flex align="center" gap={4}>
-                <Tooltip title="Mínimo R$ 25,63 (somente SEDEX). PAC não aceita seguro.">
+                <Tooltip title="Valor que será coberto pelo seguro">
                   <QuestionCircleOutlined style={{ fontSize: 12, color: "#667085", cursor: "help" }} />
                 </Tooltip>
                 <Text style={{ fontSize: 13 }}>Valor do seguro</Text>

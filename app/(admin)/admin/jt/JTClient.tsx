@@ -281,17 +281,30 @@ function ConfigTab({ config, form, onSave, saving }: {
       </Form.Item>
 
       {/* Comissão */}
-      <Form.Item label="Comissão sobre frete (%)" name="shippingCommissionPercent">
-        <InputNumber
-          min={0}
-          max={100}
-          precision={2}
-          formatter={inputNumberFormatterBRL}
-          parser={inputNumberParserBRL}
-          style={{ width: 200 }}
-          placeholder="Ex: 10.00"
-        />
-      </Form.Item>
+      <Space align="start" wrap>
+        <Form.Item label="Comissão sobre frete (%)" name="shippingCommissionPercent">
+          <InputNumber
+            min={0}
+            max={100}
+            precision={2}
+            formatter={inputNumberFormatterBRL}
+            parser={inputNumberParserBRL}
+            style={{ width: 200 }}
+            placeholder="Ex: 10.00"
+          />
+        </Form.Item>
+        <Form.Item label="Percentual de Comissão (%)" name="shippingCommissionPercent2">
+          <InputNumber
+            min={0}
+            max={100}
+            precision={2}
+            formatter={inputNumberFormatterBRL}
+            parser={inputNumberParserBRL}
+            style={{ width: 200 }}
+            placeholder="Ex: 10.00"
+          />
+        </Form.Item>
+      </Space>
 
       {/* Ambiente ativo */}
       <Form.Item label="Ambiente ativo" name="activeEnvironment">
