@@ -177,6 +177,28 @@ a {
   background: transparent;
 }
 
+/* Center label text vertically with input in horizontal form items */
+.ant-form-item-horizontal .ant-form-item-row {
+  align-items: center;
+}
+
+/* Collector detail tabs: stretch to fill full width, no overflow button */
+@media (min-width: 577px) {
+  .collector-detail-tabs .ant-tabs-nav-list {
+    width: 100%;
+  }
+
+  .collector-detail-tabs .ant-tabs-tab {
+    flex: 1;
+    justify-content: center;
+    margin: 0 !important;
+  }
+
+  .collector-detail-tabs .ant-tabs-nav-more {
+    display: none !important;
+  }
+}
+
 /* === App Header (Legacy - manter compatibilidade) === */
 .app-header {
   height: 64px;

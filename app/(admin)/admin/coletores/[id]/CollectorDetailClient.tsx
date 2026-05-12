@@ -151,6 +151,9 @@ export default function CollectorDetailClient() {
         documents: collector.documents,
         commission: collector.commission,
         bank: collector.bank,
+        pickupFee: {
+          minimum: collector.pickupFee?.minimum ?? null,
+        },
       });
 
       setCnhFiles(collector.documents.cnhFiles.map((f) => ({ ...f, status: "done" as const })));
@@ -280,21 +283,31 @@ export default function CollectorDetailClient() {
     setSaveLoading(true);
     try {
       await processUploads();
-      await handleSubmit(async (formData: CollectorFormData) => {
-        const res = await fetch(`/api/admin/coletores/${collectorId}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(formData),
-        });
+      await handleSubmit(
+        async (formData: CollectorFormData) => {
+          const res = await fetch(`/api/admin/coletores/${collectorId}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(formData),
+          });
 
-        if (!res.ok) {
-          const result = await res.json();
-          throw new Error(result.message || "Erro ao salvar coletor");
+          if (!res.ok) {
+            const result = await res.json();
+            throw new Error(result.message || "Erro ao salvar coletor");
+          }
+
+          message.success("Coletor atualizado com sucesso");
+          refetch();
+        },
+        (errors) => {
+          console.error("[CollectorDetail] Erros de validação:", JSON.stringify(errors, null, 2));
+          const firstMsg = Object.values(errors).flatMap((e: unknown) => {
+            const err = e as { message?: string; [key: string]: unknown };
+            return err?.message ? [err.message] : Object.values(err ?? {}).map((v: unknown) => (v as { message?: string })?.message).filter(Boolean);
+          })[0];
+          message.error(firstMsg ? `Erro de validação: ${firstMsg}` : "Preencha todos os campos obrigatórios");
         }
-
-        message.success("Coletor atualizado com sucesso");
-        refetch();
-      })();
+      )();
     } catch (err) {
       message.error(err instanceof Error ? err.message : "Erro ao salvar coletor");
     } finally {
@@ -574,7 +587,7 @@ export default function CollectorDetailClient() {
           <Col xs={24} lg={18}>
             <Card>
               <Spin spinning={saveLoading}>
-                <Tabs items={tabItems} defaultActiveKey="pf" />
+                <Tabs items={tabItems} defaultActiveKey="pf" className="collector-detail-tabs" />
                 <Divider />
                 <div style={{ textAlign: "right" }}>
                   <Button

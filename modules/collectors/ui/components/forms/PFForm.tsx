@@ -457,13 +457,7 @@ export default function PFForm({ showPassword = false }: PFFormProps) {
               )}
             />
           </Form.Item>
-        </Col>
-
-        <Col xs={24} md={16}>
-          <Form.Item
-            validateStatus={errors.pf?.usarMesmoNumero ? 'error' : ''}
-            style={{ marginTop: 30 }}
-          >
+          <div style={{ marginTop: -8, marginBottom: 24 }}>
             <Controller
               name="pf.usarMesmoNumero"
               control={control}
@@ -476,7 +470,7 @@ export default function PFForm({ showPassword = false }: PFFormProps) {
                 </Checkbox>
               )}
             />
-          </Form.Item>
+          </div>
         </Col>
       </Row>
 
