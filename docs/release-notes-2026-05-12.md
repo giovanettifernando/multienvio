@@ -129,6 +129,36 @@ Resumo das alterações entregues neste ciclo, prontas para apresentação em re
 
 ---
 
+## 11. Melhoria: Limite de Volumes por Envio
+
+**O que mudou:** O número máximo de volumes por cotação foi reduzido de 10 para 3. Ao tentar adicionar um 4º volume (manualmente ou via importação), o sistema exibe uma mensagem orientando o usuário a finalizar o envio atual e criar uma nova cotação para os volumes restantes.
+
+**Arquivos alterados:**
+- `modules/quotes/ui/components/quoteFormSchema.ts` — `MAX_VOLUMES` alterado para 3
+- `modules/quotes/ui/components/QuoteForm.tsx` — mensagens de erro no `handleAddVolume` e `handleImportVolumes`
+
+---
+
+## 12. Melhoria: Aviso de Dimensões Mínimas dos Correios
+
+**O que mudou:** Uma mensagem informativa — *"As dimensões mínimas dos Correios são 15 x 15 x 16 cm"* — foi adicionada acima do botão "Calcular" no painel de resultados da cotação, antes de qualquer cálculo ser feito.
+
+**Arquivo alterado:**
+- `modules/quotes/ui/components/QuoteResultsSection.tsx`
+
+---
+
+## 13. Correção: Ponto de Coleta Deixa de Ser Obrigatório
+
+**O que era:** Ao finalizar um pedido, o sistema bloqueava o checkout com o erro *"Selecione um ponto de coleta ou ative a opção de coleta na origem"* mesmo em fluxos onde o ponto de coleta não era aplicável.
+
+**O que mudou:** A obrigatoriedade do ponto de coleta foi removida do checkout. O usuário pode finalizar o pedido sem selecionar um ponto de coleta.
+
+**Arquivo alterado:**
+- `app/(envio)/cotacoes/finalizar/FinalizarClient.tsx`
+
+---
+
 ## Utilitário: Endpoint de Teste para Taxa de Coleta
 
 > *Disponível apenas fora de produção (`APP_ENV !== 'production'`)*
