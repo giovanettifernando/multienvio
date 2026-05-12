@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const MAX_VOLUMES = 10;
+export const MAX_VOLUMES = 3;
 const cepRegex = /^\d{5}-?\d{3}$/;
 
 export const volumeSchema = z.object({

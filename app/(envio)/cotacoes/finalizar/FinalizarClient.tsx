@@ -510,7 +510,7 @@ export default function FinalizarClient() {
       results: !!results,
       summary: !!summary,
       volumes: !!(summary?.volumes && summary.volumes.length > 0),
-      pickupPoint: pickupAtOrigin || !!pickupPointId,
+      pickupPoint: true,
       documentItems: hasAtLeastOneDocumentItem,
     };
 
@@ -554,7 +554,6 @@ export default function FinalizarClient() {
 
     if (!checks.selection || !checks.results || !checks.summary) return false;
     if (!checks.volumes) return false;
-    if (!checks.pickupPoint) return false;
     if (!checks.documentItems) return false;
     if (!canProceed) return false;
 
@@ -592,10 +591,6 @@ export default function FinalizarClient() {
     // Aguardando preparação do checkout
     if (isReservingCode || !reservedTrackingCode) {
       return "Preparando...";
-    }
-
-    if (!pickupAtOrigin && !pickupPointId) {
-      return "Selecione um ponto de coleta ou ative a opção de coleta na origem.";
     }
 
     // Verificar dados do destinatário
@@ -1087,12 +1082,6 @@ export default function FinalizarClient() {
         // Não bloquear o checkout se o salvamento falhar
         message.warning('Continuando checkout, mas não foi possível salvar o destinatário.');
       }
-    }
-
-    // Validar pickup point se não houver coleta na origem
-    if (!pickupAtOrigin && !pickupPointId) {
-      message.error("Selecione um ponto de coleta ou ative a opção de coleta na origem.");
-      return;
     }
 
       // Calcular total incluindo taxa de coleta se aplicável

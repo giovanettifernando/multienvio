@@ -366,7 +366,10 @@ export function QuoteResultsSection({
           <Typography.Title level={5} style={{ marginBottom: 0 }}>
             Resultados da cotação
           </Typography.Title>
-          <div style={{ display: "flex", justifyContent: "center", flex: 1, alignItems: "center", minHeight: 200 }}>
+          <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", minHeight: 200, gap: 12 }}>
+            <Typography.Text type="secondary" style={{ fontSize: 13 }}>
+              As dimensões mínimas dos Correios são 15 x 15 x 16 cm
+            </Typography.Text>
             <ELButton
               variant="primary"
               size="large"

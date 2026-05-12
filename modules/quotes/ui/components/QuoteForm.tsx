@@ -543,7 +543,10 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
 
   const handleAddVolume = useCallback(() => {
     if (fields.length >= MAX_VOLUMES) {
-      message.info(`Limite máximo de ${MAX_VOLUMES} volumes por cotação atingido.`);
+      message.warning(
+        `Este envio suporta no máximo ${MAX_VOLUMES} volumes. Para enviar mais volumes, finalize este envio normalmente e crie uma nova cotação para os volumes restantes.`,
+        6,
+      );
       return;
     }
     append(createEmptyVolume());
@@ -564,6 +567,13 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
 
   const handleImportVolumes = useCallback(
     (importedVolumes: { comprimentoCm: number; larguraCm: number; alturaCm: number; pesoKg: number }[]) => {
+      if (importedVolumes.length > MAX_VOLUMES) {
+        message.warning(
+          `Este envio suporta no máximo ${MAX_VOLUMES} volumes. Foram importados ${importedVolumes.length} volumes — finalize este envio com os primeiros ${MAX_VOLUMES} e crie uma nova cotação para os restantes.`,
+          6,
+        );
+        return;
+      }
       const newVolumes = importedVolumes.map((v) => ({
         id: generateUUID(),
         comprimentoCm: v.comprimentoCm,
@@ -573,7 +583,7 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
       }));
       replace(newVolumes);
     },
-    [replace],
+    [replace, message],
   );
 
   const applyReverseUI = useCallback((next: boolean) => {
