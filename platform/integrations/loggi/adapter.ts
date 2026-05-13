@@ -64,52 +64,47 @@ function quotationToLabel(quotation: LoggiQuotation): string {
   return base;
 }
 
-/**
- * Converte uma quotation da Loggi para QuoteResultItem
- */
-function loggiQuotationToQuoteResult(quotation: LoggiQuotation): QuoteResultItem | null {
-  const totalAmount = quotation.price?.totalAmount;
-  if (!totalAmount) return null;
-
-  const preco = loggiMoneyToReais(totalAmount);
-  if (preco <= 0) return null;
-
-  return {
-    id: quotationToServiceId(quotation.freightType, quotation.pickupType),
-    carrier: LOGGI_CARRIER_NAME,
-    modalidade: quotationToLabel(quotation),
-    prazoDias: quotation.sloInDays || 0,
-    preco,
-    exigeSeguro: false,
-    source: 'real',
-    externalServiceId: quotation.externalServiceId,
-  };
-}
 
 /**
  * Converte resposta completa de cotação da Loggi para QuoteResultItem[]
+ *
+ * A API retorna um preço por pacote (packagesQuotations[i] = pacote i).
+ * Agrupa por tipo de serviço e soma os preços para obter o total do envio.
  */
 export function loggiQuotationToQuoteResults(
   response: LoggiQuoteResponse
 ): QuoteResultItem[] {
-  const results: QuoteResultItem[] = [];
-
   if (!response.packagesQuotations || response.packagesQuotations.length === 0) {
-    return results;
+    return [];
   }
 
-  // Usar quotations do primeiro pacote (agregadas pela API)
-  const firstPackage = response.packagesQuotations[0];
-  if (!firstPackage?.quotations) return results;
+  const grouped = new Map<string, { quotation: LoggiQuotation; totalPreco: number }>();
 
-  for (const quotation of firstPackage.quotations) {
-    const result = loggiQuotationToQuoteResult(quotation);
-    if (result) {
-      results.push(result);
+  for (const pkg of response.packagesQuotations) {
+    for (const quotation of (pkg.quotations ?? [])) {
+      const preco = loggiMoneyToReais(quotation.price?.totalAmount);
+      if (preco <= 0) continue;
+
+      const key = `${quotation.freightType}:${quotation.pickupType}`;
+      const existing = grouped.get(key);
+      if (existing) {
+        existing.totalPreco += preco;
+      } else {
+        grouped.set(key, { quotation, totalPreco: preco });
+      }
     }
   }
 
-  return results;
+  return [...grouped.values()].map(({ quotation, totalPreco }) => ({
+    id: quotationToServiceId(quotation.freightType, quotation.pickupType),
+    carrier: LOGGI_CARRIER_NAME,
+    modalidade: quotationToLabel(quotation),
+    prazoDias: quotation.sloInDays || 0,
+    preco: totalPreco,
+    exigeSeguro: false,
+    source: 'real' as const,
+    externalServiceId: quotation.externalServiceId,
+  }));
 }
 
 // ============================================================================
