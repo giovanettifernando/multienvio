@@ -69,12 +69,12 @@ async function getTEConfigFromDB(): Promise<TEConfig | null> {
 
     let remetenteId = '';
     if (customData.remetenteId) {
-      try { remetenteId = decrypt(customData.remetenteId as string); } catch { remetenteId = customData.remetenteId as string; }
+      try { remetenteId = decrypt(customData.remetenteId as string); } catch { /* ignore */ }
     }
 
     let cnpj = '';
     if (customData.cnpj) {
-      try { cnpj = decrypt(customData.cnpj as string); } catch { cnpj = customData.cnpj as string; }
+      try { cnpj = decrypt(customData.cnpj as string); } catch { /* ignore */ }
     }
 
     const config: TEConfig = {
@@ -227,6 +227,15 @@ export interface TESoapResult {
   Retorno: string;
 }
 
+function escapeXml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
 function buildSoapEnvelope(params: TESoapParams): string {
   return `<?xml version="1.0" encoding="UTF-8"?>
 <SOAP-ENV:Envelope
@@ -234,10 +243,10 @@ function buildSoapEnvelope(params: TESoapParams): string {
   xmlns:ns1="${TE_SOAP_NAMESPACE}">
   <SOAP-ENV:Body>
     <ns1:CalcFrete>
-      <Remetente_ID>${params.Remetente_ID}</Remetente_ID>
-      <CEP_Origem>${params.CEP_Origem}</CEP_Origem>
-      <CEP_Destino>${params.CEP_Destino}</CEP_Destino>
-      <Tipo_Servico>${params.Tipo_Servico}</Tipo_Servico>
+      <Remetente_ID>${escapeXml(params.Remetente_ID)}</Remetente_ID>
+      <CEP_Origem>${escapeXml(params.CEP_Origem)}</CEP_Origem>
+      <CEP_Destino>${escapeXml(params.CEP_Destino)}</CEP_Destino>
+      <Tipo_Servico>${escapeXml(params.Tipo_Servico)}</Tipo_Servico>
       <Peso>${params.Peso}</Peso>
       <Comp>${params.Comp}</Comp>
       <Larg>${params.Larg}</Larg>
@@ -351,7 +360,7 @@ export async function testTEAuth(): Promise<TEAuthTestResult> {
   } catch (error) {
     return {
       success: false,
-      message: 'Falha na autenticação',
+      message: error instanceof Error ? error.message : 'Falha na autenticação',
       error: error instanceof Error ? error.message : String(error),
       latencyMs: Date.now() - startTime,
     };
