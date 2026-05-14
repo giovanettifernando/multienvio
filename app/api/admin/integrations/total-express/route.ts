@@ -72,7 +72,7 @@ function processCredentials(
       const decrypted = decrypt(customData.remetenteId as string);
       remetenteId = shouldReveal ? decrypted : (decrypted.length > 0 ? '***' : '');
     } catch {
-      remetenteId = customData.remetenteId as string;
+      /* ignore */
     }
   }
 
@@ -82,7 +82,7 @@ function processCredentials(
       const decrypted = decrypt(customData.cnpj as string);
       cnpj = shouldReveal ? decrypted : (decrypted.length > 0 ? '***' : '');
     } catch {
-      cnpj = customData.cnpj as string;
+      /* ignore */
     }
   }
 
@@ -210,7 +210,7 @@ export const POST = withApiHandler<Record<string, unknown>>(async ({ req }) => {
   });
 
   invalidateTEConfigCache();
-  if (carrier) invalidateCarrierCommissionCache(TE_CARRIER_SLUG);
+  invalidateCarrierCommissionCache(TE_CARRIER_SLUG);
 
   if (!carrier) {
     throw new ApiError({ code: 'INTERNAL_ERROR', message: 'Erro ao criar/atualizar carrier', status: 500 });
