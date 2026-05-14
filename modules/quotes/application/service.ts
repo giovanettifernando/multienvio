@@ -262,6 +262,42 @@ async function calculateShippingOptions(
     });
   }
 
+  // Total Express
+  const teEligibility = eligibility.carriers.find(
+    (c) => c.carrierId === 'total-express'
+  );
+
+  if (teEligibility?.isEligible) {
+    const { isTotalExpressAvailableAsync, quoteFromTotalExpress } = await import(
+      '@/platform/integrations/total-express'
+    );
+    const isAvailable = await isTotalExpressAvailableAsync();
+
+    if (isAvailable) {
+      try {
+        const teResult = await quoteFromTotalExpress(request);
+
+        if (teResult.results.length > 0) {
+          results.push(...teResult.results);
+        }
+
+        console.info(`[QUOTE][${requestId}] Total Express quote completed`, {
+          results: teResult.results.length,
+        });
+      } catch (error) {
+        console.error(`[QUOTE][${requestId}] Total Express quote failed`, {
+          error: error instanceof Error ? error.message : 'Unknown error',
+        });
+      }
+    } else {
+      console.warn(`[QUOTE][${requestId}] Total Express not configured`);
+    }
+  } else if (teEligibility) {
+    console.info(`[QUOTE][${requestId}] Total Express not eligible`, {
+      reasons: teEligibility.overallReasons || [],
+    });
+  }
+
   const duration = Date.now() - startTime;
   console.info(`[QUOTE][${requestId}] Quote completed (${duration}ms)`, {
     totalResults: results.length,
