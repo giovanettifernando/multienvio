@@ -8,9 +8,10 @@ import { TE_VOLUME_RULES, TE_CARRIER_SLUG, TE_CARRIER_NAME } from './constants';
 
 export function computeTEVolumeValues(volume: VolumeInput): VolumeComputedValues {
   const pesoRealKg = volume.pesoKg;
-  const pesoCubadoKg =
+  const pesoCubadoKgRaw =
     (volume.comprimentoCm * volume.larguraCm * volume.alturaCm) /
     TE_VOLUME_RULES.CUBAGE_FACTOR;
+  const pesoCubadoKg = Math.round(pesoCubadoKgRaw * 10000) / 10000;
   const chargeableWeightKg = Math.max(pesoRealKg, pesoCubadoKg);
 
   const dims = [volume.comprimentoCm, volume.larguraCm, volume.alturaCm].sort(
@@ -43,9 +44,9 @@ export class TotalExpressVolumeValidator implements CarrierVolumeValidator {
       reasons.push('Peso deve ser maior que zero');
     }
 
-    if (computed.chargeableWeightKg > TE_VOLUME_RULES.MAX_PESO_KG) {
+    if (computed.chargeableWeightKg > TE_VOLUME_RULES.MAX_CHARGEABLE_WEIGHT_KG) {
       reasons.push(
-        `Peso para cobrança (${computed.chargeableWeightKg.toFixed(2)}kg) excede ${TE_VOLUME_RULES.MAX_PESO_KG}kg (Total Express)`
+        `Peso para cobrança (${computed.chargeableWeightKg.toFixed(2)}kg) excede ${TE_VOLUME_RULES.MAX_CHARGEABLE_WEIGHT_KG}kg (Total Express)`
       );
     }
 

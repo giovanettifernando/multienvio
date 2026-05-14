@@ -65,8 +65,8 @@ export type TEDeliveryType = (typeof TE_DELIVERY_TYPES)[keyof typeof TE_DELIVERY
 // ============================================================================
 
 export const TE_VOLUME_RULES = {
-  /** Peso máximo real em kg */
-  MAX_PESO_KG: 30,
+  /** Peso máximo para cobrança em kg */
+  MAX_CHARGEABLE_WEIGHT_KG: 30,
   /** Maior lado máximo em cm */
   MAX_LADO_CM: 70,
   /** Soma dos lados máxima em cm */

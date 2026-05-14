@@ -19,6 +19,9 @@ export async function cotarTE(input: TECotacaoInput): Promise<TECotacaoResult[]>
   if (cepOrigem.length !== 8) throw new TEApiError('VALIDATION', `CEP origem inválido: ${input.cepOrigem}`);
   if (cepDestino.length !== 8) throw new TEApiError('VALIDATION', `CEP destino inválido: ${input.cepDestino}`);
   if (input.pesoG <= 0) throw new TEApiError('VALIDATION', 'Peso deve ser maior que zero');
+  if (input.comprimentoCm <= 0 || input.larguraCm <= 0 || input.alturaCm <= 0) {
+    throw new TEApiError('VALIDATION', 'Dimensões devem ser maiores que zero');
+  }
 
   const config = await getTEConfigAsync();
 
