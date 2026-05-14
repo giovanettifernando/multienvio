@@ -53,9 +53,13 @@ export interface TEAddress {
 }
 
 export interface TEVolume {
-  peso: number;
+  /** Peso em gramas */
+  pesoG: number;
+  /** Comprimento em cm */
   comprimento: number;
+  /** Largura em cm */
   largura: number;
+  /** Altura em cm */
   altura: number;
 }
 
@@ -68,15 +72,16 @@ export interface TENotaFiscal {
 }
 
 export interface TESmartLabelRequest {
-  tipo_servico: string;
-  tipo_entrega: string;
+  tipoServico: string;
+  tipoEntrega: string;
   remetente: TEAddress;
   destinatario: TEAddress;
   volumes: TEVolume[];
   conteudo?: string;
-  nota_fiscal?: TENotaFiscal;
-  numero_pedido?: string;
-  valor_declarado?: number;
+  notaFiscal?: TENotaFiscal;
+  numeroPedido?: string;
+  /** Valor declarado em reais */
+  valorDeclarado?: number;
 }
 
 export interface TESmartLabelVolumeResponse {
@@ -106,8 +111,8 @@ export interface TETrackingEvent {
 
 export interface TETrackingPackage {
   awb: string;
-  status_atual: string;
-  previsao_entrega?: string;
+  statusAtual: string;
+  previsaoEntrega?: string;
   eventos: TETrackingEvent[];
 }
 

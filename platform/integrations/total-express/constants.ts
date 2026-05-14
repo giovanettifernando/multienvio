@@ -57,6 +57,8 @@ export const TE_DELIVERY_TYPES = {
   NORMAL: 'D',
 } as const;
 
+export type TEDeliveryType = (typeof TE_DELIVERY_TYPES)[keyof typeof TE_DELIVERY_TYPES];
+
 // ============================================================================
 // Limites de Volumes
 // Adjust these if the PDF specifies different limits.
