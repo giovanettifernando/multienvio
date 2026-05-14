@@ -22,6 +22,7 @@ import type {
 import { correiosVolumeValidator } from '../correios/correios-volume-validator';
 import { jtVolumeValidator } from '../jt/jt-volume-validator';
 import { loggiVolumeValidator } from '../loggi/loggi-volume-validator';
+import { totalExpressVolumeValidator } from '../total-express/total-express-volume-validator';
 
 // ============================================================================
 // Serviço de Elegibilidade
@@ -35,6 +36,7 @@ export class EligibilityService {
     this.registerValidator(correiosVolumeValidator);
     this.registerValidator(jtVolumeValidator);
     this.registerValidator(loggiVolumeValidator);
+    this.registerValidator(totalExpressVolumeValidator);
   }
 
   /**
