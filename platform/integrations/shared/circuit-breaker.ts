@@ -293,3 +293,11 @@ export const loggiCircuitBreaker = new CircuitBreaker({
   successThreshold: 1,
   callTimeoutMs: 30000,
 });
+
+export const totalExpressCircuitBreaker = new CircuitBreaker({
+  name: 'total-express',
+  failureThreshold: 5,
+  resetTimeoutMs: 15000,
+  successThreshold: 1,
+  callTimeoutMs: 30000,
+});
