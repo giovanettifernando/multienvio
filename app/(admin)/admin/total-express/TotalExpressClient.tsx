@@ -103,7 +103,7 @@ export default function TotalExpressClient() {
   const [form] = Form.useForm();
   const [activeTab, setActiveTab] = useState('config');
   const [testResult, setTestResult] = useState<TestResult | null>(null);
-  const [testLoading, setTestLoading] = useState(false);
+  const [loadingType, setLoadingType] = useState<string | null>(null);
   const [quoteForm] = Form.useForm();
   const [trackingForm] = Form.useForm();
 
@@ -169,7 +169,7 @@ export default function TotalExpressClient() {
   };
 
   const handleTest = async (type: string, payload?: Record<string, unknown>) => {
-    setTestLoading(true);
+    setLoadingType(type);
     setTestResult(null);
     try {
       const result = await runTest({ type, ...payload });
@@ -181,7 +181,7 @@ export default function TotalExpressClient() {
         message: err instanceof Error ? err.message : 'Erro desconhecido',
       });
     } finally {
-      setTestLoading(false);
+      setLoadingType(null);
     }
   };
 
@@ -271,6 +271,11 @@ export default function TotalExpressClient() {
                 />
               </Form.Item>
             </Col>
+            <Col span={12}>
+              <Form.Item name="carrierIconPath" label="URL do ícone do carrier">
+                <Input placeholder="https://..." />
+              </Form.Item>
+            </Col>
           </Row>
 
           <Button
@@ -295,7 +300,7 @@ export default function TotalExpressClient() {
           <Button
             type="primary"
             icon={<CloudOutlined />}
-            loading={testLoading}
+            loading={loadingType === 'auth'}
             onClick={() => handleTest('auth')}
           >
             Testar autenticação
@@ -308,7 +313,7 @@ export default function TotalExpressClient() {
               description={
                 <Space direction="vertical">
                   <Text>{testResult.message}</Text>
-                  {testResult.latencyMs && <Text type="secondary">Latência: {testResult.latencyMs}ms</Text>}
+                  {testResult.latencyMs != null && <Text type="secondary">Latência: {testResult.latencyMs}ms</Text>}
                   {!testResult.success && !!testResult.error && (
                     <pre style={{ fontSize: 12, maxHeight: 200, overflow: 'auto' }}>
                       {JSON.stringify(testResult.error, null, 2)}
@@ -363,7 +368,7 @@ export default function TotalExpressClient() {
             <Button
               type="primary"
               icon={<SearchOutlined />}
-              loading={testLoading}
+              loading={loadingType === 'quote'}
               onClick={async () => {
                 const values = await quoteForm.validateFields();
                 handleTest('quote', {
@@ -406,7 +411,7 @@ export default function TotalExpressClient() {
             <Button
               type="primary"
               icon={<SearchOutlined />}
-              loading={testLoading}
+              loading={loadingType === 'tracking'}
               onClick={async () => {
                 const values = await trackingForm.validateFields();
                 handleTest('tracking', { awb: values.awb });
@@ -457,6 +462,15 @@ export default function TotalExpressClient() {
             type="warning"
             icon={<WarningOutlined />}
             message="Falha ao descriptografar senha de produção — reconfigure as credenciais"
+            showIcon
+          />
+        )}
+
+        {config?.sandbox?.passwordDecryptionFailed && (
+          <Alert
+            type="warning"
+            icon={<WarningOutlined />}
+            message="Falha ao descriptografar senha de homologação — reconfigure as credenciais"
             showIcon
           />
         )}
