@@ -364,6 +364,11 @@ export default function TotalExpressClient() {
                   <InputNumber min={1} style={{ width: '100%' }} placeholder="10" />
                 </Form.Item>
               </Col>
+              <Col span={6}>
+                <Form.Item name="valorDeclarado" label="Valor declarado (R$)">
+                  <InputNumber min={0.01} step={0.01} style={{ width: '100%' }} placeholder="100.00" />
+                </Form.Item>
+              </Col>
             </Row>
             <Button
               type="primary"
@@ -378,6 +383,7 @@ export default function TotalExpressClient() {
                   comprimentoCm: values.comprimentoCm || 20,
                   larguraCm: values.larguraCm || 15,
                   alturaCm: values.alturaCm || 10,
+                  valorDeclarado: values.valorDeclarado || undefined,
                 });
               }}
             >

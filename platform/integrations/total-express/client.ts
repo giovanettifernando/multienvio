@@ -225,7 +225,9 @@ export interface TESoapParams {
 export interface TESoapResult {
   Prazo: number;
   ValorServico: number;
-  Retorno: string;
+  CodigoProc: number;
+  ErroConsultaFrete?: string;
+  Rota?: string;
 }
 
 function escapeXml(value: string): string {
@@ -251,7 +253,7 @@ function buildSoapEnvelope(params: TESoapParams): string {
         <TipoServico xsi:type="xsd:string">${escapeXml(params.TipoServico)}</TipoServico>
         <CepDestino xsi:type="xsd:nonNegativeInteger">${escapeXml(params.CepDestino)}</CepDestino>
         <Peso xsi:type="xsd:string">${escapeXml(params.Peso)}</Peso>
-        <ValorDeclarado xsi:type="xsd:string">${escapeXml(params.ValorDeclarado ?? '0.00')}</ValorDeclarado>
+        ${params.ValorDeclarado ? `<ValorDeclarado xsi:type="xsd:string">${escapeXml(params.ValorDeclarado)}</ValorDeclarado>` : ''}
         <TipoEntrega xsi:type="xsd:nonNegativeInteger">${params.TipoEntrega ?? 0}</TipoEntrega>
         <ServicoCOD xsi:type="xsd:boolean">${params.ServicoCOD ? '1' : '0'}</ServicoCOD>
         <Altura xsi:type="xsd:nonNegativeInteger">${params.Altura}</Altura>
@@ -264,17 +266,26 @@ function buildSoapEnvelope(params: TESoapParams): string {
 }
 
 function parseSoapResponse(xml: string): TESoapResult {
+  // Handles tags with or without namespace prefix and with optional xsi:type / other attributes
   const extractTag = (tag: string): string => {
-    const match = new RegExp(`<(?:[^:>]+:)?${tag}>([^<]*)<`, 'i').exec(xml);
+    const match = new RegExp(`<(?:[^:>]+:)?${tag}(?:\\s[^>]*)?>([^<]*)<`, 'i').exec(xml);
     return match?.[1]?.trim() ?? '';
   };
 
   const prazo = parseInt(extractTag('Prazo') || '0', 10);
   const valorStr = extractTag('ValorServico') || '0';
   const valorServico = parseFloat(valorStr.replace(',', '.'));
-  const retorno = extractTag('Retorno') || extractTag('return') || '0';
+  const codigoProc = parseInt(extractTag('CodigoProc') || '0', 10);
+  const erroRaw = extractTag('ErroConsultaFrete');
+  const rota = extractTag('Rota') || undefined;
 
-  return { Prazo: prazo, ValorServico: valorServico, Retorno: retorno };
+  return {
+    Prazo: prazo,
+    ValorServico: valorServico,
+    CodigoProc: codigoProc,
+    ErroConsultaFrete: erroRaw || undefined,
+    Rota: rota,
+  };
 }
 
 export async function teSoapCalcFrete(params: TESoapParams): Promise<TESoapResult> {
@@ -313,8 +324,8 @@ export async function teSoapCalcFrete(params: TESoapParams): Promise<TESoapResul
 
     const result = parseSoapResponse(text);
 
-    if (result.Retorno !== '0' && result.Retorno !== '' && result.Prazo === 0 && result.ValorServico === 0) {
-      throw new TEApiError('SOAP_ERROR', `SOAP Retorno=${result.Retorno}. XML: ${text.substring(0, 300)}`);
+    if (result.ErroConsultaFrete) {
+      throw new TEApiError('SOAP_ERROR', result.ErroConsultaFrete);
     }
 
     return result;

@@ -63,7 +63,10 @@ export async function cotarTE(input: TECotacaoInput): Promise<TECotacaoResult[]>
     if (result.status === 'fulfilled' && result.value !== null) {
       cotacoes.push(result.value);
     } else if (result.status === 'rejected') {
-      console.warn('[TE_COTACAO] Service type failed:', result.reason);
+      const msg: string = result.reason instanceof Error ? result.reason.message : String(result.reason);
+      if (!msg.includes('não utilizado') && !msg.includes('nao utilizado')) {
+        console.warn('[TE_COTACAO] Service type failed:', msg);
+      }
     }
   }
 
