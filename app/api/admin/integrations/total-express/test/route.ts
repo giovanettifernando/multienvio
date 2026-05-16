@@ -12,7 +12,7 @@ import { getTETracking } from '@/platform/integrations/total-express/tracking';
 import { TEApiError } from '@/platform/integrations/total-express/types';
 
 const testSchema = z.object({
-  type: z.enum(['auth', 'quote', 'order', 'tracking']),
+  type: z.enum(['auth', 'quote', 'order', 'tracking', 'wsdl']),
   cepOrigem: z.string().optional(),
   cepDestino: z.string().optional(),
   pesoKg: z.number().optional(),
@@ -186,6 +186,37 @@ export const POST = withApiHandler<Record<string, unknown>>(async ({ req }) => {
             success: false,
             type: 'tracking',
             message: error instanceof Error ? error.message : 'Erro desconhecido',
+            latencyMs: Date.now() - startTime,
+          },
+        };
+      }
+    }
+
+    case 'wsdl': {
+      const startTime = Date.now();
+      try {
+        const { getTEConfigAsync } = await import('@/platform/integrations/total-express/client');
+        const config = await getTEConfigAsync();
+        const wsdlUrl = `${config.soapBase}/webservice_calculo_frete_v2.php?wsdl`;
+        const response = await fetch(wsdlUrl, {
+          headers: { 'Authorization': 'Basic ' + Buffer.from(`${config.username}:${config.password}`).toString('base64') },
+        });
+        const text = await response.text();
+        return {
+          data: {
+            success: response.ok,
+            type: 'wsdl',
+            message: response.ok ? 'WSDL obtido com sucesso' : `HTTP ${response.status}`,
+            result: { wsdl: text.substring(0, 5000) },
+            latencyMs: Date.now() - startTime,
+          },
+        };
+      } catch (error) {
+        return {
+          data: {
+            success: false,
+            type: 'wsdl',
+            message: error instanceof Error ? error.message : 'Erro ao buscar WSDL',
             latencyMs: Date.now() - startTime,
           },
         };

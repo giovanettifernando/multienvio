@@ -91,5 +91,6 @@ export const TE_DEFAULT_LOGO_URL = 'https://www.totalexpress.com.br/wp-content/u
 // and adjust TE_SOAP_NAMESPACE and TE_SOAP_ACTION_BASE below.
 // ============================================================================
 
-export const TE_SOAP_NAMESPACE = 'urn:webservice_calculo_frete_v2';
-export const TE_SOAP_ACTION_BASE = 'urn:webservice_calculo_frete_v2#CalcFrete';
+export const TE_SOAP_NAMESPACE = 'urn:calcularFrete';
+export const TE_SOAP_ACTION_BASE = 'urn:calcularFrete#calcularFrete';
+export const TE_SOAP_TYPE_NS = 'http://edi.totalexpress.com.br/soap/webservice_calculo_frete.total';

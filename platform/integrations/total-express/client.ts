@@ -8,6 +8,7 @@ import {
   TE_ENDPOINTS,
   TE_SOAP_NAMESPACE,
   TE_SOAP_ACTION_BASE,
+  TE_SOAP_TYPE_NS,
   TE_CARRIER_SLUG,
 } from './constants';
 import {
@@ -210,15 +211,15 @@ async function teFetchInternal<T>(
 // ============================================================================
 
 export interface TESoapParams {
-  Remetente_ID: string;
-  CEP_Origem: string;
-  CEP_Destino: string;
-  Tipo_Servico: string;
-  Peso: number;
-  Comp: number;
-  Larg: number;
-  Alt: number;
-  Valor_Coleta?: number;
+  TipoServico: string;
+  CepDestino: string;
+  Peso: string;
+  ValorDeclarado?: string;
+  TipoEntrega?: number;
+  ServicoCOD?: boolean;
+  Altura: number;
+  Largura: number;
+  Profundidade: number;
 }
 
 export interface TESoapResult {
@@ -238,23 +239,28 @@ function escapeXml(value: string): string {
 
 function buildSoapEnvelope(params: TESoapParams): string {
   return `<?xml version="1.0" encoding="UTF-8"?>
-<SOAP-ENV:Envelope
-  xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/"
-  xmlns:ns1="${TE_SOAP_NAMESPACE}">
-  <SOAP-ENV:Body>
-    <ns1:CalcFrete>
-      <Remetente_ID>${escapeXml(params.Remetente_ID)}</Remetente_ID>
-      <CEP_Origem>${escapeXml(params.CEP_Origem)}</CEP_Origem>
-      <CEP_Destino>${escapeXml(params.CEP_Destino)}</CEP_Destino>
-      <Tipo_Servico>${escapeXml(params.Tipo_Servico)}</Tipo_Servico>
-      <Peso>${params.Peso}</Peso>
-      <Comp>${params.Comp}</Comp>
-      <Larg>${params.Larg}</Larg>
-      <Alt>${params.Alt}</Alt>
-      ${params.Valor_Coleta != null ? `<Valor_Coleta>${params.Valor_Coleta}</Valor_Coleta>` : ''}
-    </ns1:CalcFrete>
-  </SOAP-ENV:Body>
-</SOAP-ENV:Envelope>`;
+<soapenv:Envelope
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+  xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+  xmlns:urn="${TE_SOAP_NAMESPACE}">
+  <soapenv:Header/>
+  <soapenv:Body>
+    <urn:calcularFrete soapenv:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
+      <calcularFreteRequest xsi:type="web:calcularFreteRequest" xmlns:web="${TE_SOAP_TYPE_NS}">
+        <TipoServico xsi:type="xsd:string">${escapeXml(params.TipoServico)}</TipoServico>
+        <CepDestino xsi:type="xsd:nonNegativeInteger">${escapeXml(params.CepDestino)}</CepDestino>
+        <Peso xsi:type="xsd:string">${escapeXml(params.Peso)}</Peso>
+        <ValorDeclarado xsi:type="xsd:string">${escapeXml(params.ValorDeclarado ?? '0.00')}</ValorDeclarado>
+        <TipoEntrega xsi:type="xsd:nonNegativeInteger">${params.TipoEntrega ?? 0}</TipoEntrega>
+        <ServicoCOD xsi:type="xsd:boolean">${params.ServicoCOD ? '1' : '0'}</ServicoCOD>
+        <Altura xsi:type="xsd:nonNegativeInteger">${params.Altura}</Altura>
+        <Largura xsi:type="xsd:nonNegativeInteger">${params.Largura}</Largura>
+        <Profundidade xsi:type="xsd:nonNegativeInteger">${params.Profundidade}</Profundidade>
+      </calcularFreteRequest>
+    </urn:calcularFrete>
+  </soapenv:Body>
+</soapenv:Envelope>`;
 }
 
 function parseSoapResponse(xml: string): TESoapResult {
@@ -302,7 +308,7 @@ export async function teSoapCalcFrete(params: TESoapParams): Promise<TESoapResul
     const text = await response.text();
 
     if (!response.ok) {
-      throw new TEApiError(response.status, `SOAP HTTP ${response.status}: ${text.substring(0, 500)}`);
+      throw new TEApiError(response.status, `SOAP HTTP ${response.status}: ${text.substring(0, 2000)}`);
     }
 
     const result = parseSoapResponse(text);
@@ -316,7 +322,7 @@ export async function teSoapCalcFrete(params: TESoapParams): Promise<TESoapResul
     clearTimeout(timeoutId);
     if (error instanceof TEApiError || error instanceof TEAuthError) throw error;
     if (error instanceof Error && error.name === 'AbortError') {
-      throw new TEApiError('TIMEOUT', `Timeout no SOAP CalcFrete (${params.Tipo_Servico})`);
+      throw new TEApiError('TIMEOUT', `Timeout no SOAP CalcFrete (${params.TipoServico})`);
     }
     throw new TEApiError('SOAP_CONNECTION_ERROR', error instanceof Error ? error.message : String(error));
   }
@@ -340,16 +346,16 @@ export async function testTEAuth(): Promise<TEAuthTestResult> {
       };
     }
 
-    // Try a SOAP call with test data to verify credentials
     await teSoapCalcFrete({
-      Remetente_ID: config.remetenteId,
-      CEP_Origem: '01310100',
-      CEP_Destino: '20040020',
-      Tipo_Servico: 'EXP',
-      Peso: 1000,
-      Comp: 20,
-      Larg: 15,
-      Alt: 10,
+      TipoServico: 'EXP',
+      CepDestino: '20040020',
+      Peso: '1.00',
+      ValorDeclarado: '0.00',
+      TipoEntrega: 0,
+      ServicoCOD: false,
+      Altura: 10,
+      Largura: 15,
+      Profundidade: 20,
     });
 
     return {

@@ -3,7 +3,7 @@ import 'server-only';
 import type { TECotacaoInput, TECotacaoResult } from './types';
 import { TEApiError } from './types';
 import { TE_SERVICE_TYPES, type TEServiceType } from './constants';
-import { teSoapCalcFrete, getTEConfigAsync } from './client';
+import { teSoapCalcFrete } from './client';
 
 /**
  * Queries all 4 service types in parallel via SOAP.
@@ -23,8 +23,6 @@ export async function cotarTE(input: TECotacaoInput): Promise<TECotacaoResult[]>
     throw new TEApiError('VALIDATION', 'Dimensões devem ser maiores que zero');
   }
 
-  const config = await getTEConfigAsync();
-
   const serviceTypes: TEServiceType[] = [
     TE_SERVICE_TYPES.EXP,
     TE_SERVICE_TYPES.ESP,
@@ -35,15 +33,17 @@ export async function cotarTE(input: TECotacaoInput): Promise<TECotacaoResult[]>
   const results = await Promise.allSettled(
     serviceTypes.map(async (tipoServico) => {
       const soapResult = await teSoapCalcFrete({
-        Remetente_ID: config.remetenteId,
-        CEP_Origem: cepOrigem,
-        CEP_Destino: cepDestino,
-        Tipo_Servico: tipoServico,
-        Peso: input.pesoG,
-        Comp: Math.round(input.comprimentoCm),
-        Larg: Math.round(input.larguraCm),
-        Alt: Math.round(input.alturaCm),
-        Valor_Coleta: input.valorDeclaradoCentavos,
+        TipoServico: tipoServico,
+        CepDestino: cepDestino,
+        Peso: (input.pesoG / 1000).toFixed(2),
+        ValorDeclarado: input.valorDeclaradoCentavos != null
+          ? (input.valorDeclaradoCentavos / 100).toFixed(2)
+          : undefined,
+        TipoEntrega: 0,
+        ServicoCOD: false,
+        Altura: Math.round(input.alturaCm),
+        Largura: Math.round(input.larguraCm),
+        Profundidade: Math.round(input.comprimentoCm),
       });
 
       if (soapResult.Prazo <= 0 || soapResult.ValorServico <= 0) {
