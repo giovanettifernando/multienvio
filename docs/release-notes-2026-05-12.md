@@ -159,6 +159,47 @@ Resumo das alterações entregues neste ciclo, prontas para apresentação em re
 
 ---
 
+## 14. Nova Integração: Total Express
+
+**O que mudou:** A transportadora **Total Express** foi integrada à plataforma como opção de frete no checkout do cliente. Inclui cotação via SOAP, criação de etiqueta (Smart Label) via REST e rastreamento.
+
+**Impacto no negócio:** Clientes que cotam envios para regiões atendidas pela Total Express agora recebem o serviço **Total Express Expresso (EXP)** como opção, com prazo e preço em tempo real.
+
+**Como funciona:**
+- O sistema consulta a API SOAP da Total Express (Cálculo de Frete v2.0) em paralelo com as demais transportadoras durante a cotação
+- Apenas envios dentro dos limites de volume/peso aceitos (≤ 30 kg, lados ≤ 70 cm, soma ≤ 200 cm) são elegíveis
+- Credenciais (usuário, senha, Remetente ID, CNPJ) são configuradas pelo admin e criptografadas no banco
+- O painel admin em `/admin/total-express` permite testar autenticação, cotação, criação de pedido e rastreamento
+
+**Painel admin — 4 abas:**
+- **Configuração:** salvar/revelar credenciais de produção e homologação, definir ambiente ativo e comissão da plataforma
+- **Teste Auth:** verifica conectividade e autenticação com a API SOAP
+- **Teste Cotação:** cotação de teste com CEP origem/destino, dimensões e valor declarado
+- **Rastreamento:** consulta de status por AWB (após criação de pedido)
+
+**Arquivos adicionados:**
+- `platform/integrations/total-express/types.ts`
+- `platform/integrations/total-express/constants.ts`
+- `platform/integrations/total-express/client.ts`
+- `platform/integrations/total-express/cotacao.ts`
+- `platform/integrations/total-express/order.ts`
+- `platform/integrations/total-express/tracking.ts`
+- `platform/integrations/total-express/adapter.ts`
+- `platform/integrations/total-express/total-express-volume-validator.ts`
+- `platform/integrations/total-express/index.ts`
+- `app/(admin)/admin/total-express/page.tsx`
+- `app/(admin)/admin/total-express/TotalExpressClient.tsx`
+- `app/(admin)/admin/total-express/loading.tsx`
+- `app/api/admin/integrations/total-express/route.ts`
+- `app/api/admin/integrations/total-express/test/route.ts`
+
+**Arquivos alterados:**
+- `platform/integrations/shared/eligibility-service.ts` — registra o validador de volume da Total Express
+- `modules/quotes/application/service.ts` — inclui Total Express no fluxo de cotação paralela
+- `modules/admin/application/nav.ts` — entrada "Total Express" no menu de Integrações
+
+---
+
 ## Utilitário: Endpoint de Teste para Taxa de Coleta
 
 > *Disponível apenas fora de produção (`APP_ENV !== 'production'`)*
