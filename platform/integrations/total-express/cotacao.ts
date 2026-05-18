@@ -36,9 +36,9 @@ export async function cotarTE(input: TECotacaoInput): Promise<TECotacaoResult[]>
         TipoServico: tipoServico,
         CepDestino: cepDestino,
         Peso: (input.pesoG / 1000).toFixed(2),
-        ValorDeclarado: input.valorDeclaradoCentavos != null
+        ValorDeclarado: input.valorDeclaradoCentavos != null && input.valorDeclaradoCentavos > 0
           ? (input.valorDeclaradoCentavos / 100).toFixed(2)
-          : undefined,
+          : '1.00',
         TipoEntrega: 0,
         ServicoCOD: false,
         Altura: Math.round(input.alturaCm),
