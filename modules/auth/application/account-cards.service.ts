@@ -17,7 +17,7 @@ import type { NormalizedCardCreateInput, NormalizedCardUpdateInput } from "@/mod
 
 export type AccountCardDto = Pick<
   Card,
-  "id" | "brand" | "holderName" | "last4" | "expMonth" | "expYear" | "isDefault" | "billingAddressId" | "createdAt"
+  "id" | "brand" | "holderName" | "last4" | "expMonth" | "expYear" | "isDefault" | "billingAddressId" | "createdAt" | "vaultToken"
 >;
 
 type PrismaCardModel = PrismaClient["card"];
@@ -87,6 +87,7 @@ function mapToDto(card: Card): AccountCardDto {
     isDefault: card.isDefault,
     billingAddressId: card.billingAddressId,
     createdAt: card.createdAt,
+    vaultToken: card.vaultToken,
   };
 }
 
@@ -479,6 +480,79 @@ export async function deleteUserCard(
       userId,
       cardId,
     });
+  });
+}
+
+export async function createUserCardFromPagarmeToken(
+  userId: string,
+  pagarmeToken: string,
+): Promise<AccountCardDto> {
+  const { getOrCreateCustomer, createPagarmeCard } = await import('@/platform/integrations/pagarme');
+
+  const user = await prisma.user.findUniqueOrThrow({
+    where: { id: userId },
+    select: { id: true, name: true, email: true, cpf: true, pagarmeCustomerId: true },
+  });
+
+  let customerId = user.pagarmeCustomerId ?? undefined;
+  if (!customerId) {
+    const customer = await getOrCreateCustomer({
+      userId,
+      name: user.name,
+      email: user.email,
+      document: user.cpf ?? undefined,
+    });
+    customerId = customer.id;
+    await prisma.user.update({
+      where: { id: userId },
+      data: { pagarmeCustomerId: customerId },
+    });
+  }
+
+  const pagarmeCard = await createPagarmeCard(customerId, pagarmeToken);
+
+  const fingerprint = [
+    pagarmeCard.first_six_digits,
+    pagarmeCard.last_four_digits,
+    String(pagarmeCard.exp_year),
+    String(pagarmeCard.exp_month).padStart(2, '0'),
+  ].join('-');
+
+  const brandMap: Record<string, string> = {
+    visa: 'VISA', mastercard: 'MASTERCARD', elo: 'ELO',
+    amex: 'AMEX', hipercard: 'HIPERCARD',
+  };
+  const normalizedBrand = brandMap[pagarmeCard.brand.toLowerCase()] ?? 'OTHER';
+
+  return prisma.$transaction(async (tx) => {
+    const existing = await tx.card.findFirst({ where: { userId, fingerprint } });
+    if (existing) {
+      const updated = await tx.card.update({
+        where: { id: existing.id },
+        data: { vaultToken: pagarmeCard.id, updatedAt: new Date() },
+      });
+      return mapToDto(updated);
+    }
+
+    const cardCount = await tx.card.count({ where: { userId } });
+    const isDefault = cardCount === 0;
+
+    const card = await tx.card.create({
+      data: {
+        userId,
+        brand: normalizedBrand as import('@prisma/client').CardBrand,
+        holderName: pagarmeCard.holder_name,
+        last4: pagarmeCard.last_four_digits,
+        expMonth: pagarmeCard.exp_month,
+        expYear: pagarmeCard.exp_year,
+        fingerprint,
+        isDefault,
+        vaultToken: pagarmeCard.id,
+        panCipher: null,
+      },
+    });
+
+    return mapToDto(card);
   });
 }
 

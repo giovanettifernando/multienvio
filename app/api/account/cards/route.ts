@@ -2,7 +2,6 @@ import { withApiHandler } from "@/platform/api/handler";
 import {
   createUserCard,
   listUserCards,
-  type AccountCardDto,
 } from "@/modules/auth/application/account-cards.service";
 import {
   validateCardCreateInput,
@@ -77,6 +76,18 @@ export const POST = withApiHandler<CreateCardResponse>(async (context) => {
       message: "JSON inválido.",
       status: 400,
     });
+  }
+
+  // Check for pagarmeToken first — token-based vault save flow
+  const bodyObj = payload as Record<string, unknown>;
+  if (typeof bodyObj.pagarmeToken === 'string') {
+    const { createUserCardFromPagarmeToken } = await import('@/modules/auth/application/account-cards.service');
+    const card = await createUserCardFromPagarmeToken(userId, bodyObj.pagarmeToken);
+    return {
+      data: { ...card, createdAt: card.createdAt.toISOString() },
+      status: 201,
+      meta: { tags: ["account", "cards"] },
+    };
   }
 
   let normalized;

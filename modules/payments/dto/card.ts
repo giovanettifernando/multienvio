@@ -42,6 +42,7 @@ const SharedCardFields = {
   }).optional(),
   isDefault: z.boolean().optional(),
   mpToken: z.string().optional(), // Token do Mercado Pago para vincular cartão
+  pagarmeToken: z.string().optional(), // Token do Pagar.me para salvar cartão no vault
 };
 
 const CardCreateSeparatedSchema = z
