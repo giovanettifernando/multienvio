@@ -6,8 +6,8 @@ const Spin = ELSpin;
 import { ELCard } from '@/shared/ui/ELCard';
 import { ELAlert } from '@/shared/ui/ELAlert';
 import { ELModal } from '@/shared/ui/ELModal';
+import { ELButton } from '@/shared/ui/ELButton';
 import { LoadingOutlined } from "@ant-design/icons";
-import { initMercadoPago, CardPayment } from "@mercadopago/sdk-react";
 
 // Timeout para aguardar confirmacao da operadora (15 segundos)
 const CARD_PROCESSING_TIMEOUT_MS = 15000;
@@ -20,23 +20,22 @@ interface RecipientCardPaymentFormProps {
   onError: (error: Error) => void;
 }
 
-// Tipos do Mercado Pago SDK
-interface MercadoPagoFormData {
-  token: string;
-  payment_method_id: string;
-  installments: number;
-  payer?: {
-    email?: string;
-    identification?: {
-      type: string;
+interface TokenizeCardSDK {
+  tokenize: (data: {
+    card: {
       number: string;
+      holder_name: string;
+      exp_month: string;
+      exp_year: string;
+      cvv: string;
     };
-  };
+  }) => Promise<{ token: string }>;
 }
 
-interface MercadoPagoError {
-  message?: string;
-  cause?: unknown;
+declare global {
+  interface Window {
+    PagarmeCheckout?: TokenizeCardSDK;
+  }
 }
 
 export function RecipientCardPaymentForm({
@@ -46,82 +45,90 @@ export function RecipientCardPaymentForm({
   onSuccess,
   onError,
 }: RecipientCardPaymentFormProps) {
-  const [publicKey, setPublicKey] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
+  const [form, setForm] = useState({
+    number: "",
+    holderName: "",
+    expMonth: "",
+    expYear: "",
+    cvv: "",
+  });
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  // Buscar Public Key do Mercado Pago
+  // Carregar Tokenizecard.js do Pagar.me
   useEffect(() => {
-    async function fetchPublicKey() {
+    async function init() {
       try {
-        const response = await fetch("/api/payments/mercadopago/public-key");
+        const response = await fetch("/api/payments/pagarme/public-key");
         if (!response.ok) {
-          throw new Error("Nao foi possivel carregar as credenciais do Mercado Pago");
+          throw new Error("Nao foi possivel carregar as credenciais de pagamento");
         }
         const json = await response.json();
-        const data = json.data ?? json;
-        setPublicKey(data.publicKey);
+        const pk = (json.data ?? json).publicKey;
 
-        // Inicializar SDK do Mercado Pago
-        initMercadoPago(data.publicKey, {
-          locale: "pt-BR",
-        });
+        const existing = document.querySelector("[data-pagarmecheckout-app-id]");
+        if (!existing) {
+          const script = document.createElement("script");
+          script.src = "https://checkout.pagar.me/v1/tokenizecard.js";
+          script.setAttribute("data-pagarmecheckout-app-id", pk);
+          document.body.appendChild(script);
+        }
       } catch (err) {
         console.error("[RECIPIENT_CARD_FORM]", err);
-        setError(err instanceof Error ? err.message : "Erro ao carregar Mercado Pago");
+        setError(err instanceof Error ? err.message : "Erro ao carregar formulario de pagamento");
       } finally {
         setLoading(false);
       }
     }
 
-    fetchPublicKey();
-  }, []);
+    init();
 
-  // Limpar timeout ao desmontar
-  useEffect(() => {
     return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-      }
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      abortControllerRef.current?.abort();
     };
   }, []);
 
-  const handleSubmit = async (formData: MercadoPagoFormData) => {
-    // Mostrar modal de processamento
-    setProcessing(true);
+  const handleSubmit = async () => {
+    if (!window.PagarmeCheckout) {
+      onError(new Error("SDK de pagamento nao carregado"));
+      return;
+    }
 
-    // Criar AbortController para cancelar requisicao no timeout
+    setProcessing(true);
     abortControllerRef.current = new AbortController();
 
     // Configurar timeout de 15 segundos
     timeoutRef.current = setTimeout(() => {
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-      }
+      abortControllerRef.current?.abort();
       setProcessing(false);
       onError(new Error("Erro ao processar pagamento, tente novamente mais tarde"));
     }, CARD_PROCESSING_TIMEOUT_MS);
 
     try {
-      // Usar endpoint publico para criar pagamento
+      const { token } = await window.PagarmeCheckout.tokenize({
+        card: {
+          number: form.number.replace(/\D/g, ""),
+          holder_name: form.holderName,
+          exp_month: form.expMonth,
+          exp_year: form.expYear,
+          cvv: form.cvv,
+        },
+      });
+
       const response = await fetch("/api/recipient-payment/create-payment", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           paymentToken,
           transactionAmount: amount,
-          token: formData.token,
-          paymentMethodId: formData.payment_method_id,
-          installments: formData.installments,
+          paymentMethod: "credit_card",
+          cardToken: token,
           payer: {
-            email: formData.payer?.email || email,
-            identification: formData.payer?.identification,
+            email,
           },
         }),
         signal: abortControllerRef.current.signal,
@@ -135,7 +142,8 @@ export function RecipientCardPaymentForm({
 
       if (!response.ok) {
         const errorData = await response.json();
-        const errorMessage = errorData.error?.message || errorData.message || "Cartao nao autorizado";
+        const errorMessage =
+          errorData.error?.message || errorData.message || "Cartao nao autorizado";
         throw new Error(errorMessage);
       }
 
@@ -162,11 +170,6 @@ export function RecipientCardPaymentForm({
     }
   };
 
-  const handleError = async (error: MercadoPagoError) => {
-    console.error("[RECIPIENT_CARD_ERROR]", error);
-    onError(new Error(error?.message || "Erro ao processar cartao"));
-  };
-
   if (loading) {
     return (
       <ELCard>
@@ -179,11 +182,11 @@ export function RecipientCardPaymentForm({
     );
   }
 
-  if (error || !publicKey) {
+  if (error) {
     return (
       <ELAlert
         title="Erro ao carregar formulario"
-        description={error || "Mercado Pago nao configurado"}
+        description={error}
         variant="danger"
         showIcon
       />
@@ -213,14 +216,42 @@ export function RecipientCardPaymentForm({
         </div>
       </ELModal>
 
-      <div style={{ maxWidth: 600, margin: "0 auto" }}>
-        <CardPayment
-          initialization={{
-            amount,
-          }}
-          onSubmit={handleSubmit}
-          onError={handleError}
+      <div style={{ maxWidth: 600, margin: "0 auto", display: "flex", flexDirection: "column", gap: 12 }}>
+        <input
+          placeholder="Numero do cartao"
+          value={form.number}
+          onChange={(e) => setForm((f) => ({ ...f, number: e.target.value }))}
+          style={{ padding: 8, border: "1px solid #d9d9d9", borderRadius: 6 }}
         />
+        <input
+          placeholder="Nome no cartao"
+          value={form.holderName}
+          onChange={(e) => setForm((f) => ({ ...f, holderName: e.target.value }))}
+          style={{ padding: 8, border: "1px solid #d9d9d9", borderRadius: 6 }}
+        />
+        <div style={{ display: "flex", gap: 8 }}>
+          <input
+            placeholder="MM"
+            value={form.expMonth}
+            onChange={(e) => setForm((f) => ({ ...f, expMonth: e.target.value }))}
+            style={{ flex: 1, padding: 8, border: "1px solid #d9d9d9", borderRadius: 6 }}
+          />
+          <input
+            placeholder="AA"
+            value={form.expYear}
+            onChange={(e) => setForm((f) => ({ ...f, expYear: e.target.value }))}
+            style={{ flex: 1, padding: 8, border: "1px solid #d9d9d9", borderRadius: 6 }}
+          />
+          <input
+            placeholder="CVV"
+            value={form.cvv}
+            onChange={(e) => setForm((f) => ({ ...f, cvv: e.target.value }))}
+            style={{ flex: 1, padding: 8, border: "1px solid #d9d9d9", borderRadius: 6 }}
+          />
+        </div>
+        <ELButton type="primary" onClick={handleSubmit} loading={processing} block>
+          Pagar R$ {(amount).toFixed(2).replace(".", ",")}
+        </ELButton>
       </div>
     </>
   );

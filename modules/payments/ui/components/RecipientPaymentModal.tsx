@@ -16,7 +16,6 @@ import {
   CheckCircleFilled,
   CloseCircleFilled,
 } from "@ant-design/icons";
-import { MercadoPagoSecurity, getDeviceSessionId } from "@/modules/payments/ui/components/MercadoPagoSecurity";
 import { ELModal } from '@/shared/ui/ELModal';
 import { ELButton } from '@/shared/ui/ELButton';
 import { ELAlert } from '@/shared/ui/ELAlert';
@@ -40,7 +39,8 @@ interface MercadoPagoPaymentResult {
     status: string;
     statusDetail: string;
     pixQrCode?: string;
-    pixQrCodeBase64?: string;
+    pixQrCodeBase64?: string; // MercadoPago: base64 image data
+    pixQrCodeUrl?: string;    // Pagar.me: PNG image URL
   };
 }
 
@@ -255,19 +255,17 @@ export function RecipientPaymentModal({
     try {
       if (selectedMethod === "pix") {
         // Criar pagamento PIX via endpoint publico
-        const deviceSessionId = getDeviceSessionId();
         const pixRes = await fetch("/api/recipient-payment/create-payment", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             paymentToken,
             transactionAmount: amount,
-            paymentMethodId: "pix",
+            paymentMethod: "pix",
             payer: {
               email: email,
             },
             description: description || `Pagamento de frete - ${formatBRL(amount)}`,
-            deviceSessionId,
           }),
         });
 
@@ -460,10 +458,13 @@ export function RecipientPaymentModal({
               Escaneie o QR Code abaixo com o app do seu banco:
             </Text>
 
-            {pixData.payment.pixQrCodeBase64 && (
+            {(pixData.payment.pixQrCodeUrl || pixData.payment.pixQrCodeBase64) && (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={`data:image/png;base64,${pixData.payment.pixQrCodeBase64}`}
+                src={
+                  pixData.payment.pixQrCodeUrl ||
+                  `data:image/png;base64,${pixData.payment.pixQrCodeBase64}`
+                }
                 alt="QR Code PIX"
                 style={{
                   width: 280,
@@ -515,11 +516,8 @@ export function RecipientPaymentModal({
 
   // Renderizar selecao de metodo de pagamento
   return (
-    <>
-      {/* Script de seguranca do Mercado Pago para Device Fingerprint */}
-      <MercadoPagoSecurity />
-      <ELModal
-        title="Escolha o metodo de pagamento"
+    <ELModal
+      title="Escolha o metodo de pagamento"
         open={open}
         onCancel={handleClose}
         footer={
@@ -596,7 +594,6 @@ export function RecipientPaymentModal({
           )}
         </Space>
       </ELModal>
-    </>
   );
 }
 
