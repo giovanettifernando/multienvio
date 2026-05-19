@@ -21,6 +21,7 @@ export type Card = {
   isDefault: boolean;
   billingAddressId?: string | null;
   createdAt?: string;
+  vaultToken?: string; // Pagar.me card_id (card_XXXX) used for saved-card payments
 };
 
 export type Recipient = {
