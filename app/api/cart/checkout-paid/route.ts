@@ -40,9 +40,11 @@ const cartCheckoutPaidSchema = z.object({
   /** IDs dos itens do carrinho a processar */
   itemIds: z.array(z.string()).min(1, 'Pelo menos um item é obrigatório'),
   /** Método de pagamento */
-  paymentMethod: z.enum(['WALLET', 'MERCADO_PAGO']),
+  paymentMethod: z.enum(['WALLET', 'MERCADO_PAGO', 'PAGARME']),
   /** ID do pagamento MercadoPago (se aplicável) */
   mercadoPagoPaymentId: z.string().optional(),
+  /** ID da transação Pagar.me (se aplicável) */
+  pagarmeTransactionId: z.string().optional(),
 });
 
 export const POST = withApiHandler<CartCheckoutPaidResponse>(async ({ req }) => {
@@ -97,6 +99,7 @@ export const POST = withApiHandler<CartCheckoutPaidResponse>(async ({ req }) => 
       itemIds: data.itemIds,
       paymentMethod: data.paymentMethod as CartPaymentMethod,
       mercadoPagoPaymentId: data.mercadoPagoPaymentId,
+      pagarmeTransactionId: data.pagarmeTransactionId,
     });
 
     logger.info({

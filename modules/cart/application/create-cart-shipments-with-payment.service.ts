@@ -30,7 +30,7 @@ import type { LabelGenerateJobPayload } from '@/platform/queue';
 // TYPES
 // ============================================================================
 
-export type CartPaymentMethod = 'WALLET' | 'MERCADO_PAGO';
+export type CartPaymentMethod = 'WALLET' | 'MERCADO_PAGO' | 'PAGARME';
 
 export interface CreateCartShipmentsInput {
   userId: string;
@@ -42,6 +42,8 @@ export interface CreateCartShipmentsInput {
   paymentMethod: CartPaymentMethod;
   /** ID do pagamento MercadoPago (se aplicável) */
   mercadoPagoPaymentId?: string;
+  /** ID da transação Pagar.me (se aplicável) */
+  pagarmeTransactionId?: string;
 }
 
 export interface CreateCartShipmentsResult {
@@ -168,6 +170,7 @@ export async function createCartShipmentsWithPayment(
     itemIds,
     paymentMethod,
     mercadoPagoPaymentId,
+    pagarmeTransactionId,
   } = input;
 
   // Track non-Correios shipments for post-transaction LABEL_GENERATE enqueue
@@ -365,6 +368,25 @@ export async function createCartShipmentsWithPayment(
         amountCents,
         title: transactionTitle,
       }, 'Wallet debited successfully for cart');
+    } else if (paymentMethod === 'PAGARME') {
+      // Verificar que a transação Pagar.me existe e está paga
+      if (!pagarmeTransactionId) {
+        throw new Error('pagarmeTransactionId is required for PAGARME payment');
+      }
+      const transaction = await tx.paymentTransaction.findUnique({
+        where: { id: pagarmeTransactionId },
+      });
+      if (!transaction || transaction.status !== 'PAID') {
+        throw Object.assign(
+          new Error('Pagamento Pagar.me não encontrado ou não aprovado'),
+          { code: 'PAGARME_PAYMENT_NOT_APPROVED' }
+        );
+      }
+      logger.info({
+        event: 'pagarme_payment_verified',
+        pagarmeTransactionId,
+        status: transaction.status,
+      }, 'Pagar.me payment verified successfully');
     }
 
     // 5) CRIAR SHIPMENTS para cada item
@@ -391,6 +413,7 @@ export async function createCartShipmentsWithPayment(
         paymentMethod,
         walletTransactionId,
         mercadoPagoPaymentId,
+        pagarmeTransactionId,
         totalAmount
       );
 
@@ -518,6 +541,7 @@ async function createShipmentFromCartItem(
   paymentMethod: CartPaymentMethod,
   walletTransactionId: string | null,
   mercadoPagoPaymentId: string | undefined,
+  pagarmeTransactionId: string | undefined,
   totalAmount: number
 ): Promise<{
   shipmentId: string;
@@ -569,6 +593,7 @@ async function createShipmentFromCartItem(
           confirmedAt: new Date().toISOString(),
           ...(walletTransactionId && { walletTransactionId }),
           ...(mercadoPagoPaymentId && { mercadoPagoPaymentId }),
+          ...(pagarmeTransactionId && { pagarmeTransactionId }),
           amount: totalAmount,
         },
       }
@@ -585,6 +610,7 @@ async function createShipmentFromCartItem(
           confirmedAt: new Date().toISOString(),
           ...(walletTransactionId && { walletTransactionId }),
           ...(mercadoPagoPaymentId && { mercadoPagoPaymentId }),
+          ...(pagarmeTransactionId && { pagarmeTransactionId }),
           amount: totalAmount,
         },
       };
