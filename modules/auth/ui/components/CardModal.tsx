@@ -31,22 +31,26 @@ type CardModalProps = {
   onCancel: () => void;
 };
 
-// Tipo global do SDK do Mercado Pago
-interface MercadoPagoSDK {
-  createCardToken: (cardData: {
-    cardNumber: string;
-    cardholderName: string;
-    cardExpirationMonth: string;
-    cardExpirationYear: string;
-    securityCode: string;
-    identificationType: string;
-    identificationNumber: string;
-  }) => Promise<{ id: string }>;
+// Tipo global do SDK do Pagar.me (Tokenizecard.js)
+interface PagarmeTokenizeResult {
+  token: string;
+}
+
+interface PagarmeCheckoutSDK {
+  tokenize: (data: {
+    card: {
+      number: string;
+      holder_name: string;
+      exp_month: string;
+      exp_year: string;
+      cvv: string;
+    };
+  }) => Promise<PagarmeTokenizeResult>;
 }
 
 declare global {
   interface Window {
-    MercadoPago: new (publicKey: string, options?: { locale?: string }) => MercadoPagoSDK;
+    PagarmeCheckout?: PagarmeCheckoutSDK;
   }
 }
 
@@ -78,25 +82,17 @@ export function CardModal({ open, loading, onSubmit, onCancel }: CardModalProps)
   useEffect(() => {
     async function fetchPublicKey() {
       try {
-        const response = await fetch("/api/payments/mercadopago/public-key");
+        const response = await fetch("/api/payments/pagarme/public-key");
         if (!response.ok) {
-          throw new Error("Falha ao carregar configuração do Mercado Pago");
+          throw new Error("Falha ao carregar configuração do Pagar.me");
         }
         const json = await response.json();
         // Handle standardized API response format { data: T, error, meta }
         const data = json.data ?? json;
         setPublicKey(data.publicKey);
-
-        // Carregar script do SDK do Mercado Pago
-        if (!window.MercadoPago) {
-          const script = document.createElement("script");
-          script.src = "https://sdk.mercadopago.com/js/v2";
-          script.async = true;
-          document.body.appendChild(script);
-        }
       } catch (err) {
         console.error("[CARD_MODAL_PUBLIC_KEY]", err);
-        messageApi.error(err instanceof Error ? err.message : "Erro ao carregar Mercado Pago");
+        messageApi.error(err instanceof Error ? err.message : "Erro ao carregar Pagar.me");
       } finally {
         setLoadingKey(false);
       }
@@ -108,6 +104,17 @@ export function CardModal({ open, loading, onSubmit, onCancel }: CardModalProps)
       setCardBrand(null);
     }
   }, [open, form, messageApi]);
+
+  // Carrega o script Tokenizecard.js do Pagar.me quando a public key estiver disponível
+  useEffect(() => {
+    if (!publicKey) return;
+    const existing = document.querySelector('[data-pagarmecheckout-app-id]');
+    if (existing) return;
+    const script = document.createElement('script');
+    script.src = 'https://checkout.pagar.me/v1/tokenizecard.js';
+    script.setAttribute('data-pagarmecheckout-app-id', publicKey);
+    document.body.appendChild(script);
+  }, [publicKey]);
 
   /**
    * Detecta a bandeira do cartão baseado no número
@@ -129,52 +136,41 @@ export function CardModal({ open, loading, onSubmit, onCancel }: CardModalProps)
       setProcessing(true);
       const values = await form.validateFields();
 
-      // Verificar se está usando HTTPS (requisito do Mercado Pago) - apenas em produção
-      // Em desenvolvimento, o SDK pode funcionar sem HTTPS em alguns casos
+      // Verificar se está usando HTTPS — apenas em produção
       if (typeof window !== "undefined" &&
           window.location.protocol !== "https:" &&
           process.env.NODE_ENV === "production") {
         throw new Error("Não foi possível estabelecer uma conexão segura. Tente novamente.");
       }
 
-      if (!publicKey || !window.MercadoPago) {
-        throw new Error("SDK do Mercado Pago não carregado");
+      if (!publicKey || !window.PagarmeCheckout) {
+        throw new Error("SDK do Pagar.me não carregado — tente novamente em instantes");
       }
 
       // Parsear validade MM/AA para mês e ano separados
       const [expMonth, expYear] = values.validity.split("/");
       const fullYear = `20${expYear}`; // Converter YY para YYYY (ex: 25 -> 2025)
 
-      // Inicializar SDK do MP
-      const mp = new window.MercadoPago(publicKey, { locale: "pt-BR" });
+      // Tokenizar cartão via Pagar.me Tokenizecard.js
+      const tokenResult = await window.PagarmeCheckout.tokenize({
+        card: {
+          number: values.cardNumber.replace(/\s/g, ""),
+          holder_name: values.holderName,
+          exp_month: expMonth,
+          exp_year: fullYear,
+          cvv: values.cvv || "000",
+        },
+      });
 
-      // Criar token do cartão
-      // NOTA: O CVV não é armazenado - será solicitado apenas no momento do pagamento.
-      // Para tokenização inicial, usamos um CVV dummy (será substituído no checkout).
-      const cardData = {
-        cardNumber: values.cardNumber.replace(/\s/g, ""),
-        cardholderName: values.holderName,
-        cardExpirationMonth: expMonth,
-        cardExpirationYear: fullYear,
-        securityCode: "123", // CVV dummy para tokenização inicial
-        identificationType: values.documentType || "CPF",
-        identificationNumber: values.document.replace(/\D/g, ""),
-      };
-
-      const token = await mp.createCardToken(cardData);
-
-      if (!token || !token.id) {
+      if (!tokenResult?.token) {
         throw new Error("Falha ao tokenizar cartão");
       }
 
-      // Extrair informações do cartão para enviar ao backend
-      const cardNumber = values.cardNumber.replace(/\s/g, "");
-
-      // Chamar callback com dados completos + token
-      // O backend irá calcular brand, last4, etc.
+      // Chamar callback com token do Pagar.me
+      // O backend irá calcular brand, last4, etc. a partir do token
       onSubmit({
-        mpToken: token.id,
-        number: cardNumber,
+        mpToken: tokenResult.token,
+        number: values.cardNumber.replace(/\s/g, ""),
         holderName: values.holderName,
         expMonth: parseInt(expMonth, 10),
         expYear: parseInt(fullYear, 10),
