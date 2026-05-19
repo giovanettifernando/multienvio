@@ -14,7 +14,6 @@ import { ApiError } from '@/platform/api/errors';
 import { requireUserSession } from '@/platform/auth/require-session';
 import { prisma } from '@/platform/db/db';
 import type { TransactionStatus } from '@prisma/client';
-import { refundPayment, getPaymentById, mapMercadoPagoStatus } from '@/platform/integrations/mercadopago';
 import { cancelCharge, getOrder, processOrderData } from '@/platform/integrations/pagarme';
 
 const refundSchema = z.object({
@@ -52,7 +51,7 @@ export const POST = withApiHandler<RefundPaymentResponse, { id: string }>(async 
   }
 
   const slug = transaction.gateway?.slug;
-  if (slug !== 'mercadopago' && slug !== 'pagarme') {
+  if (slug !== 'pagarme') {
     throw new ApiError({
       code: 'validation_error',
       message: 'Reembolso disponível apenas para pagamentos via cartão ou PIX',
@@ -114,7 +113,7 @@ export const POST = withApiHandler<RefundPaymentResponse, { id: string }>(async 
   if (!externalId) {
     throw new ApiError({
       code: 'validation_error',
-      message: 'ID do pagamento no Mercado Pago não encontrado',
+      message: 'ID do pagamento não encontrado',
       status: 400,
     });
   }
@@ -125,35 +124,25 @@ export const POST = withApiHandler<RefundPaymentResponse, { id: string }>(async 
   let refundStatus: string;
   let refundAmount: number;
 
-  if (slug === 'pagarme') {
-    const meta = transaction.metadata as { chargeId?: string } | null;
-    const chargeId = meta?.chargeId;
-    if (!chargeId) {
-      throw new ApiError({
-        code: 'not_found',
-        message: 'ID da cobrança Pagar.me não encontrado',
-        status: 404,
-      });
-    }
-
-    const amountCents = amount ? Math.round(amount * 100) : undefined;
-    await cancelCharge(chargeId, amountCents);
-    const order = await getOrder(externalId);
-    const processed = processOrderData(order);
-    newStatus = processed.status;
-    refundedCents = amountCents ?? transaction.amountCents;
-    refundId = chargeId;
-    refundStatus = 'refunded';
-    refundAmount = refundedCents / 100;
-  } else {
-    const refundResult = await refundPayment(externalId, amount);
-    const updatedPayment = await getPaymentById(externalId);
-    newStatus = mapMercadoPagoStatus(updatedPayment.status);
-    refundedCents = Math.round(refundResult.amount * 100);
-    refundId = refundResult.id;
-    refundStatus = refundResult.status;
-    refundAmount = refundResult.amount;
+  const meta = transaction.metadata as { chargeId?: string } | null;
+  const chargeId = meta?.chargeId;
+  if (!chargeId) {
+    throw new ApiError({
+      code: 'not_found',
+      message: 'ID da cobrança Pagar.me não encontrado',
+      status: 404,
+    });
   }
+
+  const amountCents = amount ? Math.round(amount * 100) : undefined;
+  await cancelCharge(chargeId, amountCents);
+  const order = await getOrder(externalId);
+  const processed = processOrderData(order);
+  newStatus = processed.status;
+  refundedCents = amountCents ?? transaction.amountCents;
+  refundId = chargeId;
+  refundStatus = 'refunded';
+  refundAmount = refundedCents / 100;
 
   const totalRefundedCents = alreadyRefundedCents + refundedCents;
 

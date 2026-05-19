@@ -70,15 +70,15 @@ export function usePixPayment({ onPaymentConfirmed }: UsePixPaymentOptions) {
   const generatePix = async (totalAmount: number, itemCount: number, email: string) => {
     console.log('[CHECKOUT_CART] Gerando PIX...');
 
-    const pixRes = await fetch('/api/payments/mercadopago/create', {
+    const amountCents = Math.round(totalAmount * 100);
+    const pixRes = await fetch('/api/payments/pagarme/create', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        transactionAmount: totalAmount,
-        paymentMethodId: 'pix',
-        payer: { email: email || 'usuario@example.com' },
+        amountCents,
+        paymentMethod: 'pix',
         description: `Pagamento de ${itemCount} envio(s) - Envio Legal`,
-        metadata: { type: 'checkout_payment', itemCount },
+        metadata: { type: 'checkout_payment' },
       }),
     });
 
@@ -89,7 +89,32 @@ export function usePixPayment({ onPaymentConfirmed }: UsePixPaymentOptions) {
 
     const json = await pixRes.json();
     // Handle standardized API response format { data: T, error, meta }
-    const pixResult = (json.data ?? json) as MercadoPagoPaymentResult;
+    const rawResult = (json.data ?? json) as {
+      transactionId: string;
+      orderId: string;
+      status: string;
+      pixQrCode?: string;
+      pixQrCodeUrl?: string;
+    };
+
+    // Normalise to MercadoPagoPaymentResult shape used by the rest of the component
+    const pixResult: MercadoPagoPaymentResult = {
+      success: true,
+      transaction: {
+        id: rawResult.transactionId,
+        referenceId: rawResult.orderId,
+        status: rawResult.status,
+        amountCents,
+        method: 'pix',
+      },
+      payment: {
+        id: 0,
+        status: rawResult.status,
+        statusDetail: rawResult.status,
+        pixQrCode: rawResult.pixQrCode,
+        pixQrCodeUrl: rawResult.pixQrCodeUrl,
+      },
+    };
     setPixData(pixResult);
     message.success('QR Code PIX gerado com sucesso!');
     return pixResult;

@@ -11,7 +11,7 @@ import { requireAdminSession } from '@/platform/auth/require-session';
 import { AdminPermission } from '@prisma/client';
 import { prisma } from '@/platform/db/db';
 import { getQueue, QUEUE_NAMES, JOB_PRIORITY } from '@/platform/queue';
-import type { MercadoPagoWebhookJobPayload } from '@/platform/queue/types';
+import type { PagarmeWebhookJobPayload } from '@/platform/queue/types';
 import { Prisma } from '@prisma/client';
 
 export const dynamic = 'force-dynamic';
@@ -132,7 +132,7 @@ export const POST = withApiHandler<WebhookRetryResponse>(async (context) => {
   }
 
   // Marcar como PENDING e re-enfileirar
-  const queue = getQueue<MercadoPagoWebhookJobPayload>(QUEUE_NAMES.WEBHOOK_MERCADOPAGO);
+  const queue = getQueue<PagarmeWebhookJobPayload>(QUEUE_NAMES.WEBHOOK_PAGARME);
   let retriedCount = 0;
 
   for (const webhook of failedWebhooks) {
@@ -145,16 +145,22 @@ export const POST = withApiHandler<WebhookRetryResponse>(async (context) => {
       },
     });
 
+    // Extrair orderId e eventType do payload armazenado
+    const storedPayload = webhook.payload as Record<string, unknown>;
+    const orderId = (storedPayload?.data as Record<string, unknown>)?.id as string ?? '';
+    const eventType = storedPayload?.type as string ?? '';
+
     // Re-enfileirar no BullMQ
     await queue.add(
       'process',
       {
         webhookRecordId: webhook.id,
-        payload: webhook.payload as MercadoPagoWebhookJobPayload['payload'],
+        orderId,
+        eventType,
       },
       {
         priority: JOB_PRIORITY.HIGH,
-        jobId: `mp-webhook-retry-${webhook.id}-${Date.now()}`,
+        jobId: `pagarme-webhook-retry-${webhook.id}-${Date.now()}`,
       }
     );
 

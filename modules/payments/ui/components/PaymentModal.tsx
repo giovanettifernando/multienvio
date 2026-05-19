@@ -21,7 +21,6 @@ import {
 } from "@ant-design/icons";
 import { CardPaymentForm } from "@/modules/wallet/ui/components/CardPaymentForm";
 import { SavedCardPaymentForm } from "@/modules/wallet/ui/components/SavedCardPaymentForm";
-import { MercadoPagoSecurity, getDeviceSessionId } from "@/modules/payments/ui/components/MercadoPagoSecurity";
 import { useCards } from "@/modules/account/ui/hooks";
 import { ELModal } from '@/shared/ui/ELModal';
 import { ELButton } from '@/shared/ui/ELButton';
@@ -47,6 +46,7 @@ interface MercadoPagoPaymentResult {
     statusDetail: string;
     pixQrCode?: string;
     pixQrCodeBase64?: string;
+    pixQrCodeUrl?: string;
   };
 }
 
@@ -145,19 +145,6 @@ export function PaymentModal({
       return (json.data ?? json) as WalletData;
     },
     enabled: open && allowWallet,
-  });
-
-  // Buscar dados do usuário para email
-  const { data: user } = useQuery<{ email: string }>({
-    queryKey: ["user-session"],
-    queryFn: async () => {
-      const res = await fetch("/api/auth/me");
-      if (!res.ok) throw new Error("Erro ao buscar dados do usuário");
-      const json = await res.json();
-      // Handle standardized API response format { data: T, error, meta }
-      return (json.data ?? json) as { email: string };
-    },
-    enabled: open,
   });
 
   const balance = walletData?.balance?.availableReais ?? 0;
@@ -343,22 +330,22 @@ export function PaymentModal({
         handleClose();
 
       } else if (selectedMethod === "pix") {
-        // Criar pagamento PIX via Mercado Pago
-        const deviceSessionId = getDeviceSessionId();
-        const pixRes = await fetch("/api/payments/mercadopago/create", {
+        // Criar pagamento PIX via Pagar.me
+        const amountCents = Math.round(amount * 100);
+        const pixRes = await fetch("/api/payments/pagarme/create", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            transactionAmount: amount,
-            paymentMethodId: "pix",
-            payer: {
-              email: user?.email || "usuario@example.com",
-            },
+            amountCents,
+            paymentMethod: "pix",
             description: description || `Pagamento - ${formatBRL(amount)}`,
-            deviceSessionId, // Device fingerprint para antifraude
             metadata: {
               type: mode === "topup" ? "wallet_topup" : "checkout_payment",
-              ...metadata,
+              ...(typeof metadata === "object" && metadata !== null
+                ? Object.fromEntries(
+                    Object.entries(metadata).map(([k, v]) => [k, String(v)])
+                  )
+                : {}),
             },
           }),
         });
@@ -372,7 +359,30 @@ export function PaymentModal({
 
         const pixJson = await pixRes.json();
         // Handle standardized API response format { data: T, error, meta }
-        const pixResult = (pixJson.data ?? pixJson) as MercadoPagoPaymentResult;
+        const rawResult = (pixJson.data ?? pixJson) as {
+          transactionId: string;
+          orderId: string;
+          status: string;
+          pixQrCode?: string;
+          pixQrCodeUrl?: string;
+        };
+        const pixResult: MercadoPagoPaymentResult = {
+          success: true,
+          transaction: {
+            id: rawResult.transactionId,
+            referenceId: rawResult.orderId,
+            status: rawResult.status,
+            amountCents,
+            method: "pix",
+          },
+          payment: {
+            id: 0,
+            status: rawResult.status,
+            statusDetail: rawResult.status,
+            pixQrCode: rawResult.pixQrCode,
+            pixQrCodeUrl: rawResult.pixQrCodeUrl,
+          },
+        };
         setPixData(pixResult);
         setPixStatus("pending");
         setPixExpireSeconds(30 * 60);
@@ -644,8 +654,6 @@ export function PaymentModal({
   // Renderizar seleção de método de pagamento
   return (
     <>
-    {/* Script de segurança do Mercado Pago para Device Fingerprint */}
-    <MercadoPagoSecurity />
     <ELModal
       title={getModalTitle()}
       open={open}

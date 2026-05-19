@@ -11,7 +11,6 @@
  * Registra:
  * - Tracking scheduler (repeatable: 15 min)
  * - Tracking workers (Correios, J&T, Loggi)
- * - Webhook worker (Mercado Pago)
  * - PIX monitor (repeatable: 2 min)
  * - Recipient payment expiration (repeatable: 1 hora)
  * - Email sender (assíncrono com retry)
@@ -36,9 +35,6 @@ import { createCorreiosTrackingWorker } from './tracking/correios.worker';
 import { createJTTrackingWorker } from './tracking/jt.worker';
 import { createLoggiTrackingWorker } from './tracking/loggi.worker';
 import { createTrackingSchedulerWorker, registerTrackingSchedulerRepeatable } from './tracking/scheduler.worker';
-
-// Webhooks
-import { createMercadoPagoWebhookWorker } from './webhook/mercadopago.worker';
 
 // Payments
 import { createPixMonitorWorker, registerPixMonitorRepeatable } from './payment/pix-monitor.worker';
@@ -99,7 +95,6 @@ async function start(): Promise<void> {
     createCorreiosTrackingWorker(),
     createJTTrackingWorker(),
     createLoggiTrackingWorker(),
-    createMercadoPagoWebhookWorker(),
     createPixMonitorWorker(),
     createRecipientExpirationWorker(),
     createEmailWorker(),

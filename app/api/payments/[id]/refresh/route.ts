@@ -1,7 +1,7 @@
 /**
  * POST /api/payments/[id]/refresh
  *
- * Atualiza o status de um pagamento consultando o Mercado Pago
+ * Atualiza o status de um pagamento consultando o Pagar.me
  * Usado para polling manual ou refresh de status
  */
 
@@ -9,7 +9,7 @@ import { withApiHandler } from '@/platform/api/handler';
 import { ApiError } from '@/platform/api/errors';
 import { requireUserSession } from '@/platform/auth/require-session';
 import { prisma } from '@/platform/db/db';
-import { updatePaymentFromMercadoPago } from '@/platform/integrations/mercadopago';
+import { updatePaymentFromPagarme } from '@/platform/integrations/pagarme';
 
 type RefreshPaymentResponse = {
   payment: {
@@ -62,7 +62,7 @@ export const POST = withApiHandler<RefreshPaymentResponse, { id: string }>(async
   }
 
   logger.info('payment_refresh', { externalId: payment.externalId });
-  const updatedPayment = await updatePaymentFromMercadoPago(payment.externalId);
+  const updatedPayment = await updatePaymentFromPagarme(payment.externalId);
 
   return {
     data: {
