@@ -4,7 +4,7 @@
  * Job repeatable que roda a cada 2 minutos.
  * Substitui o cron HTTP POST /api/cron/pix-monitor.
  *
- * Verifica pagamentos PIX pendentes no Mercado Pago,
+ * Verifica pagamentos PIX pendentes na Pagar.me,
  * marca expirados e registra na carteira do usuário.
  */
 
@@ -16,7 +16,7 @@ import type { PixMonitorJobPayload } from '../../platform/queue/types';
 import {
   monitorPendingPixPayments,
   cleanupOldPendingPix,
-} from '../../platform/integrations/mercadopago/pix-monitor';
+} from '../../platform/integrations/pagarme/pix-monitor';
 
 async function processPixMonitorJob(job: Job<PixMonitorJobPayload>): Promise<void> {
   const log = createJobLogger(job);
