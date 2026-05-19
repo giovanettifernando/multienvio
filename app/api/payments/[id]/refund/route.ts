@@ -13,7 +13,9 @@ import { withApiHandler } from '@/platform/api/handler';
 import { ApiError } from '@/platform/api/errors';
 import { requireUserSession } from '@/platform/auth/require-session';
 import { prisma } from '@/platform/db/db';
+import type { TransactionStatus } from '@prisma/client';
 import { refundPayment, getPaymentById, mapMercadoPagoStatus } from '@/platform/integrations/mercadopago';
+import { cancelCharge, getOrder, processOrderData } from '@/platform/integrations/pagarme';
 
 const refundSchema = z.object({
   amount: z.number().positive().optional(),
@@ -49,10 +51,11 @@ export const POST = withApiHandler<RefundPaymentResponse, { id: string }>(async 
     throw new ApiError({ code: 'not_found', message: 'Transação não encontrada', status: 404 });
   }
 
-  if (transaction.gateway?.slug !== 'mercadopago') {
+  const slug = transaction.gateway?.slug;
+  if (slug !== 'mercadopago' && slug !== 'pagarme') {
     throw new ApiError({
       code: 'validation_error',
-      message: 'Reembolso disponível apenas para pagamentos Mercado Pago',
+      message: 'Reembolso disponível apenas para pagamentos via cartão ou PIX',
       status: 400,
     });
   }
@@ -116,12 +119,42 @@ export const POST = withApiHandler<RefundPaymentResponse, { id: string }>(async 
     });
   }
 
-  const refundResult = await refundPayment(externalId, amount);
+  let newStatus: TransactionStatus;
+  let refundedCents: number;
+  let refundId: string | number;
+  let refundStatus: string;
+  let refundAmount: number;
 
-  const updatedPayment = await getPaymentById(externalId);
-  const newStatus = mapMercadoPagoStatus(updatedPayment.status);
+  if (slug === 'pagarme') {
+    const meta = transaction.metadata as { chargeId?: string } | null;
+    const chargeId = meta?.chargeId;
+    if (!chargeId) {
+      throw new ApiError({
+        code: 'not_found',
+        message: 'ID da cobrança Pagar.me não encontrado',
+        status: 404,
+      });
+    }
 
-  const refundedCents = Math.round(refundResult.amount * 100);
+    const amountCents = amount ? Math.round(amount * 100) : undefined;
+    await cancelCharge(chargeId, amountCents);
+    const order = await getOrder(externalId);
+    const processed = processOrderData(order);
+    newStatus = processed.status;
+    refundedCents = amountCents ?? transaction.amountCents;
+    refundId = chargeId;
+    refundStatus = 'refunded';
+    refundAmount = refundedCents / 100;
+  } else {
+    const refundResult = await refundPayment(externalId, amount);
+    const updatedPayment = await getPaymentById(externalId);
+    newStatus = mapMercadoPagoStatus(updatedPayment.status);
+    refundedCents = Math.round(refundResult.amount * 100);
+    refundId = refundResult.id;
+    refundStatus = refundResult.status;
+    refundAmount = refundResult.amount;
+  }
+
   const totalRefundedCents = alreadyRefundedCents + refundedCents;
 
   await prisma.paymentTransaction.update({
@@ -132,8 +165,8 @@ export const POST = withApiHandler<RefundPaymentResponse, { id: string }>(async 
         ...(transaction.metadata as object || {}),
         refundedCents: totalRefundedCents,
         lastRefund: {
-          id: refundResult.id,
-          amount: refundResult.amount,
+          id: refundId,
+          amount: refundAmount,
           reason,
           at: new Date().toISOString(),
           by: session.userId,
@@ -144,18 +177,18 @@ export const POST = withApiHandler<RefundPaymentResponse, { id: string }>(async 
 
   logger.info('refund_processed', {
     transactionId: id,
-    refundId: refundResult.id,
-    amount: refundResult.amount,
-    status: refundResult.status,
+    refundId,
+    amount: refundAmount,
+    status: refundStatus,
   });
 
   return {
     data: {
       success: true,
       refund: {
-        id: refundResult.id,
-        amount: refundResult.amount,
-        status: refundResult.status,
+        id: typeof refundId === 'string' ? parseInt(refundId, 10) || 0 : refundId,
+        amount: refundAmount,
+        status: refundStatus,
       },
       transaction: {
         id,
