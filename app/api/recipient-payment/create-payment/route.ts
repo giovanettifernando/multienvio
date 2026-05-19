@@ -1,7 +1,7 @@
 /**
  * POST /api/recipient-payment/create-payment
  *
- * Cria um pagamento via Mercado Pago para destinatario
+ * Cria um pagamento via Pagar.me para destinatario
  * Endpoint publico - valida pelo paymentToken do request
  */
 
@@ -9,27 +9,16 @@ import { withApiHandler } from '@/platform/api/handler';
 import { ApiError } from '@/platform/api/errors';
 import { z } from 'zod';
 import { prisma } from '@/platform/db/db';
-import { createPaymentWithTracking, getStatusDetailMessage } from '@/platform/integrations/mercadopago';
-import type { CreatePaymentInput } from '@/platform/integrations/mercadopago';
+import { createPagarmePaymentWithTracking } from '@/platform/integrations/pagarme';
 
 const createPaymentSchema = z.object({
   paymentToken: z.string().min(1, 'Token de pagamento e obrigatorio'),
   transactionAmount: z.number().positive('Valor deve ser positivo'),
-  token: z.string().optional(), // Token do cartao (para pagamento com cartao)
-  paymentMethodId: z.string().min(1, 'Metodo de pagamento e obrigatorio'),
+  paymentMethod: z.enum(['credit_card', 'pix']),
+  cardToken: z.string().optional(), // Token do cartao via Tokenizecard.js
+  cardId: z.string().optional(),    // ID de cartao salvo
   installments: z.number().int().min(1).max(24).optional(),
-  payer: z.object({
-    email: z.string().email('Email invalido'),
-    identification: z.object({
-      type: z.string(),
-      number: z.string(),
-    }).optional(),
-  }),
   description: z.string().optional(),
-  cardData: z.object({
-    cardholderName: z.string(),
-  }).optional(),
-  deviceSessionId: z.string().optional(),
 });
 
 type PaymentResponse = {
@@ -42,12 +31,10 @@ type PaymentResponse = {
     method: string;
   };
   payment: {
-    id: number;
+    id: string;
     status: string;
-    statusDetail: string;
-    statusMessage: string;
     pixQrCode?: string;
-    pixQrCodeBase64?: string;
+    pixQrCodeUrl?: string;
   };
 };
 
@@ -99,34 +86,38 @@ export const POST = withApiHandler<PaymentResponse>(async (context) => {
     throw ApiError.badRequest('Valor do pagamento nao corresponde ao esperado');
   }
 
-  // Criar pagamento no MercadoPago
-  const paymentInput: CreatePaymentInput = {
-    transactionAmount: paymentData.transactionAmount,
-    token: paymentData.token,
-    paymentMethodId: paymentData.paymentMethodId,
-    installments: paymentData.installments,
-    payer: paymentData.payer,
+  // Buscar dados do remetente para criacao do cliente no Pagar.me
+  const sender = await prisma.user.findUniqueOrThrow({
+    where: { id: request.senderId },
+    select: { id: true, name: true, email: true, cpf: true, cnpj: true, phone: true },
+  });
+
+  // Criar pagamento no Pagar.me
+  const result = await createPagarmePaymentWithTracking({
+    userId: sender.id,
+    userName: sender.name,
+    userEmail: sender.email,
+    userDocument: sender.cpf?.replace(/\D/g, '') ?? sender.cnpj?.replace(/\D/g, '') ?? undefined,
+    userPhone: sender.phone ?? undefined,
+    amountCents: request.totalCents,
     description: paymentData.description || `Frete - ${request.carrier} - ${request.service}`,
-    cardData: paymentData.cardData,
-    deviceSessionId: paymentData.deviceSessionId,
+    referenceId: `pm_${Date.now()}`,
+    paymentMethod: paymentData.paymentMethod,
+    cardToken: paymentData.cardToken,
+    cardId: paymentData.cardId,
+    installments: paymentData.installments,
     metadata: {
       type: 'checkout_payment' as const,
-      userId: request.senderId, // Usar o ID do remetente para rastreamento
+      userId: request.senderId,
       recipientPaymentRequestId: request.id,
       paymentToken,
-      isRecipientPayment: true,
+      isRecipientPayment: 'true',
     },
-  };
+  });
 
-  // Criar pagamento
-  const result = await createPaymentWithTracking(paymentInput);
-
-  // Se pagamento foi rejeitado, retornar erro com mensagem amigavel
-  if (result.paymentData.status === 'rejected') {
-    const userMessage = getStatusDetailMessage(result.paymentData.status_detail);
-    throw ApiError.badRequest(userMessage, {
-      statusDetail: result.paymentData.status_detail,
-    });
+  // Se pagamento foi rejeitado (cartao nao autorizado), retornar erro amigavel
+  if (result.status === 'FAILED') {
+    throw ApiError.badRequest('Cartao nao autorizado. Verifique os dados e tente novamente.');
   }
 
   // Retornar resposta
@@ -141,14 +132,10 @@ export const POST = withApiHandler<PaymentResponse>(async (context) => {
         method: result.transaction.method,
       },
       payment: {
-        id: result.paymentData.id,
-        status: result.paymentData.status,
-        statusDetail: result.paymentData.status_detail,
-        statusMessage: getStatusDetailMessage(result.paymentData.status_detail),
-        // PIX data
-        pixQrCode: result.paymentData.point_of_interaction?.transaction_data?.qr_code,
-        pixQrCodeBase64:
-          result.paymentData.point_of_interaction?.transaction_data?.qr_code_base64,
+        id: result.orderId,
+        status: result.status,
+        pixQrCode: result.pixQrCode,
+        pixQrCodeUrl: result.pixQrCodeUrl,
       },
     },
     status: 201,
