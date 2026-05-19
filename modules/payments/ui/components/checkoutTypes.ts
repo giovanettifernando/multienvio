@@ -34,7 +34,8 @@ export interface MercadoPagoPaymentResult {
     status: string;
     statusDetail: string;
     pixQrCode?: string;
-    pixQrCodeBase64?: string;
+    pixQrCodeBase64?: string; // MercadoPago: base64 image data
+    pixQrCodeUrl?: string;    // Pagar.me: PNG image URL
   };
 }
 

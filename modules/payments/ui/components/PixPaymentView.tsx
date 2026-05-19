@@ -142,10 +142,13 @@ export function PixPaymentView({
             Escaneie o QR Code abaixo com o app do seu banco:
           </Text>
 
-          {pixData.payment.pixQrCodeBase64 && (
+          {(pixData.payment.pixQrCodeUrl || pixData.payment.pixQrCodeBase64) && (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={`data:image/png;base64,${pixData.payment.pixQrCodeBase64}`}
+              src={
+                pixData.payment.pixQrCodeUrl ||
+                `data:image/png;base64,${pixData.payment.pixQrCodeBase64}`
+              }
               alt="QR Code PIX"
               style={{
                 width: 280,
