@@ -85,8 +85,8 @@ const nextConfig: NextConfig = {
       // Base policies
       "default-src 'self'",
       // Scripts: self + inline para React/Next.js + eval em dev para HMR
-      // MercadoPago: sdk.mercadopago.com (SDK) + www.mercadopago.com (security.js)
-      `script-src 'self' 'unsafe-inline' ${isDev ? "'unsafe-eval'" : ''} https://sdk.mercadopago.com https://www.mercadopago.com https://www.googletagmanager.com https://www.google-analytics.com`,
+      // Pagar.me: checkout.pagar.me (TokenizeCard.js)
+      `script-src 'self' 'unsafe-inline' ${isDev ? "'unsafe-eval'" : ''} https://checkout.pagar.me https://www.googletagmanager.com https://www.google-analytics.com`,
       // Styles: self + inline para Ant Design CSS-in-JS
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       // Images: self + data URIs (para base64) + CDNs comuns
@@ -94,11 +94,10 @@ const nextConfig: NextConfig = {
       // Fonts: self + Google Fonts
       "font-src 'self' https://fonts.gstatic.com data:",
       // Conexões: self + APIs externas
-      // MercadoPago security.js também conecta a mercadolibre.com para tracking
-      "connect-src 'self' https://api.mercadopago.com https://events.mercadopago.com https://www.mercadolibre.com https://api.correios.com.br https://apihom.correios.com.br https://viacep.com.br wss: ws:",
-      // Frames: Mercado Pago para checkout + blob: para PDFs em iframe
-      // MercadoPago security.js também cria frames para mercadolibre.com
-      "frame-src 'self' blob: https://www.mercadopago.com https://www.mercadopago.com.br https://www.mercadolibre.com",
+      // Pagar.me: api.pagar.me (produção) + sdx-api.pagar.me (sandbox)
+      "connect-src 'self' https://api.pagar.me https://sdx-api.pagar.me https://api.correios.com.br https://apihom.correios.com.br https://viacep.com.br wss: ws:",
+      // Frames: blob: para PDFs em iframe
+      "frame-src 'self' blob:",
       // Form actions: self
       "form-action 'self'",
       // Base URI: self
