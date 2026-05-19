@@ -91,7 +91,7 @@ export interface PaymentModalProps {
   /**
    * Callback chamado quando o pagamento é concluído com sucesso
    */
-  onSuccess?: (result: { paymentId?: number; method: PaymentMethod }) => void;
+  onSuccess?: (result: { transactionId?: string; method: PaymentMethod }) => void;
   /**
    * Callback chamado quando o pagamento PIX é cancelado
    */
@@ -251,7 +251,7 @@ export function PaymentModal({
           queryClient.invalidateQueries({ queryKey: ["wallet"] });
         }
 
-        onSuccess?.({ paymentId: pixData.payment.id, method: "pix" });
+        onSuccess?.({ transactionId: String(pixData.payment.id), method: "pix" });
         handleClose();
 
       } else if (["CANCELED", "FAILED", "EXPIRED"].includes(refreshData.payment?.status)) {
@@ -398,11 +398,11 @@ export function PaymentModal({
     handleClose();
   };
 
-  const handleCardSuccess = (paymentId: number) => {
+  const handleCardSuccess = (transactionId: string) => {
     messageApi.success("Pagamento processado com sucesso!");
-    console.log("[CARD_SUCCESS] Payment ID:", paymentId);
+    console.log("[CARD_SUCCESS] Transaction ID:", transactionId);
 
-    onSuccess?.({ paymentId, method: "card" });
+    onSuccess?.({ transactionId, method: "card" });
     handleClose();
 
     // Refetch wallet data after modal closes to ensure UI updates

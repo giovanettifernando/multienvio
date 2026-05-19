@@ -18,7 +18,7 @@ interface CardPaymentViewProps {
   savedCards: Array<{ id: string }> | undefined;
   useSavedCard: boolean;
   onUseSavedCard: (value: boolean) => void;
-  onSuccess: (paymentId: number) => Promise<void>;
+  onSuccess: (transactionId: string) => Promise<void>;
   onError: (error: Error) => void;
   onCancel: () => void;
 }

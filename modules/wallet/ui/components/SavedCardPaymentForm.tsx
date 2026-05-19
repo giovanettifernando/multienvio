@@ -41,7 +41,7 @@ declare global {
 
 interface SavedCardPaymentFormProps {
   amount: number;
-  onSuccess: (paymentId: number) => void;
+  onSuccess: (transactionId: string) => void;
   onError: (error: Error) => void;
   onUseNewCard: () => void; // Callback para usar novo cartão
   paymentType?: 'wallet_topup' | 'checkout_payment'; // Tipo de pagamento (default: wallet_topup)
@@ -291,7 +291,7 @@ export function SavedCardPaymentForm({
       // Verificar se o pagamento foi realmente aprovado
       if (result.payment.status === 'approved') {
         setProcessing(false);
-        onSuccess(result.payment.id);
+        onSuccess(String(result.payment.id));
       } else if (result.payment.status === 'in_process' || result.payment.status === 'pending') {
         // Pagamento em análise - informar usuário
         setProcessing(false);

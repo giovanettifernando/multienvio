@@ -194,8 +194,8 @@ export function CheckoutCartModal({
   });
 
   // Card payment handlers - NOVO FLUXO com códigos reservados
-  const handleCardSuccess = async (paymentId: number) => {
-    console.log('[CHECKOUT_CART] Pagamento com cartão aprovado:', paymentId);
+  const handleCardSuccess = async (transactionId: string) => {
+    console.log('[CHECKOUT_CART] Pagamento com cartão aprovado:', transactionId);
     try {
       message.success('Pagamento aprovado! Criando envios...');
 
@@ -209,7 +209,7 @@ export function CheckoutCartModal({
           reservedTrackingCodes,
           itemIds,
           paymentMethod: 'MERCADO_PAGO',
-          mercadoPagoPaymentId: paymentId.toString(),
+          mercadoPagoPaymentId: transactionId,
         }),
       });
 

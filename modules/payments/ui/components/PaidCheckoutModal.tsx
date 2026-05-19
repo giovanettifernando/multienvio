@@ -285,12 +285,12 @@ export function PaidCheckoutModal({
   });
 
   // Card payment handlers
-  const handleCardSuccess = async (paymentId: number) => {
-    console.log('[PAID_CHECKOUT] Pagamento com cartão aprovado:', paymentId);
+  const handleCardSuccess = async (transactionId: string) => {
+    console.log('[PAID_CHECKOUT] Pagamento com cartão aprovado:', transactionId);
     try {
       message.success('Pagamento aprovado! Criando envio...');
 
-      const data = await createShipmentWithPayment('MERCADO_PAGO', paymentId.toString());
+      const data = await createShipmentWithPayment('MERCADO_PAGO', transactionId);
 
       // Invalidar cache
       queryClient.invalidateQueries({ queryKey: ['shipments'] });

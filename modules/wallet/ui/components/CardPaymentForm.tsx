@@ -1,233 +1,156 @@
 "use client";
-
 import { useState, useEffect, useRef } from "react";
-import { ELCard, ELSpin, ELAlert } from '@/shared/ui';
-const Card = ELCard;
-const Spin = ELSpin;
-const Alert = ELAlert;
-import { ELModal } from '@/shared/ui/ELModal';
+import { ELCard, ELSpin, ELAlert, ELButton, ELModal } from '@/shared/ui';
 import { LoadingOutlined } from "@ant-design/icons";
-import { initMercadoPago, CardPayment } from "@mercadopago/sdk-react";
 
-// Timeout para aguardar confirmação da operadora (15 segundos)
 const CARD_PROCESSING_TIMEOUT_MS = 15000;
 
 interface CardPaymentFormProps {
-  amount: number;
-  onSuccess: (paymentId: number) => void;
+  amount: number; // in cents
+  onSuccess: (transactionId: string) => void;
   onError: (error: Error) => void;
-  paymentType?: 'wallet_topup' | 'checkout_payment'; // Tipo de pagamento (default: wallet_topup)
+  paymentType?: 'wallet_topup' | 'checkout_payment';
 }
 
-// Tipos do Mercado Pago SDK
-interface MercadoPagoFormData {
-  token: string;
-  payment_method_id: string;
-  installments: number;
-  payer?: {
-    email?: string;
-    identification?: {
-      type: string;
-      number: string;
-    };
-  };
+interface TokenizeCardSDK {
+  tokenize: (data: { card: { number: string; holder_name: string; exp_month: string; exp_year: string; cvv: string } }) => Promise<{ token: string }>;
 }
 
-interface MercadoPagoError {
-  message?: string;
-  cause?: unknown;
+declare global {
+  interface Window { PagarmeCheckout?: TokenizeCardSDK; }
 }
 
-export function CardPaymentForm({
-  amount,
-  onSuccess,
-  onError,
-  paymentType = 'wallet_topup',
-}: CardPaymentFormProps) {
-  const [publicKey, setPublicKey] = useState<string | null>(null);
+export function CardPaymentForm({ amount, onSuccess, onError, paymentType = 'wallet_topup' }: CardPaymentFormProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const abortControllerRef = useRef<AbortController | null>(null);
+  const [form, setForm] = useState({ number: '', holderName: '', expMonth: '', expYear: '', cvv: '' });
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
-  // Buscar Public Key do Mercado Pago
   useEffect(() => {
-    async function fetchPublicKey() {
+    async function init() {
       try {
-        const response = await fetch("/api/payments/mercadopago/public-key");
-        if (!response.ok) {
-          throw new Error("Não foi possível carregar as credenciais do Mercado Pago");
+        const res = await fetch('/api/payments/pagarme/public-key');
+        if (!res.ok) throw new Error('Falha ao carregar configuração de pagamento');
+        const json = await res.json();
+        const pk = (json.data ?? json).publicKey;
+        const existing = document.querySelector('[data-pagarmecheckout-app-id]');
+        if (!existing) {
+          const script = document.createElement('script');
+          script.src = 'https://checkout.pagar.me/v1/tokenizecard.js';
+          script.setAttribute('data-pagarmecheckout-app-id', pk);
+          document.body.appendChild(script);
         }
-        const json = await response.json();
-        // Handle standardized API response format { data: T, error, meta }
-        const data = json.data ?? json;
-        setPublicKey(data.publicKey);
-
-        // Inicializar SDK do Mercado Pago
-        initMercadoPago(data.publicKey, {
-          locale: "pt-BR",
-        });
       } catch (err) {
-        console.error("[CARD_PAYMENT_FORM]", err);
-        setError(err instanceof Error ? err.message : "Erro ao carregar Mercado Pago");
+        setError(err instanceof Error ? err.message : 'Erro ao carregar formulário de pagamento');
       } finally {
         setLoading(false);
       }
     }
-
-    fetchPublicKey();
-  }, []);
-
-  // Limpar timeout ao desmontar
-  useEffect(() => {
+    init();
     return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-      }
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      abortRef.current?.abort();
     };
   }, []);
 
-  const handleSubmit = async (formData: MercadoPagoFormData) => {
-    // Mostrar modal de processamento
+  const handleSubmit = async () => {
+    if (!window.PagarmeCheckout) { onError(new Error('SDK de pagamento não carregado')); return; }
     setProcessing(true);
-
-    // Criar AbortController para cancelar requisição no timeout
-    abortControllerRef.current = new AbortController();
-
-    // Configurar timeout de 15 segundos
+    abortRef.current = new AbortController();
     timeoutRef.current = setTimeout(() => {
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-      }
+      abortRef.current?.abort();
       setProcessing(false);
-      onError(new Error("Erro ao processar pagamento, tente novamente mais tarde"));
+      onError(new Error('Tempo esgotado, tente novamente'));
     }, CARD_PROCESSING_TIMEOUT_MS);
 
     try {
-      // O SDK já tokenizou o cartão automaticamente
-      // formData contém o token e outros dados do cartão
-      const response = await fetch("/api/payments/mercadopago/create", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          transactionAmount: amount,
-          token: formData.token,
-          paymentMethodId: formData.payment_method_id,
-          installments: formData.installments,
-          payer: {
-            email: formData.payer?.email || "test@test.com",
-            identification: formData.payer?.identification,
-          },
-          metadata: {
-            type: paymentType,
-          },
-        }),
-        signal: abortControllerRef.current.signal,
+      const { token } = await window.PagarmeCheckout.tokenize({
+        card: {
+          number: form.number.replace(/\D/g, ''),
+          holder_name: form.holderName,
+          exp_month: form.expMonth,
+          exp_year: form.expYear,
+          cvv: form.cvv,
+        },
       });
 
-      // Limpar timeout se a requisição completou
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-        timeoutRef.current = null;
-      }
+      const res = await fetch('/api/payments/pagarme/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        signal: abortRef.current.signal,
+        body: JSON.stringify({
+          amountCents: amount,
+          description: paymentType === 'wallet_topup' ? 'Recarga de carteira' : 'Pagamento de envio',
+          paymentMethod: 'credit_card',
+          cardToken: token,
+          metadata: { type: paymentType },
+        }),
+      });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        // Handle standardized API error format { error: { message } }
-        const errorMessage = errorData.error?.message || errorData.message || "Cartão não autorizado";
-        throw new Error(errorMessage);
-      }
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error?.message || 'Pagamento recusado');
 
-      const resultJson = await response.json();
-      // Handle standardized API response format { data: T, error, meta }
-      const result = resultJson.data ?? resultJson;
-      setProcessing(false);
-      onSuccess(result.payment.id);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      onSuccess((data.data ?? data).transactionId);
     } catch (err) {
-      // Limpar timeout
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-        timeoutRef.current = null;
+      if ((err as Error).name !== 'AbortError') {
+        setProcessing(false);
+        onError(err instanceof Error ? err : new Error('Erro no pagamento'));
       }
-
-      setProcessing(false);
-
-      // Se foi abortado pelo timeout, a mensagem já foi enviada
-      if (err instanceof Error && err.name === "AbortError") {
-        return;
-      }
-
-      console.error("[CARD_PAYMENT_SUBMIT]", err);
-      // Usar mensagem do erro (pode ser específica do status_detail)
-      onError(err instanceof Error ? err : new Error("Cartão não autorizado"));
     }
   };
 
-  const handleError = async (error: MercadoPagoError) => {
-    console.error("[CARD_PAYMENT_ERROR]", error);
-    onError(new Error(error?.message || "Erro ao processar cartão"));
-  };
-
-  if (loading) {
-    return (
-      <Card>
-        <div style={{ textAlign: "center", padding: "40px 0" }}>
-          <Spin tip="Carregando formulário de pagamento...">
-            <div style={{ minHeight: 100 }} />
-          </Spin>
-        </div>
-      </Card>
-    );
-  }
-
-  if (error || !publicKey) {
-    return (
-      <Alert
-        message="Erro ao carregar formulário"
-        description={error || "Mercado Pago não configurado"}
-        type="error"
-        showIcon
-      />
-    );
-  }
+  if (loading) return <ELSpin indicator={<LoadingOutlined spin />} />;
+  if (error) return <ELAlert type="error" message={error} />;
 
   return (
-    <>
-      {/* Modal bloqueante durante processamento */}
-      <ELModal
-        open={processing}
-        closable={false}
-        maskClosable={false}
-        keyboard={false}
-        footer={null}
-        centered
-        size="sm"
-      >
-        <div style={{ textAlign: "center", padding: "40px 20px" }}>
-          <LoadingOutlined style={{ fontSize: 48, color: "#1890ff", marginBottom: 24 }} spin />
-          <div style={{ fontSize: 16, fontWeight: 500, marginBottom: 8 }}>
-            Aguardando confirmação da operadora de cartão de crédito
-          </div>
-          <div style={{ fontSize: 14, color: "#666" }}>
-            Por favor, aguarde...
-          </div>
+    <ELCard>
+      <ELModal open={processing} footer={null} closable={false} centered>
+        <div style={{ textAlign: 'center', padding: 24 }}>
+          <ELSpin indicator={<LoadingOutlined spin style={{ fontSize: 32 }} />} />
+          <p style={{ marginTop: 16 }}>Processando pagamento...</p>
         </div>
       </ELModal>
-
-      <div style={{ maxWidth: 600, margin: "0 auto" }}>
-        <CardPayment
-          initialization={{
-            amount,
-          }}
-          onSubmit={handleSubmit}
-          onError={handleError}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <input
+          placeholder="Número do cartão"
+          value={form.number}
+          onChange={e => setForm(f => ({ ...f, number: e.target.value }))}
+          style={{ padding: 8, border: '1px solid #d9d9d9', borderRadius: 6 }}
         />
+        <input
+          placeholder="Nome no cartão"
+          value={form.holderName}
+          onChange={e => setForm(f => ({ ...f, holderName: e.target.value }))}
+          style={{ padding: 8, border: '1px solid #d9d9d9', borderRadius: 6 }}
+        />
+        <div style={{ display: 'flex', gap: 8 }}>
+          <input
+            placeholder="MM"
+            value={form.expMonth}
+            onChange={e => setForm(f => ({ ...f, expMonth: e.target.value }))}
+            style={{ flex: 1, padding: 8, border: '1px solid #d9d9d9', borderRadius: 6 }}
+          />
+          <input
+            placeholder="AA"
+            value={form.expYear}
+            onChange={e => setForm(f => ({ ...f, expYear: e.target.value }))}
+            style={{ flex: 1, padding: 8, border: '1px solid #d9d9d9', borderRadius: 6 }}
+          />
+          <input
+            placeholder="CVV"
+            value={form.cvv}
+            onChange={e => setForm(f => ({ ...f, cvv: e.target.value }))}
+            style={{ flex: 1, padding: 8, border: '1px solid #d9d9d9', borderRadius: 6 }}
+          />
+        </div>
+        <ELButton type="primary" onClick={handleSubmit} loading={processing} block>
+          Pagar R$ {(amount / 100).toFixed(2).replace('.', ',')}
+        </ELButton>
       </div>
-    </>
+    </ELCard>
   );
 }
 
