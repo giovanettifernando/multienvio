@@ -38,6 +38,15 @@ export interface MercadoPagoWebhookJobPayload {
   };
 }
 
+export interface PagarmeWebhookJobPayload {
+  /** ID do webhook record no banco (já criado com status PENDING) */
+  webhookRecordId: string;
+  /** ID do pedido no Pagar.me (or_XXXXXXXX) extraído do payload */
+  orderId: string;
+  /** Tipo do evento (ex: order.paid, charge.refunded) */
+  eventType: string;
+}
+
 // ============================================================================
 // Pagamentos
 // ============================================================================
@@ -196,6 +205,7 @@ export const QUEUE_NAMES = {
 
   // Webhooks
   WEBHOOK_MERCADOPAGO: 'webhook.mercadopago',
+  WEBHOOK_PAGARME: 'webhook.pagarme',
 
   // Pagamentos
   PAYMENT_PIX_MONITOR: 'payment.pix-monitor',

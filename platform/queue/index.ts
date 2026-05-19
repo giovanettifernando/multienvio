@@ -20,6 +20,7 @@ export {
   type TrackingJobPayload,
   // Webhooks
   type MercadoPagoWebhookJobPayload,
+  type PagarmeWebhookJobPayload,
   // Pagamentos
   type PixMonitorJobPayload,
   type RecipientPaymentExpirationJobPayload,

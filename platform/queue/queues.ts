@@ -69,6 +69,15 @@ const QUEUE_CONFIGS: Record<QueueName, QueueConfig> = {
     },
   },
 
+  [QUEUE_NAMES.WEBHOOK_PAGARME]: {
+    defaultJobOptions: {
+      attempts: 5,
+      backoff: { type: 'exponential', delay: 60_000 },
+      removeOnComplete: { age: 604_800, count: 5000 }, // 7 dias
+      removeOnFail: false,
+    },
+  },
+
   // --- Pagamentos ---
   [QUEUE_NAMES.PAYMENT_PIX_MONITOR]: {
     defaultJobOptions: {
