@@ -83,6 +83,12 @@ export const ADMIN_NAV: AdminNavItem[] = [
         permissions: ["INTEGRACOES"],
       },
       {
+        key: "pagarme",
+        label: "Pagar.me",
+        href: "/admin/pagarme",
+        permissions: ["INTEGRACOES"],
+      },
+      {
         key: "total-express",
         label: "Total Express",
         href: "/admin/total-express",
