@@ -46,9 +46,9 @@ const createPaidShipmentSchema = z.object({
   trackingCode: z.string().min(1, 'Código de rastreamento é obrigatório'),
 
   // Método de pagamento
-  paymentMethod: z.enum(['WALLET', 'MERCADO_PAGO']),
+  paymentMethod: z.enum(['WALLET', 'PAGARME']),
 
-  // ID do pagamento MercadoPago (se aplicável)
+  // ID do pagamento Pagar.me (se aplicável)
   mercadoPagoPaymentId: z.string().optional(),
 
   // Dados do destinatário

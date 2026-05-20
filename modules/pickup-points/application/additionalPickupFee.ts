@@ -199,7 +199,7 @@ async function tryChargeFromCards(
         brand: card.brand,
       });
 
-      // TODO: Implementar cobrança real via MercadoPago
+      // TODO: Implementar cobrança real via Pagar.me
       // Por enquanto, simular falha para ir para o fallback
       // const paymentResult = await chargeSavedCard(card, amountCents, {
       //   description: `Taxa de coleta adicional`,

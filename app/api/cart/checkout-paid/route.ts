@@ -40,8 +40,8 @@ const cartCheckoutPaidSchema = z.object({
   /** IDs dos itens do carrinho a processar */
   itemIds: z.array(z.string()).min(1, 'Pelo menos um item é obrigatório'),
   /** Método de pagamento */
-  paymentMethod: z.enum(['WALLET', 'MERCADO_PAGO', 'PAGARME']),
-  /** ID do pagamento MercadoPago (se aplicável) */
+  paymentMethod: z.enum(['WALLET', 'PAGARME']),
+  /** ID do pagamento (legacy, não utilizado) */
   mercadoPagoPaymentId: z.string().optional(),
   /** ID da transação Pagar.me (se aplicável) */
   pagarmeTransactionId: z.string().optional(),

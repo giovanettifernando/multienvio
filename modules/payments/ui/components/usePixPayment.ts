@@ -3,7 +3,7 @@
 import { useState, useRef, useCallback, useEffect, startTransition } from 'react';
 import { useELApp } from '@/shared/ui';
 const App = { useApp: useELApp };
-import type { MercadoPagoPaymentResult, PixPaymentStatus } from './checkoutTypes';
+import type { PaymentResult, PixPaymentStatus } from './checkoutTypes';
 
 interface UsePixPaymentOptions {
   onPaymentConfirmed: () => Promise<void>;
@@ -12,7 +12,7 @@ interface UsePixPaymentOptions {
 export function usePixPayment({ onPaymentConfirmed }: UsePixPaymentOptions) {
   const { message } = App.useApp();
 
-  const [pixData, setPixData] = useState<MercadoPagoPaymentResult | null>(null);
+  const [pixData, setPixData] = useState<PaymentResult | null>(null);
   const [pixPolling, setPixPolling] = useState(false);
   const [pixStatus, setPixStatus] = useState<PixPaymentStatus>('pending');
   const [pixExpireSeconds, setPixExpireSeconds] = useState(30 * 60); // 30 minutes
@@ -97,8 +97,8 @@ export function usePixPayment({ onPaymentConfirmed }: UsePixPaymentOptions) {
       pixQrCodeUrl?: string;
     };
 
-    // Normalise to MercadoPagoPaymentResult shape used by the rest of the component
-    const pixResult: MercadoPagoPaymentResult = {
+    // Normalise to PaymentResult shape used by the rest of the component
+    const pixResult: PaymentResult = {
       success: true,
       transaction: {
         id: rawResult.transactionId,

@@ -5,7 +5,7 @@ const Typography = ELTypography;
 const Space = ELSpace;
 const Spin = ELSpin;
 import { LoadingOutlined, CheckCircleFilled, CloseCircleFilled } from '@ant-design/icons';
-import type { MercadoPagoPaymentResult, PixPaymentStatus } from './checkoutTypes';
+import type { PaymentResult, PixPaymentStatus } from './checkoutTypes';
 import { formatCurrency } from './checkoutTypes';
 import { ELModal } from '@/shared/ui/ELModal';
 import { ELButton } from '@/shared/ui/ELButton';
@@ -15,7 +15,7 @@ const { Text } = Typography;
 
 interface PixPaymentViewProps {
   open: boolean;
-  pixData: MercadoPagoPaymentResult;
+  pixData: PaymentResult;
   pixStatus: PixPaymentStatus;
   pixPolling: boolean;
   pixExpireSeconds: number;

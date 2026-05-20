@@ -55,9 +55,9 @@ async function testWalletCredit() {
     console.log('   (Atualizando status para PAID e chamando applyPaymentEffects)\n');
 
     // Importar a função de pagamentos
-    const { updatePaymentFromMercadoPago } = await import('@/lib/mercadopago/payments');
+    const { updatePaymentFromPagarme } = await import('@/platform/integrations/pagarme');
 
-    // PROBLEMA: updatePaymentFromMercadoPago vai buscar do MP e ele ainda está pending
+    // PROBLEMA: updatePaymentFromPagarme vai buscar do Pagar.me e ele ainda está pending
     // Então vamos fazer manualmente
 
     // Atualizar status para PAID

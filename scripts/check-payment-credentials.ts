@@ -6,7 +6,7 @@ async function checkPaymentCredentials() {
   console.log('========================================\n');
 
   const gateway = await prisma.paymentGateway.findFirst({
-    where: { slug: 'mercadopago' },
+    where: { slug: 'pagarme' },
     include: {
       credentials: {
         orderBy: { createdAt: 'desc' },

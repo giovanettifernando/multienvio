@@ -114,7 +114,7 @@ export const GET = withApiHandler<WalletTransactionsResponse>(async ({ req }) =>
     const direction = getTransactionDirection(tx.type, tx.amountCents);
     const typeLabel = getTransactionTypeLabel(tx.type);
 
-    // Extract MercadoPago ID from meta field (Prisma returns JsonValue)
+    // Extract Pagar.me payment ID from meta field (Prisma returns JsonValue)
     const meta = tx.meta as Record<string, unknown> | null;
     const mercadoPagoId =
       meta && typeof meta === 'object' && 'externalId' in meta ? String(meta.externalId) : null;

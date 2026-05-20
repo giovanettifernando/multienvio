@@ -87,8 +87,6 @@ const RELATIVE_TO_ABSOLUTE: Record<string, string> = {
   '../integrations/shared/encryption.service': '@/platform/integrations/shared/encryption.service',
   '../integrations/correios': '@/platform/integrations/correios',
   '../integrations/correios/client': '@/platform/integrations/correios/client',
-  '../integrations/mercadopago': '@/platform/integrations/mercadopago',
-  '../integrations/mercadopago/client': '@/platform/integrations/mercadopago/client',
 
   // Services that became platform
   '../services/brasilapi': '@/platform/integrations/shared/brasilapi',

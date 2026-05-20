@@ -30,7 +30,7 @@ import type { LabelGenerateJobPayload } from '@/platform/queue';
 // TYPES
 // ============================================================================
 
-export type CartPaymentMethod = 'WALLET' | 'MERCADO_PAGO' | 'PAGARME';
+export type CartPaymentMethod = 'WALLET' | 'PAGARME';
 
 export interface CreateCartShipmentsInput {
   userId: string;
@@ -40,7 +40,7 @@ export interface CreateCartShipmentsInput {
   itemIds: string[];
   /** Método de pagamento */
   paymentMethod: CartPaymentMethod;
-  /** ID do pagamento MercadoPago (se aplicável) */
+  /** ID do pagamento (legacy, não utilizado) */
   mercadoPagoPaymentId?: string;
   /** ID da transação Pagar.me (se aplicável) */
   pagarmeTransactionId?: string;

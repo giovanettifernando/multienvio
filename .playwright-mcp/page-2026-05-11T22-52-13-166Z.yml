@@ -1,0 +1,145 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - heading "Cadastro de Coletor Autônomo" [level=2] [ref=e6]
+      - text: Preencha todos os dados para se cadastrar como coletor parceiro
+    - generic [ref=e9]:
+      - generic [ref=e11]:
+        - img "user" [ref=e13]:
+          - img [ref=e14]
+        - generic [ref=e18]: Pessoa Física
+      - generic [ref=e21]:
+        - img "bank" [ref=e23]:
+          - img [ref=e24]
+        - generic [ref=e28]: Pessoa Jurídica
+      - generic [ref=e31]:
+        - img "car" [ref=e33]:
+          - img [ref=e34]
+        - generic [ref=e38]: Veículo
+      - generic [ref=e41]:
+        - img "file" [ref=e43]:
+          - img [ref=e44]
+        - generic [ref=e48]: Documentos
+      - generic [ref=e51]:
+        - img "dollar" [ref=e53]:
+          - img [ref=e54]
+        - generic [ref=e58]: Dados Bancários
+    - generic [ref=e60]:
+      - generic [ref=e62]:
+        - img "user" [ref=e65]:
+          - img [ref=e66]
+        - generic [ref=e68]:
+          - heading "Pessoa Física" [level=4] [ref=e69]
+          - text: Seus dados pessoais
+      - generic [ref=e70]:
+        - generic [ref=e72]:
+          - heading "user Dados Pessoais" [level=5] [ref=e73]:
+            - img "user" [ref=e74]:
+              - img [ref=e75]
+            - text: Dados Pessoais
+          - generic [ref=e77]:
+            - generic [ref=e80]:
+              - generic "Nome completo" [ref=e82]: "* Nome completo :"
+              - textbox "Digite seu nome completo" [ref=e86]
+            - generic [ref=e89]:
+              - generic "CPF" [ref=e91]: "* CPF :"
+              - textbox "000.000.000-00" [ref=e95]
+          - generic [ref=e99]:
+            - generic "E-mail" [ref=e101]: "* E-mail :"
+            - textbox "seu@email.com" [ref=e105]
+          - separator [ref=e106]
+          - heading "lock Senha de Acesso" [level=5] [ref=e107]:
+            - img "lock" [ref=e108]:
+              - img [ref=e109]
+            - text: Senha de Acesso
+          - generic [ref=e111]:
+            - generic [ref=e114]:
+              - generic "Senha" [ref=e116]: "* Senha :"
+              - generic [ref=e120]:
+                - textbox "Crie uma senha segura" [ref=e121]
+                - img "eye-invisible" [ref=e123] [cursor=pointer]:
+                  - img [ref=e124]
+            - generic [ref=e129]:
+              - generic "Confirmar senha" [ref=e131]: "* Confirmar senha :"
+              - generic [ref=e135]:
+                - textbox "Digite a senha novamente" [ref=e136]
+                - img "eye-invisible" [ref=e138] [cursor=pointer]:
+                  - img [ref=e139]
+          - separator [ref=e142]
+          - heading "idcard CNH - Carteira de Habilitação" [level=5] [ref=e143]:
+            - img "idcard" [ref=e144]:
+              - img [ref=e145]
+            - text: CNH - Carteira de Habilitação
+          - generic [ref=e147]:
+            - generic [ref=e150]:
+              - generic "Número da CNH" [ref=e152]: "* Número da CNH :"
+              - textbox "00000000000" [ref=e156]
+            - generic [ref=e159]:
+              - generic "Categoria" [ref=e161]: "* Categoria :"
+              - generic [ref=e165] [cursor=pointer]:
+                - generic [ref=e166]:
+                  - generic "B" [ref=e167]
+                  - combobox [ref=e168]
+                - img "down" [ref=e170]:
+                  - img [ref=e171]
+            - generic [ref=e175]:
+              - generic "Validade" [ref=e177]: "* Validade :"
+              - generic [ref=e182]:
+                - textbox "DD/MM/AAAA" [ref=e183]
+                - generic:
+                  - img "calendar":
+                    - img
+          - separator [ref=e184]
+          - heading "home Endereço Residencial" [level=5] [ref=e185]:
+            - img "home" [ref=e186]:
+              - img [ref=e187]
+            - text: Endereço Residencial
+          - generic [ref=e189]:
+            - generic [ref=e192]:
+              - generic "CEP" [ref=e194]: "CEP :"
+              - textbox "00000-000" [ref=e198]
+            - generic [ref=e201]:
+              - generic "Logradouro" [ref=e203]: "Logradouro :"
+              - textbox "Rua, Avenida..." [ref=e207]
+          - generic [ref=e208]:
+            - generic [ref=e211]:
+              - generic "Número" [ref=e213]: "Número :"
+              - textbox "123" [ref=e217]
+            - generic [ref=e220]:
+              - generic "Complemento" [ref=e222]: "Complemento :"
+              - textbox "Apto, Bloco..." [ref=e226]
+            - generic [ref=e229]:
+              - generic "Bairro" [ref=e231]: "Bairro :"
+              - textbox "Bairro" [ref=e235]
+          - generic [ref=e236]:
+            - generic [ref=e239]:
+              - generic "Cidade" [ref=e241]: "Cidade :"
+              - textbox "Cidade" [ref=e245]
+            - generic [ref=e248]:
+              - generic "UF" [ref=e250]: "UF :"
+              - textbox "SP" [ref=e254]
+          - separator [ref=e255]
+          - heading "phone Contato" [level=5] [ref=e256]:
+            - img "phone" [ref=e257]:
+              - img [ref=e258]
+            - text: Contato
+          - generic [ref=e261]:
+            - generic [ref=e263]:
+              - generic "Celular" [ref=e265]: "* Celular :"
+              - textbox "(11) 98765-4321" [ref=e269]
+            - generic [ref=e271] [cursor=pointer]:
+              - checkbox "Usar mesmo número para WhatsApp" [checked] [ref=e273]
+              - generic [ref=e275]: Usar mesmo número para WhatsApp
+        - generic [ref=e276]:
+          - button "arrow-left Voltar" [disabled] [ref=e277]:
+            - generic:
+              - img "arrow-left":
+                - img
+            - generic: Voltar
+          - button "Próximo arrow-right" [ref=e278] [cursor=pointer]:
+            - generic [ref=e279]: Próximo
+            - img "arrow-right" [ref=e280]:
+              - img [ref=e281]
+    - generic [ref=e284]: Já possui cadastro? Faça login
+  - button "Open Next.js Dev Tools" [ref=e290] [cursor=pointer]:
+    - img [ref=e291]

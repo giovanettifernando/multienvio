@@ -44,7 +44,7 @@ export const GET = withApiHandler<PaymentGatewayGetResponse>(async ({ req }) => 
 
   // Buscar gateway e credenciais
   const gateway = await prisma.paymentGateway.findFirst({
-    where: { slug: 'mercadopago' },
+    where: { slug: 'pagarme' },
     include: {
       credentials: {
         where: { isActive: true },
@@ -131,14 +131,14 @@ export const POST = withApiHandler<PaymentGatewayPostResponse>(async ({ req }) =
 
   // Buscar ou criar gateway
   let gateway = await prisma.paymentGateway.findFirst({
-    where: { slug: 'mercadopago' },
+    where: { slug: 'pagarme' },
   });
 
   if (!gateway) {
     gateway = await prisma.paymentGateway.create({
       data: {
-        slug: 'mercadopago',
-        name: 'Mercado Pago',
+        slug: 'pagarme',
+        name: 'Pagar.me',
         environment,
         status: 'ACTIVE',
       },

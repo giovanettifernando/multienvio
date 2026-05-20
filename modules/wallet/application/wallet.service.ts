@@ -303,7 +303,7 @@ export async function refund(
  * ========================================================================
  *
  * Essas funções são chamadas APENAS por serviços de integração de pagamento
- * (ex: lib/mercadopago) quando um pagamento externo é confirmado.
+ * (ex: platform/integrations/pagarme) quando um pagamento externo é confirmado.
  *
  * NUNCA devem ser chamadas diretamente por rotas API ou controllers.
  */

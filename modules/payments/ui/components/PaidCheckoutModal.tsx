@@ -209,7 +209,7 @@ export function PaidCheckoutModal({
   const isLoading = isLoadingWallet || isLoadingCards;
 
   // Função para criar shipment com pagamento confirmado
-  const createShipmentWithPayment = async (paymentMethod: 'WALLET' | 'MERCADO_PAGO', mercadoPagoPaymentId?: string) => {
+  const createShipmentWithPayment = async (paymentMethod: 'WALLET' | 'PAGARME', pagarmePaymentId?: string) => {
     const response = await fetch('/api/shipments/create-paid', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -218,7 +218,7 @@ export function PaidCheckoutModal({
         quoteId: checkoutData.quoteId,
         trackingCode,
         paymentMethod,
-        mercadoPagoPaymentId,
+        pagarmePaymentId,
         recipient: checkoutData.recipient,
         document: checkoutData.document,
         volumes: checkoutData.volumes,
@@ -269,7 +269,7 @@ export function PaidCheckoutModal({
       try {
         message.success('Pagamento PIX confirmado! Criando envio...');
 
-        const data = await createShipmentWithPayment('MERCADO_PAGO', pixData?.payment?.id?.toString());
+        const data = await createShipmentWithPayment('PAGARME', pixData?.payment?.id?.toString());
 
         // Invalidar cache
         queryClient.invalidateQueries({ queryKey: ['shipments'] });
@@ -290,7 +290,7 @@ export function PaidCheckoutModal({
     try {
       message.success('Pagamento aprovado! Criando envio...');
 
-      const data = await createShipmentWithPayment('MERCADO_PAGO', transactionId);
+      const data = await createShipmentWithPayment('PAGARME', transactionId);
 
       // Invalidar cache
       queryClient.invalidateQueries({ queryKey: ['shipments'] });

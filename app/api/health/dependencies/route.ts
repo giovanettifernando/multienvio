@@ -58,51 +58,49 @@ async function checkDatabase(): Promise<DependencyStatus> {
 }
 
 /**
- * Check Mercado Pago API connectivity (if configured)
+ * Check Pagar.me API connectivity (if configured)
  */
-async function checkMercadoPago(): Promise<DependencyStatus> {
-  const accessToken = process.env.MP_ACCESS_TOKEN || process.env.MERCADOPAGO_ACCESS_TOKEN;
+async function checkPagarme(): Promise<DependencyStatus> {
+  const secretKey = process.env.PAGARME_SECRET_KEY;
 
-  if (!accessToken) {
+  if (!secretKey) {
     return {
-      name: "mercadopago",
+      name: "pagarme",
       status: "degraded",
-      message: "Access token not configured",
+      message: "Secret key not configured",
     };
   }
 
   const start = Date.now();
   try {
-    // Simple API call to check connectivity - get payment methods
+    // Simple API call to check connectivity — a 401 means the API is reachable
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 5000);
 
-    const response = await fetch("https://api.mercadopago.com/v1/payment_methods", {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
+    const response = await fetch("https://api.pagar.me/core/v5", {
       signal: controller.signal,
     });
 
     clearTimeout(timeout);
 
-    if (response.ok) {
+    // 401 = API is up but unauthenticated (expected without auth header)
+    if (response.ok || response.status === 401 || response.status === 404) {
       return {
-        name: "mercadopago",
+        name: "pagarme",
         status: "ok",
         latencyMs: Date.now() - start,
       };
     }
 
     return {
-      name: "mercadopago",
+      name: "pagarme",
       status: "degraded",
       latencyMs: Date.now() - start,
       message: `HTTP ${response.status}`,
     };
   } catch (error) {
     return {
-      name: "mercadopago",
+      name: "pagarme",
       status: "unavailable",
       latencyMs: Date.now() - start,
       message: error instanceof Error ? error.message : "Connection failed",
@@ -139,16 +137,16 @@ export const GET = withApiHandler<HealthDependenciesResponse>(async ({ logger })
   const timestamp = new Date().toISOString();
 
   // Run all checks in parallel
-  const [database, mercadopago] = await Promise.all([
+  const [database, pagarme] = await Promise.all([
     checkDatabase(),
-    checkMercadoPago(),
+    checkPagarme(),
   ]);
 
   const environment = checkEnvironment();
 
   const dependencies: DependencyStatus[] = [
     database,
-    mercadopago,
+    pagarme,
     environment,
   ];
 

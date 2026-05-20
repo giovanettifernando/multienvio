@@ -4,7 +4,7 @@
  * Processa o pagamento pelo destinatario
  * Endpoint publico - nao requer autenticacao
  *
- * Apos o pagamento ser confirmado (via MercadoPago):
+ * Apos o pagamento ser confirmado (via Pagar.me):
  * 1. Cria o Shipment real na tabela shipments
  * 2. Marca o RecipientPaymentRequest como PAID
  * 3. Envia e-mails de confirmacao
@@ -23,7 +23,7 @@ import { prisma } from '@/platform/db/db';
 const paymentSchema = z.object({
   paymentToken: z.string().min(1, 'Token de pagamento e obrigatorio'),
   paymentMethod: z.enum(['PIX', 'CREDIT_CARD']),
-  // Campos para integracao com MercadoPago (se necessario)
+  // Campos para integracao com Pagar.me (se necessario)
   mercadoPagoPaymentId: z.number().optional(),
   mercadoPagoStatus: z.string().optional(),
 });

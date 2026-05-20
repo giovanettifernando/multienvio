@@ -17,7 +17,7 @@ test.describe('app/api/admin/payment-transactions/sync', () => {
 
   test.before(async () => {
     adminHelpers = await import('../../../../../../../lib/auth/admin-helpers.ts');
-    paymentsModule = await import('../../../../../../../lib/mercadopago/payments.ts');
+    paymentsModule = await import('@/platform/integrations/pagarme');
   });
 
   test.afterEach(() => {
@@ -44,7 +44,7 @@ test.describe('app/api/admin/payment-transactions/sync', () => {
 
   test('sincroniza pagamento com sucesso', async () => {
     test.mock.method(adminHelpers, 'requireAdminUser', async () => ({ staffId: 's1' }));
-    test.mock.method(paymentsModule, 'updatePaymentFromMercadoPago', async () => ({
+    test.mock.method(paymentsModule, 'updatePaymentFromPagarme', async () => ({
       id: 't1',
       status: 'PAID',
       externalId: 'ext',
@@ -61,14 +61,14 @@ test.describe('app/api/admin/payment-transactions/sync', () => {
 
   test('retorna 500 quando sincronização falha', async () => {
     test.mock.method(adminHelpers, 'requireAdminUser', async () => ({ staffId: 's1' }));
-    test.mock.method(paymentsModule, 'updatePaymentFromMercadoPago', async () => {
-      throw new Error('mp down');
+    test.mock.method(paymentsModule, 'updatePaymentFromPagarme', async () => {
+      throw new Error('pagarme down');
     });
 
     const res = await POST(makeRequest({ externalId: 'ext' }));
     assert.strictEqual(res.status, 500);
     const body = await res.json();
-    assert.ok(body.error.includes('mp down'));
+    assert.ok(body.error.includes('pagarme down'));
   });
 
   test('retorna 400 para JSON inválido', async () => {
@@ -85,9 +85,9 @@ test.describe('app/api/admin/payment-transactions/sync', () => {
     assert.ok(body.error);
   });
 
-  test('propaga mensagem específica de erro do updatePaymentFromMercadoPago', async () => {
+  test('propaga mensagem específica de erro do updatePaymentFromPagarme', async () => {
     test.mock.method(adminHelpers, 'requireAdminUser', async () => ({ staffId: 's1' }));
-    test.mock.method(paymentsModule, 'updatePaymentFromMercadoPago', async () => {
+    test.mock.method(paymentsModule, 'updatePaymentFromPagarme', async () => {
       throw new Error('transação não encontrada');
     });
 

@@ -25,7 +25,7 @@ const { Text } = Typography;
 
 type PaymentMethod = "pix" | "card";
 
-interface MercadoPagoPaymentResult {
+interface PaymentResult {
   success: boolean;
   transaction: {
     id: string;
@@ -39,7 +39,7 @@ interface MercadoPagoPaymentResult {
     status: string;
     statusDetail: string;
     pixQrCode?: string;
-    pixQrCodeBase64?: string; // MercadoPago: base64 image data
+    pixQrCodeBase64?: string; // base64 image data (legacy)
     pixQrCodeUrl?: string;    // Pagar.me: PNG image URL
   };
 }
@@ -75,7 +75,7 @@ export function RecipientPaymentModal({
 
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod | null>(null);
   const [loading, setLoading] = useState(false);
-  const [pixData, setPixData] = useState<MercadoPagoPaymentResult | null>(null);
+  const [pixData, setPixData] = useState<PaymentResult | null>(null);
   const [showCardForm, setShowCardForm] = useState(false);
 
   // Estado para polling de status PIX
@@ -276,7 +276,7 @@ export function RecipientPaymentModal({
         }
 
         const pixJson = await pixRes.json();
-        const pixResult = (pixJson.data ?? pixJson) as MercadoPagoPaymentResult;
+        const pixResult = (pixJson.data ?? pixJson) as PaymentResult;
         setPixData(pixResult);
         setPixStatus("pending");
         setPixExpireSeconds(30 * 60);

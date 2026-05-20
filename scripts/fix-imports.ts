@@ -31,14 +31,8 @@ const IMPORT_MAP: Record<string, string> = {
   '@/lib/audit-admin': '@/platform/logging/audit-admin',
 
   // Platform Integrations
-  '@/lib/mercadopago': '@/platform/integrations/mercadopago',
-  '@/lib/mercadopago/client': '@/platform/integrations/mercadopago/client',
-  '@/lib/mercadopago/config': '@/platform/integrations/mercadopago/config',
-  '@/lib/mercadopago/payments': '@/platform/integrations/mercadopago/payments',
-  '@/lib/mercadopago/cards': '@/platform/integrations/mercadopago/cards',
-  '@/lib/mercadopago/webhooks': '@/platform/integrations/mercadopago/webhooks',
-  '@/lib/mercadopago/pix-monitor': '@/platform/integrations/mercadopago/pix-monitor',
-  '@/lib/mercadopago/types': '@/platform/integrations/mercadopago/types',
+  '@/lib/mercadopago': '@/platform/integrations/pagarme',
+  '@/lib/mercadopago/payments': '@/platform/integrations/pagarme',
 
   '@/lib/integrations/correios': '@/platform/integrations/correios',
   '@/lib/integrations/correios/client': '@/platform/integrations/correios/client',
@@ -249,7 +243,7 @@ const IMPORT_MAP: Record<string, string> = {
   '@/components/quote/InvoiceItemsTable': '@/modules/quotes/ui/components/InvoiceItemsTable',
   '@/components/wallet/SavedCardPaymentForm': '@/modules/wallet/ui/components/SavedCardPaymentForm',
   '@/components/wallet/CardPaymentForm': '@/modules/wallet/ui/components/CardPaymentForm',
-  '@/components/payments/MercadoPagoSecurity': '@/modules/payments/ui/components/MercadoPagoSecurity',
+
   '@/components/recipients/RecipientModal': '@/modules/recipients/ui/components/RecipientModal',
 
   // Hooks mappings

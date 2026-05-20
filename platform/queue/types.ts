@@ -18,26 +18,6 @@ export interface TrackingJobPayload {
 // Webhooks
 // ============================================================================
 
-export interface MercadoPagoWebhookJobPayload {
-  /** ID do webhook record no banco (já criado com status PENDING) */
-  webhookRecordId: string;
-  /** Payload original do MP (já validado HMAC) */
-  payload: {
-    id?: string | number;
-    live_mode?: boolean;
-    type?: string;
-    date_created?: string;
-    user_id?: string | number;
-    api_version?: string;
-    action?: string;
-    data?: {
-      id?: string | number;
-      [key: string]: unknown;
-    };
-    [key: string]: unknown;
-  };
-}
-
 export interface PagarmeWebhookJobPayload {
   /** ID do webhook record no banco (já criado com status PENDING) */
   webhookRecordId: string;
@@ -204,7 +184,6 @@ export const QUEUE_NAMES = {
   TRACKING_SCHEDULER: 'tracking.scheduler',
 
   // Webhooks
-  WEBHOOK_MERCADOPAGO: 'webhook.mercadopago',
   WEBHOOK_PAGARME: 'webhook.pagarme',
 
   // Pagamentos

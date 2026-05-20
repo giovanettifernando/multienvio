@@ -75,7 +75,7 @@ export const POST = withApiHandler<ResolveDebtResponse>(async (context) => {
     });
   }
 
-  // TODO: Integrar com MercadoPago para processar o pagamento
+  // TODO: Integrar com Pagar.me para processar o pagamento
   // Por enquanto, retornar os dados para o frontend criar o pagamento
 
   if (paymentMethod === 'card' && !cardId) {

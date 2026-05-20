@@ -169,8 +169,8 @@ export function CheckoutCartModal({
           body: JSON.stringify({
             reservedTrackingCodes,
             itemIds,
-            paymentMethod: 'MERCADO_PAGO',
-            mercadoPagoPaymentId: pixData?.payment?.id?.toString(),
+            paymentMethod: 'PAGARME',
+            pagarmePaymentId: pixData?.payment?.id?.toString(),
           }),
         });
 
@@ -208,8 +208,8 @@ export function CheckoutCartModal({
         body: JSON.stringify({
           reservedTrackingCodes,
           itemIds,
-          paymentMethod: 'MERCADO_PAGO',
-          mercadoPagoPaymentId: transactionId,
+          paymentMethod: 'PAGARME',
+          pagarmePaymentId: transactionId,
         }),
       });
 

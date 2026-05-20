@@ -31,7 +31,7 @@ const { Text } = Typography;
 
 type PaymentMethod = "pix" | "card" | "wallet";
 
-interface MercadoPagoPaymentResult {
+interface PaymentResult {
   success: boolean;
   transaction: {
     id: string;
@@ -116,7 +116,7 @@ export function PaymentModal({
   const [topUpAmount, setTopUpAmount] = useState<number>(0);
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod | null>(null);
   const [loading, setLoading] = useState(false);
-  const [pixData, setPixData] = useState<MercadoPagoPaymentResult | null>(null);
+  const [pixData, setPixData] = useState<PaymentResult | null>(null);
   const [showCardForm, setShowCardForm] = useState(false);
   const [useSavedCard, setUseSavedCard] = useState(true);
   const [amountTouched, setAmountTouched] = useState(false);
@@ -366,7 +366,7 @@ export function PaymentModal({
           pixQrCode?: string;
           pixQrCodeUrl?: string;
         };
-        const pixResult: MercadoPagoPaymentResult = {
+        const pixResult: PaymentResult = {
           success: true,
           transaction: {
             id: rawResult.transactionId,

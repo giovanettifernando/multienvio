@@ -35,7 +35,7 @@ import {
 // TIPOS
 // ============================================================================
 
-export type PaymentMethod = 'WALLET' | 'MERCADO_PAGO';
+export type PaymentMethod = 'WALLET' | 'PAGARME';
 
 export interface CreatePaidShipmentInput {
   userId: string;
@@ -59,7 +59,7 @@ export interface CreatePaidShipmentInput {
   paymentMethod: PaymentMethod;
   /** ID externo do serviço (ex: externalServiceId da Loggi) */
   externalServiceId?: string;
-  // Dados específicos para pagamento MercadoPago
+  // Dados específicos para pagamento Pagar.me
   mercadoPagoPaymentId?: string;
   // Dados de taxa de coleta (pickup fee)
   pickupFee?: {

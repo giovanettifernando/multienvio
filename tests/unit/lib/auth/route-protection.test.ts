@@ -36,7 +36,7 @@ test.describe('lib/auth/route-protection', () => {
     });
 
     test('webhooks are public (external services)', () => {
-      assert.equal(getRouteProtection('/api/webhooks/mercadopago'), null);
+      assert.equal(getRouteProtection('/api/webhooks/pagarme'), null);
       assert.equal(getRouteProtection('/api/webhooks/tracking'), null);
       assert.equal(getRouteProtection('/api/webhooks/pix'), null);
     });
@@ -102,7 +102,7 @@ test.describe('lib/auth/route-protection', () => {
 
     test('payments API requires auth', () => {
       assert.equal(getRouteProtection('/api/payments/charge'), 'auth');
-      assert.equal(getRouteProtection('/api/payments/mercadopago/create'), 'auth');
+      assert.equal(getRouteProtection('/api/payments/pagarme/create'), 'auth');
     });
 
     test('account API requires auth', () => {

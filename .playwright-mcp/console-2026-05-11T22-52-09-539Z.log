@@ -1,0 +1,74 @@
+[     113ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/c5767_next_dist_2db440d8._.js:2297
+[    2834ms] [LOG] [Fast Refresh] done in 2821ms @ http://localhost:3000/_next/static/chunks/c5767_next_dist_2db440d8._.js:2297
+[    3297ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/_next/static/chunks/c5767_next_dist_2db440d8._.js:2297
+[    3331ms] [VERBOSE] [DOM] Input elements should have autocomplete attributes (suggested: "new-password"): (More info: https://goo.gl/9p2vKq) %o @ http://localhost:3000/coletores/cadastro:0
+[    3331ms] [VERBOSE] [DOM] Input elements should have autocomplete attributes (suggested: "new-password"): (More info: https://goo.gl/9p2vKq) %o @ http://localhost:3000/coletores/cadastro:0
+[    3350ms] [LOG] [HMR] connected @ http://localhost:3000/_next/static/chunks/c5767_next_dist_2db440d8._.js:2297
+[    3626ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/c5767_next_dist_2db440d8._.js:2297
+[    3695ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:3000/api/auth/me:0
+[    3808ms] [ERROR] Warning: [antd: Select] `popupClassName` is deprecated. Please use `classNames.popup.root` instead. @ http://localhost:3000/_next/static/chunks/c5767_next_dist_2db440d8._.js:3127
+[    3862ms] [LOG] [Fast Refresh] done in 385ms @ http://localhost:3000/_next/static/chunks/c5767_next_dist_2db440d8._.js:2297
+[    3899ms] [ERROR] A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+%s%s https://react.dev/link/hydration-mismatch 
+
+  ...
+    <Select ref={function useController.useCallback[ref]} virtual={undefined} classNames={{popup:{}}} styles={{popup:{}}} ...>
+      <BaseSelect name="pf.cnh.cat..." onBlur={function useController.useCallback[onBlur]} placeholder="Categoria" ...>
+        <Polite>
+        <SelectTrigger ref={{current:null}} disabled={false} prefixCls="ant-select" visible={false} ...>
+          <Trigger showAction={[...]} hideAction={[...]} popupPlacement="bottomLeft" builtinPlacements={{...}} ...>
+            <ResizeObserver disabled={true} ref={function useEvent.useCallback[memoFn]} ...>
+              <SingleObserver disabled={true} onResize={function onTargetResize} ...>
+                <SelectInput name="pf.cnh.cat..." style={{}} removeIcon={<CloseOutlined>} ref={function} ...>
+                  <div name="pf.cnh.cat..." onFocus={function onInternalFocus} onKeyDown={function onInternalKeyDown} ...>
+                    <Affix>
+                    <SelectContent ref={{current:null}}>
+                      <div className="ant-select..." style={undefined}>
+                        <div>
+                        <input
++                         id="_R_2phpd6t5esneitpesdlb_"
+-                         id="_R_b675krklritqitpesdlb_"
+                          type="search"
+                          readOnly={true}
+                          tabIndex={undefined}
+                          maxLength={undefined}
+                          ref={{current:null}}
+                          style={{--select-input-width:undefined}}
+                          autoFocus={undefined}
+                          autoComplete="off"
+                          className="ant-select-input"
+                          disabled={false}
+                          value=""
+                          onChange={function handleChange}
+                          onKeyDown={function handleKeyDown}
+                          onBlur={function handleBlur}
+                          onPaste={function handlePaste}
+                          onCompositionStart={function handleCompositionStart}
+                          onCompositionEnd={function handleCompositionEnd}
+                          role="combobox"
+                          aria-expanded={false}
+                          aria-haspopup="listbox"
++                         aria-owns="_R_2phpd6t5esneitpesdlb__list"
+-                         aria-owns="_R_b675krklritqitpesdlb__list"
+                          aria-autocomplete="list"
++                         aria-controls="_R_2phpd6t5esneitpesdlb__list"
+-                         aria-controls="_R_b675krklritqitpesdlb__list"
+                          aria-activedescendant={undefined}
+                        >
+                    ...
+ @ http://localhost:3000/_next/static/chunks/c5767_next_dist_2db440d8._.js:3127
+[    4136ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/c5767_next_dist_2db440d8._.js:2297
+[    4161ms] [LOG] [Fast Refresh] done in 126ms @ http://localhost:3000/_next/static/chunks/c5767_next_dist_2db440d8._.js:2297
+[   17034ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/c5767_next_dist_2db440d8._.js:2297
+[   17116ms] [LOG] [Fast Refresh] done in 183ms @ http://localhost:3000/_next/static/chunks/c5767_next_dist_2db440d8._.js:2297
+[  226291ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/c5767_next_dist_2db440d8._.js:2297
+[  226345ms] [LOG] [Fast Refresh] done in 15ms @ http://localhost:3000/_next/static/chunks/c5767_next_dist_2db440d8._.js:2297

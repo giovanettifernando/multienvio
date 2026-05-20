@@ -1,0 +1,17 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e6]:
+    - generic [ref=e8]:
+      - generic "E-mail" [ref=e10]: "* E-mail"
+      - textbox "* E-mail" [ref=e14]:
+        - /placeholder: usuario@enviolegal.com
+    - generic [ref=e16]:
+      - generic "Senha" [ref=e18]: "* Senha"
+      - generic [ref=e22]:
+        - textbox "* Senha" [ref=e23]:
+          - /placeholder: ••••••••
+        - img "eye-invisible" [ref=e25] [cursor=pointer]:
+          - img [ref=e26]
+    - button "Entrar" [ref=e29] [cursor=pointer]:
+      - generic [ref=e30]: Entrar
+  - button "Open Next.js Dev Tools" [ref=e36] [cursor=pointer]:
+    - img [ref=e37]

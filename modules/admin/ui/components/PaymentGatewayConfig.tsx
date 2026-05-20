@@ -100,7 +100,7 @@ export default function PaymentGatewayConfig() {
 
   return (
     <Card
-      title="Configuração do Mercado Pago"
+      title="Configuração do Pagar.me"
       extra={
         <Space>
           <Button
@@ -123,7 +123,7 @@ export default function PaymentGatewayConfig() {
     >
       <Spin spinning={loading}>
         <Alert
-          message="Credenciais do Mercado Pago"
+          message="Credenciais do Pagar.me"
           description="Configure as credenciais para processar pagamentos. As credenciais são criptografadas antes de serem salvas no banco de dados."
           type="info"
           showIcon
@@ -170,10 +170,10 @@ export default function PaymentGatewayConfig() {
             label="Public Key"
             name="publicKey"
             rules={[{ required: true, message: 'Public Key é obrigatório' }]}
-            tooltip="Chave pública para autenticação no frontend (APP_USR-... ou TEST-...)"
+            tooltip="Chave pública para autenticação no frontend"
           >
             <Input
-              placeholder="APP_USR-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+              placeholder="pk_xxxxxxxxxxxxxxxxxxxxxxxx"
               style={{ fontFamily: 'monospace' }}
             />
           </Form.Item>
@@ -181,10 +181,10 @@ export default function PaymentGatewayConfig() {
           <Form.Item
             label="Access Token"
             name="accessToken"
-            tooltip="Token de acesso para autenticação no backend"
+            tooltip="Chave secreta para autenticação no backend"
           >
             <Input.Password
-              placeholder="APP_USR-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+              placeholder="sk_xxxxxxxxxxxxxxxxxxxxxxxx"
               style={{ fontFamily: 'monospace' }}
               autoComplete="new-password"
               visibilityToggle
@@ -194,10 +194,10 @@ export default function PaymentGatewayConfig() {
           <Form.Item
             label="Application ID (Número da Aplicação)"
             name="applicationId"
-            tooltip="ID da aplicação no Mercado Pago. Encontre em 'Detalhes da aplicação' > 'Número da aplicação'"
+            tooltip="ID da aplicação no Pagar.me"
           >
             <Input
-              placeholder="4013981001613751"
+              placeholder="app_xxxxxxxxxxxxxxxx"
               style={{ fontFamily: 'monospace' }}
             />
           </Form.Item>
@@ -219,9 +219,9 @@ export default function PaymentGatewayConfig() {
             message="Configuração do Webhook"
             description={
               <div>
-                <p style={{ marginBottom: 8 }}>Configure o webhook no painel do Mercado Pago:</p>
+                <p style={{ marginBottom: 8 }}>Configure o webhook no painel do Pagar.me:</p>
                 <ul style={{ marginBottom: 0, paddingLeft: 20 }}>
-                  <li>URL: <code>https://seudominio.com.br/api/webhooks/mercadopago</code></li>
+                  <li>URL: <code>https://seudominio.com.br/api/webhooks/pagarme</code></li>
                   <li>Eventos: Pagamentos, Contestações</li>
                 </ul>
               </div>

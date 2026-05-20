@@ -6,7 +6,7 @@ async function main() {
   console.log('Configurando gateway Mercado Pago para SANDBOX (ambiente de testes)...\n');
 
   const gateway = await prisma.paymentGateway.findFirst({
-    where: { slug: 'mercadopago' },
+    where: { slug: 'pagarme' },
   });
 
   if (!gateway) {

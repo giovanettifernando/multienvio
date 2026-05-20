@@ -1,0 +1,24 @@
+- generic [ref=e1]:
+  - generic [ref=e17]:
+    - generic [ref=e19]:
+      - generic "E-mail" [ref=e21]: "* E-mail"
+      - textbox "* E-mail" [ref=e25]:
+        - /placeholder: usuario@enviolegal.com
+        - text: admin@enviolegal.com.br
+    - generic [ref=e27]:
+      - generic "Senha" [ref=e29]: "* Senha"
+      - generic [ref=e33]:
+        - textbox "* Senha" [ref=e34]:
+          - /placeholder: ••••••••
+          - text: admin123
+        - img "eye-invisible" [ref=e36] [cursor=pointer]:
+          - img [ref=e37]
+    - button "Entrar" [active] [ref=e40] [cursor=pointer]:
+      - generic [ref=e41]: Entrar
+  - button "Open Next.js Dev Tools" [ref=e10] [cursor=pointer]:
+    - img [ref=e11]
+  - alert [ref=e42]
+  - generic [ref=e44]:
+    - img "close-circle" [ref=e45]:
+      - img [ref=e46]
+    - generic [ref=e48]: Email ou senha inválidos

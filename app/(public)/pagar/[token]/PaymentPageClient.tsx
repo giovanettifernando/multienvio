@@ -439,7 +439,7 @@ export default function PaymentPageClient({ token }: PaymentPageClientProps) {
         </div>
       </div>
 
-      {/* Modal de Pagamento MercadoPago */}
+      {/* Modal de Pagamento Pagar.me */}
       {paymentData && (
         <RecipientPaymentModal
           open={paymentModalOpen}

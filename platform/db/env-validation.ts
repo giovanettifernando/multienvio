@@ -238,7 +238,7 @@ export function validateEnv(): ValidationResult {
  */
 function logFeatureAvailability(): void {
   const features: Record<string, boolean> = {
-    payments_mercadopago: isEnvConfigured('MP_ACCESS_TOKEN') || isEnvConfigured('MERCADOPAGO_ACCESS_TOKEN'),
+    payments_pagarme: isEnvConfigured('PAGARME_SECRET_KEY'),
     shipping_correios: isEnvConfigured('CORREIOS_USER') && isEnvConfigured('CORREIOS_PASSWORD'),
     oauth_google: isEnvConfigured('GOOGLE_CLIENT_ID') && isEnvConfigured('GOOGLE_CLIENT_SECRET'),
     rate_limiting_redis: isEnvConfigured('REDIS_URL'),
@@ -293,8 +293,8 @@ export function getEnv(name: string, fallback?: string): string {
  * Check if required integrations are configured
  */
 export const integrations = {
-  isMercadoPagoConfigured(): boolean {
-    return isEnvConfigured('MP_ACCESS_TOKEN') || isEnvConfigured('MERCADOPAGO_ACCESS_TOKEN');
+  isPagarmeConfigured(): boolean {
+    return isEnvConfigured('PAGARME_SECRET_KEY');
   },
 
   isCorreiosConfigured(): boolean {

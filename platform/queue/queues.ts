@@ -60,15 +60,6 @@ const QUEUE_CONFIGS: Record<QueueName, QueueConfig> = {
   },
 
   // --- Webhooks ---
-  [QUEUE_NAMES.WEBHOOK_MERCADOPAGO]: {
-    defaultJobOptions: {
-      attempts: 5,
-      backoff: { type: 'exponential', delay: 60_000 },
-      removeOnComplete: { age: 604_800, count: 5000 }, // 7 dias
-      removeOnFail: false,
-    },
-  },
-
   [QUEUE_NAMES.WEBHOOK_PAGARME]: {
     defaultJobOptions: {
       attempts: 5,

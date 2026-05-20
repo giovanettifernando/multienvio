@@ -20,7 +20,7 @@ export interface WalletData {
 
 export type PaymentMethod = 'wallet' | 'pix' | 'card';
 
-export interface MercadoPagoPaymentResult {
+export interface PaymentResult {
   success: boolean;
   transaction: {
     id: string;

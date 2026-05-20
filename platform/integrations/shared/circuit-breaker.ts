@@ -262,14 +262,6 @@ export const correiosCircuitBreaker = new CircuitBreaker({
   callTimeoutMs: 30000,
 });
 
-export const mercadoPagoCircuitBreaker = new CircuitBreaker({
-  name: 'mercadopago',
-  failureThreshold: 5,
-  resetTimeoutMs: 30000, // 30 segundos
-  successThreshold: 2,
-  callTimeoutMs: 15000,
-});
-
 export const viaCepCircuitBreaker = new CircuitBreaker({
   name: 'viacep',
   failureThreshold: 3,
