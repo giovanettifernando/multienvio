@@ -1,13 +1,11 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { ELSpin } from "@/shared/ui";
-const Spin = ELSpin;
-import { ELCard } from '@/shared/ui/ELCard';
+import { useState, useRef } from "react";
 import { ELAlert } from '@/shared/ui/ELAlert';
 import { ELModal } from '@/shared/ui/ELModal';
 import { ELButton } from '@/shared/ui/ELButton';
 import { LoadingOutlined } from "@ant-design/icons";
+import { tokenizeCard } from '@/modules/payments/ui/utils/tokenizeCard';
 
 // Timeout para aguardar confirmacao da operadora (15 segundos)
 const CARD_PROCESSING_TIMEOUT_MS = 15000;
@@ -20,23 +18,6 @@ interface RecipientCardPaymentFormProps {
   onError: (error: Error) => void;
 }
 
-interface TokenizeCardSDK {
-  tokenize: (data: {
-    card: {
-      number: string;
-      holder_name: string;
-      exp_month: string;
-      exp_year: string;
-      cvv: string;
-    };
-  }) => Promise<{ token: string }>;
-}
-
-declare global {
-  interface Window {
-    PagarmeCheckout?: TokenizeCardSDK;
-  }
-}
 
 export function RecipientCardPaymentForm({
   paymentToken,
@@ -45,7 +26,6 @@ export function RecipientCardPaymentForm({
   onSuccess,
   onError,
 }: RecipientCardPaymentFormProps) {
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
   const [form, setForm] = useState({
@@ -58,50 +38,11 @@ export function RecipientCardPaymentForm({
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  // Carregar Tokenizecard.js do Pagar.me
-  useEffect(() => {
-    async function init() {
-      try {
-        const response = await fetch("/api/payments/pagarme/public-key");
-        if (!response.ok) {
-          throw new Error("Nao foi possivel carregar as credenciais de pagamento");
-        }
-        const json = await response.json();
-        const pk = (json.data ?? json).publicKey;
-
-        const existing = document.querySelector("[data-pagarmecheckout-app-id]");
-        if (!existing) {
-          const script = document.createElement("script");
-          script.src = "https://checkout.pagar.me/v1/tokenizecard.js";
-          script.setAttribute("data-pagarmecheckout-app-id", pk);
-          document.body.appendChild(script);
-        }
-      } catch (err) {
-        console.error("[RECIPIENT_CARD_FORM]", err);
-        setError(err instanceof Error ? err.message : "Erro ao carregar formulario de pagamento");
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    init();
-
-    return () => {
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
-      abortControllerRef.current?.abort();
-    };
-  }, []);
 
   const handleSubmit = async () => {
-    if (!window.PagarmeCheckout) {
-      onError(new Error("SDK de pagamento nao carregado"));
-      return;
-    }
-
     setProcessing(true);
     abortControllerRef.current = new AbortController();
 
-    // Configurar timeout de 15 segundos
     timeoutRef.current = setTimeout(() => {
       abortControllerRef.current?.abort();
       setProcessing(false);
@@ -109,14 +50,12 @@ export function RecipientCardPaymentForm({
     }, CARD_PROCESSING_TIMEOUT_MS);
 
     try {
-      const { token } = await window.PagarmeCheckout.tokenize({
-        card: {
-          number: form.number.replace(/\D/g, ""),
-          holder_name: form.holderName,
-          exp_month: form.expMonth,
-          exp_year: form.expYear,
-          cvv: form.cvv,
-        },
+      const token = await tokenizeCard({
+        number: form.number,
+        holderName: form.holderName,
+        expMonth: form.expMonth,
+        expYear: form.expYear,
+        cvv: form.cvv,
       });
 
       const response = await fetch("/api/recipient-payment/create-payment", {
@@ -152,35 +91,17 @@ export function RecipientCardPaymentForm({
       setProcessing(false);
       onSuccess(result.payment.id);
     } catch (err) {
-      // Limpar timeout
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
         timeoutRef.current = null;
       }
-
       setProcessing(false);
-
-      // Se foi abortado pelo timeout, a mensagem ja foi enviada
-      if (err instanceof Error && err.name === "AbortError") {
-        return;
-      }
-
-      console.error("[RECIPIENT_CARD_SUBMIT]", err);
+      if (err instanceof Error && err.name === "AbortError") return;
+      const msg = err instanceof Error ? err.message : "Cartao nao autorizado";
+      setError(msg);
       onError(err instanceof Error ? err : new Error("Cartao nao autorizado"));
     }
   };
-
-  if (loading) {
-    return (
-      <ELCard>
-        <div style={{ textAlign: "center", padding: "40px 0" }}>
-          <Spin tip="Carregando formulario de pagamento...">
-            <div style={{ minHeight: 100 }} />
-          </Spin>
-        </div>
-      </ELCard>
-    );
-  }
 
   if (error) {
     return (

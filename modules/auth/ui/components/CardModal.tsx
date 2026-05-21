@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { tokenizeCard } from '@/modules/payments/ui/utils/tokenizeCard';
 import { useELApp, ELForm, ELInput, ELRow, ELCol } from '@/shared/ui';
 const App = { useApp: useELApp };
 const Form = ELForm;
@@ -31,28 +32,6 @@ type CardModalProps = {
   onCancel: () => void;
 };
 
-// Tipo global do SDK do Pagar.me (Tokenizecard.js)
-interface PagarmeTokenizeResult {
-  token: string;
-}
-
-interface PagarmeCheckoutSDK {
-  tokenize: (data: {
-    card: {
-      number: string;
-      holder_name: string;
-      exp_month: string;
-      exp_year: string;
-      cvv: string;
-    };
-  }) => Promise<PagarmeTokenizeResult>;
-}
-
-declare global {
-  interface Window {
-    PagarmeCheckout?: PagarmeCheckoutSDK;
-  }
-}
 
 type CardBrand = {
   name: string;
@@ -74,47 +53,15 @@ const CARD_BRANDS: CardBrand[] = [
 export function CardModal({ open, loading, onSubmit, onCancel }: CardModalProps) {
   const { message: messageApi } = App.useApp();
   const [form] = Form.useForm();
-  const [publicKey, setPublicKey] = useState<string | null>(null);
-  const [loadingKey, setLoadingKey] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [cardBrand, setCardBrand] = useState<string | null>(null);
 
   useEffect(() => {
-    async function fetchPublicKey() {
-      try {
-        const response = await fetch("/api/payments/pagarme/public-key");
-        if (!response.ok) {
-          throw new Error("Falha ao carregar configuração do Pagar.me");
-        }
-        const json = await response.json();
-        // Handle standardized API response format { data: T, error, meta }
-        const data = json.data ?? json;
-        setPublicKey(data.publicKey);
-      } catch (err) {
-        console.error("[CARD_MODAL_PUBLIC_KEY]", err);
-        messageApi.error(err instanceof Error ? err.message : "Erro ao carregar Pagar.me");
-      } finally {
-        setLoadingKey(false);
-      }
-    }
-
     if (open) {
-      fetchPublicKey();
       form.resetFields();
       setCardBrand(null);
     }
-  }, [open, form, messageApi]);
-
-  // Carrega o script Tokenizecard.js do Pagar.me quando a public key estiver disponível
-  useEffect(() => {
-    if (!publicKey) return;
-    const existing = document.querySelector('[data-pagarmecheckout-app-id]');
-    if (existing) return;
-    const script = document.createElement('script');
-    script.src = 'https://checkout.pagar.me/v1/tokenizecard.js';
-    script.setAttribute('data-pagarmecheckout-app-id', publicKey);
-    document.body.appendChild(script);
-  }, [publicKey]);
+  }, [open, form]);
 
   /**
    * Detecta a bandeira do cartão baseado no número
@@ -143,33 +90,20 @@ export function CardModal({ open, loading, onSubmit, onCancel }: CardModalProps)
         throw new Error("Não foi possível estabelecer uma conexão segura. Tente novamente.");
       }
 
-      if (!publicKey || !window.PagarmeCheckout) {
-        throw new Error("SDK do Pagar.me não carregado — tente novamente em instantes");
-      }
-
       // Parsear validade MM/AA para mês e ano separados
       const [expMonth, expYear] = values.validity.split("/");
-      const fullYear = `20${expYear}`; // Converter YY para YYYY (ex: 25 -> 2025)
+      const fullYear = `20${expYear}`;
 
-      // Tokenizar cartão via Pagar.me Tokenizecard.js
-      const tokenResult = await window.PagarmeCheckout.tokenize({
-        card: {
-          number: values.cardNumber.replace(/\s/g, ""),
-          holder_name: values.holderName,
-          exp_month: expMonth,
-          exp_year: fullYear,
-          cvv: values.cvv || "000",
-        },
+      const token = await tokenizeCard({
+        number: values.cardNumber.replace(/\s/g, ""),
+        holderName: values.holderName,
+        expMonth,
+        expYear: fullYear,
+        cvv: values.cvv || "000",
       });
 
-      if (!tokenResult?.token) {
-        throw new Error("Falha ao tokenizar cartão");
-      }
-
-      // Chamar callback com token do Pagar.me
-      // O backend irá calcular brand, last4, etc. a partir do token
       onSubmit({
-        mpToken: tokenResult.token,
+        mpToken: token,
         number: values.cardNumber.replace(/\s/g, ""),
         holderName: values.holderName,
         expMonth: parseInt(expMonth, 10),
@@ -290,7 +224,7 @@ export function CardModal({ open, loading, onSubmit, onCancel }: CardModalProps)
       onCancel={onCancel}
       size="md"
     >
-      <Form form={form} layout="vertical" disabled={loadingKey || loading || processing}>
+      <Form form={form} layout="vertical" disabled={loading || processing}>
         {/* Nome no cartão - Full width */}
         <Form.Item
           name="holderName"

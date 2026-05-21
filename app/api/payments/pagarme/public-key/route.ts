@@ -11,6 +11,7 @@ import { getPagarmeConfig } from '@/platform/integrations/pagarme';
 
 type PublicKeyResponse = {
   publicKey: string;
+  baseUrl: string;
 };
 
 export const GET = withApiHandler<PublicKeyResponse>(async () => {
@@ -27,6 +28,7 @@ export const GET = withApiHandler<PublicKeyResponse>(async () => {
   return {
     data: {
       publicKey: config.publicKey,
+      baseUrl: config.baseUrl,
     },
   };
 });

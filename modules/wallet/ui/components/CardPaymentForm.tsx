@@ -1,7 +1,8 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 import { ELCard, ELSpin, ELAlert, ELButton, ELModal } from '@/shared/ui';
 import { LoadingOutlined } from "@ant-design/icons";
+import { tokenizeCard } from '@/modules/payments/ui/utils/tokenizeCard';
 
 const CARD_PROCESSING_TIMEOUT_MS = 15000;
 
@@ -12,51 +13,14 @@ interface CardPaymentFormProps {
   paymentType?: 'wallet_topup' | 'checkout_payment';
 }
 
-interface TokenizeCardSDK {
-  tokenize: (data: { card: { number: string; holder_name: string; exp_month: string; exp_year: string; cvv: string } }) => Promise<{ token: string }>;
-}
-
-declare global {
-  interface Window { PagarmeCheckout?: TokenizeCardSDK; }
-}
-
 export function CardPaymentForm({ amount, onSuccess, onError, paymentType = 'wallet_topup' }: CardPaymentFormProps) {
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
   const [form, setForm] = useState({ number: '', holderName: '', expMonth: '', expYear: '', cvv: '' });
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
-  useEffect(() => {
-    async function init() {
-      try {
-        const res = await fetch('/api/payments/pagarme/public-key');
-        if (!res.ok) throw new Error('Falha ao carregar configuração de pagamento');
-        const json = await res.json();
-        const pk = (json.data ?? json).publicKey;
-        const existing = document.querySelector('[data-pagarmecheckout-app-id]');
-        if (!existing) {
-          const script = document.createElement('script');
-          script.src = 'https://checkout.pagar.me/v1/tokenizecard.js';
-          script.setAttribute('data-pagarmecheckout-app-id', pk);
-          document.body.appendChild(script);
-        }
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Erro ao carregar formulário de pagamento');
-      } finally {
-        setLoading(false);
-      }
-    }
-    init();
-    return () => {
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
-      abortRef.current?.abort();
-    };
-  }, []);
-
   const handleSubmit = async () => {
-    if (!window.PagarmeCheckout) { onError(new Error('SDK de pagamento não carregado')); return; }
     setProcessing(true);
     abortRef.current = new AbortController();
     timeoutRef.current = setTimeout(() => {
@@ -66,20 +30,18 @@ export function CardPaymentForm({ amount, onSuccess, onError, paymentType = 'wal
     }, CARD_PROCESSING_TIMEOUT_MS);
 
     try {
-      const { token } = await window.PagarmeCheckout.tokenize({
-        card: {
-          number: form.number.replace(/\D/g, ''),
-          holder_name: form.holderName,
-          exp_month: form.expMonth,
-          exp_year: form.expYear,
-          cvv: form.cvv,
-        },
+      const token = await tokenizeCard({
+        number: form.number,
+        holderName: form.holderName,
+        expMonth: form.expMonth,
+        expYear: form.expYear,
+        cvv: form.cvv,
       });
 
       const res = await fetch('/api/payments/pagarme/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        signal: abortRef.current.signal,
+        signal: abortRef.current?.signal,
         body: JSON.stringify({
           amountCents: amount,
           description: paymentType === 'wallet_topup' ? 'Recarga de carteira' : 'Pagamento de envio',
@@ -102,7 +64,6 @@ export function CardPaymentForm({ amount, onSuccess, onError, paymentType = 'wal
     }
   };
 
-  if (loading) return <ELSpin indicator={<LoadingOutlined spin />} />;
   if (error) return <ELAlert type="error" message={error} />;
 
   return (
