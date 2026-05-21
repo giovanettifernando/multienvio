@@ -9,36 +9,28 @@ export interface CardData {
 }
 
 /**
- * Tokeniza um cartão diretamente na API do Pagar.me usando a chave pública.
- * Retorna o token (token_XXXX) para uso único no backend.
+ * Tokeniza um cartão via proxy do backend, que chama a API do Pagar.me.
+ * Retorna o token (token_XXXX) para uso único no pagamento.
  */
 export async function tokenizeCard(card: CardData): Promise<string> {
-  const res = await fetch('/api/payments/pagarme/public-key');
-  if (!res.ok) throw new Error('Falha ao carregar configuração de pagamento');
-  const json = await res.json();
-  const { publicKey, baseUrl } = json.data ?? json;
-
-  const tokenRes = await fetch(`${baseUrl}/tokens?appId=${publicKey}`, {
+  const res = await fetch('/api/payments/pagarme/tokenize', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      type: 'card',
-      card: {
-        number: card.number.replace(/\D/g, ''),
-        holder_name: card.holderName,
-        exp_month: parseInt(card.expMonth, 10),
-        exp_year: parseInt(card.expYear, 10),
-        cvv: card.cvv,
-      },
+      number: card.number.replace(/\D/g, ''),
+      holderName: card.holderName,
+      expMonth: parseInt(card.expMonth, 10),
+      expYear: parseInt(card.expYear.length === 2 ? `20${card.expYear}` : card.expYear, 10),
+      cvv: card.cvv,
     }),
   });
 
-  if (!tokenRes.ok) {
-    const err = await tokenRes.json().catch(() => ({}));
-    throw new Error(err?.message || 'Falha ao tokenizar cartão');
+  const json = await res.json();
+  if (!res.ok) {
+    throw new Error((json as { error?: { message?: string } })?.error?.message || 'Falha ao tokenizar cartão');
   }
 
-  const tokenData = await tokenRes.json();
-  if (!tokenData?.id) throw new Error('Token inválido retornado pelo Pagar.me');
-  return tokenData.id as string;
+  const token = ((json as { data?: { token?: string } })?.data ?? json as { token?: string })?.token;
+  if (!token) throw new Error('Token inválido retornado pelo Pagar.me');
+  return token;
 }
