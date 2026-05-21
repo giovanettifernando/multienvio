@@ -26,7 +26,10 @@ export const POST = withApiHandler<TokenizeResponse>(async (context) => {
     throw new ApiError({ code: 'SERVICE_UNAVAILABLE', message: 'Gateway de pagamento não configurado', status: 503 });
   }
 
-  const res = await fetch(`${config.baseUrl}/tokens?appId=${config.publicKey}`, {
+  // Token creation always uses api.pagar.me regardless of sandbox mode
+  // (pk_test_ key signals test mode to Pagar.me; sdx-api.pagar.me is for orders only)
+  const tokenBaseUrl = 'https://api.pagar.me/core/v5';
+  const res = await fetch(`${tokenBaseUrl}/tokens?appId=${config.publicKey}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -43,6 +46,7 @@ export const POST = withApiHandler<TokenizeResponse>(async (context) => {
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
+    console.error('[PAGARME_TOKENIZE] Error:', JSON.stringify({ status: res.status, url: `${config.baseUrl}/tokens?appId=***`, body: err }));
     const msg = (err as { message?: string })?.message || 'Falha ao tokenizar cartão';
     throw new ApiError({ code: 'PAYMENT_ERROR', message: msg, status: 422 });
   }
