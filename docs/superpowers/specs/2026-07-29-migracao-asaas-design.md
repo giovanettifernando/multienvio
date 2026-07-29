@@ -9,7 +9,7 @@
 
 O sistema vai trocar o gateway de pagamento **Pagar.me pelo Asaas**. A integração anterior nunca chegou a funcionar por um problema de credenciais do lado do provedor. O Asaas já foi testado de ponta a ponta e **funciona**.
 
-Escopo: PIX, cartão de crédito e cartões salvos. Boleto fica de fora por ora.
+Escopo: PIX, cartão de crédito, cartões salvos e boleto.
 
 ---
 
@@ -49,6 +49,8 @@ Testes executados na conta de sandbox real, via chamadas diretas à API:
 | 5 | Salvar cartão (tokenização) | ✅ token + bandeira + últimos 4 dígitos |
 | 6 | Cobrar cartão salvo | ✅ **aprovado na hora** |
 | 7 | Parcelamento em 3x | ✅ **aprovado na hora** |
+| 8 | Gerar boleto | ✅ boleto em PDF gerado |
+| 9 | Linha digitável e código de barras | ✅ retornados |
 
 Dois ganhos técnicos relevantes:
 
@@ -67,6 +69,9 @@ Taxas medidas na prática, comparando valor bruto e líquido:
 |---|---|---|---|---|
 | Cartão à vista | R$ 149,90 | R$ 146,43 | R$ 3,47 | 1,99% + R$ 0,49 |
 | Cartão 3x (por parcela) | R$ 100,00 | R$ 97,35 | R$ 2,65 | 2,16% + R$ 0,49 |
+| Boleto | R$ 89,90 | R$ 88,91 | R$ 0,99 | R$ 0,99 fixo |
+
+**O boleto é a forma mais barata de receber.** Cobra valor fixo, sem percentual — então quanto maior a venda, maior a economia. Numa venda de R$ 500, o cartão à vista custaria R$ 10,44 e o boleto custa R$ 0,99.
 
 **Atenção ao parcelamento:** o valor fixo de R$ 0,49 é cobrado *por parcela*. Uma venda em 12x paga esse fixo doze vezes. Vale considerar isso ao definir em quantas parcelas o cliente pode dividir.
 
@@ -99,6 +104,14 @@ O Asaas informa dois momentos distintos no cartão:
 
 **Decisão: o serviço é liberado na confirmação.** É o padrão do mercado. Esperar o recebimento significaria o cliente pagar hoje e receber a etiqueta só no mês seguinte. No PIX os dois momentos são simultâneos, então não há diferença.
 
+**O boleto é diferente e exige atenção.** PIX e cartão liberam o envio em segundos; o boleto não. O cliente gera o boleto, paga quando quiser (até o vencimento) e a compensação bancária leva de 1 a 3 dias úteis. Ou seja:
+
+- O pedido fica **aguardando pagamento** por dias, não por segundos
+- A etiqueta só pode ser emitida quando a compensação for confirmada
+- Se o boleto vencer sem pagamento, o pedido precisa ser cancelado automaticamente
+
+Isso muda a experiência de compra: quem escolher boleto precisa entender na tela que o envio **não sai na hora**. A recomendação é deixar PIX e cartão como opções principais no checkout e o boleto como alternativa, deixando o prazo bem visível para quem escolher essa via.
+
 ### 5.4 Fluxos afetados
 
 Três fluxos usam pagamento e serão convertidos:
@@ -108,6 +121,8 @@ Três fluxos usam pagamento e serão convertidos:
 3. **Pagamento pelo destinatário** — link público onde quem recebe paga o frete
 
 Além deles: estorno, painel administrativo, monitoramento de PIX pendente e recebimento de notificações do gateway.
+
+O boleto é a única forma de pagamento nova — as outras já existem hoje. Ele acrescenta ao sistema: a opção no checkout, uma tela com o boleto em PDF, a linha digitável com botão de copiar, o acompanhamento do pedido enquanto aguarda compensação e o cancelamento automático de boletos vencidos.
 
 ### 5.5 Notificações automáticas (webhooks)
 
@@ -127,6 +142,8 @@ O Asaas permite estorno total ou parcial, tanto em PIX quanto em cartão. A func
 | Cobrança duplicada por reenvio de notificação | Controle de duplicidade já existente no banco |
 | Diferença de comportamento entre sandbox e produção | Homologar cada fluxo no sandbox antes de publicar |
 | Chave de produção inválida (repetir o caso Pagar.me) | Validar a chave contra a API **antes** de publicar |
+| Pedido parado esperando boleto que nunca será pago | Cancelamento automático do pedido quando o boleto vence |
+| Cliente achar que o envio com boleto sai na hora | Prazo de compensação informado de forma clara no checkout |
 
 ---
 
