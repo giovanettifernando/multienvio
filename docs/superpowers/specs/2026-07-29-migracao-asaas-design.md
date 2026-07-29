@@ -110,7 +110,7 @@ O Asaas informa dois momentos distintos no cartão:
 - A etiqueta só pode ser emitida quando a compensação for confirmada
 - Se o boleto vencer sem pagamento, o pedido precisa ser cancelado automaticamente
 
-Isso muda a experiência de compra: quem escolher boleto precisa entender na tela que o envio **não sai na hora**. A recomendação é deixar PIX e cartão como opções principais no checkout e o boleto como alternativa, deixando o prazo bem visível para quem escolher essa via.
+Isso muda a experiência de compra: quem escolher boleto precisa entender na tela que o envio **não sai na hora**. O prazo de compensação fica visível no momento da escolha, para não gerar expectativa errada nem chamado de suporte.
 
 ### 5.4 Fluxos afetados
 
@@ -122,7 +122,9 @@ Três fluxos usam pagamento e serão convertidos:
 
 Além deles: estorno, painel administrativo, monitoramento de PIX pendente e recebimento de notificações do gateway.
 
-O boleto é a única forma de pagamento nova — as outras já existem hoje. Ele acrescenta ao sistema: a opção no checkout, uma tela com o boleto em PDF, a linha digitável com botão de copiar, o acompanhamento do pedido enquanto aguarda compensação e o cancelamento automático de boletos vencidos.
+**Os três meios de pagamento ficam disponíveis nos três fluxos.** Onde houver pagamento, o cliente escolhe entre PIX, cartão e boleto — sem exceção e sem regra diferente por tela. Isso mantém a experiência previsível e evita que o usuário precise descobrir onde cada opção funciona.
+
+O boleto é a única forma de pagamento nova — as outras já existem hoje. Ele acrescenta ao sistema: a opção nas telas de pagamento, o boleto em PDF, a linha digitável com botão de copiar, o acompanhamento do pedido enquanto aguarda compensação e o cancelamento automático de boletos vencidos.
 
 ### 5.5 Notificações automáticas (webhooks)
 
