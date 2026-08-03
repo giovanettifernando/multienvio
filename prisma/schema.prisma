@@ -23,7 +23,7 @@ model User {
   avatarUrl                String?
   googleId                 String?                   @unique
   authProvider             String                    @default("email")
-  pagarmeCustomerId        String?
+  asaasCustomerId          String?
   cpf                      String?
   cnpj                     String?
   hasCompany               Boolean                   @default(false)
