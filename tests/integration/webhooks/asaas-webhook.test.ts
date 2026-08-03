@@ -15,6 +15,19 @@ const DB_PATH = path.resolve(ROOT, 'platform/db/db.ts');
 const ENCRYPTION_PATH = path.resolve(ROOT, 'platform/integrations/shared/encryption.service.ts');
 const ROUTE_PATH = path.resolve(ROOT, 'app/api/webhooks/asaas/route.ts');
 
+// Prisma stub mutável: os dois primeiros testes (rejeição por token) nunca
+// chegam a usar isso. Os dois últimos (P2002 -> 200, erro genérico -> 500)
+// reatribuem paymentWebhook.create logo antes de chamar POST, para exercitar
+// cada ramo do catch da rota.
+const mockPrisma = {
+  paymentGateway: {
+    findFirst: async () => ({ id: 'gw_1' }),
+  },
+  paymentWebhook: {
+    create: async () => ({ id: 'wh_1' }),
+  },
+};
+
 function stubModules() {
   require.cache[SERVER_ONLY_PATH] = { id: SERVER_ONLY_PATH, filename: SERVER_ONLY_PATH, loaded: true, exports: {} } as any;
   require.cache[DB_PATH] = {
@@ -22,7 +35,7 @@ function stubModules() {
     filename: DB_PATH,
     loaded: true,
     exports: {
-      prisma: {},
+      prisma: mockPrisma,
       isDatabaseUnavailableError: () => false,
       schedulePrismaReconnect: async () => {},
     },
@@ -37,6 +50,17 @@ function stubModules() {
 
 stubModules();
 delete require.cache[ROUTE_PATH];
+
+// getAsaasConfig() consulta prisma.paymentGateway.findFirst com um `include`
+// de credentials que nosso mock não devolve; `gateway.credentials.length`
+// lança, config.ts captura e cai no fallback por variável de ambiente. Fixamos
+// as env vars aqui para termos uma config válida (com um webhookToken
+// conhecido) em todos os testes deste arquivo. Isso não muda o comportamento
+// dos dois primeiros testes: eles rejeitam por token ausente/errado
+// independentemente de qual token é o "esperado".
+process.env.ASAAS_API_KEY = process.env.ASAAS_API_KEY || 'test_api_key';
+process.env.ASAAS_WEBHOOK_TOKEN = 'test_webhook_token';
+const VALID_TOKEN = 'test_webhook_token';
 
 function makeRequest(body: unknown, token?: string) {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
@@ -68,5 +92,45 @@ describe('POST /api/webhooks/asaas', () => {
       { params: Promise.resolve({}) } as never,
     );
     assert.equal(res.status, 401);
+  });
+
+  it('evento repetido (P2002 ao persistir) responde 200 — sucesso idempotente', async () => {
+    mockPrisma.paymentGateway.findFirst = async () => ({ id: 'gw_1' });
+    mockPrisma.paymentWebhook.create = (async () => {
+      const err = new Error('Unique constraint failed on the fields: (`gatewayId`,`externalId`)') as Error & { code?: string };
+      err.code = 'P2002';
+      throw err;
+    }) as never;
+
+    const { POST } = await import('@/app/api/webhooks/asaas/route');
+    const res = await POST(
+      makeRequest(
+        { id: 'evt_dup', event: 'PAYMENT_CONFIRMED', payment: { id: 'pay_dup' } },
+        VALID_TOKEN,
+      ) as never,
+      { params: Promise.resolve({}) } as never,
+    );
+
+    assert.equal(res.status, 200);
+    const body = await res.json();
+    assert.equal(body.received, true);
+  });
+
+  it('falha genérica ao persistir o webhook (ex.: banco fora do ar) responde 500, para o Asaas retransmitir', async () => {
+    mockPrisma.paymentGateway.findFirst = async () => ({ id: 'gw_1' });
+    mockPrisma.paymentWebhook.create = (async () => {
+      throw new Error('Banco de dados indisponível');
+    }) as never;
+
+    const { POST } = await import('@/app/api/webhooks/asaas/route');
+    const res = await POST(
+      makeRequest(
+        { id: 'evt_err', event: 'PAYMENT_CONFIRMED', payment: { id: 'pay_err' } },
+        VALID_TOKEN,
+      ) as never,
+      { params: Promise.resolve({}) } as never,
+    );
+
+    assert.equal(res.status, 500);
   });
 });

@@ -19,20 +19,66 @@ import { queueConnection } from '../../platform/queue/connection';
 import { QUEUE_NAMES } from '../../platform/queue';
 import { createJobLogger, withDuration } from '../../platform/queue/helpers';
 import type { AsaasWebhookJobData } from '../../platform/queue/types';
-import { prisma } from '../../platform/db/db';
-import { updatePaymentFromAsaas } from '../../platform/integrations/asaas';
+import { prisma as defaultPrisma } from '../../platform/db/db';
+import { updatePaymentFromAsaas as defaultUpdatePaymentFromAsaas } from '../../platform/integrations/asaas';
+
+export interface AsaasWebhookJobDeps {
+  prisma?: typeof defaultPrisma;
+  updatePaymentFromAsaas?: typeof defaultUpdatePaymentFromAsaas;
+}
 
 /**
  * Processa um job de webhook do Asaas: sincroniza a transação a partir da
- * cobrança e marca o(s) registro(s) PENDING correspondentes como PROCESSED.
+ * cobrança e marca o(s) registro(s) dessa cobrança como PROCESSED.
+ *
+ * A marcação de sucesso NÃO filtra por `status: 'PENDING'`: se a 1ª tentativa
+ * falhou, `runAsaasWebhookJob` já deixou o registro em FAILED, e um retry
+ * bem-sucedido precisa conseguir corrigi-lo para PROCESSED. Filtrar por
+ * PENDING faria esse `updateMany` não casar nada — o job "sucede" do ponto de
+ * vista do BullMQ, mas o registro fica FAILED para sempre mesmo com o
+ * pagamento já reconhecido (falso positivo permanente no painel de webhooks).
  */
-export async function processAsaasWebhookJob(data: AsaasWebhookJobData): Promise<void> {
-  await updatePaymentFromAsaas(data.chargeId);
+export async function processAsaasWebhookJob(
+  data: AsaasWebhookJobData,
+  deps: AsaasWebhookJobDeps = {},
+): Promise<void> {
+  const db = deps.prisma ?? defaultPrisma;
+  const doUpdatePaymentFromAsaas = deps.updatePaymentFromAsaas ?? defaultUpdatePaymentFromAsaas;
 
-  await prisma.paymentWebhook.updateMany({
-    where: { externalId: data.chargeId, status: 'PENDING' },
+  await doUpdatePaymentFromAsaas(data.chargeId);
+
+  await db.paymentWebhook.updateMany({
+    where: { externalId: data.chargeId, status: { in: ['PENDING', 'FAILED'] } },
     data: { status: 'PROCESSED', processedAt: new Date() },
   });
+}
+
+/**
+ * Executa o processamento com marcação de erro: se `processAsaasWebhookJob`
+ * falhar, marca o registro PENDING como FAILED (visibilidade no painel) e
+ * relança o erro para o BullMQ agendar o retry automático.
+ *
+ * Extraída de `processWebhookJob` (que depende de `Job`/logger do BullMQ,
+ * difícil de testar unitariamente) para aceitar deps injetadas e ser
+ * exercitável em teste sem subir Worker/Redis — mesmo padrão de
+ * `UpdatePaymentDeps` em `platform/integrations/asaas/tracking.ts`.
+ */
+export async function runAsaasWebhookJob(
+  data: AsaasWebhookJobData,
+  deps: AsaasWebhookJobDeps = {},
+): Promise<void> {
+  const db = deps.prisma ?? defaultPrisma;
+
+  try {
+    await processAsaasWebhookJob(data, deps);
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : 'Erro desconhecido';
+    await db.paymentWebhook.updateMany({
+      where: { externalId: data.chargeId, status: 'PENDING' },
+      data: { status: 'FAILED', errorMessage: msg, processedAt: new Date() },
+    });
+    throw err; // Permite retry automático pelo BullMQ
+  }
 }
 
 async function processWebhookJob(job: Job<AsaasWebhookJobData>): Promise<void> {
@@ -41,18 +87,7 @@ async function processWebhookJob(job: Job<AsaasWebhookJobData>): Promise<void> {
 
   log.info({ chargeId, event }, 'Processing Asaas webhook');
 
-  await withDuration(async () => {
-    try {
-      await processAsaasWebhookJob(job.data);
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Erro desconhecido';
-      await prisma.paymentWebhook.updateMany({
-        where: { externalId: chargeId, status: 'PENDING' },
-        data: { status: 'FAILED', errorMessage: msg, processedAt: new Date() },
-      });
-      throw err; // Permite retry automático pelo BullMQ
-    }
-  });
+  await withDuration(() => runAsaasWebhookJob(job.data));
 
   log.info({ chargeId, event }, 'Asaas webhook processed successfully');
 }
