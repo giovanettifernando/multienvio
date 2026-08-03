@@ -55,10 +55,6 @@ delete require.cache[SESSION_PATH];
 // ambos resolvem o mesmo caminho absoluto e compartilham o require.cache.
 const sessionModule = req(SESSION_PATH) as typeof import('@/modules/auth/application/session');
 
-beforeEach(() => {
-  mock.method(sessionModule, 'getSession', async () => null);
-});
-
 afterEach(() => mock.restoreAll());
 
 // withApiHandler lê req.nextUrl (específico de NextRequest) antes mesmo de chamar
@@ -71,6 +67,7 @@ function withNextUrl(request: Request): Request {
 
 describe('POST /api/payments/asaas/create', () => {
   it('exige autenticação', async () => {
+    mock.method(sessionModule, 'getSession', async () => null);
     const { POST } = await import('@/app/api/payments/asaas/create/route');
     const req = withNextUrl(new Request('http://localhost/api/payments/asaas/create', {
       method: 'POST',
@@ -88,6 +85,11 @@ describe('POST /api/payments/asaas/create', () => {
   });
 
   it('rejeita método de pagamento desconhecido', async () => {
+    // Sessão válida para a requisição alcançar a validação Zod — sem isso, o guard
+    // de autenticação dispara primeiro e o teste "passa" sem exercitar o schema
+    // (foi exatamente esse buraco que a revisão apontou na versão anterior deste teste).
+    mock.method(sessionModule, 'getSession', async () => ({ userId: 'u_1' }) as never);
+
     const { POST } = await import('@/app/api/payments/asaas/create/route');
     const req = withNextUrl(new Request('http://localhost/api/payments/asaas/create', {
       method: 'POST',
@@ -101,6 +103,10 @@ describe('POST /api/payments/asaas/create', () => {
     }));
 
     const res = await POST(req as never, { params: Promise.resolve({}) } as never);
-    assert.ok(res.status === 400 || res.status === 401);
+    // A rota valida o corpo com Zod ANTES de tocar em prisma/Asaas (createPaymentSchema.safeParse
+    // roda logo após o guard de sessão), então nenhum stub de prisma é necessário aqui — a
+    // requisição nunca chega lá. ApiError.validation() usa status 422 (não 400): é o código real
+    // que platform/api/errors.ts atribui a erros de validação Zod nesta base de código.
+    assert.equal(res.status, 422);
   });
 });

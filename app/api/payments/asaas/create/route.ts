@@ -9,6 +9,7 @@ import { ApiError } from '@/platform/api/errors';
 import { z } from 'zod';
 import { getSession } from '@/modules/auth/application/session';
 import { createAsaasPaymentWithTracking } from '@/platform/integrations/asaas';
+import { buildDueDate } from '@/platform/integrations/asaas/due-date';
 import { prisma } from '@/platform/db/db';
 
 const createPaymentSchema = z.object({
@@ -35,13 +36,6 @@ type PaymentResponse = {
   boletoBarcode?: string;
   invoiceUrl?: string;
 };
-
-/** Vencimento: hoje para PIX e cartão; prazo configurável para boleto. */
-function buildDueDate(method: string, boletoDueDays = 3): string {
-  const date = new Date();
-  if (method === 'boleto') date.setDate(date.getDate() + boletoDueDays);
-  return date.toISOString().slice(0, 10);
-}
 
 export const POST = withApiHandler<PaymentResponse>(async (context) => {
   const session = await getSession();
