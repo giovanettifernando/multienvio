@@ -27,6 +27,13 @@ export interface PagarmeWebhookJobPayload {
   eventType: string;
 }
 
+export interface AsaasWebhookJobData {
+  /** ID da cobrança no Asaas (pay_XXXXXXXX) */
+  chargeId: string;
+  /** Tipo do evento (ex: PAYMENT_CONFIRMED, PAYMENT_RECEIVED) */
+  event: string;
+}
+
 // ============================================================================
 // Pagamentos
 // ============================================================================
@@ -185,6 +192,7 @@ export const QUEUE_NAMES = {
 
   // Webhooks
   WEBHOOK_PAGARME: 'webhook.pagarme',
+  WEBHOOK_ASAAS: 'webhook.asaas',
 
   // Pagamentos
   PAYMENT_PIX_MONITOR: 'payment.pix-monitor',
