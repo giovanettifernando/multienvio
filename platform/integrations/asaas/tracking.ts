@@ -88,7 +88,17 @@ export async function createAsaasPaymentWithTracking(
 
     if (updateResult.count === 0) {
       const refreshed = await db.user.findUniqueOrThrow({ where: { id: input.userId } });
-      customerId = (refreshed as Record<string, unknown>).asaasCustomerId as string;
+      const persisted = (refreshed as Record<string, unknown>).asaasCustomerId;
+
+      // Estado impossível: perdemos a corrida (count === 0 só ocorre quando o
+      // campo deixou de ser null), então a releitura tem de trazer um id. Falhar
+      // alto aqui é melhor que mandar `undefined` como cliente para o Asaas.
+      if (typeof persisted !== 'string' || !persisted) {
+        throw new Error(
+          'Não foi possível determinar o cliente Asaas do usuário após concorrência na criação',
+        );
+      }
+      customerId = persisted;
     } else {
       customerId = customer.id;
     }
@@ -115,8 +125,13 @@ export async function createAsaasPaymentWithTracking(
     },
   });
 
+  // Só a CRIAÇÃO da cobrança pode marcar a transação como FAILED. Depois que o
+  // Asaas aceita a cobrança, ela existe e é pagável — inclusive fora do nosso
+  // app, porque o Asaas notifica o cliente por e-mail com o link. A partir daí,
+  // marcar FAILED criaria uma cobrança paga que o sistema nunca reconheceria.
+  let charge;
   try {
-    const charge = await doCreateCharge({
+    charge = await doCreateCharge({
       customerId,
       amountCents: input.amountCents,
       description: input.description,
@@ -127,50 +142,6 @@ export async function createAsaasPaymentWithTracking(
       remoteIp: input.remoteIp,
       installments: input.installments,
     });
-
-    const status = mapAsaasStatus(charge.status);
-    const netCents = charge.netValue != null ? toCents(charge.netValue) : input.amountCents;
-
-    const result: CreateAsaasPaymentResult = {
-      transaction,
-      chargeId: charge.id,
-      status,
-      cardBrand: charge.creditCard?.creditCardBrand,
-      cardLast4: charge.creditCard?.creditCardNumber,
-      invoiceUrl: charge.invoiceUrl,
-    };
-
-    if (input.paymentMethod === 'pix') {
-      const qr = await doGetPixQrCode(charge.id);
-      result.pixQrCode = qr.payload;
-      result.pixQrCodeImage = `data:image/png;base64,${qr.encodedImage}`;
-    }
-
-    if (input.paymentMethod === 'boleto') {
-      const boleto = await doGetBoleto(charge.id);
-      result.boletoUrl = charge.bankSlipUrl;
-      result.boletoBarcode = boleto.identificationField;
-    }
-
-    const updated = await db.paymentTransaction.update({
-      where: { id: transaction.id },
-      data: {
-        externalId: charge.id,
-        status,
-        method: mapBillingTypeToMethod(charge.billingType),
-        netCents,
-        feeCents: input.amountCents - netCents,
-        cardBrand: result.cardBrand,
-        cardLast4: result.cardLast4,
-        pixQrCode: result.pixQrCode,
-        boletoUrl: result.boletoUrl,
-        boletoBarcode: result.boletoBarcode,
-        authorizedAt: status === 'CAPTURED' ? new Date() : undefined,
-        paidAt: status === 'PAID' ? new Date() : undefined,
-      },
-    });
-
-    return { ...result, transaction: updated };
   } catch (error) {
     await db.paymentTransaction.update({
       where: { id: transaction.id },
@@ -178,19 +149,116 @@ export async function createAsaasPaymentWithTracking(
     });
     throw error;
   }
+
+  const status = mapAsaasStatus(charge.status);
+  const netCents = charge.netValue != null ? toCents(charge.netValue) : input.amountCents;
+  // A taxa é a diferença entre bruto e líquido. Nunca deixar negativa: um
+  // netValue maior que o value seria resposta inesperada da API, e taxa
+  // negativa contaminaria relatório financeiro.
+  const feeCents = Math.max(0, input.amountCents - netCents);
+
+  // Persistir o externalId AGORA, antes de qualquer chamada secundária. É o que
+  // liga a cobrança do Asaas à nossa transação: sem ele, updatePaymentFromAsaas
+  // (que filtra por externalId) nunca encontraria a transação e um pagamento
+  // real ficaria invisível para o sistema.
+  let transactionRecord = await db.paymentTransaction.update({
+    where: { id: transaction.id },
+    data: {
+      externalId: charge.id,
+      status,
+      method: mapBillingTypeToMethod(charge.billingType),
+      netCents,
+      feeCents,
+      cardBrand: charge.creditCard?.creditCardBrand,
+      cardLast4: charge.creditCard?.creditCardNumber,
+      boletoUrl: charge.bankSlipUrl,
+      authorizedAt: status === 'CAPTURED' ? new Date() : undefined,
+      paidAt: status === 'PAID' ? new Date() : undefined,
+    },
+  });
+
+  const result: CreateAsaasPaymentResult = {
+    transaction: transactionRecord,
+    chargeId: charge.id,
+    status,
+    cardBrand: charge.creditCard?.creditCardBrand,
+    cardLast4: charge.creditCard?.creditCardNumber,
+    invoiceUrl: charge.invoiceUrl,
+    boletoUrl: charge.bankSlipUrl,
+  };
+
+  // QR Code e linha digitável são dados de EXIBIÇÃO de uma cobrança que já é
+  // válida. Se a busca falhar, registramos e seguimos: o cliente ainda paga
+  // pelo invoiceUrl, e o status será sincronizado depois pelo webhook ou pelo
+  // monitor de pendências.
+  if (input.paymentMethod === 'pix') {
+    try {
+      const qr = await doGetPixQrCode(charge.id);
+      result.pixQrCode = qr.payload;
+      result.pixQrCodeImage = `data:image/png;base64,${qr.encodedImage}`;
+    } catch (error) {
+      console.error(
+        `[ASAAS_TRACKING] Falha ao obter QR Code do PIX da cobrança ${charge.id} (cobrança segue válida):`,
+        error,
+      );
+    }
+  }
+
+  if (input.paymentMethod === 'boleto') {
+    try {
+      const boleto = await doGetBoleto(charge.id);
+      result.boletoBarcode = boleto.identificationField;
+    } catch (error) {
+      console.error(
+        `[ASAAS_TRACKING] Falha ao obter a linha digitável da cobrança ${charge.id} (boleto segue válido):`,
+        error,
+      );
+    }
+  }
+
+  if (result.pixQrCode || result.boletoBarcode) {
+    transactionRecord = await db.paymentTransaction.update({
+      where: { id: transaction.id },
+      data: {
+        pixQrCode: result.pixQrCode,
+        boletoBarcode: result.boletoBarcode,
+      },
+    });
+  }
+
+  return { ...result, transaction: transactionRecord };
 }
 
-/** Reconsulta a cobrança no Asaas e sincroniza o status da transação local. */
-export async function updatePaymentFromAsaas(chargeId: string): Promise<void> {
-  const charge = await getCharge(chargeId);
+export interface UpdatePaymentDeps {
+  prisma?: typeof defaultPrisma;
+  getCharge?: typeof getCharge;
+}
+
+/**
+ * Reconsulta a cobrança no Asaas e sincroniza o status da transação local.
+ *
+ * É por aqui que o webhook e o monitor de pendências refletem um pagamento.
+ * O filtro é `externalId` — por isso `createAsaasPaymentWithTracking` grava esse
+ * campo assim que a cobrança nasce: sem ele, nada aqui encontra a transação.
+ */
+export async function updatePaymentFromAsaas(
+  chargeId: string,
+  deps: UpdatePaymentDeps = {},
+): Promise<void> {
+  const db = deps.prisma ?? defaultPrisma;
+  const doGetCharge = deps.getCharge ?? getCharge;
+
+  const charge = await doGetCharge(chargeId);
   const status = mapAsaasStatus(charge.status);
   const netCents = charge.netValue != null ? toCents(charge.netValue) : undefined;
 
-  await defaultPrisma.paymentTransaction.updateMany({
+  await db.paymentTransaction.updateMany({
     where: { externalId: chargeId },
     data: {
       status,
-      ...(netCents != null ? { netCents, feeCents: toCents(charge.value) - netCents } : {}),
+      ...(netCents != null
+        ? { netCents, feeCents: Math.max(0, toCents(charge.value) - netCents) }
+        : {}),
       paidAt: status === 'PAID' ? new Date() : undefined,
       authorizedAt: status === 'CAPTURED' ? new Date() : undefined,
     },

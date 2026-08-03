@@ -258,4 +258,162 @@ describe('createAsaasPaymentWithTracking', () => {
       'usa o customerId já persistido por outra execução, não o recém-criado',
     );
   });
+
+  // --- Correção do achado CRÍTICO da revisão da Task 7 ---
+  // O externalId (id da cobrança no Asaas) era persistido só no update final,
+  // DEPOIS de buscar QR Code / linha digitável. Se essas chamadas falhassem, o
+  // catch marcava a transação como FAILED sem nunca gravar o externalId — mas a
+  // cobrança JÁ EXISTE no Asaas nesse ponto e é pagável (o Asaas notifica o
+  // cliente por e-mail com o link, independente do nosso app). O cliente pagava,
+  // updatePaymentFromAsaas filtrava por externalId, não casava nada, e o
+  // pagamento nunca era refletido: cobrança paga, transação eternamente FAILED,
+  // sem nenhuma forma de reconciliar.
+
+  it('persiste o externalId mesmo quando a busca do QR Code do PIX falha', async () => {
+    const { createAsaasPaymentWithTracking } = loadTracking();
+    const { deps, updated } = makeDeps({
+      createCharge: async () => ({
+        id: 'pay_orfa',
+        status: 'PENDING',
+        billingType: 'PIX',
+        value: 49.9,
+        netValue: 48.91,
+        dueDate: '2026-08-05',
+        invoiceUrl: 'https://sandbox.asaas.com/i/pay_orfa',
+      }),
+      getPixQrCode: async () => {
+        throw new Error('timeout ao buscar QR Code');
+      },
+    });
+
+    // Não pode lançar: a cobrança existe e é válida.
+    const result = await createAsaasPaymentWithTracking(input, deps);
+
+    const comExternalId = updated.find((u: any) => u.externalId === 'pay_orfa');
+    assert.ok(comExternalId, 'externalId precisa ter sido persistido');
+    assert.notEqual(comExternalId.status, 'FAILED', 'cobrança viva não pode virar FAILED');
+
+    assert.equal(
+      updated.some((u: any) => u.status === 'FAILED'),
+      false,
+      'nenhuma atualização pode marcar FAILED quando a cobrança foi criada com sucesso',
+    );
+
+    // Sem QR Code, o cliente ainda tem como pagar pelo link da fatura.
+    assert.equal(result.invoiceUrl, 'https://sandbox.asaas.com/i/pay_orfa');
+    assert.equal(result.pixQrCode, undefined);
+    assert.equal(result.chargeId, 'pay_orfa');
+  });
+
+  it('persiste o externalId mesmo quando a busca da linha digitável falha', async () => {
+    const { createAsaasPaymentWithTracking } = loadTracking();
+    const { deps, updated } = makeDeps({
+      createCharge: async () => ({
+        id: 'pay_bol',
+        status: 'PENDING',
+        billingType: 'BOLETO',
+        value: 89.9,
+        netValue: 88.91,
+        dueDate: '2026-08-08',
+        bankSlipUrl: 'https://sandbox.asaas.com/b/pdf/xyz',
+        invoiceUrl: 'https://sandbox.asaas.com/i/pay_bol',
+      }),
+      getBoletoIdentification: async () => {
+        throw new Error('timeout ao buscar linha digitável');
+      },
+    });
+
+    const result = await createAsaasPaymentWithTracking(
+      { ...input, paymentMethod: 'boleto', amountCents: 8990 },
+      deps,
+    );
+
+    const comExternalId = updated.find((u: any) => u.externalId === 'pay_bol');
+    assert.ok(comExternalId, 'externalId precisa ter sido persistido');
+    assert.equal(
+      updated.some((u: any) => u.status === 'FAILED'),
+      false,
+      'boleto gerado com sucesso não pode virar FAILED por falha na linha digitável',
+    );
+
+    // O PDF vem da própria cobrança, não da chamada que falhou.
+    assert.equal(result.boletoUrl, 'https://sandbox.asaas.com/b/pdf/xyz');
+    assert.equal(result.boletoBarcode, undefined);
+  });
+
+  it('nunca calcula taxa negativa quando o líquido vem maior que o bruto', async () => {
+    const { createAsaasPaymentWithTracking } = loadTracking();
+    const { deps, updated } = makeDeps({
+      createCharge: async () => ({
+        id: 'pay_3',
+        status: 'PENDING',
+        billingType: 'PIX',
+        value: 49.9,
+        netValue: 60.0, // absurdo, mas não pode gerar feeCents negativo
+        dueDate: '2026-08-05',
+      }),
+    });
+
+    await createAsaasPaymentWithTracking(input, deps);
+
+    const comExternalId = updated.find((u: any) => u.externalId === 'pay_3');
+    assert.ok(comExternalId.feeCents >= 0, 'feeCents nunca pode ser negativo');
+  });
+});
+
+describe('updatePaymentFromAsaas', () => {
+  it('sincroniza status, netCents e feeCents a partir da cobrança consultada', async () => {
+    const { updatePaymentFromAsaas } = loadTracking();
+    const updateManyCalls: any[] = [];
+
+    await updatePaymentFromAsaas('pay_1', {
+      prisma: {
+        paymentTransaction: {
+          updateMany: async (args: any) => {
+            updateManyCalls.push(args);
+            return { count: 1 };
+          },
+        },
+      },
+      getCharge: async () => ({
+        id: 'pay_1',
+        status: 'RECEIVED',
+        billingType: 'PIX',
+        value: 49.9,
+        netValue: 48.91,
+        dueDate: '2026-08-05',
+      }),
+    } as never);
+
+    assert.equal(updateManyCalls.length, 1);
+    assert.deepEqual(updateManyCalls[0].where, { externalId: 'pay_1' });
+    assert.equal(updateManyCalls[0].data.status, 'PAID', 'RECEIVED do Asaas vira PAID');
+    assert.equal(updateManyCalls[0].data.netCents, 4891);
+    assert.equal(updateManyCalls[0].data.feeCents, 99);
+  });
+
+  it('não atualiza nada e não lança quando o externalId não casa', async () => {
+    const { updatePaymentFromAsaas } = loadTracking();
+    let count = -1;
+
+    await updatePaymentFromAsaas('pay_inexistente', {
+      prisma: {
+        paymentTransaction: {
+          updateMany: async () => {
+            count = 0;
+            return { count: 0 };
+          },
+        },
+      },
+      getCharge: async () => ({
+        id: 'pay_inexistente',
+        status: 'CONFIRMED',
+        billingType: 'CREDIT_CARD',
+        value: 10,
+        dueDate: '2026-08-05',
+      }),
+    } as never);
+
+    assert.equal(count, 0, 'updateMany foi chamado e não casou nenhuma linha, sem lançar');
+  });
 });
