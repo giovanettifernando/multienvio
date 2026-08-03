@@ -21,6 +21,7 @@
  * - PDF Generate (geração assíncrona de PDFs: etiquetas, extratos, batch)
  * - FIPE Sync (sincronização de marcas/modelos FIPE via fila)
  * - Correios Agencies Sync (sincronização de agências por UF via fila)
+ * - Asaas Webhook (processamento assíncrono de webhooks de cobrança, acionado por evento de fila)
  */
 
 // Carregar .env (Next.js faz isso automaticamente, tsx não)
@@ -59,6 +60,12 @@ import { createPdfGenerateWorker, registerPdfCleanupRepeatable } from './pdf/gen
 // Admin Sync
 import { createFipeSyncWorker } from './admin/fipe-sync.worker';
 import { createCorreiosAgenciesSyncWorker } from './admin/correios-agencies-sync.worker';
+
+// Webhook (Asaas)
+// Nota: o worker de webhook do Pagar.me (workers/webhook/pagarme.worker.ts)
+// nunca chegou a ser registrado aqui e será removido na Task 17 da migração
+// para o Asaas — não registrá-lo agora evita trabalho de remoção depois.
+import { createAsaasWebhookWorker } from './webhook/asaas.worker';
 
 // ============================================================================
 // Estado global
@@ -105,6 +112,7 @@ async function start(): Promise<void> {
     createPdfGenerateWorker(),
     createFipeSyncWorker(),
     createCorreiosAgenciesSyncWorker(),
+    createAsaasWebhookWorker(),
   );
 
   console.log(`[WORKERS] ${workers.length} workers started:`);
