@@ -15,6 +15,7 @@ import { requireUserSession } from '@/platform/auth/require-session';
 import { prisma } from '@/platform/db/db';
 import type { TransactionStatus } from '@prisma/client';
 import { refundCharge, mapAsaasStatus } from '@/platform/integrations/asaas';
+import { isRefundableTransactionStatus } from '@/shared/utils/payment-status';
 
 const refundSchema = z.object({
   amount: z.number().positive().optional(),
@@ -59,7 +60,7 @@ export const POST = withApiHandler<RefundPaymentResponse, { id: string }>(async 
     });
   }
 
-  if (!['PAID', 'AUTHORIZED'].includes(transaction.status)) {
+  if (!isRefundableTransactionStatus(transaction.status)) {
     throw new ApiError({
       code: 'validation_error',
       message: `Não é possível reembolsar pagamento com status: ${transaction.status}`,
