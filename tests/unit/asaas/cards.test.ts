@@ -80,15 +80,25 @@ describe('tokenizeCard', () => {
     assert.equal(calls[0].body.creditCard.expiryYear, '2030');
     assert.equal(calls[0].body.creditCardHolderInfo.cpfCnpj, '24971563792');
     assert.equal(calls[0].body.creditCardHolderInfo.postalCode, '89223005');
+    assert.equal(calls[0].body.creditCardHolderInfo.phone, '4738010919');
     assert.equal(calls[0].body.remoteIp, '203.0.113.7');
+  });
+
+  it('formata mês de um dígito com zero à esquerda', async () => {
+    const { tokenizeCard } = loadCards();
+    const { request, calls } = fakeRequest();
+    await tokenizeCard({ ...input, expiryMonth: 1 }, { request });
+
+    assert.equal(calls[0].body.creditCard.expiryMonth, '01');
   });
 
   it('exige o IP do cliente', async () => {
     const { tokenizeCard } = loadCards();
-    const { request } = fakeRequest();
+    const { request, calls } = fakeRequest();
     await assert.rejects(
       () => tokenizeCard({ ...input, remoteIp: '' }, { request }),
       /remoteIp é obrigatório/i,
     );
+    assert.equal(calls.length, 0, 'não deve chamar a API quando o remoteIp está ausente');
   });
 });
