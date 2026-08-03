@@ -78,11 +78,36 @@ export const POST = withApiHandler<CreateCardResponse>(async (context) => {
     });
   }
 
-  // Check for pagarmeToken first — token-based vault save flow
+  // Check for asaasToken first — token-based card save flow.
+  // Diferente do Pagar.me, o Asaas não tem endpoint de "salvar no cofre": o
+  // token da tokenização (Task 9) já é o valor persistível. Como a resposta
+  // da tokenização não devolve holderName/validade, o cliente reenvia os
+  // dados que já tinha preenchido no formulário original.
   const bodyObj = payload as Record<string, unknown>;
-  if (typeof bodyObj.pagarmeToken === 'string') {
-    const { createUserCardFromPagarmeToken } = await import('@/modules/auth/application/account-cards.service');
-    const card = await createUserCardFromPagarmeToken(userId, bodyObj.pagarmeToken);
+  if (typeof bodyObj.asaasToken === 'string') {
+    const holderName = typeof bodyObj.holderName === 'string' ? bodyObj.holderName : undefined;
+    const brand = typeof bodyObj.brand === 'string' ? bodyObj.brand : undefined;
+    const last4 = typeof bodyObj.last4 === 'string' ? bodyObj.last4 : undefined;
+    const expMonth = typeof bodyObj.expMonth === 'number' ? bodyObj.expMonth : undefined;
+    const expYear = typeof bodyObj.expYear === 'number' ? bodyObj.expYear : undefined;
+
+    if (!holderName || !brand || !last4 || !expMonth || !expYear) {
+      throw new ApiError({
+        code: "invalid_payload",
+        message: "Dados do cartão incompletos para salvar o token.",
+        status: 400,
+      });
+    }
+
+    const { createUserCardFromAsaasToken } = await import('@/modules/auth/application/account-cards.service');
+    const card = await createUserCardFromAsaasToken(userId, {
+      token: bodyObj.asaasToken,
+      brand,
+      last4,
+      holderName,
+      expMonth,
+      expYear,
+    });
     return {
       data: { ...card, createdAt: card.createdAt.toISOString() },
       status: 201,

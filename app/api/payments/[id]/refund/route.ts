@@ -14,7 +14,7 @@ import { ApiError } from '@/platform/api/errors';
 import { requireUserSession } from '@/platform/auth/require-session';
 import { prisma } from '@/platform/db/db';
 import type { TransactionStatus } from '@prisma/client';
-import { cancelCharge, getOrder, processOrderData } from '@/platform/integrations/pagarme';
+import { refundCharge, mapAsaasStatus } from '@/platform/integrations/asaas';
 
 const refundSchema = z.object({
   amount: z.number().positive().optional(),
@@ -51,7 +51,7 @@ export const POST = withApiHandler<RefundPaymentResponse, { id: string }>(async 
   }
 
   const slug = transaction.gateway?.slug;
-  if (slug !== 'pagarme') {
+  if (slug !== 'asaas') {
     throw new ApiError({
       code: 'validation_error',
       message: 'Reembolso disponível apenas para pagamentos via cartão ou PIX',
@@ -124,23 +124,13 @@ export const POST = withApiHandler<RefundPaymentResponse, { id: string }>(async 
   let refundStatus: string;
   let refundAmount: number;
 
-  const meta = transaction.metadata as { chargeId?: string } | null;
-  const chargeId = meta?.chargeId;
-  if (!chargeId) {
-    throw new ApiError({
-      code: 'not_found',
-      message: 'ID da cobrança Pagar.me não encontrado',
-      status: 404,
-    });
-  }
-
+  // O Asaas estorna pela própria cobrança (payment_transactions.externalId) —
+  // não existe um "chargeId" separado como no Pagar.me.
   const amountCents = amount ? Math.round(amount * 100) : undefined;
-  await cancelCharge(chargeId, amountCents);
-  const order = await getOrder(externalId);
-  const processed = processOrderData(order);
-  newStatus = processed.status;
+  const charge = await refundCharge(externalId, amountCents);
+  newStatus = mapAsaasStatus(charge.status);
   refundedCents = amountCents ?? transaction.amountCents;
-  refundId = chargeId;
+  refundId = externalId;
   refundStatus = 'refunded';
   refundAmount = refundedCents / 100;
 

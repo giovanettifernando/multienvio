@@ -1,7 +1,7 @@
 /**
  * POST /api/payments/[id]/refresh
  *
- * Atualiza o status de um pagamento consultando o Pagar.me
+ * Atualiza o status de um pagamento consultando o Asaas
  * Usado para polling manual ou refresh de status
  */
 
@@ -9,7 +9,7 @@ import { withApiHandler } from '@/platform/api/handler';
 import { ApiError } from '@/platform/api/errors';
 import { requireUserSession } from '@/platform/auth/require-session';
 import { prisma } from '@/platform/db/db';
-import { updatePaymentFromPagarme } from '@/platform/integrations/pagarme';
+import { updatePaymentFromAsaas } from '@/platform/integrations/asaas';
 
 type RefreshPaymentResponse = {
   payment: {
@@ -62,7 +62,13 @@ export const POST = withApiHandler<RefreshPaymentResponse, { id: string }>(async
   }
 
   logger.info('payment_refresh', { externalId: payment.externalId });
-  const updatedPayment = await updatePaymentFromPagarme(payment.externalId);
+  // updatePaymentFromAsaas sincroniza a transação pelo externalId e não retorna o
+  // registro atualizado (diferente do equivalente Pagar.me) — relemos do banco.
+  await updatePaymentFromAsaas(payment.externalId);
+  const updatedPayment = await prisma.paymentTransaction.findUniqueOrThrow({
+    where: { id: payment.id },
+    select: { id: true, status: true, paidAt: true },
+  });
 
   return {
     data: {

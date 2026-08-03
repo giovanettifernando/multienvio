@@ -1,5 +1,5 @@
 import { randomUUID } from "crypto";
-import type { Card, Prisma, PrismaClient } from "@prisma/client";
+import type { Card, CardBrand, Prisma, PrismaClient } from "@prisma/client";
 import { ApiError } from "@/platform/api/errors";
 import { prisma } from "@/platform/db/db";
 import {
@@ -483,53 +483,131 @@ export async function deleteUserCard(
   });
 }
 
-export async function createUserCardFromPagarmeToken(
-  userId: string,
-  pagarmeToken: string,
-): Promise<AccountCardDto> {
-  const { getOrCreateCustomer, createPagarmeCard } = await import('@/platform/integrations/pagarme');
+export type CreateUserCardFromAsaasTokenInput = {
+  token: string;
+  brand: string;
+  last4: string;
+  holderName: string;
+  expMonth: number;
+  expYear: number;
+};
 
-  const user = await prisma.user.findUniqueOrThrow({
+type PrismaUserModel = PrismaClient["user"];
+
+type GetOrCreateAsaasCustomerFn = (input: {
+  name: string;
+  email: string;
+  document?: string;
+  phone?: string;
+}) => Promise<{ id: string }>;
+
+type AsaasCardServiceDeps = {
+  prisma: PrismaLike & { user: PrismaUserModel };
+  getOrCreateCustomer: GetOrCreateAsaasCustomerFn;
+};
+
+type PartialAsaasCardServiceDeps = Partial<AsaasCardServiceDeps>;
+
+// Import dinâmico (não estático) de propósito: platform/integrations/asaas usa
+// 'server-only', e este serviço não deve puxar essa dependência no topo do
+// módulo — mesmo padrão já usado aqui para a integração anterior.
+async function defaultGetOrCreateAsaasCustomer(
+  input: Parameters<GetOrCreateAsaasCustomerFn>[0],
+) {
+  const { getOrCreateCustomer } = await import("@/platform/integrations/asaas");
+  return getOrCreateCustomer(input);
+}
+
+function getAsaasCardServiceDeps(overrides?: PartialAsaasCardServiceDeps): AsaasCardServiceDeps {
+  return {
+    prisma: overrides?.prisma ?? (prisma as unknown as PrismaLike & { user: PrismaUserModel }),
+    getOrCreateCustomer: overrides?.getOrCreateCustomer ?? defaultGetOrCreateAsaasCustomer,
+  };
+}
+
+/**
+ * Persiste localmente um cartão a partir do token retornado por
+ * POST /api/payments/asaas/tokenize (Task 9).
+ *
+ * DIFERENÇA DE MODELO EM RELAÇÃO AO PAGAR.ME: o Asaas não expõe um endpoint
+ * de "salvar cartão no cofre" nem de "excluir token" — não procure por
+ * `createAsaasCard` ou `deleteAsaasCard`, eles não existem. O token devolvido
+ * pela tokenização JÁ É o valor persistível: fica vinculado ao
+ * `asaasCustomerId` que o gerou e pode ser cobrado diretamente com ele. Por
+ * isso esta função só GRAVA o token localmente, sem uma segunda chamada
+ * remota. Pelo mesmo motivo, a exclusão de cartão (`deleteUserCard`) e a
+ * listagem (`listUserCards`) são só locais — não há nada remoto para
+ * sincronizar.
+ *
+ * A resposta da tokenização não inclui os 6 primeiros dígitos do cartão nem
+ * a validade, então o fingerprint aqui não segue o formato bin-last4-ano-mês
+ * usado para cartões com PAN completo (ver `makeFingerprint`); usamos
+ * last4+validade+sufixo do token, suficiente para reenvio idempotente do
+ * mesmo token.
+ */
+export async function createUserCardFromAsaasToken(
+  userId: string,
+  input: CreateUserCardFromAsaasTokenInput,
+  deps?: PartialAsaasCardServiceDeps,
+): Promise<AccountCardDto> {
+  const { prisma: db, getOrCreateCustomer } = getAsaasCardServiceDeps(deps);
+
+  const user = await db.user.findUniqueOrThrow({
     where: { id: userId },
-    select: { id: true, name: true, email: true, cpf: true, pagarmeCustomerId: true },
+    select: { id: true, name: true, email: true, cpf: true, phone: true, asaasCustomerId: true },
   });
 
-  let customerId = user.pagarmeCustomerId ?? undefined;
+  let customerId = user.asaasCustomerId ?? undefined;
   if (!customerId) {
     const customer = await getOrCreateCustomer({
-      userId,
       name: user.name,
       email: user.email,
       document: user.cpf ?? undefined,
+      phone: user.phone ?? undefined,
     });
     customerId = customer.id;
-    await prisma.user.update({
-      where: { id: userId },
-      data: { pagarmeCustomerId: customerId },
+
+    // Mesma mitigação de corrida usada em createAsaasPaymentWithTracking
+    // (platform/integrations/asaas/tracking.ts): grava só se o campo ainda
+    // estiver vazio; quem perde a corrida relê o valor persistido pela outra
+    // execução, convergindo para um único asaasCustomerId por usuário mesmo
+    // que dois clientes tenham sido criados no Asaas por uma corrida.
+    const updateResult = await db.user.updateMany({
+      where: { id: userId, asaasCustomerId: null },
+      data: { asaasCustomerId: customerId },
     });
+
+    if (updateResult.count === 0) {
+      const refreshed = await db.user.findUniqueOrThrow({ where: { id: userId } });
+      if (!refreshed.asaasCustomerId) {
+        throw new Error(
+          "Não foi possível determinar o cliente Asaas do usuário após concorrência na criação",
+        );
+      }
+      customerId = refreshed.asaasCustomerId;
+    }
   }
 
-  const pagarmeCard = await createPagarmeCard(customerId, pagarmeToken);
+  const brandMap: Record<string, CardBrand> = {
+    visa: "VISA", mastercard: "MASTERCARD", elo: "ELO",
+    amex: "AMEX", hipercard: "HIPERCARD",
+  };
+  const normalizedBrand = brandMap[input.brand.toLowerCase()] ?? "OTHER";
 
   const fingerprint = [
-    pagarmeCard.first_six_digits,
-    pagarmeCard.last_four_digits,
-    String(pagarmeCard.exp_year),
-    String(pagarmeCard.exp_month).padStart(2, '0'),
-  ].join('-');
+    "asaas",
+    input.last4,
+    String(input.expYear),
+    String(input.expMonth).padStart(2, "0"),
+    input.token.slice(-8),
+  ].join("-");
 
-  const brandMap: Record<string, string> = {
-    visa: 'VISA', mastercard: 'MASTERCARD', elo: 'ELO',
-    amex: 'AMEX', hipercard: 'HIPERCARD',
-  };
-  const normalizedBrand = brandMap[pagarmeCard.brand.toLowerCase()] ?? 'OTHER';
-
-  return prisma.$transaction(async (tx) => {
+  return db.$transaction(async (tx) => {
     const existing = await tx.card.findFirst({ where: { userId, fingerprint } });
     if (existing) {
       const updated = await tx.card.update({
         where: { id: existing.id },
-        data: { vaultToken: pagarmeCard.id, updatedAt: new Date() },
+        data: { vaultToken: input.token, updatedAt: new Date() },
       });
       return mapToDto(updated);
     }
@@ -540,14 +618,14 @@ export async function createUserCardFromPagarmeToken(
     const card = await tx.card.create({
       data: {
         userId,
-        brand: normalizedBrand as import('@prisma/client').CardBrand,
-        holderName: pagarmeCard.holder_name,
-        last4: pagarmeCard.last_four_digits,
-        expMonth: pagarmeCard.exp_month,
-        expYear: pagarmeCard.exp_year,
+        brand: normalizedBrand,
+        holderName: input.holderName,
+        last4: input.last4,
+        expMonth: input.expMonth,
+        expYear: input.expYear,
         fingerprint,
         isDefault,
-        vaultToken: pagarmeCard.id,
+        vaultToken: input.token,
         panCipher: null,
       },
     });

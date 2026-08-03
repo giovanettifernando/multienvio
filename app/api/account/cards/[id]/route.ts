@@ -1,6 +1,5 @@
 import { withApiHandler } from "@/platform/api/handler";
 import { ApiError } from "@/platform/api/errors";
-import { prisma } from "@/platform/db/db";
 import {
   enforceCardWriteLimit,
   rethrowCardValidation,
@@ -74,28 +73,9 @@ export const DELETE = withApiHandler<DeleteCardResponse>(async (context) => {
 
   await enforceCardWriteLimit(context);
 
-  // Fetch vaultToken before deletion so we can clean up Pagar.me vault
-  const cardBefore = await prisma.card.findUnique({
-    where: { id },
-    select: { vaultToken: true, userId: true },
-  });
-
+  // O Asaas não expõe endpoint de exclusão de token — diferente do Pagar.me,
+  // não há cofre remoto para limpar. A exclusão de cartão é só local.
   await deleteUserCard(userId, id, { logger });
-
-  // Delete from Pagar.me vault if token looks like a Pagar.me card id
-  if (cardBefore?.userId === userId && cardBefore.vaultToken?.startsWith('card_')) {
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { pagarmeCustomerId: true },
-    });
-    const customerId = user?.pagarmeCustomerId ?? undefined;
-    if (customerId) {
-      const { deletePagarmeCard } = await import('@/platform/integrations/pagarme');
-      await deletePagarmeCard(customerId, cardBefore.vaultToken).catch((err: Error) => {
-        console.warn('[PAGARME] Failed to delete card from vault:', err.message);
-      });
-    }
-  }
 
   return {
     data: { deleted: true },
