@@ -1272,7 +1272,11 @@ por:
 Run: `pnpm prisma migrate dev --name asaas_gateway`
 Expected: migration criada e aplicada; Prisma Client regenerado.
 
-Confirmar que o SQL gerado contém `ALTER TABLE ... RENAME COLUMN` ou o par DROP/ADD. Como a coluna anterior nunca foi usada em produção, perder o conteúdo é aceitável.
+Confirmar que o SQL gerado contém o par DROP/ADD (não um `RENAME COLUMN`).
+
+**Por que descartar o conteúdo é o certo aqui — e por que `RENAME COLUMN` seria pior.** O valor guardado em `pagarmeCustomerId` é um identificador de cliente **do Pagar.me**, que não tem significado algum na API do Asaas. Renomear a coluna preservaria os bytes e produziria um campo `asaasCustomerId` populado com identificadores sintaticamente plausíveis mas semanticamente inválidos — o sistema tentaria cobrar um cliente inexistente e falharia de forma silenciosa, em vez de simplesmente cair no fluxo de "criar cliente no Asaas" que o código já tem. Perder o dado faz o sistema se autocorrigir; preservá-lo o envenena.
+
+(Observação: esse dado **é** escrito por código de produção hoje, no fluxo de adicionar cartão. A justificativa para descartá-lo é a não-portabilidade entre gateways descrita acima, não a ausência de uso.)
 
 - [ ] **Step 3: Escrever o script de registro do gateway**
 

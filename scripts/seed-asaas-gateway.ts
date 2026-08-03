@@ -35,22 +35,33 @@ async function main() {
     },
   });
 
-  await prisma.paymentCredential.updateMany({
-    where: { gatewayId: gateway.id, isActive: true },
-    data: { isActive: false },
-  });
+  if (!process.env.ASAAS_WEBHOOK_TOKEN) {
+    console.warn(
+      'AVISO: ASAAS_WEBHOOK_TOKEN não configurada — a validação de webhook ficará indisponível até configurá-la.',
+    );
+  }
 
-  await prisma.paymentCredential.create({
-    data: {
-      gatewayId: gateway.id,
-      environment: isSandbox ? 'SANDBOX' : 'PRODUCTION',
-      authType: 'API_KEY',
-      accessToken: encrypt(apiKey),
-      clientSecret: process.env.ASAAS_WEBHOOK_TOKEN
-        ? encrypt(process.env.ASAAS_WEBHOOK_TOKEN)
-        : null,
-      isActive: true,
-    },
+  // Desativar a credencial antiga e criar a nova precisam ser atômicos: se o create falhar
+  // depois do updateMany ter sido aplicado, o gateway ficaria sem nenhuma credencial ativa
+  // (outage de pagamento). Envolvidos na mesma transação, ou os dois acontecem ou nenhum.
+  await prisma.$transaction(async (tx) => {
+    await tx.paymentCredential.updateMany({
+      where: { gatewayId: gateway.id, isActive: true },
+      data: { isActive: false },
+    });
+
+    await tx.paymentCredential.create({
+      data: {
+        gatewayId: gateway.id,
+        environment: isSandbox ? 'SANDBOX' : 'PRODUCTION',
+        authType: 'API_KEY',
+        accessToken: encrypt(apiKey),
+        clientSecret: process.env.ASAAS_WEBHOOK_TOKEN
+          ? encrypt(process.env.ASAAS_WEBHOOK_TOKEN)
+          : null,
+        isActive: true,
+      },
+    });
   });
 
   // Desativa o gateway anterior, se existir
