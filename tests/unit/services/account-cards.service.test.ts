@@ -1,7 +1,45 @@
 import assert from 'node:assert';
 import test from 'node:test';
-import { ApiError } from '@/platform/api/errors';
-import * as service from '@/modules/auth/application/account-cards.service';
+import path from 'node:path';
+import { createRequire } from 'node:module';
+
+// account-cards.service.ts -> @/platform/db/db (Prisma real, conexão de banco
+// no escopo do módulo) e @/platform/crypto/card-vault (que importa
+// 'server-only', via @/platform/api/errors -> @/platform/db/db também). Sob
+// node --test (CommonJS puro, fora do bundler do Next.js) isso lança/quebra
+// no import estático. Mesmo padrão de stub usado em
+// tests/unit/asaas/tracking.test.ts (Task 3/7): stub via require.cache de
+// 'server-only' e platform/db/db.ts ANTES de carregar o módulo sob teste, com
+// createRequire — e sem NENHUM `import` estático (nem de ApiError, nem do
+// serviço) no topo do arquivo, porque o TypeScript compila `import` para
+// `require()` içado para o topo do módulo compilado, executado antes de
+// qualquer stub poder ser instalado.
+const req = createRequire(path.resolve(process.cwd(), 'package.json'));
+const ROOT = path.resolve(process.cwd());
+
+const SERVER_ONLY_PATH = req.resolve('server-only');
+const DB_PATH = path.resolve(ROOT, 'platform/db/db.ts');
+const ERRORS_PATH = path.resolve(ROOT, 'platform/api/errors.ts');
+const SERVICE_PATH = path.resolve(ROOT, 'modules/auth/application/account-cards.service.ts');
+
+function stubModules() {
+  require.cache[SERVER_ONLY_PATH] = { id: SERVER_ONLY_PATH, filename: SERVER_ONLY_PATH, loaded: true, exports: {} } as any;
+  require.cache[DB_PATH] = { id: DB_PATH, filename: DB_PATH, loaded: true, exports: { prisma: {} } } as any;
+}
+
+test.before(() => {
+  stubModules();
+  delete require.cache[ERRORS_PATH];
+  delete require.cache[SERVICE_PATH];
+});
+
+function loadService() {
+  return req(SERVICE_PATH) as typeof import('@/modules/auth/application/account-cards.service');
+}
+
+function loadApiError() {
+  return (req(ERRORS_PATH) as typeof import('@/platform/api/errors')).ApiError;
+}
 
 const keyBuffer = Buffer.from('a'.repeat(32));
 
@@ -33,6 +71,7 @@ function makeDeps(overrides: any = {}) {
 
 test.describe('services/account-cards', () => {
   test('cria cartão com pan cifrado e marca default', async () => {
+    const service = loadService();
     const deps = makeDeps();
     const result = await service.createUserCard('u1', {
       pan: '4111111111111111',
@@ -59,6 +98,7 @@ test.describe('services/account-cards', () => {
   });
 
   test('updateCard valida expiração', async () => {
+    const service = loadService();
     const prismaTx: any = {
       card: {
         findUnique: async () => ({ id: 'c1', userId: 'u1', expMonth: 1, expYear: 2030, holderName: 'OLD', isDefault: false, fingerprint: '123-456-2030-01' }),
@@ -75,6 +115,8 @@ test.describe('services/account-cards', () => {
   });
 
   test('removeCard falha se não encontrado', async () => {
+    const service = loadService();
+    const ApiError = loadApiError();
     const prismaTx: any = {
       card: {
         findUnique: async () => null,
@@ -98,6 +140,7 @@ function makeAsaasCardDeps(overrides: {
   findUniqueOrThrow?: () => Promise<any>;
 } = {}) {
   const cards: any[] = [];
+  const updateManyCalls: any[] = [];
   const userState: Record<string, unknown> = {
     id: 'u1',
     name: 'User Name',
@@ -113,9 +156,13 @@ function makeAsaasCardDeps(overrides: {
       findUniqueOrThrow: overrides.findUniqueOrThrow ?? (async () => ({ ...userState })),
       updateMany:
         overrides.updateMany ??
-        (async ({ data }: any) => {
+        (async (args: any) => {
+          // Captura o argumento completo (where + data) para o teste poder
+          // inspecionar a condição atômica, não só decidir count via estado
+          // mutável — é o `where` que torna a operação segura no Postgres.
+          updateManyCalls.push(args);
           if (userState.asaasCustomerId === null) {
-            userState.asaasCustomerId = data.asaasCustomerId;
+            userState.asaasCustomerId = args.data.asaasCustomerId;
             return { count: 1 };
           }
           return { count: 0 };
@@ -139,11 +186,12 @@ function makeAsaasCardDeps(overrides: {
     $transaction: async (fn: any) => fn(prisma),
   };
 
-  return { prisma, cards, userState };
+  return { prisma, cards, userState, updateManyCalls };
 }
 
 test.describe('services/account-cards - createUserCardFromAsaasToken', () => {
   test('cria cliente Asaas e salva o token da tokenização como cartão default', async () => {
+    const service = loadService();
     const deps = makeAsaasCardDeps();
     const card = await service.createUserCardFromAsaasToken(
       'u1',
@@ -161,9 +209,24 @@ test.describe('services/account-cards - createUserCardFromAsaasToken', () => {
     assert.strictEqual(card.brand, 'VISA');
     assert.strictEqual(card.isDefault, true);
     assert.strictEqual(deps.userState.asaasCustomerId, 'cus_new');
+
+    // Important 2 (revisão fix round 2): não basta o resultado final bater —
+    // é o próprio `where` da atualização condicional que precisa exigir
+    // `asaasCustomerId: null`. Sem isso, a "mitigação de corrida" é só
+    // decoração: um `updateMany` sem essa condição sobrescreveria sem checar
+    // se outra execução já gravou primeiro.
+    assert.strictEqual(deps.updateManyCalls.length, 1);
+    assert.strictEqual(deps.updateManyCalls[0].where.id, 'u1');
+    assert.strictEqual(
+      deps.updateManyCalls[0].where.asaasCustomerId,
+      null,
+      'updateMany precisa condicionar a gravação a asaasCustomerId ainda vazio',
+    );
+    assert.strictEqual(deps.updateManyCalls[0].data.asaasCustomerId, 'cus_new');
   });
 
   test('perde a corrida de criação do cliente e converge para o customerId já persistido', async () => {
+    const service = loadService();
     let reads = 0;
     const deps = makeAsaasCardDeps({
       updateMany: async () => ({ count: 0 }), // outra execução já gravou primeiro
@@ -197,6 +260,7 @@ test.describe('services/account-cards - createUserCardFromAsaasToken', () => {
   });
 
   test('reenvio do mesmo token atualiza o cartão existente em vez de duplicar', async () => {
+    const service = loadService();
     const deps = makeAsaasCardDeps({ userOverrides: { asaasCustomerId: 'cus_existente' } });
     const input = {
       token: 'card_tok_zzzzzzzz',
@@ -216,6 +280,7 @@ test.describe('services/account-cards - createUserCardFromAsaasToken', () => {
   });
 
   test('não existe chamada remota de exclusão: deleteUserCard só apaga o registro local', async () => {
+    const service = loadService();
     const prismaTx: any = {
       card: {
         findUnique: async () => ({ id: 'c1', userId: 'u1', isDefault: false }),
