@@ -70,23 +70,43 @@ const baseDocument = { type: 'DECLARACAO' as const };
 
 const baseVolumes = [{ peso: 1, altura: 10, largura: 10, comprimento: 10 }];
 
-function fakeTx(overrides: Record<string, unknown> = {}) {
+// IMPORTANTE (achado da revisão): um merge raso no nível de "paymentTransaction"
+// apagava métodos que o override não repetia — um teste que só fornecia
+// `findUnique` deixava `update`/`updateMany` undefined; quando o fluxo
+// alcançava essa chamada (mesmo com a checagem de dono REMOVIDA de propósito),
+// o TypeError "... is not a function" era capturado por `assert.rejects` como
+// se fosse a rejeição esperada — falso positivo que não pega sabotagem
+// nenhuma. Por isso o merge abaixo é por SUB-OBJETO: cada área
+// (shipment/trackingCodeReservation/label/paymentTransaction) tem seus
+// próprios defaults preenchidos, e um override parcial de uma área não apaga
+// os métodos das outras chaves que a área não menciona.
+function fakeTx(overrides: {
+  shipment?: Record<string, unknown>;
+  trackingCodeReservation?: Record<string, unknown>;
+  label?: Record<string, unknown>;
+  paymentTransaction?: Record<string, unknown>;
+} = {}) {
   return {
     shipment: {
       findFirst: async () => null, // não idempotente
+      ...overrides.shipment,
     },
     trackingCodeReservation: {
       findFirst: async () => ({ code: 'EL123', userId: 'user-1' }), // reserva válida
       updateMany: async () => ({ count: 1 }),
+      ...overrides.trackingCodeReservation,
     },
     label: {
       create: async ({ data }: any) => ({ id: 'lbl_1', ...data }),
+      ...overrides.label,
     },
     paymentTransaction: {
       findUnique: async () => null,
-      update: async ({ data }: any) => ({ id: 'ptx_1', ...data }),
+      // Default do claim: sucesso. Testes que querem simular "já
+      // reivindicado por outra requisição" sobrescrevem só isso.
+      updateMany: async () => ({ count: 1 }),
+      ...overrides.paymentTransaction,
     },
-    ...overrides,
   };
 }
 
@@ -109,8 +129,22 @@ function baseInput(overrides: Record<string, unknown> = {}) {
   };
 }
 
+function assertNotApproved(err: unknown) {
+  assert.ok(err instanceof Error);
+  assert.equal((err as any).code, 'PAGARME_PAYMENT_NOT_APPROVED');
+  assert.match(err.message, /não encontrado ou não aprovado/);
+  return true;
+}
+
+function assertAlreadyUsed(err: unknown) {
+  assert.ok(err instanceof Error);
+  assert.equal((err as any).code, 'PAGARME_PAYMENT_ALREADY_USED');
+  assert.match(err.message, /já foi utilizado/);
+  return true;
+}
+
 describe('createPaidShipment — gate de liberação do pagamento do gateway', () => {
-  it('rejeita quando a transação pertence a outro usuário (dono)', async () => {
+  it('rejeita quando a transação pertence a outro usuário (dono) — pela checagem certa, não por mock incompleto', async () => {
     const { createPaidShipment } = loadService();
     require.cache[DB_PATH]!.exports.prisma = {
       $transaction: async (cb: any) =>
@@ -131,6 +165,7 @@ describe('createPaidShipment — gate de liberação do pagamento do gateway', (
 
     await assert.rejects(
       createPaidShipment(baseInput({ pagarmePaymentId: 'ptx_1', totalCost: 20 })),
+      assertNotApproved,
     );
   });
 
@@ -145,7 +180,7 @@ describe('createPaidShipment — gate de liberação do pagamento do gateway', (
                 id: 'ptx_2',
                 userId: 'user-1',
                 status: 'CAPTURED',
-                amountCents: 500, // menor que os 2000 do totalCost
+                amountCents: 500, // menor que os 2000 (20 * 100) do totalCost
                 metadata: null,
               }),
             },
@@ -155,6 +190,7 @@ describe('createPaidShipment — gate de liberação do pagamento do gateway', (
 
     await assert.rejects(
       createPaidShipment(baseInput({ pagarmePaymentId: 'ptx_2', totalCost: 20 })),
+      assertNotApproved,
     );
   });
 
@@ -179,10 +215,11 @@ describe('createPaidShipment — gate de liberação do pagamento do gateway', (
 
     await assert.rejects(
       createPaidShipment(baseInput({ pagarmePaymentId: 'ptx_3', totalCost: 20 })),
+      assertNotApproved,
     );
   });
 
-  it('rejeita quando a transação já foi usada para liberar outro envio (reuso)', async () => {
+  it('rejeita quando o claim atômico não vence (transação já reivindicada/consumida)', async () => {
     const { createPaidShipment } = loadService();
     require.cache[DB_PATH]!.exports.prisma = {
       $transaction: async (cb: any) =>
@@ -194,8 +231,11 @@ describe('createPaidShipment — gate de liberação do pagamento do gateway', (
                 userId: 'user-1',
                 status: 'CAPTURED',
                 amountCents: 2000,
-                metadata: { shipmentId: 'shp_outro' }, // já consumida
+                metadata: null,
               }),
+              // Simula outra requisição/tentativa que já reivindicou a linha
+              // (count 0 é exatamente o que o Postgres devolveria).
+              updateMany: async () => ({ count: 0 }),
             },
           }),
         ),
@@ -203,12 +243,13 @@ describe('createPaidShipment — gate de liberação do pagamento do gateway', (
 
     await assert.rejects(
       createPaidShipment(baseInput({ pagarmePaymentId: 'ptx_4', totalCost: 20 })),
+      assertAlreadyUsed,
     );
   });
 
   it('libera e cria o envio quando CAPTURED, do próprio usuário e com valor correto', async () => {
     const { createPaidShipment } = loadService();
-    let updatedMetadata: unknown;
+    let claimCall: unknown;
     require.cache[DB_PATH]!.exports.prisma = {
       $transaction: async (cb: any) =>
         cb(
@@ -221,9 +262,9 @@ describe('createPaidShipment — gate de liberação do pagamento do gateway', (
                 amountCents: 2000,
                 metadata: null,
               }),
-              update: async ({ data }: any) => {
-                updatedMetadata = data.metadata;
-                return { id: 'ptx_5', ...data };
+              updateMany: async (args: any) => {
+                claimCall = args;
+                return { count: 1 };
               },
             },
           }),
@@ -234,6 +275,56 @@ describe('createPaidShipment — gate de liberação do pagamento do gateway', (
 
     assert.equal(result.shipmentId, 'shp_new');
     assert.equal(result.isIdempotent, false);
-    assert.deepEqual(updatedMetadata, { shipmentId: 'shp_new' }, 'marca a transação como consumida');
+    assert.deepEqual(
+      claimCall,
+      {
+        where: { id: 'ptx_5', consumedByReference: null },
+        data: { consumedByReference: 'shipment:EL123' },
+      },
+      'o claim usa a condição consumedByReference: null e grava a referência deste envio',
+    );
+  });
+
+  it('SABOTAGEM: sob concorrência, exatamente uma chamada libera — a outra é rejeitada pelo claim atômico', async () => {
+    const { createPaidShipment } = loadService();
+    let claimed = false;
+    const sharedPaymentTx = {
+      id: 'ptx_race',
+      userId: 'user-1',
+      status: 'CAPTURED',
+      amountCents: 2000,
+      metadata: null,
+    };
+
+    require.cache[DB_PATH]!.exports.prisma = {
+      $transaction: async (cb: any) =>
+        cb(
+          fakeTx({
+            paymentTransaction: {
+              findUnique: async () => sharedPaymentTx,
+              // Modela o compare-and-swap real do Postgres: a primeira
+              // chamada a executar vence (count 1); qualquer chamada
+              // seguinte vê a linha já reivindicada (count 0).
+              updateMany: async () => {
+                if (claimed) return { count: 0 };
+                claimed = true;
+                return { count: 1 };
+              },
+            },
+          }),
+        ),
+    };
+
+    const results = await Promise.allSettled([
+      createPaidShipment(baseInput({ pagarmePaymentId: 'ptx_race', totalCost: 20, trackingCode: 'EL_RACE_A' })),
+      createPaidShipment(baseInput({ pagarmePaymentId: 'ptx_race', totalCost: 20, trackingCode: 'EL_RACE_B' })),
+    ]);
+
+    const fulfilled = results.filter((r) => r.status === 'fulfilled');
+    const rejected = results.filter((r) => r.status === 'rejected');
+
+    assert.equal(fulfilled.length, 1, 'exatamente uma chamada deve liberar o envio');
+    assert.equal(rejected.length, 1, 'a outra deve ser rejeitada pelo claim atômico');
+    assertAlreadyUsed((rejected[0] as PromiseRejectedResult).reason);
   });
 });

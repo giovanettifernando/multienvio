@@ -14,7 +14,6 @@
  * 3. Email é enviado ao destinatário
  */
 
-import { Prisma } from '@prisma/client';
 import { prisma } from '@/platform/db/db';
 import { createShipmentWithVolumes } from '@/modules/shipments/application/create-with-volumes';
 import { ShipmentStatus } from '@/modules/shipments/application/shipment-status';
@@ -190,10 +189,6 @@ export async function createPaidShipment(
 
     // 3) PAGAMENTO COM CARTEIRA: Debitar saldo
     let walletTransactionId: string | null = null;
-    // Preenchido quando paymentMethod === 'PAGARME': usado depois da criação do
-    // shipment para marcar a PaymentTransaction como consumida (evita que o
-    // mesmo pagamento libere dois envios).
-    let gatewayPaymentTx: { id: string; metadata: Prisma.JsonValue } | null = null;
 
     if (paymentMethod === 'WALLET') {
       // Buscar carteira COM LOCK para evitar race condition
@@ -280,16 +275,13 @@ export async function createPaidShipment(
       }, 'Wallet debited successfully');
     } else if (paymentMethod === 'PAGARME') {
       // Verificar a PaymentTransaction do gateway (Asaas) antes de liberar o
-      // envio. Três checagens além do status — sem elas, canReleaseService
-      // sozinho não fecha o risco:
+      // envio. Três checagens antes do claim — canReleaseService sozinho não
+      // fecha o risco:
       //   1) DONO: a transação tem que pertencer ao usuário da sessão, senão
       //      qualquer um pode reaproveitar o id de uma transação paga alheia.
-      //   2) VALOR: a transação tem que cobrir o custo total deste envio,
+      //   2) STATUS: canReleaseService(status) — só CAPTURED ou PAID liberam.
+      //   3) VALOR: a transação tem que cobrir o custo total deste envio,
       //      senão uma transação de centavos libera uma etiqueta cara.
-      //   3) REUSO: uma transação paga não pode liberar dois envios — o
-      //      vínculo é gravado em metadata.shipmentId após a criação (abaixo),
-      //      seguindo o mesmo padrão de metadata usado em tracking.ts e no
-      //      checkout do carrinho.
       // TODO(Task 14/15 - frontend): renomear o par pagarmePaymentId/PAGARME
       // para nomenclatura Asaas quando o frontend (PaidCheckoutModal) for
       // atualizado — hoje o nome é mantido por compatibilidade de contrato.
@@ -316,22 +308,41 @@ export async function createPaidShipment(
         );
       }
 
-      const existingMeta = (paymentTx.metadata ?? {}) as Record<string, unknown>;
-      if (existingMeta.shipmentId) {
+      // 4) REUSO — claim atômico: uma PaymentTransaction só pode liberar UM
+      // envio. `updateMany` com `WHERE consumedByReference IS NULL` é um
+      // compare-and-swap real no Postgres — não uma checagem de aplicação:
+      // a linha é bloqueada durante o UPDATE, então se duas requisições
+      // concorrentes chegarem aqui com a mesma transação paga, a segunda só
+      // executa depois que a primeira commita (ou desfaz), e nesse momento a
+      // condição `consumedByReference: null` já não casa mais — count 0.
+      // Mesmo desenho do claim atômico de RecipientPaymentRequest.status
+      // (Task 12b) e do WalletTransaction.referenceId único.
+      //
+      // Não há liberação manual do claim se a criação do shipment falhar
+      // depois: este updateMany roda dentro da MESMA transação interativa
+      // (prisma.$transaction(async (tx) => {...})) que cria o shipment — se
+      // qualquer escrita subsequente lançar, o Postgres desfaz TUDO,
+      // inclusive este claim, automaticamente. Um "release" manual no catch
+      // seria redundante e arriscaria liberar um claim que na verdade foi
+      // commitado.
+      const claim = await tx.paymentTransaction.updateMany({
+        where: { id: pagarmePaymentId, consumedByReference: null },
+        data: { consumedByReference: referenceId },
+      });
+
+      if (claim.count === 0) {
         throw Object.assign(
           new Error('Este pagamento já foi utilizado para criar outro envio'),
           { code: 'PAGARME_PAYMENT_ALREADY_USED' }
         );
       }
 
-      gatewayPaymentTx = { id: paymentTx.id, metadata: paymentTx.metadata };
-
       logger.info({
         event: 'pagarme_payment_verified',
         trackingCode,
         pagarmePaymentId,
         status: paymentTx.status,
-      }, 'Gateway payment verified successfully');
+      }, 'Gateway payment verified and claimed successfully');
     }
 
     // 3) CRIAR SHIPMENT com status PROCESSING (integração com transportadora é assíncrona)
@@ -389,24 +400,6 @@ export async function createPaidShipment(
       paymentMethod,
       status: ShipmentStatus.PROCESSING,
     }, 'Shipment created with PROCESSING status — carrier integration will be async');
-
-    // 3b) MARCAR A PaymentTransaction DO GATEWAY COMO CONSUMIDA (REUSO)
-    // Grava o shipmentId em metadata dentro da MESMA transação de banco que
-    // criou o shipment: se outra requisição concorrente tentar reaproveitar o
-    // mesmo pagamento, o lock de escrita nesta linha serializa as duas
-    // tentativas e a segunda vê metadata.shipmentId já preenchido.
-    if (gatewayPaymentTx) {
-      const previousMeta = (gatewayPaymentTx.metadata ?? {}) as Record<string, unknown>;
-      await tx.paymentTransaction.update({
-        where: { id: gatewayPaymentTx.id },
-        data: {
-          metadata: {
-            ...previousMeta,
-            shipmentId: shipment.id,
-          } as Prisma.InputJsonValue,
-        },
-      });
-    }
 
     // 4) CRIAR ETIQUETA (status pending — será preenchida pelo worker)
     const label = await tx.label.create({

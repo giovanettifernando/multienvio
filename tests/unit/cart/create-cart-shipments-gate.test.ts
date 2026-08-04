@@ -62,51 +62,78 @@ function loadService() {
   return req(SERVICE_PATH) as typeof import('../../../modules/cart/application/create-cart-shipments-with-payment.service');
 }
 
-const cartItemFixture = {
-  id: 'item_1',
-  originAddress: { cep: '01001000' },
-  destination: {
-    nome: 'Maria',
-    cep: '01001000',
-    logradouro: 'Rua A',
-    numero: '10',
-    bairro: 'Centro',
-    cidade: 'São Paulo',
-    uf: 'SP',
-  },
-  volumes: [{ pesoKg: 1, alturaCm: 10, larguraCm: 10, comprimentoCm: 10 }],
-  preferences: null,
-  selectedQuote: { carrier: 'Correios', serviceName: 'PAC', deadlineDays: 5, price: 20 },
-  pickupFee: null,
-  document: null,
-  insuranceValue: null,
-  pickupPoint: null,
-  totals: { total: 20 },
-};
+function cartItemFixture(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 'item_1',
+    originAddress: { cep: '01001000' },
+    destination: {
+      nome: 'Maria',
+      cep: '01001000',
+      logradouro: 'Rua A',
+      numero: '10',
+      bairro: 'Centro',
+      cidade: 'São Paulo',
+      uf: 'SP',
+    },
+    volumes: [{ pesoKg: 1, alturaCm: 10, larguraCm: 10, comprimentoCm: 10 }],
+    preferences: null,
+    selectedQuote: { carrier: 'Correios', serviceName: 'PAC', deadlineDays: 5, price: 20 },
+    pickupFee: null,
+    document: null,
+    insuranceValue: null,
+    pickupPoint: null,
+    totals: { total: 20 },
+    ...overrides,
+  };
+}
 
-function fakeTx(overrides: Record<string, unknown> = {}) {
+// IMPORTANTE (achado da revisão): um merge raso no nível de "paymentTransaction"
+// apagava métodos que o override não repetia — um teste que só fornecia
+// `findUnique` deixava `update`/`updateMany` undefined; quando o fluxo
+// alcançava essa chamada (mesmo com a checagem de dono REMOVIDA de propósito),
+// o TypeError "... is not a function" era capturado por `assert.rejects` como
+// se fosse a rejeição esperada — falso positivo que não pega sabotagem
+// nenhuma. Por isso o merge abaixo é por SUB-OBJETO: cada área tem seus
+// próprios defaults preenchidos, e um override parcial de uma área não apaga
+// os métodos das outras chaves que a área não menciona.
+function fakeTx(overrides: {
+  walletTransaction?: Record<string, unknown>;
+  trackingCodeReservation?: Record<string, unknown>;
+  cart?: Record<string, unknown>;
+  cartItem?: Record<string, unknown>;
+  label?: Record<string, unknown>;
+  pickupRequest?: Record<string, unknown>;
+  user?: Record<string, unknown>;
+  paymentTransaction?: Record<string, unknown>;
+} = {}) {
   return {
     walletTransaction: {
       findUnique: async () => null, // não idempotente
+      ...overrides.walletTransaction,
     },
     trackingCodeReservation: {
       findMany: async () => [{ code: 'EL1' }],
       updateMany: async () => ({ count: 1 }),
+      ...overrides.trackingCodeReservation,
     },
     cart: {
-      findFirst: async () => ({ id: 'cart_1', items: [cartItemFixture] }),
+      findFirst: async () => ({ id: 'cart_1', items: [cartItemFixture()] }),
       update: async () => ({}),
+      ...overrides.cart,
     },
     cartItem: {
       deleteMany: async () => ({}),
       count: async () => 0,
+      ...overrides.cartItem,
     },
     label: {
       create: async ({ data }: any) => ({ id: `lbl_${data.trackingCode}`, ...data }),
+      ...overrides.label,
     },
     pickupRequest: {
       findUnique: async () => null,
       create: async ({ data }: any) => ({ id: 'pr_1', ...data }),
+      ...overrides.pickupRequest,
     },
     user: {
       findUnique: async () => ({
@@ -117,12 +144,15 @@ function fakeTx(overrides: Record<string, unknown> = {}) {
         cpf: '12345678900',
         cnpj: null,
       }),
+      ...overrides.user,
     },
     paymentTransaction: {
       findUnique: async () => null,
-      update: async ({ data }: any) => ({ id: 'ptx_1', ...data }),
+      // Default do claim: sucesso. Testes que querem simular "já
+      // reivindicado por outra requisição" sobrescrevem só isso.
+      updateMany: async () => ({ count: 1 }),
+      ...overrides.paymentTransaction,
     },
-    ...overrides,
   };
 }
 
@@ -136,8 +166,22 @@ function baseInput(overrides: Record<string, unknown> = {}) {
   };
 }
 
+function assertNotApproved(err: unknown) {
+  assert.ok(err instanceof Error);
+  assert.equal((err as any).code, 'PAGARME_PAYMENT_NOT_APPROVED');
+  assert.match(err.message, /não encontrado ou não aprovado/);
+  return true;
+}
+
+function assertAlreadyUsed(err: unknown) {
+  assert.ok(err instanceof Error);
+  assert.equal((err as any).code, 'PAGARME_PAYMENT_ALREADY_USED');
+  assert.match(err.message, /já foi utilizado/);
+  return true;
+}
+
 describe('createCartShipmentsWithPayment — gate de liberação do pagamento do gateway', () => {
-  it('rejeita quando a transação pertence a outro usuário (dono)', async () => {
+  it('rejeita quando a transação pertence a outro usuário (dono) — pela checagem certa, não por mock incompleto', async () => {
     const { createCartShipmentsWithPayment } = loadService();
     require.cache[DB_PATH]!.exports.prisma = {
       $transaction: async (cb: any) =>
@@ -158,6 +202,7 @@ describe('createCartShipmentsWithPayment — gate de liberação do pagamento do
 
     await assert.rejects(
       createCartShipmentsWithPayment(baseInput({ pagarmePaymentId: 'ptx_1' })),
+      assertNotApproved,
     );
   });
 
@@ -182,6 +227,7 @@ describe('createCartShipmentsWithPayment — gate de liberação do pagamento do
 
     await assert.rejects(
       createCartShipmentsWithPayment(baseInput({ pagarmePaymentId: 'ptx_2' })),
+      assertNotApproved,
     );
   });
 
@@ -206,10 +252,11 @@ describe('createCartShipmentsWithPayment — gate de liberação do pagamento do
 
     await assert.rejects(
       createCartShipmentsWithPayment(baseInput({ pagarmePaymentId: 'ptx_3' })),
+      assertNotApproved,
     );
   });
 
-  it('rejeita quando a transação já foi usada para liberar outro checkout (reuso)', async () => {
+  it('rejeita quando o claim atômico não vence (transação já reivindicada/consumida)', async () => {
     const { createCartShipmentsWithPayment } = loadService();
     require.cache[DB_PATH]!.exports.prisma = {
       $transaction: async (cb: any) =>
@@ -221,8 +268,11 @@ describe('createCartShipmentsWithPayment — gate de liberação do pagamento do
                 userId: 'user-1',
                 status: 'CAPTURED',
                 amountCents: 2000,
-                metadata: { shipmentIds: ['shp_outro'] }, // já consumida
+                metadata: null,
               }),
+              // Simula outra requisição/tentativa que já reivindicou a linha
+              // (count 0 é exatamente o que o Postgres devolveria).
+              updateMany: async () => ({ count: 0 }),
             },
           }),
         ),
@@ -230,12 +280,13 @@ describe('createCartShipmentsWithPayment — gate de liberação do pagamento do
 
     await assert.rejects(
       createCartShipmentsWithPayment(baseInput({ pagarmePaymentId: 'ptx_4' })),
+      assertAlreadyUsed,
     );
   });
 
   it('libera e cria os envios quando CAPTURED, do próprio usuário e com valor correto', async () => {
     const { createCartShipmentsWithPayment } = loadService();
-    let updatedMetadata: unknown;
+    let claimCall: unknown;
     require.cache[DB_PATH]!.exports.prisma = {
       $transaction: async (cb: any) =>
         cb(
@@ -248,9 +299,9 @@ describe('createCartShipmentsWithPayment — gate de liberação do pagamento do
                 amountCents: 2000,
                 metadata: null,
               }),
-              update: async ({ data }: any) => {
-                updatedMetadata = data.metadata;
-                return { id: 'ptx_5', ...data };
+              updateMany: async (args: any) => {
+                claimCall = args;
+                return { count: 1 };
               },
             },
           }),
@@ -261,6 +312,69 @@ describe('createCartShipmentsWithPayment — gate de liberação do pagamento do
 
     assert.deepEqual(result.shipmentIds, ['shp_EL1']);
     assert.equal(result.isIdempotent, false);
-    assert.deepEqual(updatedMetadata, { shipmentIds: ['shp_EL1'] }, 'marca a transação como consumida');
+    assert.deepEqual(
+      claimCall,
+      {
+        where: { id: 'ptx_5', consumedByReference: null },
+        data: { consumedByReference: 'cart:EL1' },
+      },
+      'o claim usa a condição consumedByReference: null e grava a referência deste checkout',
+    );
+  });
+
+  it('SABOTAGEM: sob concorrência, exatamente uma chamada libera — a outra é rejeitada pelo claim atômico', async () => {
+    const { createCartShipmentsWithPayment } = loadService();
+    let claimed = false;
+    const sharedPaymentTx = {
+      id: 'ptx_race',
+      userId: 'user-1',
+      status: 'CAPTURED',
+      amountCents: 2000,
+      metadata: null,
+    };
+
+    require.cache[DB_PATH]!.exports.prisma = {
+      $transaction: async (cb: any) =>
+        cb(
+          fakeTx({
+            trackingCodeReservation: {
+              findMany: async (args: any) =>
+                (args.where.code.in as string[]).map((code: string) => ({ code })),
+              updateMany: async () => ({ count: 1 }),
+            },
+            cart: {
+              findFirst: async () => ({ id: 'cart_1', items: [cartItemFixture()] }),
+              update: async () => ({}),
+            },
+            paymentTransaction: {
+              findUnique: async () => sharedPaymentTx,
+              // Modela o compare-and-swap real do Postgres: a primeira
+              // chamada a executar vence (count 1); qualquer chamada
+              // seguinte vê a linha já reivindicada (count 0).
+              updateMany: async () => {
+                if (claimed) return { count: 0 };
+                claimed = true;
+                return { count: 1 };
+              },
+            },
+          }),
+        ),
+    };
+
+    const results = await Promise.allSettled([
+      createCartShipmentsWithPayment(
+        baseInput({ pagarmePaymentId: 'ptx_race', reservedTrackingCodes: ['EL_RACE_A'] }),
+      ),
+      createCartShipmentsWithPayment(
+        baseInput({ pagarmePaymentId: 'ptx_race', reservedTrackingCodes: ['EL_RACE_B'] }),
+      ),
+    ]);
+
+    const fulfilled = results.filter((r) => r.status === 'fulfilled');
+    const rejected = results.filter((r) => r.status === 'rejected');
+
+    assert.equal(fulfilled.length, 1, 'exatamente uma chamada deve liberar os envios');
+    assert.equal(rejected.length, 1, 'a outra deve ser rejeitada pelo claim atômico');
+    assertAlreadyUsed((rejected[0] as PromiseRejectedResult).reason);
   });
 });

@@ -766,29 +766,36 @@ model PaymentEndpoint {
 }
 
 model PaymentTransaction {
-  id            String            @id @default(cuid())
-  gatewayId     String
-  externalId    String?
-  referenceId   String            @unique
-  userId        String?
-  method        PaymentMethod
-  status        TransactionStatus @default(PENDING)
-  amountCents   Int
-  feeCents      Int               @default(0)
-  netCents      Int
-  cardBrand     String?
-  cardLast4     String?
-  pixKey        String?
-  pixQrCode     String?
-  boletoUrl     String?
-  boletoBarcode String?
-  metadata      Json?
-  createdAt     DateTime          @default(now())
-  updatedAt     DateTime          @updatedAt
-  authorizedAt  DateTime?
-  paidAt        DateTime?
-  gateway       PaymentGateway    @relation(fields: [gatewayId], references: [id])
-  user          User?             @relation(fields: [userId], references: [id])
+  id                  String            @id @default(cuid())
+  gatewayId           String
+  externalId          String?
+  referenceId         String            @unique
+  userId              String?
+  method              PaymentMethod
+  status              TransactionStatus @default(PENDING)
+  amountCents         Int
+  feeCents            Int               @default(0)
+  netCents            Int
+  cardBrand           String?
+  cardLast4           String?
+  pixKey              String?
+  pixQrCode           String?
+  boletoUrl           String?
+  boletoBarcode       String?
+  metadata            Json?
+  // Claim atômico anti-reuso: uma PaymentTransaction só pode liberar UM
+  // checkout/envio. O claim é feito via updateMany({ where: { id,
+  // consumedByReference: null }, data: { consumedByReference: <referenceId
+  // do checkout/envio> } }) — se count === 0, outra requisição já reivindicou
+  // esta transação primeiro. Mesmo desenho do claim atômico de
+  // RecipientPaymentRequest.status e do WalletTransaction.referenceId único.
+  consumedByReference String?
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+  authorizedAt        DateTime?
+  paidAt              DateTime?
+  gateway             PaymentGateway    @relation(fields: [gatewayId], references: [id])
+  user                User?             @relation(fields: [userId], references: [id])
 
   @@index([gatewayId, status, createdAt])
   @@index([userId, status])
@@ -1693,14 +1700,14 @@ model KnowledgeBaseArticle {
 
 /// Notificação in-app para o usuário (Fase 3 BullMQ)
 model Notification {
-  id        String   @id @default(cuid())
-  userId    String   @map("user_id")
-  type      String   // SHIPMENT_CREATED, SHIPMENT_STATUS_CHANGED, SHIPMENT_CREATION_FAILED, PAYMENT_CONFIRMED, LABEL_READY, RECONCILIATION_DIVERGENCE
+  id        String    @id @default(cuid())
+  userId    String    @map("user_id")
+  type      String // SHIPMENT_CREATED, SHIPMENT_STATUS_CHANGED, SHIPMENT_CREATION_FAILED, PAYMENT_CONFIRMED, LABEL_READY, RECONCILIATION_DIVERGENCE
   title     String
-  message   String   @db.Text
-  isRead    Boolean  @default(false) @map("is_read")
+  message   String    @db.Text
+  isRead    Boolean   @default(false) @map("is_read")
   metadata  Json?
-  createdAt DateTime @default(now()) @map("created_at")
+  createdAt DateTime  @default(now()) @map("created_at")
   readAt    DateTime? @map("read_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -1719,11 +1726,11 @@ model GeneratedDocument {
   id           String    @id @default(cuid())
   userId       String    @map("user_id")
   documentType String    @map("document_type") // label, package, statement, batch_labels
-  status       String    @default("PENDING")   // PENDING, PROCESSING, COMPLETED, FAILED
+  status       String    @default("PENDING") // PENDING, PROCESSING, COMPLETED, FAILED
   jobId        String?   @unique @map("job_id")
-  referenceId  String?   @map("reference_id")  // labelId, packageId, walletId, ou IDs concatenados
+  referenceId  String?   @map("reference_id") // labelId, packageId, walletId, ou IDs concatenados
   fileName     String?   @map("file_name")
-  filePath     String?   @map("file_path")     // Caminho relativo no filesystem
+  filePath     String?   @map("file_path") // Caminho relativo no filesystem
   contentType  String?   @default("application/pdf") @map("content_type")
   sizeBytes    Int?      @map("size_bytes")
   errorMessage String?   @map("error_message") @db.Text
