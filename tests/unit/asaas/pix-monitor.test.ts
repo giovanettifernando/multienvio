@@ -2,6 +2,7 @@ import { describe, it, before } from 'node:test';
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import { createRequire } from 'node:module';
+import { AsaasApiError } from '@/platform/integrations/asaas/types';
 
 // pix-monitor.ts -> 'server-only' e @/platform/db/db (conexão real com o banco no
 // escopo do módulo). Sob node --test (CommonJS puro, fora do bundler do Next.js)
@@ -35,6 +36,10 @@ function loadPixMonitor() {
   return req(PIX_MONITOR_PATH) as typeof import('../../../platform/integrations/asaas/pix-monitor');
 }
 
+// Transações antigas por padrão (2h) — só importa para o caminho de 404, mas
+// mantém os fixtures realistas agora que createdAt entra no select.
+const TWO_HOURS_AGO = new Date(Date.now() - 2 * 60 * 60 * 1000);
+
 function makeDeps(charges: Record<string, { status: string }>) {
   const updates: any[] = [];
   return {
@@ -43,8 +48,8 @@ function makeDeps(charges: Record<string, { status: string }>) {
       prisma: {
         paymentTransaction: {
           findMany: async () => [
-            { id: 'tx_1', externalId: 'pay_1', amountCents: 4990, method: 'PIX' },
-            { id: 'tx_2', externalId: 'pay_2', amountCents: 8990, method: 'BOLETO' },
+            { id: 'tx_1', externalId: 'pay_1', amountCents: 4990, createdAt: TWO_HOURS_AGO },
+            { id: 'tx_2', externalId: 'pay_2', amountCents: 8990, createdAt: TWO_HOURS_AGO },
           ],
           update: async ({ where, data }: any) => {
             updates.push({ id: where.id, ...data });
@@ -107,8 +112,8 @@ describe('syncPendingCharges', () => {
       prisma: {
         paymentTransaction: {
           findMany: async () => [
-            { id: 'tx_1', externalId: 'pay_1', amountCents: 4990, method: 'PIX' },
-            { id: 'tx_2', externalId: 'pay_2', amountCents: 8990, method: 'BOLETO' },
+            { id: 'tx_1', externalId: 'pay_1', amountCents: 4990, createdAt: TWO_HOURS_AGO },
+            { id: 'tx_2', externalId: 'pay_2', amountCents: 8990, createdAt: TWO_HOURS_AGO },
           ],
           update: async ({ where, data }: any) => {
             updates.push({ id: where.id, ...data });
@@ -140,7 +145,7 @@ describe('syncPendingCharges', () => {
       prisma: {
         paymentTransaction: {
           findMany: async () => [
-            { id: 'tx_1', externalId: 'pay_1', amountCents: 4990, method: 'PIX' },
+            { id: 'tx_1', externalId: 'pay_1', amountCents: 4990, createdAt: TWO_HOURS_AGO },
           ],
           update: async ({ where, data }: any) => {
             updates.push({ id: where.id, ...data });
@@ -157,5 +162,67 @@ describe('syncPendingCharges', () => {
 
     assert.equal(result.updated, 1);
     assert.equal(updates[0].feeCents, 0);
+  });
+
+  it('cancela e conta em notFound uma cobrança 404 numa transação com mais de 1h', async () => {
+    const { syncPendingCharges } = loadPixMonitor();
+    const updates: any[] = [];
+    const deps = {
+      prisma: {
+        paymentTransaction: {
+          findMany: async () => [
+            { id: 'tx_1', externalId: 'pay_1', amountCents: 4990, createdAt: TWO_HOURS_AGO },
+          ],
+          update: async ({ where, data }: any) => {
+            updates.push({ id: where.id, ...data });
+            return {};
+          },
+        },
+      },
+      // Cobrança deletada no Asaas (ou id nunca existiu): 404 permanente, a
+      // transação tem 2h — velha o suficiente para não ser suspeita de
+      // ambiente de API errado.
+      getCharge: async () => {
+        throw new AsaasApiError('not_found', 'Cobrança não encontrada', 404);
+      },
+    } as never;
+
+    const result = await syncPendingCharges(deps);
+
+    assert.equal(result.notFound, 1);
+    assert.equal(result.updated, 0);
+    assert.equal(updates.length, 1);
+    assert.equal(updates[0].id, 'tx_1');
+    assert.equal(updates[0].status, 'CANCELED');
+  });
+
+  it('NÃO cancela uma cobrança 404 numa transação com menos de 1h — mantém PENDING', async () => {
+    const { syncPendingCharges } = loadPixMonitor();
+    const updates: any[] = [];
+    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+    const deps = {
+      prisma: {
+        paymentTransaction: {
+          findMany: async () => [
+            { id: 'tx_1', externalId: 'pay_1', amountCents: 4990, createdAt: tenMinutesAgo },
+          ],
+          update: async ({ where, data }: any) => {
+            updates.push({ id: where.id, ...data });
+            return {};
+          },
+        },
+      },
+      // Cobrança recém-criada com 404 é quase certamente chave de API apontando
+      // para o ambiente errado (sandbox vs produção) — não pode cancelar.
+      getCharge: async () => {
+        throw new AsaasApiError('not_found', 'Cobrança não encontrada', 404);
+      },
+    } as never;
+
+    const result = await syncPendingCharges(deps);
+
+    assert.equal(result.notFound, 0);
+    assert.equal(result.updated, 0);
+    assert.equal(updates.length, 0);
   });
 });
