@@ -12,8 +12,8 @@ import {
   CreditCardOutlined,
   SafetyOutlined,
   UserOutlined,
-  IdcardOutlined,
 } from "@ant-design/icons";
+import { maskCEP, isValidCep, normalizeCep } from '@/shared/utils/masks';
 
 export type CardFormValues = {
   /** Token de tokenização do Asaas (Task 9) — o que POST /api/account/cards espera desde a Task 11. */
@@ -52,6 +52,8 @@ async function tokenizeCard(card: {
   expMonth: string;
   expYear: string;
   cvv: string;
+  postalCode: string;
+  addressNumber: string;
 }): Promise<{ token: string; brand: string; last4: string }> {
   const res = await fetch('/api/payments/asaas/tokenize', {
     method: 'POST',
@@ -62,6 +64,8 @@ async function tokenizeCard(card: {
       expMonth: parseInt(card.expMonth, 10),
       expYear: parseInt(card.expYear.length === 2 ? `20${card.expYear}` : card.expYear, 10),
       ccv: card.cvv,
+      postalCode: normalizeCep(card.postalCode),
+      addressNumber: card.addressNumber.trim(),
     }),
   });
 
@@ -142,6 +146,8 @@ export function CardModal({ open, loading, onSubmit, onCancel }: CardModalProps)
         expMonth,
         expYear: fullYear,
         cvv: values.cvv || "000",
+        postalCode: values.postalCode,
+        addressNumber: values.addressNumber,
       });
 
       // Higienizar PAN/CVV do state assim que a resposta do tokenize chega
@@ -206,28 +212,6 @@ export function CardModal({ open, loading, onSubmit, onCancel }: CardModalProps)
     }
 
     return v;
-  };
-
-  /**
-   * Formata CPF/CNPJ dinamicamente
-   */
-  const formatDocument = (value: string) => {
-    const v = value.replace(/\D/g, "");
-
-    if (v.length <= 11) {
-      // CPF: 000.000.000-00
-      return v
-        .replace(/(\d{3})(\d)/, "$1.$2")
-        .replace(/(\d{3})(\d)/, "$1.$2")
-        .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
-    } else {
-      // CNPJ: 00.000.000/0000-00
-      return v
-        .replace(/(\d{2})(\d)/, "$1.$2")
-        .replace(/(\d{3})(\d)/, "$1.$2")
-        .replace(/(\d{3})(\d)/, "$1/$2")
-        .replace(/(\d{4})(\d{1,2})$/, "$1-$2");
-    }
   };
 
   /**
@@ -331,9 +315,9 @@ export function CardModal({ open, loading, onSubmit, onCancel }: CardModalProps)
           />
         </Form.Item>
 
-        {/* Validade + CPF/CNPJ em linha */}
+        {/* Validade + CVV em linha */}
         <Row gutter={16}>
-          <Col xs={24} sm={10}>
+          <Col xs={24} sm={12}>
             <Form.Item
               name="validity"
               label="Validade"
@@ -354,17 +338,36 @@ export function CardModal({ open, loading, onSubmit, onCancel }: CardModalProps)
             </Form.Item>
           </Col>
 
+          <Col xs={24} sm={12}>
+            <Form.Item
+              name="cvv"
+              label="CVV"
+              rules={[
+                { required: true, message: "Informe o CVV" },
+                { len: 3, message: "CVV deve ter 3 dígitos" },
+              ]}
+            >
+              <Input
+                placeholder="123"
+                maxLength={3}
+                size="large"
+              />
+            </Form.Item>
+          </Col>
+        </Row>
+
+        {/* CEP + Número do endereço em linha */}
+        <Row gutter={16}>
           <Col xs={24} sm={14}>
             <Form.Item
-              name="document"
-              label="CPF/CNPJ do titular"
+              name="postalCode"
+              label="CEP do titular"
               rules={[
-                { required: true, message: "Informe o CPF ou CNPJ" },
+                { required: true, message: "Informe o CEP" },
                 {
                   validator: (_, value) => {
-                    const digits = value?.replace(/\D/g, "") || "";
-                    if (digits.length !== 11 && digits.length !== 14) {
-                      return Promise.reject(new Error("CPF ou CNPJ inválido"));
+                    if (!isValidCep(value)) {
+                      return Promise.reject(new Error("CEP inválido (8 dígitos)"));
                     }
                     return Promise.resolve();
                   },
@@ -372,22 +375,32 @@ export function CardModal({ open, loading, onSubmit, onCancel }: CardModalProps)
               ]}
             >
               <Input
-                placeholder="000.000.000-00"
-                prefix={<IdcardOutlined style={{ color: "#bfbfbf" }} />}
-                maxLength={18}
+                placeholder="00000-000"
+                maxLength={9}
                 size="large"
                 onChange={(e) => {
-                  const formatted = formatDocument(e.target.value);
-                  form.setFieldValue("document", formatted);
+                  const formatted = maskCEP(e.target.value);
+                  form.setFieldValue("postalCode", formatted);
                 }}
               />
             </Form.Item>
           </Col>
-        </Row>
 
-        <Form.Item name="documentType" hidden initialValue="CPF">
-          <Input />
-        </Form.Item>
+          <Col xs={24} sm={10}>
+            <Form.Item
+              name="addressNumber"
+              label="Número"
+              rules={[
+                { required: true, message: "Informe o número do endereço" },
+              ]}
+            >
+              <Input
+                placeholder="123"
+                size="large"
+              />
+            </Form.Item>
+          </Col>
+        </Row>
       </Form>
     </ELModal>
   );

@@ -29,7 +29,7 @@ export function CheckoutModal({
   const queryClient = useQueryClient();
   const { message } = App.useApp();
 
-  const handleSuccess = async (result: { paymentId?: number; method: string }) => {
+  const handleSuccess = async (result: { transactionId?: string; method: string }) => {
     try {
       // Marcar pagamento aprovado no shipment
       const response = await fetch(`/api/shipments/${shipmentId}/payment`, {
@@ -39,7 +39,7 @@ export function CheckoutModal({
           method: result.method,
           status: 'approved',
           meta: {
-            mercadoPagoPaymentId: result.paymentId,
+            transactionId: result.transactionId,
             amount: totalAmount,
           },
         }),

@@ -66,22 +66,18 @@ export function RecipientCardPaymentForm({
     }, CARD_PROCESSING_TIMEOUT_MS);
 
     try {
-      // NOTA (Task 15): `/api/payments/asaas/tokenize` (Task 9) exige sessão
-      // autenticada — ele tokeniza contra o `asaasCustomerId` do usuário
-      // logado. Este formulário roda numa página pública (`/pagar/[token]`,
-      // sem login: quem paga é o destinatário do frete, não um usuário
-      // cadastrado). Não existe hoje uma rota Asaas pública equivalente (só
-      // `/api/recipient-payment/create-payment`, que já espera um
-      // `cardToken` pronto, não tokeniza raw card data) — criar uma exigiria
-      // alterar backend, fora do escopo desta task. Esta chamada troca a
-      // rota morta do Pagar.me (503 desde a Task 6) pela rota real do Asaas,
-      // mas para um visitante anônimo ela responde 401 "Não autenticado" —
-      // documentado no relatório da Task 15 como gap de backend pendente.
-      const tokenizeRes = await fetch('/api/payments/asaas/tokenize', {
+      // NOTA (Task 15 - fix round 1): `/api/recipient-payment/tokenize` é a
+      // rota pública equivalente de tokenização. Resolve a solicitação pelo
+      // paymentToken (o único fator de autorização), verifica status/expiração,
+      // e tokeniza contra o cliente Asaas do remetente (sender), não de quem
+      // está logado. Assim destinatários anônimos conseguem pagar, e não há
+      // risco de cartão ser tokenizado contra conta de outro usuário.
+      const tokenizeRes = await fetch('/api/recipient-payment/tokenize', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         signal: abortControllerRef.current.signal,
         body: JSON.stringify({
+          paymentToken,
           number: form.number.replace(/\D/g, ''),
           holderName: form.holderName,
           expMonth: parseInt(form.expMonth, 10),
