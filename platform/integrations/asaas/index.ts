@@ -28,5 +28,7 @@ export {
 export type { CreateChargeInput } from './charges';
 export { createAsaasPaymentWithTracking, updatePaymentFromAsaas } from './tracking';
 export type { CreateAsaasPaymentInput, CreateAsaasPaymentResult } from './tracking';
+export { syncPendingCharges } from './pix-monitor';
+export type { MonitorDeps } from './pix-monitor';
 export { verifyWebhookToken, extractChargeFromPayload, isRelevantEvent } from './webhooks';
 export { canReleaseService } from './release';

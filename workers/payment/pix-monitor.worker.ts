@@ -1,11 +1,14 @@
 /**
- * Worker: PIX Monitor
+ * Worker: PIX/Boleto Monitor
  *
  * Job repeatable que roda a cada 2 minutos.
  * Substitui o cron HTTP POST /api/cron/pix-monitor.
  *
- * Verifica pagamentos PIX pendentes na Pagar.me,
- * marca expirados e registra na carteira do usuário.
+ * Rede de segurança do sistema de webhooks do Asaas: sincroniza transações
+ * PENDING que ficaram órfãs (webhook perdido ou fila pausada por falhas
+ * consecutivas). Cobre PIX pago fora do nosso fluxo, boleto compensado e
+ * boleto vencido sem pagamento — este último não gera webhook confiável e
+ * só é cancelado por esta varredura.
  */
 
 import { Worker, type Job } from 'bullmq';
@@ -13,41 +16,25 @@ import { queueConnection } from '../../platform/queue/connection';
 import { getQueue, QUEUE_NAMES } from '../../platform/queue';
 import { createJobLogger, withDuration } from '../../platform/queue/helpers';
 import type { PixMonitorJobPayload } from '../../platform/queue/types';
-import {
-  monitorPendingPixPayments,
-  cleanupOldPendingPix,
-} from '../../platform/integrations/pagarme/pix-monitor';
+import { syncPendingCharges } from '../../platform/integrations/asaas/pix-monitor';
 
 async function processPixMonitorJob(job: Job<PixMonitorJobPayload>): Promise<void> {
   const log = createJobLogger(job);
 
-  log.info({ trigger: job.data.trigger }, 'Starting PIX monitor');
+  log.info({ trigger: job.data.trigger }, 'Starting PIX/boleto monitor');
 
-  // 1. Monitorar PIX pendentes
-  const { result: monitorResult, durationMs: monitorMs } = await withDuration(() =>
-    monitorPendingPixPayments()
-  );
-
-  // 2. Limpar PIX muito antigos
-  const { result: cleanedUp, durationMs: cleanupMs } = await withDuration(() =>
-    cleanupOldPendingPix()
-  );
+  const { result: syncResult, durationMs } = await withDuration(() => syncPendingCharges());
 
   log.info({
-    processed: monitorResult.processed,
-    approved: monitorResult.approved,
-    expired: monitorResult.expired,
-    pending: monitorResult.pending,
-    errors: monitorResult.errors,
-    cleanedUp,
-    monitorMs,
-    cleanupMs,
-    totalMs: monitorMs + cleanupMs,
-  }, 'PIX monitor completed');
+    checked: syncResult.checked,
+    updated: syncResult.updated,
+    expired: syncResult.expired,
+    durationMs,
+  }, 'PIX/boleto monitor completed');
 }
 
 /**
- * Cria e retorna o Worker do PIX Monitor
+ * Cria e retorna o Worker do PIX/Boleto Monitor
  */
 export function createPixMonitorWorker(): Worker<PixMonitorJobPayload> {
   const worker = new Worker<PixMonitorJobPayload>(
@@ -62,7 +49,7 @@ export function createPixMonitorWorker(): Worker<PixMonitorJobPayload> {
   worker.on('failed', (job, err) => {
     console.error(JSON.stringify({
       level: 'error',
-      msg: 'PIX monitor job failed',
+      msg: 'PIX/boleto monitor job failed',
       queue: QUEUE_NAMES.PAYMENT_PIX_MONITOR,
       jobId: job?.id,
       error: err.message,
@@ -74,7 +61,7 @@ export function createPixMonitorWorker(): Worker<PixMonitorJobPayload> {
 }
 
 /**
- * Registra o job repeatable do PIX Monitor
+ * Registra o job repeatable do PIX/Boleto Monitor
  * Chamado uma vez na inicialização do worker process.
  */
 export async function registerPixMonitorRepeatable(): Promise<void> {
@@ -96,5 +83,5 @@ export async function registerPixMonitorRepeatable(): Promise<void> {
     }
   );
 
-  console.log('[SCHEDULER] PIX monitor registered: every 2 minutes');
+  console.log('[SCHEDULER] PIX/boleto monitor registered: every 2 minutes');
 }
