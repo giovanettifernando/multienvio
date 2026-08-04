@@ -18,7 +18,7 @@ export interface WalletData {
   latestTransactions?: unknown[];
 }
 
-export type PaymentMethod = 'wallet' | 'pix' | 'card';
+export type PaymentMethod = 'wallet' | 'pix' | 'card' | 'boleto';
 
 export interface PaymentResult {
   success: boolean;
@@ -30,12 +30,11 @@ export interface PaymentResult {
     method: string;
   };
   payment: {
-    id: number;
     status: string;
     statusDetail: string;
     pixQrCode?: string;
-    pixQrCodeBase64?: string;
-    pixQrCodeUrl?: string;
+    /** Imagem do QR Code já em data URI (data:image/png;base64,...), retornada pelo Asaas. */
+    pixQrCodeImage?: string;
   };
 }
 

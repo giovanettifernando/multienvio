@@ -30,7 +30,7 @@ interface SavedCardPaymentFormProps {
 
 /**
  * Formulário para pagamento com cartão salvo
- * Pagar.me: paga diretamente com card_id (vaultToken) — sem CVV necessário
+ * Asaas: paga diretamente com o creditCardToken salvo no vault (vaultToken) — sem CVV necessário
  */
 export function SavedCardPaymentForm({
   amount,
@@ -105,8 +105,8 @@ export function SavedCardPaymentForm({
     }, CARD_PROCESSING_TIMEOUT_MS);
 
     try {
-      // Pagar.me: pay directly with card_id (vaultToken), no CVV needed
-      const res = await fetch('/api/payments/pagarme/create', {
+      // Asaas: paga direto com o creditCardToken salvo no vault (vaultToken), sem CVV
+      const res = await fetch('/api/payments/asaas/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         signal: abortControllerRef.current.signal,
@@ -114,7 +114,7 @@ export function SavedCardPaymentForm({
           amountCents: amount,
           description: paymentDescription || (paymentType === 'wallet_topup' ? 'Recarga de carteira' : 'Pagamento de envio'),
           paymentMethod: 'credit_card',
-          cardId: selectedCard.vaultToken, // card_XXXX from Pagar.me
+          cardToken: selectedCard.vaultToken,
           metadata: { type: paymentType },
         }),
       });

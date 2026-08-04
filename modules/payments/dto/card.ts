@@ -288,6 +288,18 @@ export function validateCardCreateInput(payload: unknown): NormalizedCardCreateI
   };
 }
 
+/**
+ * Meio de pagamento selecionável na UI (Asaas). Espelha o enum aceito por
+ * POST /api/payments/asaas/create.
+ */
+export type PaymentMethodChoice = "pix" | "credit_card" | "boleto";
+
+/** Dados mínimos para exibir/copiar um boleto recém-gerado. */
+export interface BoletoResult {
+  boletoUrl: string;
+  boletoBarcode: string;
+}
+
 export function validateCardUpdateInput(payload: unknown): NormalizedCardUpdateInput {
   const parsed = CardUpdateSchema.safeParse(payload);
   if (!parsed.success) {

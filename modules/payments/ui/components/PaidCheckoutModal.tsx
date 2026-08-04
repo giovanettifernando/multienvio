@@ -29,20 +29,27 @@ import {
   WalletOutlined,
   QrcodeOutlined,
   CreditCardOutlined,
+  BarcodeOutlined,
   CheckCircleOutlined,
   LoadingOutlined,
 } from '@ant-design/icons';
 import { ELModal } from '@/shared/ui/ELModal';
 import { ELButton } from '@/shared/ui/ELButton';
+import { ELAlert } from '@/shared/ui/ELAlert';
 import { useCards } from '@/modules/account/ui/hooks';
 import { formatBRL } from '@/shared/utils/format';
 import { usePixPayment } from './usePixPayment';
 import { PixPaymentView } from './PixPaymentView';
 import { CardPaymentView } from './CardPaymentView';
+import type { BoletoResult } from '@/modules/payments/dto/card';
 
 const { Text } = Typography;
 
-type PaymentMethod = 'wallet' | 'pix' | 'card';
+type PaymentMethod = 'wallet' | 'pix' | 'card' | 'boleto';
+
+interface BoletoData extends BoletoResult {
+  transactionId: string;
+}
 
 interface WalletData {
   balance: {
@@ -175,6 +182,7 @@ export function PaidCheckoutModal({
   const [showCardForm, setShowCardForm] = useState(false);
   const [useSavedCard, setUseSavedCard] = useState(true);
   const [checkoutInProgress, setCheckoutInProgress] = useState(false);
+  const [boletoData, setBoletoData] = useState<BoletoData | null>(null);
 
   // Buscar saldo da carteira
   const { data: walletData, isLoading: isLoadingWallet } = useQuery<WalletData>({
@@ -269,7 +277,9 @@ export function PaidCheckoutModal({
       try {
         message.success('Pagamento PIX confirmado! Criando envio...');
 
-        const data = await createShipmentWithPayment('PAGARME', pixData?.payment?.id?.toString());
+        // pagarmePaymentId carrega o id da PaymentTransaction (Asaas); o nome do
+        // campo é mantido por compatibilidade de contrato com o backend (ver TODO lá).
+        const data = await createShipmentWithPayment('PAGARME', pixData?.transaction?.id);
 
         // Invalidar cache
         queryClient.invalidateQueries({ queryKey: ['shipments'] });
@@ -313,6 +323,7 @@ export function PaidCheckoutModal({
 
   const handleClose = () => {
     resetPix();
+    setBoletoData(null);
     setSelectedMethod(null);
     setShowCardForm(false);
     setUseSavedCard(true);
@@ -355,6 +366,46 @@ export function PaidCheckoutModal({
         setShowCardForm(true);
         setLoading(false);
         return;
+
+      } else if (selectedMethod === 'boleto') {
+        // Boleto: compensação leva até 3 dias úteis. O envio só é criado depois
+        // que o pagamento é confirmado (acompanhamento/polling é da Task 15) —
+        // aqui só geramos o boleto e mostramos o mínimo funcional.
+        console.log('[PAID_CHECKOUT] Gerando boleto...');
+        const amountCents = Math.round(totalAmount * 100);
+        const boletoRes = await fetch('/api/payments/asaas/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            amountCents,
+            paymentMethod: 'boleto',
+            description: 'Pagamento de envio - Envio Legal',
+            metadata: { type: 'checkout_payment' },
+          }),
+        });
+
+        if (!boletoRes.ok) {
+          const errorJson = await boletoRes.json();
+          const error = errorJson.error ?? errorJson;
+          throw new Error(error.message || error.error || 'Erro ao gerar boleto');
+        }
+
+        const boletoJson = await boletoRes.json();
+        const rawResult = (boletoJson.data ?? boletoJson) as {
+          transactionId: string;
+          boletoUrl?: string;
+          boletoBarcode?: string;
+        };
+
+        setBoletoData({
+          transactionId: rawResult.transactionId,
+          boletoUrl: rawResult.boletoUrl || '',
+          boletoBarcode: rawResult.boletoBarcode || '',
+        });
+        setCheckoutInProgress(true);
+        message.success('Boleto gerado com sucesso!');
+        setLoading(false);
+        return;
       }
 
     } catch (error) {
@@ -387,6 +438,72 @@ export function PaidCheckoutModal({
           setCheckoutInProgress(false);
         }}
       />
+    );
+  }
+
+  // Render boleto gerado (mínimo funcional — acompanhamento é da Task 15)
+  if (boletoData && checkoutInProgress) {
+    return (
+      <ELModal
+        title="Boleto gerado"
+        open={open}
+        closable={!loading}
+        maskClosable={false}
+        footer={
+          <ELButton variant="primary" onClick={handleClose}>
+            Fechar
+          </ELButton>
+        }
+        width={600}
+      >
+        <Space orientation="vertical" size="large" style={{ width: '100%' }}>
+          <ELAlert
+            variant="warning"
+            title="Aguardando pagamento"
+            description="Compensação em até 3 dias úteis — o envio é liberado após o pagamento."
+          />
+
+          <div style={{ textAlign: 'center' }}>
+            <Text strong style={{ fontSize: 18 }}>
+              {formatBRL(totalAmount)}
+            </Text>
+          </div>
+
+          {boletoData.boletoUrl && (
+            <ELButton
+              variant="primary"
+              block
+              onClick={() => window.open(boletoData.boletoUrl, '_blank', 'noopener,noreferrer')}
+            >
+              Abrir boleto (PDF)
+            </ELButton>
+          )}
+
+          {boletoData.boletoBarcode && (
+            <ELAlert
+              variant="info"
+              title="Linha digitável"
+              description={
+                <div style={{ wordBreak: 'break-all', fontSize: 12 }}>
+                  {boletoData.boletoBarcode}
+                  <br />
+                  <ELButton
+                    variant="link"
+                    size="small"
+                    onClick={() => {
+                      navigator.clipboard.writeText(boletoData.boletoBarcode);
+                      message.success('Linha digitável copiada!');
+                    }}
+                    style={{ paddingLeft: 0 }}
+                  >
+                    Copiar linha digitável
+                  </ELButton>
+                </div>
+              }
+            />
+          )}
+        </Space>
+      </ELModal>
     );
   }
 
@@ -520,6 +637,19 @@ export function PaidCheckoutModal({
                       </div>
                     </Space>
                   </Radio>
+
+                  {/* Boleto */}
+                  <Radio value="boleto" style={{ width: '100%' }}>
+                    <Space>
+                      <BarcodeOutlined style={{ fontSize: 20 }} />
+                      <div>
+                        <div>Boleto bancário</div>
+                        <Text type="secondary" style={{ fontSize: 12 }}>
+                          Compensação em até 3 dias úteis — o envio é liberado após o pagamento
+                        </Text>
+                      </div>
+                    </Space>
+                  </Radio>
                 </Space>
               </Radio.Group>
             </div>
@@ -537,6 +667,14 @@ export function PaidCheckoutModal({
             <div style={{ padding: '12px', background: '#e6f7ff', borderRadius: 4, border: '1px solid #91d5ff' }}>
               <Text type="secondary" style={{ fontSize: 12 }}>
                 Será gerado um QR Code PIX. O envio será criado assim que o pagamento for confirmado.
+              </Text>
+            </div>
+          )}
+          {selectedMethod === 'boleto' && (
+            <div style={{ padding: '12px', background: '#f0f2f5', borderRadius: 4 }}>
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                Será gerado um boleto bancário. A compensação leva até 3 dias úteis e o envio só é
+                liberado após a confirmação do pagamento.
               </Text>
             </div>
           )}

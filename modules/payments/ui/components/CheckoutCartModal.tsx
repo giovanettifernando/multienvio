@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useCallback, useEffect, useRef } from 'react';
-import { useELApp, ELSpin, ELSpace } from '@/shared/ui';
+import { useState, useEffect, useRef } from 'react';
+import { useELApp, ELSpin, ELSpace, ELTypography } from '@/shared/ui';
 const App = { useApp: useELApp };
 const Spin = ELSpin;
 const Space = ELSpace;
+const { Text } = ELTypography;
 import { CheckCircleOutlined, LoadingOutlined } from '@ant-design/icons';
 import { useRouter } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -14,8 +15,15 @@ import { PixPaymentView } from './PixPaymentView';
 import { CardPaymentView } from './CardPaymentView';
 import { PaymentMethodSelector } from './PaymentMethodSelector';
 import type { CheckoutCartModalProps, WalletData, PaymentMethod } from './checkoutTypes';
+import { formatCurrency } from './checkoutTypes';
 import { ELModal } from '@/shared/ui/ELModal';
 import { ELButton } from '@/shared/ui/ELButton';
+import { ELAlert } from '@/shared/ui/ELAlert';
+import type { BoletoResult } from '@/modules/payments/dto/card';
+
+interface BoletoData extends BoletoResult {
+  transactionId: string;
+}
 
 export function CheckoutCartModal({
   open,
@@ -31,6 +39,7 @@ export function CheckoutCartModal({
   const [showCardForm, setShowCardForm] = useState(false);
   const [useSavedCard, setUseSavedCard] = useState(true);
   const [checkoutInProgress, setCheckoutInProgress] = useState(false);
+  const [boletoData, setBoletoData] = useState<BoletoData | null>(null);
 
   // Estado para códigos de rastreamento reservados (NOVO FLUXO)
   const [reservedTrackingCodes, setReservedTrackingCodes] = useState<string[]>([]);
@@ -170,7 +179,9 @@ export function CheckoutCartModal({
             reservedTrackingCodes,
             itemIds,
             paymentMethod: 'PAGARME',
-            pagarmePaymentId: pixData?.payment?.id?.toString(),
+            // pagarmePaymentId carrega o id da PaymentTransaction (Asaas); o nome do
+            // campo é mantido por compatibilidade de contrato com o backend (ver TODO lá).
+            pagarmePaymentId: pixData?.transaction?.id,
           }),
         });
 
@@ -303,6 +314,46 @@ export function CheckoutCartModal({
         setShowCardForm(true);
         setLoading(false);
         return;
+
+      } else if (selectedMethod === 'boleto') {
+        // Boleto: compensação leva até 3 dias úteis. O envio só é criado depois
+        // que o pagamento é confirmado (acompanhamento/polling é da Task 15) —
+        // aqui só geramos o boleto e mostramos o mínimo funcional.
+        console.log('[CHECKOUT_CART] Gerando boleto...');
+        const amountCents = Math.round(totalAmount * 100);
+        const boletoRes = await fetch('/api/payments/asaas/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            amountCents,
+            paymentMethod: 'boleto',
+            description: `Pagamento de ${itemCount} envio(s) - Envio Legal`,
+            metadata: { type: 'checkout_payment' },
+          }),
+        });
+
+        if (!boletoRes.ok) {
+          const errorJson = await boletoRes.json();
+          const error = errorJson.error ?? errorJson;
+          throw new Error(error.message || error.error || 'Erro ao gerar boleto');
+        }
+
+        const boletoJson = await boletoRes.json();
+        const rawResult = (boletoJson.data ?? boletoJson) as {
+          transactionId: string;
+          boletoUrl?: string;
+          boletoBarcode?: string;
+        };
+
+        setBoletoData({
+          transactionId: rawResult.transactionId,
+          boletoUrl: rawResult.boletoUrl || '',
+          boletoBarcode: rawResult.boletoBarcode || '',
+        });
+        setCheckoutInProgress(true);
+        message.success('Boleto gerado com sucesso!');
+        setLoading(false);
+        return;
       }
 
     } catch (error) {
@@ -315,6 +366,7 @@ export function CheckoutCartModal({
 
   const handleClose = () => {
     resetPix();
+    setBoletoData(null);
     setSelectedMethod(null);
     setShowCardForm(false);
     setUseSavedCard(true);
@@ -340,6 +392,76 @@ export function CheckoutCartModal({
           setCheckoutInProgress(false);
         }}
       />
+    );
+  }
+
+  // Render boleto gerado (mínimo funcional — acompanhamento é da Task 15)
+  if (boletoData && checkoutInProgress) {
+    return (
+      <ELModal
+        title="Boleto gerado"
+        open={open}
+        closable={!loading}
+        maskClosable={false}
+        footer={
+          <ELButton variant="primary" onClick={handleClose}>
+            Fechar
+          </ELButton>
+        }
+        width={600}
+      >
+        <Space orientation="vertical" size="large" style={{ width: '100%' }}>
+          <ELAlert
+            variant="warning"
+            title="Aguardando pagamento"
+            description="Compensação em até 3 dias úteis — os envios são criados após a confirmação do pagamento."
+          />
+
+          <div style={{ textAlign: 'center' }}>
+            <Text strong style={{ fontSize: 18 }}>
+              {formatCurrency(totalAmount)}
+            </Text>
+            <br />
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              {itemCount} {itemCount === 1 ? 'envio' : 'envios'}
+            </Text>
+          </div>
+
+          {boletoData.boletoUrl && (
+            <ELButton
+              variant="primary"
+              block
+              onClick={() => window.open(boletoData.boletoUrl, '_blank', 'noopener,noreferrer')}
+            >
+              Abrir boleto (PDF)
+            </ELButton>
+          )}
+
+          {boletoData.boletoBarcode && (
+            <ELAlert
+              variant="info"
+              title="Linha digitável"
+              description={
+                <div style={{ wordBreak: 'break-all', fontSize: 12 }}>
+                  {boletoData.boletoBarcode}
+                  <br />
+                  <ELButton
+                    variant="link"
+                    size="small"
+                    onClick={() => {
+                      navigator.clipboard.writeText(boletoData.boletoBarcode);
+                      message.success('Linha digitável copiada!');
+                    }}
+                    style={{ paddingLeft: 0 }}
+                  >
+                    Copiar linha digitável
+                  </ELButton>
+                </div>
+              }
+            />
+          )}
+        </Space>
+      </ELModal>
     );
   }
 

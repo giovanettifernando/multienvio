@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { tokenizeCard } from '@/modules/payments/ui/utils/tokenizeCard';
 import { useELApp, ELForm, ELInput, ELRow, ELCol } from '@/shared/ui';
 const App = { useApp: useELApp };
 const Form = ELForm;
@@ -38,6 +37,46 @@ type CardBrand = {
   pattern: RegExp;
   logo?: string;
 };
+
+/**
+ * NOTA (Task 14 - migração Asaas): este fluxo de cadastro de cartão em
+ * "Minha conta" está fora do escopo desta task (não listado no brief; o
+ * fluxo equivalente migrado fica em modules/wallet/ui/components/CardPaymentForm.tsx).
+ * `modules/payments/ui/utils/tokenizeCard.ts` foi removido por pedir a rota do
+ * Pagar.me no navegador; esta função local preserva o comportamento anterior
+ * (idêntico ao utilitário removido) para não quebrar o build. Já estava
+ * quebrado em runtime antes desta task (gateway Pagar.me inativo desde a
+ * Task 6) — migrar para /api/payments/asaas/tokenize fica para quem tratar
+ * este fluxo.
+ */
+async function tokenizeCard(card: {
+  number: string;
+  holderName: string;
+  expMonth: string;
+  expYear: string;
+  cvv: string;
+}): Promise<string> {
+  const res = await fetch('/api/payments/pagarme/tokenize', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      number: card.number.replace(/\D/g, ''),
+      holderName: card.holderName,
+      expMonth: parseInt(card.expMonth, 10),
+      expYear: parseInt(card.expYear.length === 2 ? `20${card.expYear}` : card.expYear, 10),
+      cvv: card.cvv,
+    }),
+  });
+
+  const json = await res.json();
+  if (!res.ok) {
+    throw new Error((json as { error?: { message?: string } })?.error?.message || 'Falha ao tokenizar cartão');
+  }
+
+  const token = ((json as { data?: { token?: string } })?.data ?? (json as { token?: string }))?.token;
+  if (!token) throw new Error('Token inválido retornado pelo Pagar.me');
+  return token;
+}
 
 const CARD_BRANDS: CardBrand[] = [
   { name: "Visa", pattern: /^4/ },

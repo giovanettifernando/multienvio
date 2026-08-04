@@ -5,10 +5,48 @@ import { ELAlert } from '@/shared/ui/ELAlert';
 import { ELModal } from '@/shared/ui/ELModal';
 import { ELButton } from '@/shared/ui/ELButton';
 import { LoadingOutlined } from "@ant-design/icons";
-import { tokenizeCard } from '@/modules/payments/ui/utils/tokenizeCard';
 
 // Timeout para aguardar confirmacao da operadora (15 segundos)
 const CARD_PROCESSING_TIMEOUT_MS = 15000;
+
+/**
+ * NOTA (Task 14 - migração Asaas): o fluxo de pagamento pelo destinatário
+ * (RecipientPaymentModal e este formulário) é escopo da Task 15 — não deve
+ * ser tocado nesta task além de preservar o TODO já existente.
+ * `modules/payments/ui/utils/tokenizeCard.ts` foi removido por pedir a rota
+ * do Pagar.me no navegador; esta função local preserva o comportamento
+ * anterior (idêntico ao utilitário removido) só para não quebrar o build.
+ * Já estava quebrado em runtime antes desta task (gateway Pagar.me inativo
+ * desde a Task 6) — migrar para /api/payments/asaas/tokenize é da Task 15.
+ */
+async function tokenizeCard(card: {
+  number: string;
+  holderName: string;
+  expMonth: string;
+  expYear: string;
+  cvv: string;
+}): Promise<string> {
+  const res = await fetch('/api/payments/pagarme/tokenize', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      number: card.number.replace(/\D/g, ''),
+      holderName: card.holderName,
+      expMonth: parseInt(card.expMonth, 10),
+      expYear: parseInt(card.expYear.length === 2 ? `20${card.expYear}` : card.expYear, 10),
+      cvv: card.cvv,
+    }),
+  });
+
+  const json = await res.json();
+  if (!res.ok) {
+    throw new Error((json as { error?: { message?: string } })?.error?.message || 'Falha ao tokenizar cartão');
+  }
+
+  const token = ((json as { data?: { token?: string } })?.data ?? (json as { token?: string }))?.token;
+  if (!token) throw new Error('Token inválido retornado pelo Pagar.me');
+  return token;
+}
 
 interface RecipientCardPaymentFormProps {
   paymentToken: string;

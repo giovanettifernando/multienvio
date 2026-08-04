@@ -69,9 +69,10 @@ export function usePixPayment({ onPaymentConfirmed }: UsePixPaymentOptions) {
   // Generate PIX QR Code
   const generatePix = async (totalAmount: number, itemCount: number, email: string) => {
     console.log('[CHECKOUT_CART] Gerando PIX...');
+    void email; // mantido na assinatura por compatibilidade com os chamadores existentes
 
     const amountCents = Math.round(totalAmount * 100);
-    const pixRes = await fetch('/api/payments/pagarme/create', {
+    const pixRes = await fetch('/api/payments/asaas/create', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -91,28 +92,30 @@ export function usePixPayment({ onPaymentConfirmed }: UsePixPaymentOptions) {
     // Handle standardized API response format { data: T, error, meta }
     const rawResult = (json.data ?? json) as {
       transactionId: string;
-      orderId: string;
+      chargeId: string;
       status: string;
       pixQrCode?: string;
-      pixQrCodeUrl?: string;
+      pixQrCodeImage?: string;
     };
 
-    // Normalise to PaymentResult shape used by the rest of the component
+    // Normalise to PaymentResult shape used by the rest of the component.
+    // rawResult.transactionId é o ID real da PaymentTransaction (usado como
+    // pagarmePaymentId pelos chamadores) — não existe mais um "payment.id"
+    // numérico do gateway; quem precisar do identificador usa transaction.id.
     const pixResult: PaymentResult = {
       success: true,
       transaction: {
         id: rawResult.transactionId,
-        referenceId: rawResult.orderId,
+        referenceId: rawResult.chargeId,
         status: rawResult.status,
         amountCents,
         method: 'pix',
       },
       payment: {
-        id: 0,
         status: rawResult.status,
         statusDetail: rawResult.status,
         pixQrCode: rawResult.pixQrCode,
-        pixQrCodeUrl: rawResult.pixQrCodeUrl,
+        pixQrCodeImage: rawResult.pixQrCodeImage,
       },
     };
     setPixData(pixResult);

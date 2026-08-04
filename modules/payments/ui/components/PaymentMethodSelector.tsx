@@ -9,6 +9,7 @@ import {
   WalletOutlined,
   QrcodeOutlined,
   CreditCardOutlined,
+  BarcodeOutlined,
 } from '@ant-design/icons';
 import type { PaymentMethod } from './checkoutTypes';
 import { formatCurrency } from './checkoutTypes';
@@ -104,6 +105,19 @@ export function PaymentMethodSelector({
                 <div>Cartão de crédito</div>
               </Space>
             </Radio>
+
+            {/* Boleto */}
+            <Radio value="boleto" style={{ width: '100%' }}>
+              <Space>
+                <BarcodeOutlined style={{ fontSize: 20 }} />
+                <div>
+                  <div>Boleto bancário</div>
+                  <Text type="secondary" style={{ fontSize: 12 }}>
+                    Compensação em até 3 dias úteis — o envio é liberado após o pagamento
+                  </Text>
+                </div>
+              </Space>
+            </Radio>
           </Space>
         </Radio.Group>
       </div>
@@ -132,6 +146,15 @@ export function PaymentMethodSelector({
             {savedCardsCount > 0
               ? `Você tem ${savedCardsCount} cartão(ões) salvo(s). Poderá usar um deles ou cadastrar um novo.`
               : 'Você será direcionado para cadastrar os dados do cartão.'}
+          </Text>
+        </div>
+      )}
+
+      {selectedMethod === 'boleto' && (
+        <div style={{ padding: '12px', background: '#f0f2f5', borderRadius: 4 }}>
+          <Text type="secondary" style={{ fontSize: 12 }}>
+            Será gerado um boleto bancário. A compensação leva até 3 dias úteis e o envio só é
+            liberado após a confirmação do pagamento.
           </Text>
         </div>
       )}

@@ -15,6 +15,7 @@ import {
   CreditCardOutlined,
   CheckCircleOutlined,
   WalletOutlined,
+  BarcodeOutlined,
   LoadingOutlined,
   CheckCircleFilled,
   CloseCircleFilled,
@@ -26,10 +27,11 @@ import { ELModal } from '@/shared/ui/ELModal';
 import { ELButton } from '@/shared/ui/ELButton';
 import { ELAlert } from '@/shared/ui/ELAlert';
 import { inputNumberFormatterBRL, inputNumberParserBRL, formatBRL } from "@/shared/utils/format";
+import type { BoletoResult } from "@/modules/payments/dto/card";
 
 const { Text } = Typography;
 
-type PaymentMethod = "pix" | "card" | "wallet";
+type PaymentMethod = "pix" | "card" | "wallet" | "boleto";
 
 interface PaymentResult {
   success: boolean;
@@ -41,13 +43,16 @@ interface PaymentResult {
     method: string;
   };
   payment: {
-    id: number;
     status: string;
     statusDetail: string;
     pixQrCode?: string;
-    pixQrCodeBase64?: string;
-    pixQrCodeUrl?: string;
+    /** Imagem do QR Code já em data URI (data:image/png;base64,...), retornada pelo Asaas. */
+    pixQrCodeImage?: string;
   };
+}
+
+interface BoletoData extends BoletoResult {
+  transactionId: string;
 }
 
 interface WalletData {
@@ -117,6 +122,7 @@ export function PaymentModal({
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod | null>(null);
   const [loading, setLoading] = useState(false);
   const [pixData, setPixData] = useState<PaymentResult | null>(null);
+  const [boletoData, setBoletoData] = useState<BoletoData | null>(null);
   const [showCardForm, setShowCardForm] = useState(false);
   const [useSavedCard, setUseSavedCard] = useState(true);
   const [amountTouched, setAmountTouched] = useState(false);
@@ -186,6 +192,7 @@ export function PaymentModal({
     }
 
     setPixData(null);
+    setBoletoData(null);
     setPixPolling(false);
     setPixStatus("pending");
     setPixExpireSeconds(30 * 60);
@@ -238,7 +245,7 @@ export function PaymentModal({
           queryClient.invalidateQueries({ queryKey: ["wallet"] });
         }
 
-        onSuccess?.({ transactionId: String(pixData.payment.id), method: "pix" });
+        onSuccess?.({ transactionId: pixData.transaction.id, method: "pix" });
         handleClose();
 
       } else if (["CANCELED", "FAILED", "EXPIRED"].includes(refreshData.payment?.status)) {
@@ -258,7 +265,7 @@ export function PaymentModal({
     } catch (error) {
       console.error("[PIX_POLL] Erro ao verificar status:", error);
     }
-  }, [pixData?.transaction?.id, pixData?.payment?.id, mode, messageApi, queryClient, onSuccess, handleClose]);
+  }, [pixData?.transaction?.id, mode, messageApi, queryClient, onSuccess, handleClose]);
 
   // Effect para polling do status PIX
   useEffect(() => {
@@ -329,64 +336,81 @@ export function PaymentModal({
         onSuccess?.({ method: "wallet" });
         handleClose();
 
-      } else if (selectedMethod === "pix") {
-        // Criar pagamento PIX via Pagar.me
+      } else if (selectedMethod === "pix" || selectedMethod === "boleto") {
+        // Criar cobrança PIX/boleto via Asaas
         const amountCents = Math.round(amount * 100);
-        const pixRes = await fetch("/api/payments/pagarme/create", {
+        const asaasMetadata = {
+          type: mode === "topup" ? "wallet_topup" : "checkout_payment",
+          ...(typeof metadata === "object" && metadata !== null
+            ? Object.fromEntries(
+                Object.entries(metadata).map(([k, v]) => [k, String(v)])
+              )
+            : {}),
+        };
+
+        const chargeRes = await fetch("/api/payments/asaas/create", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             amountCents,
-            paymentMethod: "pix",
+            paymentMethod: selectedMethod,
             description: description || `Pagamento - ${formatBRL(amount)}`,
-            metadata: {
-              type: mode === "topup" ? "wallet_topup" : "checkout_payment",
-              ...(typeof metadata === "object" && metadata !== null
-                ? Object.fromEntries(
-                    Object.entries(metadata).map(([k, v]) => [k, String(v)])
-                  )
-                : {}),
-            },
+            metadata: asaasMetadata,
           }),
         });
 
-        if (!pixRes.ok) {
-          const errorJson = await pixRes.json();
+        if (!chargeRes.ok) {
+          const errorJson = await chargeRes.json();
           // Handle standardized API response format { data: T, error, meta }
           const error = errorJson.error ?? errorJson;
-          throw new Error(error.message || error.error || "Erro ao gerar PIX");
+          throw new Error(
+            error.message || error.error || (selectedMethod === "pix" ? "Erro ao gerar PIX" : "Erro ao gerar boleto")
+          );
         }
 
-        const pixJson = await pixRes.json();
+        const chargeJson = await chargeRes.json();
         // Handle standardized API response format { data: T, error, meta }
-        const rawResult = (pixJson.data ?? pixJson) as {
+        const rawResult = (chargeJson.data ?? chargeJson) as {
           transactionId: string;
-          orderId: string;
+          chargeId: string;
           status: string;
           pixQrCode?: string;
-          pixQrCodeUrl?: string;
+          pixQrCodeImage?: string;
+          boletoUrl?: string;
+          boletoBarcode?: string;
         };
-        const pixResult: PaymentResult = {
-          success: true,
-          transaction: {
-            id: rawResult.transactionId,
-            referenceId: rawResult.orderId,
-            status: rawResult.status,
-            amountCents,
-            method: "pix",
-          },
-          payment: {
-            id: 0,
-            status: rawResult.status,
-            statusDetail: rawResult.status,
-            pixQrCode: rawResult.pixQrCode,
-            pixQrCodeUrl: rawResult.pixQrCodeUrl,
-          },
-        };
-        setPixData(pixResult);
-        setPixStatus("pending");
-        setPixExpireSeconds(30 * 60);
-        messageApi.success("QR Code PIX gerado com sucesso!");
+
+        if (selectedMethod === "pix") {
+          const pixResult: PaymentResult = {
+            success: true,
+            transaction: {
+              id: rawResult.transactionId,
+              referenceId: rawResult.chargeId,
+              status: rawResult.status,
+              amountCents,
+              method: "pix",
+            },
+            payment: {
+              status: rawResult.status,
+              statusDetail: rawResult.status,
+              pixQrCode: rawResult.pixQrCode,
+              pixQrCodeImage: rawResult.pixQrCodeImage,
+            },
+          };
+          setPixData(pixResult);
+          setPixStatus("pending");
+          setPixExpireSeconds(30 * 60);
+          messageApi.success("QR Code PIX gerado com sucesso!");
+        } else {
+          // Boleto: compensação leva até 3 dias úteis — sem polling aqui
+          // (acompanhamento é da Task 15). Só exibimos o mínimo funcional.
+          setBoletoData({
+            transactionId: rawResult.transactionId,
+            boletoUrl: rawResult.boletoUrl || "",
+            boletoBarcode: rawResult.boletoBarcode || "",
+          });
+          messageApi.success("Boleto gerado com sucesso!");
+        }
 
       } else if (selectedMethod === "card") {
         // Mostrar formulário de cartão
@@ -481,6 +505,72 @@ export function PaymentModal({
             </Space>
           </Space>
         )}
+      </ELModal>
+    );
+  }
+
+  // Renderizar boleto gerado (mínimo funcional — acompanhamento é da Task 15)
+  if (boletoData) {
+    return (
+      <ELModal
+        title="Boleto gerado"
+        open={open}
+        closable={!loading}
+        maskClosable={false}
+        footer={
+          <ELButton variant="primary" onClick={handleClose}>
+            Fechar
+          </ELButton>
+        }
+        width={600}
+      >
+        <Space orientation="vertical" size="large" style={{ width: "100%" }}>
+          <ELAlert
+            variant="warning"
+            title="Aguardando pagamento"
+            description="Compensação em até 3 dias úteis — o envio é liberado após o pagamento."
+          />
+
+          <div style={{ textAlign: "center" }}>
+            <Text strong style={{ fontSize: 18 }}>
+              {formatBRL(amount)}
+            </Text>
+          </div>
+
+          {boletoData.boletoUrl && (
+            <ELButton
+              variant="primary"
+              block
+              onClick={() => window.open(boletoData.boletoUrl, "_blank", "noopener,noreferrer")}
+            >
+              Abrir boleto (PDF)
+            </ELButton>
+          )}
+
+          {boletoData.boletoBarcode && (
+            <ELAlert
+              variant="info"
+              title="Linha digitável"
+              description={
+                <div style={{ wordBreak: "break-all", fontSize: 12 }}>
+                  {boletoData.boletoBarcode}
+                  <br />
+                  <ELButton
+                    variant="link"
+                    size="small"
+                    onClick={() => {
+                      navigator.clipboard.writeText(boletoData.boletoBarcode);
+                      messageApi.success("Linha digitável copiada!");
+                    }}
+                    style={{ paddingLeft: 0 }}
+                  >
+                    Copiar linha digitável
+                  </ELButton>
+                </div>
+              }
+            />
+          )}
+        </Space>
       </ELModal>
     );
   }
@@ -597,10 +687,10 @@ export function PaymentModal({
               Escaneie o QR Code abaixo com o app do seu banco:
             </Text>
 
-            {pixData.payment.pixQrCodeBase64 && (
+            {pixData.payment.pixQrCodeImage && (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={`data:image/png;base64,${pixData.payment.pixQrCodeBase64}`}
+                src={pixData.payment.pixQrCodeImage}
                 alt="QR Code PIX"
                 style={{
                   width: 280,
@@ -773,6 +863,19 @@ export function PaymentModal({
                     <div>Cartão de crédito</div>
                   </Space>
                 </Radio>
+
+                {/* Boleto bancário */}
+                <Radio value="boleto" style={{ width: "100%" }}>
+                  <Space>
+                    <BarcodeOutlined style={{ fontSize: 20 }} />
+                    <div>
+                      <div>Boleto bancário</div>
+                      <Text type="secondary" style={{ fontSize: 12 }}>
+                        Compensação em até 3 dias úteis — o envio é liberado após o pagamento
+                      </Text>
+                    </div>
+                  </Space>
+                </Radio>
               </Space>
             </Radio.Group>
           </div>
@@ -803,6 +906,16 @@ export function PaymentModal({
               {savedCards && savedCards.length > 0
                 ? `Você tem ${savedCards.length} cartão(ões) salvo(s). Poderá usar um deles ou cadastrar um novo.`
                 : "Você será direcionado para cadastrar os dados do cartão."}
+            </Text>
+          </div>
+        )}
+
+        {selectedMethod === "boleto" && (
+          <div style={{ padding: "12px", background: "#f0f2f5", borderRadius: 4 }}>
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              Será gerado um boleto bancário. A compensação leva até 3 dias úteis
+              {mode === "topup" && " e o saldo será creditado em sua carteira assim que o pagamento for confirmado."}
+              {mode === "checkout" && " e o envio só é liberado após a confirmação do pagamento."}
             </Text>
           </div>
         )}
