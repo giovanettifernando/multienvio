@@ -25,6 +25,7 @@ import { logger } from '@/platform/logging/logger';
 import { isCorreiosCarrier } from '@/shared/utils/carrier';
 import { getQueue, QUEUE_NAMES, JOB_PRIORITY } from '@/platform/queue';
 import type { LabelGenerateJobPayload } from '@/platform/queue';
+import { canReleaseService } from '@/platform/integrations/asaas/release';
 
 // ============================================================================
 // TYPES
@@ -42,8 +43,10 @@ export interface CreateCartShipmentsInput {
   paymentMethod: CartPaymentMethod;
   /** ID do pagamento (legacy, não utilizado) */
   mercadoPagoPaymentId?: string;
-  /** ID da transação Pagar.me (se aplicável) */
-  pagarmeTransactionId?: string;
+  /** ID da PaymentTransaction do gateway (Asaas), se aplicável.
+   *  Nome mantido como "pagarmePaymentId" por compatibilidade de contrato com o
+   *  frontend (CheckoutCartModal / PaidCheckoutModal já enviam esta chave). */
+  pagarmePaymentId?: string;
 }
 
 export interface CreateCartShipmentsResult {
@@ -170,7 +173,7 @@ export async function createCartShipmentsWithPayment(
     itemIds,
     paymentMethod,
     mercadoPagoPaymentId,
-    pagarmeTransactionId,
+    pagarmePaymentId,
   } = input;
 
   // Track non-Correios shipments for post-transaction LABEL_GENERATE enqueue
@@ -288,6 +291,10 @@ export async function createCartShipmentsWithPayment(
 
     // 4) PAGAMENTO COM CARTEIRA: Debitar saldo
     let walletTransactionId: string | null = null;
+    // Preenchido quando paymentMethod === 'PAGARME': usado depois da criação
+    // dos shipments para marcar a PaymentTransaction como consumida (evita que
+    // o mesmo pagamento libere dois checkouts).
+    let gatewayPaymentTx: { id: string; metadata: Prisma.JsonValue } | null = null;
 
     if (paymentMethod === 'WALLET') {
       // Buscar carteira COM LOCK para evitar race condition
@@ -369,24 +376,51 @@ export async function createCartShipmentsWithPayment(
         title: transactionTitle,
       }, 'Wallet debited successfully for cart');
     } else if (paymentMethod === 'PAGARME') {
-      // Verificar que a transação Pagar.me existe e está paga
-      if (!pagarmeTransactionId) {
-        throw new Error('pagarmeTransactionId is required for PAGARME payment');
+      // Verificar a PaymentTransaction do gateway (Asaas) antes de liberar os
+      // shipments. Três checagens além do status — canReleaseService sozinho
+      // não fecha o risco:
+      //   1) DONO: a transação tem que pertencer ao usuário da sessão, senão
+      //      qualquer um reaproveita o id de uma transação paga alheia.
+      //   2) VALOR: a transação tem que cobrir o total deste carrinho, senão
+      //      uma transação de centavos libera envios caros.
+      //   3) REUSO: uma transação paga não pode liberar dois checkouts — o
+      //      vínculo é gravado em metadata.shipmentIds após a criação (abaixo).
+      // TODO(Task 14/15 - frontend): renomear o par pagarmePaymentId/PAGARME
+      // para nomenclatura Asaas quando o frontend (CheckoutCartModal) for
+      // atualizado — hoje o nome é mantido por compatibilidade de contrato.
+      if (!pagarmePaymentId) {
+        throw new Error('pagarmePaymentId is required for PAGARME payment');
       }
       const transaction = await tx.paymentTransaction.findUnique({
-        where: { id: pagarmeTransactionId },
+        where: { id: pagarmePaymentId },
       });
-      if (!transaction || transaction.status !== 'PAID') {
+      if (
+        !transaction ||
+        transaction.userId !== userId ||
+        !canReleaseService(transaction.status) ||
+        transaction.amountCents < amountCents
+      ) {
         throw Object.assign(
-          new Error('Pagamento Pagar.me não encontrado ou não aprovado'),
+          new Error('Pagamento não encontrado ou não aprovado'),
           { code: 'PAGARME_PAYMENT_NOT_APPROVED' }
         );
       }
+
+      const existingMeta = (transaction.metadata ?? {}) as Record<string, unknown>;
+      if (existingMeta.shipmentIds) {
+        throw Object.assign(
+          new Error('Este pagamento já foi utilizado para criar outros envios'),
+          { code: 'PAGARME_PAYMENT_ALREADY_USED' }
+        );
+      }
+
+      gatewayPaymentTx = { id: transaction.id, metadata: transaction.metadata };
+
       logger.info({
         event: 'pagarme_payment_verified',
-        pagarmeTransactionId,
+        pagarmePaymentId,
         status: transaction.status,
-      }, 'Pagar.me payment verified successfully');
+      }, 'Gateway payment verified successfully');
     }
 
     // 5) CRIAR SHIPMENTS para cada item
@@ -413,7 +447,7 @@ export async function createCartShipmentsWithPayment(
         paymentMethod,
         walletTransactionId,
         mercadoPagoPaymentId,
-        pagarmeTransactionId,
+        pagarmePaymentId,
         totalAmount
       );
 
@@ -444,6 +478,24 @@ export async function createCartShipmentsWithPayment(
         data: {
           usedAt: new Date(),
           shipmentId: shipmentResult.shipmentId,
+        },
+      });
+    }
+
+    // 5b) MARCAR A PaymentTransaction DO GATEWAY COMO CONSUMIDA (REUSO)
+    // Grava os shipmentIds em metadata dentro da MESMA transação de banco que
+    // criou os shipments: se outra requisição concorrente tentar reaproveitar
+    // o mesmo pagamento, o lock de escrita nesta linha serializa as duas
+    // tentativas e a segunda vê metadata.shipmentIds já preenchido.
+    if (gatewayPaymentTx) {
+      const previousMeta = (gatewayPaymentTx.metadata ?? {}) as Record<string, unknown>;
+      await tx.paymentTransaction.update({
+        where: { id: gatewayPaymentTx.id },
+        data: {
+          metadata: {
+            ...previousMeta,
+            shipmentIds,
+          } as Prisma.InputJsonValue,
         },
       });
     }
@@ -541,7 +593,7 @@ async function createShipmentFromCartItem(
   paymentMethod: CartPaymentMethod,
   walletTransactionId: string | null,
   mercadoPagoPaymentId: string | undefined,
-  pagarmeTransactionId: string | undefined,
+  pagarmePaymentId: string | undefined,
   totalAmount: number
 ): Promise<{
   shipmentId: string;
@@ -593,7 +645,7 @@ async function createShipmentFromCartItem(
           confirmedAt: new Date().toISOString(),
           ...(walletTransactionId && { walletTransactionId }),
           ...(mercadoPagoPaymentId && { mercadoPagoPaymentId }),
-          ...(pagarmeTransactionId && { pagarmeTransactionId }),
+          ...(pagarmePaymentId && { pagarmeTransactionId: pagarmePaymentId }),
           amount: totalAmount,
         },
       }
@@ -610,7 +662,7 @@ async function createShipmentFromCartItem(
           confirmedAt: new Date().toISOString(),
           ...(walletTransactionId && { walletTransactionId }),
           ...(mercadoPagoPaymentId && { mercadoPagoPaymentId }),
-          ...(pagarmeTransactionId && { pagarmeTransactionId }),
+          ...(pagarmePaymentId && { pagarmeTransactionId: pagarmePaymentId }),
           amount: totalAmount,
         },
       };

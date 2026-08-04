@@ -11,6 +11,7 @@ import {
   getWalletBalanceByUserId,
   invalidateWalletBalanceCache,
 } from './ledger-balance.service';
+import { canReleaseService } from '@/platform/integrations/asaas/release';
 
 export interface WalletBalance {
   availableCents: number;
@@ -320,14 +321,17 @@ export interface CreditFromGatewayTopupParams {
  * Credita saldo na carteira a partir de um pagamento confirmado no gateway
  *
  * Regras de negócio:
- * - Valida se PaymentTransaction existe e está PAID
+ * - Valida se PaymentTransaction existe e está em estado liberável
+ *   (canReleaseService: CAPTURED — cartão aprovado — ou PAID — dinheiro recebido).
+ *   PENDING (boleto recém-gerado, PIX aguardando) NUNCA credita: liberar carteira
+ *   para um boleto não pago é prejuízo direto e irrecuperável.
  * - Garante idempotência: não aplica crédito duas vezes para o mesmo pagamento
  * - Cria WalletTransaction com type="TOPUP" e reason="gateway_topup"
  * - Atualiza saldo da Wallet
  *
  * @param params Parâmetros do crédito
  * @returns Transação de carteira criada
- * @throws Error se PaymentTransaction não existe ou já foi aplicada
+ * @throws Error se PaymentTransaction não existe ou não pode ser liberada
  */
 export async function creditFromGatewayTopup(
   params: CreditFromGatewayTopupParams
@@ -347,7 +351,7 @@ export async function creditFromGatewayTopup(
     throw new Error(`PaymentTransaction não encontrada: ${paymentTransactionId}`);
   }
 
-  if (paymentTx.status !== 'PAID') {
+  if (!canReleaseService(paymentTx.status)) {
     throw new Error(`PaymentTransaction não está PAID: ${paymentTx.status}`);
   }
 

@@ -1,7 +1,7 @@
 /**
  * POST /api/recipient-payment/refresh-status
  *
- * Atualiza o status de um pagamento consultando o Pagar.me
+ * Atualiza o status de um pagamento consultando o Asaas
  * Endpoint publico - valida pelo transactionId e recebe paymentToken para seguranca
  * Usado para polling do status do PIX na pagina de pagamento do destinatario
  */
@@ -10,7 +10,7 @@ import { withApiHandler } from '@/platform/api/handler';
 import { ApiError } from '@/platform/api/errors';
 import { z } from 'zod';
 import { prisma } from '@/platform/db/db';
-import { updatePaymentFromPagarme } from '@/platform/integrations/pagarme';
+import { updatePaymentFromAsaas } from '@/platform/integrations/asaas';
 
 const refreshSchema = z.object({
   transactionId: z.string().min(1, 'ID da transacao e obrigatorio'),
@@ -81,7 +81,15 @@ export const POST = withApiHandler<RefreshStatusResponse>(async (context) => {
   }
 
   logger.info('recipient_payment_refresh', { externalId: payment.externalId });
-  const updatedPayment = await updatePaymentFromPagarme(payment.externalId);
+
+  // updatePaymentFromAsaas não retorna a transação atualizada (void) — releio
+  // pelo id para obter o status/paidAt sincronizados.
+  await updatePaymentFromAsaas(payment.externalId);
+
+  const updatedPayment = await prisma.paymentTransaction.findUniqueOrThrow({
+    where: { id: transactionId },
+    select: { id: true, status: true, paidAt: true },
+  });
 
   return {
     data: {

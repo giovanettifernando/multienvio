@@ -14,12 +14,14 @@
  * 3. Email é enviado ao destinatário
  */
 
+import { Prisma } from '@prisma/client';
 import { prisma } from '@/platform/db/db';
 import { createShipmentWithVolumes } from '@/modules/shipments/application/create-with-volumes';
 import { ShipmentStatus } from '@/modules/shipments/application/shipment-status';
 import { logger } from '@/platform/logging/logger';
 import { getQueue, QUEUE_NAMES, JOB_PRIORITY } from '@/platform/queue';
 import type { ShipmentCreateJobPayload } from '@/platform/queue/types';
+import { canReleaseService } from '@/platform/integrations/asaas/release';
 import {
   CheckoutRecipient,
   CheckoutVolume,
@@ -59,8 +61,10 @@ export interface CreatePaidShipmentInput {
   paymentMethod: PaymentMethod;
   /** ID externo do serviço (ex: externalServiceId da Loggi) */
   externalServiceId?: string;
-  // Dados específicos para pagamento Pagar.me
-  mercadoPagoPaymentId?: string;
+  /** ID da PaymentTransaction do gateway (Asaas), para paymentMethod === 'PAGARME'.
+   *  Nome mantido como "pagarmePaymentId" por compatibilidade de contrato com o
+   *  frontend (PaidCheckoutModal já envia esta chave). */
+  pagarmePaymentId?: string;
   // Dados de taxa de coleta (pickup fee)
   pickupFee?: {
     collectorId: string;
@@ -110,7 +114,7 @@ export async function createPaidShipment(
     totalCost,
     solicitarColeta,
     paymentMethod,
-    mercadoPagoPaymentId,
+    pagarmePaymentId,
     pickupFee,
   } = input;
 
@@ -186,6 +190,10 @@ export async function createPaidShipment(
 
     // 3) PAGAMENTO COM CARTEIRA: Debitar saldo
     let walletTransactionId: string | null = null;
+    // Preenchido quando paymentMethod === 'PAGARME': usado depois da criação do
+    // shipment para marcar a PaymentTransaction como consumida (evita que o
+    // mesmo pagamento libere dois envios).
+    let gatewayPaymentTx: { id: string; metadata: Prisma.JsonValue } | null = null;
 
     if (paymentMethod === 'WALLET') {
       // Buscar carteira COM LOCK para evitar race condition
@@ -270,6 +278,60 @@ export async function createPaidShipment(
         walletTransactionId,
         amountCents,
       }, 'Wallet debited successfully');
+    } else if (paymentMethod === 'PAGARME') {
+      // Verificar a PaymentTransaction do gateway (Asaas) antes de liberar o
+      // envio. Três checagens além do status — sem elas, canReleaseService
+      // sozinho não fecha o risco:
+      //   1) DONO: a transação tem que pertencer ao usuário da sessão, senão
+      //      qualquer um pode reaproveitar o id de uma transação paga alheia.
+      //   2) VALOR: a transação tem que cobrir o custo total deste envio,
+      //      senão uma transação de centavos libera uma etiqueta cara.
+      //   3) REUSO: uma transação paga não pode liberar dois envios — o
+      //      vínculo é gravado em metadata.shipmentId após a criação (abaixo),
+      //      seguindo o mesmo padrão de metadata usado em tracking.ts e no
+      //      checkout do carrinho.
+      // TODO(Task 14/15 - frontend): renomear o par pagarmePaymentId/PAGARME
+      // para nomenclatura Asaas quando o frontend (PaidCheckoutModal) for
+      // atualizado — hoje o nome é mantido por compatibilidade de contrato.
+      if (!pagarmePaymentId) {
+        throw Object.assign(
+          new Error('pagarmePaymentId is required for PAGARME payment'),
+          { code: 'PAGARME_PAYMENT_REQUIRED' }
+        );
+      }
+
+      const paymentTx = await tx.paymentTransaction.findUnique({
+        where: { id: pagarmePaymentId },
+      });
+
+      if (
+        !paymentTx ||
+        paymentTx.userId !== userId ||
+        !canReleaseService(paymentTx.status) ||
+        paymentTx.amountCents < amountCents
+      ) {
+        throw Object.assign(
+          new Error('Pagamento não encontrado ou não aprovado'),
+          { code: 'PAGARME_PAYMENT_NOT_APPROVED' }
+        );
+      }
+
+      const existingMeta = (paymentTx.metadata ?? {}) as Record<string, unknown>;
+      if (existingMeta.shipmentId) {
+        throw Object.assign(
+          new Error('Este pagamento já foi utilizado para criar outro envio'),
+          { code: 'PAGARME_PAYMENT_ALREADY_USED' }
+        );
+      }
+
+      gatewayPaymentTx = { id: paymentTx.id, metadata: paymentTx.metadata };
+
+      logger.info({
+        event: 'pagarme_payment_verified',
+        trackingCode,
+        pagarmePaymentId,
+        status: paymentTx.status,
+      }, 'Gateway payment verified successfully');
     }
 
     // 3) CRIAR SHIPMENT com status PROCESSING (integração com transportadora é assíncrona)
@@ -305,7 +367,7 @@ export async function createPaidShipment(
             method: paymentMethod.toLowerCase(),
             confirmedAt: new Date().toISOString(),
             ...(walletTransactionId && { walletTransactionId }),
-            ...(mercadoPagoPaymentId && { mercadoPagoPaymentId }),
+            ...(pagarmePaymentId && { pagarmePaymentId }),
             amount: totalCost,
           },
         },
@@ -327,6 +389,24 @@ export async function createPaidShipment(
       paymentMethod,
       status: ShipmentStatus.PROCESSING,
     }, 'Shipment created with PROCESSING status — carrier integration will be async');
+
+    // 3b) MARCAR A PaymentTransaction DO GATEWAY COMO CONSUMIDA (REUSO)
+    // Grava o shipmentId em metadata dentro da MESMA transação de banco que
+    // criou o shipment: se outra requisição concorrente tentar reaproveitar o
+    // mesmo pagamento, o lock de escrita nesta linha serializa as duas
+    // tentativas e a segunda vê metadata.shipmentId já preenchido.
+    if (gatewayPaymentTx) {
+      const previousMeta = (gatewayPaymentTx.metadata ?? {}) as Record<string, unknown>;
+      await tx.paymentTransaction.update({
+        where: { id: gatewayPaymentTx.id },
+        data: {
+          metadata: {
+            ...previousMeta,
+            shipmentId: shipment.id,
+          } as Prisma.InputJsonValue,
+        },
+      });
+    }
 
     // 4) CRIAR ETIQUETA (status pending — será preenchida pelo worker)
     const label = await tx.label.create({

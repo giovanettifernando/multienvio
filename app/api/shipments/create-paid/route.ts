@@ -48,8 +48,10 @@ const createPaidShipmentSchema = z.object({
   // Método de pagamento
   paymentMethod: z.enum(['WALLET', 'PAGARME']),
 
-  // ID do pagamento Pagar.me (se aplicável)
-  mercadoPagoPaymentId: z.string().optional(),
+  // ID da PaymentTransaction do gateway (Asaas), se aplicável.
+  // Nome mantido como "pagarmePaymentId" por compatibilidade de contrato com o
+  // frontend (PaidCheckoutModal já envia esta chave) — ver TODO no service.
+  pagarmePaymentId: z.string().optional(),
 
   // Dados do destinatário
   recipient: z.object({
@@ -251,7 +253,7 @@ export const POST = withApiHandler<CreatePaidShipmentResponse>(async ({ req }) =
       totalCost: serverTotalCost, // SECURITY: Usar valor calculado no servidor
       solicitarColeta: data.solicitarColeta,
       paymentMethod: data.paymentMethod as PaymentMethod,
-      mercadoPagoPaymentId: data.mercadoPagoPaymentId,
+      pagarmePaymentId: data.pagarmePaymentId,
       pickupFee: data.pickupFee,
     });
 
@@ -301,6 +303,22 @@ export const POST = withApiHandler<CreatePaidShipmentResponse>(async ({ req }) =
         throw new ApiError({
           code: 'invalid_tracking_code',
           message: 'Código de rastreamento inválido, expirado ou não autorizado. Recarregue a página e tente novamente.',
+          status: 400,
+        });
+      }
+
+      if (errorCode === 'PAGARME_PAYMENT_REQUIRED' || errorCode === 'PAGARME_PAYMENT_NOT_APPROVED') {
+        throw new ApiError({
+          code: 'payment_not_approved',
+          message: 'Pagamento não encontrado ou ainda não aprovado. Se pagou por boleto ou PIX, aguarde a confirmação.',
+          status: 400,
+        });
+      }
+
+      if (errorCode === 'PAGARME_PAYMENT_ALREADY_USED') {
+        throw new ApiError({
+          code: 'payment_already_used',
+          message: 'Este pagamento já foi utilizado para criar outro envio.',
           status: 400,
         });
       }

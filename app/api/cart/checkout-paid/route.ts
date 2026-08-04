@@ -43,8 +43,8 @@ const cartCheckoutPaidSchema = z.object({
   paymentMethod: z.enum(['WALLET', 'PAGARME']),
   /** ID do pagamento (legacy, não utilizado) */
   mercadoPagoPaymentId: z.string().optional(),
-  /** ID da transação Pagar.me (se aplicável) */
-  pagarmeTransactionId: z.string().optional(),
+  /** ID da PaymentTransaction do gateway (Asaas), se aplicável */
+  pagarmePaymentId: z.string().optional(),
 });
 
 export const POST = withApiHandler<CartCheckoutPaidResponse>(async ({ req }) => {
@@ -99,7 +99,7 @@ export const POST = withApiHandler<CartCheckoutPaidResponse>(async ({ req }) => 
       itemIds: data.itemIds,
       paymentMethod: data.paymentMethod as CartPaymentMethod,
       mercadoPagoPaymentId: data.mercadoPagoPaymentId,
-      pagarmeTransactionId: data.pagarmeTransactionId,
+      pagarmePaymentId: data.pagarmePaymentId,
     });
 
     logger.info({
@@ -162,6 +162,22 @@ export const POST = withApiHandler<CartCheckoutPaidResponse>(async ({ req }) => 
         throw new ApiError({
           code: 'invalid_tracking_code',
           message: 'Código(s) de rastreamento inválido(s), expirado(s) ou não autorizado(s). Reabra o carrinho e tente novamente.',
+          status: 400,
+        });
+      }
+
+      if (errorCode === 'PAGARME_PAYMENT_NOT_APPROVED') {
+        throw new ApiError({
+          code: 'payment_not_approved',
+          message: 'Pagamento não encontrado ou ainda não aprovado. Se pagou por boleto ou PIX, aguarde a confirmação.',
+          status: 400,
+        });
+      }
+
+      if (errorCode === 'PAGARME_PAYMENT_ALREADY_USED') {
+        throw new ApiError({
+          code: 'payment_already_used',
+          message: 'Este pagamento já foi utilizado para criar outros envios.',
           status: 400,
         });
       }

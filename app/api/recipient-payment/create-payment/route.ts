@@ -1,7 +1,7 @@
 /**
  * POST /api/recipient-payment/create-payment
  *
- * Cria um pagamento via Pagar.me para destinatario
+ * Cria um pagamento via Asaas para destinatario
  * Endpoint publico - valida pelo paymentToken do request
  */
 
@@ -9,14 +9,15 @@ import { withApiHandler } from '@/platform/api/handler';
 import { ApiError } from '@/platform/api/errors';
 import { z } from 'zod';
 import { prisma } from '@/platform/db/db';
-import { createPagarmePaymentWithTracking } from '@/platform/integrations/pagarme';
+import { createAsaasPaymentWithTracking } from '@/platform/integrations/asaas';
+import { buildDueDate } from '@/platform/integrations/asaas/due-date';
 
 const createPaymentSchema = z.object({
   paymentToken: z.string().min(1, 'Token de pagamento e obrigatorio'),
   transactionAmount: z.number().positive('Valor deve ser positivo'),
-  paymentMethod: z.enum(['credit_card', 'pix']),
+  paymentMethod: z.enum(['credit_card', 'pix', 'boleto']),
   cardToken: z.string().optional(), // Token do cartao via Tokenizecard.js
-  cardId: z.string().optional(),    // ID de cartao salvo
+  // NOTA: "cardId" (cartao salvo) nao existe no Asaas — o token cumpre esse papel.
   installments: z.number().int().min(1).max(24).optional(),
   description: z.string().optional(),
 });
@@ -35,6 +36,8 @@ type PaymentResponse = {
     status: string;
     pixQrCode?: string;
     pixQrCodeUrl?: string;
+    boletoUrl?: string;
+    boletoBarcode?: string;
   };
 };
 
@@ -48,6 +51,11 @@ export const POST = withApiHandler<PaymentResponse>(async (context) => {
   }
 
   const { paymentToken, ...paymentData } = parsed.data;
+
+  const remoteIp = context.req.headers.get('x-forwarded-for')?.split(',')[0].trim();
+  if (paymentData.paymentMethod === 'credit_card' && !remoteIp) {
+    throw ApiError.badRequest('Não foi possível identificar o IP de origem');
+  }
 
   // Buscar request diretamente para ter acesso ao senderId
   const request = await prisma.recipientPaymentRequest.findUnique({
@@ -86,14 +94,14 @@ export const POST = withApiHandler<PaymentResponse>(async (context) => {
     throw ApiError.badRequest('Valor do pagamento nao corresponde ao esperado');
   }
 
-  // Buscar dados do remetente para criacao do cliente no Pagar.me
+  // Buscar dados do remetente para criacao do cliente no Asaas
   const sender = await prisma.user.findUniqueOrThrow({
     where: { id: request.senderId },
     select: { id: true, name: true, email: true, cpf: true, cnpj: true, phone: true },
   });
 
-  // Criar pagamento no Pagar.me
-  const result = await createPagarmePaymentWithTracking({
+  // Criar pagamento no Asaas
+  const result = await createAsaasPaymentWithTracking({
     userId: sender.id,
     userName: sender.name,
     userEmail: sender.email,
@@ -101,13 +109,13 @@ export const POST = withApiHandler<PaymentResponse>(async (context) => {
     userPhone: sender.phone ?? undefined,
     amountCents: request.totalCents,
     description: paymentData.description || `Frete - ${request.carrier} - ${request.service}`,
-    referenceId: `pm_${Date.now()}`,
+    dueDate: buildDueDate(paymentData.paymentMethod),
     paymentMethod: paymentData.paymentMethod,
     cardToken: paymentData.cardToken,
-    cardId: paymentData.cardId,
+    remoteIp,
     installments: paymentData.installments,
     metadata: {
-      type: 'checkout_payment' as const,
+      type: 'recipient_payment' as const,
       userId: request.senderId,
       recipientPaymentRequestId: request.id,
       paymentToken,
@@ -120,6 +128,9 @@ export const POST = withApiHandler<PaymentResponse>(async (context) => {
     throw ApiError.badRequest('Cartao nao autorizado. Verifique os dados e tente novamente.');
   }
 
+  // PENDING (boleto gerado, PIX aguardando): não há shipment a liberar aqui —
+  // esta rota só cria a cobrança. A liberação (criação do shipment do
+  // destinatário) acontece em outro fluxo quando o pagamento é confirmado.
   // Retornar resposta
   return {
     data: {
@@ -132,10 +143,14 @@ export const POST = withApiHandler<PaymentResponse>(async (context) => {
         method: result.transaction.method,
       },
       payment: {
-        id: result.orderId,
+        id: result.chargeId,
         status: result.status,
         pixQrCode: result.pixQrCode,
-        pixQrCodeUrl: result.pixQrCodeUrl,
+        // pixQrCodeUrl aqui carrega a imagem do QR (data URI) — o frontend já
+        // trata este campo como "pronto para usar em <img src>".
+        pixQrCodeUrl: result.pixQrCodeImage,
+        boletoUrl: result.boletoUrl,
+        boletoBarcode: result.boletoBarcode,
       },
     },
     status: 201,
