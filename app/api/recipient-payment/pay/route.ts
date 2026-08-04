@@ -4,7 +4,13 @@
  * Processa o pagamento pelo destinatario
  * Endpoint publico - nao requer autenticacao
  *
- * Apos o pagamento ser confirmado (via Pagar.me):
+ * IMPORTANTE: como não há sessão de usuário, o `transactionId` (PaymentTransaction
+ * do Asaas criada por /create-payment) é o único jeito de provar que este link
+ * de pagamento foi realmente pago antes de liberar o Shipment. O gate completo
+ * (status que libera serviço, vínculo com este RecipientPaymentRequest, valor
+ * suficiente e anti-reuso) fica em processRecipientPayment.
+ *
+ * Somente após o gate aprovar:
  * 1. Cria o Shipment real na tabela shipments
  * 2. Marca o RecipientPaymentRequest como PAID
  * 3. Envia e-mails de confirmacao
@@ -22,10 +28,12 @@ import { prisma } from '@/platform/db/db';
 
 const paymentSchema = z.object({
   paymentToken: z.string().min(1, 'Token de pagamento e obrigatorio'),
-  paymentMethod: z.enum(['PIX', 'CREDIT_CARD']),
-  // Campos para integracao com Pagar.me (se necessario)
-  mercadoPagoPaymentId: z.number().optional(),
-  mercadoPagoStatus: z.string().optional(),
+  paymentMethod: z.enum(['PIX', 'CREDIT_CARD', 'BOLETO']),
+  // Id da PaymentTransaction (Asaas) criada por /create-payment. Este endpoint
+  // é público (sem sessão de usuário) — a transação é o único jeito de provar
+  // que o pagamento aconteceu antes de criar o Shipment. Ver o gate completo
+  // em processRecipientPayment (modules/recipients/application/service.ts).
+  transactionId: z.string().min(1, 'Id da transação de pagamento e obrigatorio'),
 });
 
 type PayResponse = {
@@ -44,7 +52,7 @@ export const POST = withApiHandler<PayResponse>(async (context) => {
     throw ApiError.validation('Dados invalidos', parsed.error.flatten());
   }
 
-  const { paymentToken, paymentMethod } = parsed.data;
+  const { paymentToken, paymentMethod, transactionId } = parsed.data;
 
   // Buscar request para validacao
   const request = await getRequestByToken(paymentToken);
@@ -71,8 +79,12 @@ export const POST = withApiHandler<PayResponse>(async (context) => {
     throw ApiError.badRequest('Esta solicitacao expirou');
   }
 
-  // Processar pagamento e criar shipment
-  const result = await processRecipientPayment(paymentToken, paymentMethod);
+  // Processar pagamento e criar shipment.
+  // O gate real (transação existe, status libera serviço, pertence a ESTE
+  // link, valor cobre o total e não foi reaproveitada) acontece dentro de
+  // processRecipientPayment — sem ele, este endpoint público criaria o
+  // shipment para qualquer requisição com um paymentToken válido, pago ou não.
+  const result = await processRecipientPayment(paymentToken, paymentMethod, transactionId);
 
   if (!result.success) {
     throw ApiError.badRequest(result.error || 'Erro ao processar pagamento');

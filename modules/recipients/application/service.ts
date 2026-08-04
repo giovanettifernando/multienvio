@@ -15,6 +15,7 @@ import { ShipmentStatus } from '@/modules/shipments/application/shipment-status'
 import { integrateWithCarrier } from '@/modules/shipments/application/carrier-integration';
 import { generatePlatformTrackingCode } from '@/modules/cart/application/checkout.service';
 import { logger } from '@/platform/logging/logger';
+import { canReleaseService } from '@/platform/integrations/asaas/release';
 import {
   type CreateRecipientPaymentInput,
   type RecipientPaymentRequestWithPackages,
@@ -196,14 +197,35 @@ export async function getRequestByToken(
 
 /**
  * Processa o pagamento pelo destinatário e cria o Shipment
+ *
+ * GATE DE LIBERAÇÃO (Task 12b): este endpoint é público — não há sessão de
+ * usuário que garanta que quem está chamando é quem realmente pagou. O
+ * `transactionId` (PaymentTransaction do Asaas criada por
+ * app/api/recipient-payment/create-payment/route.ts) é o único jeito de
+ * provar isso. Quatro checagens, na ordem:
+ *   1) STATUS: canReleaseService(transaction.status) — PENDING (boleto
+ *      recém-gerado, PIX ainda não pago) não libera nada; quem libera depois
+ *      é o webhook/monitor.
+ *   2) VÍNCULO: transaction.metadata.recipientPaymentRequestId precisa ser
+ *      o id DESTE request — sem sessão de usuário, é o vínculo
+ *      transação↔request que substitui a checagem de dono.
+ *   3) VALOR: transaction.amountCents precisa cobrir request.totalCents.
+ *   4) ANTI-REUSO: nem a transação (metadata.shipmentId) nem o request
+ *      (status já PAID) podem ter liberado um shipment antes. O request é
+ *      reivindicado com um UPDATE condicional (WHERE status = 'PENDING')
+ *      logo após passar nas checagens acima — se outra requisição concorrente
+ *      já venceu a corrida, count vem 0 e esta chamada é rejeitada antes de
+ *      criar um segundo shipment.
  */
 export async function processRecipientPayment(
   token: string,
-  _paymentMethod: 'PIX' | 'CREDIT_CARD'
+  _paymentMethod: 'PIX' | 'CREDIT_CARD' | 'BOLETO',
+  transactionId: string
 ): Promise<ProcessPaymentResult> {
   logger.info({
     event: 'recipient_payment_process_start',
     token,
+    transactionId,
   }, 'Processing recipient payment');
 
   const result = await prisma.$transaction(async (tx) => {
@@ -252,6 +274,51 @@ export async function processRecipientPayment(
         });
       }
       return { success: false, error: 'Esta solicitação expirou' };
+    }
+
+    // 2b) GATE DE PAGAMENTO — ver docstring da função.
+    const transaction = await tx.paymentTransaction.findUnique({
+      where: { id: transactionId },
+    });
+
+    if (!transaction) {
+      return { success: false, error: 'Pagamento não encontrado' };
+    }
+
+    const transactionMeta = (transaction.metadata ?? {}) as Record<string, unknown>;
+
+    if (transactionMeta.recipientPaymentRequestId !== request.id) {
+      return { success: false, error: 'Pagamento não corresponde a esta solicitação' };
+    }
+
+    if (transactionMeta.shipmentId) {
+      return { success: false, error: 'Este pagamento já foi utilizado para criar outro envio' };
+    }
+
+    if (!canReleaseService(transaction.status)) {
+      return {
+        success: false,
+        error: 'Pagamento aguardando confirmação. Assim que for confirmado, seu envio será liberado automaticamente.',
+      };
+    }
+
+    if (transaction.amountCents < request.totalCents) {
+      return { success: false, error: 'Valor do pagamento não corresponde ao esperado' };
+    }
+
+    // 2c) CLAIM ATÔMICO do request: garante que duas chamadas concorrentes
+    // (duplo clique, retry do frontend, dois tabs) não criem dois shipments
+    // para o mesmo request. A condição WHERE status = 'PENDING' faz o
+    // Postgres serializar as tentativas pela linha; quem chega depois vê
+    // count 0 e sabe que a primeira já venceu — sem isso a checagem de
+    // status acima (feita por leitura simples, sem lock) não fecha a corrida.
+    const claim = await tx.recipientPaymentRequest.updateMany({
+      where: { id: request.id, status: 'PENDING' },
+      data: { status: 'PAID', paidAt: new Date() },
+    });
+
+    if (claim.count === 0) {
+      return { success: false, error: 'Esta solicitação já foi processada' };
     }
 
     // 3) Gerar código de rastreamento único
@@ -351,13 +418,24 @@ export async function processRecipientPayment(
     // 10) Integrar com transportadora
     await integrateWithCarrierSafely(tx, request, shipment.id, packages);
 
-    // 11) Atualizar request como pago
+    // 11) Gravar o shipmentId no request (status e paidAt já foram gravados
+    // pelo claim atômico no passo 2c, antes de qualquer efeito colateral).
     await tx.recipientPaymentRequest.update({
       where: { id: request.id },
+      data: { shipmentId: shipment.id },
+    });
+
+    // 11b) Marcar a PaymentTransaction como consumida (anti-reuso): grava o
+    // shipmentId em metadata dentro da MESMA transação de banco que criou o
+    // shipment, mesmo padrão usado em create-paid-shipment.service.ts e
+    // create-cart-shipments-with-payment.service.ts.
+    await tx.paymentTransaction.update({
+      where: { id: transaction.id },
       data: {
-        status: 'PAID',
-        paidAt: new Date(),
-        shipmentId: shipment.id,
+        metadata: {
+          ...transactionMeta,
+          shipmentId: shipment.id,
+        } as Prisma.InputJsonValue,
       },
     });
 
@@ -366,6 +444,7 @@ export async function processRecipientPayment(
       requestId: request.id,
       shipmentId: shipment.id,
       trackingCode,
+      transactionId: transaction.id,
     }, 'Recipient payment processed successfully');
 
     return {
