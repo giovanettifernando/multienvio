@@ -325,6 +325,7 @@ describe('createCartShipmentsWithPayment — gate de liberação do pagamento do
   it('SABOTAGEM: sob concorrência, exatamente uma chamada libera — a outra é rejeitada pelo claim atômico', async () => {
     const { createCartShipmentsWithPayment } = loadService();
     let claimed = false;
+    const calls: any[] = [];
     const sharedPaymentTx = {
       id: 'ptx_race',
       userId: 'user-1',
@@ -348,10 +349,23 @@ describe('createCartShipmentsWithPayment — gate de liberação do pagamento do
             },
             paymentTransaction: {
               findUnique: async () => sharedPaymentTx,
-              // Modela o compare-and-swap real do Postgres: a primeira
-              // chamada a executar vence (count 1); qualquer chamada
-              // seguinte vê a linha já reivindicada (count 0).
-              updateMany: async () => {
+              // Modela o compare-and-swap real do Postgres derivando o
+              // resultado do PRÓPRIO argumento `where` — não apenas de um
+              // flag de closure. Isso prova a CONDIÇÃO, não só a propagação
+              // do count: se o serviço parar de mandar
+              // `consumedByReference: null` no WHERE (ex.: alguém remove essa
+              // parte da condição), a chamada "vence" incondicionalmente por
+              // casar só no `id` — exatamente o que aconteceria de verdade no
+              // Postgres com um UPDATE sem essa cláusula — e a corrida deixa
+              // de ser fechada, o que este teste tem que detectar.
+              updateMany: async (args: any) => {
+                calls.push(args);
+                const hasClaimCondition = args.where?.consumedByReference === null;
+                if (!hasClaimCondition) {
+                  // WHERE sem a condição de claim: casa incondicionalmente
+                  // pelo id, então "vence" toda vez — a corrida não é fechada.
+                  return { count: 1 };
+                }
                 if (claimed) return { count: 0 };
                 claimed = true;
                 return { count: 1 };
@@ -376,5 +390,11 @@ describe('createCartShipmentsWithPayment — gate de liberação do pagamento do
     assert.equal(fulfilled.length, 1, 'exatamente uma chamada deve liberar os envios');
     assert.equal(rejected.length, 1, 'a outra deve ser rejeitada pelo claim atômico');
     assertAlreadyUsed((rejected[0] as PromiseRejectedResult).reason);
+
+    assert.equal(calls.length, 2, 'as duas chamadas devem ter tentado o claim');
+    for (const call of calls) {
+      assert.equal(call.where.id, 'ptx_race');
+      assert.equal(call.where.consumedByReference, null, 'o claim precisa condicionar no WHERE consumedByReference: null');
+    }
   });
 });

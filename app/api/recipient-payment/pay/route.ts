@@ -33,6 +33,10 @@ const paymentSchema = z.object({
   // é público (sem sessão de usuário) — a transação é o único jeito de provar
   // que o pagamento aconteceu antes de criar o Shipment. Ver o gate completo
   // em processRecipientPayment (modules/recipients/application/service.ts).
+  // TODO(Task 14/15 - frontend): RecipientPaymentModal.tsx ainda envia o campo
+  // antigo `mercadoPagoPaymentId` em vez de `transactionId` — o fluxo via UI
+  // recebe 400 (campo obrigatório ausente) até o modal ser atualizado para
+  // enviar o id real da PaymentTransaction retornado por /create-payment.
   transactionId: z.string().min(1, 'Id da transação de pagamento e obrigatorio'),
 });
 

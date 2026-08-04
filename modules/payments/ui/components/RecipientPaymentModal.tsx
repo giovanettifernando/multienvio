@@ -118,6 +118,12 @@ export function RecipientPaymentModal({
   // Processar pagamento apos confirmacao
   const processPaymentAndCreateShipment = useCallback(async (mercadoPagoPaymentId: number, method: PaymentMethod) => {
     try {
+      // TODO(Task 14/15 - frontend): `/api/recipient-payment/pay` agora exige
+      // `transactionId` (id da PaymentTransaction do Asaas criada por
+      // /create-payment) para provar que o pagamento aconteceu — este campo
+      // `mercadoPagoPaymentId` é o nome antigo e a rota não o lê mais.
+      // Enquanto este payload não for atualizado para enviar `transactionId`,
+      // o fluxo de pagamento pelo destinatário via esta UI recebe 400.
       const response = await fetch("/api/recipient-payment/pay", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
