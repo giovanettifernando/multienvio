@@ -5,54 +5,17 @@ import { ELAlert } from '@/shared/ui/ELAlert';
 import { ELModal } from '@/shared/ui/ELModal';
 import { ELButton } from '@/shared/ui/ELButton';
 import { LoadingOutlined } from "@ant-design/icons";
+import { maskCEP, isValidCep, normalizeCep } from '@/shared/utils/masks';
 
 // Timeout para aguardar confirmacao da operadora (15 segundos)
 const CARD_PROCESSING_TIMEOUT_MS = 15000;
-
-/**
- * NOTA (Task 14 - migração Asaas): o fluxo de pagamento pelo destinatário
- * (RecipientPaymentModal e este formulário) é escopo da Task 15 — não deve
- * ser tocado nesta task além de preservar o TODO já existente.
- * `modules/payments/ui/utils/tokenizeCard.ts` foi removido por pedir a rota
- * do Pagar.me no navegador; esta função local preserva o comportamento
- * anterior (idêntico ao utilitário removido) só para não quebrar o build.
- * Já estava quebrado em runtime antes desta task (gateway Pagar.me inativo
- * desde a Task 6) — migrar para /api/payments/asaas/tokenize é da Task 15.
- */
-async function tokenizeCard(card: {
-  number: string;
-  holderName: string;
-  expMonth: string;
-  expYear: string;
-  cvv: string;
-}): Promise<string> {
-  const res = await fetch('/api/payments/pagarme/tokenize', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      number: card.number.replace(/\D/g, ''),
-      holderName: card.holderName,
-      expMonth: parseInt(card.expMonth, 10),
-      expYear: parseInt(card.expYear.length === 2 ? `20${card.expYear}` : card.expYear, 10),
-      cvv: card.cvv,
-    }),
-  });
-
-  const json = await res.json();
-  if (!res.ok) {
-    throw new Error((json as { error?: { message?: string } })?.error?.message || 'Falha ao tokenizar cartão');
-  }
-
-  const token = ((json as { data?: { token?: string } })?.data ?? (json as { token?: string }))?.token;
-  if (!token) throw new Error('Token inválido retornado pelo Pagar.me');
-  return token;
-}
 
 interface RecipientCardPaymentFormProps {
   paymentToken: string;
   amount: number;
   email: string;
-  onSuccess: (paymentId: number) => void;
+  /** Id da PaymentTransaction (Asaas) — é o que `/api/recipient-payment/pay` exige como `transactionId`. */
+  onSuccess: (transactionId: string) => void;
   onError: (error: Error) => void;
 }
 
@@ -65,6 +28,7 @@ export function RecipientCardPaymentForm({
   onError,
 }: RecipientCardPaymentFormProps) {
   const [error, setError] = useState<string | null>(null);
+  const [fieldError, setFieldError] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
   const [form, setForm] = useState({
     number: "",
@@ -72,12 +36,26 @@ export function RecipientCardPaymentForm({
     expMonth: "",
     expYear: "",
     cvv: "",
+    postalCode: "",
+    addressNumber: "",
   });
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
 
   const handleSubmit = async () => {
+    // O Asaas exige CEP e número do endereço do titular para tokenizar o cartão
+    // (mesma exigência de modules/wallet/ui/components/CardPaymentForm.tsx, Task 14).
+    if (!isValidCep(form.postalCode)) {
+      setFieldError('Informe um CEP válido (8 dígitos)');
+      return;
+    }
+    if (!form.addressNumber.trim()) {
+      setFieldError('Informe o número do endereço do titular');
+      return;
+    }
+    setFieldError(null);
+
     setProcessing(true);
     abortControllerRef.current = new AbortController();
 
@@ -88,13 +66,43 @@ export function RecipientCardPaymentForm({
     }, CARD_PROCESSING_TIMEOUT_MS);
 
     try {
-      const token = await tokenizeCard({
-        number: form.number,
-        holderName: form.holderName,
-        expMonth: form.expMonth,
-        expYear: form.expYear,
-        cvv: form.cvv,
+      // NOTA (Task 15): `/api/payments/asaas/tokenize` (Task 9) exige sessão
+      // autenticada — ele tokeniza contra o `asaasCustomerId` do usuário
+      // logado. Este formulário roda numa página pública (`/pagar/[token]`,
+      // sem login: quem paga é o destinatário do frete, não um usuário
+      // cadastrado). Não existe hoje uma rota Asaas pública equivalente (só
+      // `/api/recipient-payment/create-payment`, que já espera um
+      // `cardToken` pronto, não tokeniza raw card data) — criar uma exigiria
+      // alterar backend, fora do escopo desta task. Esta chamada troca a
+      // rota morta do Pagar.me (503 desde a Task 6) pela rota real do Asaas,
+      // mas para um visitante anônimo ela responde 401 "Não autenticado" —
+      // documentado no relatório da Task 15 como gap de backend pendente.
+      const tokenizeRes = await fetch('/api/payments/asaas/tokenize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        signal: abortControllerRef.current.signal,
+        body: JSON.stringify({
+          number: form.number.replace(/\D/g, ''),
+          holderName: form.holderName,
+          expMonth: parseInt(form.expMonth, 10),
+          expYear: parseInt(form.expYear.length === 2 ? `20${form.expYear}` : form.expYear, 10),
+          ccv: form.cvv,
+          postalCode: normalizeCep(form.postalCode),
+          addressNumber: form.addressNumber.trim(),
+        }),
       });
+
+      const tokenizeJson = await tokenizeRes.json();
+
+      // Higienizar PAN/CVV do state assim que a resposta do tokenize chega
+      // (sucesso OU erro) — não há motivo para manter os dados brutos do
+      // cartão em memória depois desse ponto.
+      setForm((f) => ({ ...f, number: '', cvv: '' }));
+
+      if (!tokenizeRes.ok) {
+        throw new Error(tokenizeJson.error?.message || 'Falha ao tokenizar cartão');
+      }
+      const token = (tokenizeJson.data ?? tokenizeJson).token as string;
 
       const response = await fetch("/api/recipient-payment/create-payment", {
         method: "POST",
@@ -127,8 +135,17 @@ export function RecipientCardPaymentForm({
       const resultJson = await response.json();
       const result = resultJson.data ?? resultJson;
       setProcessing(false);
-      onSuccess(result.payment.id);
+      // result.transaction.id é o id real da PaymentTransaction — o que
+      // /api/recipient-payment/pay exige como `transactionId` (Task 12b).
+      // result.payment.id é o chargeId do Asaas (string), não serve para
+      // esse contrato; usar payment.id aqui era exatamente o bug que
+      // deixava este fluxo quebrado (mesmo padrão que a Task 14 já havia
+      // corrigido no checkout de carteira/carrinho).
+      onSuccess(result.transaction.id);
     } catch (err) {
+      // Rede fora, abort etc. podem interromper antes da resposta do
+      // tokenize chegar — higieniza de novo aqui como rede de segurança.
+      setForm((f) => ({ ...f, number: '', cvv: '' }));
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
         timeoutRef.current = null;
@@ -208,6 +225,24 @@ export function RecipientCardPaymentForm({
             style={{ flex: 1, padding: 8, border: "1px solid #d9d9d9", borderRadius: 6 }}
           />
         </div>
+        <div style={{ display: "flex", gap: 8 }}>
+          <input
+            placeholder="CEP do titular"
+            value={form.postalCode}
+            onChange={(e) => setForm((f) => ({ ...f, postalCode: maskCEP(e.target.value) }))}
+            maxLength={9}
+            style={{ flex: 2, padding: 8, border: "1px solid #d9d9d9", borderRadius: 6 }}
+          />
+          <input
+            placeholder="Número"
+            value={form.addressNumber}
+            onChange={(e) => setForm((f) => ({ ...f, addressNumber: e.target.value }))}
+            style={{ flex: 1, padding: 8, border: "1px solid #d9d9d9", borderRadius: 6 }}
+          />
+        </div>
+        {fieldError && (
+          <ELAlert variant="danger" description={fieldError} showIcon />
+        )}
         <ELButton type="primary" onClick={handleSubmit} loading={processing} block>
           Pagar R$ {(amount).toFixed(2).replace(".", ",")}
         </ELButton>

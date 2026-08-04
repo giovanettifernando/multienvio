@@ -56,7 +56,7 @@ export interface RecipientPaymentModalProps {
   /** Descricao para o pagamento */
   description?: string;
   /** Callback quando pagamento e concluido */
-  onSuccess?: (result: { paymentId: number; method: PaymentMethod; trackingCode?: string }) => void;
+  onSuccess?: (result: { transactionId: string; method: PaymentMethod; trackingCode?: string }) => void;
   /** Callback quando PIX e cancelado */
   onPixCancel?: () => void;
 }
@@ -116,21 +116,19 @@ export function RecipientPaymentModal({
   }, [onClose]);
 
   // Processar pagamento apos confirmacao
-  const processPaymentAndCreateShipment = useCallback(async (mercadoPagoPaymentId: number, method: PaymentMethod) => {
+  const processPaymentAndCreateShipment = useCallback(async (transactionId: string, method: PaymentMethod) => {
     try {
-      // TODO(Task 14/15 - frontend): `/api/recipient-payment/pay` agora exige
-      // `transactionId` (id da PaymentTransaction do Asaas criada por
-      // /create-payment) para provar que o pagamento aconteceu — este campo
-      // `mercadoPagoPaymentId` é o nome antigo e a rota não o lê mais.
-      // Enquanto este payload não for atualizado para enviar `transactionId`,
-      // o fluxo de pagamento pelo destinatário via esta UI recebe 400.
+      // Task 12b: `/api/recipient-payment/pay` exige `transactionId` (id real
+      // da PaymentTransaction criada por /create-payment) para provar que o
+      // pagamento aconteceu — o campo antigo `mercadoPagoPaymentId` foi
+      // removido do schema da rota (Task 15 fecha o TODO deixado na Task 14).
       const response = await fetch("/api/recipient-payment/pay", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           paymentToken,
           paymentMethod: method === "pix" ? "PIX" : "CREDIT_CARD",
-          mercadoPagoPaymentId,
+          transactionId,
         }),
       });
 
@@ -142,7 +140,7 @@ export function RecipientPaymentModal({
 
       messageApi.success("Pagamento confirmado!");
       onSuccess?.({
-        paymentId: mercadoPagoPaymentId,
+        transactionId,
         method,
         trackingCode: result.data?.trackingCode,
       });
@@ -190,8 +188,10 @@ export function RecipientPaymentModal({
           countdownIntervalRef.current = null;
         }
 
-        // Processar pagamento e criar shipment
-        await processPaymentAndCreateShipment(pixData.payment.id, "pix");
+        // Processar pagamento e criar shipment — transaction.id (não
+        // payment.id, que aqui é o chargeId do Asaas) é o que a rota /pay
+        // exige como transactionId (Task 12b).
+        await processPaymentAndCreateShipment(pixData.transaction.id, "pix");
       } else if (["CANCELED", "FAILED", "EXPIRED"].includes(refreshData.payment?.status)) {
         setPixStatus("expired");
         setPixPolling(false);
@@ -208,7 +208,7 @@ export function RecipientPaymentModal({
     } catch (error) {
       console.error("[PIX_POLL] Erro ao verificar status:", error);
     }
-  }, [pixData?.transaction?.id, pixData?.payment?.id, paymentToken, processPaymentAndCreateShipment]);
+  }, [pixData?.transaction?.id, paymentToken, processPaymentAndCreateShipment]);
 
   // Effect para polling do status PIX
   useEffect(() => {
@@ -307,10 +307,10 @@ export function RecipientPaymentModal({
     handleClose();
   };
 
-  const handleCardSuccess = async (paymentId: number) => {
+  const handleCardSuccess = async (transactionId: string) => {
     messageApi.success("Pagamento com cartao aprovado!");
     // Processar pagamento e criar shipment
-    await processPaymentAndCreateShipment(paymentId, "card");
+    await processPaymentAndCreateShipment(transactionId, "card");
   };
 
   const handleCardError = (error: Error) => {

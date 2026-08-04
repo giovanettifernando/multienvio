@@ -65,6 +65,12 @@ export function CardPaymentForm({ amount, onSuccess, onError, paymentType = 'wal
       });
 
       const tokenizeJson = await tokenizeRes.json();
+
+      // Higienizar PAN/CVV do state assim que a resposta do tokenize chega
+      // (sucesso OU erro) — o token já basta para o resto do fluxo, não há
+      // motivo para manter os dados brutos do cartão em memória depois disso.
+      setForm((f) => ({ ...f, number: '', cvv: '' }));
+
       if (!tokenizeRes.ok) {
         throw new Error(tokenizeJson.error?.message || 'Falha ao tokenizar cartão');
       }
@@ -89,6 +95,10 @@ export function CardPaymentForm({ amount, onSuccess, onError, paymentType = 'wal
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
       onSuccess((data.data ?? data).transactionId);
     } catch (err) {
+      // Rede fora, abort etc. podem interromper antes da resposta do
+      // tokenize chegar — higieniza de novo aqui como rede de segurança
+      // (idempotente, sem custo se já estiver limpo).
+      setForm((f) => ({ ...f, number: '', cvv: '' }));
       if ((err as Error).name !== 'AbortError') {
         setProcessing(false);
         onError(err instanceof Error ? err : new Error('Erro no pagamento'));

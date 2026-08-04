@@ -27,7 +27,8 @@ import { ELModal } from '@/shared/ui/ELModal';
 import { ELButton } from '@/shared/ui/ELButton';
 import { ELAlert } from '@/shared/ui/ELAlert';
 import { inputNumberFormatterBRL, inputNumberParserBRL, formatBRL } from "@/shared/utils/format";
-import type { BoletoResult } from "@/modules/payments/dto/card";
+import { BoletoPaymentView } from "./BoletoPaymentView";
+import { formatBoletoDueDate, type BoletoPaymentData } from "./checkoutTypes";
 
 const { Text } = Typography;
 
@@ -49,10 +50,6 @@ interface PaymentResult {
     /** Imagem do QR Code já em data URI (data:image/png;base64,...), retornada pelo Asaas. */
     pixQrCodeImage?: string;
   };
-}
-
-interface BoletoData extends BoletoResult {
-  transactionId: string;
 }
 
 interface WalletData {
@@ -122,7 +119,7 @@ export function PaymentModal({
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod | null>(null);
   const [loading, setLoading] = useState(false);
   const [pixData, setPixData] = useState<PaymentResult | null>(null);
-  const [boletoData, setBoletoData] = useState<BoletoData | null>(null);
+  const [boletoData, setBoletoData] = useState<BoletoPaymentData | null>(null);
   const [showCardForm, setShowCardForm] = useState(false);
   const [useSavedCard, setUseSavedCard] = useState(true);
   const [amountTouched, setAmountTouched] = useState(false);
@@ -402,12 +399,19 @@ export function PaymentModal({
           setPixExpireSeconds(30 * 60);
           messageApi.success("QR Code PIX gerado com sucesso!");
         } else {
-          // Boleto: compensação leva até 3 dias úteis — sem polling aqui
-          // (acompanhamento é da Task 15). Só exibimos o mínimo funcional.
+          // Boleto: compensação leva até 3 dias úteis. Este modal (topup e
+          // checkout genérico) não faz polling client-side do boleto — a
+          // carteira é creditada pelo webhook do Asaas independentemente da
+          // tela ficar aberta (mesmo padrão do PIX aqui: o polling existe só
+          // para fechar a UI, não para efetivar o crédito). O acompanhamento
+          // com polling ativo (Task 15) está em CheckoutCartModal/
+          // PaidCheckoutModal, onde a confirmação client-side dispara a
+          // criação do shipment.
           setBoletoData({
             transactionId: rawResult.transactionId,
             boletoUrl: rawResult.boletoUrl || "",
             boletoBarcode: rawResult.boletoBarcode || "",
+            dueDate: formatBoletoDueDate(),
           });
           messageApi.success("Boleto gerado com sucesso!");
         }
@@ -509,69 +513,28 @@ export function PaymentModal({
     );
   }
 
-  // Renderizar boleto gerado (mínimo funcional — acompanhamento é da Task 15)
+  // Renderizar boleto gerado. Sem polling client-side neste modal (ver
+  // comentário em handleConfirm) — boletoStatus/boletoPolling ficam fixos em
+  // "pending"/false, que é exatamente o comportamento anterior a esta task.
   if (boletoData) {
     return (
-      <ELModal
-        title="Boleto gerado"
+      <BoletoPaymentView
         open={open}
-        closable={!loading}
-        maskClosable={false}
-        footer={
-          <ELButton variant="primary" onClick={handleClose}>
-            Fechar
-          </ELButton>
+        boletoData={boletoData}
+        boletoStatus="pending"
+        boletoPolling={false}
+        totalAmount={amount}
+        releaseMessage={
+          mode === "topup"
+            ? "O saldo será creditado após a compensação, em até 3 dias úteis"
+            : undefined
         }
-        width={600}
-      >
-        <Space orientation="vertical" size="large" style={{ width: "100%" }}>
-          <ELAlert
-            variant="warning"
-            title="Aguardando pagamento"
-            description="Compensação em até 3 dias úteis — o envio é liberado após o pagamento."
-          />
-
-          <div style={{ textAlign: "center" }}>
-            <Text strong style={{ fontSize: 18 }}>
-              {formatBRL(amount)}
-            </Text>
-          </div>
-
-          {boletoData.boletoUrl && (
-            <ELButton
-              variant="primary"
-              block
-              onClick={() => window.open(boletoData.boletoUrl, "_blank", "noopener,noreferrer")}
-            >
-              Abrir boleto (PDF)
-            </ELButton>
-          )}
-
-          {boletoData.boletoBarcode && (
-            <ELAlert
-              variant="info"
-              title="Linha digitável"
-              description={
-                <div style={{ wordBreak: "break-all", fontSize: 12 }}>
-                  {boletoData.boletoBarcode}
-                  <br />
-                  <ELButton
-                    variant="link"
-                    size="small"
-                    onClick={() => {
-                      navigator.clipboard.writeText(boletoData.boletoBarcode);
-                      messageApi.success("Linha digitável copiada!");
-                    }}
-                    style={{ paddingLeft: 0 }}
-                  >
-                    Copiar linha digitável
-                  </ELButton>
-                </div>
-              }
-            />
-          )}
-        </Space>
-      </ELModal>
+        onCancel={handleClose}
+        onCopyCode={() => {
+          navigator.clipboard.writeText(boletoData.boletoBarcode);
+          messageApi.success("Linha digitável copiada!");
+        }}
+      />
     );
   }
 

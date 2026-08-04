@@ -16,12 +16,13 @@ import {
 } from "@ant-design/icons";
 
 export type CardFormValues = {
-  mpToken: string;
-  number: string;
+  /** Token de tokenização do Asaas (Task 9) — o que POST /api/account/cards espera desde a Task 11. */
+  asaasToken: string;
+  brand: string;
+  last4: string;
   holderName: string;
   expMonth: number;
   expYear: number;
-  isDefault: boolean;
 };
 
 type CardModalProps = {
@@ -39,15 +40,11 @@ type CardBrand = {
 };
 
 /**
- * NOTA (Task 14 - migração Asaas): este fluxo de cadastro de cartão em
- * "Minha conta" está fora do escopo desta task (não listado no brief; o
- * fluxo equivalente migrado fica em modules/wallet/ui/components/CardPaymentForm.tsx).
- * `modules/payments/ui/utils/tokenizeCard.ts` foi removido por pedir a rota do
- * Pagar.me no navegador; esta função local preserva o comportamento anterior
- * (idêntico ao utilitário removido) para não quebrar o build. Já estava
- * quebrado em runtime antes desta task (gateway Pagar.me inativo desde a
- * Task 6) — migrar para /api/payments/asaas/tokenize fica para quem tratar
- * este fluxo.
+ * NOTA (Task 15 - migração Asaas): este fluxo de cadastro de cartão em
+ * "Minha conta" usa a tokenização Asaas (Task 9). O token é persistível
+ * (diferente do Pagar.me que exigiu um segundo endpoint de cofre), mas a
+ * resposta não devolve holderName/brand/last4, então o formulário reenvia
+ * esses dados junto com o token para POST /api/account/cards.
  */
 async function tokenizeCard(card: {
   number: string;
@@ -55,8 +52,8 @@ async function tokenizeCard(card: {
   expMonth: string;
   expYear: string;
   cvv: string;
-}): Promise<string> {
-  const res = await fetch('/api/payments/pagarme/tokenize', {
+}): Promise<{ token: string; brand: string; last4: string }> {
+  const res = await fetch('/api/payments/asaas/tokenize', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -64,7 +61,7 @@ async function tokenizeCard(card: {
       holderName: card.holderName,
       expMonth: parseInt(card.expMonth, 10),
       expYear: parseInt(card.expYear.length === 2 ? `20${card.expYear}` : card.expYear, 10),
-      cvv: card.cvv,
+      ccv: card.cvv,
     }),
   });
 
@@ -73,9 +70,15 @@ async function tokenizeCard(card: {
     throw new Error((json as { error?: { message?: string } })?.error?.message || 'Falha ao tokenizar cartão');
   }
 
-  const token = ((json as { data?: { token?: string } })?.data ?? (json as { token?: string }))?.token;
-  if (!token) throw new Error('Token inválido retornado pelo Pagar.me');
-  return token;
+  const token = (json.data ?? json).token as string;
+  const brand = (json.data ?? json).brand as string;
+  const last4 = (json.data ?? json).last4 as string;
+
+  if (!token || !brand || !last4) {
+    throw new Error('Token ou metadados inválidos retornados pelo Asaas');
+  }
+
+  return { token, brand, last4 };
 }
 
 const CARD_BRANDS: CardBrand[] = [
@@ -133,7 +136,7 @@ export function CardModal({ open, loading, onSubmit, onCancel }: CardModalProps)
       const [expMonth, expYear] = values.validity.split("/");
       const fullYear = `20${expYear}`;
 
-      const token = await tokenizeCard({
+      const { token, brand, last4 } = await tokenizeCard({
         number: values.cardNumber.replace(/\s/g, ""),
         holderName: values.holderName,
         expMonth,
@@ -141,15 +144,30 @@ export function CardModal({ open, loading, onSubmit, onCancel }: CardModalProps)
         cvv: values.cvv || "000",
       });
 
+      // Higienizar PAN/CVV do state assim que a resposta do tokenize chega
+      // (sucesso OU erro) — o token já basta para o resto do fluxo, não há
+      // motivo para manter os dados brutos do cartão em memória depois disso.
+      form.setFieldsValue({
+        cardNumber: '',
+        cvv: '',
+      });
+
       onSubmit({
-        mpToken: token,
-        number: values.cardNumber.replace(/\s/g, ""),
+        asaasToken: token,
         holderName: values.holderName,
+        brand,
+        last4,
         expMonth: parseInt(expMonth, 10),
         expYear: parseInt(fullYear, 10),
-        isDefault: false,
       });
     } catch (err) {
+      // Rede fora etc. podem interromper antes da resposta do
+      // tokenize chegar — higieniza de novo aqui como rede de segurança
+      // (idempotente, sem custo se já estiver limpo).
+      form.setFieldsValue({
+        cardNumber: '',
+        cvv: '',
+      });
       console.error("[CARD_MODAL_SUBMIT]", err);
       messageApi.error(err instanceof Error ? err.message : "Erro ao processar cartão");
     } finally {

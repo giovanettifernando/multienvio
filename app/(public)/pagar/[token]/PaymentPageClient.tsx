@@ -98,7 +98,7 @@ export default function PaymentPageClient({ token }: PaymentPageClientProps) {
   };
 
   // Callback quando pagamento e concluido com sucesso
-  const handlePaymentSuccess = (result: { paymentId: number; method: string; trackingCode?: string }) => {
+  const handlePaymentSuccess = (result: { transactionId: string; method: string; trackingCode?: string }) => {
     setPaymentSuccess({
       trackingCode: result.trackingCode || "",
     });
