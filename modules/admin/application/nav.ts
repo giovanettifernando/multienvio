@@ -83,9 +83,9 @@ export const ADMIN_NAV: AdminNavItem[] = [
         permissions: ["INTEGRACOES"],
       },
       {
-        key: "pagarme",
-        label: "Pagar.me",
-        href: "/admin/pagarme",
+        key: "asaas",
+        label: "Asaas",
+        href: "/admin/asaas",
         permissions: ["INTEGRACOES"],
       },
       {

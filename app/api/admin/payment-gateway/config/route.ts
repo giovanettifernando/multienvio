@@ -11,6 +11,7 @@ import { AdminPermission } from '@prisma/client';
 import { requireAdminSession } from '@/platform/auth/require-session';
 import { prisma } from '@/platform/db/db';
 import { encrypt, decrypt } from '@/platform/integrations/shared/encryption.service';
+import { invalidateAsaasConfigCache } from '@/platform/integrations/asaas';
 import { withApiHandler } from '@/platform/api/handler';
 import { ApiError } from '@/platform/api/errors';
 import { z } from 'zod';
@@ -44,7 +45,7 @@ export const GET = withApiHandler<PaymentGatewayGetResponse>(async ({ req }) => 
 
   // Buscar gateway e credenciais
   const gateway = await prisma.paymentGateway.findFirst({
-    where: { slug: 'pagarme' },
+    where: { slug: 'asaas' },
     include: {
       credentials: {
         where: { isActive: true },
@@ -73,11 +74,13 @@ export const GET = withApiHandler<PaymentGatewayGetResponse>(async ({ req }) => 
     }
   }
 
+  // Token de webhook do Asaas é gravado em clientSecret (mesmo campo lido
+  // por getAsaasConfig()) — não em secretKey, que não é usado pelo Asaas.
   let webhookSecretValue = '';
   let webhookSecretDecryptionFailed = false;
-  if (credential.secretKey) {
+  if (credential.clientSecret) {
     try {
-      const decrypted = decrypt(credential.secretKey);
+      const decrypted = decrypt(credential.clientSecret);
       webhookSecretValue = shouldReveal ? decrypted : (decrypted.length > 0 ? '***configurado***' : '');
     } catch {
       webhookSecretDecryptionFailed = true;
@@ -92,7 +95,7 @@ export const GET = withApiHandler<PaymentGatewayGetResponse>(async ({ req }) => 
     accessToken: accessTokenValue,
     webhookSecret: webhookSecretValue,
     hasAccessToken: Boolean(credential.accessToken),
-    hasWebhookSecret: Boolean(credential.secretKey),
+    hasWebhookSecret: Boolean(credential.clientSecret),
     accessTokenDecryptionFailed,
     webhookSecretDecryptionFailed,
   };
@@ -102,7 +105,8 @@ export const GET = withApiHandler<PaymentGatewayGetResponse>(async ({ req }) => 
 
 const PaymentGatewayConfigSchema = z.object({
   environment: z.enum(['PRODUCTION', 'SANDBOX']),
-  publicKey: z.string().min(1),
+  // Asaas não tem par público/secreto — publicKey não se aplica e é opcional aqui.
+  publicKey: z.string().optional(),
   accessToken: z.string().optional(),
   applicationId: z.string().optional(),
   webhookSecret: z.string().optional(),
@@ -131,14 +135,14 @@ export const POST = withApiHandler<PaymentGatewayPostResponse>(async ({ req }) =
 
   // Buscar ou criar gateway
   let gateway = await prisma.paymentGateway.findFirst({
-    where: { slug: 'pagarme' },
+    where: { slug: 'asaas' },
   });
 
   if (!gateway) {
     gateway = await prisma.paymentGateway.create({
       data: {
-        slug: 'pagarme',
-        name: 'Pagar.me',
+        slug: 'asaas',
+        name: 'Asaas',
         environment,
         status: 'ACTIVE',
       },
@@ -160,13 +164,15 @@ export const POST = withApiHandler<PaymentGatewayPostResponse>(async ({ req }) =
   });
 
   const credentialData: {
-    publicKey: string;
+    publicKey?: string;
     accessToken?: string;
     applicationId?: string;
-    secretKey?: string;
-  } = {
-    publicKey,
-  };
+    clientSecret?: string;
+  } = {};
+
+  if (publicKey) {
+    credentialData.publicKey = publicKey;
+  }
 
   // Salvar applicationId se fornecido
   if (applicationId) {
@@ -178,9 +184,10 @@ export const POST = withApiHandler<PaymentGatewayPostResponse>(async ({ req }) =
     credentialData.accessToken = encrypt(accessToken);
   }
 
-  // Criptografar webhookSecret se fornecido
+  // Token de webhook do Asaas vai em clientSecret — é o campo que
+  // getAsaasConfig() lê (não secretKey, que o Asaas nunca usa).
   if (webhookSecret) {
-    credentialData.secretKey = encrypt(webhookSecret);
+    credentialData.clientSecret = encrypt(webhookSecret);
   }
 
   if (credential) {
@@ -201,6 +208,11 @@ export const POST = withApiHandler<PaymentGatewayPostResponse>(async ({ req }) =
       },
     });
   }
+
+  // Este painel edita a mesma credencial ativa que /admin/asaas — sem
+  // invalidar o cache de getAsaasConfig() (5min), a mudança feita por aqui
+  // também ficaria "sem efeito" até o TTL expirar.
+  invalidateAsaasConfigCache();
 
   return {
     data: {

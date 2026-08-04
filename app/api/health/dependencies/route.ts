@@ -5,6 +5,7 @@
 
 import { withApiHandler } from "@/platform/api/handler";
 import { pingDatabase, getPoolMetrics } from "@/platform/db/db";
+import { isAsaasConfigured, getAsaasConfig } from "@/platform/integrations/asaas";
 
 
 interface DependencyStatus {
@@ -58,26 +59,29 @@ async function checkDatabase(): Promise<DependencyStatus> {
 }
 
 /**
- * Check Pagar.me API connectivity (if configured)
+ * Check Asaas API connectivity (if configured)
  */
-async function checkPagarme(): Promise<DependencyStatus> {
-  const secretKey = process.env.PAGARME_SECRET_KEY;
+async function checkAsaas(): Promise<DependencyStatus> {
+  const configured = await isAsaasConfigured();
 
-  if (!secretKey) {
+  if (!configured) {
     return {
-      name: "pagarme",
+      name: "asaas",
       status: "degraded",
-      message: "Secret key not configured",
+      message: "API key not configured",
     };
   }
 
   const start = Date.now();
   try {
+    const config = await getAsaasConfig();
+    const baseUrl = config?.baseUrl ?? "https://api-sandbox.asaas.com";
+
     // Simple API call to check connectivity — a 401 means the API is reachable
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 5000);
 
-    const response = await fetch("https://api.pagar.me/core/v5", {
+    const response = await fetch(baseUrl, {
       signal: controller.signal,
     });
 
@@ -86,21 +90,21 @@ async function checkPagarme(): Promise<DependencyStatus> {
     // 401 = API is up but unauthenticated (expected without auth header)
     if (response.ok || response.status === 401 || response.status === 404) {
       return {
-        name: "pagarme",
+        name: "asaas",
         status: "ok",
         latencyMs: Date.now() - start,
       };
     }
 
     return {
-      name: "pagarme",
+      name: "asaas",
       status: "degraded",
       latencyMs: Date.now() - start,
       message: `HTTP ${response.status}`,
     };
   } catch (error) {
     return {
-      name: "pagarme",
+      name: "asaas",
       status: "unavailable",
       latencyMs: Date.now() - start,
       message: error instanceof Error ? error.message : "Connection failed",
@@ -137,16 +141,16 @@ export const GET = withApiHandler<HealthDependenciesResponse>(async ({ logger })
   const timestamp = new Date().toISOString();
 
   // Run all checks in parallel
-  const [database, pagarme] = await Promise.all([
+  const [database, asaas] = await Promise.all([
     checkDatabase(),
-    checkPagarme(),
+    checkAsaas(),
   ]);
 
   const environment = checkEnvironment();
 
   const dependencies: DependencyStatus[] = [
     database,
-    pagarme,
+    asaas,
     environment,
   ];
 

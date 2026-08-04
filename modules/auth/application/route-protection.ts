@@ -68,7 +68,10 @@ const PUBLIC_ROUTES = [
   /^\/api\/recipient-payment\/pay$/,   // Process recipient payment (public)
   /^\/api\/recipient-payment\/create-payment$/, // Create Pagar.me payment for recipient (public)
   /^\/api\/recipient-payment\/refresh-status$/, // Refresh PIX status for recipient payment (public)
-  /^\/api\/payments\/pagarme\/public-key$/, // Pagar.me public key (public - safe to expose)
+  // Nota: o Asaas não tem chave pública (par público/secreto não existe —
+  // uma única API key). Tokenização roda sempre no servidor
+  // (/api/payments/asaas/tokenize), então nenhuma rota Asaas precisa ser
+  // pública aqui.
   /^\/pagar\/.*/,                  // Payment page for recipients (public)
 ];
 

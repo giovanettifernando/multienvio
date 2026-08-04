@@ -11,8 +11,7 @@ import { requireAdminSession } from '@/platform/auth/require-session';
 import { AdminPermission } from '@prisma/client';
 import { prisma } from '@/platform/db/db';
 import { getQueue, QUEUE_NAMES, JOB_PRIORITY } from '@/platform/queue';
-import type { PagarmeWebhookJobPayload } from '@/platform/queue/types';
-import { Prisma } from '@prisma/client';
+import type { AsaasWebhookJobData } from '@/platform/queue/types';
 
 export const dynamic = 'force-dynamic';
 
@@ -123,7 +122,8 @@ export const POST = withApiHandler<WebhookRetryResponse>(async (context) => {
     },
     select: {
       id: true,
-      payload: true,
+      externalId: true,
+      eventType: true,
     },
   });
 
@@ -132,7 +132,7 @@ export const POST = withApiHandler<WebhookRetryResponse>(async (context) => {
   }
 
   // Marcar como PENDING e re-enfileirar
-  const queue = getQueue<PagarmeWebhookJobPayload>(QUEUE_NAMES.WEBHOOK_PAGARME);
+  const queue = getQueue<AsaasWebhookJobData>(QUEUE_NAMES.WEBHOOK_ASAAS);
   let retriedCount = 0;
 
   for (const webhook of failedWebhooks) {
@@ -145,22 +145,23 @@ export const POST = withApiHandler<WebhookRetryResponse>(async (context) => {
       },
     });
 
-    // Extrair orderId e eventType do payload armazenado
-    const storedPayload = webhook.payload as Record<string, unknown>;
-    const orderId = (storedPayload?.data as Record<string, unknown>)?.id as string ?? '';
-    const eventType = storedPayload?.type as string ?? '';
+    // chargeId e event já ficam gravados no próprio registro (externalId /
+    // eventType) — não precisam ser reextraídos do payload bruto.
+    const chargeId = webhook.externalId ?? '';
+    const event = webhook.eventType ?? '';
 
-    // Re-enfileirar no BullMQ
+    // Re-enfileirar no BullMQ com jobId único de retry — não reutiliza o
+    // jobId determinístico de enqueueAsaasWebhook (chargeId+event) porque o
+    // job original com esse mesmo ID pode ainda existir na fila (falhado).
     await queue.add(
       'process',
       {
-        webhookRecordId: webhook.id,
-        orderId,
-        eventType,
+        chargeId,
+        event,
       },
       {
         priority: JOB_PRIORITY.HIGH,
-        jobId: `pagarme-webhook-retry-${webhook.id}-${Date.now()}`,
+        jobId: `asaas-webhook-retry-${webhook.id}-${Date.now()}`,
       }
     );
 

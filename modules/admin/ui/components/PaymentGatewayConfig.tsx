@@ -100,7 +100,7 @@ export default function PaymentGatewayConfig() {
 
   return (
     <Card
-      title="Configuração do Pagar.me"
+      title="Configuração do Asaas"
       extra={
         <Space>
           <Button
@@ -123,7 +123,7 @@ export default function PaymentGatewayConfig() {
     >
       <Spin spinning={loading}>
         <Alert
-          message="Credenciais do Pagar.me"
+          message="Credenciais do Asaas"
           description="Configure as credenciais para processar pagamentos. As credenciais são criptografadas antes de serem salvas no banco de dados."
           type="info"
           showIcon
@@ -167,24 +167,23 @@ export default function PaymentGatewayConfig() {
           </Form.Item>
 
           <Form.Item
-            label="Public Key"
+            label="Public Key (não aplicável ao Asaas)"
             name="publicKey"
-            rules={[{ required: true, message: 'Public Key é obrigatório' }]}
-            tooltip="Chave pública para autenticação no frontend"
+            tooltip="O Asaas usa uma única chave de API — não há par público/secreto. Deixe em branco."
           >
             <Input
-              placeholder="pk_xxxxxxxxxxxxxxxxxxxxxxxx"
+              placeholder="Não aplicável ao Asaas"
               style={{ fontFamily: 'monospace' }}
             />
           </Form.Item>
 
           <Form.Item
-            label="Access Token"
+            label="Chave de API (Access Token)"
             name="accessToken"
-            tooltip="Chave secreta para autenticação no backend"
+            tooltip="Chave única do Asaas para autenticação no backend ($aact_hmlg_... em sandbox, $aact_prod_... em produção)"
           >
             <Input.Password
-              placeholder="sk_xxxxxxxxxxxxxxxxxxxxxxxx"
+              placeholder="$aact_hmlg_xxxxxxxxxxxxxxxxxxxxxxxx"
               style={{ fontFamily: 'monospace' }}
               autoComplete="new-password"
               visibilityToggle
@@ -192,23 +191,23 @@ export default function PaymentGatewayConfig() {
           </Form.Item>
 
           <Form.Item
-            label="Application ID (Número da Aplicação)"
+            label="Application ID (não aplicável ao Asaas)"
             name="applicationId"
-            tooltip="ID da aplicação no Pagar.me"
+            tooltip="Não usado pelo Asaas — deixe em branco"
           >
             <Input
-              placeholder="app_xxxxxxxxxxxxxxxx"
+              placeholder="Não aplicável ao Asaas"
               style={{ fontFamily: 'monospace' }}
             />
           </Form.Item>
 
           <Form.Item
-            label="Webhook Secret (Opcional)"
+            label="Token de Webhook do Asaas (Opcional)"
             name="webhookSecret"
-            tooltip="Secret para validar assinatura dos webhooks"
+            tooltip="Token que você define e cadastra também no painel do Asaas (header asaas-access-token). Sem ele, a validação de webhook falha por padrão."
           >
             <Input.Password
-              placeholder="Secret do webhook"
+              placeholder="Token cadastrado no painel do Asaas"
               style={{ fontFamily: 'monospace' }}
               autoComplete="new-password"
               visibilityToggle
@@ -219,10 +218,11 @@ export default function PaymentGatewayConfig() {
             message="Configuração do Webhook"
             description={
               <div>
-                <p style={{ marginBottom: 8 }}>Configure o webhook no painel do Pagar.me:</p>
+                <p style={{ marginBottom: 8 }}>Configure o webhook no painel do Asaas:</p>
                 <ul style={{ marginBottom: 0, paddingLeft: 20 }}>
-                  <li>URL: <code>https://seudominio.com.br/api/webhooks/pagarme</code></li>
-                  <li>Eventos: Pagamentos, Contestações</li>
+                  <li>URL: <code>https://seudominio.com.br/api/webhooks/asaas</code></li>
+                  <li>Eventos: Cobranças (confirmada, recebida, vencida, estornada)</li>
+                  <li>Header <code>asaas-access-token</code>: mesmo valor do campo &quot;Token de Webhook&quot; acima</li>
                 </ul>
               </div>
             }
