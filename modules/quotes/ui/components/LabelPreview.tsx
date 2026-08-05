@@ -72,7 +72,11 @@ export function LabelPreview({
   return (
     <Card
       size="small"
-      title={cardTitle}
+      // ELCard ignora a prop `title` do Ant Design (faz title={undefined} e
+      // monta o cabeçalho a partir de `header`). Enquanto isto passava por
+      // `title`, o cabeçalho inteiro — incluindo o interruptor "Destinatário
+      // paga o frete" — era silenciosamente descartado e nunca chegava à tela.
+      header={{ title: cardTitle }}
       style={{
         background: "#f6ffed",
         borderColor: "#b7eb8f",
