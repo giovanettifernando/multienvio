@@ -7,20 +7,38 @@ Ambiente: sandbox do Asaas (dinheiro de mentira). Banco de desenvolvimento.
 
 ## Antes de começar
 
+**Terminal 1 — o app:**
+
 ```bash
 cd "/home/fernando-giovanetti/Área de trabalho/envio_legal"
 pnpm dev
 ```
 
-Em outro terminal, se quiser acompanhar os pagamentos chegando:
+**Terminal 2 — os workers** (quem reflete o pagamento confirmado no app):
 
 ```bash
+cd "/home/fernando-giovanetti/Área de trabalho/envio_legal"
 pnpm workers
 ```
 
-> O `workers` é o processo que consome os webhooks e roda o monitor de pendências.
-> Sem ele, um pagamento confirmado no Asaas não reflete no app automaticamente.
-> Ele precisa de Redis rodando.
+Você deve ver, no fim da saída dos workers:
+
+```
+[WORKERS] 15 workers started:
+  - payment.pix-monitor (concurrency: 1)
+  - webhook.asaas (concurrency: 5)
+```
+
+Esses dois são os que importam aqui: `webhook.asaas` recebe a confirmação de
+pagamento do Asaas, e `payment.pix-monitor` é a rede de segurança que varre
+cobranças pendentes a cada 2 minutos, caso algum aviso se perca.
+
+> **Precisa de Redis rodando.** Confira com `redis-cli ping` (deve responder `PONG`).
+
+> **Se `pnpm workers` falhar**, verifique se você está no commit `f2f3a37` ou mais
+> recente — dois bugs que impediam esse processo de subir (o `tsx` não declarado
+> como dependência e o `.env` carregado tarde demais) foram corrigidos ali. São
+> anteriores à migração; o processo de workers nunca havia rodado nesta máquina.
 
 **Login de teste:** `user@enviolegal.com` — **Admin:** `admin@enviolegal.com`
 (as senhas são as que você definiu no seed)
@@ -44,54 +62,105 @@ pnpm workers
 
 ## Roteiro de teste
 
-### 1. Recarga de carteira — PIX
-Carteira → adicionar saldo → **PIX**.
-**Esperado:** QR Code aparece na tela, com botão de copiar o código.
-**O que provar:** o QR Code é real (dá pra escanear); o valor confere.
+Marque conforme for passando. Os testes **5**, **6** e **8** são os mais
+importantes — explico o porquê em cada um.
 
-### 2. Recarga de carteira — Boleto
-Carteira → adicionar saldo → **Boleto**.
-**Esperado:** antes de escolher, você já vê o aviso *"compensação em até 3 dias
-úteis"*. Depois de gerar: linha digitável com botão copiar, botão que abre o PDF,
-data de vencimento visível.
-**O que provar:** o PDF abre de verdade; o saldo **não** é creditado na hora
-(é assim que tem que ser — só credita após a compensação).
+---
 
-### 3. Recarga de carteira — Cartão
-Carteira → adicionar saldo → **Cartão** → dados de teste acima.
-**Esperado:** aprovação em segundos e saldo creditado.
-**O que provar:** o valor certo entrou na carteira.
+### [ ] 1. Recarga de carteira — PIX
+**Onde:** Carteira → adicionar saldo → **PIX**
 
-### 4. Checkout do carrinho
-Monte um carrinho e pague com cada um dos três meios.
-**Esperado:** PIX e cartão liberam o envio; boleto deixa o pedido aguardando.
+**Esperado:** QR Code na tela, com botão de copiar o código.
 
-### 5. Cadastrar cartão em Minha Conta
-Minha Conta → Cartões → adicionar.
-**Esperado:** cartão salvo com bandeira e últimos 4 dígitos.
-> Este fluxo estava 100% quebrado e foi corrigido no último commit — vale testar
-> com atenção.
+**Confira:** o QR Code é real (escaneie com o celular — deve abrir como cobrança
+PIX no seu banco); o valor bate com o que você digitou.
 
-### 6. Link público de pagamento pelo destinatário
-Gere um envio com pagamento pelo destinatário e **abra o link numa janela
-anônima** (é assim que o destinatário vê).
-**Esperado:** paga com PIX, boleto ou cartão sem precisar de login.
-> A tokenização de cartão aqui usa uma rota pública nova, criada especificamente
-> para este caso. Testar em janela anônima é importante: era exatamente aí que
-> estava o bug de cobrar na conta errada.
+---
 
-### 7. Painel administrativo
-`/admin/asaas` (logado como admin).
-**Esperado:** ver o estado da configuração, trocar chave e ambiente
-(Sandbox/Produção), configurar o token de webhook.
-**O que provar:** salvar uma chave passa a valer **na hora** (não depois de 5 min).
+### [ ] 2. Recarga de carteira — Boleto
+**Onde:** Carteira → adicionar saldo → **Boleto**
 
-### 8. Confirmar um pagamento de verdade (o teste definitivo)
-No painel do Asaas (`sandbox.asaas.com`), encontre uma cobrança PIX ou boleto que
-você gerou e **simule o pagamento**.
-**Esperado:** com o `pnpm workers` rodando, em segundos o pedido sai de "aguardando"
-e o serviço é liberado.
-**O que isso prova:** o ciclo inteiro — cobrança → pagamento → webhook → liberação.
+**Esperado:** **antes** de você selecionar, já aparece o aviso *"compensação em
+até 3 dias úteis"*. Depois de gerar: linha digitável com botão copiar, botão que
+abre o PDF e a data de vencimento.
+
+**Confira:** o PDF abre de verdade; e — importante — o saldo **NÃO** é creditado
+na hora. Isso é o comportamento correto: boleto só credita após compensar.
+Se o saldo entrar imediatamente, é bug grave (me avise).
+
+---
+
+### [ ] 3. Recarga de carteira — Cartão
+**Onde:** Carteira → adicionar saldo → **Cartão** → dados de teste da tabela acima
+
+**Esperado:** aprovação em segundos, saldo creditado na hora.
+
+**Confira:** o valor certo entrou na carteira.
+
+---
+
+### [ ] 4. Checkout do carrinho
+**Onde:** monte um carrinho e finalize, testando os três meios.
+
+**Esperado:** PIX e cartão liberam o envio; **boleto deixa o pedido aguardando**
+(sem etiqueta) até a compensação.
+
+**Confira:** que o boleto NÃO gera etiqueta na hora. Esse foi um dos pontos que
+mais recebeu atenção — liberar envio com boleto não pago seria prejuízo direto.
+
+---
+
+### [ ] 5. Cadastrar cartão em Minha Conta ⚠️
+**Onde:** Minha Conta → Cartões → adicionar
+
+**Esperado:** cartão salvo, aparecendo com bandeira e últimos 4 dígitos.
+
+**Por que importa:** este fluxo estava **100% quebrado** e foi corrigido no
+penúltimo commit. É o mais provável de ainda ter aresta. Repare que agora ele
+pede CEP e número do endereço — exigência do Asaas que o gateway antigo não tinha.
+
+---
+
+### [ ] 6. Link público do destinatário ⚠️ (abra em janela anônima)
+**Onde:** gere um envio com pagamento pelo destinatário, copie o link e abra numa
+**janela anônima** — é assim que o destinatário real vê.
+
+**Esperado:** dá pra pagar com PIX, boleto **ou cartão**, sem login nenhum.
+
+**Por que a janela anônima é essencial:** logado, você não reproduz o cenário
+real. Era exatamente aqui que estava o bug mais perigoso da migração — o cartão
+do destinatário era vinculado à conta de quem estivesse logado no navegador, ou
+seja, **cobrança na conta errada**. A correção criou uma rota pública específica,
+autorizada pelo token do link. Se der erro de "não autorizado" aqui, me avise na
+hora.
+
+---
+
+### [ ] 7. Painel administrativo
+**Onde:** `/admin/asaas`, logado como admin.
+
+**Esperado:** ver o estado atual da configuração, trocar chave e ambiente
+(Sandbox/Produção) e configurar o token de webhook.
+
+**Confira:** salvar uma chave passa a valer **na hora**. (Antes havia um cache de
+5 minutos sem invalidação — você salvava e parecia não ter funcionado.)
+
+---
+
+### [ ] 8. Confirmar um pagamento de verdade 🎯 (o teste definitivo)
+**Onde:** no painel do Asaas em `sandbox.asaas.com`, ache uma cobrança PIX ou
+boleto que você gerou nos testes acima e **simule o pagamento** por lá.
+
+**Esperado:** com o `pnpm workers` rodando, o pedido sai de "aguardando" e o
+serviço é liberado sozinho.
+
+**Quanto tempo esperar:** se o webhook estiver configurado e sua máquina
+acessível pela internet, é questão de segundos. Sem isso, o **monitor de
+pendências** resolve na varredura seguinte — então **espere até 2 minutos** antes
+de considerar que falhou.
+
+**O que isso prova:** o ciclo inteiro, ponta a ponta — cobrança criada → cliente
+paga → sistema descobre → serviço liberado. É o teste que valida a migração toda.
 
 ---
 
@@ -111,11 +180,20 @@ e o serviço é liberado.
 
 ---
 
-## Se algo quebrar
+## Se algo quebrar — o que me mandar
 
-Anote **em qual tela**, **o que você clicou** e **a mensagem de erro** (e o que
-aparece no terminal do `pnpm dev`). Com isso dá pra corrigir cirurgicamente, sem
-gastar cota adivinhando.
+Quanto mais preciso, mais cirúrgica a correção (e menos cota gasta adivinhando):
+
+1. **Qual teste do roteiro** (o número) e **em qual passo** parou
+2. **A mensagem que apareceu na tela**
+3. **O que apareceu no terminal do `pnpm dev`** — geralmente é aí que está a causa
+   real; a tela costuma mostrar só a consequência
+4. Se o teste envolvia workers, **o que apareceu no terminal do `pnpm workers`**
+
+Se der erro numa requisição, o painel de rede do navegador (F12 → Network) mostra
+a rota chamada e a resposta — isso mata a maioria dos casos de primeira.
+
+**Não precisa diagnosticar nada** — só reportar o que viu. O diagnóstico é comigo.
 
 ---
 
