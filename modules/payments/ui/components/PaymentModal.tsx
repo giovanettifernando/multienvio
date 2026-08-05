@@ -49,6 +49,12 @@ interface PaymentResult {
     pixQrCode?: string;
     /** Imagem do QR Code já em data URI (data:image/png;base64,...), retornada pelo Asaas. */
     pixQrCodeImage?: string;
+    /**
+     * Página de pagamento hospedada pelo gateway. Sempre presente e sempre
+     * pagável — é o caminho alternativo quando a geração do QR Code falha
+     * (a cobrança em si continua válida nesse caso).
+     */
+    invoiceUrl?: string;
   };
 }
 
@@ -375,6 +381,9 @@ export function PaymentModal({
           pixQrCodeImage?: string;
           boletoUrl?: string;
           boletoBarcode?: string;
+          // Link da fatura no gateway: sempre presente e sempre pagável.
+          // É o caminho alternativo quando o QR Code não vem.
+          invoiceUrl?: string;
         };
 
         if (selectedMethod === "pix") {
@@ -392,12 +401,21 @@ export function PaymentModal({
               statusDetail: rawResult.status,
               pixQrCode: rawResult.pixQrCode,
               pixQrCodeImage: rawResult.pixQrCodeImage,
+              invoiceUrl: rawResult.invoiceUrl,
             },
           };
           setPixData(pixResult);
           setPixStatus("pending");
           setPixExpireSeconds(30 * 60);
-          messageApi.success("QR Code PIX gerado com sucesso!");
+          // A cobrança pode nascer válida sem QR Code: a busca do QR é
+          // tolerante a falha (se o gateway não devolver, a cobrança continua
+          // pagável pela fatura). Não anunciar "QR gerado" quando não veio —
+          // a tela oferece o link da fatura nesse caso.
+          messageApi.success(
+            rawResult.pixQrCode
+              ? "QR Code PIX gerado com sucesso!"
+              : "Cobrança PIX gerada. Use o link de pagamento abaixo.",
+          );
         } else {
           // Boleto: compensação leva até 3 dias úteis. Este modal (topup e
           // checkout genérico) não faz polling client-side do boleto — a
@@ -538,8 +556,11 @@ export function PaymentModal({
     );
   }
 
-  // Renderizar QR Code PIX
-  if (pixData && pixData.payment.pixQrCode) {
+  // Renderizar PIX. A condição aceita cobrança SEM QR Code: a busca do QR é
+  // tolerante a falha e a cobrança segue válida e pagável pela fatura. Exigir
+  // pixQrCode aqui fazia a tela inteira sumir nesse caso — o usuário via só a
+  // mensagem de sucesso e nenhuma forma de pagar.
+  if (pixData && (pixData.payment.pixQrCode || pixData.payment.invoiceUrl)) {
     // Status: PAGO
     if (pixStatus === "paid") {
       return (
@@ -647,10 +668,12 @@ export function PaymentModal({
 
           <div style={{ textAlign: "center" }}>
             <Text type="secondary" style={{ marginBottom: 12, display: "block" }}>
-              Escaneie o QR Code abaixo com o app do seu banco:
+              {pixData.payment.pixQrCodeImage
+                ? "Escaneie o QR Code abaixo com o app do seu banco:"
+                : "Abra o link abaixo para pagar com PIX:"}
             </Text>
 
-            {pixData.payment.pixQrCodeImage && (
+            {pixData.payment.pixQrCodeImage ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={pixData.payment.pixQrCodeImage}
@@ -664,6 +687,19 @@ export function PaymentModal({
                   background: "#fff",
                 }}
               />
+            ) : (
+              pixData.payment.invoiceUrl && (
+                // Sem QR Code, a cobrança continua válida: a página de
+                // pagamento do gateway aceita PIX normalmente. Melhor oferecer
+                // esse caminho do que deixar o usuário sem nenhuma saída.
+                <ELButton
+                  type="primary"
+                  size="large"
+                  onClick={() => window.open(pixData.payment.invoiceUrl, "_blank", "noopener,noreferrer")}
+                >
+                  Abrir página de pagamento
+                </ELButton>
+              )
             )}
 
             <div style={{ marginTop: 16 }}>
@@ -677,27 +713,32 @@ export function PaymentModal({
             </div>
           </div>
 
-          <ELAlert
-            variant="warning"
-            title="PIX Copia e Cola"
-            description={
-              <div style={{ wordBreak: "break-all", fontSize: 12 }}>
-                {pixData.payment.pixQrCode}
-                <br />
-                <ELButton
-                  variant="link"
-                  size="small"
-                  onClick={() => {
-                    navigator.clipboard.writeText(pixData.payment.pixQrCode!);
-                    messageApi.success("Código PIX copiado!");
-                  }}
-                  style={{ paddingLeft: 0 }}
-                >
-                  Copiar código
-                </ELButton>
-              </div>
-            }
-          />
+          {/* Sem QR Code não há copia-e-cola: o código e a imagem vêm juntos
+              do gateway. Sem esta guarda o bloco aparecia vazio, com um botão
+              de copiar que copiaria "undefined". */}
+          {pixData.payment.pixQrCode && (
+            <ELAlert
+              variant="warning"
+              title="PIX Copia e Cola"
+              description={
+                <div style={{ wordBreak: "break-all", fontSize: 12 }}>
+                  {pixData.payment.pixQrCode}
+                  <br />
+                  <ELButton
+                    variant="link"
+                    size="small"
+                    onClick={() => {
+                      navigator.clipboard.writeText(pixData.payment.pixQrCode!);
+                      messageApi.success("Código PIX copiado!");
+                    }}
+                    style={{ paddingLeft: 0 }}
+                  >
+                    Copiar código
+                  </ELButton>
+                </div>
+              }
+            />
+          )}
 
         </Space>
       </ELModal>
