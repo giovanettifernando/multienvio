@@ -24,9 +24,15 @@
  * - Asaas Webhook (processamento assíncrono de webhooks de cobrança, acionado por evento de fila)
  */
 
-// Carregar .env (Next.js faz isso automaticamente, tsx não)
-import { config } from 'dotenv';
-config();
+// Carregar .env (Next.js faz isso automaticamente, tsx não).
+//
+// PRECISA ser `import 'dotenv/config'` e ser o PRIMEIRO import do arquivo: a
+// forma anterior (`import { config }` seguido de `config()` no corpo) carregava
+// o .env tarde demais, porque o corpo do módulo só executa depois que TODOS os
+// imports foram resolvidos — e os módulos importados abaixo leem process.env no
+// escopo deles. O sintoma era o processo subir e acusar DATABASE_URL, JWT_SECRET
+// e companhia como ausentes, mesmo estando no .env.
+import 'dotenv/config';
 
 import { type Worker } from 'bullmq';
 import { closeAllQueues, closeLockRedis } from '../platform/queue';
