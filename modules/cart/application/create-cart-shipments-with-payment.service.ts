@@ -24,8 +24,8 @@ import { sendShipmentTrackingEmail } from '@/platform/email/mailer';
 import { logger } from '@/platform/logging/logger';
 import { isCorreiosCarrier } from '@/shared/utils/carrier';
 import { getQueue, QUEUE_NAMES, JOB_PRIORITY } from '@/platform/queue';
-import type { LabelGenerateJobPayload } from '@/platform/queue';
 import { canReleaseService } from '@/platform/integrations/asaas/release';
+import type { LabelGenerateJobPayload, ShipmentCreateJobPayload } from '@/platform/queue';
 
 // ============================================================================
 // TYPES
@@ -178,6 +178,16 @@ export async function createCartShipmentsWithPayment(
 
   // Track non-Correios shipments for post-transaction LABEL_GENERATE enqueue
   const nonCorreiosShipments: Array<{ shipmentId: string; carrier: string }> = [];
+
+  // Track Correios shipments for post-transaction SHIPMENT_CREATE enqueue (integração assíncrona)
+  const correiosShipments: Array<{
+    shipmentId: string;
+    carrier: string;
+    service: string;
+    declaredValue: number;
+    targetStatus: string;
+    originAddress: CartItemOriginAddress;
+  }> = [];
 
   // Validar que temos códigos para todos os itens
   if (reservedTrackingCodes.length !== itemIds.length) {
@@ -476,10 +486,27 @@ export async function createCartShipmentsWithPayment(
         destinationState: shipmentResult.destinationState,
       });
 
-      // Track non-Correios carriers for label generation
+      // Track carriers for post-transaction async processing
       const selectedQuote = item.selectedQuote as unknown as CartItemQuote;
-      if (selectedQuote?.carrier && !isCorreiosCarrier(selectedQuote.carrier)) {
-        nonCorreiosShipments.push({ shipmentId: shipmentResult.shipmentId, carrier: selectedQuote.carrier });
+      if (selectedQuote?.carrier) {
+        if (isCorreiosCarrier(selectedQuote.carrier)) {
+          // Correios: integração assíncrona via SHIPMENT_CREATE worker
+          // Atualiza status para PROCESSING — worker define o status final após pré-postagem
+          await tx.shipment.update({
+            where: { id: shipmentResult.shipmentId },
+            data: { status: 'PROCESSING' },
+          });
+          correiosShipments.push({
+            shipmentId: shipmentResult.shipmentId,
+            carrier: selectedQuote.carrier,
+            service: selectedQuote.serviceName || selectedQuote.serviceCode || '',
+            declaredValue: item.insuranceValue ? Number(item.insuranceValue) : 0,
+            targetStatus: shipmentResult.targetStatus,
+            originAddress: item.originAddress as unknown as CartItemOriginAddress,
+          });
+        } else {
+          nonCorreiosShipments.push({ shipmentId: shipmentResult.shipmentId, carrier: selectedQuote.carrier });
+        }
       }
 
       // Marcar reserva como usada
@@ -536,7 +563,36 @@ export async function createCartShipmentsWithPayment(
     sendCartTrackingEmailsAsync(userId, result._shipmentsData || []);
   }
 
-  // 9) Enfileirar LABEL_GENERATE para carriers não-Correios
+  // 9) Enfileirar SHIPMENT_CREATE para Correios (integração assíncrona)
+  if (!result.isIdempotent && correiosShipments.length > 0) {
+    const shipmentCreateQueue = getQueue<ShipmentCreateJobPayload>(QUEUE_NAMES.SHIPMENT_CREATE);
+    for (const { shipmentId, carrier, service, declaredValue, targetStatus, originAddress } of correiosShipments) {
+      try {
+        await shipmentCreateQueue.add('create', {
+          shipmentId,
+          userId,
+          carrier,
+          service,
+          declaredValue,
+          targetStatus,
+          originAddress,
+        }, {
+          priority: JOB_PRIORITY.HIGH,
+          jobId: `shipment-create-${shipmentId}`,
+          attempts: 5,
+          backoff: { type: 'exponential', delay: 30_000 },
+        });
+      } catch (err) {
+        logger.warn({
+          event: 'correios_shipment_create_enqueue_failed',
+          shipmentId,
+          error: err instanceof Error ? err.message : String(err),
+        }, 'Failed to enqueue SHIPMENT_CREATE for Correios');
+      }
+    }
+  }
+
+  // 10) Enfileirar LABEL_GENERATE para carriers não-Correios
   if (!result.isIdempotent && nonCorreiosShipments.length > 0) {
     for (const { shipmentId, carrier } of nonCorreiosShipments) {
       try {
@@ -600,6 +656,7 @@ async function createShipmentFromCartItem(
   destinationCity: string;
   destinationState: string;
   publicTrackingId: string | null;
+  targetStatus: string;
 }> {
   const originAddress = item.originAddress as unknown as CartItemOriginAddress;
   const destination = item.destination as unknown as CartItemDestination;
@@ -766,13 +823,16 @@ async function createShipmentFromCartItem(
     destinationCity: destination.cidade,
     destinationState: destination.uf,
     publicTrackingId: shipment.publicTrackingId,
+    targetStatus: initialStatus,
   };
 }
 
 /**
  * Integra com a transportadora.
- * CORREIOS: Integração OBRIGATÓRIA - lança erro se falhar
+ * CORREIOS: Ignorado aqui — integração acontece de forma assíncrona via SHIPMENT_CREATE worker
  * OUTRAS: Best-effort (não bloqueia)
+ *
+ * Retorna true se integração foi realizada com sucesso, false caso contrário.
  */
 async function integrateWithCarrierSafely(
   tx: Prisma.TransactionClient,
@@ -787,8 +847,14 @@ async function integrateWithCarrierSafely(
     destination: CartItemDestination;
     declaredValue: number;
   }
-): Promise<void> {
+): Promise<boolean> {
   const isCorreios = isCorreiosCarrier(params.carrier);
+
+  if (isCorreios) {
+    // Correios: não chama API dentro da transação para evitar timeout e falha no checkout.
+    // O SHIPMENT_CREATE worker faz a pré-postagem de forma assíncrona com retries automáticos.
+    return false;
+  }
 
   const user = await tx.user.findUnique({
     where: { id: userId },
@@ -848,32 +914,14 @@ async function integrateWithCarrierSafely(
   });
 
   if (!integrationResult.success) {
-    if (isCorreios) {
-      // CORREIOS: Integração OBRIGATÓRIA
-      logger.error({
-        event: 'cart_correios_integration_failed_required',
-        shipmentId,
-        carrier: params.carrier,
-        errorMessage: integrationResult.errorMessage,
-      }, 'Correios integration failed - transaction will be rolled back');
-
-      throw Object.assign(
-        new Error(
-          integrationResult.errorMessage ||
-          'Não foi possível gerar a pré-postagem nos Correios. Por favor, tente novamente.'
-        ),
-        { code: 'CARRIER_INTEGRATION_FAILED' }
-      );
-    } else {
-      // OUTRAS TRANSPORTADORAS: Best-effort
-      logger.warn({
-        event: 'cart_carrier_integration_failed',
-        shipmentId,
-        carrier: params.carrier,
-        error: integrationResult.errorMessage,
-      }, 'Carrier integration failed (non-blocking for non-Correios)');
-    }
-    return;
+    // OUTRAS TRANSPORTADORAS: Best-effort
+    logger.warn({
+      event: 'cart_carrier_integration_failed',
+      shipmentId,
+      carrier: params.carrier,
+      error: integrationResult.errorMessage,
+    }, 'Carrier integration failed (non-blocking for non-Correios)');
+    return false;
   }
 
   logger.info({
@@ -881,6 +929,7 @@ async function integrateWithCarrierSafely(
     shipmentId,
     carrier: params.carrier,
   }, 'Carrier integration successful');
+  return true;
 }
 
 /**
