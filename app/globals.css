@@ -743,3 +743,17 @@ textarea.ant-input {
     display: block;
   }
 }
+
+/* Neutraliza o fundo azul do autopreenchimento do navegador.
+ *
+ * Mora aqui, e não em ELInput.module.css, porque o seletor é de elemento
+ * (sem classe local) — CSS Modules recusa esses seletores no build de
+ * produção ("pure selectors must contain at least one local class or id").
+ * O truque do transition longo evita a cor de fundo sem bloquear o
+ * autopreenchimento em si. */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  transition: background-color 9999s ease-in-out 0s !important;
+  -webkit-text-fill-color: var(--el-text-primary, #111827) !important;
+}

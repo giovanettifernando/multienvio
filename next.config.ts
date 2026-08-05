@@ -20,7 +20,11 @@ const nextConfig: NextConfig = {
   skipTrailingSlashRedirect: true,
 
   // Transpile Ant Design packages
-  transpilePackages: ['antd', '@ant-design', 'rc-util', 'rc-pagination', 'rc-picker'],
+  // @api/loggi-platform é distribuído como TypeScript dentro de node_modules
+  // (pacote local gerado pelo `api` da Loggi). Sem transpilá-lo aqui, o build
+  // de produção falha com "Module parse failed: Unexpected token" no import
+  // de tipos — tanto no Turbopack quanto no webpack.
+  transpilePackages: ['antd', '@ant-design', 'rc-util', 'rc-pagination', 'rc-picker', '@api/loggi-platform'],
 
   // Server-only packages - prevent bundling with Turbopack
   // pino/thread-stream have test files that break Turbopack

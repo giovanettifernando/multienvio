@@ -35,9 +35,14 @@
   color: var(--el-text-primary, #111827) !important;
 }
 
-/* Dropdown popup — font size igual ao input */
-:global(.el-select-dropdown) :global(.ant-select-item) {
-  font-size: var(--el-font-size-base, 14px) !important;
+/* Dropdown popup — font size igual ao input.
+ *
+ * Sintaxe de bloco `:global { ... }`: o seletor original era composto só de
+ * partes globais, que CSS Modules recusa no build de produção. */
+:global {
+  .el-select-dropdown .ant-select-item {
+    font-size: var(--el-font-size-base, 14px) !important;
+  }
 }
 
 /* Tags de seleção múltipla — pill limpo, sem borda feia */

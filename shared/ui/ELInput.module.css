@@ -42,13 +42,15 @@ textarea.input,
   box-shadow: 0 0 0 3px var(--el-color-primary-tint, #E6EEF7);
 }
 
-/* Neutraliza o fundo azul do autopreenchimento do browser */
-:global(input:-webkit-autofill),
-:global(input:-webkit-autofill:hover),
-:global(input:-webkit-autofill:focus) {
-  transition: background-color 9999s ease-in-out 0s !important;
-  -webkit-text-fill-color: var(--el-text-primary, #111827) !important;
-}
+/* A regra que neutraliza o fundo do autopreenchimento do navegador foi movida
+ * para app/globals.css.
+ *
+ * Motivo: ela usa seletor de ELEMENTO (input:-webkit-autofill), e CSS Modules
+ * exige que todo seletor tenha ao menos uma classe ou id local ("pure
+ * selectors"). Nem `:global(...)` nem o bloco `:global { ... }` contornam isso
+ * para seletores de elemento — o build de produção falhava. Ajuste de
+ * comportamento nativo do navegador é global por natureza e pertence à folha
+ * global, não a um módulo de componente. */
 
 .password :global(.ant-input) {
   border-radius: var(--el-radius-base, 12px) !important;
