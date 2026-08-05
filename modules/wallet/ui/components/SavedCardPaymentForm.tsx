@@ -20,6 +20,7 @@ import { useCards } from "@/modules/account/ui/hooks";
 const { Text } = Typography;
 
 interface SavedCardPaymentFormProps {
+  /** Valor em REAIS (ex.: 5 = R$ 5,00). A conversão para centavos é feita no envio. */
   amount: number;
   onSuccess: (transactionId: string) => void;
   onError: (error: Error) => void;
@@ -111,7 +112,9 @@ export function SavedCardPaymentForm({
         headers: { 'Content-Type': 'application/json' },
         signal: abortControllerRef.current.signal,
         body: JSON.stringify({
-          amountCents: amount,
+          // amount chega em reais (o display acima usa formatBRL(amount));
+          // a API cobra em centavos.
+          amountCents: Math.round(amount * 100),
           description: paymentDescription || (paymentType === 'wallet_topup' ? 'Recarga de carteira' : 'Pagamento de envio'),
           paymentMethod: 'credit_card',
           cardToken: selectedCard.vaultToken,

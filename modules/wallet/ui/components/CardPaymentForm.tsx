@@ -7,7 +7,14 @@ import { maskCEP, isValidCep, normalizeCep } from '@/shared/utils/masks';
 const CARD_PROCESSING_TIMEOUT_MS = 15000;
 
 interface CardPaymentFormProps {
-  amount: number; // in cents
+  /**
+   * Valor em REAIS (ex.: 5 = R$ 5,00).
+   *
+   * Todos os chamadores (PaymentModal, CardPaymentView) trabalham em reais, e
+   * o mesmo vale para o fluxo de PIX/boleto em usePixPayment. A conversão para
+   * centavos acontece aqui, no envio — nunca no chamador.
+   */
+  amount: number;
   onSuccess: (transactionId: string) => void;
   onError: (error: Error) => void;
   paymentType?: 'wallet_topup' | 'checkout_payment';
@@ -81,7 +88,8 @@ export function CardPaymentForm({ amount, onSuccess, onError, paymentType = 'wal
         headers: { 'Content-Type': 'application/json' },
         signal: abortRef.current?.signal,
         body: JSON.stringify({
-          amountCents: amount,
+          // amount chega em reais; a API cobra em centavos.
+          amountCents: Math.round(amount * 100),
           description: paymentType === 'wallet_topup' ? 'Recarga de carteira' : 'Pagamento de envio',
           paymentMethod: 'credit_card',
           cardToken: token,
@@ -166,7 +174,7 @@ export function CardPaymentForm({ amount, onSuccess, onError, paymentType = 'wal
           <ELAlert type="error" message={fieldError} />
         )}
         <ELButton type="primary" onClick={handleSubmit} loading={processing} block>
-          Pagar R$ {(amount / 100).toFixed(2).replace('.', ',')}
+          Pagar R$ {amount.toFixed(2).replace('.', ',')}
         </ELButton>
       </div>
     </ELCard>
