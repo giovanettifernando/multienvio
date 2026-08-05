@@ -2,6 +2,9 @@ import { Prisma } from "@prisma/client";
 import { ZodError } from "zod";
 import { schedulePrismaReconnect, isDatabaseUnavailableError } from "@/platform/db/db";
 import { CircuitBreakerError } from "@/platform/integrations/shared/circuit-breaker";
+// types.ts é puro (sem 'server-only'), então importar aqui não arrasta o
+// módulo de integração inteiro para o bundle.
+import { AsaasApiError } from "@/platform/integrations/asaas/types";
 
 export type ApiErrorInput = {
   code: string;
@@ -66,6 +69,46 @@ export function toApiError(error: unknown): ApiError {
       message: error.message,
       status: 503,
       details: { circuit: error.circuitName },
+      cause: error,
+    });
+  }
+
+  // Erros da API do Asaas.
+  //
+  // Sem este bloco, um 400 do gateway virava 500 genérico e o usuário via
+  // "erro inesperado" — mesmo quando o Asaas tinha devolvido uma mensagem
+  // clara e em português (ex.: "O valor da cobrança (R$ 1,00) ... não pode ser
+  // menor que R$ 5,00"). Descartar essa mensagem transforma um problema que o
+  // usuário resolveria sozinho num mistério.
+  if (error instanceof AsaasApiError) {
+    // 4xx de dados: a descrição do Asaas é voltada ao usuário final e já vem
+    // em português — repassar é o comportamento útil.
+    if (error.statusCode === 400 || error.statusCode === 422) {
+      return new ApiError({
+        code: error.code || "PAYMENT_ERROR",
+        message: error.message,
+        status: 400,
+        cause: error,
+      });
+    }
+
+    // 401/403 significam credencial nossa inválida ou ambiente errado — culpa
+    // de configuração, não do usuário. Não repassar o texto do gateway para
+    // não sugerir que ele fez algo errado nem expor detalhe de integração.
+    if (error.statusCode === 401 || error.statusCode === 403) {
+      return new ApiError({
+        code: "SERVICE_UNAVAILABLE",
+        message: "Pagamento indisponível no momento. Tente novamente em instantes.",
+        status: 503,
+        cause: error,
+      });
+    }
+
+    // Demais casos (5xx, timeout, não configurado): gateway fora do ar.
+    return new ApiError({
+      code: "SERVICE_UNAVAILABLE",
+      message: "Pagamento indisponível no momento. Tente novamente em instantes.",
+      status: 503,
       cause: error,
     });
   }
