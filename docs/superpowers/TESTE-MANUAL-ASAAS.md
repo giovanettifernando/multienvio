@@ -68,12 +68,22 @@ importantes — explico o porquê em cada um.
 ---
 
 ### [ ] 1. Recarga de carteira — PIX
-**Onde:** Carteira → adicionar saldo → **PIX**
+**Onde:** Carteira → adicionar saldo → **PIX** (mínimo **R$ 5,00** — regra do Asaas)
 
 **Esperado:** QR Code na tela, com botão de copiar o código.
 
 **Confira:** o QR Code é real (escaneie com o celular — deve abrir como cobrança
 PIX no seu banco); o valor bate com o que você digitou.
+
+> ⚠️ **Em 05/08/2026 o sandbox do Asaas está sem gerar QR Code.** Confirmado como
+> problema deles: a falha se reproduz chamando a API direto, e a própria página de
+> pagamento hospedada pelo Asaas exibe *"Não foi possível gerar o QR Code neste
+> momento"*. Cobranças criadas antes disso seguem com QR normal.
+>
+> Nesse cenário a tela mostra o botão **"Abrir página de pagamento"** em vez do
+> QR — comportamento correto: a cobrança é válida e pagável, só a imagem não veio.
+> **Marque este teste como "bloqueado por terceiro" e siga para o teste 2.**
+> Quando o sandbox voltar, o QR aparece sozinho, sem precisar mexer em nada.
 
 ---
 
