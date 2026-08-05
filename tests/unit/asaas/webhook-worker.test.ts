@@ -79,6 +79,11 @@ function makeFakePaymentWebhook(initialStatus: string) {
         return { count: 1 };
       },
     },
+    // O worker localiza a PaymentTransaction da cobrança para disparar o
+    // crédito da recarga. Sem isto o mock quebra antes de chegar no updateMany.
+    paymentTransaction: {
+      findFirst: async () => ({ id: 'tx_1' }),
+    },
   };
 
   return { record, calls, prisma };
@@ -91,7 +96,7 @@ describe('processAsaasWebhookJob', () => {
 
     await processAsaasWebhookJob(
       { chargeId: 'pay_1', event: 'PAYMENT_CONFIRMED' },
-      { prisma: prisma as never, updatePaymentFromAsaas: async () => {} },
+      { prisma: prisma as never, updatePaymentFromAsaas: async () => {}, creditTopupIfReleased: async () => false },
     );
 
     assert.equal(record.status, 'PROCESSED');
@@ -104,7 +109,7 @@ describe('processAsaasWebhookJob', () => {
 
     await processAsaasWebhookJob(
       { chargeId: 'pay_2', event: 'PAYMENT_CONFIRMED' },
-      { prisma: prisma as never, updatePaymentFromAsaas: async () => {} },
+      { prisma: prisma as never, updatePaymentFromAsaas: async () => {}, creditTopupIfReleased: async () => false },
     );
 
     assert.equal(record.status, 'PROCESSED');
@@ -127,7 +132,7 @@ describe('runAsaasWebhookJob', () => {
       () =>
         runAsaasWebhookJob(
           { chargeId: 'pay_3', event: 'PAYMENT_CONFIRMED' },
-          { prisma: prisma as never, updatePaymentFromAsaas },
+          { prisma: prisma as never, updatePaymentFromAsaas, creditTopupIfReleased: async () => false },
         ),
       /Falha simulada na API do Asaas/,
     );
@@ -140,7 +145,7 @@ describe('runAsaasWebhookJob', () => {
     // mesmo com o pagamento já reconhecido — exatamente o bug que este teste sabota.
     await runAsaasWebhookJob(
       { chargeId: 'pay_3', event: 'PAYMENT_CONFIRMED' },
-      { prisma: prisma as never, updatePaymentFromAsaas },
+      { prisma: prisma as never, updatePaymentFromAsaas, creditTopupIfReleased: async () => false },
     );
 
     assert.equal(record.status, 'PROCESSED');
@@ -153,9 +158,59 @@ describe('runAsaasWebhookJob', () => {
 
     await runAsaasWebhookJob(
       { chargeId: 'pay_4', event: 'PAYMENT_CONFIRMED' },
-      { prisma: prisma as never, updatePaymentFromAsaas: async () => {} },
+      { prisma: prisma as never, updatePaymentFromAsaas: async () => {}, creditTopupIfReleased: async () => false },
     );
 
     assert.equal(record.status, 'PROCESSED');
+  });
+});
+
+describe('processAsaasWebhookJob — crédito da recarga', () => {
+  // Antes desta cobertura o worker só sincronizava o status: uma recarga
+  // confirmada por PIX/boleto virava CAPTURED/PAID e o saldo do cliente
+  // NUNCA era creditado (o crédito só existia na rota administrativa de
+  // aprovação manual). Dinheiro cobrado, nada entregue.
+  it('dispara o crédito da transação correspondente à cobrança', async () => {
+    const { processAsaasWebhookJob } = loadWorker();
+    const { prisma } = makeFakePaymentWebhook('PENDING');
+
+    const creditados: string[] = [];
+
+    await processAsaasWebhookJob(
+      { chargeId: 'pay_credito', event: 'PAYMENT_RECEIVED' },
+      {
+        prisma: prisma as never,
+        updatePaymentFromAsaas: async () => {},
+        creditTopupIfReleased: async (id: string) => {
+          creditados.push(id);
+          return true;
+        },
+      },
+    );
+
+    assert.deepEqual(creditados, ['tx_1'], 'o crédito precisa ser chamado com o id da transação');
+  });
+
+  it('não quebra quando a cobrança não tem transação local', async () => {
+    const { processAsaasWebhookJob } = loadWorker();
+    const { record, prisma } = makeFakePaymentWebhook('PENDING');
+    prisma.paymentTransaction.findFirst = async () => null as never;
+
+    let chamou = false;
+
+    await processAsaasWebhookJob(
+      { chargeId: 'pay_orfao', event: 'PAYMENT_RECEIVED' },
+      {
+        prisma: prisma as never,
+        updatePaymentFromAsaas: async () => {},
+        creditTopupIfReleased: async () => {
+          chamou = true;
+          return true;
+        },
+      },
+    );
+
+    assert.equal(chamou, false, 'sem transação local não há o que creditar');
+    assert.equal(record.status, 'PROCESSED', 'o webhook ainda deve ser marcado como processado');
   });
 });

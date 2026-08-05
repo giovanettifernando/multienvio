@@ -17,6 +17,7 @@ import { getQueue, QUEUE_NAMES } from '../../platform/queue';
 import { createJobLogger, withDuration } from '../../platform/queue/helpers';
 import type { PixMonitorJobPayload } from '../../platform/queue/types';
 import { syncPendingCharges } from '../../platform/integrations/asaas/pix-monitor';
+import { creditTopupIfReleased } from '../../modules/wallet/application/wallet.service';
 
 async function processPixMonitorJob(job: Job<PixMonitorJobPayload>): Promise<void> {
   const log = createJobLogger(job);
@@ -25,10 +26,25 @@ async function processPixMonitorJob(job: Job<PixMonitorJobPayload>): Promise<voi
 
   const { result: syncResult, durationMs } = await withDuration(() => syncPendingCharges());
 
+  // Rede de segurança do crédito: se o webhook do Asaas não chegou (fila
+  // pausada, ambiente sem URL pública, evento perdido), é aqui que uma recarga
+  // confirmada finalmente vira saldo. Idempotente — não duplica se o webhook
+  // já tiver creditado. Falha em uma não pode impedir as demais.
+  let credited = 0;
+  for (const transactionId of syncResult.releasedTransactionIds) {
+    try {
+      if (await creditTopupIfReleased(transactionId)) credited += 1;
+    } catch (error) {
+      log.error({ transactionId, error }, 'Falha ao creditar recarga liberada');
+    }
+  }
+
   log.info({
     checked: syncResult.checked,
     updated: syncResult.updated,
     expired: syncResult.expired,
+    notFound: syncResult.notFound,
+    credited,
     durationMs,
   }, 'PIX/boleto monitor completed');
 }

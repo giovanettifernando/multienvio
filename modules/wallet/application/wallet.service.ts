@@ -318,6 +318,45 @@ export interface CreditFromGatewayTopupParams {
 }
 
 /**
+ * Credita a carteira se — e somente se — a transação for uma recarga já
+ * liberada. Seguro para chamar de qualquer lugar e quantas vezes for.
+ *
+ * Existe porque o crédito precisa acontecer em três momentos diferentes, e
+ * antes disso não acontecia em nenhum:
+ *   - cartão: aprovado de forma síncrona na criação da cobrança;
+ *   - PIX/boleto: confirmados depois, via webhook do Asaas;
+ *   - rede de segurança: monitor de pendências, quando o webhook se perde.
+ *
+ * A idempotência vem de `creditFromGatewayTopup`, que procura um
+ * WalletTransaction com o mesmo referenceId antes de criar (e o campo é
+ * @unique no schema). Chamadas repetidas devolvem o crédito existente em vez
+ * de duplicar dinheiro.
+ *
+ * @returns true se creditou agora ou se já havia crédito; false se a transação
+ *          não é recarga, não está liberada, ou não tem dono.
+ */
+export async function creditTopupIfReleased(paymentTransactionId: string): Promise<boolean> {
+  const tx = await prisma.paymentTransaction.findUnique({
+    where: { id: paymentTransactionId },
+  });
+
+  if (!tx || !tx.userId) return false;
+  if (!canReleaseService(tx.status)) return false;
+
+  const meta = (tx.metadata ?? {}) as Record<string, unknown>;
+  if (meta.type !== 'wallet_topup') return false;
+
+  await creditFromGatewayTopup({
+    userId: tx.userId,
+    amountCents: tx.amountCents,
+    paymentTransactionId: tx.id,
+    providerPaymentId: tx.externalId ?? undefined,
+  });
+
+  return true;
+}
+
+/**
  * Credita saldo na carteira a partir de um pagamento confirmado no gateway
  *
  * Regras de negócio:

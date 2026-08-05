@@ -21,10 +21,12 @@ import { createJobLogger, withDuration } from '../../platform/queue/helpers';
 import type { AsaasWebhookJobData } from '../../platform/queue/types';
 import { prisma as defaultPrisma } from '../../platform/db/db';
 import { updatePaymentFromAsaas as defaultUpdatePaymentFromAsaas } from '../../platform/integrations/asaas';
+import { creditTopupIfReleased as defaultCreditTopupIfReleased } from '../../modules/wallet/application/wallet.service';
 
 export interface AsaasWebhookJobDeps {
   prisma?: typeof defaultPrisma;
   updatePaymentFromAsaas?: typeof defaultUpdatePaymentFromAsaas;
+  creditTopupIfReleased?: typeof defaultCreditTopupIfReleased;
 }
 
 /**
@@ -46,6 +48,20 @@ export async function processAsaasWebhookJob(
   const doUpdatePaymentFromAsaas = deps.updatePaymentFromAsaas ?? defaultUpdatePaymentFromAsaas;
 
   await doUpdatePaymentFromAsaas(data.chargeId);
+
+  // Sincronizar o status não basta: uma recarga confirmada precisa virar saldo.
+  // É aqui que PIX e boleto são creditados (o cartão é creditado na própria
+  // criação, porque aprova de forma síncrona e não gera webhook de confirmação).
+  // Idempotente: o crédito procura um WalletTransaction com o mesmo referenceId
+  // antes de criar, então a entrega at-least-once do Asaas não duplica dinheiro.
+  const doCreditTopup = deps.creditTopupIfReleased ?? defaultCreditTopupIfReleased;
+  const tx = await db.paymentTransaction.findFirst({
+    where: { externalId: data.chargeId },
+    select: { id: true },
+  });
+  if (tx) {
+    await doCreditTopup(tx.id);
+  }
 
   await db.paymentWebhook.updateMany({
     where: { externalId: data.chargeId, status: { in: ['PENDING', 'FAILED'] } },

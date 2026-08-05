@@ -3,6 +3,7 @@ import { prisma as defaultPrisma } from '@/platform/db/db';
 import { getCharge as defaultGetCharge } from './charges';
 import { mapAsaasStatus } from './status';
 import { toCents } from './money';
+import { canReleaseService } from './release';
 import { AsaasApiError } from './types';
 
 export interface MonitorDeps {
@@ -27,7 +28,14 @@ const NOT_FOUND_MIN_AGE_MS = 60 * 60 * 1000;
  */
 export async function syncPendingCharges(
   deps: MonitorDeps = {},
-): Promise<{ checked: number; updated: number; expired: number; notFound: number }> {
+): Promise<{
+  checked: number;
+  updated: number;
+  expired: number;
+  notFound: number;
+  /** Transações que passaram a estar liberadas nesta varredura. */
+  releasedTransactionIds: string[];
+}> {
   const db = deps.prisma ?? defaultPrisma;
   const getCharge = deps.getCharge ?? defaultGetCharge;
 
@@ -39,6 +47,7 @@ export async function syncPendingCharges(
   let updated = 0;
   let expired = 0;
   let notFound = 0;
+  const releasedTransactionIds: string[] = [];
 
   for (const tx of pending) {
     if (!tx.externalId) continue;
@@ -70,6 +79,11 @@ export async function syncPendingCharges(
 
       updated += 1;
       if (status === 'CANCELED') expired += 1;
+      // Quem consome (o worker) precisa saber quais foram LIBERADAS para
+      // disparar o efeito de negócio — creditar a carteira, no caso de recarga.
+      // O monitor não faz isso aqui de propósito: este módulo fala com o
+      // gateway e não deve conhecer carteira nem envio.
+      if (canReleaseService(status)) releasedTransactionIds.push(tx.id);
     } catch (error) {
       if (error instanceof AsaasApiError && error.statusCode === 404) {
         const ageMs = Date.now() - tx.createdAt.getTime();
@@ -102,5 +116,5 @@ export async function syncPendingCharges(
     }
   }
 
-  return { checked: pending.length, updated, expired, notFound };
+  return { checked: pending.length, updated, expired, notFound, releasedTransactionIds };
 }

@@ -84,6 +84,14 @@ export const POST = withApiHandler<PaymentResponse>(async (context) => {
     throw ApiError.badRequest('Pagamento recusado pela operadora', { status: result.status });
   }
 
+  // Cartão é aprovado de forma síncrona: a cobrança já nasce CAPTURED e não
+  // haverá webhook de confirmação para creditar depois. Sem esta chamada, uma
+  // recarga no cartão debitava o cliente e nunca virava saldo. É idempotente
+  // e ignora o que não for recarga liberada — PIX/boleto continuam sendo
+  // creditados pelo webhook (ou pelo monitor, se ele se perder).
+  const { creditTopupIfReleased } = await import('@/modules/wallet/application/wallet.service');
+  await creditTopupIfReleased(result.transaction.id);
+
   return {
     data: {
       transactionId: result.transaction.id,
