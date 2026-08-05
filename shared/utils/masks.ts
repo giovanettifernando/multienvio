@@ -71,6 +71,19 @@ export function maskCEP(value: string): string {
   return `${digits.slice(0, 5)}-${digits.slice(5, 8)}`;
 }
 
+/**
+ * Máscara de validade de cartão no formato MM/AA — como vem impresso no
+ * cartão. A API do Asaas recebe mês e ano em campos separados; a divisão é
+ * responsabilidade de quem envia, não de quem digita.
+ */
+export function maskCardValidity(value: string): string {
+  const digits = onlyDigits(value).slice(0, 4);
+  if (digits.length >= 2) {
+    return `${digits.slice(0, 2)}/${digits.slice(2, 4)}`;
+  }
+  return digits;
+}
+
 export function normalizePhoneInput(value: string): string {
   return maskPhone(value);
 }

@@ -13,7 +13,7 @@ import {
   SafetyOutlined,
   UserOutlined,
 } from "@ant-design/icons";
-import { maskCEP, isValidCep, normalizeCep } from '@/shared/utils/masks';
+import { maskCEP, isValidCep, normalizeCep, maskCardValidity } from '@/shared/utils/masks';
 
 export type CardFormValues = {
   /** Token de tokenização do Asaas (Task 9) — o que POST /api/account/cards espera desde a Task 11. */
@@ -204,15 +204,10 @@ export function CardModal({ open, loading, onSubmit, onCancel }: CardModalProps)
   /**
    * Formata e valida validade MM/AA
    */
-  const formatValidity = (value: string) => {
-    const v = value.replace(/\D/g, "");
-
-    if (v.length >= 2) {
-      return `${v.slice(0, 2)}/${v.slice(2, 4)}`;
-    }
-
-    return v;
-  };
+  // Máscara compartilhada em shared/utils/masks.ts — a mesma usada pelo
+  // formulário de cartão novo da carteira/checkout, para os dois campos de
+  // validade se comportarem igual.
+  const formatValidity = maskCardValidity;
 
   /**
    * Valida se a validade está no futuro
