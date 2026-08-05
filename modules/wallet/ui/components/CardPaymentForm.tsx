@@ -101,6 +101,10 @@ export function CardPaymentForm({ amount, onSuccess, onError, paymentType = 'wal
       if (!res.ok) throw new Error(data.error?.message || 'Pagamento recusado');
 
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      // Encerrar o estado de "processando" ANTES de avisar o pai: sem isso o
+      // overlay de carregamento ficava para sempre na tela, mesmo com o
+      // pagamento já aprovado no gateway. (SavedCardPaymentForm já fazia assim.)
+      setProcessing(false);
       onSuccess((data.data ?? data).transactionId);
     } catch (err) {
       // Rede fora, abort etc. podem interromper antes da resposta do
