@@ -68,9 +68,6 @@ import { createFipeSyncWorker } from './admin/fipe-sync.worker';
 import { createCorreiosAgenciesSyncWorker } from './admin/correios-agencies-sync.worker';
 
 // Webhook (Asaas)
-// Nota: o worker de webhook do Pagar.me (workers/webhook/pagarme.worker.ts)
-// nunca chegou a ser registrado aqui e será removido na Task 17 da migração
-// para o Asaas — não registrá-lo agora evita trabalho de remoção depois.
 import { createAsaasWebhookWorker } from './webhook/asaas.worker';
 
 // ============================================================================

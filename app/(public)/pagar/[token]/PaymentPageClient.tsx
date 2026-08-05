@@ -439,7 +439,7 @@ export default function PaymentPageClient({ token }: PaymentPageClientProps) {
         </div>
       </div>
 
-      {/* Modal de Pagamento Pagar.me */}
+      {/* Modal de Pagamento (Asaas) */}
       {paymentData && (
         <RecipientPaymentModal
           open={paymentModalOpen}

@@ -19,7 +19,6 @@ export {
   // Tracking
   type TrackingJobPayload,
   // Webhooks
-  type PagarmeWebhookJobPayload,
   type AsaasWebhookJobData,
   // Pagamentos
   type PixMonitorJobPayload,

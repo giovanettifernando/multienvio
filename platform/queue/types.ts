@@ -18,15 +18,6 @@ export interface TrackingJobPayload {
 // Webhooks
 // ============================================================================
 
-export interface PagarmeWebhookJobPayload {
-  /** ID do webhook record no banco (já criado com status PENDING) */
-  webhookRecordId: string;
-  /** ID do pedido no Pagar.me (or_XXXXXXXX) extraído do payload */
-  orderId: string;
-  /** Tipo do evento (ex: order.paid, charge.refunded) */
-  eventType: string;
-}
-
 export interface AsaasWebhookJobData {
   /** ID da cobrança no Asaas (pay_XXXXXXXX) */
   chargeId: string;
@@ -191,7 +182,6 @@ export const QUEUE_NAMES = {
   TRACKING_SCHEDULER: 'tracking.scheduler',
 
   // Webhooks
-  WEBHOOK_PAGARME: 'webhook.pagarme',
   WEBHOOK_ASAAS: 'webhook.asaas',
 
   // Pagamentos

@@ -93,6 +93,13 @@ const optionalEnvSchema = z.object({
   PAYMENT_GATEWAY_ENABLED: z.enum(['true', 'false']).optional(),
   PAYMENT_GATEWAY_URL: z.string().url().optional(),
 
+  // Asaas (payment gateway)
+  // ASAAS_API_KEY é "obrigatória" no sentido de gerar warning se ausente — mas
+  // não é crítica (não derruba a app), pois credenciais podem vir do painel
+  // admin (payment_gateways) em vez da env var.
+  ASAAS_API_KEY: z.string(),
+  ASAAS_WEBHOOK_TOKEN: z.string().optional(),
+
   // External APIs
   FIPE_BASE_URL: z.string().url().optional(),
   FIPE_SUBSCRIPTION_TOKEN: z.string().optional(),
@@ -238,7 +245,7 @@ export function validateEnv(): ValidationResult {
  */
 function logFeatureAvailability(): void {
   const features: Record<string, boolean> = {
-    payments_pagarme: isEnvConfigured('PAGARME_SECRET_KEY'),
+    payments_asaas: isEnvConfigured('ASAAS_API_KEY'),
     shipping_correios: isEnvConfigured('CORREIOS_USER') && isEnvConfigured('CORREIOS_PASSWORD'),
     oauth_google: isEnvConfigured('GOOGLE_CLIENT_ID') && isEnvConfigured('GOOGLE_CLIENT_SECRET'),
     rate_limiting_redis: isEnvConfigured('REDIS_URL'),
@@ -293,8 +300,8 @@ export function getEnv(name: string, fallback?: string): string {
  * Check if required integrations are configured
  */
 export const integrations = {
-  isPagarmeConfigured(): boolean {
-    return isEnvConfigured('PAGARME_SECRET_KEY');
+  isAsaasConfigured(): boolean {
+    return isEnvConfigured('ASAAS_API_KEY');
   },
 
   isCorreiosConfigured(): boolean {
