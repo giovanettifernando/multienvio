@@ -26,13 +26,16 @@ Tenha em mãos:
 ssh -p 10060 root@138.59.147.223
 cd /opt/app/envio-legal
 
-pg_dump "$(grep -oP '^DATABASE_URL="\K[^"]+' .env)" \
+# O sed remove o "?schema=public" do fim da URL — o pg_dump rejeita esse
+# parâmetro e o backup sai vazio (0 bytes) sem avisar direito.
+pg_dump "$(grep -oP '^DATABASE_URL="\K[^"]+' .env | sed 's/?schema=public//')" \
   > ~/backup-antes-asaas-$(date +%Y%m%d-%H%M).sql
 
 ls -lh ~/backup-antes-asaas-*.sql
 ```
 
-Confira que o arquivo tem tamanho razoável antes de seguir.
+Confira que o arquivo tem tamanho razoável antes de seguir. **Se vier com 0
+bytes, o backup falhou** — não prossiga.
 
 ---
 
