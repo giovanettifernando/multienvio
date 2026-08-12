@@ -16,6 +16,39 @@ import { ELAlert } from '@/shared/ui/ELAlert';
 import { ELTag } from '@/shared/ui/ELTag';
 import type { QuoteResultItem, QuoteCalculateResponse } from '@/shared/types/quote';
 import { formatBRL } from '@/shared/utils/format';
+import { DIMENSOES_MINIMAS_CM } from '@/modules/quotes/dto/quote';
+
+/**
+ * Regra de validação de dimensão mínima para os campos do Ant Design.
+ *
+ * Os mínimos vêm de `DIMENSOES_MINIMAS_CM` (mesma fonte usada pelo schema da
+ * cotação e pelo texto de ajuda dos campos) — assim a dica, a validação da
+ * calculadora e a validação do formulário de cotar não divergem quando algum
+ * valor mudar.
+ */
+function regraDimensaoMinima(chave: keyof typeof DIMENSOES_MINIMAS_CM) {
+  const minimo = DIMENSOES_MINIMAS_CM[chave];
+  // "Comprimento mínimo" x "Altura mínima" — o adjetivo concorda com o gênero
+  // do substantivo, então a mensagem é escrita por extenso em vez de montada
+  // com um rótulo genérico.
+  const mensagens = {
+    altura: `Altura mínima de ${DIMENSOES_MINIMAS_CM.altura}cm`,
+    largura: `Largura mínima de ${DIMENSOES_MINIMAS_CM.largura}cm`,
+    comprimento: `Comprimento mínimo de ${DIMENSOES_MINIMAS_CM.comprimento}cm`,
+  } as const;
+
+  return {
+    validator: (_rule: unknown, valor: unknown) => {
+      // Campo vazio é tratado pela regra de obrigatoriedade, não por esta.
+      if (valor === undefined || valor === null || valor === '') {
+        return Promise.resolve();
+      }
+      return Number(valor) >= minimo
+        ? Promise.resolve()
+        : Promise.reject(new Error(mensagens[chave]));
+    },
+  };
+}
 
 const { Text } = Typography;
 
@@ -91,10 +124,13 @@ export function QuickCalculator() {
 
   const quoteMutation = useMutation({
     mutationFn: async (values: { originCep: string; destCep: string; weight: number; height?: number; width?: number; length?: number }) => {
-      // Usar valores default para dimensões se não fornecidas
-      const height = values.height || 10;
-      const width = values.width || 15;
-      const length = values.length || 20;
+      // Dimensões são opcionais nesta calculadora rápida; quando não
+      // informadas, usamos o próprio mínimo aceito. Antes os defaults eram
+      // 10/15/20, e os dois primeiros ficavam ABAIXO do mínimo — a calculadora
+      // montava sozinha um volume que a validação recusaria.
+      const height = values.height || DIMENSOES_MINIMAS_CM.altura;
+      const width = values.width || DIMENSOES_MINIMAS_CM.largura;
+      const length = values.length || DIMENSOES_MINIMAS_CM.comprimento;
 
       const payload = {
         origem: { cep: values.originCep },
@@ -239,23 +275,41 @@ export function QuickCalculator() {
             <Form.Item
               label={<Text style={{ fontSize: '11px', whiteSpace: 'nowrap' }}>Alt. (cm)</Text>}
               name="height"
+              rules={[regraDimensaoMinima('altura')]}
               style={{ marginBottom: 0 }}
             >
-              <ELInput type="number" placeholder="cm" size="small" />
+              <ELInput
+                type="number"
+                placeholder={`mín. ${DIMENSOES_MINIMAS_CM.altura}`}
+                size="small"
+                min={DIMENSOES_MINIMAS_CM.altura}
+              />
             </Form.Item>
             <Form.Item
               label={<Text style={{ fontSize: '11px', whiteSpace: 'nowrap' }}>Larg. (cm)</Text>}
               name="width"
+              rules={[regraDimensaoMinima('largura')]}
               style={{ marginBottom: 0 }}
             >
-              <ELInput type="number" placeholder="cm" size="small" />
+              <ELInput
+                type="number"
+                placeholder={`mín. ${DIMENSOES_MINIMAS_CM.largura}`}
+                size="small"
+                min={DIMENSOES_MINIMAS_CM.largura}
+              />
             </Form.Item>
             <Form.Item
               label={<Text style={{ fontSize: '11px', whiteSpace: 'nowrap' }}>Comp. (cm)</Text>}
               name="length"
+              rules={[regraDimensaoMinima('comprimento')]}
               style={{ marginBottom: 0 }}
             >
-              <ELInput type="number" placeholder="cm" size="small" />
+              <ELInput
+                type="number"
+                placeholder={`mín. ${DIMENSOES_MINIMAS_CM.comprimento}`}
+                size="small"
+                min={DIMENSOES_MINIMAS_CM.comprimento}
+              />
             </Form.Item>
           </div>
 

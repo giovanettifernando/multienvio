@@ -19,6 +19,7 @@ import {
 } from "react-hook-form";
 import { useEffect, useRef, useState, startTransition } from "react";
 import type { QuoteFormValues } from "./quoteFormSchema";
+import { DIMENSOES_MINIMAS_CM } from "@/modules/quotes/dto/quote";
 import { MinhasEmbalagensSelect } from "@/modules/quotes/ui/components/MinhasEmbalagensSelect";
 import type { PackagingTemplate } from "@/modules/quotes/ui/hooks";
 import type { EligibilityResponse } from "@/shared/types/quote";
@@ -218,7 +219,7 @@ function VolumeItem({
                         help={showError ? fieldState.error?.message : undefined}
                         style={{ marginBottom: 0 }}
                       >
-                        <InputNumber {...controllerField} value={controllerField.value ?? undefined} min={0} step={1} precision={0} placeholder="0" parser={parseDecimal} status={showError ? "error" : undefined} onChange={(value) => controllerField.onChange(value ?? undefined)} style={{ width: "100%" }} />
+                        <InputNumber {...controllerField} value={controllerField.value ?? undefined} min={DIMENSOES_MINIMAS_CM.comprimento} step={1} precision={0} placeholder={`mín. ${DIMENSOES_MINIMAS_CM.comprimento}`} parser={parseDecimal} status={showError ? "error" : undefined} onChange={(value) => controllerField.onChange(value ?? undefined)} style={{ width: "100%" }} />
                       </Form.Item>
                     );
                   }}
@@ -235,7 +236,7 @@ function VolumeItem({
                         help={showError ? fieldState.error?.message : undefined}
                         style={{ marginBottom: 0 }}
                       >
-                        <InputNumber {...controllerField} value={controllerField.value ?? undefined} min={0} step={1} precision={0} placeholder="0" parser={parseDecimal} status={showError ? "error" : undefined} onChange={(value) => controllerField.onChange(value ?? undefined)} style={{ width: "100%" }} />
+                        <InputNumber {...controllerField} value={controllerField.value ?? undefined} min={DIMENSOES_MINIMAS_CM.largura} step={1} precision={0} placeholder={`mín. ${DIMENSOES_MINIMAS_CM.largura}`} parser={parseDecimal} status={showError ? "error" : undefined} onChange={(value) => controllerField.onChange(value ?? undefined)} style={{ width: "100%" }} />
                       </Form.Item>
                     );
                   }}
@@ -252,7 +253,7 @@ function VolumeItem({
                         help={showError ? fieldState.error?.message : undefined}
                         style={{ marginBottom: 0 }}
                       >
-                        <InputNumber {...controllerField} value={controllerField.value ?? undefined} min={0} step={1} precision={0} placeholder="0" parser={parseDecimal} status={showError ? "error" : undefined} onChange={(value) => controllerField.onChange(value ?? undefined)} style={{ width: "100%" }} />
+                        <InputNumber {...controllerField} value={controllerField.value ?? undefined} min={DIMENSOES_MINIMAS_CM.altura} step={1} precision={0} placeholder={`mín. ${DIMENSOES_MINIMAS_CM.altura}`} parser={parseDecimal} status={showError ? "error" : undefined} onChange={(value) => controllerField.onChange(value ?? undefined)} style={{ width: "100%" }} />
                       </Form.Item>
                     );
                   }}
