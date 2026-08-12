@@ -5,7 +5,7 @@ import { useELApp, ELInput } from '@/shared/ui';
 const App = { useApp: useELApp };
 const Input = ELInput;
 import { ELModal } from '@/shared/ui/ELModal';
-import { Controller, FormProvider, useForm } from "react-hook-form";
+import { Controller, FormProvider, useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CepInput } from '@/shared/ui/form/CepInput';
@@ -105,7 +105,11 @@ export function AddressModal({
 
   // Observado para o campo de número reagir na hora: some o asterisco,
   // desabilita o input e mostra "S/N".
-  const semNumero = form.watch("semNumero");
+  //
+  // `useWatch` e não `form.watch`: o React Compiler pula a otimização do
+  // componente inteiro ao encontrar `form.watch` ("Use of incompatible
+  // library"). Mesmo padrão já usado em VolumesGrid.
+  const semNumero = useWatch({ control: form.control, name: "semNumero" });
 
   const handleSubmit = form.handleSubmit((values) => {
     // "S/N" é o que vai para a etiqueta e para a transportadora quando o
