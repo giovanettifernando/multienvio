@@ -17,11 +17,25 @@ const addressSchema = z.object({
     .string()
     .regex(/^[0-9]{5}-?[0-9]{3}$/u, "CEP inválido."),
   logradouro: z.string().min(3, "Informe o logradouro"),
-  numero: z.string().min(1, "Informe o número"),
+  numero: z.string(),
+  // Marcado quando o endereço não tem número (a rua não numera, imóvel rural
+  // etc.). Nesse caso o campo `numero` é preenchido com "S/N", que é o que as
+  // transportadoras esperam receber — enviar vazio faz a etiqueta sair sem
+  // número e a entrega falhar.
+  semNumero: z.boolean().optional(),
   complemento: z.string().optional(),
   bairro: z.string().min(2, "Informe o bairro"),
   cidade: z.string().min(2, "Informe a cidade"),
   uf: z.string().min(2).max(2, "UF inválida"),
+}).superRefine((valores, ctx) => {
+  // Número só é obrigatório quando "sem número" NÃO está marcado.
+  if (!valores.semNumero && valores.numero.trim().length === 0) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["numero"],
+      message: "Informe o número",
+    });
+  }
 });
 
 export type AddressFormValues = z.infer<typeof addressSchema>;
@@ -64,6 +78,7 @@ export function AddressModal({
       cep: "",
       logradouro: "",
       numero: "",
+      semNumero: false,
       complemento: "",
       bairro: "",
       cidade: "",
@@ -78,6 +93,8 @@ export function AddressModal({
         cep: initialValues?.cep ?? "",
         logradouro: initialValues?.logradouro ?? "",
         numero: initialValues?.numero ?? "",
+        // Endereço salvo como "S/N" reabre com a caixinha já marcada.
+        semNumero: (initialValues?.numero ?? "").trim().toUpperCase() === "S/N",
         complemento: initialValues?.complemento ?? "",
         bairro: initialValues?.bairro ?? "",
         cidade: initialValues?.cidade ?? "",
@@ -86,8 +103,14 @@ export function AddressModal({
     }
   }, [open, initialValues, form]);
 
+  // Observado para o campo de número reagir na hora: some o asterisco,
+  // desabilita o input e mostra "S/N".
+  const semNumero = form.watch("semNumero");
+
   const handleSubmit = form.handleSubmit((values) => {
-    onSubmit(values);
+    // "S/N" é o que vai para a etiqueta e para a transportadora quando o
+    // endereço não tem número.
+    onSubmit(values.semNumero ? { ...values, numero: "S/N" } : values);
   }, (errors) => {
     if (errors && Object.keys(errors).length) {
       message.error("Revise os campos destacados.");
@@ -137,10 +160,52 @@ export function AddressModal({
 
           {/* Número e Complemento */}
           <div style={{ display: "flex", gap: 12 }}>
-            <div style={{ width: 100 }}>
-              <label style={fieldLabel}><span style={{ color: "#ff4d4f" }}>*</span> Número</label>
+            <div style={{ width: 130 }}>
+              <label style={fieldLabel}>
+                {!semNumero && <span style={{ color: "#ff4d4f" }}>*</span>} Número
+              </label>
               <Controller name="numero" control={form.control} render={({ field, fieldState }) => (
-                <Input {...field} placeholder="123" inputMode="numeric" status={fieldState.error ? "error" : undefined} />
+                <div>
+                  <Input
+                    {...field}
+                    value={semNumero ? "S/N" : field.value}
+                    disabled={semNumero}
+                    placeholder="123"
+                    inputMode="numeric"
+                    status={fieldState.error ? "error" : undefined}
+                  />
+                  {fieldState.error && (
+                    <div style={{ color: "#ff4d4f", fontSize: 12 }}>{fieldState.error.message}</div>
+                  )}
+                </div>
+              )} />
+              <Controller name="semNumero" control={form.control} render={({ field }) => (
+                <label
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                    marginTop: 6,
+                    fontSize: 12,
+                    color: "#374151",
+                    cursor: "pointer",
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={Boolean(field.value)}
+                    onChange={(e) => {
+                      field.onChange(e.target.checked);
+                      // Limpa o que estava digitado ao marcar, e revalida para
+                      // apagar um erro de "informe o número" que já estivesse
+                      // na tela.
+                      if (e.target.checked) form.setValue("numero", "");
+                      void form.trigger("numero");
+                    }}
+                    style={{ cursor: "pointer" }}
+                  />
+                  Sem número
+                </label>
               )} />
             </div>
             <div style={{ flex: 1 }}>
