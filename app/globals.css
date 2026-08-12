@@ -757,3 +757,11 @@ input:-webkit-autofill:focus {
   transition: background-color 9999s ease-in-out 0s !important;
   -webkit-text-fill-color: var(--el-text-primary, #111827) !important;
 }
+
+/* Dropdown do ELSelect — font size igual ao do input.
+   Vive aqui, e não em ELSelect.module.css, porque o dropdown do Ant Design é
+   renderizado fora da árvore do componente: o seletor mira apenas classes
+   globais, o que CSS Modules recusa. */
+.el-select-dropdown .ant-select-item {
+  font-size: var(--el-font-size-base, 14px) !important;
+}

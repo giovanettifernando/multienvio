@@ -35,15 +35,14 @@
   color: var(--el-text-primary, #111827) !important;
 }
 
-/* Dropdown popup — font size igual ao input.
+/* A regra de font-size do dropdown foi movida para app/globals.css.
  *
- * Sintaxe de bloco `:global { ... }`: o seletor original era composto só de
- * partes globais, que CSS Modules recusa no build de produção. */
-:global {
-  .el-select-dropdown .ant-select-item {
-    font-size: var(--el-font-size-base, 14px) !important;
-  }
-}
+ * Motivo: o seletor mira só classes do Ant Design (.el-select-dropdown e
+ * .ant-select-item), sem nenhuma classe local deste módulo — e CSS Modules
+ * exige ao menos uma ("pure selectors"). O bloco `:global { }` fazia o build
+ * de produção passar mas quebrava o dev (Turbopack recusa como "ambiguous
+ * CSS module class"). O dropdown é renderizado fora da árvore do componente,
+ * então seu estilo é global por natureza. */
 
 /* Tags de seleção múltipla — pill limpo, sem borda feia */
 .select :global(.ant-select-multiple .ant-select-selection-item) {
