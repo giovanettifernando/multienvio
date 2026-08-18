@@ -498,6 +498,12 @@ export async function cotarCorreios(
     length: input.comprimentoCm,
     width: input.larguraCm,
     height: input.alturaCm,
+    // OBRIGATÓRIO na chave: o valor declarado MUDA o preço (medido no SEDEX,
+    // R$ 1.000 de seguro custam ~R$ 10 a mais). Sem ele aqui, cotar a mesma
+    // rota primeiro sem seguro e depois com seguro devolvia o resultado
+    // guardado da primeira vez — a API dos Correios nem chegava a ser
+    // consultada, e o preço na tela nunca mudava.
+    declaredValue: input.valorDeclarado ?? 0,
     carrier: 'correios',
   };
 
