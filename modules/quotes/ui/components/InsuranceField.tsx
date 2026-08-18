@@ -22,8 +22,18 @@ const Tooltip = ELTooltip;
 const Typography = ELTypography;
 const { Text } = Typography;
 
-/** Mínimo aceito pelos Correios para valor declarado. */
+/**
+ * Faixa aceita pelos Correios para valor declarado.
+ *
+ * Fora dela a cotação com seguro é RECUSADA pela API deles — e o serviço
+ * simplesmente some da lista (medido: com R$ 50.000 o SEDEX desaparece da
+ * resposta, sobrando só o PAC, que não aceita seguro). Sem validar aqui, o
+ * usuário digita um valor alto e não entende por que nada acontece.
+ *
+ * Espelha CORREIOS_LIMITS em platform/integrations/correios/constants.ts.
+ */
 const VALOR_MINIMO_SEGURO = 25.63;
+const VALOR_MAXIMO_SEGURO = 38057.59;
 
 /**
  * Campo de seguro da tela de finalizar envio.
@@ -43,7 +53,7 @@ export function InsuranceField() {
 
   const results = useQuoteStore((s) => s.results);
   const selection = useQuoteStore((s) => s.selection);
-  const setResults = useQuoteStore((s) => s.setResults);
+  const updateSummary = useQuoteStore((s) => s.updateSummary);
   const setSelection = useQuoteStore((s) => s.setSelection);
 
   const seguroAtual = results?.resumo.seguroValor ?? null;
@@ -52,10 +62,12 @@ export function InsuranceField() {
   const precoAtual = selection?.result.preco ?? null;
   const alterado = (valor ?? 0) !== (seguroAtual ?? 0);
   const abaixoDoMinimo = (valor ?? 0) > 0 && (valor ?? 0) < VALOR_MINIMO_SEGURO;
+  const acimaDoMaximo = (valor ?? 0) > VALOR_MAXIMO_SEGURO;
+  const foraDaFaixa = abaixoDoMinimo || acimaDoMaximo;
 
   const aplicar = async () => {
     if (!results || !selection) return;
-    if (abaixoDoMinimo) return;
+    if (foraDaFaixa) return;
 
     const resumo = results.resumo;
     try {
@@ -77,15 +89,20 @@ export function InsuranceField() {
         (r) => r.carrier === anterior.carrier && r.modalidade === anterior.modalidade,
       );
 
-      setResults({
-        ...results,
-        quoteId: resposta.quoteId || results.quoteId,
-        createdAt: resposta.createdAt || results.createdAt,
-        expiresAt: resposta.expiresAt || results.expiresAt,
-        resumo: { ...resumo, seguroValor: valor && valor > 0 ? valor : null },
-        results: resposta.results,
-        pontosParceiros: resposta.pontosParceiros ?? results.pontosParceiros,
-      });
+      // ATENÇÃO: não usar `setResults` aqui. Ele zera a seleção
+      // (`selection: null`), o que faz sentido numa cotação nova — mas neste
+      // componente a seleção é o que mantém a tela de pé (`if (!selection)
+      // return null`). Chamar setResults desmontava o campo no meio da
+      // operação e o setSelection seguinte se perdia: o preço voltava ao
+      // antigo e a mensagem dizia "Seguro aplicado" sem nada ter mudado.
+      //
+      // A ordem abaixo importa: primeiro a seleção nova (preço atualizado),
+      // depois o resumo, que preserva a seleção.
+      if (novo) {
+        setSelection({ ...selection, result: novo });
+      }
+
+      updateSummary({ seguroValor: valor && valor > 0 ? valor : null });
 
       if (!novo) {
         message.warning(
@@ -94,8 +111,6 @@ export function InsuranceField() {
         );
         return;
       }
-
-      setSelection({ ...selection, result: novo });
 
       const diferenca = novo.preco - anterior.preco;
       if (Math.abs(diferenca) >= 0.01) {
@@ -133,7 +148,7 @@ export function InsuranceField() {
           prefix="R$"
           formatter={inputNumberFormatterBRL}
           parser={inputNumberParserBRL}
-          status={abaixoDoMinimo ? "error" : undefined}
+          status={foraDaFaixa ? "error" : undefined}
           disabled={calculateQuotes.isPending}
           style={{ width: 150 }}
         />
@@ -143,7 +158,7 @@ export function InsuranceField() {
             variant="primary"
             size="small"
             loading={calculateQuotes.isPending}
-            disabled={abaixoDoMinimo}
+            disabled={foraDaFaixa}
             onClick={aplicar}
           >
             Aplicar
@@ -157,7 +172,14 @@ export function InsuranceField() {
         </Text>
       )}
 
-      {alterado && !abaixoDoMinimo && (
+      {acimaDoMaximo && (
+        <Text type="danger" style={{ fontSize: 12 }}>
+          Valor máximo de {formatBRL(VALOR_MAXIMO_SEGURO)} — acima disso os
+          Correios recusam a cotação e o serviço deixa de aparecer.
+        </Text>
+      )}
+
+      {alterado && !foraDaFaixa && (
         <ELAlert
           variant="info"
           message="Informar o seguro recalcula o frete — o valor declarado entra no preço da transportadora."
