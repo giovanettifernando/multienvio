@@ -128,6 +128,11 @@ export function InsuranceField() {
 
   if (!results || !selection) return null;
 
+  // Serviço que não aceita valor declarado (PAC dos Correios, por regra deles)
+  // não mostra o campo: aceitar um valor que seria ignorado faz o usuário
+  // achar que contratou uma cobertura que não existe.
+  if (selection.result.aceitaSeguro === false) return null;
+
   return (
     <Flex vertical gap={8} style={{ width: "100%" }}>
       <Flex align="center" gap={8} wrap="wrap">

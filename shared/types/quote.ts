@@ -39,6 +39,13 @@ export type QuoteResultItem = {
   modalidade: string;
   prazoDias: number;
   preco: number;
+  /**
+   * Se o serviço aceita valor declarado (seguro). Ausente ou true = aceita.
+   * Só o PAC dos Correios declara false — regra deles, erro ERP-054 da API.
+   * A tela usa isto para esconder o campo de seguro em vez de aceitar um
+   * valor que seria silenciosamente ignorado.
+   */
+  aceitaSeguro?: boolean;
   exigeSeguro?: boolean;
   source?: 'real' | 'error' | 'quote'; // 'real' = API, 'error' = falha, 'quote' = cotação selecionada
   /** Carrier-specific external service ID (e.g. Loggi externalServiceId) */

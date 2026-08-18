@@ -35,6 +35,7 @@ import {
   type CorreiosMultiVolumeQuoteResult,
   CorreiosApiError,
 } from './types';
+import { servicoAceitaValorDeclarado } from './constants';
 import { correiosVolumeValidator } from './correios-volume-validator';
 import type { VolumeInput, CarrierEligibility, VolumeValidationResult } from '../shared/volume-eligibility';
 
@@ -174,6 +175,7 @@ export function correiosCotacaoToQuoteResult(
     prazoDias: cotacao.prazoDias,
     preco: cotacao.precoTotal,
     exigeSeguro: false, // Correios não exige seguro obrigatório
+    aceitaSeguro: servicoAceitaValorDeclarado(cotacao.codigoServicoCorreios),
     source: 'real',
   };
 }
@@ -259,6 +261,7 @@ function multiVolumeResultToQuoteResult(
     prazoDias: result.deliveryDays,
     preco: result.totalPrice,
     exigeSeguro: false,
+    aceitaSeguro: servicoAceitaValorDeclarado(result.serviceCode),
     source: 'real',
   };
 }
