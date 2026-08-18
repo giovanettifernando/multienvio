@@ -161,9 +161,28 @@ export function QuickCalculator() {
     // Aplicar mesma regra do menu: bloquear se não tiver endereços
     if (hasNoAddresses) {
       router.push('/minha-conta?showOnboarding=true#addresses');
-    } else {
-      router.push('/cotacoes');
+      return;
     }
+
+    // Levar o que já foi digitado aqui para a página de cotação, para o
+    // usuário não redigitar as mesmas medidas. Os nomes dos parâmetros usam a
+    // nomenclatura do formulário de destino (comprimento/largura/altura/peso),
+    // não a desta calculadora (length/width/height/weight).
+    const values = form.getFieldsValue();
+    const params = new URLSearchParams();
+    if (values.originCep) params.set('origemCep', String(values.originCep));
+    if (values.destCep) params.set('destinoCep', String(values.destCep));
+    if (values.length) params.set('comprimento', String(values.length));
+    if (values.width) params.set('largura', String(values.width));
+    if (values.height) params.set('altura', String(values.height));
+    if (values.weight) params.set('peso', String(values.weight));
+    // Sinaliza para a página de cotação disparar o cálculo sozinha — o usuário
+    // já pediu isso aqui. A página remove este parâmetro da URL assim que
+    // dispara, então recarregar ou voltar não cota de novo.
+    params.set('autocalc', '1');
+
+    const query = params.toString();
+    router.push(query ? `/cotacoes?${query}` : '/cotacoes');
   };
 
   const cardTitle = (
@@ -264,25 +283,21 @@ export function QuickCalculator() {
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '4px 8px', marginTop: 4 }}>
+            {/* Ordem igual à do formulário de cotar (Compr., Largura, Altura,
+                Peso) — C × L × A é a convenção de medidas de encomenda, e as
+                duas telas em ordens diferentes convidavam a erro de digitação
+                de quem passa de uma para a outra. */}
             <Form.Item
-              label={<Text style={{ fontSize: '11px', whiteSpace: 'nowrap' }}>Peso (kg)</Text>}
-              name="weight"
-              rules={[{ required: true, message: 'Obrigatório' }]}
-              style={{ marginBottom: 0 }}
-            >
-              <ELInput type="number" placeholder="kg" size="small" step="0.1" />
-            </Form.Item>
-            <Form.Item
-              label={<Text style={{ fontSize: '11px', whiteSpace: 'nowrap' }}>Alt. (cm)</Text>}
-              name="height"
-              rules={[regraDimensaoMinima('altura')]}
+              label={<Text style={{ fontSize: '11px', whiteSpace: 'nowrap' }}>Comp. (cm)</Text>}
+              name="length"
+              rules={[regraDimensaoMinima('comprimento')]}
               style={{ marginBottom: 0 }}
             >
               <ELInput
                 type="number"
-                placeholder={`mín. ${DIMENSOES_MINIMAS_CM.altura}`}
+                placeholder={`mín. ${DIMENSOES_MINIMAS_CM.comprimento}`}
                 size="small"
-                min={DIMENSOES_MINIMAS_CM.altura}
+                min={DIMENSOES_MINIMAS_CM.comprimento}
               />
             </Form.Item>
             <Form.Item
@@ -299,17 +314,25 @@ export function QuickCalculator() {
               />
             </Form.Item>
             <Form.Item
-              label={<Text style={{ fontSize: '11px', whiteSpace: 'nowrap' }}>Comp. (cm)</Text>}
-              name="length"
-              rules={[regraDimensaoMinima('comprimento')]}
+              label={<Text style={{ fontSize: '11px', whiteSpace: 'nowrap' }}>Alt. (cm)</Text>}
+              name="height"
+              rules={[regraDimensaoMinima('altura')]}
               style={{ marginBottom: 0 }}
             >
               <ELInput
                 type="number"
-                placeholder={`mín. ${DIMENSOES_MINIMAS_CM.comprimento}`}
+                placeholder={`mín. ${DIMENSOES_MINIMAS_CM.altura}`}
                 size="small"
-                min={DIMENSOES_MINIMAS_CM.comprimento}
+                min={DIMENSOES_MINIMAS_CM.altura}
               />
+            </Form.Item>
+            <Form.Item
+              label={<Text style={{ fontSize: '11px', whiteSpace: 'nowrap' }}>Peso (kg)</Text>}
+              name="weight"
+              rules={[{ required: true, message: 'Obrigatório' }]}
+              style={{ marginBottom: 0 }}
+            >
+              <ELInput type="number" placeholder="kg" size="small" step="0.1" />
             </Form.Item>
           </div>
 

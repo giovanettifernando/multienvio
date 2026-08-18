@@ -60,14 +60,24 @@ export const toHeaderInfo = (
 };
 
 /**
- * Create an empty volume object
+ * Cria um volume vazio.
+ *
+ * Os campos numéricos nascem `undefined`, não `0`: com zero, o formulário abria
+ * com "0" digitado em todos os campos — o usuário tinha que apagar antes de
+ * escrever, e o texto de dica com o mínimo nunca aparecia. Com `undefined` o
+ * campo fica realmente vazio e mostra a dica (`mín. 10`, `mín. 15`...).
+ *
+ * O cast existe porque o schema de validação exige números (o volume só é
+ * válido preenchido), mas o formulário legitimamente passa por um estado vazio
+ * antes de o usuário digitar. O grid já trata `undefined` (`value ?? undefined`)
+ * e a validação acusa o campo vazio normalmente no envio.
  */
 export const createEmptyVolume = (): QuoteFormValues["volumes"][number] => ({
   id: generateUUID(),
-  comprimentoCm: 0,
-  larguraCm: 0,
-  alturaCm: 0,
-  pesoKg: 0,
+  comprimentoCm: undefined as unknown as number,
+  larguraCm: undefined as unknown as number,
+  alturaCm: undefined as unknown as number,
+  pesoKg: undefined as unknown as number,
 });
 
 /**

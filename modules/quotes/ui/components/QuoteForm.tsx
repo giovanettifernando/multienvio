@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   useELApp,
@@ -83,7 +84,6 @@ import {
   toHeaderInfo,
 } from "./quoteFormHelpers";
 import { DestinationModeSelector } from "./DestinationModeSelector";
-import { InsuranceInput } from "./InsuranceInput";
 import { PickupToggle } from "./PickupToggle";
 import { ReverseToggle } from "./ReverseToggle";
 import { VolumesGrid, DEFAULT_CUBAGE_FACTOR } from "./VolumesGrid";
@@ -184,9 +184,46 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
   // Use imported helper function (stable reference at module level)
   const mapStoreAddressToCompany = mapStoreAddressToCompanyFn;
 
-  const defaultVolumes = storedForm?.volumes?.length
-    ? storedForm.volumes.map((item) => ({ ...item }))
-    : [createEmptyVolume()];
+  // Medidas vindas da calculadora rápida do dashboard (via query string).
+  // Quem acabou de digitar as medidas lá não deve precisar redigitá-las aqui,
+  // então elas têm prioridade sobre o rascunho salvo de uma sessão anterior.
+  const searchParams = useSearchParams();
+  const prefill = useMemo(() => {
+    const num = (key: string) => {
+      const raw = searchParams.get(key);
+      if (!raw) return undefined;
+      const parsed = Number(raw.replace(",", "."));
+      return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
+    };
+    return {
+      comprimentoCm: num("comprimento"),
+      larguraCm: num("largura"),
+      alturaCm: num("altura"),
+      pesoKg: num("peso"),
+      origemCep: searchParams.get("origemCep") ?? undefined,
+      destinoCep: searchParams.get("destinoCep") ?? undefined,
+    };
+  }, [searchParams]);
+
+  const hasPrefilledVolume =
+    prefill.comprimentoCm !== undefined ||
+    prefill.larguraCm !== undefined ||
+    prefill.alturaCm !== undefined ||
+    prefill.pesoKg !== undefined;
+
+  const defaultVolumes = hasPrefilledVolume
+    ? [
+        {
+          ...createEmptyVolume(),
+          ...(prefill.comprimentoCm !== undefined ? { comprimentoCm: prefill.comprimentoCm } : {}),
+          ...(prefill.larguraCm !== undefined ? { larguraCm: prefill.larguraCm } : {}),
+          ...(prefill.alturaCm !== undefined ? { alturaCm: prefill.alturaCm } : {}),
+          ...(prefill.pesoKg !== undefined ? { pesoKg: prefill.pesoKg } : {}),
+        },
+      ]
+    : storedForm?.volumes?.length
+      ? storedForm.volumes.map((item) => ({ ...item }))
+      : [createEmptyVolume()];
 
   const formMethods = useForm<QuoteFormValues>({
     resolver: zodResolver(quoteFormSchema),
@@ -199,12 +236,16 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
       modoDestino: "manual",
       remetenteRecorrenteId: null,
       destinatarioRecorrenteId: null,
-      origemCep: storedForm?.origemCep
+      origemCep: prefill.origemCep
+        ? maskCEP(prefill.origemCep)
+        : storedForm?.origemCep
         ? maskCEP(storedForm.origemCep)
         : defaultCompanyAddress?.cep
         ? maskCEP(defaultCompanyAddress.cep)
         : "",
-      destinoCep: storedForm?.destinoCep
+      destinoCep: prefill.destinoCep
+        ? maskCEP(prefill.destinoCep)
+        : storedForm?.destinoCep
         ? maskCEP(storedForm.destinoCep)
         : storedDestinationAddress?.cep
         ? maskCEP(storedDestinationAddress.cep)
@@ -303,19 +344,29 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
   // Estados para destinatário
   const { destination, setDestination, setPickupAtOrigin } = useQuoteDraft();
   const [destinationMode, setDestinationMode] = useState<"manual" | "recipient">(
-    destination?.mode ?? "recipient"
+    // Vindo da calculadora do dashboard com um CEP de destino, abrir já na aba
+    // "informar manualmente" — é a única onde o campo de CEP aparece. Sem isso
+    // o valor era preenchido mas ficava invisível, atrás da aba de
+    // destinatário salvo.
+    prefill.destinoCep ? "manual" : destination?.mode ?? "recipient"
   );
   const [selectedRecipientId, setSelectedRecipientId] = useState<string | null>(
     destination?.recipientId ?? null
   );
 
-  // Sincronizar estados locais quando destination do store for limpo
+  // Sincronizar estados locais quando destination do store for limpo.
+  //
+  // Exceção: quando o CEP de destino veio da calculadora do dashboard, o
+  // rascunho está vazio (não há destinatário escolhido) e este efeito
+  // reverteria a aba para "destinatário salvo" logo após a montagem —
+  // escondendo o CEP que acabamos de preencher. Nesse caso a aba manual é
+  // justamente a intenção do usuário.
   useEffect(() => {
-    if (!destination) {
+    if (!destination && !prefill.destinoCep) {
       setDestinationMode("recipient");
       setSelectedRecipientId(null);
     }
-  }, [destination]);
+  }, [destination, prefill.destinoCep]);
 
   // Ref para rastrear o updatedAt do storedForm anterior
   // Isso permite detectar quando o store foi resetado (mudou de dados -> vazio)
@@ -1037,6 +1088,52 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
     }
   };
 
+  // Vindo da calculadora do dashboard, o CEP de destino chega preenchido mas
+  // nunca passou pelo blur — então cidade/UF ficam vazios e o formulário
+  // continua inválido, com o botão Calcular desabilitado sem explicação. Aqui
+  // disparamos a mesma resolução que o blur faria, uma única vez.
+  const prefillResolvedRef = useRef(false);
+  useEffect(() => {
+    if (prefillResolvedRef.current) return;
+    if (!prefill.destinoCep) return;
+    if (normalizeCep(prefill.destinoCep).length !== 8) return;
+
+    prefillResolvedRef.current = true;
+    void handleClientBlur();
+    // handleClientBlur é recriada a cada render; a ref acima garante execução
+    // única, então não entra nas dependências.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prefill.destinoCep]);
+
+  // Cotar automaticamente quando o usuário chega da calculadora do dashboard:
+  // ele já pediu o cálculo lá, repetir o clique aqui é trabalho à toa.
+  //
+  // A trava é obrigatória — cotar chama as APIs das transportadoras, que são
+  // lentas e algumas cobradas por consulta. O sinal vem no parâmetro
+  // `autocalc` da URL e é REMOVIDO da URL assim que dispara: recarregar ou
+  // voltar pelo histórico cai numa URL sem o sinal e não cota de novo, mas
+  // uma navegação nova a partir do dashboard traz o sinal outra vez.
+  const autoCalcRef = useRef(false);
+  useEffect(() => {
+    if (autoCalcRef.current) return;
+    if (searchParams.get("autocalc") !== "1") return;
+    if (!canSubmit) return; // espera o CEP terminar de resolver
+
+    autoCalcRef.current = true;
+
+    // Tira o sinal da URL sem recarregar a página nem criar entrada no
+    // histórico, para que F5 e "voltar" não redisparem.
+    const limpa = new URLSearchParams(searchParams.toString());
+    limpa.delete("autocalc");
+    const qs = limpa.toString();
+    window.history.replaceState(null, "", qs ? `?${qs}` : window.location.pathname);
+
+    void handleSubmit(onSubmit)();
+    // Só precisa reagir a canSubmit virar true; o resto é estável ou
+    // protegido pela ref acima.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canSubmit, searchParams]);
+
   const onSubmit: SubmitHandler<QuoteFormValues> = async (values) => {
     const payload: QuoteRequestPayload = {
       origem: { cep: values.origemCep },
@@ -1337,8 +1434,11 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
                 destinationCard={destinationCardNode}
               />
 
-              <Flex justify="space-between" align="flex-start" wrap="wrap" gap={16}>
-                <InsuranceInput control={control} />
+              {/* O campo de seguro saiu daqui e foi para a tela de finalizar
+                  envio. Como o valor declarado entra no preço cobrado pelas
+                  transportadoras, informá-lo lá dispara uma nova cotação do
+                  serviço escolhido — ver `InsuranceField` em FinalizarClient. */}
+              <Flex justify="flex-end" align="flex-start" wrap="wrap" gap={16}>
                 <ReverseToggle
                   isReverse={isReverse}
                   onChange={handleReverseToggle}
