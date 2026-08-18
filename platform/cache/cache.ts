@@ -1077,6 +1077,13 @@ export type QuoteCacheParams = {
   width?: number;
   height?: number;
   carrier?: string;
+  /**
+   * Valor declarado (seguro) em reais. FAZ PARTE DA CHAVE porque muda o preço
+   * cotado — medido no SEDEX, R$ 1.000 de seguro custam ~R$ 10 a mais. Sem
+   * ele, cotar a mesma rota sem seguro e depois com seguro devolvia o
+   * resultado guardado da primeira consulta.
+   */
+  declaredValue?: number;
 };
 
 /**
@@ -1098,6 +1105,12 @@ function generateQuoteCacheKey(params: QuoteCacheParams): string {
   // Incluir transportadora se específica
   if (params.carrier) {
     parts.push(params.carrier.toLowerCase());
+  }
+
+  // Incluir valor declarado — sem isto, cotação com e sem seguro compartilham
+  // a mesma chave e o preço nunca muda para o usuário.
+  if (params.declaredValue) {
+    parts.push(`vd${Math.round(params.declaredValue * 100)}`);
   }
 
   return parts.join(':');
