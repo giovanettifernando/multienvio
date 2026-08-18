@@ -32,6 +32,8 @@ type LabelPreviewProps = {
   recipientPays?: boolean;
   /** Handler para mudanca do toggle */
   onRecipientPaysChange?: (checked: boolean) => void;
+  /** Conteúdo extra no rodapé do card (ex.: campo de seguro, que altera o preço). */
+  footer?: React.ReactNode;
 };
 
 const currency = new Intl.NumberFormat("pt-BR", {
@@ -49,6 +51,7 @@ export function LabelPreview({
   showRecipientPaysToggle = false,
   recipientPays = false,
   onRecipientPaysChange,
+  footer,
 }: LabelPreviewProps) {
   const hasPickupFee = pickupFee && pickupFee.feeAmount > 0;
   const total = hasPickupFee ? preco + pickupFee.feeAmount : preco;
@@ -138,6 +141,12 @@ export function LabelPreview({
             </Typography.Text>
           )}
         </div>
+
+        {/* Espaço para conteúdo que altera o preço acima — hoje o campo de
+            seguro. Fica dentro deste card, e não como card próprio, porque a
+            grade da tela de finalizar tem colunas fixas: um quarto card
+            espremia o de pagamento. */}
+        {footer}
       </Space>
     </Card>
   );

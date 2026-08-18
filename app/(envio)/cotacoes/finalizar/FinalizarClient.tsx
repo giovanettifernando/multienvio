@@ -28,6 +28,7 @@ import { DocumentChooser } from "@/modules/quotes/ui/components/DocumentChooser"
 import { PostingUnitPicker } from "@/modules/quotes/ui/components/PostingUnitPicker";
 import { RecipientModal } from "@/modules/quotes/ui/components/RecipientModal";
 import { LabelPreview } from "@/modules/quotes/ui/components/LabelPreview";
+import { InsuranceField } from "@/modules/quotes/ui/components/InsuranceField";
 import { ResultsBanner } from "@/modules/quotes/ui/components/ResultsBanner";
 import { useQuoteStore } from '@/modules/quotes/ui/state/useQuoteStore';
 import { useCartAdd } from "@/modules/cart/ui/hooks";
@@ -1740,6 +1741,9 @@ export default function FinalizarClient() {
               showRecipientPaysToggle
               recipientPays={recipientPays}
               onRecipientPaysChange={handleRecipientPaysToggle}
+              // Seguro (valor declarado) fica junto do preço que ele altera:
+              // informá-lo dispara nova cotação e atualiza o frete acima.
+              footer={<InsuranceField />}
             />
             <ELCard
               header={{ title: "Pagamento" }}
