@@ -75,7 +75,12 @@ export const GET = withApiHandler<GetAddressesResponse>(async (context) => {
         updatedAt: addr.updatedAt.toISOString(),
       })),
     },
-    headers: { 'Cache-Control': 'private, max-age=300' }, // 5min — endereços mudam raramente
+    // `no-store`: o cache anterior (`private, max-age=300`) fazia o navegador
+    // servir a lista antiga por 5 minutos SEM perguntar ao servidor — nem o F5
+    // resolvia. Quem acabou de criar, editar ou remover um endereço é
+    // justamente quem mais precisa ver o estado novo, e a lista é pequena e
+    // barata de buscar.
+    headers: { 'Cache-Control': 'no-store' },
   };
 });
 
