@@ -385,6 +385,11 @@ export async function createQuote(
           deliveryDays: option.prazoDias,
           metadata: {
             exigeSeguro: option.exigeSeguro,
+            // Precisa ser persistido: a resposta é remontada a partir do banco
+            // mais abaixo, campo a campo. Sem guardar aqui, a informação de que
+            // o serviço não aceita seguro (PAC dos Correios) se perde no
+            // caminho e a tela oferece um campo que seria ignorado.
+            aceitaSeguro: option.aceitaSeguro,
             platformCommissionCents: option.comissaoCentavos, // Registro explícito da comissão
             ...(option.externalServiceId ? { externalServiceId: option.externalServiceId } : {}),
           },
@@ -414,7 +419,10 @@ export async function createQuote(
   };
 
   const results: QuoteResultItem[] = quote.options.map((opt) => {
-    const metadata = opt.metadata as { exigeSeguro?: boolean } | null;
+    const metadata = opt.metadata as {
+      exigeSeguro?: boolean;
+      aceitaSeguro?: boolean;
+    } | null;
     return {
       id: opt.serviceId,
       carrier: opt.carrierName,
@@ -422,6 +430,8 @@ export async function createQuote(
       prazoDias: opt.deliveryDays,
       preco: opt.totalCents / 100,
       exigeSeguro: metadata?.exigeSeguro ?? false,
+      // Ausente = aceita (só o PAC dos Correios grava false).
+      aceitaSeguro: metadata?.aceitaSeguro ?? true,
     };
   });
 
