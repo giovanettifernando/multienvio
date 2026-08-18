@@ -48,3 +48,6 @@ public/uploads/
 
 # Logs (pino-roll)
 logs/
+
+# Notas locais — nunca versionar (anotações pessoais, pesquisas, rascunhos)
+notas-locais/
