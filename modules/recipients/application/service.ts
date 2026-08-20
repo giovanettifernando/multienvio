@@ -340,6 +340,12 @@ export async function processRecipientPayment(
         recipientEmail: request.recipientEmail,
         recipientDocument: request.recipientDocument,
         originCep: request.originCep,
+        originAddress: [request.originAddress, request.originNumber, request.originComplement]
+          .filter(Boolean).join(', ') || null,
+        originNeighborhood: request.originNeighborhood,
+        originCity: request.originCity,
+        originState: request.originState,
+        senderName: request.sender.razaoSocial || request.sender.name,
         destinationCep: request.destinationCep,
         destinationAddress: [
           request.destinationAddress,

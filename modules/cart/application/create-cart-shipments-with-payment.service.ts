@@ -18,7 +18,7 @@ import { prisma } from '@/platform/db/db';
 import { createShipmentWithVolumes } from '@/modules/shipments/application/create-with-volumes';
 // Eventos de rastreamento virão dos Correios via webhook/sync
 import { ShipmentStatus } from '@/modules/shipments/application/shipment-status';
-import { calculateCommissionsInCents } from '@/modules/quotes/application/commission';
+import { calculateCommissionsInCents, calculateInsuranceCommission, resolveCarrierSlugByName } from '@/modules/quotes/application/commission';
 import { integrateWithCarrier } from '@/modules/shipments/application/carrier-integration';
 import { sendShipmentTrackingEmail } from '@/platform/email/mailer';
 import { logger } from '@/platform/logging/logger';
@@ -621,10 +621,19 @@ async function createShipmentFromCartItem(
 
   // Calcular comissoes
   const pickupFeeAmount = pickupFeeData?.feeAmount ?? 0;
-  const freightCostCents = Math.round(selectedQuote.price * 100);
   const pickupFeeCents = Math.round(pickupFeeAmount * 100);
-  // Determinar carrierSlug baseado no nome da transportadora
-  const carrierSlug = selectedQuote.carrier.toLowerCase().includes('correio') ? 'correios' : selectedQuote.carrier.toLowerCase();
+  const carrierSlug = resolveCarrierSlugByName(selectedQuote.carrier) ?? '';
+
+  // O preco da cotacao ja vem com as duas comissoes somadas. A de frete e
+  // recalculada de tras para frente a partir do preco, entao a de seguro
+  // precisa sair antes — senao ela seria contada como receita de frete.
+  const { commissionAmount: insuranceCommission } = await calculateInsuranceCommission(
+    declaredValue,
+    carrierSlug
+  );
+  const insuranceCommissionCents = Math.round(insuranceCommission * 100);
+  const freightCostCents = Math.round(selectedQuote.price * 100) - insuranceCommissionCents;
+
   const { shippingCommissionCents, pickupCommissionCents } = await calculateCommissionsInCents(
     freightCostCents,
     pickupFeeCents,
@@ -674,6 +683,15 @@ async function createShipmentFromCartItem(
       recipientEmail: destination.email,
       recipientDocument: destination.documento,
       originCep: originAddress.cep,
+      // Endereço de origem congelado no envio, no mesmo formato do destino
+      // abaixo. Antes só o CEP era guardado e as telas não tinham como
+      // mostrar de onde a encomenda saiu.
+      originAddress: [originAddress.logradouro, originAddress.numero, originAddress.complemento]
+        .filter(Boolean)
+        .join(', ') || null,
+      originNeighborhood: originAddress.bairro || null,
+      originCity: originAddress.cidade || null,
+      originState: originAddress.uf || null,
       destinationCep: destination.cep,
       destinationAddress: [destination.logradouro, destination.numero, destination.complemento]
         .filter(Boolean)
@@ -692,6 +710,7 @@ async function createShipmentFromCartItem(
       paymentMethod, // JÁ DEFINIDO
       platformShippingCommissionCents: shippingCommissionCents > 0 ? shippingCommissionCents : null,
       platformPickupCommissionCents: pickupCommissionCents > 0 ? pickupCommissionCents : null,
+      platformInsuranceCommissionCents: insuranceCommissionCents > 0 ? insuranceCommissionCents : null,
     },
     volumes: volumes.map((vol) => ({
       peso: vol.pesoKg || 0,

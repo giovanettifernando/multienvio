@@ -25,7 +25,8 @@ import {
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useShallow } from "zustand/react/shallow";
 import { DocumentChooser } from "@/modules/quotes/ui/components/DocumentChooser";
-import { PostingUnitPicker } from "@/modules/quotes/ui/components/PostingUnitPicker";
+// PostingUnitPicker: card de unidade de postagem ocultado a pedido do produto.
+// O componente continua no projeto; reimportar aqui para reativar.
 import { RecipientModal } from "@/modules/quotes/ui/components/RecipientModal";
 import { LabelPreview } from "@/modules/quotes/ui/components/LabelPreview";
 import { InsuranceField } from "@/modules/quotes/ui/components/InsuranceField";
@@ -1901,9 +1902,12 @@ export default function FinalizarClient() {
 
           {/* Formulários */}
           <Space orientation="vertical" size={24} style={{ width: "100%", marginTop: 24 }}>
+            {/* Unidade de postagem ocultada a pedido do produto. A escolha
+                já não era obrigatória (preconditionsOk mantém pickupPoint
+                sempre true), então esconder o card não bloqueia o avanço.
+                O componente segue no projeto para reativação futura. */}
             <ELGrid variant="forms" gap="xl">
               <DocumentChooser />
-              <PostingUnitPicker />
             </ELGrid>
           </Space>
 

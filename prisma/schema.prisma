@@ -188,6 +188,22 @@ model Shipment {
   carrier                         String?
   service                         String?
   originCep                       String
+  // Endereço de origem COMPLETO, congelado no momento do envio.
+  //
+  // Antes só o CEP era guardado, e a tela tinha de adivinhar o resto pelo
+  // cadastro do usuário — o que dá errado quando ele muda de endereço: envios
+  // passados passariam a exibir um endereço de onde a encomenda nunca saiu.
+  // O destino já era guardado assim; a origem ficou de fora por descuido.
+  originAddress                   String?
+  originNeighborhood              String?
+  originCity                      String?
+  originState                     String?
+  senderName                      String?
+  // CPF/CNPJ do remetente, congelado junto com o nome. A declaracao de
+  // conteudo exige identificar remetente e destinatario, e ler isso do
+  // cadastro do usuario na hora de imprimir daria o documento atual, nao o de
+  // quem enviou.
+  senderDocument                  String?
   destinationCep                  String
   estimatedDays                   Int?
   freightCost                     Float?
@@ -205,6 +221,10 @@ model Shipment {
   // Campos de comissão da plataforma (para reconciliação)
   platformShippingCommissionCents Int?                     @map("platform_shipping_commission_cents") // Comissão sobre frete em centavos
   platformPickupCommissionCents   Int?                     @map("platform_pickup_commission_cents") // Comissão sobre coleta em centavos
+  // Comissão sobre o seguro, em centavos. Fica separada da de frete porque o
+  // preço da cotação já traz as duas somadas: sem separar, a comissão de
+  // seguro seria contabilizada como se fosse receita de frete.
+  platformInsuranceCommissionCents Int?                    @map("platform_insurance_commission_cents")
   recipient                       User?                    @relation("RecipientShipments", fields: [recipientId], references: [id])
   sender                          User                     @relation("SenderShipments", fields: [senderId], references: [id])
   trackingEvents                  TrackingEvent[]
@@ -662,6 +682,11 @@ model Carrier {
   description               String?
   /// Comissao sobre frete (%) - aplicada nas cotacoes desta transportadora
   shippingCommissionPercent Decimal?               @map("shipping_commission_percent") @db.Decimal(5, 2)
+  /// Comissao de seguro: pontos percentuais somados sobre o VALOR DECLARADO.
+  /// Ex.: transportadora cobra 2% de valor declarado e este campo e 1 -> o
+  /// cliente paga 3%, e 1% do valor declarado fica com a plataforma.
+  /// Nao depende da tarifa interna da transportadora, entao vale para todas.
+  insuranceCommissionPercent Decimal?              @map("insurance_commission_percent") @db.Decimal(5, 2)
   createdAt                 DateTime               @default(now())
   updatedAt                 DateTime               @updatedAt
   credentials               CarrierCredential[]

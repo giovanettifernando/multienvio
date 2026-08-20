@@ -10,6 +10,7 @@ const App = { useApp: useELApp };
 import { ELCard } from '@/shared/ui/ELCard';
 import {
   PrinterOutlined,
+  FileTextOutlined,
   StopOutlined,
   GlobalOutlined,
   CarOutlined,
@@ -17,6 +18,7 @@ import {
   ExclamationCircleOutlined,
 } from "@ant-design/icons";
 import Link from "next/link";
+import { fetchAndPrintShipmentDocument } from "@/modules/labels/infra/print-shipment-declaration";
 import { useShipments, useShipmentCancel } from "@/modules/shipments/ui/hooks";
 import type { Shipment, ShipmentStatus } from '@/shared/types/shipments';
 import { PageShell } from '@/shared/ui/PageShell';
@@ -96,6 +98,9 @@ export default function ShipmentsClient() {
   const [selectedShipmentForLabel, setSelectedShipmentForLabel] = useState<Shipment | null>(null);
   const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
   const [shipmentToCancel, setShipmentToCancel] = useState<Shipment | null>(null);
+  // Id do envio cuja declaração está sendo montada — a listagem não traz os
+  // volumes, então é preciso buscar o detalhe antes de gerar o PDF.
+  const [printingDocumentId, setPrintingDocumentId] = useState<string | null>(null);
 
   const { data, isLoading, refetch } = useShipments({ q: query, status, page, limit: pageSize });
   const cancelMut = useShipmentCancel();
@@ -228,6 +233,17 @@ export default function ShipmentsClient() {
     }
   }, [shipmentToCancel, cancelMut, message, handleCloseCancelConfirm]);
 
+  const handlePrintDocument = useCallback(async (shipmentId: string) => {
+    setPrintingDocumentId(shipmentId);
+    try {
+      await fetchAndPrintShipmentDocument(shipmentId);
+    } catch (err) {
+      message.error(err instanceof Error ? err.message : 'Não foi possível gerar a declaração.');
+    } finally {
+      setPrintingDocumentId(null);
+    }
+  }, [message]);
+
   const columns: DataTableColumn<Shipment>[] = useMemo(
     () => [
       // COLUNA 1: Envio (código + destinatário + cidade/UF)
@@ -350,6 +366,15 @@ export default function ShipmentsClient() {
                   onClick={() => handleOpenLabelModal(row)}
                 />
               </Tooltip>
+              <Tooltip title="Imprimir declaração de conteúdo">
+                <ELButton
+                  variant="ghost"
+                  size="small"
+                  icon={<FileTextOutlined />}
+                  loading={printingDocumentId === row.id}
+                  onClick={() => handlePrintDocument(row.id)}
+                />
+              </Tooltip>
               <Tooltip title="Abrir rastreio">
                 <ELButton
                   variant="ghost"
@@ -384,7 +409,7 @@ export default function ShipmentsClient() {
         },
       },
     ],
-    [cancelMut, handleOpenLabelModal, handleOpenDivergenceModal, handleOpenCancelConfirm],
+    [cancelMut, handleOpenLabelModal, handleOpenDivergenceModal, handleOpenCancelConfirm, handlePrintDocument, printingDocumentId],
   );
 
   return (

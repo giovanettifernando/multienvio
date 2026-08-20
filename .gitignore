@@ -51,3 +51,10 @@ logs/
 
 # Notas locais — nunca versionar (anotações pessoais, pesquisas, rascunhos)
 notas-locais/
+
+# Logs de desenvolvimento local (pnpm dev / pnpm workers)
+dev-server.log
+workers.log
+
+# Documentos gerados em runtime (declarações, etiquetas)
+storage/generated-documents/

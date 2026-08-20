@@ -12,11 +12,12 @@ const App = { useApp: useELApp };
 import { ELButton } from '@/shared/ui/ELButton';
 import { ELGrid, ELGridSpanFull } from '@/shared/ui/ELGrid';
 import { ShareAltOutlined, CopyOutlined, PrinterOutlined } from "@ant-design/icons";
-import { formatBRL } from "@/shared/utils/format";
+import { formatBRL, formatPaymentMethod } from "@/shared/utils/format";
 import { useQuery } from "@tanstack/react-query";
 import { TrackingTimeline } from "@/modules/tracking/ui/components/TrackingTimeline";
 import { PageShell } from '@/shared/ui/PageShell';
 import { ShipmentLabelPdfModal } from "@/modules/labels/ui/components";
+import { printShipmentDocument, isNFeShipment } from "@/modules/labels/infra/print-shipment-declaration";
 import { useState, useMemo } from "react";
 import { generatePublicTimeline, type PublicTrackingEvent } from "@/modules/shipments/application/public-tracking-status";
 
@@ -103,6 +104,12 @@ interface ShipmentDetail {
   declaredValue: number | null;
   weight: number | null;
   originCep: string;
+  originAddress: string | null;
+  originNeighborhood: string | null;
+  originCity: string | null;
+  originState: string | null;
+  senderName: string | null;
+  senderDocument: string | null;
   destinationCep: string;
   destinationCity: string;
   destinationState: string;
@@ -205,6 +212,17 @@ export default function ShipmentDetailClient() {
     }));
   }, [shipment]);
 
+  // Montagem do documento vive em print-shipment-declaration para a listagem
+  // (que só tem o id do envio) imprimir exatamente o mesmo PDF.
+  const handlePrintDocument = () => {
+    if (!shipment) return;
+    if (shipment.volumes.length === 0) {
+      message.warning('Este envio não tem volumes para imprimir.');
+      return;
+    }
+    printShipmentDocument(shipment);
+  };
+
   return (
     <PageShell
       title="Detalhes do envio"
@@ -227,6 +245,13 @@ export default function ShipmentDetailClient() {
               </Tooltip>
             );
           })()}
+          {shipment && shipment.volumes.length > 0 && (
+            <Tooltip title="Gerar o PDF e abrir a impressão">
+              <ELButton icon={<PrinterOutlined />} onClick={handlePrintDocument}>
+                {isNFeShipment(shipment) ? 'Imprimir NF-e' : 'Imprimir Declaração'}
+              </ELButton>
+            </Tooltip>
+          )}
           {shipment?.publicTrackingId && (
             <>
               <ELButton
@@ -281,12 +306,30 @@ export default function ShipmentDetailClient() {
               <div>
                 <Text type="secondary">Método de pagamento</Text>
                 <div style={{ marginTop: 4 }}>
-                  {shipment.paymentMethod ? (
-                    shipment.paymentMethod === 'wallet' ? 'Carteira' :
-                    shipment.paymentMethod === 'pix' ? 'PIX' :
-                    shipment.paymentMethod === 'card' ? 'Cartão' :
-                    shipment.paymentMethod
-                  ) : 'Não informado'}
+                  {formatPaymentMethod(shipment.paymentMethod)}
+                </div>
+              </div>
+              <div>
+                <Text type="secondary">Remetente</Text>
+                <div style={{ marginTop: 4 }}>{shipment.senderName || 'Não informado'}</div>
+              </div>
+              <div>
+                <Text type="secondary">Endereço de origem</Text>
+                <div style={{ marginTop: 4 }}>
+                  {/* Envios criados antes de a origem passar a ser gravada só
+                      têm o CEP — por isso o fallback em vez de "Não informado". */}
+                  {shipment.originAddress ? (
+                    <>
+                      {shipment.originAddress}
+                      {shipment.originNeighborhood ? ` - ${shipment.originNeighborhood}` : ''}
+                      <br />
+                      {[shipment.originCity, shipment.originState].filter(Boolean).join('/')}
+                      {shipment.originCity ? ' - ' : ''}
+                      {shipment.originCep}
+                    </>
+                  ) : (
+                    shipment.originCep
+                  )}
                 </div>
               </div>
               <div>
@@ -294,14 +337,19 @@ export default function ShipmentDetailClient() {
                 <div style={{ marginTop: 4 }}>{shipment.recipientName || 'Não informado'}</div>
               </div>
               <div>
-                <Text type="secondary">Cidade destino</Text>
+                <Text type="secondary">Endereço de destino</Text>
                 <div style={{ marginTop: 4 }}>
-                  {shipment.destinationCity}, {shipment.destinationState}
+                  {shipment.destinationAddress ? (
+                    <>
+                      {shipment.destinationAddress}
+                      {shipment.destinationNeighborhood ? ` - ${shipment.destinationNeighborhood}` : ''}
+                      <br />
+                      {shipment.destinationCity}/{shipment.destinationState} - {shipment.destinationCep}
+                    </>
+                  ) : (
+                    shipment.destinationCep
+                  )}
                 </div>
-              </div>
-              <div>
-                <Text type="secondary">CEP destino</Text>
-                <div style={{ marginTop: 4 }}>{shipment.destinationCep}</div>
               </div>
               <div>
                 <Text type="secondary">Transportadora</Text>

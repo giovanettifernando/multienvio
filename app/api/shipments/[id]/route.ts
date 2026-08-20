@@ -94,6 +94,12 @@ interface ShipmentDetail {
   carrier: string | null;
   service: string | null;
   originCep: string;
+  originAddress: string | null;
+  originNeighborhood: string | null;
+  originCity: string | null;
+  originState: string | null;
+  senderName: string | null;
+  senderDocument: string | null;
   destinationCep: string;
   estimatedDays: number | null;
   freightCost: number | null;

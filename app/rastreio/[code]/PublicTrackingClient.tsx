@@ -14,6 +14,7 @@ import { ELAlert } from '@/shared/ui/ELAlert';
 import { ELStatusTag, type StatusVariant } from '@/shared/ui/ELStatusTag';
 import { ELSkeleton } from '@/shared/ui/ELSkeleton';
 import { ELGrid, ELFlex } from '@/shared/ui/ELGrid';
+import { formatBRL, formatPaymentMethod } from "@/shared/utils/format";
 
 const { Text } = Typography;
 
@@ -43,9 +44,20 @@ type TrackingData = {
   service: string;
   origin: {
     cep: string;
+    address: string | null;
+    neighborhood: string | null;
+    city: string | null;
+    state: string | null;
   };
+  senderName: string | null;
+  recipientName: string | null;
+  senderDocument: string | null;
+  recipientDocument: string | null;
+  paymentMethod: string | null;
   destination: {
     cep: string;
+    address: string | null;
+    neighborhood: string | null;
     city: string;
     state: string;
   };
@@ -154,13 +166,50 @@ export default function PublicTrackingClient() {
               <Text type="secondary" style={{ fontSize: 12 }}>Serviço</Text>
               <div><Text strong>{data.service}</Text></div>
             </div>
+            {data.senderName && (
+              <div>
+                <Text type="secondary" style={{ fontSize: 12 }}>Remetente</Text>
+                <div><Text strong>{data.senderName}</Text></div>
+              </div>
+            )}
             <div>
               <Text type="secondary" style={{ fontSize: 12 }}>Origem</Text>
-              <div><Text>{data.origin.cep}</Text></div>
+              <div>
+                {/* Envios antigos só têm o CEP gravado — daí o fallback. */}
+                {data.origin.address ? (
+                  <Text>
+                    {data.origin.address}
+                    {data.origin.neighborhood ? ` - ${data.origin.neighborhood}` : ''}
+                    <br />
+                    {[data.origin.city, data.origin.state].filter(Boolean).join('/')}
+                    {data.origin.city ? ' - ' : ''}
+                    {data.origin.cep}
+                  </Text>
+                ) : (
+                  <Text>{data.origin.cep}</Text>
+                )}
+              </div>
             </div>
+            {data.recipientName && (
+              <div>
+                <Text type="secondary" style={{ fontSize: 12 }}>Destinatário</Text>
+                <div><Text strong>{data.recipientName}</Text></div>
+              </div>
+            )}
             <div>
               <Text type="secondary" style={{ fontSize: 12 }}>Destino</Text>
-              <div><Text>{data.destination.city}/{data.destination.state} - {data.destination.cep}</Text></div>
+              <div>
+                {data.destination.address ? (
+                  <Text>
+                    {data.destination.address}
+                    {data.destination.neighborhood ? ` - ${data.destination.neighborhood}` : ''}
+                    <br />
+                    {data.destination.city}/{data.destination.state} - {data.destination.cep}
+                  </Text>
+                ) : (
+                  <Text>{data.destination.city}/{data.destination.state} - {data.destination.cep}</Text>
+                )}
+              </div>
             </div>
             {data.estimatedDays && (
               <div>
@@ -174,6 +223,24 @@ export default function PublicTrackingClient() {
                 <div><Text>{data.weight} kg</Text></div>
               </div>
             )}
+            <div>
+              <Text type="secondary" style={{ fontSize: 12 }}>Valor do frete</Text>
+              <div><Text>{data.freightCost ? formatBRL(data.freightCost) : 'Não informado'}</Text></div>
+            </div>
+            <div>
+              <Text type="secondary" style={{ fontSize: 12 }}>Valor declarado</Text>
+              <div><Text>{data.declaredValue ? formatBRL(data.declaredValue) : 'Não informado'}</Text></div>
+            </div>
+            <div>
+              <Text type="secondary" style={{ fontSize: 12 }}>Método de pagamento</Text>
+              <div>
+                <Text>{formatPaymentMethod(data.paymentMethod)}</Text>
+              </div>
+            </div>
+            <div>
+              <Text type="secondary" style={{ fontSize: 12 }}>Criado em</Text>
+              <div><Text>{new Date(data.createdAt).toLocaleString("pt-BR")}</Text></div>
+            </div>
             {data.postedAt && (
               <div>
                 <Text type="secondary" style={{ fontSize: 12 }}>Data de postagem</Text>
@@ -196,6 +263,10 @@ export default function PublicTrackingClient() {
             trackingCode: data.trackingCode,
             carrier: data.carrier,
             service: data.service,
+            senderName: data.senderName,
+            senderDocument: data.senderDocument,
+            recipientName: data.recipientName,
+            recipientDocument: data.recipientDocument,
             origin: data.origin,
             destination: data.destination,
             createdAt: data.createdAt,

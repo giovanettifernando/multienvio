@@ -17,7 +17,7 @@ import { prisma } from '@/platform/db/db';
 import { createShipmentWithVolumes } from '@/modules/shipments/application/create-with-volumes';
 // Eventos de rastreamento virão dos Correios via webhook/sync
 import { ShipmentStatus } from '@/modules/shipments/application/shipment-status';
-import { calculateCommissionsInCents } from '@/modules/quotes/application/commission';
+import { calculateCommissionsInCents, calculateInsuranceCommission, resolveCarrierSlugByName } from '@/modules/quotes/application/commission';
 import { integrateWithCarrier } from '@/modules/shipments/application/carrier-integration';
 import { logger } from '@/platform/logging/logger';
 import { ApiError } from '@/platform/api/errors';
@@ -267,10 +267,17 @@ async function createShipmentFromCartItem(
 
   // Calcular comissoes
   const pickupFeeAmount = pickupFeeData?.feeAmount ?? 0;
-  const freightCostCents = Math.round(selectedQuote.price * 100);
   const pickupFeeCents = Math.round(pickupFeeAmount * 100);
-  // Determinar carrierSlug baseado no nome da transportadora
-  const carrierSlug = selectedQuote.carrier.toLowerCase().includes('correio') ? 'correios' : 'correios';
+  const carrierSlug = resolveCarrierSlugByName(selectedQuote.carrier) ?? '';
+
+  // Ver a explicacao em create-cart-shipments-with-payment.service.ts: a
+  // comissao de seguro sai do preco antes do calculo reverso da de frete.
+  const { commissionAmount: insuranceCommission } = await calculateInsuranceCommission(
+    declaredValue,
+    carrierSlug
+  );
+  const insuranceCommissionCents = Math.round(insuranceCommission * 100);
+  const freightCostCents = Math.round(selectedQuote.price * 100) - insuranceCommissionCents;
   const { shippingCommissionCents, pickupCommissionCents } = await calculateCommissionsInCents(
     freightCostCents,
     pickupFeeCents,
@@ -300,6 +307,12 @@ async function createShipmentFromCartItem(
       recipientEmail: destination.email,
       recipientDocument: destination.documento,
       originCep: originAddress.cep,
+      originAddress: [originAddress.logradouro, originAddress.numero, originAddress.complemento]
+        .filter(Boolean)
+        .join(', ') || null,
+      originNeighborhood: originAddress.bairro || null,
+      originCity: originAddress.cidade || null,
+      originState: originAddress.uf || null,
       destinationCep: destination.cep,
       destinationAddress: [destination.logradouro, destination.numero, destination.complemento]
         .filter(Boolean)
@@ -317,6 +330,7 @@ async function createShipmentFromCartItem(
       status: initialStatus,
       paymentMethod: null,
       platformShippingCommissionCents: shippingCommissionCents > 0 ? shippingCommissionCents : null,
+      platformInsuranceCommissionCents: insuranceCommissionCents > 0 ? insuranceCommissionCents : null,
       platformPickupCommissionCents: pickupCommissionCents > 0 ? pickupCommissionCents : null,
     },
     volumes: volumes.map((vol) => ({

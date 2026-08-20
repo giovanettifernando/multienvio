@@ -10,6 +10,7 @@ import { withApiHandlerResponse } from '@/platform/api/handler';
 import { ApiError } from '@/platform/api/errors';
 import { requireUserSession } from '@/platform/auth/require-session';
 import { prisma } from '@/platform/db/db';
+import { buildRemetente, buildDestinatario } from '@/modules/shipments/application/declaracao-parties';
 import {
   generateDeclaracaoConteudoPdf,
   type DeclaracaoConteudoPayload,
@@ -17,7 +18,6 @@ import {
 } from '@/shared/docs/correios/declaracao-conteudo-pdf';
 import { isCorreiosCarrier } from '@/shared/utils/carrier';
 import { extractDeclarationItems, type ShipmentDocument } from '@/shared/docs/correios/declaration-items';
-import { formatEndereco } from '@/shared/utils/address';
 
 export const maxDuration = 30; // 30 segundos para gerar o PDF
 
@@ -81,35 +81,18 @@ export const GET = withApiHandlerResponse(async ({ req, params, logger }) => {
 
   // Montar dados do remetente
   const sender = shipment.sender;
-  const senderAddress = sender.addresses[0];
-
-  if (!senderAddress) {
-    throw new ApiError({
-      code: 'BAD_REQUEST',
-      message: 'Remetente não possui endereço cadastrado',
-      status: 400,
-    });
-  }
+  // O endereco de origem fica congelado no envio. O cadastro so e consultado
+  // como reserva para envios anteriores a esses campos — por isso nao ha mais
+  // erro quando o usuario nao tem endereco cadastrado hoje.
+  const senderAddress = sender.addresses[0] ?? null;
 
   // Calcular peso total
   const pesoTotalKg = shipment.packages.reduce((sum, pkg) => sum + Number(pkg.weight), 0);
 
   // Montar payload para geração do PDF
   const payload: DeclaracaoConteudoPayload = {
-    remetente: {
-      nome: sender.razaoSocial || sender.name || '—',
-      documento: sender.cnpj || sender.cpf || null,
-      endereco: formatEndereco(senderAddress),
-      cidadeUf: `${senderAddress.cidade} - ${senderAddress.uf}`,
-      cep: shipment.originCep,
-    },
-    destinatario: {
-      nome: shipment.recipientName || '—',
-      documento: shipment.recipientDocument || null,
-      endereco: shipment.destinationAddress || '—',
-      cidadeUf: `${shipment.destinationCity} - ${shipment.destinationState}`,
-      cep: shipment.destinationCep,
-    },
+    remetente: buildRemetente(shipment, sender, senderAddress),
+    destinatario: buildDestinatario(shipment),
     itens,
     pesoTotalKg,
   };

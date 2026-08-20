@@ -40,6 +40,12 @@ const loggiConfigSchema = z.object({
     .max(100, 'Comissão não pode exceder 100%')
     .optional()
     .nullable(),
+  insuranceCommissionPercent: z
+    .number()
+    .min(0, 'Comissão não pode ser negativa')
+    .max(100, 'Comissão não pode exceder 100%')
+    .optional()
+    .nullable(),
   carrierIconPath: z.string().optional().nullable(),
 });
 
@@ -118,6 +124,7 @@ export const GET = withApiHandler(async ({ req }) => {
         production: { configured: false, clientId: '', clientSecret: '', companyId: '' },
         sandbox: { configured: false, clientId: '', clientSecret: '', companyId: '' },
         shippingCommissionPercent: null as number | null,
+        insuranceCommissionPercent: null as number | null,
         carrierIconPath: null as string | null,
         status: null as string | null,
         lastUpdated: null as Date | null,
@@ -147,6 +154,9 @@ export const GET = withApiHandler(async ({ req }) => {
       sandbox: sandboxData,
       shippingCommissionPercent: carrier.shippingCommissionPercent
         ? Number(carrier.shippingCommissionPercent)
+        : null,
+      insuranceCommissionPercent: carrier.insuranceCommissionPercent
+        ? Number(carrier.insuranceCommissionPercent)
         : null,
       carrierIconPath: carrier.logoUrl || null,
       status: carrier.status as string | null,
@@ -211,6 +221,7 @@ export const POST = withApiHandler(async ({ req }) => {
           logoUrl: data.carrierIconPath || 'https://loggi.com/wp-content/uploads/2023/01/logo-loggi.png',
           description: 'Integração com APIs da Loggi',
           shippingCommissionPercent: data.shippingCommissionPercent ?? null,
+          insuranceCommissionPercent: data.insuranceCommissionPercent ?? null,
         },
       });
     } else {
@@ -222,6 +233,7 @@ export const POST = withApiHandler(async ({ req }) => {
           baseUrl: baseUrls[data.activeEnvironment],
           logoUrl: data.carrierIconPath ?? carrier.logoUrl,
           shippingCommissionPercent: data.shippingCommissionPercent ?? null,
+          insuranceCommissionPercent: data.insuranceCommissionPercent ?? null,
           updatedAt: new Date(),
         },
       });

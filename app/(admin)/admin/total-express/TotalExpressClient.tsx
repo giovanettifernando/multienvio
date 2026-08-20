@@ -34,6 +34,7 @@ interface TEConfig {
   production: EnvironmentCredentials;
   sandbox: EnvironmentCredentials;
   shippingCommissionPercent?: number | null;
+  insuranceCommissionPercent?: number | null;
   carrierIconPath?: string | null;
   status?: string;
   lastUpdated?: string;
@@ -130,6 +131,7 @@ export default function TotalExpressClient() {
       form.setFieldsValue({
         activeEnvironment: config.activeEnvironment,
         shippingCommissionPercent: config.shippingCommissionPercent ?? undefined,
+        insuranceCommissionPercent: config.insuranceCommissionPercent ?? undefined,
         carrierIconPath: config.carrierIconPath ?? undefined,
         prod_username: config.production?.username,
         prod_password: config.production?.password,
@@ -161,6 +163,7 @@ export default function TotalExpressClient() {
           cnpj: values.sandbox_cnpj,
         },
         shippingCommissionPercent: values.shippingCommissionPercent,
+        insuranceCommissionPercent: values.insuranceCommissionPercent,
         carrierIconPath: values.carrierIconPath,
       });
     } catch {
@@ -271,6 +274,23 @@ export default function TotalExpressClient() {
                 />
               </Form.Item>
             </Col>
+            <Col span={12}>
+              <Form.Item
+                name="insuranceCommissionPercent"
+                label="Comissão sobre seguro (%)"
+                help="Somado sobre o valor declarado pelo cliente"
+              >
+                <InputNumber
+                  min={0} max={100} step={0.1}
+                  formatter={inputNumberFormatterBRL}
+                  parser={inputNumberParserBRL}
+                  style={{ width: '100%' }}
+                  placeholder="1.00"
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Row gutter={16}>
             <Col span={12}>
               <Form.Item name="carrierIconPath" label="URL do ícone do carrier">
                 <Input placeholder="https://..." />

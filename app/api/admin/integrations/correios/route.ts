@@ -61,6 +61,12 @@ const correiosConfigSchema = z.object({
     .max(100, 'Comissao nao pode exceder 100%')
     .optional()
     .nullable(),
+  insuranceCommissionPercent: z
+    .number()
+    .min(0, 'Comissao nao pode ser negativa')
+    .max(100, 'Comissao nao pode exceder 100%')
+    .optional()
+    .nullable(),
   // Caminho do ícone da transportadora
   carrierIconPath: z.string().optional().nullable(),
 });
@@ -163,6 +169,7 @@ export const GET = withApiHandler(async ({ req }) => {
         sandbox: { configured: false, username: '', password: '', cartaoPostagem: '', contrato: '', dr: '' },
         servicos: [] as unknown[],
         shippingCommissionPercent: null as number | null,
+        insuranceCommissionPercent: null as number | null,
         carrierIconPath: null as string | null,
         status: null as string | null,
         lastUpdated: null as Date | null,
@@ -205,6 +212,9 @@ export const GET = withApiHandler(async ({ req }) => {
       servicos: (customData.servicos || []) as unknown[],
       shippingCommissionPercent: carrier.shippingCommissionPercent
         ? Number(carrier.shippingCommissionPercent)
+        : null,
+      insuranceCommissionPercent: carrier.insuranceCommissionPercent
+        ? Number(carrier.insuranceCommissionPercent)
         : null,
       carrierIconPath: carrier.logoUrl || null,
       status: carrier.status as string | null,
@@ -272,6 +282,7 @@ export const POST = withApiHandler(async ({ req }) => {
           logoUrl: data.carrierIconPath || 'https://www.correios.com.br/++resource++correios/img/logo-correios-blue.svg',
           description: 'Integração com APIs dos Correios (CWS)',
           shippingCommissionPercent: data.shippingCommissionPercent ?? null,
+          insuranceCommissionPercent: data.insuranceCommissionPercent ?? null,
         },
       });
     } else {
@@ -283,6 +294,7 @@ export const POST = withApiHandler(async ({ req }) => {
           baseUrl: baseUrls[data.activeEnvironment],
           logoUrl: data.carrierIconPath ?? carrier.logoUrl,
           shippingCommissionPercent: data.shippingCommissionPercent ?? null,
+          insuranceCommissionPercent: data.insuranceCommissionPercent ?? null,
           updatedAt: new Date(),
         },
       });

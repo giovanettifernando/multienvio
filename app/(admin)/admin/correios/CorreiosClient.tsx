@@ -67,6 +67,7 @@ interface CorreiosConfig {
     ordemExibicao?: number;
   }>;
   shippingCommissionPercent?: number | null;
+  insuranceCommissionPercent?: number | null;
   carrierIconPath?: string | null;
   status?: string;
   lastUpdated?: string;
@@ -276,6 +277,7 @@ function ConfigTab() {
     if (config && !initializedRef.current) {
       form.setFieldsValue({
         shippingCommissionPercent: config.shippingCommissionPercent ?? 0,
+        insuranceCommissionPercent: config.insuranceCommissionPercent ?? 0,
         carrierIconPath: config.carrierIconPath || '',
         activeEnvironment: config.activeEnvironment || 'sandbox',
         production: {
@@ -302,6 +304,7 @@ function ConfigTab() {
   const handleSubmit = (values: Record<string, unknown>) => {
     const payload = {
       shippingCommissionPercent: values.shippingCommissionPercent as number | null,
+      insuranceCommissionPercent: values.insuranceCommissionPercent as number | null,
       carrierIconPath: (values.carrierIconPath as string) || null,
       activeEnvironment: values.activeEnvironment,
       production: values.production,
@@ -477,11 +480,12 @@ function ConfigTab() {
             />
           </Form.Item>
           <Form.Item
-            name="shippingCommissionPercent2"
-            label="Percentual de Comissão (%)"
+            name="insuranceCommissionPercent"
+            label="Comissao sobre seguro (%)"
+            extra="Somado sobre o valor declarado pelo cliente. Ex.: 1% em uma declaracao de R$ 1.000 rende R$ 10"
             rules={[
-              { type: 'number', min: 0, message: 'Nao pode ser negativo' },
-              { type: 'number', max: 100, message: 'Nao pode exceder 100%' },
+              { type: 'number', min: 0, message: 'Comissao nao pode ser negativa' },
+              { type: 'number', max: 100, message: 'Comissao nao pode exceder 100%' },
             ]}
           >
             <InputNumber

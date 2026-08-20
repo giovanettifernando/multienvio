@@ -506,6 +506,14 @@ export async function processCheckout(input: CheckoutInput): Promise<CheckoutRes
         recipientEmail: input.recipient.email ?? null,
         recipientDocument: input.recipient.documento ?? null,
         originCep: input.originCep,
+        originAddress: [
+          input.originAddress?.logradouro,
+          input.originAddress?.numero,
+          input.originAddress?.complemento,
+        ].filter(Boolean).join(', ') || null,
+        originNeighborhood: input.originAddress?.bairro ?? null,
+        originCity: input.originAddress?.cidade ?? input.originCidade ?? null,
+        originState: input.originAddress?.uf ?? input.originUf ?? null,
         destinationCep: input.destinationCep,
         destinationAddress: [
           input.recipient.logradouro,
