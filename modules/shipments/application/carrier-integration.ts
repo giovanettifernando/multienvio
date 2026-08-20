@@ -354,6 +354,12 @@ async function integrateWithCorreios(
       where: { shipmentId },
       data: {
         trackingCode: result.primaryTrackingCode,
+        // A transportadora aceitou o envio e devolveu o código: a etiqueta
+        // está emitida. É este status que libera o botão "Imprimir Etiqueta"
+        // na tela do envio — o PDF em si é buscado sob demanda ao abrir o
+        // modal. Sem isto a etiqueta ficava 'pending' para sempre no fluxo
+        // assíncrono e o botão nunca aparecia.
+        status: 'issued',
       },
     });
 
@@ -604,6 +610,12 @@ async function integrateWithLoggi(
       where: { shipmentId },
       data: {
         trackingCode: primaryTrackingCode,
+        // A transportadora aceitou o envio e devolveu o código: a etiqueta
+        // está emitida. É este status que libera o botão "Imprimir Etiqueta"
+        // na tela do envio — o PDF em si é buscado sob demanda ao abrir o
+        // modal. Sem isto a etiqueta ficava 'pending' para sempre no fluxo
+        // assíncrono e o botão nunca aparecia.
+        status: 'issued',
       },
     });
 
@@ -840,6 +852,12 @@ async function integrateWithJT(
       where: { shipmentId },
       data: {
         trackingCode: billCode,
+        // A transportadora aceitou o envio e devolveu o código: a etiqueta
+        // está emitida. É este status que libera o botão "Imprimir Etiqueta"
+        // na tela do envio — o PDF em si é buscado sob demanda ao abrir o
+        // modal. Sem isto a etiqueta ficava 'pending' para sempre no fluxo
+        // assíncrono e o botão nunca aparecia.
+        status: 'issued',
       },
     });
 

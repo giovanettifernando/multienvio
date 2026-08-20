@@ -65,8 +65,19 @@ export const GET = withApiHandler<unknown, { code: string }>(async ({ params, lo
       status: true,
       carrier: true,
       service: true,
+      recipientName: true,
+      recipientDocument: true,
+      senderDocument: true,
+      paymentMethod: true,
       originCep: true,
+      originAddress: true,
+      originNeighborhood: true,
+      originCity: true,
+      originState: true,
+      senderName: true,
       destinationCep: true,
+      destinationAddress: true,
+      destinationNeighborhood: true,
       destinationCity: true,
       destinationState: true,
       estimatedDays: true,
@@ -445,11 +456,27 @@ export const GET = withApiHandler<unknown, { code: string }>(async ({ params, lo
       publicStatusDescription: publicStatusInfo.description,
       carrier: shipment.carrier || 'Não informado',
       service: shipment.service || 'Não informado',
+      // Endereço completo de origem e destino. O destinatário que abre este
+      // link precisa saber de quem veio e para onde vai — antes só o CEP era
+      // exposto e a tela tinha de adivinhar o resto.
       origin: {
         cep: shipment.originCep,
+        address: shipment.originAddress,
+        neighborhood: shipment.originNeighborhood,
+        city: shipment.originCity,
+        state: shipment.originState,
       },
+      senderName: shipment.senderName,
+      recipientName: shipment.recipientName,
+      // CPF/CNPJ das partes: exigidos pela declaracao de conteudo, que pode ser
+      // baixada desta pagina. Ver a nota em PublicShipmentItems.
+      senderDocument: shipment.senderDocument,
+      recipientDocument: shipment.recipientDocument,
+      paymentMethod: shipment.paymentMethod,
       destination: {
         cep: shipment.destinationCep,
+        address: shipment.destinationAddress,
+        neighborhood: shipment.destinationNeighborhood,
         city: shipment.destinationCity,
         state: shipment.destinationState,
       },

@@ -149,3 +149,29 @@ export function inputNumberParserBRL(value: string | undefined): number {
 
   return Number.isNaN(parsed) ? 0 : parsed;
 }
+
+/**
+ * Rótulo do método de pagamento gravado no envio.
+ *
+ * Os valores no banco são `WALLET`, `PAGARME` e `RECIPIENT_PAID` — maiúsculos.
+ * As telas comparavam com minúsculas ('wallet'), então caíam no fallback e
+ * mostravam "WALLET" cru para o usuário.
+ *
+ * `PAGARME` é herança do gateway anterior e hoje significa apenas "pago pelo
+ * gateway" (Asaas). O meio real (cartão/PIX/boleto) fica na transação, não no
+ * envio, por isso o rótulo é genérico.
+ */
+export function formatPaymentMethod(method: string | null | undefined): string {
+  if (!method) return 'Não informado';
+
+  const labels: Record<string, string> = {
+    wallet: 'Carteira',
+    pagarme: 'Pagamento online',
+    recipient_paid: 'Pago pelo destinatário',
+    pix: 'PIX',
+    card: 'Cartão',
+    boleto: 'Boleto',
+  };
+
+  return labels[method.toLowerCase()] ?? method;
+}

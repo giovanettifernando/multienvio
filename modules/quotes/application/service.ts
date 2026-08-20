@@ -18,7 +18,7 @@ import {
   quoteFromCorreios,
   isCorreiosAvailableAsync,
 } from '@/platform/integrations/correios';
-import { applyShippingCommission } from './commission';
+import { applyShippingCommission, calculateInsuranceCommission, resolveCarrierSlug } from './commission';
 import {
   getEligibilityService,
   type EligibilityService,
@@ -330,17 +330,37 @@ export async function createQuote(
   // Apply carrier commission to all shipping options
   const optionsWithCommission = await Promise.all(
     shippingResult.results.map(async (option) => {
-      // Determinar o carrierSlug baseado no ID da opção
-      const carrierSlug = option.id.startsWith('loggi-') ? 'loggi'
-        : option.id.startsWith('jt-') ? 'jt'
-        : option.carrier.toLowerCase().includes('correio') ? 'correios'
-        : 'correios';
+      const carrierSlug = resolveCarrierSlug(option.id);
+
+      if (!carrierSlug) {
+        console.warn('[COMISSAO] Transportadora não reconhecida pelo id da opção; nenhuma comissão aplicada', {
+          optionId: option.id,
+          carrier: option.carrier,
+        });
+        return {
+          ...option,
+          precoBase: option.preco,
+          comissaoCentavos: 0,
+        };
+      }
+
       const { finalPrice, commissionAmount } = await applyShippingCommission(option.preco, carrierSlug);
+
+      // Comissao de seguro: pontos percentuais sobre o valor declarado, somados
+      // por cima. So entra quando o cliente pediu seguro E o servico aceita —
+      // no PAC dos Correios o valor declarado e recusado pela API, entao cobrar
+      // a comissao ali seria cobrar por algo que o cliente nao recebe.
+      const aceitaSeguro = option.aceitaSeguro !== false;
+      const { commissionAmount: insuranceCommission } = aceitaSeguro
+        ? await calculateInsuranceCommission(request.seguro, carrierSlug)
+        : { commissionAmount: 0 };
+
       return {
         ...option,
         precoBase: option.preco, // Preco original da transportadora
-        preco: finalPrice, // Preco final com comissao
+        preco: Math.round((finalPrice + insuranceCommission) * 100) / 100,
         comissaoCentavos: Math.round(commissionAmount * 100),
+        comissaoSeguroCentavos: Math.round(insuranceCommission * 100),
       };
     })
   );

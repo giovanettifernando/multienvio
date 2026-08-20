@@ -20,6 +20,14 @@ export interface ShipmentInput {
 
   // Remetente
   senderId: string;
+  /**
+   * Nome do remetente, congelado no envio. Se vier vazio é resolvido a partir
+   * do cadastro do usuário na criação — congelar aqui é o que faz o envio
+   * continuar mostrando quem enviou mesmo que a conta mude de nome depois.
+   */
+  senderName?: string | null;
+  /** CPF/CNPJ do remetente. Resolvido junto com o nome quando vier vazio. */
+  senderDocument?: string | null;
 
   // Destinatário
   recipientName: string;
@@ -29,6 +37,11 @@ export interface ShipmentInput {
 
   // Endereços
   originCep: string;
+  /** Origem completa, congelada no envio (mesmo formato do destino). */
+  originAddress?: string | null;
+  originNeighborhood?: string | null;
+  originCity?: string | null;
+  originState?: string | null;
   destinationCep: string;
   destinationAddress?: string | null;
   destinationNeighborhood?: string | null;
@@ -54,6 +67,7 @@ export interface ShipmentInput {
 
   // Comissões da plataforma (para reconciliação)
   platformShippingCommissionCents?: number | null;
+  platformInsuranceCommissionCents?: number | null;
   platformPickupCommissionCents?: number | null;
 }
 
@@ -102,10 +116,26 @@ export async function createShipmentWithVolumes(
     hasPickupRequest: false, // Será criado depois se necessário
   });
 
+  // O remetente é sempre o dono da conta. Resolver aqui, num lugar só, evita
+  // que cada fluxo de checkout tenha de lembrar de buscar o nome — e evita o
+  // engano de usar o `label` do endereço ("Casa", "Escritório") como nome.
+  let senderName = input.shipment.senderName ?? null;
+  let senderDocument = input.shipment.senderDocument ?? null;
+  if (!senderName || !senderDocument) {
+    const sender = await tx.user.findUnique({
+      where: { id: input.shipment.senderId },
+      select: { name: true, razaoSocial: true, cpf: true, cnpj: true },
+    });
+    senderName = senderName || sender?.razaoSocial || sender?.name || null;
+    senderDocument = senderDocument || sender?.cnpj || sender?.cpf || null;
+  }
+
   // Criar shipment com peso calculado
   const shipment = await tx.shipment.create({
     data: {
       ...input.shipment,
+      senderName,
+      senderDocument,
       weight: totalWeight, // SEMPRE usar peso calculado dos volumes
       status: initialStatus,
     },

@@ -19,6 +19,7 @@ import {
 } from '../../../platform/integrations/correios/client';
 import { printLoggiLabel } from '../../../platform/integrations/loggi/label';
 import { createEnvioLegalPdf } from '../../../platform/labels/pdf-generator';
+import { buildRemetente, buildDestinatario } from '@/modules/shipments/application/declaracao-parties';
 import {
   generateDeclaracaoConteudoPdf,
   type DeclaracaoConteudoPayload,
@@ -26,7 +27,6 @@ import {
 import type { JobLogger } from '../../../platform/queue/helpers';
 import { withRetry, CORREIOS_RETRY_CONFIG } from '../../../shared/utils/retry';
 import { CorreiosApiError } from '../../../platform/integrations/correios/types';
-import { formatEndereco } from '../../../shared/utils/address';
 import { extractDeclarationItems, type ShipmentDocument } from '../../../shared/docs/correios/declaration-items';
 
 async function baixarRotuloPdfComRetry(
@@ -440,27 +440,17 @@ export async function generateLabelPdf(params: {
       const itens = extractDeclarationItems(shipmentDoc);
 
       if (itens.length > 0) {
-        const sender = label.shipment.sender;
-        const senderAddress = sender?.addresses?.[0];
+        const sender = label.shipment.sender ?? null;
+        const senderAddress = sender?.addresses?.[0] ?? null;
 
-        if (sender && senderAddress) {
+        {
           const pesoTotalKg = packages.reduce((sum, pkg) => sum + Number(pkg.weight), 0);
 
+          // Mesma origem de dados do download avulso da declaracao: o endereco
+          // congelado no envio, com o cadastro apenas como reserva.
           const declaracaoPayload: DeclaracaoConteudoPayload = {
-            remetente: {
-              nome: sender.razaoSocial || sender.name || '—',
-              documento: sender.cnpj || sender.cpf || null,
-              endereco: formatEndereco(senderAddress),
-              cidadeUf: `${senderAddress.cidade} - ${senderAddress.uf}`,
-              cep: label.shipment.originCep,
-            },
-            destinatario: {
-              nome: label.shipment.recipientName || '—',
-              documento: label.shipment.recipientDocument || null,
-              endereco: label.shipment.destinationAddress || '—',
-              cidadeUf: `${label.shipment.destinationCity} - ${label.shipment.destinationState}`,
-              cep: label.shipment.destinationCep,
-            },
+            remetente: buildRemetente(label.shipment, sender, senderAddress),
+            destinatario: buildDestinatario(label.shipment),
             itens,
             pesoTotalKg,
           };

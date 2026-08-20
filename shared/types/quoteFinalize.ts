@@ -406,17 +406,22 @@ export const finalizeFormSchema = z
   });
 
 // Factory function to create schema with pickup context
-export function createFinalizeFormSchema(pickupAtOrigin: boolean) {
-  return finalizeFormSchema.superRefine((values, ctx) => {
-    // Validação adicional: unidade de postagem obrigatória apenas se não houver coleta
-    if (!pickupAtOrigin && !values.postingUnit.selected) {
-      ctx.addIssue({
-        path: ["postingUnit", "selected"],
-        code: z.ZodIssueCode.custom,
-        message: "Selecione uma unidade de postagem.",
-      });
-    }
-  });
+/**
+ * O card de unidade de postagem foi ocultado do checkout a pedido do produto,
+ * e com ele caiu a obrigatoriedade de escolher uma.
+ *
+ * A exigência vivia aqui num superRefine e passou despercebida quando a tela
+ * mudou: o botão "Pagar agora" ficava habilitado (as pré-condições da tela já
+ * não olhavam a unidade), o clique disparava, e a validação do formulário
+ * reprovava `postingUnit.selected` — um campo que não é mais exibido. O
+ * usuário via "preencha todos os campos obrigatórios" sem nenhum campo em
+ * vermelho, porque o campo culpado não estava na página.
+ *
+ * O parâmetro continua na assinatura para que reativar o card seja só voltar a
+ * checagem aqui, sem mexer em quem chama.
+ */
+export function createFinalizeFormSchema(_pickupAtOrigin: boolean) {
+  return finalizeFormSchema;
 }
 
 export type FinalizeFormValues = z.infer<typeof finalizeFormSchema>;

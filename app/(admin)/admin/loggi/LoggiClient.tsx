@@ -58,6 +58,7 @@ interface LoggiConfig {
   production: EnvironmentCredentials;
   sandbox: EnvironmentCredentials;
   shippingCommissionPercent?: number | null;
+  insuranceCommissionPercent?: number | null;
   carrierIconPath?: string | null;
   status?: string;
   lastUpdated?: string;
@@ -167,6 +168,7 @@ export default function LoggiClient() {
           companyId: values.sandbox_companyId,
         },
         shippingCommissionPercent: values.shippingCommissionPercent,
+        insuranceCommissionPercent: values.insuranceCommissionPercent,
         carrierIconPath: values.carrierIconPath,
       };
 
@@ -292,6 +294,7 @@ function ConfigTab({ config, form, onSave, saving }: {
         activeEnvironment: config?.activeEnvironment || 'sandbox',
         carrierIconPath: config?.carrierIconPath || '',
         shippingCommissionPercent: config?.shippingCommissionPercent ?? null,
+        insuranceCommissionPercent: config?.insuranceCommissionPercent ?? null,
         prod_clientId: config?.production?.clientId || '',
         prod_clientSecret: config?.production?.clientSecret || '',
         prod_companyId: config?.production?.companyId || '',
@@ -340,7 +343,11 @@ function ConfigTab({ config, form, onSave, saving }: {
             placeholder="Ex: 10.00"
           />
         </Form.Item>
-        <Form.Item label="Percentual de Comissão (%)" name="shippingCommissionPercent2">
+        <Form.Item
+          label="Comissão sobre seguro (%)"
+          name="insuranceCommissionPercent"
+          help="Somado sobre o valor declarado pelo cliente"
+        >
           <InputNumber
             min={0}
             max={100}
@@ -348,7 +355,7 @@ function ConfigTab({ config, form, onSave, saving }: {
             formatter={inputNumberFormatterBRL}
             parser={inputNumberParserBRL}
             style={{ width: 200 }}
-            placeholder="Ex: 10.00"
+            placeholder="Ex: 1.00"
           />
         </Form.Item>
       </Space>

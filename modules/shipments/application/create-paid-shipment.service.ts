@@ -356,6 +356,15 @@ export async function createPaidShipment(
         recipientEmail: recipient.email ?? null,
         recipientDocument: recipient.documento ?? null,
         originCep,
+        // Endereço de origem congelado no envio (mesmo formato do destino).
+        originAddress: [
+          originAddress?.logradouro,
+          originAddress?.numero,
+          originAddress?.complemento,
+        ].filter(Boolean).join(', ') || null,
+        originNeighborhood: originAddress?.bairro ?? null,
+        originCity: originAddress?.cidade ?? originCidade ?? null,
+        originState: originAddress?.uf ?? originUf ?? null,
         destinationCep,
         destinationAddress: [
           recipient.logradouro,

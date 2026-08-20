@@ -121,13 +121,28 @@ export interface ShipmentInfo {
   trackingCode: string;
   carrier: string;
   service: string;
+  /**
+   * Identificacao das partes. Opcionais porque a declaracao ja era gerada
+   * antes destes campos existirem no envio — quando faltam, o bloco cai para
+   * o que houver, em vez de imprimir uma declaracao pela metade.
+   */
+  senderName?: string | null;
+  senderDocument?: string | null;
+  recipientName?: string | null;
+  recipientDocument?: string | null;
   origin: {
     cep: string;
+    address?: string | null;
+    neighborhood?: string | null;
+    city?: string | null;
+    state?: string | null;
   };
   destination: {
     cep: string;
     city: string;
     state: string;
+    address?: string | null;
+    neighborhood?: string | null;
   };
   createdAt: string;
 }
@@ -151,18 +166,31 @@ const formatNFeKey = (key: string): string => {
  */
 export function generateDeclarationPDF(
   volume: VolumeData,
-  shipmentInfo: ShipmentInfo
+  shipmentInfo: ShipmentInfo,
+  /**
+   * Documento já aberto, para juntar vários volumes num PDF só (uma
+   * declaração por página). Sem isto, um envio com 3 volumes abriria 3 abas.
+   */
+  existingDoc?: jsPDF
 ): jsPDF {
-  const doc = new jsPDF({
+  const doc = existingDoc ?? new jsPDF({
     orientation: 'portrait',
     unit: 'mm',
     format: 'a4',
   });
 
+  if (existingDoc) {
+    doc.addPage();
+  }
+
   const pageWidth = doc.internal.pageSize.getWidth();
   const margin = 15;
   const contentWidth = pageWidth - margin * 2;
   let y = margin;
+
+  // O rodapé da página anterior deixa a cor cinza; sem restaurar, a próxima
+  // declaração sai inteira em cinza claro.
+  doc.setTextColor(0, 0, 0);
 
   // Header
   doc.setFontSize(16);
@@ -191,20 +219,52 @@ export function generateDeclarationPDF(
   doc.text(`Data: ${new Date(shipmentInfo.createdAt).toLocaleDateString('pt-BR')}`, margin, y);
   y += 10;
 
-  // Origem e Destino
-  doc.setFont('helvetica', 'bold');
-  doc.text('ORIGEM / DESTINO', margin, y);
-  y += 6;
+  // Remetente e destinatario. A declaracao de conteudo precisa identificar as
+  // duas partes com nome, documento e endereco — antes daqui saia so o CEP.
+  const linhaCidade = (cidade?: string | null, uf?: string | null, cep?: string) => {
+    const local = [cidade, uf].filter(Boolean).join('/');
+    return [local, cep].filter(Boolean).join(' - ');
+  };
 
-  doc.setFont('helvetica', 'normal');
-  doc.text(`Origem: CEP ${shipmentInfo.origin.cep}`, margin, y);
-  y += 5;
-  doc.text(
-    `Destino: ${shipmentInfo.destination.city}/${shipmentInfo.destination.state} - CEP ${shipmentInfo.destination.cep}`,
-    margin,
-    y
-  );
-  y += 10;
+  const linhaEndereco = (rua?: string | null, bairro?: string | null) => {
+    if (!rua) return null;
+    return bairro ? `${rua} - ${bairro}` : rua;
+  };
+
+  const partes: Array<{ titulo: string; nome?: string | null; documento?: string | null; endereco: string | null; cidade: string }> = [
+    {
+      titulo: 'REMETENTE',
+      nome: shipmentInfo.senderName,
+      documento: shipmentInfo.senderDocument,
+      endereco: linhaEndereco(shipmentInfo.origin.address, shipmentInfo.origin.neighborhood),
+      cidade: linhaCidade(shipmentInfo.origin.city, shipmentInfo.origin.state, shipmentInfo.origin.cep),
+    },
+    {
+      titulo: 'DESTINATÁRIO',
+      nome: shipmentInfo.recipientName,
+      documento: shipmentInfo.recipientDocument,
+      endereco: linhaEndereco(shipmentInfo.destination.address, shipmentInfo.destination.neighborhood),
+      cidade: linhaCidade(shipmentInfo.destination.city, shipmentInfo.destination.state, shipmentInfo.destination.cep),
+    },
+  ];
+
+  for (const parte of partes) {
+    doc.setFont('helvetica', 'bold');
+    doc.text(parte.titulo, margin, y);
+    y += 6;
+
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Nome: ${parte.nome || 'Não informado'}`, margin, y);
+    y += 5;
+    doc.text(`CPF/CNPJ: ${formatCnpjCpf(parte.documento)}`, margin, y);
+    y += 5;
+    if (parte.endereco) {
+      doc.text(`Endereço: ${parte.endereco}`, margin, y);
+      y += 5;
+    }
+    doc.text(parte.cidade, margin, y);
+    y += 9;
+  }
 
   // Dimensões do volume (se disponíveis)
   if (volume.height || volume.width || volume.length || volume.weight) {
@@ -398,17 +458,28 @@ const formatAddress = (endereco: NFeEndereco | null | undefined): string => {
  * Se nfeData estiver disponível, usa os dados completos.
  * Caso contrário, usa os items básicos.
  */
-export function generateNFePDF(volume: VolumeData, _shipmentInfo: ShipmentInfo): jsPDF {
-  const doc = new jsPDF({
+export function generateNFePDF(
+  volume: VolumeData,
+  _shipmentInfo: ShipmentInfo,
+  /** Mesmo propósito do parâmetro em generateDeclarationPDF: juntar volumes. */
+  existingDoc?: jsPDF
+): jsPDF {
+  const doc = existingDoc ?? new jsPDF({
     orientation: 'portrait',
     unit: 'mm',
     format: 'a4',
   });
 
+  if (existingDoc) {
+    doc.addPage();
+  }
+
   const pageWidth = doc.internal.pageSize.getWidth();
   const margin = 10;
   const contentWidth = pageWidth - margin * 2;
   let y = margin;
+
+  doc.setTextColor(0, 0, 0);
 
   const nfe = volume.nfeData;
 
@@ -720,4 +791,32 @@ export function downloadDocumentPDF(volume: VolumeData, shipmentInfo: ShipmentIn
       : `declaracao-${shipmentInfo.trackingCode}-vol${volume.index}.pdf`;
 
   doc.save(filename);
+}
+
+/**
+ * Gera as declarações de todos os volumes num PDF só e já abre a caixa de
+ * impressão do navegador.
+ *
+ * Usa exatamente o mesmo gerador da página pública de rastreio — a declaração
+ * impressa aqui e a baixada pelo link são o mesmo documento.
+ */
+export function printDocumentPDF(volumes: VolumeData[], shipmentInfo: ShipmentInfo): void {
+  if (volumes.length === 0) return;
+
+  let doc: jsPDF | undefined;
+  for (const volume of volumes) {
+    doc =
+      volume.documentType === 'NF'
+        ? generateNFePDF(volume, shipmentInfo, doc)
+        : generateDeclarationPDF(volume, shipmentInfo, doc);
+  }
+  if (!doc) return;
+
+  // autoPrint marca o PDF para abrir já na caixa de impressão. O visualizador
+  // do navegador respeita isso; se não respeitar, o PDF fica aberto na aba e o
+  // usuário imprime pelo próprio visualizador — nunca fica sem saída.
+  doc.autoPrint();
+
+  const url = URL.createObjectURL(doc.output('blob'));
+  window.open(url, '_blank');
 }
