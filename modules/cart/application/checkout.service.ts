@@ -16,6 +16,7 @@ import 'server-only';
 import { Prisma, PrismaClient, Package } from '@prisma/client';
 import { prisma } from '@/platform/db/db';
 import { createShipmentWithVolumes } from '@/modules/shipments/application/create-with-volumes';
+import { calculateCommissionsInCents, calculateInsuranceCommission, resolveCarrierSlugByName } from '@/modules/quotes/application/commission';
 import { ShipmentStatus } from '@/modules/shipments/application/shipment-status';
 import { integrateWithCarrier } from '@/modules/shipments/application/carrier-integration';
 import { logger } from '@/platform/logging/logger';
@@ -495,6 +496,22 @@ export async function processCheckout(input: CheckoutInput): Promise<CheckoutRes
       });
     }
 
+    // Comissoes: este caminho tambem nao registrava nenhuma. Mesma conta dos
+    // demais fluxos — a de seguro sai do preco antes do calculo reverso da de
+    // frete, para a de frete nao incidir duas vezes sobre ela.
+    const carrierSlug = resolveCarrierSlugByName(input.carrier) ?? '';
+    const { commissionAmount: insuranceCommission } = await calculateInsuranceCommission(
+      declaredValue,
+      carrierSlug
+    );
+    const insuranceCommissionCents = Math.round(insuranceCommission * 100);
+    const freightCents = Math.round(serverFreightCost * 100) - insuranceCommissionCents;
+    const { shippingCommissionCents, pickupCommissionCents } = await calculateCommissionsInCents(
+      freightCents,
+      0,
+      carrierSlug
+    );
+
     // Criar shipment com volumes
     const { shipment, packages } = await createShipmentWithVolumes(tx, {
       shipment: {
@@ -529,6 +546,9 @@ export async function processCheckout(input: CheckoutInput): Promise<CheckoutRes
         estimatedDays: serverEstimatedDays, // SECURITY: Usar valor do servidor
         freightCost: serverFreightCost, // SECURITY: Usar valor do servidor
         pickupPointId: input.pickupPointId,
+        platformShippingCommissionCents: shippingCommissionCents > 0 ? shippingCommissionCents : null,
+        platformPickupCommissionCents: pickupCommissionCents > 0 ? pickupCommissionCents : null,
+        platformInsuranceCommissionCents: insuranceCommissionCents > 0 ? insuranceCommissionCents : null,
         document: documentData,
         status: initialStatus,
         paymentMethod: null,

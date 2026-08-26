@@ -10,6 +10,7 @@
 import { Prisma, RecipientPaymentStatus } from '@prisma/client';
 import { prisma } from '@/platform/db/db';
 import { createShipmentWithVolumes } from '@/modules/shipments/application/create-with-volumes';
+import { calculateCommissionsInCents, calculateInsuranceCommission, resolveCarrierSlugByName } from '@/modules/quotes/application/commission';
 // Eventos de rastreamento virão dos Correios via webhook/sync
 import { ShipmentStatus } from '@/modules/shipments/application/shipment-status';
 import { integrateWithCarrier } from '@/modules/shipments/application/carrier-integration';
@@ -330,6 +331,22 @@ export async function processRecipientPayment(
       : ShipmentStatus.AWAITING_DROP_OFF_AT_POINT;
 
     // 5) Criar shipment
+    // Comissoes: o frontend envia `shippingCommissionCents: undefined` ("calculado
+    // no backend"), mas ninguem calculava — os envios pagos pelo destinatario
+    // ficavam sem nenhuma comissao registrada. Calculamos aqui, na mesma conta
+    // dos demais fluxos, caindo para o que veio no pedido quando existir.
+    const carrierSlug = resolveCarrierSlugByName(request.carrier) ?? '';
+    const { commissionAmount: insuranceCommission } = await calculateInsuranceCommission(
+      request.declaredValue,
+      carrierSlug
+    );
+    const insuranceCommissionCents = Math.round(insuranceCommission * 100);
+    const { shippingCommissionCents, pickupCommissionCents } = await calculateCommissionsInCents(
+      request.freightCostCents - insuranceCommissionCents,
+      request.pickupFeeCents ?? 0,
+      carrierSlug
+    );
+
     const { shipment, packages } = await createShipmentWithVolumes(tx, {
       shipment: {
         platformTrackingCode: trackingCode,
@@ -364,8 +381,11 @@ export async function processRecipientPayment(
         document: request.document as object,
         status: initialStatus,
         paymentMethod: 'RECIPIENT_PAID',
-        platformShippingCommissionCents: request.shippingCommissionCents,
-        platformPickupCommissionCents: request.pickupCommissionCents,
+        platformShippingCommissionCents:
+          request.shippingCommissionCents ?? (shippingCommissionCents > 0 ? shippingCommissionCents : null),
+        platformPickupCommissionCents:
+          request.pickupCommissionCents ?? (pickupCommissionCents > 0 ? pickupCommissionCents : null),
+        platformInsuranceCommissionCents: insuranceCommissionCents > 0 ? insuranceCommissionCents : null,
       },
       volumes: request.packages.map((pkg) => ({
         peso: pkg.weight,

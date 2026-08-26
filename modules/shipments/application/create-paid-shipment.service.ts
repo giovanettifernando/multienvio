@@ -21,6 +21,7 @@ import { logger } from '@/platform/logging/logger';
 import { getQueue, QUEUE_NAMES, JOB_PRIORITY } from '@/platform/queue';
 import type { ShipmentCreateJobPayload } from '@/platform/queue/types';
 import { canReleaseService } from '@/platform/integrations/asaas/release';
+import { calculateCommissionsInCents, calculateInsuranceCommission, resolveCarrierSlugByName } from '@/modules/quotes/application/commission';
 import {
   CheckoutRecipient,
   CheckoutVolume,
@@ -346,6 +347,24 @@ export async function createPaidShipment(
     }
 
     // 3) CRIAR SHIPMENT com status PROCESSING (integração com transportadora é assíncrona)
+    // Comissoes: este caminho nao registrava nenhuma delas — nem a de frete —
+    // entao os envios criados por aqui ficavam de fora dos relatorios de
+    // receita. Mesma conta dos fluxos de carrinho: a comissao de seguro sai do
+    // preco antes do calculo reverso da de frete, senao a de frete incidiria
+    // duas vezes sobre ela.
+    const carrierSlug = resolveCarrierSlugByName(carrier) ?? '';
+    const { commissionAmount: insuranceCommission } = await calculateInsuranceCommission(
+      declaredValue,
+      carrierSlug
+    );
+    const insuranceCommissionCents = Math.round(insuranceCommission * 100);
+    const freightCostCents = Math.round(freightCost * 100) - insuranceCommissionCents;
+    const { shippingCommissionCents, pickupCommissionCents } = await calculateCommissionsInCents(
+      freightCostCents,
+      Math.round((pickupFee?.feeAmount ?? 0) * 100),
+      carrierSlug
+    );
+
     const { shipment, packages } = await createShipmentWithVolumes(tx, {
       shipment: {
         platformTrackingCode: trackingCode,
@@ -380,6 +399,9 @@ export async function createPaidShipment(
         estimatedDays,
         freightCost,
         pickupPointId,
+        platformShippingCommissionCents: shippingCommissionCents > 0 ? shippingCommissionCents : null,
+        platformPickupCommissionCents: pickupCommissionCents > 0 ? pickupCommissionCents : null,
+        platformInsuranceCommissionCents: insuranceCommissionCents > 0 ? insuranceCommissionCents : null,
         document: {
           ...documentData as object,
           payment: {

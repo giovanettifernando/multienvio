@@ -12,7 +12,7 @@ import {
 } from "@/shared/ui";
 import { QuestionCircleOutlined } from "@ant-design/icons";
 import { useQuoteStore } from "@/modules/quotes/ui/state/useQuoteStore";
-import { useQuoteCalculate } from "@/modules/quotes/ui/hooks";
+import { useQuoteCalculate, useQuoteSelection } from "@/modules/quotes/ui/hooks";
 import { inputNumberFormatterBRL, inputNumberParserBRL } from "@/shared/utils/format";
 import { formatBRL } from "@/shared/utils/format";
 
@@ -50,6 +50,7 @@ const VALOR_MAXIMO_SEGURO = 38057.59;
 export function InsuranceField() {
   const { message } = useELApp();
   const calculateQuotes = useQuoteCalculate();
+  const selectQuote = useQuoteSelection();
 
   const results = useQuoteStore((s) => s.results);
   const selection = useQuoteStore((s) => s.selection);
@@ -99,7 +100,34 @@ export function InsuranceField() {
       // A ordem abaixo importa: primeiro a seleção nova (preço atualizado),
       // depois o resumo, que preserva a seleção.
       if (novo) {
-        setSelection({ ...selection, result: novo });
+        // A recotacao cria uma cotacao NOVA no banco. Sem gravar a selecao
+        // nela, o checkout continua validando contra a cotacao antiga — que
+        // nao tem o seguro — e cobra o preco de antes. A tela mostrava um
+        // valor e o cliente pagava outro, com a plataforma absorvendo a
+        // diferenca em silencio.
+        const novoQuoteId = resposta.quoteId;
+        if (!novoQuoteId) {
+          // Sem o id da cotacao nova nao ha como gravar a selecao, e seguir
+          // adiante mostraria na tela um preco que o servidor nao vai cobrar.
+          message.error(
+            "Nao foi possivel confirmar o seguro nesta cotacao. Recalcule o frete e tente de novo.",
+            6,
+          );
+          return;
+        }
+
+        const persistida = await selectQuote.mutateAsync({
+          quoteId: novoQuoteId,
+          serviceId: novo.id,
+          seguro: valor && valor > 0 ? valor : null,
+        });
+
+        setSelection({
+          ...selection,
+          selectionId: persistida.selectionId,
+          quoteId: novoQuoteId,
+          result: novo,
+        });
       }
 
       updateSummary({ seguroValor: valor && valor > 0 ? valor : null });
