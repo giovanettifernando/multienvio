@@ -286,46 +286,25 @@ export function validateDocumentHasItems(document: CheckoutDocument): boolean {
 }
 
 /**
- * Calcula o valor declarado baseado nos itens do documento
+ * Valor segurado do envio.
+ *
+ * É apenas o que o cliente escolheu no campo de seguro. A declaração de
+ * conteúdo (ou a NF-e) descreve o que vai dentro da caixa e serve ao
+ * documento — não define quanto está segurado.
+ *
+ * Antes esta função somava os itens do documento e SOBRESCREVIA o seguro
+ * escolhido. Isso quebrava de dois jeitos: um envio com R$ 9.315 declarados em
+ * bens saía segurado em R$ 0 num fluxo, enquanto noutro o seguro virava a soma
+ * da declaração sem o cliente ter pedido. Como o valor declarado altera o
+ * preço da transportadora e a nossa comissão, a conta mudava depois da
+ * cotação — o cliente via um preço e pagava outro.
+ *
+ * O parâmetro `document` continua na assinatura porque os dois chamadores já o
+ * têm em mãos, e porque uma regra futura (segurar pelo maior valor, por
+ * exemplo) precisaria dele de volta.
  */
-export function calculateDeclaredValue(document: CheckoutDocument, insuranceValue?: number): number {
-  let declaredValue = insuranceValue ?? 0;
-
-  if (document.type === 'DECLARACAO') {
-    // Novo formato: declaração por volume
-    if (document.volumeDeclarations && document.volumeDeclarations.length > 0) {
-      declaredValue = document.volumeDeclarations.reduce((totalSum, volDecl) => {
-        const volumeTotal = volDecl.items.reduce((itemSum, item) =>
-          itemSum + (item.valorUnitario * item.quantidade), 0
-        );
-        return totalSum + volumeTotal;
-      }, 0);
-    }
-    // Formato legado: declaração única
-    else if (document.declarationItems) {
-      declaredValue = document.declarationItems.reduce((sum, item) =>
-        sum + (item.valorUnitario * item.quantidade), 0
-      );
-    }
-  } else if (document.type === 'NFE') {
-    // Novo formato: packages (NF por pacote)
-    if (document.packages && document.packages.length > 0) {
-      declaredValue = document.packages.reduce((totalSum, pkg) => {
-        const packageTotal = pkg.items.reduce((itemSum, item) =>
-          itemSum + (item.valorTotal || (item.valorUnitario * item.quantidade)), 0
-        );
-        return totalSum + packageTotal;
-      }, 0);
-    }
-    // Formato legado: nfeItems
-    else if (document.nfeItems && document.nfeItems.length > 0) {
-      declaredValue = document.nfeItems.reduce((sum, item) =>
-        sum + (item.valorTotal || (item.valorUnitario * item.quantidade)), 0
-      );
-    }
-  }
-
-  return declaredValue;
+export function calculateDeclaredValue(_document: CheckoutDocument, insuranceValue?: number): number {
+  return insuranceValue ?? 0;
 }
 
 /**

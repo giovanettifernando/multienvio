@@ -86,6 +86,7 @@ import {
 import { DestinationModeSelector } from "./DestinationModeSelector";
 import { PickupToggle } from "./PickupToggle";
 import { ReverseToggle } from "./ReverseToggle";
+import { InsuranceInput } from "./InsuranceInput";
 import { VolumesGrid, DEFAULT_CUBAGE_FACTOR } from "./VolumesGrid";
 import { VolumesTotalizer } from "./VolumesTotalizer";
 import { QuoteResultsSection } from "./QuoteResultsSection";
@@ -1434,11 +1435,18 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
                 destinationCard={destinationCardNode}
               />
 
-              {/* O campo de seguro saiu daqui e foi para a tela de finalizar
-                  envio. Como o valor declarado entra no preço cobrado pelas
-                  transportadoras, informá-lo lá dispara uma nova cotação do
-                  serviço escolhido — ver `InsuranceField` em FinalizarClient. */}
+              {/* O seguro fica aqui, antes de calcular: o valor declarado entra
+                  no preço que as transportadoras cobram, então informá-lo agora
+                  faz a lista de cotações já sair com o total certo em todas as
+                  opções. Quando o campo vivia na tela de finalizar, era preciso
+                  recotar o serviço escolhido depois — e o preço só aparecia no
+                  fim.
+
+                  No PAC dos Correios o valor declarado é recusado (ERP-054), e
+                  a integração separa os serviços que aceitam dos que não: o PAC
+                  continua na lista, cotado sem seguro. */}
               <Flex justify="flex-end" align="flex-start" wrap="wrap" gap={16}>
+                <InsuranceInput control={control} />
                 <ReverseToggle
                   isReverse={isReverse}
                   onChange={handleReverseToggle}

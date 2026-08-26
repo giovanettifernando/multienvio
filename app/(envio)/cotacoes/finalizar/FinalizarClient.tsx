@@ -29,7 +29,8 @@ import { DocumentChooser } from "@/modules/quotes/ui/components/DocumentChooser"
 // O componente continua no projeto; reimportar aqui para reativar.
 import { RecipientModal } from "@/modules/quotes/ui/components/RecipientModal";
 import { LabelPreview } from "@/modules/quotes/ui/components/LabelPreview";
-import { InsuranceField } from "@/modules/quotes/ui/components/InsuranceField";
+// O campo de seguro voltou para a tela de cotação, para o preço já sair
+// completo na lista de opções. InsuranceField segue no projeto caso precise.
 import { ResultsBanner } from "@/modules/quotes/ui/components/ResultsBanner";
 import { useQuoteStore } from '@/modules/quotes/ui/state/useQuoteStore';
 import { useCartAdd } from "@/modules/cart/ui/hooks";
@@ -1744,7 +1745,6 @@ export default function FinalizarClient() {
               onRecipientPaysChange={handleRecipientPaysToggle}
               // Seguro (valor declarado) fica junto do preço que ele altera:
               // informá-lo dispara nova cotação e atualiza o frete acima.
-              footer={<InsuranceField />}
             />
             <ELCard
               header={{ title: "Pagamento" }}

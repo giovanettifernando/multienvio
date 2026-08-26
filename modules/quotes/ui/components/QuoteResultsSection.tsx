@@ -15,6 +15,16 @@ import {
   EL_EMPTY_PRESENTED_IMAGE_SIMPLE,
 } from '@/shared/ui';
 import { formatBRL } from '@/shared/utils/format';
+import { ELTooltip } from '@/shared/ui';
+
+/**
+ * Cobertura que os Correios já incluem no preço, sem custo. Aparece na
+ * resposta da API deles como `vlSeguroAutomatico` e coincide com o valor
+ * mínimo de valor declarado — é o piso de cobertura da transportadora.
+ */
+const COBERTURA_AUTOMATICA_PAC = 25.63;
+
+const Tooltip = ELTooltip;
 const Alert = ELAlert;
 const Avatar = ELAvatar;
 const Empty = ELEmpty;
@@ -31,6 +41,7 @@ import { DataTable, type DataTableColumn } from '@/shared/ui/DataTable';
 import {
   CheckCircleOutlined,
   ClockCircleOutlined,
+  ExclamationCircleOutlined,
 } from "@ant-design/icons";
 import type { QuoteResultItem, DocumentType, EligibilityResponse } from '@/shared/types/quote';
 import { ContentDeclarationModal } from "./ContentDeclarationModal";
@@ -487,6 +498,8 @@ export function QuoteResultsSection({
   }
 
   // Estado com resultados
+  const seguroInformado = storeResults?.resumo.seguroValor ?? 0;
+
   const columns: DataTableColumn<QuoteResultItem>[] = [
     {
       title: "Transportadora",
@@ -535,6 +548,52 @@ export function QuoteResultsSection({
       dataIndex: "modalidade",
       key: "modalidade",
       width: 120,
+      render: (text: unknown, row: QuoteResultItem) => {
+        // Quando o cliente pediu seguro, os serviços que não aceitam valor
+        // declarado aparecem cotados SEM ele — e ficam mais baratos na lista
+        // por um motivo que a tela não conta. É o caso do PAC dos Correios,
+        // que recusa o valor declarado (erro ERP-054 da API deles) mas leva
+        // cobertura automática de R$ 25,63 embutida no preço.
+        const semSeguro = row.aceitaSeguro === false && seguroInformado > 0;
+
+        return (
+          <Flex vertical gap={2}>
+            <Typography.Text>{text as string}</Typography.Text>
+            {semSeguro && (
+              <Flex align="center" gap={4}>
+                <Typography.Text type="warning" style={{ fontSize: 11 }}>
+                  Não inclui o seguro
+                </Typography.Text>
+                <Tooltip
+                  title={
+                    <div style={{ fontSize: 12, lineHeight: 1.5, maxWidth: 260 }}>
+                      <div style={{ marginBottom: 6 }}>
+                        <strong>{row.modalidade}</strong> não aceita valor declarado, então
+                        o preço ao lado <strong>não inclui</strong> o seguro de{" "}
+                        {formatBRL(seguroInformado)} que você informou.
+                      </div>
+                      <div style={{ marginBottom: 6 }}>
+                        Ele já vem com cobertura automática de{" "}
+                        <strong>{formatBRL(COBERTURA_AUTOMATICA_PAC)}</strong>, sem custo — e
+                        não é possível aumentar esse valor.
+                      </div>
+                      <div>
+                        Para segurar {formatBRL(seguroInformado)}, escolha um{" "}
+                        <strong>SEDEX</strong>: lá o seguro custa 1% do que passar de{" "}
+                        {formatBRL(COBERTURA_AUTOMATICA_PAC)}.
+                      </div>
+                    </div>
+                  }
+                >
+                  <ExclamationCircleOutlined
+                    style={{ fontSize: 12, color: "#faad14", cursor: "help" }}
+                  />
+                </Tooltip>
+              </Flex>
+            )}
+          </Flex>
+        );
+      },
       showInCard: true,
     },
     {
