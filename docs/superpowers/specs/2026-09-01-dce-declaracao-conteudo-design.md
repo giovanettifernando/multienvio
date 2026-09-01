@@ -46,6 +46,53 @@ A decisão de bloquear o checkout é segura **porque a plataforma não fala com 
 SEFAZ**. Quem emite é o cliente; não há instabilidade nossa capaz de derrubar vendas.
 Numa modalidade de emissão própria essa decisão precisaria ser reavaliada.
 
+## Respostas das transportadoras (01/09/2026)
+
+Perguntadas sobre como tratam a DC-e hoje:
+
+- **Elas não emitem.** "O cliente vai emitir por conta própria, a DC-e tem que ser
+  dele." Isso confirma a modalidade escolhida e destrava o bloco de emissão.
+- **Objetos sem DC-e ainda são aceitos**, com declaração de conteúdo em papel. Não
+  há emergência — há prazo de manobra.
+- **A Total Express já opera assim:** campo no sistema para o número, e o sistema
+  gera a segunda via. O desenho que fizemos é o mesmo do mercado.
+- **O DACE deve ser impresso junto com a nossa etiqueta**, mas não como etiqueta.
+
+## O prazo que vale para pessoa jurídica
+
+Do FAQ oficial do portal:
+
+- O app do Fisco é **destinado a pessoa física**. Há também um emissor Web
+  (`dce.receita.pr.gov.br`), igualmente para pessoa física.
+- Para pessoa jurídica, o uso do app é permitido **apenas até 31/10/2026**,
+  emitindo com o CPF do representante legal e informando o CNPJ da empresa em
+  "Informações Complementares".
+- Para operações recorrentes, o próprio Fisco recomenda sistema próprio ou
+  software de mercado.
+
+A plataforma atende PF e PJ. **Decisão tomada: não comprar certificado.** Depois de
+31/10, o cliente pessoa jurídica emite no sistema fiscal que já usa (Bling, Tiny,
+contador) e cola a chave aqui — o mesmo campo, mudando só quem emitiu.
+
+**Decisão tomada: a declaração em papel sai por completo.** Não haverá convivência
+entre os dois formatos.
+
+## O QR-Code sai da chave
+
+Do Anexo II, seção 3.2.1: o QR-Code impresso no DACE contém apenas uma URL:
+
+```
+<portal da SEFAZ>/dce/qrcode?chDCe=<44 dígitos>&tpAmb=1
+```
+
+Não depende do protocolo de autorização. Como o manual exige que **o QR-Code e o
+código de barras estejam visíveis na embalagem**, e ambos derivam da chave, a
+plataforma consegue imprimi-los junto da etiqueta a partir do que o cliente colar.
+
+Um DACE completo traz também o protocolo de autorização, que só a SEFAZ devolve a
+quem emitiu — esse a plataforma não tem. O que se imprime aqui é o que precisa ser
+lido na caixa, não uma segunda via oficial.
+
 ## Fatos apurados na fonte oficial
 
 Do *Manual DC-e — Visão Geral* e do *Anexo I — Leiaute e Regras de Validação*
