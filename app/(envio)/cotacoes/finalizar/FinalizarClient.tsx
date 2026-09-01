@@ -15,6 +15,8 @@ import { ELGrid } from '@/shared/ui/ELGrid';
 import { ELSkeleton } from '@/shared/ui/ELSkeleton';
 import { PageShell } from '@/shared/ui/PageShell';
 import { useProfile } from "@/modules/account/ui/hooks/useAccount";
+import { DceKeyField } from "@/modules/quotes/ui/components/DceKeyField";
+import { isValidDceKey } from "@/shared/validation/dce";
 import { ELButton } from '@/shared/ui/ELButton';
 import { ELModal } from '@/shared/ui/ELModal';
 import {
@@ -413,6 +415,13 @@ export default function FinalizarClient() {
   );
   const faltaDocumentoDoRemetente =
     documentType === "DECLARACAO" && perfil !== undefined && !remetenteTemDocumento;
+
+  // Segunda camada da trava: sem chave válida o pagamento não abre. A primeira
+  // é o superRefine do schema — as duas juntas, porque validar só numa já
+  // custou dois bugs neste projeto.
+  const dceKeyInformada = useWatch({ control, name: "document.dceKey" });
+  const faltaChaveDce =
+    documentType === "DECLARACAO" && !isValidDceKey(dceKeyInformada ?? "");
   const declarationItems = useWatch({ control, name: "document.declarationItems" });
   const volumeDeclarations = useWatch({ control, name: "document.volumeDeclarations" });
   const volumeDocuments = useWatch({ control, name: "document.volumeDocuments" });
@@ -572,6 +581,7 @@ export default function FinalizarClient() {
     if (!checks.documentItems) return false;
     if (!canProceed) return false;
     if (faltaDocumentoDoRemetente) return false;
+    if (faltaChaveDce) return false;
 
     // P2: Bloquear se código não foi reservado ou houve erro
     if (!reservedTrackingCode || reservationError) return false;
@@ -594,6 +604,7 @@ export default function FinalizarClient() {
     reservedTrackingCode,
     reservationError,
     faltaDocumentoDoRemetente,
+    faltaChaveDce,
     recipientLogradouro,
     recipientBairro,
     recipientCidade,
@@ -651,12 +662,17 @@ export default function FinalizarClient() {
       return "Informe seu CPF ou CNPJ em Minha conta para enviar com declaração de conteúdo.";
     }
 
+    if (faltaChaveDce) {
+      return "Informe a chave da DC-e para continuar.";
+    }
+
     return "Preencha todos os campos obrigatórios para continuar.";
   }, [
     preconditionsOk,
     isReservingCode,
     reservedTrackingCode,
     faltaDocumentoDoRemetente,
+    faltaChaveDce,
     hasAtLeastOneDocumentItem,
     pickupAtOrigin,
     pickupPointId,
@@ -1927,6 +1943,7 @@ export default function FinalizarClient() {
                 O componente segue no projeto para reativação futura. */}
             <ELGrid variant="forms" gap="xl">
               <DocumentChooser />
+              {documentType === "DECLARACAO" && <DceKeyField />}
             </ELGrid>
           </Space>
 

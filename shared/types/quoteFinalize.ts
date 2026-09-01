@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { DocumentType } from '@/shared/types/quote';
+import { isValidDceKey } from "@/shared/validation/dce";
 
 export const cepRegex = /^\d{5}-\d{3}$/;
 
@@ -247,6 +248,10 @@ export const finalizeFormSchema = z
       declarationItems: z.array(declarationItemSchema).optional(),
       // Novo formato: declaração por volume
       volumeDeclarations: z.array(volumeDeclarationSchema).optional(),
+      // Chave da DC-e emitida pelo cliente. Obrigatória quando o documento é
+      // declaração de conteúdo — validada no superRefine abaixo, para a
+      // mensagem citar o campo certo.
+      dceKey: z.string().optional(),
     }),
     postingUnit: postingUnitSchema,
     recipient: z.object({
@@ -259,6 +264,19 @@ export const finalizeFormSchema = z
     }),
   })
   .superRefine((values, ctx) => {
+    // A declaração de conteúdo em papel foi substituída pela DC-e, que o
+    // cliente emite na SEFAZ. Sem a chave não há documento válido para o
+    // envio, então o formulário não fecha.
+    if (values.document.type === "DECLARACAO") {
+      if (!values.document.dceKey || !isValidDceKey(values.document.dceKey)) {
+        ctx.addIssue({
+          path: ["document", "dceKey"],
+          code: z.ZodIssueCode.custom,
+          message: "Informe a chave da DC-e (44 dígitos) para continuar.",
+        });
+      }
+    }
+
     // Novo formato: volumeDocuments (cada volume pode ter NF-e ou Declaração)
     // Se volumeDocuments está sendo usado, a validação é feita separadamente via validateVolumeDocumentsOnSubmit
     const hasVolumeDocuments = values.document.volumeDocuments && values.document.volumeDocuments.length > 0;
