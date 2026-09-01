@@ -14,6 +14,7 @@ import { ELCard } from '@/shared/ui/ELCard';
 import { ELGrid } from '@/shared/ui/ELGrid';
 import { ELSkeleton } from '@/shared/ui/ELSkeleton';
 import { PageShell } from '@/shared/ui/PageShell';
+import { useProfile } from "@/modules/account/ui/hooks/useAccount";
 import { ELButton } from '@/shared/ui/ELButton';
 import { ELModal } from '@/shared/ui/ELModal';
 import {
@@ -401,6 +402,17 @@ export default function FinalizarClient() {
   // Watch document fields to validate items
   // Using useWatch for better reactivity with nested fields
   const documentType = useWatch({ control, name: "document.type" });
+
+  // A DC-e exige CPF/CNPJ do remetente. A checagem também existe no servidor,
+  // mas precisa estar AQUI: no pagamento por cartão a cobrança acontece antes
+  // da criação do envio, então barrar só lá deixa o cliente cobrado e sem
+  // envio. Foi exatamente o que aconteceu no primeiro teste.
+  const { data: perfil } = useProfile();
+  const remetenteTemDocumento = Boolean(
+    perfil?.cpf?.trim() || perfil?.company?.cnpj?.trim()
+  );
+  const faltaDocumentoDoRemetente =
+    documentType === "DECLARACAO" && perfil !== undefined && !remetenteTemDocumento;
   const declarationItems = useWatch({ control, name: "document.declarationItems" });
   const volumeDeclarations = useWatch({ control, name: "document.volumeDeclarations" });
   const volumeDocuments = useWatch({ control, name: "document.volumeDocuments" });
@@ -559,6 +571,7 @@ export default function FinalizarClient() {
     if (!checks.volumes) return false;
     if (!checks.documentItems) return false;
     if (!canProceed) return false;
+    if (faltaDocumentoDoRemetente) return false;
 
     // P2: Bloquear se código não foi reservado ou houve erro
     if (!reservedTrackingCode || reservationError) return false;
@@ -580,6 +593,7 @@ export default function FinalizarClient() {
     recipientCep,
     reservedTrackingCode,
     reservationError,
+    faltaDocumentoDoRemetente,
     recipientLogradouro,
     recipientBairro,
     recipientCidade,
@@ -633,11 +647,16 @@ export default function FinalizarClient() {
       return "Informe os dados obrigatórios do destinatário para continuar.";
     }
 
+    if (faltaDocumentoDoRemetente) {
+      return "Informe seu CPF ou CNPJ em Minha conta para enviar com declaração de conteúdo.";
+    }
+
     return "Preencha todos os campos obrigatórios para continuar.";
   }, [
     preconditionsOk,
     isReservingCode,
     reservedTrackingCode,
+    faltaDocumentoDoRemetente,
     hasAtLeastOneDocumentItem,
     pickupAtOrigin,
     pickupPointId,
