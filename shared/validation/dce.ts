@@ -10,6 +10,8 @@
  * tamanho e o mesmo dígito verificador.
  */
 
+import { z } from 'zod';
+
 import { onlyDigits } from '@/shared/utils/masks';
 
 /** Modelo do documento na chave de acesso. A NF-e usa '55'. */
@@ -76,3 +78,16 @@ export function parseDceKey(value: string): DceKeyParts | null {
     dv: d.slice(43, 44),
   };
 }
+
+/**
+ * Schema da chave, para usar nos payloads de checkout. Normaliza para dígitos
+ * antes de validar, porque o cliente cola a chave como aparece no app da
+ * SEFAZ — com espaços ou pontos.
+ */
+export const dceKeySchema = z
+  .string()
+  .transform(onlyDigits)
+  .refine(isValidDceKey, {
+    message:
+      'Chave da DC-e inválida. Confira os 44 dígitos — se o documento for uma nota fiscal, ela não serve aqui.',
+  });

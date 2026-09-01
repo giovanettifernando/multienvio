@@ -29,6 +29,9 @@ export interface ShipmentInput {
   /** CPF/CNPJ do remetente. Resolvido junto com o nome quando vier vazio. */
   senderDocument?: string | null;
 
+  /** Chave de acesso da DC-e, quando o documento for declaração de conteúdo. */
+  dceKey?: string | null;
+
   // Destinatário
   recipientName: string;
   recipientPhone?: string | null;

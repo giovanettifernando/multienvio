@@ -204,6 +204,9 @@ model Shipment {
   // cadastro do usuario na hora de imprimir daria o documento atual, nao o de
   // quem enviou.
   senderDocument                  String?
+  /// Chave de acesso da DC-e (44 dígitos). Única: a mesma declaração não pode
+  /// ser reaproveitada em outro envio.
+  dceKey                          String?                   @unique
   destinationCep                  String
   estimatedDays                   Int?
   freightCost                     Float?
