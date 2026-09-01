@@ -15,6 +15,7 @@ import 'server-only';
 
 import { Prisma, PrismaClient, Package } from '@prisma/client';
 import { prisma } from '@/platform/db/db';
+import { assertSenderCanUseDeclaration } from '@/shared/validation/dce';
 import { createShipmentWithVolumes } from '@/modules/shipments/application/create-with-volumes';
 import { calculateCommissionsInCents, calculateInsuranceCommission, resolveCarrierSlugByName } from '@/modules/quotes/application/commission';
 import { ShipmentStatus } from '@/modules/shipments/application/shipment-status';
@@ -419,6 +420,16 @@ export async function processCheckout(input: CheckoutInput): Promise<CheckoutRes
 
   const platformTrackingCode = generatePlatformTrackingCode();
   const declaredValue = calculateDeclaredValue(input.document, input.insuranceValue);
+
+  // A DC-e exige documento do emitente. Barrar aqui, antes de cobrar, evita
+  // criar envio que nunca poderá ter documento válido.
+  if (input.document.type === 'DECLARACAO') {
+    const sender = await prisma.user.findUnique({
+      where: { id: input.userId },
+      select: { cpf: true, cnpj: true },
+    });
+    assertSenderCanUseDeclaration({ cpf: sender?.cpf ?? null, cnpj: sender?.cnpj ?? null });
+  }
   const documentData = prepareDocumentData(input.document);
   const initialStatus = determineInitialStatus(input.solicitarColeta, input.pickupPointId);
 

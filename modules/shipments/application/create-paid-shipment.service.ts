@@ -15,6 +15,7 @@
  */
 
 import { prisma } from '@/platform/db/db';
+import { assertSenderCanUseDeclaration } from '@/shared/validation/dce';
 import { createShipmentWithVolumes } from '@/modules/shipments/application/create-with-volumes';
 import { ShipmentStatus } from '@/modules/shipments/application/shipment-status';
 import { logger } from '@/platform/logging/logger';
@@ -119,6 +120,16 @@ export async function createPaidShipment(
   } = input;
 
   const declaredValue = calculateDeclaredValue(document, insuranceValue);
+
+  // Mesma regra do checkout do carrinho: sem CPF/CNPJ do remetente não há
+  // como emitir a DC-e, então o envio não deve nem ser criado.
+  if (document.type === 'DECLARACAO') {
+    const sender = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { cpf: true, cnpj: true },
+    });
+    assertSenderCanUseDeclaration({ cpf: sender?.cpf ?? null, cnpj: sender?.cnpj ?? null });
+  }
   const documentData = prepareDocumentData(document);
   const initialStatus = determineInitialStatus(solicitarColeta, pickupPointId);
   const amountCents = Math.round(totalCost * 100);

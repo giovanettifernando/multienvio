@@ -91,3 +91,24 @@ export const dceKeySchema = z
     message:
       'Chave da DC-e inválida. Confira os 44 dígitos — se o documento for uma nota fiscal, ela não serve aqui.',
   });
+
+/**
+ * A DC-e exige CPF ou CNPJ do emitente — que, nos nossos envios, é o
+ * remetente. Lança quando o cadastro está sem documento, apontando onde
+ * resolver: o formulário de "Minha conta" já pede e valida esse campo, mas
+ * nada obriga o usuário a passar por lá antes de enviar.
+ */
+export function assertSenderCanUseDeclaration(sender: {
+  cpf: string | null;
+  cnpj: string | null;
+}): void {
+  const temDocumento = Boolean(sender.cpf?.trim() || sender.cnpj?.trim());
+  if (temDocumento) return;
+
+  throw Object.assign(
+    new Error(
+      'Para enviar com declaração de conteúdo é preciso informar seu CPF ou CNPJ em Minha conta.'
+    ),
+    { code: 'SENDER_DOCUMENT_REQUIRED' }
+  );
+}
