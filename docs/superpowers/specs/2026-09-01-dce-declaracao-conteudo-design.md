@@ -74,8 +74,11 @@ A plataforma atende PF e PJ. **Decisão tomada: não comprar certificado.** Depo
 31/10, o cliente pessoa jurídica emite no sistema fiscal que já usa (Bling, Tiny,
 contador) e cola a chave aqui — o mesmo campo, mudando só quem emitiu.
 
-**Decisão tomada: a declaração em papel sai por completo.** Não haverá convivência
-entre os dois formatos.
+**Decisão tomada: a declaração em papel sai de circulação, mas o código fica.** O
+usuário deixa de ver e de imprimir o PDF de papel, e ele deixa de ser anexado à
+etiqueta — porém nada é apagado do projeto. Os geradores e o trecho do worker ficam
+comentados e identificados, para reativar sem reescrever caso a DC-e precise
+retroceder ou conviver com o papel em alguma praça.
 
 ## O QR-Code sai da chave
 
