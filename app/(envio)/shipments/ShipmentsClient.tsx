@@ -238,7 +238,7 @@ export default function ShipmentsClient() {
     try {
       await fetchAndPrintShipmentDocument(shipmentId);
     } catch (err) {
-      message.error(err instanceof Error ? err.message : 'Não foi possível gerar a declaração.');
+      message.error(err instanceof Error ? err.message : 'Não foi possível gerar o documento.');
     } finally {
       setPrintingDocumentId(null);
     }

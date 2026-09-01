@@ -245,10 +245,13 @@ export default function ShipmentDetailClient() {
               </Tooltip>
             );
           })()}
-          {shipment && shipment.volumes.length > 0 && (
+          {/* Só NF-e. A declaração de conteúdo em papel saiu de circulação em
+              01/09/2026: o documento válido passou a ser a DC-e, emitida pelo
+              cliente na SEFAZ. O gerador continua em document-pdf.ts. */}
+          {shipment && shipment.volumes.length > 0 && isNFeShipment(shipment) && (
             <Tooltip title="Gerar o PDF e abrir a impressão">
               <ELButton icon={<PrinterOutlined />} onClick={handlePrintDocument}>
-                {isNFeShipment(shipment) ? 'Imprimir NF-e' : 'Imprimir Declaração'}
+                Imprimir NF-e
               </ELButton>
             </Tooltip>
           )}

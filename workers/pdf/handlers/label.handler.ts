@@ -19,15 +19,18 @@ import {
 } from '../../../platform/integrations/correios/client';
 import { printLoggiLabel } from '../../../platform/integrations/loggi/label';
 import { createEnvioLegalPdf } from '../../../platform/labels/pdf-generator';
-import { buildRemetente, buildDestinatario } from '@/modules/shipments/application/declaracao-parties';
-import {
-  generateDeclaracaoConteudoPdf,
-  type DeclaracaoConteudoPayload,
-} from '../../../shared/docs/correios/declaracao-conteudo-pdf';
+// Usados apenas pelo anexo da declaração em papel, desativado em 01/09/2026.
+// Ver o bloco comentado mais abaixo.
+// import { buildRemetente, buildDestinatario } from '@/modules/shipments/application/declaracao-parties';
+// import {
+//   generateDeclaracaoConteudoPdf,
+//   type DeclaracaoConteudoPayload,
+// } from '../../../shared/docs/correios/declaracao-conteudo-pdf';
 import type { JobLogger } from '../../../platform/queue/helpers';
 import { withRetry, CORREIOS_RETRY_CONFIG } from '../../../shared/utils/retry';
 import { CorreiosApiError } from '../../../platform/integrations/correios/types';
-import { extractDeclarationItems, type ShipmentDocument } from '../../../shared/docs/correios/declaration-items';
+// extractDeclarationItems idem — só o tipo segue em uso.
+import { type ShipmentDocument } from '../../../shared/docs/correios/declaration-items';
 
 async function baixarRotuloPdfComRetry(
   prePostageId: string,
@@ -432,6 +435,13 @@ export async function generateLabelPdf(params: {
 
   log.info({ labelId, volumeCount: pdfBuffers.length }, 'Label PDF composed');
 
+  /* DESATIVADO EM 01/09/2026 — a declaração de conteúdo em papel foi
+     substituída pela DC-e, que o cliente emite na SEFAZ e cujo QR-Code vai na
+     etiqueta. Anexar o papel aqui entregaria um documento sem validade.
+
+     Mantido comentado, e não removido, para reativar sem reescrever caso o
+     papel volte a ser aceito ou precise conviver com a DC-e em alguma praça.
+
   // 4. Anexar Declaração de Conteúdo (se aplicável)
   const shipmentDoc = label.shipment.document as ShipmentDocument | null;
 
@@ -474,6 +484,7 @@ export async function generateLabelPdf(params: {
         'Failed to append declaration — continuing without it');
     }
   }
+  */
 
   const fileName = `etiqueta_${platformTrackingCode || labelId}.pdf`;
   return { pdfBuffer: Buffer.from(finalPdf), fileName };

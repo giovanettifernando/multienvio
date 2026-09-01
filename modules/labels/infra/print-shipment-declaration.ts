@@ -5,6 +5,11 @@
  * tela de detalhe do envio, que já tem os dados carregados, e a listagem, que
  * só tem o id e precisa buscá-los. Manter a montagem do payload em um lugar só
  * evita que as duas impressões saiam diferentes.
+ *
+ * Desde 01/09/2026 este caminho só atende NF-e. A declaração de conteúdo em
+ * papel deixou de ser oferecida — foi substituída pela DC-e, emitida pelo
+ * cliente na SEFAZ. O gerador da declaração continua em `document-pdf.ts`,
+ * intacto, para reativar caso o papel volte a ser aceito.
  */
 
 import { printDocumentPDF, type ShipmentInfo, type VolumeData } from './document-pdf';
@@ -120,6 +125,16 @@ export async function fetchAndPrintShipmentDocument(shipmentId: string): Promise
 
   if (!shipment || !shipment.volumes?.length) {
     throw new Error('Este envio não tem volumes para imprimir.');
+  }
+
+  // A declaração de conteúdo em papel saiu de circulação em 01/09/2026: o
+  // documento válido é a DC-e, que o cliente emite na SEFAZ e imprime de lá.
+  // A recusa vive aqui, e não na tela, porque a listagem não sabe o tipo do
+  // documento — assim qualquer chamador recebe a mesma explicação.
+  if (!isNFeShipment(shipment)) {
+    throw new Error(
+      'A declaração em papel foi substituída pela DC-e. Imprima o documento no portal da SEFAZ, com a chave informada no envio.'
+    );
   }
 
   printShipmentDocument(shipment);
