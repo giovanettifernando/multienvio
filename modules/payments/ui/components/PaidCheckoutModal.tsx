@@ -74,6 +74,8 @@ export interface CheckoutData {
     observacoes?: string | null;
     salvarRecorrente?: boolean;
   };
+  /** Chave da DC-e, quando o documento é declaração de conteúdo. */
+  dceKey?: string | null;
   document: {
     type: 'NFE' | 'DECLARACAO';
     packages?: Array<{
@@ -223,6 +225,7 @@ export function PaidCheckoutModal({
         pagarmePaymentId,
         recipient: checkoutData.recipient,
         document: checkoutData.document,
+        dceKey: checkoutData.dceKey ?? null,
         volumes: checkoutData.volumes,
         insuranceValue: checkoutData.insuranceValue,
         freightCost: checkoutData.freightCost,

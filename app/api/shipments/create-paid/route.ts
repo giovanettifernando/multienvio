@@ -15,6 +15,7 @@
 
 import { NextRequest } from 'next/server';
 import { withApiHandler } from '@/platform/api/handler';
+import { dceKeySchema } from '@/shared/validation/dce';
 import { ApiError } from '@/platform/api/errors';
 import { z } from 'zod';
 import { requireUser } from '@/platform/auth/require-session';
@@ -124,6 +125,9 @@ const createPaidShipmentSchema = z.object({
   insuranceValue: z.number().optional(),
   freightCost: z.number(),
   totalCost: z.number(),
+
+  /** Chave da DC-e, obrigatória quando o documento é declaração de conteúdo. */
+  dceKey: dceKeySchema.optional(),
 
   // Coleta
   pickupPointId: z.string().optional().nullable(),
@@ -243,6 +247,7 @@ export const POST = withApiHandler<CreatePaidShipmentResponse>(async ({ req }) =
       carrier: data.carrier,
       service: data.service,
       externalServiceId: validatedQuote.externalServiceId,
+      dceKey: data.dceKey ?? null,
       originCep: data.originCep,
       originCidade: data.originCidade,
       originUf: data.originUf,

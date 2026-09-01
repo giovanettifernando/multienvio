@@ -1296,6 +1296,7 @@ export default function FinalizarClient() {
             salvarRecorrente: recipientData.salvarRecorrente || false,
           },
           document: payload.document,
+          dceKey: dceKeyInformada ?? null,
           volumes: payload.volumes,
           insuranceValue: payload.insuranceValue,
           freightCost: payload.freightCost,

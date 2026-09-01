@@ -88,6 +88,8 @@ export interface CheckoutVolumeDeclaration {
 
 export interface CheckoutDocument {
   type: 'NFE' | 'DECLARACAO';
+  /** Chave da DC-e, quando o documento é declaração de conteúdo. */
+  dceKey?: string;
   packages?: CheckoutNfePackage[];
   nfeKeys?: Array<{ chave: string }>;
   nfeItems?: Array<{
@@ -531,6 +533,7 @@ export async function processCheckout(input: CheckoutInput): Promise<CheckoutRes
         destinationCity: input.recipient.cidade,
         destinationState: input.recipient.uf,
         declaredValue,
+        dceKey: input.document.dceKey ?? null,
         carrier: input.carrier,
         service: input.service,
         estimatedDays: serverEstimatedDays, // SECURITY: Usar valor do servidor

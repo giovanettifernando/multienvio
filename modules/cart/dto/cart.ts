@@ -180,6 +180,8 @@ const nfeDataSchema = z.object({
 // Baseado no mesmo formato do /api/checkout
 export const documentSnapshotSchema = z.object({
   type: z.enum(['NFE', 'DECLARACAO']),
+  /** Chave da DC-e, quando o documento é declaração de conteúdo. */
+  dceKey: z.string().optional(),
   // Novo formato NFE: packages (NF por pacote com items)
   packages: z.array(z.object({
     chave: z.string(),

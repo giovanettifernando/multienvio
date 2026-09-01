@@ -15,7 +15,7 @@
  */
 
 import { prisma } from '@/platform/db/db';
-import { assertSenderCanUseDeclaration } from '@/shared/validation/dce';
+import { assertSenderCanUseDeclaration, isValidDceKey } from '@/shared/validation/dce';
 import { createShipmentWithVolumes } from '@/modules/shipments/application/create-with-volumes';
 import { ShipmentStatus } from '@/modules/shipments/application/shipment-status';
 import { logger } from '@/platform/logging/logger';
@@ -58,6 +58,8 @@ export interface CreatePaidShipmentInput {
   estimatedDays: number;
   freightCost: number;
   totalCost: number; // Valor total a ser debitado (frete + taxa de coleta)
+  /** Chave da DC-e, quando o documento é declaração de conteúdo. */
+  dceKey?: string | null;
   solicitarColeta?: boolean;
   paymentMethod: PaymentMethod;
   /** ID externo do serviço (ex: externalServiceId da Loggi) */
@@ -113,6 +115,7 @@ export async function createPaidShipment(
     estimatedDays,
     freightCost,
     totalCost,
+    dceKey,
     solicitarColeta,
     paymentMethod,
     pagarmePaymentId,
@@ -129,6 +132,14 @@ export async function createPaidShipment(
       select: { cpf: true, cnpj: true },
     });
     assertSenderCanUseDeclaration({ cpf: sender?.cpf ?? null, cnpj: sender?.cnpj ?? null });
+  }
+
+  // Última linha de defesa: a tela já trava, mas chamada por API não passa por
+  // ela. Sem chave não existe documento válido para o envio.
+  if (document.type === 'DECLARACAO' && !isValidDceKey(dceKey ?? '')) {
+    throw Object.assign(new Error('Chave da DC-e ausente ou inválida.'), {
+      code: 'DCE_KEY_REQUIRED',
+    });
   }
   const documentData = prepareDocumentData(document);
   const initialStatus = determineInitialStatus(solicitarColeta, pickupPointId);
@@ -405,6 +416,7 @@ export async function createPaidShipment(
         destinationCity: recipient.cidade,
         destinationState: recipient.uf,
         declaredValue,
+        dceKey: dceKey ?? null,
         carrier,
         service,
         estimatedDays,
