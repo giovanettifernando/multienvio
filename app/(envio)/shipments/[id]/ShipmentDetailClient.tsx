@@ -110,6 +110,7 @@ interface ShipmentDetail {
   originState: string | null;
   senderName: string | null;
   senderDocument: string | null;
+  dceKey: string | null;
   destinationCep: string;
   destinationCity: string;
   destinationState: string;
@@ -312,6 +313,14 @@ export default function ShipmentDetailClient() {
                   {formatPaymentMethod(shipment.paymentMethod)}
                 </div>
               </div>
+              {shipment.dceKey && (
+                <ELGridSpanFull>
+                  <Text type="secondary">Chave da DC-e</Text>
+                  <div style={{ marginTop: 4, fontFamily: 'monospace', fontSize: 13, wordBreak: 'break-all' }}>
+                    {shipment.dceKey}
+                  </div>
+                </ELGridSpanFull>
+              )}
               <div>
                 <Text type="secondary">Remetente</Text>
                 <div style={{ marginTop: 4 }}>{shipment.senderName || 'Não informado'}</div>

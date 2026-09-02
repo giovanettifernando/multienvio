@@ -54,6 +54,7 @@ type TrackingData = {
   senderDocument: string | null;
   recipientDocument: string | null;
   paymentMethod: string | null;
+  dceKey: string | null;
   destination: {
     cep: string;
     address: string | null;
@@ -237,6 +238,14 @@ export default function PublicTrackingClient() {
                 <Text>{formatPaymentMethod(data.paymentMethod)}</Text>
               </div>
             </div>
+            {data.dceKey && (
+              <div>
+                <Text type="secondary" style={{ fontSize: 12 }}>Chave da DC-e</Text>
+                <div style={{ fontFamily: 'monospace', fontSize: 11, wordBreak: 'break-all' }}>
+                  {data.dceKey}
+                </div>
+              </div>
+            )}
             <div>
               <Text type="secondary" style={{ fontSize: 12 }}>Criado em</Text>
               <div><Text>{new Date(data.createdAt).toLocaleString("pt-BR")}</Text></div>

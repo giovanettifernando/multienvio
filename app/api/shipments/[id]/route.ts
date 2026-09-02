@@ -100,6 +100,7 @@ interface ShipmentDetail {
   originState: string | null;
   senderName: string | null;
   senderDocument: string | null;
+  dceKey: string | null;
   destinationCep: string;
   estimatedDays: number | null;
   freightCost: number | null;

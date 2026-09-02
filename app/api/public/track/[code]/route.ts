@@ -69,6 +69,7 @@ export const GET = withApiHandler<unknown, { code: string }>(async ({ params, lo
       recipientDocument: true,
       senderDocument: true,
       paymentMethod: true,
+      dceKey: true,
       originCep: true,
       originAddress: true,
       originNeighborhood: true,
@@ -473,6 +474,7 @@ export const GET = withApiHandler<unknown, { code: string }>(async ({ params, lo
       senderDocument: shipment.senderDocument,
       recipientDocument: shipment.recipientDocument,
       paymentMethod: shipment.paymentMethod,
+      dceKey: shipment.dceKey,
       destination: {
         cep: shipment.destinationCep,
         address: shipment.destinationAddress,
