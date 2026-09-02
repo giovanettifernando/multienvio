@@ -11,6 +11,7 @@ import {
 import { ExportOutlined } from "@ant-design/icons";
 import { isValidDceKey } from "@/shared/validation/dce";
 import type { FinalizeFormValues } from "@/shared/types/quoteFinalize";
+import { useProfile } from "@/modules/account/ui/hooks/useAccount";
 
 const Typography = ELTypography;
 const { Text } = Typography;
@@ -26,6 +27,17 @@ const { Text } = Typography;
 const PORTAL_DCE = "https://dfe-portal.svrs.rs.gov.br/Dce";
 
 /**
+ * Até esta data o representante legal de uma empresa pode emitir a DC-e no app
+ * do Fisco, usando o próprio CPF e informando o CNPJ em "Informações
+ * Complementares" (FAQ oficial, pergunta 7). Depois disso o app atende apenas
+ * pessoa física, e a empresa precisa emitir pelo sistema fiscal que já usa.
+ *
+ * A orientação na tela muda sozinha quando a data passa — ninguém precisa
+ * lembrar de trocar o texto.
+ */
+const FIM_APP_FISCO_PJ = new Date("2026-10-31T23:59:59-03:00");
+
+/**
  * A DC-e é emitida pelo cliente, fora da plataforma: no app ou no emissor Web
  * do Fisco (pessoa física), ou no sistema fiscal próprio (pessoa jurídica, que
  * perde o acesso ao app do Fisco em 31/10/2026). Ele volta com 44 dígitos.
@@ -36,6 +48,10 @@ const PORTAL_DCE = "https://dfe-portal.svrs.rs.gov.br/Dce";
  */
 export function DceKeyField() {
   const { control } = useFormContext<FinalizeFormValues>();
+  const { data: perfil } = useProfile();
+
+  const ehPessoaJuridica = Boolean(perfil?.company?.cnpj?.trim());
+  const appFiscoIndisponivel = ehPessoaJuridica && new Date() > FIM_APP_FISCO_PJ;
 
   return (
     <ELCard
@@ -43,18 +59,35 @@ export function DceKeyField() {
       header={{ title: "Declaração de Conteúdo eletrônica (DC-e)" }}
     >
       <ELSpace orientation="vertical" size={12} style={{ width: "100%" }}>
-        <Text style={{ fontSize: 13 }}>
-          Emita a DC-e no portal da SEFAZ — no site ou pelo aplicativo — e cole
-          aqui a chave de 44 dígitos. Sem ela não é possível concluir o envio.
-        </Text>
+        {appFiscoIndisponivel ? (
+          <Text style={{ fontSize: 13 }}>
+            Emita a DC-e no seu sistema fiscal — o aplicativo da SEFAZ atende
+            apenas pessoa física. Cole aqui a chave de 44 dígitos gerada lá. Sem
+            ela não é possível concluir o envio.
+          </Text>
+        ) : (
+          <Text style={{ fontSize: 13 }}>
+            Emita a DC-e no portal da SEFAZ — no site ou pelo aplicativo — e cole
+            aqui a chave de 44 dígitos. Sem ela não é possível concluir o envio.
+          </Text>
+        )}
 
-        <ELButton
-          size="small"
-          icon={<ExportOutlined />}
-          onClick={() => window.open(PORTAL_DCE, "_blank", "noopener")}
-        >
-          Abrir portal da DC-e
-        </ELButton>
+        {ehPessoaJuridica && !appFiscoIndisponivel && (
+          <Text type="warning" style={{ fontSize: 12 }}>
+            A partir de 1º de novembro de 2026, empresas deixam de emitir pelo
+            aplicativo da SEFAZ e passam a usar o próprio sistema fiscal.
+          </Text>
+        )}
+
+        {!appFiscoIndisponivel && (
+          <ELButton
+            size="small"
+            icon={<ExportOutlined />}
+            onClick={() => window.open(PORTAL_DCE, "_blank", "noopener")}
+          >
+            Abrir portal da DC-e
+          </ELButton>
+        )}
 
         <Controller
           control={control}
