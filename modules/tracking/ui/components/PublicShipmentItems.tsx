@@ -88,6 +88,11 @@ function DocumentPDFButton({ volume, shipmentInfo }: { volume: PublicVolume; shi
   const hasItems = volume.items && volume.items.length > 0;
   if (!hasItems) return null;
 
+  // A declaração de conteúdo em papel saiu de circulação em 01/09/2026: o
+  // documento válido passou a ser a DC-e, que o cliente emite na SEFAZ e
+  // imprime de lá. Aqui sobra apenas o espelho da NF-e.
+  if (volume.documentType !== 'NF') return null;
+
   const volumeData = {
     index: volume.index,
     documentType: volume.documentType,

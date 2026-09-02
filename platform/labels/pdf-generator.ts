@@ -6,6 +6,7 @@
 
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import bwipjs from 'bwip-js';
+import { buildDceQrCodeUrl, isValidDceKey } from '@/shared/validation/dce';
 import { readFile } from 'fs/promises';
 import { join } from 'path';
 
@@ -16,6 +17,11 @@ export interface EnvioLegalPdfOptions {
   correioPdfBuffers: Buffer[];
   /** Número do volume (opcional, para etiquetas de volume específico) */
   packageNumber?: number;
+  /**
+   * Chave da DC-e. Quando presente, o QR-Code de consulta é impresso no
+   * cabeçalho — o manual exige que ele esteja visível na embalagem.
+   */
+  dceKey?: string | null;
 }
 
 /**
@@ -25,7 +31,7 @@ export interface EnvioLegalPdfOptions {
  * @returns Buffer do PDF gerado
  */
 export async function createEnvioLegalPdf(options: EnvioLegalPdfOptions): Promise<Buffer> {
-  const { platformTrackingCode, correioPdfBuffers, packageNumber } = options;
+  const { platformTrackingCode, correioPdfBuffers, packageNumber, dceKey } = options;
 
   const pdfDoc = await PDFDocument.create();
   const helveticaBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
@@ -57,6 +63,25 @@ export async function createEnvioLegalPdf(options: EnvioLegalPdfOptions): Promis
       barcodeImage = await pdfDoc.embedPng(barcodePng);
     } catch {
       // Barcode falhou, continua sem
+    }
+  }
+
+  // QR-Code da DC-e. Deriva só da chave (Anexo II, 3.2.1), então a plataforma
+  // consegue imprimi-lo mesmo sem ter emitido o documento. Não é um DACE
+  // completo — falta o protocolo de autorização, que só a SEFAZ devolve a quem
+  // emitiu. É o que a fiscalização lê na caixa.
+  let dceQrImage: Awaited<ReturnType<typeof pdfDoc.embedPng>> | null = null;
+
+  if (dceKey && isValidDceKey(dceKey)) {
+    try {
+      const qrPng = await bwipjs.toBuffer({
+        bcid: 'qrcode',
+        text: buildDceQrCodeUrl(dceKey),
+        scale: 3,
+      });
+      dceQrImage = await pdfDoc.embedPng(qrPng);
+    } catch {
+      // QR falhou, a etiqueta sai sem ele em vez de não sair
     }
   }
 
@@ -109,6 +134,24 @@ export async function createEnvioLegalPdf(options: EnvioLegalPdfOptions): Promis
           width: barcodeWidth,
           height: barcodeHeight,
         });
+      }
+
+      // QR-Code da DC-e, à direita do bloco central do cabeçalho
+      if (dceQrImage) {
+        const qrSize = 52;
+        const qrX = Math.min(CONTENT_WIDTH + 12, pageWidth - qrSize - 8);
+        const qrY = pageHeight - qrSize - 14;
+
+        if (qrX > CONTENT_WIDTH) {
+          page.drawImage(dceQrImage, { x: qrX, y: qrY, width: qrSize, height: qrSize });
+          page.drawText('DC-e', {
+            x: qrX + qrSize / 2 - 8,
+            y: qrY - 8,
+            size: 6,
+            font: helveticaBold,
+            color: rgb(0.35, 0.35, 0.35),
+          });
+        }
       }
 
       // Texto "ENVIO LEGAL" + código + volume (se aplicável)

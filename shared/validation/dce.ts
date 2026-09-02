@@ -112,3 +112,21 @@ export function assertSenderCanUseDeclaration(sender: {
     { code: 'SENDER_DOCUMENT_REQUIRED' }
   );
 }
+
+/**
+ * URL que vai dentro do QR-Code impresso na embalagem.
+ *
+ * Anexo II, seção 3.2.1: o QR-Code contém o endereço de consulta da SEFAZ
+ * seguido da chave e do ambiente. Não depende do protocolo de autorização —
+ * por isso a plataforma consegue montá-lo a partir do que o cliente colar,
+ * mesmo sem ter emitido o documento.
+ */
+export function buildDceQrCodeUrl(value: string, ambiente: 1 | 2 = 1): string {
+  const chave = onlyDigits(value ?? '');
+
+  if (!isValidDceKey(chave)) {
+    throw new Error('Chave da DC-e inválida para gerar o QR-Code.');
+  }
+
+  return `https://dfe-portal.svrs.rs.gov.br/dce/QrCode?chDCe=${chave}&tpAmb=${ambiente}`;
+}

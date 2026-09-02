@@ -238,7 +238,7 @@ export function ShipmentLabelPdfModal({
         title="Configuração de impressão"
         description={
           hasDeclaration
-            ? "Etiqueta inclui Declaração de Conteúdo. Use papel para etiquetas 84.7 x 101.6 mm (padrão Correios). Configure a impressora sem margens."
+            ? "A etiqueta traz o QR-Code da DC-e. Use papel para etiquetas 84.7 x 101.6 mm (padrão Correios), sem margens e sem ajuste de escala — o QR precisa ficar legível na embalagem."
             : "Use papel para etiquetas 84.7 x 101.6 mm (padrão Correios). Configure a impressora sem margens e sem ajuste de escala."
         }
       />

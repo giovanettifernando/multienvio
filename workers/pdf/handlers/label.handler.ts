@@ -372,6 +372,18 @@ export async function generateLabelPdf(params: {
       log.warn({ labelId, error: msg }, 'Loggi label not available yet');
       throw new Error(`Etiqueta Loggi não disponível: ${msg}`);
     }
+  } else if (carrier && carrier !== 'correios' && !carrier.includes('correio')) {
+    // Transportadora que não é Correios nem Loggi (J&T, Total Express) e cujo
+    // PDF ainda não foi salvo em fileBase64.
+    //
+    // Antes isto caía no `else` dos Correios e o usuário recebia "não foi
+    // possível criar a pré-postagem nos Correios — verifique as credenciais"
+    // num envio da J&T. Mensagem que manda investigar o lugar errado.
+    log.warn({ labelId, carrier }, 'Label not ready for non-Correios carrier');
+    errors.push(
+      `A etiqueta da ${label.shipment.carrier} ainda não foi disponibilizada pela transportadora. ` +
+      `Aguarde alguns minutos e tente novamente.`
+    );
   } else {
     // Correios: download PDFs per volume via pre-postage
     for (const pkg of packages) {
@@ -431,6 +443,9 @@ export async function generateLabelPdf(params: {
   let finalPdf: Buffer | Uint8Array = await createEnvioLegalPdf({
     platformTrackingCode,
     correioPdfBuffers: pdfBuffers,
+    // O QR da DC-e precisa estar visível na embalagem. Substitui o anexo da
+    // declaração em papel, desativado logo abaixo.
+    dceKey: label.shipment.dceKey,
   });
 
   log.info({ labelId, volumeCount: pdfBuffers.length }, 'Label PDF composed');
