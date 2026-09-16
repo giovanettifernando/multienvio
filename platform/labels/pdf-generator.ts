@@ -38,10 +38,10 @@ export async function createEnvioLegalPdf(options: EnvioLegalPdfOptions): Promis
 
   const headerHeight = 80;
 
-  // Carregar logo Envio Legal
+  // Carregar logo
   let logoImage: Awaited<ReturnType<typeof pdfDoc.embedPng>> | null = null;
   try {
-    const logoPath = join(process.cwd(), 'public', 'images', 'envio-legal-logo.png');
+    const logoPath = join(process.cwd(), 'public', 'images', 'logo-fundo-claro.png');
     const logoBuffer = await readFile(logoPath);
     logoImage = await pdfDoc.embedPng(logoBuffer);
   } catch {
@@ -110,9 +110,9 @@ export async function createEnvioLegalPdf(options: EnvioLegalPdfOptions): Promis
       const headerCenterX = CONTENT_WIDTH / 2;
 
       // Logo
-      const logoHeight = 28;
-      const logoWidth = logoHeight * 2.5;
       if (logoImage) {
+        // Cabe numa caixa de 70x28pt mantendo a proporção do arquivo
+        const { width: logoWidth, height: logoHeight } = logoImage.scaleToFit(70, 28);
         page.drawImage(logoImage, {
           x: headerCenterX - logoWidth / 2,
           y: pageHeight - 32,

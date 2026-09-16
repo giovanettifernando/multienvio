@@ -127,13 +127,12 @@ async function generateManifestPdf(pickup: PickupRequestWithRelations): Promise<
   const textColor = rgb(0.2, 0.2, 0.2);
   const lightGray = rgb(0.6, 0.6, 0.6);
 
-  // Logo Envio Legal (se disponível)
+  // Logo (se disponível)
   try {
-    const logoPath = join(process.cwd(), 'public', 'images', 'envio-legal-logo.png');
+    const logoPath = join(process.cwd(), 'public', 'images', 'logo-fundo-claro.png');
     const logoBuffer = await readFile(logoPath);
     const logoImage = await pdfDoc.embedPng(logoBuffer);
-    const logoHeight = 40;
-    const logoWidth = logoHeight * 2.5;
+    const { width: logoWidth, height: logoHeight } = logoImage.scaleToFit(100, 40);
     page.drawImage(logoImage, {
       x: margin,
       y: yPos - logoHeight,

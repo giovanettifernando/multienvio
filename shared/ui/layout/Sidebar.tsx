@@ -94,8 +94,8 @@ export function Sidebar({ collapsed, onCollapse }: SidebarProps) {
         ) : (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src="/assets/logo-envio-legal-branca.svg"
-            alt="Envio Legal"
+            src="/images/logo-fundo-escuro.png"
+            alt="Multienvio"
             className={styles.logoImage}
           />
         )}

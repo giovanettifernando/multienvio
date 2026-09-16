@@ -231,8 +231,8 @@ export default function LoginClient() {
           <div className={styles.cardHeader}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src="/logo-azul.png"
-              alt="Envio Legal"
+              src="/images/logo-fundo-claro.png"
+              alt="Multienvio"
               className={styles.logo}
             />
             <Typography.Title level={3} className={styles.title}>

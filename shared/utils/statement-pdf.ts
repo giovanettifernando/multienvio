@@ -73,19 +73,20 @@ export async function generateStatementPdf(params: StatementPdfParams): Promise<
   };
 
   // === HEADER ===
-  // Logo Envio Legal
+  // Logo
   let logoImage: Awaited<ReturnType<typeof pdfDoc.embedPng>> | null = null;
   try {
-    const logoPath = join(process.cwd(), 'public', 'images', 'envio-legal-logo.png');
+    const logoPath = join(process.cwd(), 'public', 'images', 'logo-fundo-claro.png');
     const logoBuffer = await readFile(logoPath);
     logoImage = await pdfDoc.embedPng(logoBuffer);
   } catch {
     // Logo optional - continue without it
   }
 
-  // Logo maior com proporção 2000x800 = 2.5:1
-  const logoHeight = 50;
-  const logoWidth = logoHeight * 2.5; // 125pt
+  // Cabe numa caixa de 125x50pt mantendo a proporção do arquivo
+  const { width: logoWidth, height: logoHeight } = logoImage
+    ? logoImage.scaleToFit(125, 50)
+    : { width: 125, height: 50 };
 
   if (logoImage) {
     page.drawImage(logoImage, {

@@ -111,9 +111,9 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   const mobileLogo = (
     // eslint-disable-next-line @next/next/no-img-element
     <img
-      src="/assets/logo-envio-legal-branca.svg"
-      alt="Envio Legal"
-      style={{ width: 140, height: 'auto', maxHeight: 36 }}
+      src="/images/logo-fundo-escuro.png"
+      alt="Multienvio"
+      style={{ height: 36, width: 'auto' }}
     />
   );
 
@@ -171,9 +171,9 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
               />
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src="/assets/logo-envio-legal.svg"
-                alt="Envio Legal"
-                style={{ height: 28 }}
+                src="/images/logo-fundo-claro.png"
+                alt="Multienvio"
+                style={{ height: 36, width: 'auto' }}
               />
               {/* Placeholder para equilibrar o layout */}
               <div style={{ width: 44 }} />
