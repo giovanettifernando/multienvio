@@ -54,7 +54,6 @@ export type KeyType =
   | 'faq'
   | 'pickup_points'
   | 'agencies'
-  | 'fipe'
   | 'lock';
 
 /**
@@ -142,8 +141,6 @@ export const Keys = {
 
   // Lookups estáticos
   agencies: (cep5: string) => buildKey('agencies', cep5),
-  fipeBrands: () => buildKey('fipe', 'brands'),
-  fipeModels: (brandId: string) => buildKey('fipe', 'models', brandId),
 
   // Locks (para stampede protection)
   lock: (key: string) => buildKey('lock', key),

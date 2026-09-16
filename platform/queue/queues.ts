@@ -150,17 +150,6 @@ const QUEUE_CONFIGS: Record<QueueName, QueueConfig> = {
     limiter: { max: 5, duration: 1000 }, // 5 jobs/s (protege API Correios)
   },
 
-  // --- Admin: FIPE Sync ---
-  [QUEUE_NAMES.FIPE_SYNC]: {
-    defaultJobOptions: {
-      attempts: 3,
-      backoff: { type: 'exponential', delay: 10_000 },
-      removeOnComplete: { age: 86_400, count: 500 },
-      removeOnFail: false,
-    },
-    limiter: { max: 3, duration: 1000 }, // 3 req/s (API FIPE rate limit)
-  },
-
   // --- Admin: Correios Agencies Sync ---
   [QUEUE_NAMES.CORREIOS_AGENCIES_SYNC]: {
     defaultJobOptions: {

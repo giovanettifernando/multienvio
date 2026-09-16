@@ -16,7 +16,7 @@ import {
   type SupportTicket,
 } from "@/shared/validation/support";
 
-type Audience = "user" | "admin" | "collector" | "autonomous_collector";
+type Audience = "user" | "admin";
 
 type TicketFilters = {
   status?: Status[];
@@ -86,8 +86,6 @@ function buildQueryParams({ filters, page, pageSize }: Omit<TicketsQueryOptions,
 
 function getTicketsEndpoint(audience: Audience): string {
   if (audience === "admin") return "/api/admin/support/tickets";
-  if (audience === "collector") return "/api/pontos-coleta/tickets";
-  if (audience === "autonomous_collector") return "/api/coletores/suporte";
   return "/api/support/tickets";
 }
 
@@ -99,12 +97,6 @@ function getTicketEndpoint(audience: Audience, ticketId: string): string {
 function getMessageEndpoint(audience: Audience, ticketId: string): string {
   if (audience === "admin") {
     return `/api/admin/support/tickets/${ticketId}/reply`;
-  }
-  if (audience === "collector") {
-    return `/api/pontos-coleta/tickets/${ticketId}/messages`;
-  }
-  if (audience === "autonomous_collector") {
-    return `/api/coletores/suporte/${ticketId}/mensagens`;
   }
   return `/api/support/tickets/${ticketId}/messages`;
 }
@@ -264,40 +256,24 @@ export function usePostTicketMessage(audience: Audience = "user") {
         throw new Error("Mensagem obrigatória");
       }
 
-      let response: Response;
+      const formData = new FormData();
+      formData.append("text", trimmed);
 
-      // Autonomous collectors use JSON endpoint (no file uploads for now)
-      if (audience === "autonomous_collector") {
-        response = await fetch(endpoint, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({
-            content: trimmed,
-            // attachments not supported for autonomous collectors yet
-          }),
-        });
-      } else {
-        // Other audiences use FormData endpoint (with file uploads)
-        const formData = new FormData();
-        formData.append("text", trimmed);
-
-        if (audience === "admin" && internal !== undefined) {
-          formData.append("internal", internal ? "true" : "false");
-        }
-
-        (attachments ?? []).slice(0, 5).forEach((file) => {
-          if (file instanceof File) {
-            formData.append("files", file, file.name);
-          }
-        });
-
-        response = await fetch(endpoint, {
-          method: "POST",
-          credentials: "include",
-          body: formData,
-        });
+      if (audience === "admin" && internal !== undefined) {
+        formData.append("internal", internal ? "true" : "false");
       }
+
+      (attachments ?? []).slice(0, 5).forEach((file) => {
+        if (file instanceof File) {
+          formData.append("files", file, file.name);
+        }
+      });
+
+      const response = await fetch(endpoint, {
+        method: "POST",
+        credentials: "include",
+        body: formData,
+      });
 
       const data = await response.json().catch(() => undefined);
       if (!response.ok) {

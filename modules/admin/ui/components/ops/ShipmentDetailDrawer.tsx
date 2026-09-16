@@ -18,7 +18,6 @@ import {
   InputNumber,
   message,
   Divider,
-  DatePicker,
 } from 'antd';
 import { inputNumberFormatterBRL, inputNumberParserBRL, formatBRL, formatCentsAsBRL } from '@/shared/utils/format';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -84,26 +83,6 @@ async function updateShipment(id: string, data: Record<string, unknown>) {
   return json.data ?? json;
 }
 
-// Fetch collectors list
-async function fetchCollectors() {
-  const res = await fetch('/api/admin/ops/collectors');
-  if (!res.ok) throw new Error('Failed to fetch collectors');
-  const json = await res.json();
-  return json.data ?? json;
-}
-
-// Manage pickup request (create or update)
-async function managePickupRequest(shipmentId: string, data: Record<string, unknown>) {
-  const res = await fetch(`/api/admin/ops/shipments/${shipmentId}/pickup-request`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
-  });
-  if (!res.ok) throw new Error('Failed to manage pickup request');
-  const json = await res.json();
-  return json.data ?? json;
-}
-
 export default function ShipmentDetailDrawer({
   open,
   shipmentId,
@@ -112,9 +91,7 @@ export default function ShipmentDetailDrawer({
 }: ShipmentDetailDrawerProps) {
   const queryClient = useQueryClient();
   const [editMode, setEditMode] = useState(false);
-  const [editPickupMode, setEditPickupMode] = useState(false);
   const [form] = Form.useForm();
-  const [pickupForm] = Form.useForm();
 
   // Fetch shipment data
   const { data: shipment, isLoading } = useQuery({
@@ -136,29 +113,6 @@ export default function ShipmentDetailDrawer({
     },
     onError: () => {
       message.error('Erro ao atualizar envio');
-    },
-  });
-
-  // Fetch collectors
-  const { data: collectors } = useQuery({
-    queryKey: ['admin', 'ops', 'collectors'],
-    queryFn: fetchCollectors,
-    enabled: open,
-  });
-
-  // Manage pickup request mutation
-  const pickupMutation = useMutation({
-    mutationFn: (data: Record<string, unknown>) => managePickupRequest(shipmentId!, data),
-    onSuccess: () => {
-      message.success('Coleta salva com sucesso');
-      setEditPickupMode(false);
-      onUpdate();
-      queryClient.invalidateQueries({
-        queryKey: ['admin', 'ops', 'shipments', shipmentId, 'detail'],
-      });
-    },
-    onError: () => {
-      message.error('Erro ao salvar coleta');
     },
   });
 
@@ -200,41 +154,6 @@ export default function ShipmentDetailDrawer({
   const handleCancel = () => {
     setEditMode(false);
     form.resetFields();
-  };
-
-  // Initialize pickup form when pickup edit mode is activated
-  useEffect(() => {
-    if (shipment?.pickupRequest && editPickupMode) {
-      pickupForm.setFieldsValue({
-        collectorId: shipment.pickupRequest.collectorId,
-        status: shipment.pickupRequest.status,
-        scheduleAt: shipment.pickupRequest.scheduleAt ? dayjs(shipment.pickupRequest.scheduleAt) : null,
-        notes: shipment.pickupRequest.notes,
-      });
-    } else if (!shipment?.pickupRequest && editPickupMode) {
-      // Initialize with default values when creating new pickup
-      pickupForm.setFieldsValue({
-        status: 'PENDING',
-      });
-    }
-  }, [shipment, editPickupMode, pickupForm]);
-
-  const handleSavePickup = async () => {
-    try {
-      const values = await pickupForm.validateFields();
-      const data = {
-        ...values,
-        scheduleAt: values.scheduleAt ? values.scheduleAt.toISOString() : null,
-      };
-      pickupMutation.mutate(data);
-    } catch (error) {
-      console.error('Validation failed:', error);
-    }
-  };
-
-  const handleCancelPickup = () => {
-    setEditPickupMode(false);
-    pickupForm.resetFields();
   };
 
   if (!open || !shipmentId) return null;
@@ -517,197 +436,6 @@ export default function ShipmentDetailDrawer({
             <Descriptions.Item label="Cidade">{shipment.destinationCity}</Descriptions.Item>
             <Descriptions.Item label="Estado">{shipment.destinationState}</Descriptions.Item>
           </Descriptions>
-        </div>
-      ),
-    },
-    {
-      key: 'pickup',
-      label: 'Coleta',
-      children: (
-        <div>
-          {shipment.pickupRequest ? (
-            <>
-              {editPickupMode ? (
-                <Form form={pickupForm} layout="vertical">
-                  <Form.Item label="Status" name="status" rules={[{ required: true }]}>
-                    <Select>
-                      <Select.Option value="PENDING">Pendente</Select.Option>
-                      <Select.Option value="SCHEDULED">Agendada</Select.Option>
-                      <Select.Option value="COLLECTED">Coletada</Select.Option>
-                      <Select.Option value="COMPLETED">Completa</Select.Option>
-                      <Select.Option value="FAILED">Falhou</Select.Option>
-                      <Select.Option value="CANCELED">Cancelada</Select.Option>
-                    </Select>
-                  </Form.Item>
-
-                  <Form.Item label="Coletor" name="collectorId">
-                    <Select allowClear placeholder="Selecione um coletor">
-                      {collectors?.map((c: { id: string; name: string }) => (
-                        <Select.Option key={c.id} value={c.id}>
-                          {c.name}
-                        </Select.Option>
-                      ))}
-                    </Select>
-                  </Form.Item>
-
-                  <Form.Item label="Agendar para" name="scheduleAt">
-                    <DatePicker
-                      showTime
-                      format="DD/MM/YYYY HH:mm"
-                      style={{ width: '100%' }}
-                      placeholder="Selecione data e hora"
-                    />
-                  </Form.Item>
-
-                  <Form.Item label="Observações" name="notes">
-                    <Input.TextArea rows={3} placeholder="Observações sobre a coleta" />
-                  </Form.Item>
-
-                  <Space style={{ marginTop: 16 }}>
-                    <Button
-                      type="primary"
-                      icon={<SaveOutlined />}
-                      onClick={handleSavePickup}
-                      loading={pickupMutation.isPending}
-                    >
-                      Salvar
-                    </Button>
-                    <Button icon={<CloseOutlined />} onClick={handleCancelPickup}>
-                      Cancelar
-                    </Button>
-                  </Space>
-                </Form>
-              ) : (
-                <>
-                  <Space style={{ marginBottom: 16 }}>
-                    <Button
-                      type="primary"
-                      icon={<EditOutlined />}
-                      onClick={() => setEditPickupMode(true)}
-                    >
-                      Editar Coleta
-                    </Button>
-                  </Space>
-
-                  <Descriptions column={1} bordered size="small">
-                    <Descriptions.Item label="Status">
-                      <Tag>{shipment.pickupRequest.status}</Tag>
-                    </Descriptions.Item>
-                    <Descriptions.Item label="Coletor">
-                      {shipment.pickupRequest.collector?.name || '—'}
-                    </Descriptions.Item>
-                    <Descriptions.Item label="Agendado para">
-                      {shipment.pickupRequest.scheduleAt
-                        ? dayjs(shipment.pickupRequest.scheduleAt).format('DD/MM/YYYY HH:mm')
-                        : '—'}
-                    </Descriptions.Item>
-                    <Descriptions.Item label="Coletado em">
-                      {shipment.pickupRequest.collectedAt
-                        ? dayjs(shipment.pickupRequest.collectedAt).format('DD/MM/YYYY HH:mm')
-                        : '—'}
-                    </Descriptions.Item>
-                    <Descriptions.Item label="Entregue na transportadora em">
-                      {shipment.pickupRequest.deliveredToCarrierAt
-                        ? dayjs(shipment.pickupRequest.deliveredToCarrierAt).format(
-                            'DD/MM/YYYY HH:mm'
-                          )
-                        : '—'}
-                    </Descriptions.Item>
-                    <Descriptions.Item label="Recebido por">
-                      {shipment.pickupRequest.carrierRecipient || '—'}
-                    </Descriptions.Item>
-                    <Descriptions.Item label="Unidade da transportadora">
-                      {shipment.pickupRequest.carrierUnit || '—'}
-                    </Descriptions.Item>
-                    <Descriptions.Item label="Tentativas">
-                      {shipment.pickupRequest.attemptCount}
-                    </Descriptions.Item>
-                    <Descriptions.Item label="Observações">
-                      {shipment.pickupRequest.notes || '—'}
-                    </Descriptions.Item>
-                  </Descriptions>
-                </>
-              )}
-            </>
-          ) : (
-            <>
-              {editPickupMode ? (
-                <Form form={pickupForm} layout="vertical">
-                  <Alert
-                    message="Criar Nova Coleta"
-                    description="Preencha os dados abaixo para criar uma solicitação de coleta para este envio."
-                    type="info"
-                    showIcon
-                    style={{ marginBottom: 16 }}
-                  />
-
-                  <Form.Item label="Status" name="status" rules={[{ required: true }]}>
-                    <Select>
-                      <Select.Option value="PENDING">Pendente</Select.Option>
-                      <Select.Option value="SCHEDULED">Agendada</Select.Option>
-                      <Select.Option value="COLLECTED">Coletada</Select.Option>
-                      <Select.Option value="COMPLETED">Completa</Select.Option>
-                      <Select.Option value="FAILED">Falhou</Select.Option>
-                      <Select.Option value="CANCELED">Cancelada</Select.Option>
-                    </Select>
-                  </Form.Item>
-
-                  <Form.Item label="Coletor" name="collectorId">
-                    <Select allowClear placeholder="Selecione um coletor">
-                      {collectors?.map((c: { id: string; name: string }) => (
-                        <Select.Option key={c.id} value={c.id}>
-                          {c.name}
-                        </Select.Option>
-                      ))}
-                    </Select>
-                  </Form.Item>
-
-                  <Form.Item label="Agendar para" name="scheduleAt">
-                    <DatePicker
-                      showTime
-                      format="DD/MM/YYYY HH:mm"
-                      style={{ width: '100%' }}
-                      placeholder="Selecione data e hora"
-                    />
-                  </Form.Item>
-
-                  <Form.Item label="Observações" name="notes">
-                    <Input.TextArea rows={3} placeholder="Observações sobre a coleta" />
-                  </Form.Item>
-
-                  <Space style={{ marginTop: 16 }}>
-                    <Button
-                      type="primary"
-                      icon={<SaveOutlined />}
-                      onClick={handleSavePickup}
-                      loading={pickupMutation.isPending}
-                    >
-                      Criar Coleta
-                    </Button>
-                    <Button icon={<CloseOutlined />} onClick={handleCancelPickup}>
-                      Cancelar
-                    </Button>
-                  </Space>
-                </Form>
-              ) : (
-                <>
-                  <Alert
-                    message="Nenhuma coleta associada"
-                    description="Este envio não possui uma solicitação de coleta."
-                    type="warning"
-                    showIcon
-                    style={{ marginBottom: 16 }}
-                  />
-                  <Button
-                    type="primary"
-                    onClick={() => setEditPickupMode(true)}
-                  >
-                    Criar Coleta
-                  </Button>
-                </>
-              )}
-            </>
-          )}
         </div>
       ),
     },

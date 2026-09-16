@@ -39,7 +39,6 @@ export {
   type PdfGenerateStatementPayload,
   type PdfGenerateBatchLabelsPayload,
   // Admin sync
-  type FipeSyncJobPayload,
   type CorreiosAgenciesSyncJobPayload,
 } from './types';
 

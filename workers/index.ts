@@ -19,7 +19,6 @@
  * - Notification status (notificações in-app)
  * - Reconciliation (reconciliação financeira diária, repeatable: 03:00 UTC)
  * - PDF Generate (geração assíncrona de PDFs: etiquetas, extratos, batch)
- * - FIPE Sync (sincronização de marcas/modelos FIPE via fila)
  * - Correios Agencies Sync (sincronização de agências por UF via fila)
  * - Asaas Webhook (processamento assíncrono de webhooks de cobrança, acionado por evento de fila)
  */
@@ -64,7 +63,6 @@ import { createReconciliationWorker, registerReconciliationRepeatable } from './
 import { createPdfGenerateWorker, registerPdfCleanupRepeatable } from './pdf/generate.worker';
 
 // Admin Sync
-import { createFipeSyncWorker } from './admin/fipe-sync.worker';
 import { createCorreiosAgenciesSyncWorker } from './admin/correios-agencies-sync.worker';
 
 // Webhook (Asaas)
@@ -113,7 +111,6 @@ async function start(): Promise<void> {
     createNotificationStatusWorker(),
     createReconciliationWorker(),
     createPdfGenerateWorker(),
-    createFipeSyncWorker(),
     createCorreiosAgenciesSyncWorker(),
     createAsaasWebhookWorker(),
   );

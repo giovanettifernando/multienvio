@@ -1,7 +1,5 @@
 import type {
   OpsShipment,
-  PickupOrder,
-  PointOfCollection,
   OpsException,
   OpsSLA,
   OpsEvent,
@@ -66,73 +64,6 @@ export async function getShipmentTimeline(id: string): Promise<TimelineEvent[]> 
   });
   if (!res.ok) throw new Error('Failed to fetch timeline');
   return extractData<TimelineEvent[]>(res);
-}
-
-// Pickups
-export async function listPickups(p: ListParams): Promise<Paged<PickupOrder>> {
-  const params = new URLSearchParams();
-  if (p.page) params.set('page', p.page.toString());
-  if (p.pageSize) params.set('pageSize', p.pageSize.toString());
-  if (p.q) params.set('q', p.q);
-  if (p.type) params.set('type', p.type);
-  if (p.provider) params.set('provider', p.provider);
-  if (p.status) params.set('status', p.status);
-  if (p.city) params.set('city', p.city);
-  if (p.state) params.set('state', p.state);
-
-  const res = await fetch(`/api/admin/ops/pickups?${params}`, {
-    credentials: 'include',
-  });
-  if (!res.ok) throw new Error('Failed to fetch pickups');
-  return extractData<Paged<PickupOrder>>(res);
-}
-
-export async function updatePickup(id: string, patch: Partial<PickupOrder>): Promise<{ ok: true }> {
-  const res = await fetch(`/api/admin/ops/pickups/${id}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
-    body: JSON.stringify(patch),
-  });
-  if (!res.ok) throw new Error('Failed to update pickup');
-  return extractData<{ ok: true }>(res);
-}
-
-// Points of Collection
-export async function listPoC(p: ListParams): Promise<PointOfCollection[]> {
-  const params = new URLSearchParams();
-  if (p.q) params.set('q', p.q);
-  if (p.city) params.set('city', p.city);
-  if (p.state) params.set('state', p.state);
-  if (p.active !== undefined) params.set('active', p.active.toString());
-
-  const res = await fetch(`/api/admin/ops/pocs?${params}`, {
-    credentials: 'include',
-  });
-  if (!res.ok) throw new Error('Failed to fetch PoCs');
-  return extractData<PointOfCollection[]>(res);
-}
-
-export async function togglePoCActive(id: string, active: boolean): Promise<{ ok: true }> {
-  const res = await fetch(`/api/admin/ops/pocs/${id}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
-    body: JSON.stringify({ active }),
-  });
-  if (!res.ok) throw new Error('Failed to toggle PoC');
-  return extractData<{ ok: true }>(res);
-}
-
-export async function updatePoC(id: string, patch: Partial<PointOfCollection>): Promise<{ ok: true }> {
-  const res = await fetch(`/api/admin/ops/pocs/${id}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
-    body: JSON.stringify(patch),
-  });
-  if (!res.ok) throw new Error('Failed to update PoC');
-  return extractData<{ ok: true }>(res);
 }
 
 // Exceptions

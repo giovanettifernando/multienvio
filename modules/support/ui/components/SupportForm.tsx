@@ -12,10 +12,9 @@ import { ELSelect } from '@/shared/ui/ELSelect';
 import { ELButton } from '@/shared/ui/ELButton';
 import { useCreateTicket } from '@/modules/support/ui/hooks';
 import { useCurrentUser } from '@/modules/auth/ui/hooks';
-import { useCollectorSession } from '@/modules/collectors/ui/state/useCollectorSession';
 import { NewTicketInputSchema, type Priority } from '@/shared/validation/support';
 
-type Audience = 'user' | 'admin' | 'collector';
+type Audience = 'user' | 'admin';
 
 interface SupportFormProps {
   onSuccess?: (ticketId: string) => void;
@@ -41,39 +40,28 @@ export function SupportForm({ onSuccess, audience = 'user', defaultValues }: Sup
   const { message } = App.useApp();
   const createTicket = useCreateTicket(audience);
   const { user: usuario } = useCurrentUser();
-  const { collector } = useCollectorSession();
 
-  // Auto-preencher dados do usuário ou coletor logado
+  // Auto-preencher dados do usuário logado
   useEffect(() => {
-    if (audience === 'collector' && collector) {
-      form.setFieldsValue({
-        name: collector.nomeFantasia || '',
-        email: collector.email || '',
-        phone: collector.telefone || '',
-      });
-    } else if (audience === 'user' && usuario) {
+    if (audience === 'user' && usuario) {
       form.setFieldsValue({
         name: usuario.name || '',
         email: usuario.email || '',
         phone: usuario.phone || '',
       });
     }
-  }, [usuario, collector, audience, form]);
+  }, [usuario, audience, form]);
 
-  const isLoggedIn = audience === 'collector' ? Boolean(collector) : Boolean(usuario);
+  const isLoggedIn = Boolean(usuario);
 
   const handleSubmit = async (values: FormValues) => {
     try {
-      // Garantir que usamos os dados do usuário/coletor se estiver logado
+      // Garantir que usamos os dados do usuário se estiver logado
       let requesterName: string;
       let requesterEmail: string;
       let requesterPhone: string | null;
 
-      if (audience === 'collector' && collector) {
-        requesterName = collector.nomeFantasia || values.name;
-        requesterEmail = collector.email || values.email;
-        requesterPhone = values.phone || collector.telefone || null;
-      } else if (audience === 'user' && usuario) {
+      if (audience === 'user' && usuario) {
         requesterName = usuario.name || values.name;
         requesterEmail = usuario.email || values.email;
         requesterPhone = values.phone || usuario.phone || null;

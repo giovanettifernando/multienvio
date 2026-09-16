@@ -25,7 +25,7 @@ interface NewTicketListProps {
   onTicketClick?: (ticketId: string) => void;
   filterByEmail?: string;
   showRequester?: boolean;
-  audience?: 'user' | 'admin' | 'collector';
+  audience?: 'user' | 'admin';
   autoRefresh?: boolean;
   isComposing?: boolean;
 }

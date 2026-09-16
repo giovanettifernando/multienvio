@@ -51,7 +51,7 @@ dayjs.locale('pt-br');
 const { TextArea } = Input;
 const { Text, Title } = Typography;
 
-type Audience = 'user' | 'admin' | 'collector';
+type Audience = 'user' | 'admin';
 
 interface TicketDetailsBaseProps {
   ticketId: string | null;

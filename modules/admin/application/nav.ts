@@ -119,18 +119,6 @@ export const ADMIN_NAV: AdminNavItem[] = [
         permissions: ["CONTAS"],
       },
       {
-        key: "coletores",
-        label: "Coletores",
-        href: "/admin/coletores",
-        permissions: ["COLETORES"],
-      },
-      {
-        key: "pontos-de-coleta",
-        label: "Pontos de Coleta",
-        href: "/admin/pontos-de-coleta",
-        permissions: ["PONTOS_COLETA"],
-      },
-      {
         key: "usuarios",
         label: "Usuários",
         href: "/admin/usuarios",

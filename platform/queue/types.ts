@@ -145,21 +145,8 @@ export type PdfGenerateJobPayload =
   | PdfGenerateBatchLabelsPayload;
 
 // ============================================================================
-// Admin Sync (FIPE, Correios Agencies)
+// Admin Sync (Correios Agencies)
 // ============================================================================
-
-export interface FipeSyncJobPayload {
-  /** Tipo de veículo a sincronizar */
-  vehicleType: 'cars' | 'motorcycles' | 'trucks';
-  /** Código de referência FIPE (mês atual) */
-  referenceCode?: string;
-  /** Se forçar atualização mesmo com dados recentes */
-  forceUpdate?: boolean;
-  /** ID da marca (quando sub-job por marca) */
-  brandCode?: string;
-  /** Modo: 'brands' busca marcas, 'models' busca modelos de uma marca */
-  mode: 'brands' | 'models';
-}
 
 export interface CorreiosAgenciesSyncJobPayload {
   /** UF a sincronizar */
@@ -205,7 +192,6 @@ export const QUEUE_NAMES = {
   PDF_GENERATE: 'pdf.generate',
 
   // Admin sync
-  FIPE_SYNC: 'admin.fipe-sync',
   CORREIOS_AGENCIES_SYNC: 'admin.correios-agencies-sync',
 } as const;
 

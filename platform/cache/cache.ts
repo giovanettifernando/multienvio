@@ -1225,48 +1225,6 @@ export const agenciesCache = {
 };
 
 // ============================================================================
-// FIPE CACHE HELPER
-// ============================================================================
-
-/**
- * Cache de dados FIPE (marcas e modelos de veículos)
- * Dados estáticos - TTL de 7 dias
- * Usa stampede protection pois é dado compartilhado
- */
-export const fipeCache = {
-  brandsKey: () => 'fipe:brands',
-  modelsKey: (brandId: string) => `fipe:models:${brandId}`,
-
-  /**
-   * Busca marcas de veículos com proteção contra stampede
-   */
-  async getBrands<T>(fetchFn: () => Promise<T>): Promise<T> {
-    return cacheGetOrSetWithLock(this.brandsKey(), fetchFn, CacheTTL.STATIC);
-  },
-
-  /**
-   * Busca modelos de uma marca com proteção contra stampede
-   */
-  async getModels<T>(brandId: string, fetchFn: () => Promise<T>): Promise<T> {
-    return cacheGetOrSetWithLock(this.modelsKey(brandId), fetchFn, CacheTTL.STATIC);
-  },
-
-  /**
-   * Invalida todo o cache FIPE (após sync)
-   */
-  async invalidateAll(): Promise<number> {
-    return cacheDeletePattern('fipe:*');
-  },
-
-  /**
-   * Invalida modelos de uma marca específica
-   */
-  async invalidateModels(brandId: string): Promise<boolean> {
-    return cacheDelete(this.modelsKey(brandId));
-  },
-};
-
-// ============================================================================
 // USER SHIPMENTS CACHE HELPER
 // ============================================================================
 

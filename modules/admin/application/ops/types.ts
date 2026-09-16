@@ -9,7 +9,6 @@ export type ShipmentStatus =
   | 'delivered'             // entregue
   | 'returned';             // devolvido/cancelado
 
-export type PickupType = 'home_pickup' | 'poc_pickup' | 'locker_pickup';
 export type CarrierCode = 'Correios' | 'Jadlog' | 'J&T' | 'Loggi' | 'Outro';
 
 export interface OpsShipment {
@@ -61,37 +60,6 @@ export interface OpsShipment {
   // Package info
   packageCount?: number;
   hasDivergence?: boolean;
-}
-
-export interface PickupOrder {
-  id: string;
-  type: PickupType;                  // home_pickup / poc_pickup
-  provider: 'internal' | 'third';    // nossa operação ou terceiros
-  scheduledFor: string;              // ISO
-  window?: { start: string; end: string } | null;
-  address: string;
-  pocId?: string | null;
-  pocName?: string | null;
-  capacitySlots?: number | null;     // qte itens na coleta
-  status: 'scheduled' | 'en_route' | 'completed' | 'failed' | 'canceled';
-  vehicle?: string | null;
-  driver?: string | null;
-}
-
-export interface PointOfCollection {
-  id: string;
-  name: string;
-  code: string;
-  address: string;
-  city: string;
-  state: string;
-  contact?: string | null;
-  active: boolean;
-  commissionPerItem: number; // R$
-  capacityDaily?: number | null;
-  itemsAwaiting: number;     // fila atual
-  itemsReceivedToday: number;
-  monthlyReceived?: number;  // itens recebidos no mês corrente
 }
 
 export interface OpsException {

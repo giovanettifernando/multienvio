@@ -18,10 +18,7 @@ const { Button, Input } = { Button: ELButton, Input: ELInput };
  */
 const HIDDEN_ROUTES = [
   "/admin",
-  "/coletores",
-  "/collectors",
   "/auth",
-  "/coletor", // área pública do coletor
 ];
 
 const { TextArea } = ELInput;

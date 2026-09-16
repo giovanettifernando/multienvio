@@ -22,7 +22,6 @@
     "lint:fix": "eslint --fix .",
     "audit:forms": "ts-node --transpile-only scripts/audit-forms.ts",
     "geocode:collectors": "tsx scripts/geocode-collectors.ts",
-    "fipe:sync": "tsx scripts/fipe-sync.ts",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev --name init",
     "db:seed": "prisma db seed",

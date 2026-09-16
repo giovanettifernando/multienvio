@@ -100,9 +100,6 @@ const optionalEnvSchema = z.object({
   ASAAS_API_KEY: z.string(),
   ASAAS_WEBHOOK_TOKEN: z.string().optional(),
 
-  // External APIs
-  FIPE_BASE_URL: z.string().url().optional(),
-  FIPE_SUBSCRIPTION_TOKEN: z.string().optional(),
 });
 
 // Combined schema

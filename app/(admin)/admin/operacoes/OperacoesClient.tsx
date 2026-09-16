@@ -8,8 +8,6 @@ import { useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import { getOpsKpis } from '@/modules/admin/application/ops/api';
 import ShipmentsTable from '@/modules/admin/ui/components/ops/ShipmentsTable';
-import PickupsTable from '@/modules/admin/ui/components/ops/PickupsTable';
-import ReceptionsTable from '@/modules/admin/ui/components/ops/ReceptionsTable';
 import ExceptionsTable from '@/modules/admin/ui/components/ops/ExceptionsTable';
 import EventsTable from '@/modules/admin/ui/components/ops/EventsTable';
 import { PageShell } from '@/shared/ui/PageShell';
@@ -73,16 +71,6 @@ export default function OperacoesClient() {
       children: <ShipmentsTable dateStart={_period.dateStart} dateEnd={_period.dateEnd} />,
     },
     {
-      key: 'pickups',
-      label: 'Coletas',
-      children: <PickupsTable dateStart={_period.dateStart} dateEnd={_period.dateEnd} />,
-    },
-    {
-      key: 'pocs',
-      label: 'Pontos de Coleta',
-      children: <ReceptionsTable dateStart={_period.dateStart} dateEnd={_period.dateEnd} />,
-    },
-    {
       key: 'exceptions',
       label: 'Exceções',
       children: <ExceptionsTable dateStart={_period.dateStart} dateEnd={_period.dateEnd} />,
@@ -144,20 +132,6 @@ export default function OperacoesClient() {
                 title="Em Backlog"
                 value={kpis?.backlog ?? 0}
                 styles={{ content: { color: (kpis?.backlog ?? 0) > 10 ? '#cf1322' : '#000' } }}
-              />
-            </Col>
-            <Col xs={12} sm={8} lg={4} xl={3}>
-              <Statistic
-                title="Em Coleta"
-                value={kpis?.inPickup ?? 0}
-                styles={{ content: { color: '#1890ff' } }}
-              />
-            </Col>
-            <Col xs={12} sm={8} lg={4} xl={3}>
-              <Statistic
-                title="No PoC"
-                value={kpis?.atPoC ?? 0}
-                styles={{ content: { color: '#faad14' } }}
               />
             </Col>
             <Col xs={12} sm={8} lg={4} xl={3}>
