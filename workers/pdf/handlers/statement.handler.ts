@@ -40,6 +40,11 @@ export async function generateStatementPdfFromData(params: {
     throw new Error('Carteira não encontrada');
   }
 
+  // A carteira tem de ser de quem pediu o extrato
+  if (wallet.userId !== userId) {
+    throw new Error('Carteira não pertence ao usuário');
+  }
+
   // 3. Definir período
   let periodStart: Date;
   let periodEnd: Date;

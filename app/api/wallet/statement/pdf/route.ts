@@ -222,9 +222,8 @@ function generateStatementHTML(params: {
     }
 
     .logo {
-      font-size: 24px;
-      font-weight: bold;
-      color: #1890ff;
+      height: 48px;
+      width: auto;
     }
 
     .title {
@@ -343,7 +342,7 @@ function generateStatementHTML(params: {
 </head>
 <body>
   <div class="header">
-    <div class="logo">Envio Legal</div>
+    <img class="logo" src="/images/logo-fundo-claro.png" alt="Multienvio" />
     <div class="title">
       <h1>Extrato da Carteira</h1>
       <p>Período: ${periodLabel}</p>

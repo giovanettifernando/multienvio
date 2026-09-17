@@ -25,21 +25,20 @@ type GenerateRequestBody = {
   documentType: 'label' | 'package' | 'statement' | 'batch_labels';
   labelId?: string;
   packageId?: string;
-  walletId?: string;
   dateFrom?: string;
   dateTo?: string;
   search?: string;
   shipmentIds?: string[];
 };
 
-function deriveReferenceId(body: GenerateRequestBody): string {
+function deriveReferenceId(body: GenerateRequestBody, walletId: string | null): string {
   switch (body.documentType) {
     case 'label':
       return body.labelId || '';
     case 'package':
       return body.packageId || '';
     case 'statement':
-      return body.walletId || '';
+      return walletId || '';
     case 'batch_labels':
       return (body.shipmentIds || []).sort().join(',');
   }
@@ -49,6 +48,7 @@ function buildJobPayload(
   doc: { id: string },
   userId: string,
   body: GenerateRequestBody,
+  walletId: string | null,
 ): PdfGenerateJobPayload {
   switch (body.documentType) {
     case 'label':
@@ -70,7 +70,7 @@ function buildJobPayload(
         documentType: 'statement',
         documentId: doc.id,
         userId,
-        walletId: body.walletId!,
+        walletId: walletId!,
         dateFrom: body.dateFrom!,
         dateTo: body.dateTo!,
         search: body.search,
@@ -106,14 +106,24 @@ export const POST = withApiHandler(async (context) => {
   if (documentType === 'package' && !body.packageId) {
     throw new ApiError({ code: 'VALIDATION_ERROR', message: 'packageId é obrigatório para tipo package', status: 400 });
   }
-  if (documentType === 'statement' && !body.walletId) {
-    throw new ApiError({ code: 'VALIDATION_ERROR', message: 'walletId é obrigatório para tipo statement', status: 400 });
+  // A carteira sai da sessão, nunca do corpo do pedido: aceitar um walletId
+  // de fora deixaria um usuário logado pedir o extrato da carteira de outro.
+  let walletId: string | null = null;
+  if (documentType === 'statement') {
+    const wallet = await prisma.wallet.findUnique({
+      where: { userId: session.userId },
+      select: { id: true },
+    });
+    if (!wallet) {
+      throw new ApiError({ code: 'NOT_FOUND', message: 'Carteira não encontrada', status: 404 });
+    }
+    walletId = wallet.id;
   }
   if (documentType === 'batch_labels' && (!body.shipmentIds || body.shipmentIds.length === 0)) {
     throw new ApiError({ code: 'VALIDATION_ERROR', message: 'shipmentIds é obrigatório para tipo batch_labels', status: 400 });
   }
 
-  const referenceId = deriveReferenceId(body);
+  const referenceId = deriveReferenceId(body, walletId);
 
   // Idempotência: verificar se já existe documento recente para a mesma referência
   const existing = await prisma.generatedDocument.findFirst({
@@ -155,7 +165,7 @@ export const POST = withApiHandler(async (context) => {
   // Enfileirar job
   const jobId = `pdf-${documentType}-${doc.id}`;
   const queue = getQueue<PdfGenerateJobPayload>(QUEUE_NAMES.PDF_GENERATE);
-  await queue.add(documentType, buildJobPayload(doc, session.userId, body), {
+  await queue.add(documentType, buildJobPayload(doc, session.userId, body, walletId), {
     priority: documentType === 'batch_labels' ? JOB_PRIORITY.LOW : JOB_PRIORITY.MEDIUM,
     jobId,
   });
