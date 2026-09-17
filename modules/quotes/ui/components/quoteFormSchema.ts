@@ -34,7 +34,6 @@ export const quoteFormSchema = z.object({
       return normalized.length === 8 ? `${normalized.slice(0, 5)}-${normalized.slice(5)}` : val;
     })
     .refine((val) => cepRegex.test(val), { message: "CEP inválido." }),
-  coleta: z.boolean(),
   devolucao: z.boolean(),
   seguroValor: z
     .union([

@@ -77,7 +77,6 @@ export function InsuranceField() {
         destino: { cep: resumo.destinoCep ?? "" },
         volumes: resumo.volumes ?? [],
         seguro: valor && valor > 0 ? valor : null,
-        coleta: resumo.coleta ?? false,
         devolucao: resumo.devolucao ?? false,
       } as never);
 

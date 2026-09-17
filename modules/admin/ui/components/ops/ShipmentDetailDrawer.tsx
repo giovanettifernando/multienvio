@@ -203,9 +203,7 @@ export default function ShipmentDetailDrawer({
               <Title level={5}>Status e Transportadora</Title>
               <Form.Item label="Status" name="status">
                 <Select>
-                  <Select.Option value="PICKUP_REQUESTED">Coleta Solicitada</Select.Option>
                   <Select.Option value="AWAITING_DROP_OFF_AT_POINT">Aguardando Entrega no Ponto</Select.Option>
-                  <Select.Option value="RECEIVED_AT_POINT">Recebido no Ponto</Select.Option>
                   <Select.Option value="IN_TRANSIT_TO_CARRIER">Em Trânsito para Transportadora</Select.Option>
                   <Select.Option value="IN_TRANSIT_TO_CARRIER_HUB">Em Trânsito para Hub</Select.Option>
                   <Select.Option value="RECEIVED_AT_CARRIER">Recebido na Transportadora</Select.Option>

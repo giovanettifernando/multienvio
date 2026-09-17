@@ -215,22 +215,6 @@ const manualRecipientSchema = z.object({
 
 export type RecipientManualForm = z.infer<typeof manualRecipientSchema>;
 
-const postingUnitSchema = z.object({
-  selected: z
-    .object({
-      id: z.string(),
-      nome: z.string(),
-      cep: z.string(),
-      endereco: z.string(),
-      cidade: z.string(),
-      uf: z.string(),
-    })
-    .nullable(),
-  ampliarBusca: z.boolean(),
-  incluirEstadosProximos: z.boolean(),
-  definirComoPadrao: z.boolean(),
-});
-
 export const finalizeFormSchema = z
   .object({
     document: z.object({
@@ -253,7 +237,6 @@ export const finalizeFormSchema = z
       // mensagem citar o campo certo.
       dceKey: z.string().optional(),
     }),
-    postingUnit: postingUnitSchema,
     recipient: z.object({
       mode: z.enum(["manual", "saved"]),
       savedId: z.string().optional(),
@@ -423,22 +406,11 @@ export const finalizeFormSchema = z
     }
   });
 
-// Factory function to create schema with pickup context
 /**
- * O card de unidade de postagem foi ocultado do checkout a pedido do produto,
- * e com ele caiu a obrigatoriedade de escolher uma.
- *
- * A exigência vivia aqui num superRefine e passou despercebida quando a tela
- * mudou: o botão "Pagar agora" ficava habilitado (as pré-condições da tela já
- * não olhavam a unidade), o clique disparava, e a validação do formulário
- * reprovava `postingUnit.selected` — um campo que não é mais exibido. O
- * usuário via "preencha todos os campos obrigatórios" sem nenhum campo em
- * vermelho, porque o campo culpado não estava na página.
- *
- * O parâmetro continua na assinatura para que reativar o card seja só voltar a
- * checagem aqui, sem mexer em quem chama.
+ * O card de unidade de postagem não faz parte do checkout: quem leva o pacote
+ * até a transportadora é o cliente, e a tela só ajuda a achar uma agência.
  */
-export function createFinalizeFormSchema(_pickupAtOrigin: boolean) {
+export function createFinalizeFormSchema() {
   return finalizeFormSchema;
 }
 

@@ -52,7 +52,6 @@ function adaptCartSnapshot(snapshot: {
         uf: item.destination.uf,
       },
       devolucao: item.preferences.reverse || false,
-      coleta: item.preferences.pickupRequested || false,
       volumes: volumesWithCubicWeight.map((v) => ({
         id: String(v.idx || 0),
         comprimentoCm: v.comprimentoCm,

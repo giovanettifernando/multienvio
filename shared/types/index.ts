@@ -32,7 +32,6 @@ export * from './wallet-statement';
 export * from './correios-label';
 export * from './invoice';
 export * from './label';
-export * from './pickup';
 
 // Extended shipment types (core Shipment is from contracts)
 export type {

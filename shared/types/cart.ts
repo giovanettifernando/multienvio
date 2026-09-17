@@ -38,24 +38,10 @@ export type CartItemSnapshot = {
     idx?: number;
   }>;
   preferences: {
-    pickupRequested?: boolean;
     reverse?: boolean;
     reminder?: string;
   };
   insuranceValue?: number;
-  pickupPoint?: {
-    id: string;
-    nome?: string;
-    endereco?: string;
-    cidade?: string;
-    uf?: string;
-    cep?: string;
-  } | null;
-  pickupFee?: {
-    collectorId: string;
-    feeAmount: number;
-    distanceKm: number;
-  } | null;
   selectedQuote: {
     carrier: string;
     serviceCode?: string;
@@ -68,7 +54,6 @@ export type CartItemSnapshot = {
     subtotal?: number;
     desconto?: number;
     taxas?: number;
-    pickupFee?: number;
     total: number;
     moeda: string;
   };
@@ -95,7 +80,6 @@ export type CartItem = {
     uf?: string;
   };
   devolucao: boolean;
-  coleta: boolean;
   volumes: QuoteVolume[];
   pesoTotalKg: number;
   pesoCubadoTotalKg: number;

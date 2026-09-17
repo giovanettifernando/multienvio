@@ -68,10 +68,8 @@ export const quoteInputSchema = z.object({
   serviceCode: z.string().optional(),
   estimatedDays: z.number().int().positive().optional(),
   freightCostCents: z.number().int().min(0, 'Valor do frete deve ser positivo'),
-  pickupFeeCents: z.number().int().min(0).optional(),
   totalCents: z.number().int().min(1, 'Valor total deve ser positivo'),
   shippingCommissionCents: z.number().int().min(0).optional(),
-  pickupCommissionCents: z.number().int().min(0).optional(),
 });
 
 /**
@@ -86,7 +84,6 @@ export const createRecipientPaymentSchema = z.object({
   quote: quoteInputSchema,
   totalWeight: z.number().positive('Peso total deve ser positivo'),
   declaredValue: z.number().min(0, 'Valor declarado não pode ser negativo'),
-  pickupAtOrigin: z.boolean().default(false),
   document: z.record(z.string(), z.unknown()).optional(),
 });
 

@@ -54,7 +54,6 @@ export function CartTable({ items, onRemove }: CartTableProps) {
               {record.destino?.cidadeUF ? `(${record.destino?.cidadeUF})` : ""}
             </Typography.Text>
             <Space>
-              {record.coleta ? <Tag color="blue">Coleta</Tag> : null}
               {record.devolucao ? <Tag color="orange">Devolução</Tag> : null}
             </Space>
           </Space>
@@ -147,7 +146,6 @@ export function CartTable({ items, onRemove }: CartTableProps) {
               <Space size={4} wrap>
                 <Tag style={{ margin: 0 }}>{item.volumes.length} vol</Tag>
                 <Tag style={{ margin: 0 }}>{item.pesoTotalKg.toFixed(1)} kg</Tag>
-                {item.coleta ? <Tag color="blue" style={{ margin: 0 }}>Coleta</Tag> : null}
                 {item.devolucao ? <Tag color="orange" style={{ margin: 0 }}>Devolução</Tag> : null}
               </Space>
               <Button

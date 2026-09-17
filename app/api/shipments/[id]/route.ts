@@ -62,17 +62,6 @@ interface ShipmentLabel {
   updatedAt: string;
 }
 
-interface ShipmentPickupRequest {
-  id: string;
-  shipmentId: string;
-  collectorId: string | null;
-  status: string;
-  scheduleAt: string | null;
-  collectedAt: string | null;
-  createdAt: string;
-  updatedAt: string;
-}
-
 interface ShipmentDetail {
   id: string;
   platformTrackingCode: string;
@@ -104,8 +93,6 @@ interface ShipmentDetail {
   destinationCep: string;
   estimatedDays: number | null;
   freightCost: number | null;
-  pickupFee: number | null;
-  pickupPointId: string | null;
   document: unknown;
   paymentMethod: string | null;
   publicTrackingId: string | null;
@@ -123,7 +110,6 @@ interface ShipmentDetail {
   volumes: ShipmentVolume[];
   trackingEvents: ShipmentTrackingEvent[];
   label: ShipmentLabel | null;
-  pickupRequest: ShipmentPickupRequest | null;
 }
 
 interface ShipmentDeleteResponse {
@@ -155,17 +141,6 @@ export const GET = withApiHandler<ShipmentDetail, { id: string }>(async (context
         },
       },
       label: true,
-      pickupRequest: {
-        include: {
-          collector: {
-            select: {
-              id: true,
-              pfNome: true,
-              pfCelular: true,
-            },
-          },
-        },
-      },
     },
   });
 
@@ -209,7 +184,7 @@ export const GET = withApiHandler<ShipmentDetail, { id: string }>(async (context
   }
 
   // Desestruturar para remover campos que serão transformados
-  const { packages, trackingEvents, label, pickupRequest, ...shipmentBase } = shipment;
+  const { packages, trackingEvents, label, ...shipmentBase } = shipment;
 
   // Serializar para JSON (converter Decimal, Date, etc.)
   const shipmentData = {
@@ -285,15 +260,6 @@ export const GET = withApiHandler<ShipmentDetail, { id: string }>(async (context
           createdAt: label.createdAt.toISOString(),
           updatedAt: label.updatedAt.toISOString(),
           printedAt: label.printedAt?.toISOString() || null,
-        }
-      : null,
-    pickupRequest: pickupRequest
-      ? {
-          ...pickupRequest,
-          scheduleAt: pickupRequest.scheduleAt?.toISOString() || null,
-          collectedAt: pickupRequest.collectedAt?.toISOString() || null,
-          createdAt: pickupRequest.createdAt.toISOString(),
-          updatedAt: pickupRequest.updatedAt.toISOString(),
         }
       : null,
   };

@@ -4,7 +4,6 @@ import {
   ShoppingCartOutlined,
   // FileAddOutlined, // TODO: Descomentar quando reativar menu Etiquetas
   ReconciliationOutlined,
-  CalendarOutlined,
   WalletOutlined,
   CustomerServiceOutlined,
   SettingOutlined,
@@ -53,12 +52,6 @@ export const sidebarItems: SidebarItem[] = [
   //   label: 'Etiquetas',
   //   href: '/etiquetas',
   // },
-  {
-    key: 'pickups',
-    icon: CalendarOutlined,
-    label: 'Coletas',
-    href: '/coletas',
-  },
   {
     key: 'recipient-payments',
     icon: SendOutlined,

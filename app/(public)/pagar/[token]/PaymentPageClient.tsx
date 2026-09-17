@@ -392,12 +392,6 @@ export default function PaymentPageClient({ token }: PaymentPageClientProps) {
             <Title level={2} style={{ margin: "8px 0", color: "#1890ff" }}>
               {formatCentsAsBRL(paymentData.totalCents)}
             </Title>
-            {paymentData.pickupFeeCents && paymentData.pickupFeeCents > 0 && (
-              <Text type="secondary" style={{ fontSize: 12 }}>
-                (inclui taxa de coleta de{" "}
-                {formatCentsAsBRL(paymentData.pickupFeeCents)})
-              </Text>
-            )}
           </ELCard>
 
           {/* Expiration Warning */}

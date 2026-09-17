@@ -120,7 +120,6 @@ export interface CheckoutInput {
   document: CheckoutDocument;
   volumes: CheckoutVolume[];
   insuranceValue?: number;
-  pickupPointId?: string | null;
   carrier: string;
   service: string;
   originCep: string;
@@ -130,7 +129,6 @@ export interface CheckoutInput {
   destinationCep: string;
   estimatedDays: number;
   freightCost: number;
-  solicitarColeta?: boolean;
   /** Carrier-specific external service ID (e.g. Loggi externalServiceId) */
   externalServiceId?: string;
 }
@@ -140,7 +138,6 @@ export interface CheckoutResult {
   trackingCode: string;
   publicTrackingId: string | null;
   labelId: string;
-  pickupRequestId: string | null;
   isIdempotent: boolean;
 }
 
@@ -347,13 +344,12 @@ export function generatePlatformTrackingCode(): string {
 }
 
 /**
- * Determina o status inicial do shipment baseado no tipo de coleta
+ * Status inicial do envio.
+ *
+ * Quem leva o pacote até a transportadora é o próprio cliente, então todo
+ * envio nasce aguardando postagem.
  */
-export function determineInitialStatus(solicitarColeta?: boolean, pickupPointId?: string | null): ShipmentStatus {
-  if (solicitarColeta === true) {
-    return ShipmentStatus.PICKUP_REQUESTED;
-  }
-  // Fallback padrão para ambos os casos
+export function determineInitialStatus(): ShipmentStatus {
   return ShipmentStatus.AWAITING_DROP_OFF_AT_POINT;
 }
 
@@ -433,7 +429,7 @@ export async function processCheckout(input: CheckoutInput): Promise<CheckoutRes
     assertSenderCanUseDeclaration({ cpf: sender?.cpf ?? null, cnpj: sender?.cnpj ?? null });
   }
   const documentData = prepareDocumentData(input.document);
-  const initialStatus = determineInitialStatus(input.solicitarColeta, input.pickupPointId);
+  const initialStatus = determineInitialStatus();
 
   const result = await prisma.$transaction(async (tx) => {
     // IDEMPOTÊNCIA: Verificar se já existe um shipment para este checkout
@@ -451,7 +447,6 @@ export async function processCheckout(input: CheckoutInput): Promise<CheckoutRes
       },
       include: {
         label: true,
-        pickupRequest: true,
       },
       orderBy: {
         createdAt: 'desc',
@@ -468,7 +463,6 @@ export async function processCheckout(input: CheckoutInput): Promise<CheckoutRes
         trackingCode: existingShipment.platformTrackingCode,
         publicTrackingId: existingShipment.publicTrackingId,
         labelId: existingShipment.label?.id || '',
-        pickupRequestId: existingShipment.pickupRequest?.id || null,
         isIdempotent: true,
       };
     }
@@ -498,7 +492,7 @@ export async function processCheckout(input: CheckoutInput): Promise<CheckoutRes
     );
     const insuranceCommissionCents = Math.round(insuranceCommission * 100);
     const freightCents = Math.round(serverFreightCost * 100) - insuranceCommissionCents;
-    const { shippingCommissionCents, pickupCommissionCents } = await calculateCommissionsInCents(
+    const { shippingCommissionCents } = await calculateCommissionsInCents(
       freightCents,
       0,
       carrierSlug
@@ -538,9 +532,7 @@ export async function processCheckout(input: CheckoutInput): Promise<CheckoutRes
         service: input.service,
         estimatedDays: serverEstimatedDays, // SECURITY: Usar valor do servidor
         freightCost: serverFreightCost, // SECURITY: Usar valor do servidor
-        pickupPointId: input.pickupPointId,
         platformShippingCommissionCents: shippingCommissionCents > 0 ? shippingCommissionCents : null,
-        platformPickupCommissionCents: pickupCommissionCents > 0 ? pickupCommissionCents : null,
         platformInsuranceCommissionCents: insuranceCommissionCents > 0 ? insuranceCommissionCents : null,
         document: documentData,
         status: initialStatus,
@@ -572,13 +564,6 @@ export async function processCheckout(input: CheckoutInput): Promise<CheckoutRes
     // Integração com transportadora (best-effort)
     await integrateWithCarrierSafely(tx, input, shipment.id, packages, declaredValue);
 
-    // Criar PickupRequest se solicitado
-    let pickupRequestId: string | null = null;
-    if (input.solicitarColeta) {
-      const pickupRequest = await createPickupRequestIfNeeded(tx, input, shipment.id);
-      pickupRequestId = pickupRequest?.id || null;
-    }
-
     // Eventos de rastreamento virão dos Correios via webhook/sync
     // Não criar evento inicial genérico - API pública tem fallback para timeline vazia
 
@@ -587,7 +572,6 @@ export async function processCheckout(input: CheckoutInput): Promise<CheckoutRes
       trackingCode: shipment.platformTrackingCode,
       publicTrackingId: shipment.publicTrackingId,
       labelId: label.id,
-      pickupRequestId,
       isIdempotent: false,
     };
   });
@@ -745,32 +729,3 @@ async function integrateWithCarrierSafely(
   }, 'Carrier integration successful');
 }
 
-/**
- * Cria PickupRequest se não existir (idempotente)
- */
-async function createPickupRequestIfNeeded(
-  tx: Prisma.TransactionClient,
-  input: CheckoutInput,
-  shipmentId: string
-): Promise<{ id: string } | null> {
-  const existingPickup = await tx.pickupRequest.findUnique({
-    where: { shipmentId },
-  });
-
-  if (existingPickup) {
-    return existingPickup;
-  }
-
-  return tx.pickupRequest.create({
-    data: {
-      userId: input.userId,
-      shipmentId,
-      originCep: input.originCep,
-      originAddress: null,
-      originCity: input.originCidade || null,
-      originUf: input.originUf || null,
-      status: 'PENDING',
-      notes: null,
-    },
-  });
-}

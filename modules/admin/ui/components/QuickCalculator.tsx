@@ -143,7 +143,6 @@ export function QuickCalculator() {
             pesoKg: values.weight,
           },
         ],
-        coleta: false,
         devolucao: false,
       };
 

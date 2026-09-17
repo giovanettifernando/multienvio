@@ -62,15 +62,6 @@ const STATUS_CONFIG: StatusConfig[] = [
     bgColor: '#e6f4ff',
   },
   {
-    key: 'awaiting_pickup',
-    label: 'Aguardando coleta',
-    statuses: [UI_STATUSES.AGUARDANDO_COLETA],
-    icon: <ClockCircleOutlined />,
-    color: '#faad14',
-    bgColor: '#fffbe6',
-    filterParam: 'Aguardando coleta',
-  },
-  {
     key: 'awaiting_posting',
     label: 'Aguardando postagem',
     statuses: [UI_STATUSES.AGUARDANDO_POSTAGEM],

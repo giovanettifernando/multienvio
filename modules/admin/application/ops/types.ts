@@ -36,23 +36,10 @@ export interface OpsShipment {
   service?: string | null;
   estimatedDays?: number | null;
   freightCost?: number | null;
-  pickupFee?: number | null;
-  pickupPointId?: string | null;
-  pickupPointName?: string | null;
-  collectorId?: string | null;
-  collectorName?: string | null;
   postedAt?: string | null;
-  receivedAt?: string | null;
-  receivedBy?: string | null;
   deliveredAt?: string | null;
   createdAt: string;
   updatedAt: string;
-  // Pickup Request info
-  pickupRequestId?: string | null;
-  pickupRequestStatus?: string | null;
-  pickupScheduledAt?: string | null;
-  pickupCollectedAt?: string | null;
-  pickupDeliveredToCarrierAt?: string | null;
   // Label info
   labelStatus?: string | null;
   labelFileUrl?: string | null;
@@ -100,16 +87,12 @@ export interface ListParams {
   pageSize?: number;
   q?: string;                           // busca livre (cliente, doc, tracking, pedido)
   status?: string;                      // ShipmentStatus|'all'
-  pickupType?: string;                  // PickupType|'all'
   carrier?: string;                     // CarrierCode|'all'
-  pocId?: string;                       // filtro por ponto de coleta
   dateStart?: string;
   dateEnd?: string;                     // ISO
   riskOnly?: boolean;                   // flag de risco
   type?: string;                        // exception type
   severity?: string;                    // exception severity
-  provider?: string;                    // pickup provider
-  active?: boolean;                     // PoC active
   city?: string;
   state?: string;
   processed?: boolean;                  // events
@@ -131,17 +114,13 @@ export interface TimelineEvent {
 }
 
 export interface OpsKpis {
-  /** Aguardando coleta/postagem (PICKUP_REQUESTED, AWAITING_DROP_OFF_AT_POINT, etc.) */
+  /** Aguardando postagem pelo cliente (AWAITING_DROP_OFF_AT_POINT) */
   backlog: number;
-  /** Em coleta (COLLECTED_FROM_SENDER, IN_TRANSIT_TO_CARRIER_HUB) */
-  inPickup: number;
-  /** No ponto de coleta (DROPPED_OFF_AT_POINT, AWAITING_CARRIER_PICKUP_AT_POINT) */
-  atPoC: number;
   /** Em trânsito (RECEIVED_AT_ORIGIN_HUB, IN_TRANSFER, IN_TRANSIT_TO_DESTINATION, etc.) */
   inTransit: number;
   /** Em rota de entrega (OUT_FOR_DELIVERY, AWAITING_PICKUP_AT_DESTINATION_HUB) */
   outForDelivery: number;
-  /** Exceções/problemas (DELIVERY_ATTEMPT_FAILED, DELIVERY_PROBLEM, PICKUP_FAILED) */
+  /** Exceções/problemas (DELIVERY_ATTEMPT_FAILED, DELIVERY_PROBLEM) */
   exceptions: number;
   /** Entregues (DELIVERED, DELIVERED_AT_DESTINATION_HUB) */
   delivered: number;

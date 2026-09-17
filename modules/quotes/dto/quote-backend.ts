@@ -62,7 +62,6 @@ export const quoteRequestSchema = z.object({
     .min(1, 'Pelo menos 1 volume é obrigatório')
     .max(10, 'Máximo de 10 volumes por cotação'),
   seguro: z.number().min(0).nullable().optional(),
-  coleta: z.boolean().default(false),
   devolucao: z.boolean().default(false),
   lembrete: z.string().max(500, 'Lembrete muito longo').nullable().optional(),
 });

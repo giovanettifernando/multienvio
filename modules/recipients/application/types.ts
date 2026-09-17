@@ -68,10 +68,8 @@ export interface QuoteInput {
   serviceCode?: string;
   estimatedDays?: number;
   freightCostCents: number;
-  pickupFeeCents?: number;
   totalCents: number;
   shippingCommissionCents?: number;
-  pickupCommissionCents?: number;
 }
 
 /**
@@ -86,7 +84,6 @@ export interface CreateRecipientPaymentInput {
   quote: QuoteInput;
   totalWeight: number;
   declaredValue: number;
-  pickupAtOrigin?: boolean;
   document?: Record<string, unknown>;
 }
 
@@ -124,7 +121,6 @@ export interface PublicPaymentData {
   // Valores
   totalCents: number;
   freightCostCents: number;
-  pickupFeeCents: number | null;
 
   // Transportadora
   carrier: string;

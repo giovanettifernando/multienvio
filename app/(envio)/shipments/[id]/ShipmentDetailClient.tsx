@@ -120,7 +120,6 @@ interface ShipmentDetail {
   recipientPhone: string | null;
   recipientEmail: string | null;
   recipientDocument: string | null;
-  pickupPointId: string | null;
   document: Record<string, unknown> | null;
   postedAt: string | null;
   deliveredAt: string | null;

@@ -17,7 +17,6 @@ export type QuoteFormState = {
   destinoCep: CEP;
   destinoCidade?: string;
   destinoUf?: string;
-  coleta: boolean;
   devolucao: boolean;
   volumes: QuoteVolume[];
   seguroValor?: number | null;
@@ -63,7 +62,6 @@ export type QuoteSummary = {
   destinoUf?: string;
   volumes: QuoteVolume[];
   seguroValor?: number | null;
-  coleta: boolean;
   devolucao: boolean;
 };
 
@@ -86,7 +84,6 @@ export type QuoteRequestPayload = {
     pesoKg: number;
   }>;
   seguro?: number | null;
-  coleta: boolean;
   devolucao: boolean;
 };
 

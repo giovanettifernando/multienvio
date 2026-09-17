@@ -126,13 +126,6 @@ export interface CheckoutData {
   insuranceValue?: number;
   freightCost: number;
   totalCost: number;
-  pickupPointId?: string | null;
-  solicitarColeta?: boolean;
-  pickupFee?: {
-    collectorId: string;
-    feeAmount: number;
-    distanceKm: number;
-  };
   carrier: string;
   service: string;
   originCep: string;
@@ -230,9 +223,6 @@ export function PaidCheckoutModal({
         insuranceValue: checkoutData.insuranceValue,
         freightCost: checkoutData.freightCost,
         totalCost: totalAmount,
-        pickupPointId: checkoutData.pickupPointId,
-        solicitarColeta: checkoutData.solicitarColeta,
-        pickupFee: checkoutData.pickupFee,
         carrier: checkoutData.carrier,
         service: checkoutData.service,
         originCep: checkoutData.originCep,

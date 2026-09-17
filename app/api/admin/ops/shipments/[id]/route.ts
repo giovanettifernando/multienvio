@@ -8,37 +8,7 @@ import { ShipmentStatus } from '@/modules/shipments/application/shipment-status'
 import { isValidTransition } from '@/modules/shipments/application/status-migration';
 import { auditStatusChange } from '@/modules/shipments/application/shipment-audit';
 
-interface ShipmentDetailCollector {
-  id: string;
-  name: string;
-}
 
-interface ShipmentDetailPickupRequest {
-  id: string;
-  userId: string;
-  shipmentId: string;
-  collectorId: string | null;
-  collector: ShipmentDetailCollector | null;
-  status: string;
-  originCep: string;
-  originAddress: string | null;
-  originCity: string | null;
-  originUf: string | null;
-  windowStart: string | null;
-  windowEnd: string | null;
-  scheduleAt: string | null;
-  collectedAt: string | null;
-  collectedBy: string | null;
-  scannedCode: string | null;
-  deliveredToCarrierAt: string | null;
-  carrierRecipient: string | null;
-  carrierUnit: string | null;
-  attemptCount: number;
-  attemptNotes: unknown;
-  notes: string | null;
-  createdAt: string;
-  updatedAt: string;
-}
 
 interface ShipmentDetailLabel {
   id: string;
@@ -136,18 +106,12 @@ interface ShipmentDetailResponse {
   service: string | null;
   estimatedDays: number | null;
   freightCost: number | null;
-  pickupFee: number | null;
-  pickupPointId: string | null;
   document: unknown;
   paymentMethod: string | null;
   publicTrackingId: string | null;
   postedAt: string | null;
-  receivedAt: string | null;
-  receivedBy: string | null;
   deliveredAt: string | null;
   platformShippingCommissionCents: number | null;
-  platformPickupCommissionCents: number | null;
-  pickupRequest: ShipmentDetailPickupRequest | null;
   label: ShipmentDetailLabel | null;
   packages: ShipmentDetailPackage[];
   trackingEvents: ShipmentDetailTrackingEvent[];
@@ -181,18 +145,14 @@ interface ShipmentUpdateResponse {
     service: string | null;
     estimatedDays: number | null;
     freightCost: number | null;
-    pickupFee: number | null;
-    pickupPointId: string | null;
     document: unknown;
     paymentMethod: string | null;
     publicTrackingId: string | null;
     postedAt: Date | null;
-    receivedAt: Date | null;
     receivedBy: string | null;
     deliveredAt: Date | null;
     platformShippingCommissionCents: number | null;
-    platformPickupCommissionCents: number | null;
-    createdAt: Date;
+      createdAt: Date;
     updatedAt: Date;
   };
 }
@@ -221,16 +181,6 @@ export const GET = withApiHandler<ShipmentDetailResponse, { id: string }>(async 
           email: true,
         },
       },
-      pickupRequest: {
-        include: {
-          collector: {
-            select: {
-              id: true,
-              pfNome: true,
-            },
-          },
-        },
-      },
       label: true,
       packages: {
         orderBy: {
@@ -255,26 +205,7 @@ export const GET = withApiHandler<ShipmentDetailResponse, { id: string }>(async 
     createdAt: shipment.createdAt.toISOString(),
     updatedAt: shipment.updatedAt.toISOString(),
     postedAt: shipment.postedAt?.toISOString() || null,
-    receivedAt: shipment.receivedAt?.toISOString() || null,
     deliveredAt: shipment.deliveredAt?.toISOString() || null,
-    pickupRequest: shipment.pickupRequest
-      ? {
-          ...shipment.pickupRequest,
-          collector: shipment.pickupRequest.collector
-            ? {
-                id: shipment.pickupRequest.collector.id,
-                name: shipment.pickupRequest.collector.pfNome,
-              }
-            : null,
-          createdAt: shipment.pickupRequest.createdAt.toISOString(),
-          updatedAt: shipment.pickupRequest.updatedAt.toISOString(),
-          windowStart: shipment.pickupRequest.windowStart?.toISOString() || null,
-          windowEnd: shipment.pickupRequest.windowEnd?.toISOString() || null,
-          collectedAt: shipment.pickupRequest.collectedAt?.toISOString() || null,
-          deliveredToCarrierAt: shipment.pickupRequest.deliveredToCarrierAt?.toISOString() || null,
-          scheduleAt: shipment.pickupRequest.scheduleAt?.toISOString() || null,
-        }
-      : null,
     label: shipment.label
       ? {
           ...shipment.label,
@@ -308,7 +239,6 @@ const ShipmentUpdateSchema = z.object({
   weight: z.number().positive().optional(),
   declaredValue: z.number().min(0).optional(),
   freightCost: z.number().min(0).optional(),
-  pickupFee: z.number().min(0).optional(),
   estimatedDays: z.number().int().positive().optional(),
   recipientName: z.string().min(1).optional(),
   recipientPhone: z.string().optional(),
@@ -319,7 +249,6 @@ const ShipmentUpdateSchema = z.object({
   destinationCity: z.string().min(1).optional(),
   destinationState: z.string().length(2).optional(),
   destinationCep: z.string().regex(/^\d{8}$/).optional(),
-  pickupPointId: z.string().uuid().optional(),
 });
 
 export const PATCH = withApiHandler<ShipmentUpdateResponse, { id: string }>(async (context) => {
@@ -377,7 +306,6 @@ export const PATCH = withApiHandler<ShipmentUpdateResponse, { id: string }>(asyn
   if (validatedData.weight !== undefined) updateData.weight = validatedData.weight;
   if (validatedData.declaredValue !== undefined) updateData.declaredValue = validatedData.declaredValue;
   if (validatedData.freightCost !== undefined) updateData.freightCost = validatedData.freightCost;
-  if (validatedData.pickupFee !== undefined) updateData.pickupFee = validatedData.pickupFee;
   if (validatedData.estimatedDays !== undefined) updateData.estimatedDays = validatedData.estimatedDays;
 
   // SECURITY: Verifica se há alteração de destinatário/endereço após etiqueta gerada
@@ -416,9 +344,6 @@ export const PATCH = withApiHandler<ShipmentUpdateResponse, { id: string }>(asyn
   if (validatedData.destinationState !== undefined)
     updateData.destinationState = validatedData.destinationState;
   if (validatedData.destinationCep !== undefined) updateData.destinationCep = validatedData.destinationCep;
-
-  // Pickup point
-  if (validatedData.pickupPointId !== undefined) updateData.pickupPointId = validatedData.pickupPointId;
 
   const updatedShipment = await prisma.shipment.update({
     where: { id },

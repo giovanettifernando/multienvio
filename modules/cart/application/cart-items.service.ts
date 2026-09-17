@@ -30,7 +30,6 @@ export interface CartItemDto {
   preferences: Prisma.JsonValue;
   insuranceValue?: number;
   pickupPoint: Prisma.JsonValue;
-  pickupFee?: Prisma.JsonValue;
   selectedQuote: Prisma.JsonValue;
   totals: Prisma.JsonValue;
   document?: Prisma.JsonValue;
@@ -63,7 +62,6 @@ export function mapCartItemToDto(item: CartItem): CartItemDto {
     preferences: item.preferences,
     insuranceValue: item.insuranceValue ? Number(item.insuranceValue) : undefined,
     pickupPoint: item.pickupPoint,
-    pickupFee: item.pickupFee,
     selectedQuote: item.selectedQuote,
     totals: item.totals,
     document: item.document,
@@ -100,8 +98,6 @@ export async function addItem(
       volumes: data.volumes as Prisma.InputJsonValue,
       preferences: data.preferences as Prisma.InputJsonValue,
       insuranceValue: data.insuranceValue,
-      pickupPoint: (data.pickupPoint || null) as Prisma.InputJsonValue,
-      pickupFee: (data.pickupFee || null) as Prisma.InputJsonValue,
       selectedQuote: data.selectedQuote as Prisma.InputJsonValue,
       totals: data.totals as Prisma.InputJsonValue,
       document: (data.document || null) as Prisma.InputJsonValue,
@@ -164,12 +160,6 @@ export async function updateItem(
   }
   if (data.insuranceValue !== undefined) {
     updateData.insuranceValue = data.insuranceValue;
-  }
-  if (data.pickupPoint !== undefined) {
-    updateData.pickupPoint = (data.pickupPoint || null) as Prisma.InputJsonValue;
-  }
-  if (data.pickupFee !== undefined) {
-    updateData.pickupFee = (data.pickupFee || null) as Prisma.InputJsonValue;
   }
   if (data.selectedQuote) {
     updateData.selectedQuote = data.selectedQuote as Prisma.InputJsonValue;

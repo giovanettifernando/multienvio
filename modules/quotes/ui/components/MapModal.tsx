@@ -23,19 +23,29 @@ import {
   SearchOutlined,
   AimOutlined,
 } from "@ant-design/icons";
-import type { PickupPoint } from "@/modules/pickup-points/application/types";
 import type { GeoCoordinates } from "@/shared/utils/geo";
 import { matchesSearch } from "@/shared/utils/string";
 import { formatDistance } from "@/shared/utils/geo";
 import UnitsMap from "./UnitsMap";
 import type { Marker } from "./LeafletMapInner";
 
-interface PickupPointWithDistance extends PickupPoint {
+/**
+ * Ponto exibido no mapa. Hoje só vêm agências dos Correios, mas o mapa não
+ * depende disso: precisa de um id, um nome e coordenadas.
+ */
+export interface MapPoint {
+  id: string;
+  razaoSocial: string;
+  nomeFantasia?: string | null;
+  bairro?: string | null;
+  cidade?: string | null;
+  uf?: string | null;
+  geo?: { lat: number; lng: number } | null;
   distance?: number;
 }
 
 // Normalizar pontos para markers
-function toMarkers(points: Array<Record<string, unknown> | PickupPointWithDistance>): Marker[] {
+function toMarkers(points: MapPoint[]): Marker[] {
   const markers = points
     .map((p) => {
       const geo = p.geo as { lat?: number | string; lng?: number | string } | undefined | null;
@@ -72,7 +82,7 @@ function toMarkers(points: Array<Record<string, unknown> | PickupPointWithDistan
 interface MapModalProps {
   open: boolean;
   onClose: () => void;
-  points: PickupPointWithDistance[];
+  points: MapPoint[];
   originCoords: GeoCoordinates | null | undefined;
   originInfo?: {
     cep?: string;

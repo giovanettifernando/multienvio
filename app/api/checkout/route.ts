@@ -101,7 +101,6 @@ const checkoutSchema = z.object({
     comprimento: z.number(),
   })),
   insuranceValue: z.number().optional(),
-  pickupPointId: z.string().optional().nullable(),
   carrier: z.string(),
   service: z.string(),
   originCep: z.string(),
@@ -121,7 +120,9 @@ const checkoutSchema = z.object({
   destinationCep: z.string(),
   estimatedDays: z.number(),
   freightCost: z.number(),
-  solicitarColeta: z.boolean().optional().default(false),
+  // pickupPointId e solicitarColeta saíram do contrato. O schema não é
+  // strict, então clientes antigos que ainda mandem esses campos seguem
+  // funcionando: eles são ignorados em vez de derrubar a chamada.
 });
 
 type CheckoutPayload = z.infer<typeof checkoutSchema>;
@@ -190,7 +191,6 @@ export const POST = withApiHandler<CheckoutResponse>(async ({ req }) => {
     document: data.document,
     volumes: data.volumes,
     insuranceValue: data.insuranceValue,
-    pickupPointId: data.pickupPointId,
     carrier: data.carrier,
     service: data.service,
     originCep: data.originCep,
@@ -200,7 +200,6 @@ export const POST = withApiHandler<CheckoutResponse>(async ({ req }) => {
     destinationCep: data.destinationCep,
     estimatedDays: data.estimatedDays,
     freightCost: data.freightCost,
-    solicitarColeta: data.solicitarColeta,
   };
 
   // SECURITY: Idempotência para prevenir checkouts duplicados

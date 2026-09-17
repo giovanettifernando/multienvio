@@ -8,7 +8,6 @@ import { useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import { getOpsKpis } from '@/modules/admin/application/ops/api';
 import ShipmentsTable from '@/modules/admin/ui/components/ops/ShipmentsTable';
-import ExceptionsTable from '@/modules/admin/ui/components/ops/ExceptionsTable';
 import EventsTable from '@/modules/admin/ui/components/ops/EventsTable';
 import { PageShell } from '@/shared/ui/PageShell';
 
@@ -69,11 +68,6 @@ export default function OperacoesClient() {
       key: 'shipments',
       label: 'Envios',
       children: <ShipmentsTable dateStart={_period.dateStart} dateEnd={_period.dateEnd} />,
-    },
-    {
-      key: 'exceptions',
-      label: 'Exceções',
-      children: <ExceptionsTable dateStart={_period.dateStart} dateEnd={_period.dateEnd} />,
     },
     {
       key: 'events',

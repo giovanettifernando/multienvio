@@ -36,10 +36,6 @@ export interface ShipmentListItem {
   labelUrl: string | undefined;
   trackingUrl: string | undefined;
   hasVolumeDivergence: boolean;
-  pickupRequest: {
-    id: string;
-    status: string;
-  } | null;
 }
 
 export interface ShipmentListFilters {
@@ -155,7 +151,6 @@ async function fetchShipmentsFromDb(
       where,
       include: {
         label: true,
-        pickupRequest: true,
         packages: {
           select: {
             id: true,
@@ -212,10 +207,6 @@ function mapShipmentsToListItems(shipments: any[]): ShipmentListItem[] {
       labelUrl: s.label?.fileUrl || (s.label?.fileBase64 ? `data:${s.label.contentType};base64,${s.label.fileBase64}` : undefined),
       trackingUrl: s.publicTrackingId ? `/rastreio/${s.publicTrackingId}` : undefined,
       hasVolumeDivergence,
-      pickupRequest: s.pickupRequest ? {
-        id: s.pickupRequest.id,
-        status: s.pickupRequest.status,
-      } : null,
     };
   });
 }

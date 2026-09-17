@@ -16,7 +16,6 @@ export {
 // UI Components
 export { DestinationModeSelector } from "./DestinationModeSelector";
 export { InsuranceInput } from "./InsuranceInput";
-export { PickupToggle } from "./PickupToggle";
 export { ReverseToggle } from "./ReverseToggle";
 
 // Existing components (re-export for convenience)

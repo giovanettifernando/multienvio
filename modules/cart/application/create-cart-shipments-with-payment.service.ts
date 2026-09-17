@@ -105,17 +105,7 @@ interface CartItemQuote {
   price: number;
 }
 
-interface CartItemPickupPoint {
-  id?: string | null;
-}
-
-interface CartItemPickupFee {
-  feeAmount?: number;
-  collectorId?: string;
-}
-
 interface CartItemPreferences {
-  pickupRequested?: boolean;
 }
 
 interface CartItemDocument {
@@ -128,12 +118,10 @@ interface CartItemDocument {
 // ============================================================================
 
 /**
- * Determina o status inicial do shipment baseado no tipo de coleta
+ * Status inicial do envio: quem leva o pacote até a transportadora é o
+ * próprio cliente, então todo envio nasce aguardando postagem.
  */
-function determineInitialStatus(hasPickupRequest: boolean, pickupPointId: string | null): ShipmentStatus {
-  if (hasPickupRequest) {
-    return ShipmentStatus.PICKUP_REQUESTED;
-  }
+function determineInitialStatus(): ShipmentStatus {
   return ShipmentStatus.AWAITING_DROP_OFF_AT_POINT;
 }
 
@@ -663,22 +651,14 @@ async function createShipmentFromCartItem(
   const volumes = item.volumes as unknown as CartItemVolume[];
   const preferences = item.preferences as unknown as CartItemPreferences | null;
   const selectedQuote = item.selectedQuote as unknown as CartItemQuote;
-  const pickupFeeData = item.pickupFee as unknown as CartItemPickupFee | null;
   const itemDocument = item.document as unknown as CartItemDocument | null;
 
   // Valor declarado
   const declaredValue = item.insuranceValue ? Number(item.insuranceValue) : 0;
 
-  // Determinar status inicial
-  const pickupPointId = item.pickupPoint
-    ? (item.pickupPoint as CartItemPickupPoint).id || null
-    : null;
-  const hasPickupRequest = preferences?.pickupRequested === true;
-  const initialStatus = determineInitialStatus(hasPickupRequest, pickupPointId);
+  const initialStatus = determineInitialStatus();
 
   // Calcular comissoes
-  const pickupFeeAmount = pickupFeeData?.feeAmount ?? 0;
-  const pickupFeeCents = Math.round(pickupFeeAmount * 100);
   const carrierSlug = resolveCarrierSlugByName(selectedQuote.carrier) ?? '';
 
   // O preco da cotacao ja vem com as duas comissoes somadas. A de frete e
@@ -691,9 +671,9 @@ async function createShipmentFromCartItem(
   const insuranceCommissionCents = Math.round(insuranceCommission * 100);
   const freightCostCents = Math.round(selectedQuote.price * 100) - insuranceCommissionCents;
 
-  const { shippingCommissionCents, pickupCommissionCents } = await calculateCommissionsInCents(
+  const { shippingCommissionCents } = await calculateCommissionsInCents(
     freightCostCents,
-    pickupFeeCents,
+    0,
     carrierSlug
   );
 
@@ -761,12 +741,10 @@ async function createShipmentFromCartItem(
       service: selectedQuote.serviceName || selectedQuote.serviceCode,
       estimatedDays: selectedQuote.deadlineDays,
       freightCost: selectedQuote.price,
-      pickupPointId,
       document: shipmentDocument as Prisma.InputJsonValue,
       status: initialStatus,
       paymentMethod, // JÁ DEFINIDO
       platformShippingCommissionCents: shippingCommissionCents > 0 ? shippingCommissionCents : null,
-      platformPickupCommissionCents: pickupCommissionCents > 0 ? pickupCommissionCents : null,
       platformInsuranceCommissionCents: insuranceCommissionCents > 0 ? insuranceCommissionCents : null,
     },
     volumes: volumes.map((vol) => ({
@@ -801,30 +779,6 @@ async function createShipmentFromCartItem(
     destination,
     declaredValue,
   });
-
-  // Criar PickupRequest se solicitado
-  if (hasPickupRequest) {
-    const collectorId = pickupFeeData?.collectorId || null;
-    const existingPickup = await tx.pickupRequest.findUnique({
-      where: { shipmentId: shipment.id },
-    });
-
-    if (!existingPickup) {
-      await tx.pickupRequest.create({
-        data: {
-          userId,
-          shipmentId: shipment.id,
-          collectorId,
-          originCep: originAddress.cep,
-          originAddress: null,
-          originCity: originAddress.cidade || null,
-          originUf: originAddress.uf || null,
-          status: 'PENDING',
-          notes: null,
-        },
-      });
-    }
-  }
 
   // Eventos de rastreamento virão dos Correios via webhook/sync
   // Não criar evento inicial genérico - API pública tem fallback para timeline vazia

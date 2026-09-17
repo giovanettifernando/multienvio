@@ -47,7 +47,6 @@ export interface CreatePaidShipmentInput {
   document: CheckoutDocument;
   volumes: CheckoutVolume[];
   insuranceValue?: number;
-  pickupPointId?: string | null;
   carrier: string;
   service: string;
   originCep: string;
@@ -57,10 +56,9 @@ export interface CreatePaidShipmentInput {
   destinationCep: string;
   estimatedDays: number;
   freightCost: number;
-  totalCost: number; // Valor total a ser debitado (frete + taxa de coleta)
+  totalCost: number; // Valor total a ser debitado (frete + seguro)
   /** Chave da DC-e, quando o documento é declaração de conteúdo. */
   dceKey?: string | null;
-  solicitarColeta?: boolean;
   paymentMethod: PaymentMethod;
   /** ID externo do serviço (ex: externalServiceId da Loggi) */
   externalServiceId?: string;
@@ -68,12 +66,6 @@ export interface CreatePaidShipmentInput {
    *  Nome mantido como "pagarmePaymentId" por compatibilidade de contrato com o
    *  frontend (PaidCheckoutModal já envia esta chave). */
   pagarmePaymentId?: string;
-  // Dados de taxa de coleta (pickup fee)
-  pickupFee?: {
-    collectorId: string;
-    feeAmount: number;
-    distanceKm: number;
-  };
 }
 
 export interface CreatePaidShipmentResult {
@@ -81,7 +73,6 @@ export interface CreatePaidShipmentResult {
   trackingCode: string;
   publicTrackingId: string | null;
   labelId: string;
-  pickupRequestId: string | null;
   walletTransactionId: string | null;
   isIdempotent: boolean;
 }
@@ -104,7 +95,6 @@ export async function createPaidShipment(
     document,
     volumes,
     insuranceValue,
-    pickupPointId,
     carrier,
     service,
     originCep,
@@ -116,10 +106,8 @@ export async function createPaidShipment(
     freightCost,
     totalCost,
     dceKey,
-    solicitarColeta,
     paymentMethod,
     pagarmePaymentId,
-    pickupFee,
   } = input;
 
   const declaredValue = calculateDeclaredValue(document, insuranceValue);
@@ -142,7 +130,7 @@ export async function createPaidShipment(
     });
   }
   const documentData = prepareDocumentData(document);
-  const initialStatus = determineInitialStatus(solicitarColeta, pickupPointId);
+  const initialStatus = determineInitialStatus();
   const amountCents = Math.round(totalCost * 100);
   const referenceId = `shipment:${trackingCode}`;
 
@@ -260,10 +248,6 @@ export async function createPaidShipment(
             trackingCode,
             reason: 'shipment_payment',
             freightCost,
-            ...(pickupFee && {
-              pickupFee: pickupFee.feeAmount,
-              collectorId: pickupFee.collectorId,
-            }),
           },
         },
       });
@@ -283,9 +267,6 @@ export async function createPaidShipment(
             userId,
             walletTransactionId: walletTransaction.id,
             freightCost,
-            ...(pickupFee && {
-              pickupFee: pickupFee.feeAmount,
-            }),
           },
         },
       });
@@ -381,9 +362,9 @@ export async function createPaidShipment(
     );
     const insuranceCommissionCents = Math.round(insuranceCommission * 100);
     const freightCostCents = Math.round(freightCost * 100) - insuranceCommissionCents;
-    const { shippingCommissionCents, pickupCommissionCents } = await calculateCommissionsInCents(
+    const { shippingCommissionCents } = await calculateCommissionsInCents(
       freightCostCents,
-      Math.round((pickupFee?.feeAmount ?? 0) * 100),
+      0,
       carrierSlug
     );
 
@@ -421,9 +402,7 @@ export async function createPaidShipment(
         service,
         estimatedDays,
         freightCost,
-        pickupPointId,
         platformShippingCommissionCents: shippingCommissionCents > 0 ? shippingCommissionCents : null,
-        platformPickupCommissionCents: pickupCommissionCents > 0 ? pickupCommissionCents : null,
         platformInsuranceCommissionCents: insuranceCommissionCents > 0 ? insuranceCommissionCents : null,
         document: {
           ...documentData as object,
@@ -483,30 +462,11 @@ export async function createPaidShipment(
       },
     });
 
-    // 6) CRIAR PICKUP REQUEST SE SOLICITADO
-    let pickupRequestId: string | null = null;
-    if (solicitarColeta) {
-      const pickupRequest = await tx.pickupRequest.create({
-        data: {
-          userId,
-          shipmentId: shipment.id,
-          originCep,
-          originAddress: null,
-          originCity: originCidade || null,
-          originUf: originUf || null,
-          status: 'PENDING',
-          notes: null,
-        },
-      });
-      pickupRequestId = pickupRequest.id;
-    }
-
     return {
       shipmentId: shipment.id,
       trackingCode: shipment.platformTrackingCode,
       publicTrackingId: shipment.publicTrackingId,
       labelId: label.id,
-      pickupRequestId,
       walletTransactionId,
       isIdempotent: false,
     };
@@ -536,7 +496,7 @@ export async function createPaidShipment(
         carrier,
         service,
         declaredValue,
-        targetStatus: initialStatus, // Status após integração (PICKUP_REQUESTED ou AWAITING_DROP_OFF_AT_POINT)
+        targetStatus: initialStatus, // Status após integração (AWAITING_DROP_OFF_AT_POINT)
         externalServiceId: input.externalServiceId,
         originAddress: {
           cep: originAddr.cep || originCep,

@@ -43,7 +43,6 @@ const toSummary = (form: QuoteFormState): QuoteSummary => ({
   destinoCep: form.destinoCep,
   destinoCidade: form.destinoCidade,
   destinoUf: form.destinoUf,
-  coleta: form.coleta,
   devolucao: form.devolucao,
   volumes: form.volumes,
   seguroValor: form.seguroValor ?? null,
@@ -58,7 +57,6 @@ const fromSummary = (summary: QuoteSummary): QuoteFormState => ({
   destinoCep: summary.destinoCep,
   destinoCidade: summary.destinoCidade,
   destinoUf: summary.destinoUf,
-  coleta: summary.coleta,
   devolucao: summary.devolucao,
   volumes: summary.volumes,
   seguroValor: summary.seguroValor ?? null,
@@ -68,7 +66,6 @@ const fromSummary = (summary: QuoteSummary): QuoteFormState => ({
 const emptyForm = (): QuoteFormState => ({
   origemCep: "",
   destinoCep: "",
-  coleta: false,
   devolucao: false,
   volumes: [],
   seguroValor: null,
@@ -94,7 +91,6 @@ const mergeSummary = (
   destinoCep: patch.destinoCep ?? base.destinoCep,
   destinoCidade: patch.destinoCidade ?? base.destinoCidade,
   destinoUf: patch.destinoUf ?? base.destinoUf,
-  coleta: patch.coleta ?? base.coleta,
   devolucao: patch.devolucao ?? base.devolucao,
   volumes: patch.volumes ?? base.volumes,
   seguroValor:

@@ -265,9 +265,7 @@ export default function ShipmentsTable({ dateStart, dateEnd }: ShipmentsTablePro
             style={{ width: 200 }}
             allowClear
             options={[
-              { value: 'PICKUP_REQUESTED', label: 'Coleta Solicitada' },
               { value: 'AWAITING_DROP_OFF_AT_POINT', label: 'Aguardando Entrega no Ponto' },
-              { value: 'RECEIVED_AT_POINT', label: 'Recebido no Ponto' },
               { value: 'IN_TRANSIT_TO_CARRIER', label: 'Em Trânsito para Transportadora' },
               { value: 'IN_TRANSIT_TO_CARRIER_HUB', label: 'Em Trânsito para Hub' },
               { value: 'RECEIVED_AT_CARRIER', label: 'Recebido na Transportadora' },

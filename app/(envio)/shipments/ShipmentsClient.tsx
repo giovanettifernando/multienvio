@@ -13,7 +13,6 @@ import {
   FileTextOutlined,
   StopOutlined,
   GlobalOutlined,
-  CarOutlined,
   WarningOutlined,
   ExclamationCircleOutlined,
 } from "@ant-design/icons";
@@ -40,7 +39,6 @@ const { Text } = Typography;
 
 const STATUS_OPTIONS: Array<ShipmentStatus | "Todos"> = [
   "Todos",
-  "Aguardando coleta",
   "Aguardando postagem",
   "Postado",
   "Em trânsito",
@@ -297,14 +295,6 @@ export default function ShipmentsClient() {
             <ELStatusTag variant={STATUS_VARIANTS[row.status] ?? "default"} size="default">
               {row.status}
             </ELStatusTag>
-            {row.pickupRequest && row.pickupRequest.status !== 'CANCELED' && row.pickupRequest.status !== 'COMPLETED' && (
-              <ELStatusTag
-                variant={row.pickupRequest.status === 'PENDING' ? 'warning' : 'processing'}
-                size="small"
-              >
-                Coleta: {row.pickupRequest.status === 'PENDING' ? 'Pendente' : row.pickupRequest.status === 'SCHEDULED' ? 'Agendada' : row.pickupRequest.status}
-              </ELStatusTag>
-            )}
             <Text type="secondary" style={{ fontSize: 11 }}>
               Criado: {formatDateBR(row.createdAt)}
             </Text>
@@ -383,15 +373,6 @@ export default function ShipmentsClient() {
                   disabled={!row.trackingUrl}
                   onClick={() => row.trackingUrl && window.open(row.trackingUrl, "_blank")}
                 />
-              </Tooltip>
-              <Tooltip title={row.pickupRequest ? "Ver coleta" : "Coleta não disponível"}>
-                {row.pickupRequest ? (
-                  <Link href={`/coletas?shipmentId=${row.id}`}>
-                    <ELButton variant="ghost" size="small" icon={<CarOutlined />} />
-                  </Link>
-                ) : (
-                  <ELButton variant="ghost" size="small" icon={<CarOutlined />} disabled />
-                )}
               </Tooltip>
               {!isFinalStatus && (
                 <Tooltip title="Cancelar envio">

@@ -9,7 +9,6 @@ export const origemDestinoSchema = z.object({
     .string()
     .min(1, "Informe o CEP de destino")
     .regex(/^[0-9]{5}-?[0-9]{3}$/u, "CEP de destino inválido"),
-  coleta: z.boolean().default(false),
   portaAPorta: z.boolean().default(false),
 });
 

@@ -84,7 +84,6 @@ import {
   toHeaderInfo,
 } from "./quoteFormHelpers";
 import { DestinationModeSelector } from "./DestinationModeSelector";
-import { PickupToggle } from "./PickupToggle";
 import { ReverseToggle } from "./ReverseToggle";
 import { InsuranceInput } from "./InsuranceInput";
 import { VolumesGrid, DEFAULT_CUBAGE_FACTOR } from "./VolumesGrid";
@@ -251,7 +250,6 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
         : storedDestinationAddress?.cep
         ? maskCEP(storedDestinationAddress.cep)
         : "",
-      coleta: storedForm?.coleta ?? false,
       devolucao: storedForm?.devolucao ?? false,
       seguroValor: storedForm?.seguroValor ?? undefined,
       volumes: defaultVolumes,
@@ -343,7 +341,7 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
 
 
   // Estados para destinatário
-  const { destination, setDestination, setPickupAtOrigin } = useQuoteDraft();
+  const { destination, setDestination } = useQuoteDraft();
   const [destinationMode, setDestinationMode] = useState<"manual" | "recipient">(
     // Vindo da calculadora do dashboard com um CEP de destino, abrir já na aba
     // "informar manualmente" — é a única onde o campo de CEP aparece. Sem isso
@@ -377,7 +375,7 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
   // Detecta quando o store muda de "tem dados" para "vazio"
   useEffect(() => {
     const currentUpdatedAt = storedForm?.updatedAt || null;
-    const isStoreEmpty = !storedForm || (!storedForm.destinoCep && !storedForm.coleta && storedForm.volumes.length === 0);
+    const isStoreEmpty = !storedForm || (!storedForm.destinoCep && storedForm.volumes.length === 0);
 
     // Detectar se o store foi resetado (updatedAt mudou OU store ficou vazio)
     const storeWasReset = previousUpdatedAt.current !== currentUpdatedAt && isStoreEmpty;
@@ -393,7 +391,6 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
         destinatarioRecorrenteId: null,
         origemCep: defaultCompanyAddress?.cep ? maskCEP(defaultCompanyAddress.cep) : "",
         destinoCep: "",
-        coleta: false,
         devolucao: false,
         seguroValor: undefined,
         volumes: [createEmptyVolume()],
@@ -522,7 +519,6 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
   // Observar todos os campos do formulário que afetam a cotação
   const watchedOrigemCep = useWatch({ control, name: "origemCep" });
   const watchedDestinoCep = useWatch({ control, name: "destinoCep" });
-  const watchedColeta = useWatch({ control, name: "coleta" });
   const watchedDevolucao = useWatch({ control, name: "devolucao" });
   const watchedSeguroValor = useWatch({ control, name: "seguroValor" });
 
@@ -543,7 +539,6 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
     const currentInputs = JSON.stringify({
       origemCep: watchedOrigemCep,
       destinoCep: watchedDestinoCep,
-      coleta: watchedColeta,
       devolucao: watchedDevolucao,
       seguroValor: watchedSeguroValor,
       volumes: volumesValues,
@@ -572,7 +567,6 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
   }, [
     watchedOrigemCep,
     watchedDestinoCep,
-    watchedColeta,
     watchedDevolucao,
     watchedSeguroValor,
     volumesValues,
@@ -965,7 +959,6 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
     destinoCep: values.destinoCep,
     destinoCidade: destinoInfo?.cidade,
     destinoUf: destinoInfo?.uf,
-    coleta: values.coleta,
     devolucao: values.devolucao,
     volumes: normalizeVolumes(values.volumes),
     seguroValor:
@@ -1139,7 +1132,6 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
     const payload: QuoteRequestPayload = {
       origem: { cep: values.origemCep },
       destino: { cep: values.destinoCep },
-      coleta: values.coleta,
       devolucao: values.devolucao,
       seguro:
         values.seguroValor === undefined || values.seguroValor === null
@@ -1210,7 +1202,6 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
         volumesCount: values.volumes.length,
         pesoTotalKg: totals.pesoRealKg,
         pesoCubadoTotalKg: totals.pesoCubadoKg,
-        coleta: values.coleta,
         devolucao: values.devolucao,
         hasInsuranceValue: Boolean(payload.seguro),
       });
@@ -1303,27 +1294,6 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
           />
         </Form.Item>
 
-        {!isReverse && (
-          <Controller
-            control={control}
-            name="coleta"
-            render={({ field }) => (
-              <ELAddonCard
-                checked={field.value ?? false}
-                onChange={(checked) => {
-                  field.onChange(checked);
-                  setPickupAtOrigin(checked);
-                }}
-                disabled={calculateQuotes.isPending}
-                icon={<CarOutlined />}
-                title="Coleta na origem"
-                description="Disponível para CEPs com cobertura"
-                checkedLabel="Adicionado"
-                uncheckedLabel="Adicionar"
-              />
-            )}
-          />
-        )}
       </Space>
     </OriginCard>
   );

@@ -129,14 +129,9 @@ const createPaidShipmentSchema = z.object({
   /** Chave da DC-e, obrigatória quando o documento é declaração de conteúdo. */
   dceKey: dceKeySchema.optional(),
 
-  // Coleta
-  pickupPointId: z.string().optional().nullable(),
-  solicitarColeta: z.boolean().optional().default(false),
-  pickupFee: z.object({
-    collectorId: z.string(),
-    feeAmount: z.number(),
-    distanceKm: z.number(),
-  }).optional(),
+  // pickupPointId, solicitarColeta e pickupFee saíram do contrato. O schema
+  // não é strict, então clientes antigos que ainda mandem esses campos
+  // seguem funcionando: eles são ignorados em vez de derrubar a chamada.
 
   // Transportadora
   carrier: z.string(),
@@ -204,10 +199,9 @@ export const POST = withApiHandler<CreatePaidShipmentResponse>(async ({ req }) =
     data.freightCost // Passamos para logging de tentativas de manipulação
   );
 
-  // Calcular totalCost no servidor (freightCost + pickupFee se houver)
+  // O total é o frete validado no servidor (o seguro já entra no preço da cotação)
   const serverFreightCost = validatedQuote.freightCost;
-  const pickupFeeAmount = data.pickupFee?.feeAmount ?? 0;
-  const serverTotalCost = serverFreightCost + pickupFeeAmount;
+  const serverTotalCost = serverFreightCost;
 
   logger.info({
     event: 'create_paid_shipment_request',
@@ -243,7 +237,6 @@ export const POST = withApiHandler<CreatePaidShipmentResponse>(async ({ req }) =
       document: data.document,
       volumes: data.volumes,
       insuranceValue: data.insuranceValue,
-      pickupPointId: data.pickupPointId,
       carrier: data.carrier,
       service: data.service,
       externalServiceId: validatedQuote.externalServiceId,
@@ -256,10 +249,8 @@ export const POST = withApiHandler<CreatePaidShipmentResponse>(async ({ req }) =
       estimatedDays: validatedQuote.estimatedDays, // SECURITY: Usar valor do servidor
       freightCost: serverFreightCost, // SECURITY: Usar valor do servidor
       totalCost: serverTotalCost, // SECURITY: Usar valor calculado no servidor
-      solicitarColeta: data.solicitarColeta,
       paymentMethod: data.paymentMethod as PaymentMethod,
       pagarmePaymentId: data.pagarmePaymentId,
-      pickupFee: data.pickupFee,
     });
 
     logger.info({

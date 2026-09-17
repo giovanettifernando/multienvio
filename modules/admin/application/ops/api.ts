@@ -24,9 +24,7 @@ export async function listShipments(p: ListParams): Promise<Paged<OpsShipment>> 
   if (p.pageSize) params.set('pageSize', p.pageSize.toString());
   if (p.q) params.set('q', p.q);
   if (p.status) params.set('status', p.status);
-  if (p.pickupType) params.set('pickupType', p.pickupType);
   if (p.carrier) params.set('carrier', p.carrier);
-  if (p.pocId) params.set('pocId', p.pocId);
   if (p.dateStart) params.set('dateStart', p.dateStart);
   if (p.dateEnd) params.set('dateEnd', p.dateEnd);
   if (p.riskOnly) params.set('riskOnly', 'true');
@@ -67,23 +65,6 @@ export async function getShipmentTimeline(id: string): Promise<TimelineEvent[]> 
 }
 
 // Exceptions
-export async function listExceptions(p: ListParams): Promise<Paged<OpsException>> {
-  const params = new URLSearchParams();
-  if (p.page) params.set('page', p.page.toString());
-  if (p.pageSize) params.set('pageSize', p.pageSize.toString());
-  if (p.q) params.set('q', p.q);
-  if (p.type) params.set('type', p.type);
-  if (p.severity) params.set('severity', p.severity);
-  if (p.status) params.set('status', p.status);
-  if (p.carrier) params.set('carrier', p.carrier);
-  if (p.pocId) params.set('pocId', p.pocId);
-
-  const res = await fetch(`/api/admin/ops/exceptions?${params}`, {
-    credentials: 'include',
-  });
-  if (!res.ok) throw new Error('Failed to fetch exceptions');
-  return extractData<Paged<OpsException>>(res);
-}
 
 export async function updateException(id: string, patch: Partial<OpsException>): Promise<{ ok: true }> {
   const res = await fetch(`/api/admin/ops/exceptions/${id}`, {

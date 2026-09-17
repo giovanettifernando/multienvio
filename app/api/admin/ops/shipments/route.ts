@@ -64,16 +64,6 @@ export const GET = withApiHandler<Paged<OpsShipment>>(async (context) => {
             email: true,
           },
         },
-        pickupRequest: {
-          include: {
-            collector: {
-              select: {
-                id: true,
-                pfNome: true,
-              },
-            },
-          },
-        },
         label: {
           select: {
             status: true,
@@ -120,22 +110,10 @@ export const GET = withApiHandler<Paged<OpsShipment>>(async (context) => {
     service: s.service,
     estimatedDays: s.estimatedDays,
     freightCost: s.freightCost,
-    pickupFee: s.pickupFee,
-    pickupPointId: s.pickupPointId,
-    collectorId: s.pickupRequest?.collectorId || null,
-    collectorName: s.pickupRequest?.collector?.pfNome || null,
     postedAt: s.postedAt?.toISOString() || null,
-    receivedAt: s.receivedAt?.toISOString() || null,
-    receivedBy: s.receivedBy,
     deliveredAt: s.deliveredAt?.toISOString() || null,
     createdAt: s.createdAt.toISOString(),
     updatedAt: s.updatedAt.toISOString(),
-    // Pickup Request info
-    pickupRequestId: s.pickupRequest?.id || null,
-    pickupRequestStatus: s.pickupRequest?.status || null,
-    pickupScheduledAt: s.pickupRequest?.scheduleAt?.toISOString() || null,
-    pickupCollectedAt: s.pickupRequest?.collectedAt?.toISOString() || null,
-    pickupDeliveredToCarrierAt: s.pickupRequest?.deliveredToCarrierAt?.toISOString() || null,
     // Label info
     labelStatus: s.label?.status || null,
     labelFileUrl: s.label?.fileUrl || null,

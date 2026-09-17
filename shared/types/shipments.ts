@@ -29,8 +29,4 @@ export type Shipment = {
   labelUrl?: string;          // URL da etiqueta (stub)
   trackingUrl?: string;       // URL de rastreio externo (stub)
   hasVolumeDivergence?: boolean; // Flag para alerta de divergência
-  pickupRequest?: {           // Informações da coleta (se houver)
-    id: string;
-    status: string;           // PENDING, SCHEDULED, FAILED, CANCELED, COMPLETED
-  } | null;
 };

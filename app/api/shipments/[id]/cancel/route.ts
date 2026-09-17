@@ -66,7 +66,6 @@ export const POST = withApiHandler<ShipmentCancelResponse, { id: string }>(async
     where: { id },
     include: {
       label: true,
-      pickupRequest: true,
       packages: true,
     },
   });
@@ -154,16 +153,6 @@ export const POST = withApiHandler<ShipmentCancelResponse, { id: string }>(async
       },
     });
 
-    // Cancelar pickup request se pendente/agendado
-    if (shipment.pickupRequest) {
-      const pickupStatus = shipment.pickupRequest.status;
-      if (pickupStatus === 'PENDING' || pickupStatus === 'SCHEDULED') {
-        await tx.pickupRequest.update({
-          where: { id: shipment.pickupRequest.id },
-          data: { status: 'CANCELED' },
-        });
-      }
-    }
   });
 
   logger.info({

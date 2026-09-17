@@ -15,10 +15,8 @@ export type QuoteDestination = {
 
 type DraftStore = {
   destination?: QuoteDestination;
-  pickupAtOrigin: boolean;
   recipientPays: boolean;
   setDestination: (d: QuoteDestination) => void;
-  setPickupAtOrigin: (pickup: boolean) => void;
   setRecipientPays: (recipientPays: boolean) => void;
   clear: () => void;
   _hasHydrated: boolean;
@@ -28,18 +26,16 @@ export const useQuoteDraft = create<DraftStore>()(
   persist(
     (set, get) => ({
       destination: undefined,
-      pickupAtOrigin: false,
       recipientPays: false,
       setDestination: (d) => set({ destination: d }),
-      setPickupAtOrigin: (pickup) => set({ pickupAtOrigin: pickup }),
       setRecipientPays: (recipientPays) => set({ recipientPays }),
-      clear: () => set({ destination: undefined, pickupAtOrigin: false, recipientPays: false }),
+      clear: () => set({ destination: undefined, recipientPays: false }),
       _hasHydrated: false,
     }),
     {
       name: "envio.quoteDraft.v1",
       storage: createJSONStorage(() => localStorage),
-      partialize: (s) => ({ destination: s.destination, pickupAtOrigin: s.pickupAtOrigin, recipientPays: s.recipientPays }),
+      partialize: (s) => ({ destination: s.destination, recipientPays: s.recipientPays }),
       onRehydrateStorage: () => (state) => {
         // Marca como hidratado após carregar do localStorage
         if (state) {

@@ -89,13 +89,10 @@ export async function createRecipientPaymentRequest(
 
       // Valores
       freightCostCents: input.quote.freightCostCents,
-      pickupFeeCents: input.quote.pickupFeeCents,
       totalCents: input.quote.totalCents,
       shippingCommissionCents: input.quote.shippingCommissionCents,
-      pickupCommissionCents: input.quote.pickupCommissionCents,
 
       // Opções
-      pickupAtOrigin: input.pickupAtOrigin ?? false,
       document: input.document as Prisma.InputJsonValue,
 
       // Expiração
@@ -179,7 +176,6 @@ export async function getRequestByToken(
     // Valores
     totalCents: request.totalCents,
     freightCostCents: request.freightCostCents,
-    pickupFeeCents: request.pickupFeeCents,
 
     // Transportadora
     carrier: request.carrier,
@@ -325,10 +321,8 @@ export async function processRecipientPayment(
     // 3) Gerar código de rastreamento único
     const trackingCode = generatePlatformTrackingCode();
 
-    // 4) Determinar status inicial do shipment
-    const initialStatus = request.pickupAtOrigin
-      ? ShipmentStatus.PICKUP_REQUESTED
-      : ShipmentStatus.AWAITING_DROP_OFF_AT_POINT;
+    // 4) O cliente leva o pacote até a transportadora
+    const initialStatus = ShipmentStatus.AWAITING_DROP_OFF_AT_POINT;
 
     // 5) Criar shipment
     // Comissoes: o frontend envia `shippingCommissionCents: undefined` ("calculado
@@ -341,9 +335,9 @@ export async function processRecipientPayment(
       carrierSlug
     );
     const insuranceCommissionCents = Math.round(insuranceCommission * 100);
-    const { shippingCommissionCents, pickupCommissionCents } = await calculateCommissionsInCents(
+    const { shippingCommissionCents } = await calculateCommissionsInCents(
       request.freightCostCents - insuranceCommissionCents,
-      request.pickupFeeCents ?? 0,
+      0,
       carrierSlug
     );
 
@@ -377,14 +371,11 @@ export async function processRecipientPayment(
         service: request.service,
         estimatedDays: request.estimatedDays ?? 0,
         freightCost: request.freightCostCents / 100,
-        pickupPointId: null,
         document: request.document as object,
         status: initialStatus,
         paymentMethod: 'RECIPIENT_PAID',
         platformShippingCommissionCents:
           request.shippingCommissionCents ?? (shippingCommissionCents > 0 ? shippingCommissionCents : null),
-        platformPickupCommissionCents:
-          request.pickupCommissionCents ?? (pickupCommissionCents > 0 ? pickupCommissionCents : null),
         platformInsuranceCommissionCents: insuranceCommissionCents > 0 ? insuranceCommissionCents : null,
       },
       volumes: request.packages.map((pkg) => ({
@@ -423,20 +414,6 @@ export async function processRecipientPayment(
       },
     });
 
-    // 8) Criar pickup request se solicitado coleta
-    if (request.pickupAtOrigin) {
-      await tx.pickupRequest.create({
-        data: {
-          userId: request.senderId,
-          shipmentId: shipment.id,
-          originCep: request.originCep,
-          originAddress: request.originAddress,
-          originCity: request.originCity,
-          originUf: request.originState,
-          status: 'PENDING',
-        },
-      });
-    }
 
     // 9) Eventos de rastreamento virão dos Correios via webhook/sync
     // Não criar evento inicial genérico - API pública tem fallback para timeline vazia

@@ -90,17 +90,7 @@ interface CartItemQuote {
   price: number;
 }
 
-interface CartItemPickupPoint {
-  id?: string | null;
-}
-
-interface CartItemPickupFee {
-  feeAmount?: number;
-  collectorId?: string;
-}
-
 interface CartItemPreferences {
-  pickupRequested?: boolean;
 }
 
 interface CartItemDocument {
@@ -141,12 +131,10 @@ function calculateItemsTotal(items: CartItem[]): number {
 }
 
 /**
- * Determina o status inicial do shipment baseado no tipo de coleta
+ * Status inicial do envio: quem leva o pacote até a transportadora é o
+ * próprio cliente, então todo envio nasce aguardando postagem.
  */
-function determineInitialStatus(hasPickupRequest: boolean, pickupPointId: string | null): ShipmentStatus {
-  if (hasPickupRequest) {
-    return ShipmentStatus.PICKUP_REQUESTED;
-  }
+function determineInitialStatus(): ShipmentStatus {
   return ShipmentStatus.AWAITING_DROP_OFF_AT_POINT;
 }
 
@@ -249,7 +237,6 @@ async function createShipmentFromCartItem(
   const volumes = item.volumes as unknown as CartItemVolume[];
   const preferences = item.preferences as unknown as CartItemPreferences | null;
   const selectedQuote = item.selectedQuote as unknown as CartItemQuote;
-  const pickupFeeData = item.pickupFee as unknown as CartItemPickupFee | null;
   const itemDocument = item.document as unknown as CartItemDocument | null;
 
   // Valor declarado
@@ -258,16 +245,9 @@ async function createShipmentFromCartItem(
   // Gerar tracking code
   const platformTrackingCode = generatePlatformTrackingCode();
 
-  // Determinar status inicial
-  const pickupPointId = item.pickupPoint
-    ? (item.pickupPoint as CartItemPickupPoint).id || null
-    : null;
-  const hasPickupRequest = preferences?.pickupRequested === true;
-  const initialStatus = determineInitialStatus(hasPickupRequest, pickupPointId);
+  const initialStatus = determineInitialStatus();
 
   // Calcular comissoes
-  const pickupFeeAmount = pickupFeeData?.feeAmount ?? 0;
-  const pickupFeeCents = Math.round(pickupFeeAmount * 100);
   const carrierSlug = resolveCarrierSlugByName(selectedQuote.carrier) ?? '';
 
   // Ver a explicacao em create-cart-shipments-with-payment.service.ts: a
@@ -278,9 +258,9 @@ async function createShipmentFromCartItem(
   );
   const insuranceCommissionCents = Math.round(insuranceCommission * 100);
   const freightCostCents = Math.round(selectedQuote.price * 100) - insuranceCommissionCents;
-  const { shippingCommissionCents, pickupCommissionCents } = await calculateCommissionsInCents(
+  const { shippingCommissionCents } = await calculateCommissionsInCents(
     freightCostCents,
-    pickupFeeCents,
+    0,
     carrierSlug
   );
 
@@ -325,13 +305,11 @@ async function createShipmentFromCartItem(
       service: selectedQuote.serviceName || selectedQuote.serviceCode,
       estimatedDays: selectedQuote.deadlineDays,
       freightCost: selectedQuote.price,
-      pickupPointId,
       document: shipmentDocument as Prisma.InputJsonValue,
       status: initialStatus,
       paymentMethod: null,
       platformShippingCommissionCents: shippingCommissionCents > 0 ? shippingCommissionCents : null,
       platformInsuranceCommissionCents: insuranceCommissionCents > 0 ? insuranceCommissionCents : null,
-      platformPickupCommissionCents: pickupCommissionCents > 0 ? pickupCommissionCents : null,
     },
     volumes: volumes.map((vol) => ({
       peso: vol.pesoKg || 0,
@@ -365,11 +343,6 @@ async function createShipmentFromCartItem(
     destination,
     declaredValue,
   });
-
-  // Criar PickupRequest se solicitado
-  if (hasPickupRequest) {
-    await createPickupRequestIfNeeded(tx, userId, shipment.id, originAddress, pickupFeeData);
-  }
 
   // Eventos de rastreamento virão dos Correios via webhook/sync
   // Não criar evento inicial genérico - API pública tem fallback para timeline vazia
@@ -497,40 +470,6 @@ async function integrateWithCarrierSafely(
       carrier: params.carrier,
       err: integrationError,
     }, 'Carrier integration error (non-blocking)');
-  }
-}
-
-/**
- * Cria PickupRequest se coleta foi solicitada
- */
-async function createPickupRequestIfNeeded(
-  tx: Prisma.TransactionClient,
-  userId: string,
-  shipmentId: string,
-  originAddress: CartItemOriginAddress,
-  pickupFeeData: CartItemPickupFee | null
-): Promise<void> {
-  const collectorId = pickupFeeData?.collectorId || null;
-
-  // Verificar se já existe (idempotência)
-  const existingPickup = await tx.pickupRequest.findUnique({
-    where: { shipmentId },
-  });
-
-  if (!existingPickup) {
-    await tx.pickupRequest.create({
-      data: {
-        userId,
-        shipmentId,
-        collectorId,
-        originCep: originAddress.cep,
-        originAddress: null,
-        originCity: originAddress.cidade || null,
-        originUf: originAddress.uf || null,
-        status: 'PENDING',
-        notes: null,
-      },
-    });
   }
 }
 

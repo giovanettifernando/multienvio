@@ -48,7 +48,6 @@ import { useQuoteDraft } from "@/modules/quotes/ui/state/quoteDraft";
 import { useCheckoutStore } from '@/modules/cart/ui/state/checkout';
 import { CheckoutModal } from "@/modules/payments/ui/components/CheckoutModal";
 import { PaidCheckoutModal, type CheckoutData } from "@/modules/payments/ui/components/PaidCheckoutModal";
-import { usePickupFee } from "@/modules/quotes/ui/hooks";
 import { generateUUID } from "@/shared/utils/uuid";
 import { useAddressStore } from "@/modules/auth/ui/state/addresses";
 import { useAddresses } from "@/modules/account/ui/hooks";
@@ -69,12 +68,10 @@ export default function FinalizarClient() {
       clearIfExpired: state.clearIfExpired,
     })),
   );
-  const pickupAtOrigin = useQuoteDraft((s) => s.pickupAtOrigin);
   const destino = useQuoteDraft((s) => s.destination);
   const setDestination = useQuoteDraft((s) => s.setDestination);
   const recipientPays = useQuoteDraft((s) => s.recipientPays);
   const setRecipientPays = useQuoteDraft((s) => s.setRecipientPays);
-  const pickupPointId = useCheckoutStore((s) => s.pickupPointId);
   const cartAdd = useCartAdd();
   const recipientSave = useRecipientSave();
 
@@ -199,7 +196,6 @@ export default function FinalizarClient() {
 
   // Log inicial para debug
   console.log('[FINALIZAR_DEBUG] Initial state:', JSON.stringify({
-    pickupAtOrigin,
     hasOrigemCep: !!summary?.origemCep,
     origemCep: summary?.origemCep,
     hasPreco: !!selectedService?.preco,
@@ -211,27 +207,6 @@ export default function FinalizarClient() {
     destinoCep: destino?.cep,
     summaryDestinoCep: summary?.destinoCep,
   }, null, 2));
-
-  // Calcular taxa de coleta se pickupAtOrigin estiver ativo
-  // Hook params: (originCep, freightCost, enabled)
-  const { data: pickupFeeData, isLoading: isLoadingPickupFee, error: pickupFeeError } = usePickupFee(
-    summary?.origemCep ?? null,
-    selectedService?.preco ?? null,
-    pickupAtOrigin  // enabled only when pickup is requested
-  );
-
-  // Debug: Log pickup fee data
-  useEffect(() => {
-    console.log('[PICKUP_FEE_DEBUG] State changed:', JSON.stringify({
-      pickupAtOrigin,
-      originCep: summary?.origemCep,
-      freightCost: selectedService?.preco,
-      isLoading: isLoadingPickupFee,
-      hasData: !!pickupFeeData,
-      pickupFeeData,
-      error: pickupFeeError ? String(pickupFeeError) : null,
-    }, null, 2));
-  }, [pickupAtOrigin, summary?.origemCep, selectedService?.preco, isLoadingPickupFee, pickupFeeData, pickupFeeError]);
 
   // Inicializar destination se estiver vazio mas houver CEP no summary
   // Isso só deve acontecer quando o usuário usou modo manual (sem destinatário recorrente)
@@ -301,12 +276,6 @@ export default function FinalizarClient() {
             ],
           })) : undefined,
         },
-        postingUnit: {
-          selected: null,
-          ampliarBusca: false,
-          incluirEstadosProximos: false,
-          definirComoPadrao: false,
-        },
         recipient: {
           // Se há um destinatário recorrente selecionado, usar mode: "saved"
           mode: (destino?.mode === "recipient" && destino?.recipientId) ? "saved" : "manual",
@@ -337,7 +306,7 @@ export default function FinalizarClient() {
 
   const formMethods = useForm<FinalizeFormValues>({
     resolver: zodResolver<FinalizeFormValues, unknown, FinalizeFormValues>(
-      createFinalizeFormSchema(pickupAtOrigin),
+      createFinalizeFormSchema(),
     ),
     defaultValues,
     mode: "onChange",
@@ -591,8 +560,6 @@ export default function FinalizarClient() {
     selection,
     results,
     summary,
-    pickupAtOrigin,
-    pickupPointId,
     destino,
     recipientMode,
     recipientNome,
@@ -674,8 +641,6 @@ export default function FinalizarClient() {
     faltaDocumentoDoRemetente,
     faltaChaveDce,
     hasAtLeastOneDocumentItem,
-    pickupAtOrigin,
-    pickupPointId,
     destino,
     recipientMode,
     recipientNome,
@@ -725,9 +690,7 @@ export default function FinalizarClient() {
       return;
     }
 
-    // Calcular total incluindo taxa de coleta se aplicável
-    const pickupFeeAmount = pickupFeeData && pickupFeeData.success ? pickupFeeData.feeAmount : 0;
-    const totalAmount = selectedService.preco + pickupFeeAmount;
+    const totalAmount = selectedService.preco;
 
     try {
       // Obter dados do destinatário (manual ou salvo)
@@ -843,16 +806,9 @@ export default function FinalizarClient() {
         },
         volumes: summary.volumes,
         preferences: {
-          pickupRequested: pickupAtOrigin,
           reverse: summary.devolucao || false,
         },
         insuranceValue: summary.seguroValor || undefined,
-        pickupPoint: pickupPointId ? { id: pickupPointId } : undefined,
-        pickupFee: pickupFeeData && pickupFeeData.success ? {
-          collectorId: pickupFeeData.collector.id,
-          feeAmount: pickupFeeData.feeAmount,
-          distanceKm: pickupFeeData.distanceKm,
-        } : undefined,
         selectedQuote: {
           carrier: selectedService.carrier,
           serviceCode: selectedService.modalidade,
@@ -864,7 +820,6 @@ export default function FinalizarClient() {
         totals: {
           total: totalAmount,
           subtotal: selectedService.preco,
-          pickupFee: pickupFeeAmount,
           moeda: 'BRL',
         },
         // Documento fiscal (NFE/Declaração) - igual ao checkout direto
@@ -946,7 +901,6 @@ export default function FinalizarClient() {
         selectionId: selection.selectionId,
         action: "ADICIONAR_AO_CARRINHO",
         docType: values.document?.type ?? "DECLARACAO",
-        hasPickupFee: pickupFeeAmount > 0,
       });
       dispatchTelemetry("cart_add", {
         selectionId: selection.selectionId,
@@ -1122,15 +1076,12 @@ export default function FinalizarClient() {
       }
     }
 
-      // Calcular total incluindo taxa de coleta se aplicável
-      const pickupFeeAmount = pickupFeeData && pickupFeeData.success ? pickupFeeData.feeAmount : 0;
-      const totalAmount = selectedService.preco + pickupFeeAmount;
+      const totalAmount = selectedService.preco;
 
       dispatchTelemetry("quote_finalize_submit", {
         selectionId: selection.selectionId,
         action: "PAGAR_AGORA",
         docType: values.document.type,
-        hasPickupFee: pickupFeeAmount > 0,
       });
 
       // Montar payload do checkout
@@ -1236,12 +1187,6 @@ export default function FinalizarClient() {
           comprimento: v.comprimentoCm,
         })),
         insuranceValue: summary.seguroValor || 0,
-        pickupPointId: pickupAtOrigin ? null : pickupPointId,
-        pickupFee: pickupFeeData && pickupFeeData.success ? {
-          collectorId: pickupFeeData.collector.id,
-          feeAmount: pickupFeeData.feeAmount,
-          distanceKm: pickupFeeData.distanceKm,
-        } : undefined,
         carrier: selectedService.carrier,
         service: selectedService.modalidade,
         originCep: summary.origemCep || "",
@@ -1262,7 +1207,6 @@ export default function FinalizarClient() {
         estimatedDays: selectedService.prazoDias,
         freightCost: selectedService.preco,
         totalCost: totalAmount,
-        solicitarColeta: pickupAtOrigin, // Usar pickupAtOrigin do quoteDraft
         // Código de rastreamento reservado (garante unicidade)
         reservedTrackingCode: reservedTrackingCode || undefined,
       };
@@ -1301,9 +1245,6 @@ export default function FinalizarClient() {
           insuranceValue: payload.insuranceValue,
           freightCost: payload.freightCost,
           totalCost: totalAmount,
-          pickupPointId: payload.pickupPointId,
-          solicitarColeta: payload.solicitarColeta,
-          pickupFee: payload.pickupFee,
           carrier: payload.carrier,
           service: payload.service,
           originCep: payload.originCep,
@@ -1462,9 +1403,7 @@ export default function FinalizarClient() {
         return;
       }
 
-      // Calcular total incluindo taxa de coleta se aplicavel
-      const pickupFeeAmount = pickupFeeData && pickupFeeData.success ? pickupFeeData.feeAmount : 0;
-      const totalAmount = selectedService.preco + pickupFeeAmount;
+      const totalAmount = selectedService.preco;
 
       // Montar payload para criar RecipientPaymentRequest
       const payload = {
@@ -1511,15 +1450,12 @@ export default function FinalizarClient() {
           serviceCode: selectedService.modalidade,
           estimatedDays: selectedService.prazoDias,
           freightCostCents: Math.round(selectedService.preco * 100),
-          pickupFeeCents: pickupFeeAmount > 0 ? Math.round(pickupFeeAmount * 100) : undefined,
           totalCents: Math.round(totalAmount * 100),
           shippingCommissionCents: undefined, // Calculado no backend
-          pickupCommissionCents: undefined,
         },
         // Outros
         totalWeight: summary.volumes.reduce((acc, v) => acc + v.pesoKg, 0),
         declaredValue: summary.seguroValor || 0,
-        pickupAtOrigin: pickupAtOrigin,
         document: {
           type: values.document.type,
           volumeDocuments: values.document.volumeDocuments,
@@ -1766,16 +1702,6 @@ export default function FinalizarClient() {
               modalidade={selectedService?.modalidade ?? ""}
               prazoDias={selectedService?.prazoDias ?? 0}
               preco={selectedService?.preco ?? 0}
-              isLoadingPickupFee={pickupAtOrigin && isLoadingPickupFee}
-              pickupFee={
-                pickupFeeData && pickupFeeData.success
-                  ? {
-                      collectorName: pickupFeeData.collector.pfNome || pickupFeeData.collector.pjRazaoSocial,
-                      distanceKm: pickupFeeData.distanceKm,
-                      feeAmount: pickupFeeData.feeAmount,
-                    }
-                  : null
-              }
               showRecipientPaysToggle
               recipientPays={recipientPays}
               onRecipientPaysChange={handleRecipientPaysToggle}

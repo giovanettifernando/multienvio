@@ -58,9 +58,6 @@ export interface ShipmentInput {
   estimatedDays: number;
   freightCost: number;
 
-  // Pickup point (opcional)
-  pickupPointId?: string | null;
-
   // Documento e metadados
   document?: Prisma.InputJsonValue;
 
@@ -113,11 +110,7 @@ export async function createShipmentWithVolumes(
     declaredWeight: totalWeight, // Agora sempre calculado
   });
 
-  // Determinar status inicial baseado no contexto
-  const initialStatus = input.shipment.status || getInitialShipmentStatus({
-    hasPickupPoint: !!input.shipment.pickupPointId,
-    hasPickupRequest: false, // Será criado depois se necessário
-  });
+  const initialStatus = input.shipment.status || getInitialShipmentStatus();
 
   // O remetente é sempre o dono da conta. Resolver aqui, num lugar só, evita
   // que cada fluxo de checkout tenha de lembrar de buscar o nome — e evita o

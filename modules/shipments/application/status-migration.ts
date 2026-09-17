@@ -342,21 +342,7 @@ export function isValidTransition(from: ShipmentStatus, to: ShipmentStatus): boo
 /**
  * Determina o status inicial de um shipment no checkout
  */
-export function getInitialShipmentStatus(params: {
-  hasPickupPoint: boolean;
-  hasPickupRequest: boolean;
-}): ShipmentStatus {
-  if (params.hasPickupPoint) {
-    // Cliente vai entregar no ponto de coleta
-    return ShipmentStatus.AWAITING_DROP_OFF_AT_POINT;
-  }
-
-  if (params.hasPickupRequest) {
-    // Cliente solicitou coleta na origem
-    return ShipmentStatus.PICKUP_REQUESTED;
-  }
-
-  // Fallback (não deveria acontecer)
-  console.warn('[INITIAL_STATUS] Shipment sem pickup point nem pickup request. Usando AWAITING_DROP_OFF_AT_POINT.');
+export function getInitialShipmentStatus(): ShipmentStatus {
+  // Quem leva o pacote até a transportadora é o próprio cliente.
   return ShipmentStatus.AWAITING_DROP_OFF_AT_POINT;
 }

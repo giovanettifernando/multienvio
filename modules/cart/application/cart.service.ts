@@ -30,7 +30,6 @@ export interface CartItemDto {
   preferences: Prisma.JsonValue;
   insuranceValue?: number;
   pickupPoint: Prisma.JsonValue;
-  pickupFee?: Prisma.JsonValue;
   selectedQuote: Prisma.JsonValue;
   totals: Prisma.JsonValue;
   document?: Prisma.JsonValue;
@@ -75,7 +74,6 @@ export function mapCartItemToDto(item: CartItem): CartItemDto {
     preferences: item.preferences,
     insuranceValue: item.insuranceValue ? Number(item.insuranceValue) : undefined,
     pickupPoint: item.pickupPoint,
-    pickupFee: item.pickupFee,
     selectedQuote: item.selectedQuote,
     totals: item.totals,
     document: item.document,

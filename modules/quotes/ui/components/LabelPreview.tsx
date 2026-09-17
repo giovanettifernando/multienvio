@@ -13,19 +13,11 @@ const Spin = ELSpin;
 const Switch = ELSwitch;
 const Typography = ELTypography;
 
-type PickupFeeInfo = {
-  collectorName: string;
-  distanceKm: number;
-  feeAmount: number;
-};
-
 type LabelPreviewProps = {
   carrier: string;
   modalidade: string;
   prazoDias: number;
   preco: number;
-  pickupFee?: PickupFeeInfo | null;
-  isLoadingPickupFee?: boolean;
   /** Se true, mostra o toggle de pagamento pelo destinatario */
   showRecipientPaysToggle?: boolean;
   /** Valor do toggle */
@@ -46,15 +38,11 @@ export function LabelPreview({
   modalidade,
   prazoDias,
   preco,
-  pickupFee,
-  isLoadingPickupFee = false,
   showRecipientPaysToggle = false,
   recipientPays = false,
   onRecipientPaysChange,
   footer,
 }: LabelPreviewProps) {
-  const hasPickupFee = pickupFee && pickupFee.feeAmount > 0;
-  const total = hasPickupFee ? preco + pickupFee.feeAmount : preco;
 
   const cardTitle = showRecipientPaysToggle ? (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" }}>
@@ -117,29 +105,6 @@ export function LabelPreview({
             </Typography.Text>
           </Space>
 
-          {isLoadingPickupFee && (
-            <Space size={6}>
-              <Spin size="small" />
-              <Typography.Text type="secondary" style={{ fontSize: 13 }}>
-                Calculando coleta...
-              </Typography.Text>
-            </Space>
-          )}
-
-          {!isLoadingPickupFee && hasPickupFee && (
-            <Space size={6}>
-              <CarOutlined style={{ fontSize: 16, color: "#fa8c16" }} />
-              <Typography.Text style={{ fontSize: 14 }}>
-                <strong>Coleta:</strong> {currency.format(pickupFee.feeAmount)}
-              </Typography.Text>
-            </Space>
-          )}
-
-          {!isLoadingPickupFee && hasPickupFee && (
-            <Typography.Text strong style={{ fontSize: 15, color: "#1890ff", marginLeft: "auto" }}>
-              Total: {currency.format(total)}
-            </Typography.Text>
-          )}
         </div>
 
         {/* Espaço para conteúdo que altera o preço acima — hoje o campo de
