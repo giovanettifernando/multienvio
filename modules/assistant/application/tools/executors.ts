@@ -95,7 +95,7 @@ function validateToolArgs<T>(toolName: string, args: unknown): T {
  * O LLM usa status simplificados em inglês, mas o backend usa labels em PT-BR
  */
 const TOOL_STATUS_TO_UI_STATUS: Record<string, UIShipmentStatus> = {
-  PENDING: 'Aguardando coleta',
+  PENDING: 'Aguardando postagem',
   PROCESSING: 'Aguardando postagem',
   IN_TRANSIT: 'Em trânsito',
   DELIVERED: 'Entregue',

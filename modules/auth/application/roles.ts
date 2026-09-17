@@ -78,22 +78,6 @@ export const ROLE_GROUPS: RoleGroup[] = [
       },
     ],
   },
-  {
-    key: "coletas",
-    label: "Coletas",
-    roles: [
-      {
-        key: "COLETORES",
-        label: "Coletores",
-        description: "Permite gerenciar coletores e suas informações.",
-      },
-      {
-        key: "PONTOS_COLETA",
-        label: "Pontos de Coleta",
-        description: "Permite gerenciar pontos de coleta cadastrados.",
-      },
-    ],
-  },
 ];
 
 export function getAllRoles(): Role[] {

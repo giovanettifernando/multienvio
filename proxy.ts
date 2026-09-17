@@ -7,37 +7,13 @@
  *   Cookie: last_activity_admin
  * - CLIENT (auth_token): Has idle timeout (SESSION_IDLE_MINUTES, default 10min)
  *   Cookie: last_activity_user
- * - PICKUP POINT (collector_auth): NO idle timeout - EXCEÇÃO DOCUMENTADA
- * - AUTONOMOUS COLLECTOR (coletor-token): NO idle timeout - EXCEÇÃO DOCUMENTADA
- *
- * EXCEÇÃO DOCUMENTADA - Coletores/Pontos de Coleta sem idle timeout:
- * ----------------------------------------------------------------
- * Decisão consciente de NÃO implementar idle timeout para esses perfis.
- *
- * Justificativa:
- * - Coletores autônomos operam em dispositivos móveis dedicados (tablets/celulares)
- * - Pontos de coleta usam terminais fixos em estabelecimentos
- * - Fluxo de trabalho envolve períodos de espera entre coletas
- * - Idle timeout frequente causaria UX ruim e interrupções no fluxo de trabalho
- *
- * Mitigações de segurança:
- * 1. JWT com TTL reduzido: Coletores 7 dias, Pontos de coleta 12 horas
- * 2. TokenVersion no Redis permite revogação imediata de sessões comprometidas
- * 3. Validação de status (ativo/bloqueado) em cada requisição
- * 4. Monitoramento de atividade suspeita via logs
- * 5. Dispositivos devem usar PIN/biometria do próprio dispositivo
- *
- * Se necessário implementar idle no futuro:
- * - Definir COLLECTOR_IDLE_MINUTES (sugestão: 15-20 min)
- * - Criar heartbeat simples ou usar eventos de navegação
- * - Adicionar cookies last_activity_collector e last_activity_pickup
  */
 
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { jwtVerify, errors as joseErrors } from 'jose';
 import { getRouteProtection } from '@/modules/auth/application/route-protection';
-import { sessionCache, staffSessionCache, collectorSessionCache, pickupPointSessionCache } from '@/platform/cache/cache';
+import { sessionCache, staffSessionCache } from '@/platform/cache/cache';
 
 // Validar JWT secrets em produção
 if (process.env.NODE_ENV === 'production') {
@@ -76,19 +52,9 @@ const INACTIVITY_LIMIT_MS = SESSION_IDLE_MINUTES * 60 * 1000;
 // Tipos de erro de verificação JWT
 type JWTVerifyResult = { payload: AdminJWTPayload | JWTPayload | null; error: 'expired' | 'invalid' | null };
 
-// All user types (User, StaffUser, Collector, PickupPoint) now use Redis session caches
+// User e StaffUser usam caches de sessão no Redis
 // No in-memory caches needed - Redis is the source of truth
 
-// Collector JWT Secret (for pickup points) - OBRIGATÓRIO, sem fallback
-const COLLECTOR_JWT_SECRET_RAW = process.env.COLLECTOR_JWT_SECRET;
-if (!COLLECTOR_JWT_SECRET_RAW) {
-  throw new Error('[SECURITY] COLLECTOR_JWT_SECRET não configurado. Esta variável é obrigatória.');
-}
-const COLLECTOR_JWT_SECRET = new TextEncoder().encode(COLLECTOR_JWT_SECRET_RAW);
-
-// Cookie names for collectors
-const COLLECTOR_AUTH_COOKIE_NAME = 'collector_auth'; // Pickup points
-const AUTONOMOUS_COLLECTOR_COOKIE_NAME = 'coletor-token'; // Autonomous collectors
 
 interface JWTPayload {
   userId: string;
@@ -110,27 +76,7 @@ interface AdminJWTPayload {
   exp?: number;
 }
 
-interface CollectorJWTPayload {
-  pointId: string;
-  cnpj: string;
-  nomeFantasia: string;
-  tokenVersion: number;
-  iss?: string;
-  aud?: string;
-  iat?: number;
-  exp?: number;
-}
 
-interface AutonomousCollectorJWTPayload {
-  coletorId: string;
-  pfEmail: string;
-  pfNome: string;
-  pjRazaoSocial: string;
-  status: string;
-  tokenVersion: number;
-  iat?: number;
-  exp?: number;
-}
 
 /**
  * Verify customer JWT token and return payload with error type
@@ -169,42 +115,7 @@ async function verifyAdminToken(token: string): Promise<{ payload: AdminJWTPaylo
   }
 }
 
-/**
- * Verify pickup point JWT token and return payload with error type
- */
-async function verifyCollectorToken(token: string): Promise<{ payload: CollectorJWTPayload | null; error: 'expired' | 'invalid' | null }> {
-  try {
-    const { payload } = await jwtVerify(token, COLLECTOR_JWT_SECRET, {
-      issuer: 'enviolegal-collector',
-      audience: 'collector',
-    });
-    return { payload: payload as unknown as CollectorJWTPayload, error: null };
-  } catch (error) {
-    if (error instanceof joseErrors.JWTExpired) {
-      return { payload: null, error: 'expired' };
-    }
-    return { payload: null, error: 'invalid' };
-  }
-}
 
-/**
- * Verify autonomous collector JWT token and return payload with error type
- */
-async function verifyAutonomousCollectorToken(token: string): Promise<{ payload: AutonomousCollectorJWTPayload | null; error: 'expired' | 'invalid' | null }> {
-  try {
-    const { payload } = await jwtVerify(token, JWT_SECRET);
-    // Validate it's an autonomous collector token (has coletorId field)
-    if (!payload.coletorId) {
-      return { payload: null, error: 'invalid' };
-    }
-    return { payload: payload as unknown as AutonomousCollectorJWTPayload, error: null };
-  } catch (error) {
-    if (error instanceof joseErrors.JWTExpired) {
-      return { payload: null, error: 'expired' };
-    }
-    return { payload: null, error: 'invalid' };
-  }
-}
 
 /**
  * Check if user has admin role
@@ -293,83 +204,7 @@ async function validateUserTokenVersion(
   }
 }
 
-/**
- * Validate autonomous collector tokenVersion and status against Redis (fail-closed)
- */
-async function validateCollectorTokenVersion(
-  collectorId: string,
-  tokenVersion: number
-): Promise<{ valid: boolean; reason?: string }> {
-  try {
-    // Verificar tokenVersion no Redis (fail-closed)
-    const redisTokenVersion = await collectorSessionCache.getTokenVersion(collectorId);
 
-    // Cache miss = sessão não existe → 401
-    if (redisTokenVersion === null) {
-      return { valid: false, reason: 'session_not_found' };
-    }
-
-    // Mismatch = logout foi feito ou sessão inválida → 401
-    if (redisTokenVersion !== tokenVersion) {
-      return { valid: false, reason: 'token_revoked' };
-    }
-
-    // Verificar status na sessão Redis
-    const session = await collectorSessionCache.get(collectorId);
-    if (!session) {
-      return { valid: false, reason: 'session_not_found' };
-    }
-
-    if (session.status !== 'ACTIVE') {
-      return { valid: false, reason: 'collector_blocked' };
-    }
-
-    return { valid: true };
-  } catch (error) {
-    console.error('[PROXY] Redis error validating collector tokenVersion:', error);
-    // On Redis error, reject for security (fail-closed)
-    return { valid: false, reason: 'redis_error' };
-  }
-}
-
-/**
- * Validate pickup point tokenVersion and status against Redis (fail-closed)
- */
-async function validatePickupPointTokenVersion(
-  pointId: string,
-  tokenVersion: number
-): Promise<{ valid: boolean; reason?: string }> {
-  try {
-    // Verificar tokenVersion no Redis (fail-closed)
-    const redisTokenVersion = await pickupPointSessionCache.getTokenVersion(pointId);
-
-    // Cache miss = sessão não existe → 401
-    if (redisTokenVersion === null) {
-      return { valid: false, reason: 'session_not_found' };
-    }
-
-    // Mismatch = logout foi feito ou sessão inválida → 401
-    if (redisTokenVersion !== tokenVersion) {
-      return { valid: false, reason: 'token_revoked' };
-    }
-
-    // Verificar status na sessão Redis
-    const session = await pickupPointSessionCache.get(pointId);
-    if (!session) {
-      return { valid: false, reason: 'session_not_found' };
-    }
-
-    if (session.status !== 'ACTIVE') {
-      return { valid: false, reason: 'point_blocked' };
-    }
-
-    return { valid: true };
-  } catch (error) {
-    console.error('[PROXY] Redis error validating pickup point tokenVersion:', error);
-    // On Redis error, reject for security (fail-closed)
-    return { valid: false, reason: 'redis_error' };
-  }
-}
 
 /**
  * Create response with updated last_activity cookie
@@ -552,109 +387,6 @@ export async function proxy(request: NextRequest) {
 
   const payload = tokenResult.payload;
 
-  // Handle autonomous collector routes (/api/coletores/*)
-  if (protection === 'collector') {
-    // Allow auth routes without authentication
-    if (pathname.startsWith('/api/coletores/auth/')) {
-      return NextResponse.next();
-    }
-
-    // Get autonomous collector token
-    const collectorToken = request.cookies.get(AUTONOMOUS_COLLECTOR_COOKIE_NAME)?.value;
-    const collectorResult = collectorToken
-      ? await verifyAutonomousCollectorToken(collectorToken)
-      : { payload: null, error: null };
-
-    // If JWT expired, return 401
-    if (collectorResult.error === 'expired') {
-      return NextResponse.json(
-        { error: 'Session expired', message: 'Sessão expirada. Faça login novamente.' },
-        { status: 401 }
-      );
-    }
-
-    // If no valid token, return 401
-    if (!collectorResult.payload) {
-      return NextResponse.json(
-        { error: 'Unauthorized', message: 'Autenticação de coletor necessária' },
-        { status: 401 }
-      );
-    }
-
-    // SECURITY: Validate tokenVersion and status against database
-    const collectorValidation = await validateCollectorTokenVersion(
-      collectorResult.payload.coletorId,
-      collectorResult.payload.tokenVersion
-    );
-
-    if (!collectorValidation.valid) {
-      return NextResponse.json(
-        {
-          error: 'Unauthorized',
-          message: collectorValidation.reason === 'collector_blocked'
-            ? 'Conta bloqueada. Entre em contato com o suporte.'
-            : 'Sessão inválida. Faça login novamente.',
-          code: collectorValidation.reason
-        },
-        { status: 401 }
-      );
-    }
-
-    // Token is valid - no idle timeout for collectors (only fixed JWT expiration)
-    return NextResponse.next();
-  }
-
-  // Handle pickup point routes (/api/pontos-coleta/*)
-  if (protection === 'pickup_point') {
-    // Allow auth routes without authentication
-    if (pathname.startsWith('/api/pontos-coleta/auth/')) {
-      return NextResponse.next();
-    }
-
-    // Get pickup point token
-    const pickupToken = request.cookies.get(COLLECTOR_AUTH_COOKIE_NAME)?.value;
-    const pickupResult = pickupToken
-      ? await verifyCollectorToken(pickupToken)
-      : { payload: null, error: null };
-
-    // If JWT expired, return 401
-    if (pickupResult.error === 'expired') {
-      return NextResponse.json(
-        { error: 'Session expired', message: 'Sessão expirada. Faça login novamente.' },
-        { status: 401 }
-      );
-    }
-
-    // No valid token - return 401 (fail-close, não fail-open)
-    if (!pickupResult.payload) {
-      return NextResponse.json(
-        { error: 'Unauthorized', message: 'Autenticação de ponto de coleta necessária' },
-        { status: 401 }
-      );
-    }
-
-    // SECURITY: Validate tokenVersion and status against database
-    const pickupValidation = await validatePickupPointTokenVersion(
-      pickupResult.payload.pointId,
-      pickupResult.payload.tokenVersion
-    );
-
-    if (!pickupValidation.valid) {
-      return NextResponse.json(
-        {
-          error: 'Unauthorized',
-          message: pickupValidation.reason === 'point_blocked'
-            ? 'Ponto de coleta bloqueado. Entre em contato com o suporte.'
-            : 'Sessão inválida. Faça login novamente.',
-          code: pickupValidation.reason
-        },
-        { status: 401 }
-      );
-    }
-
-    // Token is valid - no idle timeout for pickup points (only fixed JWT expiration)
-    return NextResponse.next();
-  }
 
   // Handle admin routes (customer with admin role)
   if (protection === 'admin') {

@@ -25,7 +25,6 @@ const criticalEnvSchema = z.object({
   NEXTAUTH_SECRET: z.string().min(16, 'Must be at least 16 characters for security'),
   JWT_SECRET: z.string().min(16, 'Must be at least 16 characters for security'),
   ADMIN_JWT_SECRET: z.string().min(16, 'Must be at least 16 characters for security'),
-  COLLECTOR_JWT_SECRET: z.string().min(16, 'Must be at least 16 characters for security'),
 });
 
 /**
@@ -80,7 +79,6 @@ const optionalEnvSchema = z.object({
   EMAIL_PUBLIC_URL: z.string().url().optional(),
 
   // Uploads
-  COLLECTOR_UPLOAD_DIR: z.string().default('./uploads/collector'),
   SUPPORT_UPLOAD_DIR: z.string().default('./uploads/support'),
   EXPENSE_UPLOAD_DIR: z.string().default('./uploads/expenses'),
 

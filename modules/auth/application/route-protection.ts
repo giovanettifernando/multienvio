@@ -22,8 +22,6 @@ const AUTH_ROUTES = [
   '/minha-conta/*',
   '/pedidos',
   '/pedidos/*',
-  '/coletas',
-  '/coletas/*',
   '/envios',
   '/envios/*',
   '/cotacoes',
@@ -84,20 +82,6 @@ const ADMIN_API_ROUTES = [
 ];
 
 /**
- * API routes that require collector authentication
- */
-const COLLECTOR_API_ROUTES = [
-  /^\/api\/coletores\/.*/,         // Collector system
-];
-
-/**
- * API routes that require pickup point authentication
- */
-const PICKUP_POINT_API_ROUTES = [
-  /^\/api\/pontos-coleta\/.*/,     // Pickup point system
-];
-
-/**
  * API routes that require regular user authentication
  */
 const AUTH_API_ROUTES = [
@@ -105,7 +89,6 @@ const AUTH_API_ROUTES = [
   /^\/api\/wallet\/.*/,            // Digital wallet
   /^\/api\/shipments\/.*/,         // Shipments
   /^\/api\/cotacoes\/.*/,          // Quotes
-  /^\/api\/coletas\/.*/,           // Pickups
   /^\/api\/orders\/.*/,            // Orders
   /^\/api\/cart.*/,                // Shopping cart
   /^\/api\/carrinho.*/,            // Shopping cart (PT)
@@ -114,7 +97,6 @@ const AUTH_API_ROUTES = [
   /^\/api\/support\/.*/,           // Support tickets
   /^\/api\/recurring-items\/.*/,   // Recurring items
   /^\/api\/user\/.*/,              // User preferences
-  /^\/api\/pickups\/.*/,           // Pickup management
   /^\/api\/labels.*/,              // Label generation
   /^\/api\/invoices.*/,            // Invoices
   /^\/api\/packaging.*/,           // Packaging
@@ -169,20 +151,6 @@ export function isAdminApiRoute(path: string): boolean {
 }
 
 /**
- * Check if API route requires collector authentication
- */
-export function isCollectorApiRoute(path: string): boolean {
-  return COLLECTOR_API_ROUTES.some(pattern => pattern.test(path));
-}
-
-/**
- * Check if API route requires pickup point authentication
- */
-export function isPickupPointApiRoute(path: string): boolean {
-  return PICKUP_POINT_API_ROUTES.some(pattern => pattern.test(path));
-}
-
-/**
  * Check if API route requires regular user authentication
  */
 export function isAuthApiRoute(path: string): boolean {
@@ -191,11 +159,11 @@ export function isAuthApiRoute(path: string): boolean {
 
 /**
  * Check if the path should be protected by middleware
- * Returns the type of protection needed: 'admin', 'auth', 'collector', 'pickup_point', or null (public)
+ * Returns the type of protection needed: 'admin', 'auth', or null (public)
  *
  * SECURITY: All /api/* routes require authentication by default unless explicitly public
  */
-export function getRouteProtection(path: string): 'admin' | 'auth' | 'collector' | 'pickup_point' | null {
+export function getRouteProtection(path: string): 'admin' | 'auth' | null {
   // Check public routes first
   if (isPublicRoute(path)) {
     return null;
@@ -204,16 +172,6 @@ export function getRouteProtection(path: string): 'admin' | 'auth' | 'collector'
   // Check admin routes (both pages and API)
   if (isAdminRoute(path) || isAdminApiRoute(path)) {
     return 'admin';
-  }
-
-  // Check collector routes
-  if (isCollectorApiRoute(path)) {
-    return 'collector';
-  }
-
-  // Check pickup point routes
-  if (isPickupPointApiRoute(path)) {
-    return 'pickup_point';
   }
 
   // Check auth routes (both pages and API)

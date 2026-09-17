@@ -191,7 +191,7 @@ export async function validateGoogleConfigAsync(): Promise<{ valid: boolean; err
 // ============================================================================
 
 // Context types for OAuth flow
-export type OAuthContext = 'user' | 'collector';
+export type OAuthContext = 'user';
 
 // State payload for OAuth flow
 export interface OAuthState {
@@ -303,7 +303,7 @@ export async function parseState(state: string): Promise<OAuthState | null> {
         console.warn('[GOOGLE_OAUTH] SECURITY: State com campos inválidos');
         return null;
       }
-      if (parsed.context !== 'user' && parsed.context !== 'collector') {
+      if (parsed.context !== 'user') {
         console.warn('[GOOGLE_OAUTH] SECURITY: State com context inválido:', parsed.context);
         return null;
       }
@@ -339,7 +339,7 @@ export async function parseState(state: string): Promise<OAuthState | null> {
     if (!parsed.context || !parsed.nonce) {
       return null;
     }
-    if (parsed.context !== 'user' && parsed.context !== 'collector') {
+    if (parsed.context !== 'user') {
       return null;
     }
 

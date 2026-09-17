@@ -31,7 +31,7 @@ import { formatDateBR } from '@/shared/utils/date';
 
 const { Text } = Typography;
 
-type PayableType = 'collector_commission' | 'pickup_point_commission' | 'carrier_cost' | 'expense';
+type PayableType = 'carrier_cost' | 'expense';
 type PayableStatus = 'pending' | 'paid';
 
 interface PayableItem {
@@ -68,15 +68,11 @@ interface AccountsPayableResponse {
 }
 
 const PAYABLE_TYPE_LABELS: Record<PayableType, string> = {
-  collector_commission: 'Comissão Coletor',
-  pickup_point_commission: 'Comissão Ponto de Coleta',
   carrier_cost: 'Custo Transportadora',
   expense: 'Despesa',
 };
 
 const PAYABLE_TYPE_COLORS: Record<PayableType, string> = {
-  collector_commission: 'blue',
-  pickup_point_commission: 'purple',
   carrier_cost: 'orange',
   expense: 'default',
 };

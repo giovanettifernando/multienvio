@@ -113,7 +113,6 @@ export const GET = withApiHandler<DREResponse>(async ({ req }) => {
     select: {
       postedAt: true,
       platformShippingCommissionCents: true,
-      platformPickupCommissionCents: true,
     },
   });
 
@@ -126,10 +125,6 @@ export const GET = withApiHandler<DREResponse>(async ({ req }) => {
       // 1.1.01 - Comissão sobre frete por envio
       monthData.values['1.1.01'] = (monthData.values['1.1.01'] || 0) +
         (shipment.platformShippingCommissionCents || 0);
-
-      // 1.2.01 - Comissão por coleta na origem
-      monthData.values['1.2.01'] = (monthData.values['1.2.01'] || 0) +
-        (shipment.platformPickupCommissionCents || 0);
     }
   }
 

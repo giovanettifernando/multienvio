@@ -492,11 +492,7 @@ export async function processCheckout(input: CheckoutInput): Promise<CheckoutRes
     );
     const insuranceCommissionCents = Math.round(insuranceCommission * 100);
     const freightCents = Math.round(serverFreightCost * 100) - insuranceCommissionCents;
-    const { shippingCommissionCents } = await calculateCommissionsInCents(
-      freightCents,
-      0,
-      carrierSlug
-    );
+    const { shippingCommissionCents } = await calculateCommissionsInCents(freightCents, carrierSlug);
 
     // Criar shipment com volumes
     const { shipment, packages } = await createShipmentWithVolumes(tx, {

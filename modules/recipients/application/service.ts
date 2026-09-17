@@ -335,11 +335,7 @@ export async function processRecipientPayment(
       carrierSlug
     );
     const insuranceCommissionCents = Math.round(insuranceCommission * 100);
-    const { shippingCommissionCents } = await calculateCommissionsInCents(
-      request.freightCostCents - insuranceCommissionCents,
-      0,
-      carrierSlug
-    );
+    const { shippingCommissionCents } = await calculateCommissionsInCents(request.freightCostCents - insuranceCommissionCents, carrierSlug);
 
     const { shipment, packages } = await createShipmentWithVolumes(tx, {
       shipment: {

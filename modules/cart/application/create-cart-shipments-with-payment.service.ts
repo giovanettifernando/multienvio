@@ -671,11 +671,7 @@ async function createShipmentFromCartItem(
   const insuranceCommissionCents = Math.round(insuranceCommission * 100);
   const freightCostCents = Math.round(selectedQuote.price * 100) - insuranceCommissionCents;
 
-  const { shippingCommissionCents } = await calculateCommissionsInCents(
-    freightCostCents,
-    0,
-    carrierSlug
-  );
+  const { shippingCommissionCents } = await calculateCommissionsInCents(freightCostCents, carrierSlug);
 
   // Construir documento do shipment
   const shipmentDocument = itemDocument?.type

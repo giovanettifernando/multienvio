@@ -2,8 +2,7 @@
  * GET /api/admin/finance/reports/accounts-payable
  *
  * Relatório consolidado de contas a pagar/pagas.
- * Inclui: comissões de coletores, comissões de pontos de coleta,
- * custos de transportadoras e outras despesas.
+ * Inclui custos de transportadoras e outras despesas.
  *
  * Parâmetros:
  * - dateStart, dateEnd: Período (obrigatório)
@@ -17,7 +16,7 @@ import { withApiHandler } from '@/platform/api/handler';
 import { ApiError } from '@/platform/api/errors';
 import { startOfDayBrasilia, endOfDayBrasilia } from '@/shared/utils/date';
 
-export type PayableType = 'collector_commission' | 'pickup_point_commission' | 'carrier_cost' | 'expense';
+export type PayableType = 'carrier_cost' | 'expense';
 export type PayableStatus = 'pending' | 'paid';
 
 export interface PayableItem {
@@ -53,10 +52,6 @@ export interface AccountsPayableResponse {
   items: PayableItem[];
 }
 
-// Status de PickupRequest que indicam coleta realizada (pago)
-const COMPLETED_PICKUP_STATUSES = ['COLLECTED', 'COMPLETED'];
-// Status de Reception que indicam recepção realizada (pago)
-const COMPLETED_RECEPTION_STATUSES = ['RECEIVED', 'PROCESSED', 'ISSUE_REPORTED'];
 
 export const GET = withApiHandler<AccountsPayableResponse>(async ({ req }) => {
   const session = await requireAdminSession(req, AdminPermission.FINANCEIRO);
@@ -87,16 +82,12 @@ export const GET = withApiHandler<AccountsPayableResponse>(async ({ req }) => {
   const endDate = endOfDayBrasilia(dateEnd);
 
   // PERFORMANCE: Executar todas as queries em paralelo (independentes)
-  const [collectorCommissions, pickupPointCommissions, carrierCosts, expenses] = await Promise.all([
-    getCollectorCommissions(startDate, endDate, statusFilter),
-    getPickupPointCommissions(startDate, endDate, statusFilter),
+  const [carrierCosts, expenses] = await Promise.all([
     getCarrierCosts(startDate, endDate, statusFilter),
     getExpenses(startDate, endDate, statusFilter),
   ]);
 
   const items: PayableItem[] = [
-    ...collectorCommissions,
-    ...pickupPointCommissions,
     ...carrierCosts,
     ...expenses,
   ];
@@ -124,126 +115,7 @@ export const GET = withApiHandler<AccountsPayableResponse>(async ({ req }) => {
   return { data: response };
 });
 
-async function getCollectorCommissions(
-  startDate: Date,
-  endDate: Date,
-  statusFilter: string
-): Promise<PayableItem[]> {
-  const whereStatus: string[] = [];
-  if (statusFilter === 'paid') {
-    whereStatus.push(...COMPLETED_PICKUP_STATUSES);
-  } else if (statusFilter === 'pending') {
-    whereStatus.push('PENDING', 'SCHEDULED');
-  } else {
-    whereStatus.push(...COMPLETED_PICKUP_STATUSES, 'PENDING', 'SCHEDULED');
-  }
 
-  const pickupRequests = await prisma.pickupRequest.findMany({
-    where: {
-      collectorId: { not: null },
-      status: { in: whereStatus },
-      createdAt: {
-        gte: startDate,
-        lte: endDate,
-      },
-    },
-    include: {
-      collector: {
-        select: {
-          id: true,
-          pfNome: true,
-          pjRazaoSocial: true,
-        },
-      },
-      shipment: {
-        select: {
-          id: true,
-          platformTrackingCode: true,
-          pickupFee: true,
-          destinationCity: true,
-          destinationState: true,
-        },
-      },
-    },
-  });
-
-  return pickupRequests
-    .filter(pr => pr.shipment.pickupFee && pr.shipment.pickupFee > 0)
-    .map((pr): PayableItem => {
-      const isPaid = COMPLETED_PICKUP_STATUSES.includes(pr.status);
-      const amountReais = pr.shipment.pickupFee || 0;
-      const amountCents = Math.round(amountReais * 100);
-
-      return {
-        id: `collector_${pr.id}`,
-        type: 'collector_commission',
-        creditorName: pr.collector?.pjRazaoSocial || pr.collector?.pfNome || 'Coletor',
-        description: `Coleta ${pr.shipment.platformTrackingCode} - ${pr.shipment.destinationCity}/${pr.shipment.destinationState}`,
-        dueDate: null, // Coletas não têm data de vencimento definida
-        amountCents,
-        amountReais,
-        status: isPaid ? 'paid' : 'pending',
-        referenceCode: pr.shipment.platformTrackingCode,
-        createdAt: pr.createdAt.toISOString(),
-        paidAt: isPaid && pr.collectedAt ? pr.collectedAt.toISOString() : null,
-      };
-    });
-}
-
-async function getPickupPointCommissions(
-  startDate: Date,
-  endDate: Date,
-  statusFilter: string
-): Promise<PayableItem[]> {
-  const whereStatus: string[] = [];
-  if (statusFilter === 'paid') {
-    whereStatus.push(...COMPLETED_RECEPTION_STATUSES);
-  } else if (statusFilter === 'pending') {
-    whereStatus.push('PENDING');
-  } else {
-    whereStatus.push(...COMPLETED_RECEPTION_STATUSES, 'PENDING');
-  }
-
-  const receptions = await prisma.reception.findMany({
-    where: {
-      status: { in: whereStatus as never[] },
-      createdAt: {
-        gte: startDate,
-        lte: endDate,
-      },
-      commissionCents: { gt: 0 },
-    },
-    include: {
-      pickupPoint: {
-        select: {
-          id: true,
-          nomeFantasia: true,
-          razaoSocial: true,
-        },
-      },
-    },
-  });
-
-  return receptions.map((reception): PayableItem => {
-    const isPaid = COMPLETED_RECEPTION_STATUSES.includes(reception.status);
-    const amountCents = reception.commissionCents;
-    const amountReais = amountCents / 100;
-
-    return {
-      id: `pickup_point_${reception.id}`,
-      type: 'pickup_point_commission',
-      creditorName: reception.pickupPoint.nomeFantasia || reception.pickupPoint.razaoSocial || 'Ponto de Coleta',
-      description: `Recepção ${reception.trackingCode} - ${reception.senderName}`,
-      dueDate: null,
-      amountCents,
-      amountReais,
-      status: isPaid ? 'paid' : 'pending',
-      referenceCode: reception.trackingCode,
-      createdAt: reception.createdAt.toISOString(),
-      paidAt: isPaid && reception.processedAt ? reception.processedAt.toISOString() : null,
-    };
-  });
-}
 
 async function getCarrierCosts(
   startDate: Date,
@@ -358,8 +230,6 @@ async function getExpenses(
 
 function calculateSummary(items: PayableItem[]): AccountsPayableResponse['summary'] {
   const byType: Record<PayableType, { count: number; amountCents: number; amountReais: number }> = {
-    collector_commission: { count: 0, amountCents: 0, amountReais: 0 },
-    pickup_point_commission: { count: 0, amountCents: 0, amountReais: 0 },
     carrier_cost: { count: 0, amountCents: 0, amountReais: 0 },
     expense: { count: 0, amountCents: 0, amountReais: 0 },
   };

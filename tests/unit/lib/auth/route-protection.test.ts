@@ -63,25 +63,10 @@ test.describe('lib/auth/route-protection', () => {
     });
   });
 
-  test.describe('collector routes (collector authentication)', () => {
-    test('collector API endpoints require collector auth', () => {
-      assert.equal(getRouteProtection('/api/coletores/coletas'), 'collector');
-      assert.equal(getRouteProtection('/api/coletores/dashboard'), 'collector');
-    });
-  });
-
-  test.describe('pickup point routes (pickup point authentication)', () => {
-    test('pickup point API endpoints require pickup_point auth', () => {
-      assert.equal(getRouteProtection('/api/pontos-coleta/receptions'), 'pickup_point');
-      assert.equal(getRouteProtection('/api/pontos-coleta/dashboard'), 'pickup_point');
-    });
-  });
-
   test.describe('authenticated routes (user login required)', () => {
     test('user pages require auth', () => {
       assert.equal(getRouteProtection('/conta'), 'auth');
       assert.equal(getRouteProtection('/minha-conta'), 'auth');
-      assert.equal(getRouteProtection('/coletas'), 'auth');
       assert.equal(getRouteProtection('/envios'), 'auth');
     });
 

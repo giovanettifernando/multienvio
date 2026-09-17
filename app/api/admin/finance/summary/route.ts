@@ -32,11 +32,11 @@ export const GET = withApiHandler<FinanceSummary>(async ({ req }) => {
   });
   const grossRevenue = topupResult._sum.amountCents || 0;
 
-  // 2. Taxas da plataforma: comissões sobre frete e coleta (usando postedAt como competência)
+  // 2. Taxas da plataforma: comissões sobre frete e seguro (usando postedAt como competência)
   const platformFeesResult = await prisma.shipment.aggregate({
     _sum: {
       platformShippingCommissionCents: true,
-      platformPickupCommissionCents: true,
+      platformInsuranceCommissionCents: true,
     },
     where: {
       status: { in: [ShipmentStatus.RECEIVED_AT_ORIGIN_HUB, ShipmentStatus.IN_TRANSIT_TO_DESTINATION, ShipmentStatus.DELIVERED] },
@@ -46,7 +46,7 @@ export const GET = withApiHandler<FinanceSummary>(async ({ req }) => {
   });
   const platformFees =
     (platformFeesResult._sum.platformShippingCommissionCents || 0) +
-    (platformFeesResult._sum.platformPickupCommissionCents || 0);
+    (platformFeesResult._sum.platformInsuranceCommissionCents || 0);
 
   // 3. Repasses às transportadoras: soma de carrierQuotePrice dos pacotes (usando postedAt do shipment)
   const carrierPayoutsResult = await prisma.package.aggregate({
@@ -61,19 +61,6 @@ export const GET = withApiHandler<FinanceSummary>(async ({ req }) => {
   });
   // carrierQuotePrice está em reais (Float), converter para centavos
   const carrierPayouts = Math.round((carrierPayoutsResult._sum.carrierQuotePrice || 0) * 100);
-
-  // 4. Comissões de parceiros (coletores): soma de pickupFee dos shipments postados
-  const partnerCommissionsResult = await prisma.shipment.aggregate({
-    _sum: { pickupFee: true },
-    where: {
-      status: { in: [ShipmentStatus.RECEIVED_AT_ORIGIN_HUB, ShipmentStatus.IN_TRANSIT_TO_DESTINATION, ShipmentStatus.DELIVERED] },
-      postedAt: { not: null },
-      pickupFee: { not: null },
-      ...(hasDateFilter && { postedAt: dateFilter }),
-    },
-  });
-  // pickupFee está em reais (Float), converter para centavos
-  const partnerCommissions = Math.round((partnerCommissionsResult._sum.pickupFee || 0) * 100);
 
   // 5. Reembolsos: soma de REFUNDs confirmados
   const refundsResult = await prisma.walletTransaction.aggregate({
@@ -97,17 +84,16 @@ export const GET = withApiHandler<FinanceSummary>(async ({ req }) => {
   const customersWalletBalance = walletsResult._sum.availableCents || 0;
 
   // 8. Saldo operacional da plataforma
-  // Fórmula: Receita - Repasses - Comissões Parceiros - Reembolsos - Chargebacks
+  // Fórmula: Receita - Repasses - Reembolsos - Chargebacks
   // Nota: platformFees é parte da receita retida pela plataforma
   const platformOperationalBalance =
-    grossRevenue - carrierPayouts - partnerCommissions - refunds - chargebacks;
+    grossRevenue - carrierPayouts - refunds - chargebacks;
 
   const summary: FinanceSummary = {
     period: { dateStart, dateEnd },
     grossRevenue,
     platformFees,
     carrierPayouts,
-    partnerCommissions,
     refunds,
     chargebacks,
     customersWalletBalance,

@@ -1,36 +1,18 @@
 /**
  * Servico de comissoes da plataforma
  *
- * Gerencia a aplicacao de comissoes sobre frete e taxa de coleta.
+ * Gerencia a aplicacao de comissoes sobre frete e seguro.
  * - Comissao de frete: especifica por transportadora (Carrier.shippingCommissionPercent)
- * - Comissao de coleta: geral da plataforma (PlatformCommission.pickupFeeCommissionPercent)
+ * - Comissao de seguro: especifica por transportadora (Carrier.insuranceCommissionPercent)
  */
 
 import { prisma } from '@/platform/db/db';
-
-export interface PlatformCommissionConfig {
-  pickupFeeCommissionPercent: number;
-  isActive: boolean;
-}
-
-// Cache em memoria para configuracao de comissoes da plataforma (taxa de coleta)
-let platformCommissionCache: PlatformCommissionConfig | null = null;
-let platformCacheExpiresAt: number = 0;
 
 // Cache em memoria para comissoes por transportadora
 const carrierCommissionCache = new Map<string, { percent: number; expiresAt: number }>();
 const carrierInsuranceCommissionCache = new Map<string, { percent: number; expiresAt: number }>();
 
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutos
-
-/**
- * Invalida o cache de comissoes da plataforma
- * Chamado quando a configuracao e alterada no admin
- */
-export function invalidatePlatformCommissionCache(): void {
-  platformCommissionCache = null;
-  platformCacheExpiresAt = 0;
-}
 
 /**
  * Invalida o cache de comissao de uma transportadora especifica
@@ -44,37 +26,6 @@ export function invalidateCarrierCommissionCache(carrierSlug?: string): void {
     carrierCommissionCache.clear();
     carrierInsuranceCommissionCache.clear();
   }
-}
-
-/**
- * Busca a configuracao de comissoes da plataforma (taxa de coleta)
- * Usa cache em memoria para evitar queries repetidas
- */
-export async function getPlatformCommissionConfig(): Promise<PlatformCommissionConfig> {
-  const now = Date.now();
-
-  // Verificar cache
-  if (platformCommissionCache && now < platformCacheExpiresAt) {
-    return platformCommissionCache;
-  }
-
-  // Buscar do banco
-  const config = await prisma.platformCommission.findFirst({
-    where: { isActive: true },
-    orderBy: { updatedAt: 'desc' },
-  });
-
-  // Configuracao padrao se nao houver registro
-  const result: PlatformCommissionConfig = {
-    pickupFeeCommissionPercent: config ? Number(config.pickupFeeCommissionPercent) : 0,
-    isActive: config?.isActive ?? true,
-  };
-
-  // Atualizar cache
-  platformCommissionCache = result;
-  platformCacheExpiresAt = now + CACHE_TTL_MS;
-
-  return result;
 }
 
 /**
@@ -149,57 +100,19 @@ export async function applyShippingCommission(
 }
 
 /**
- * Aplica a comissão da plataforma sobre uma taxa de coleta
- *
- * @param baseFee Taxa base de coleta (sem comissão)
- * @returns Objeto com taxa final e valor da comissão
- */
-export async function applyPickupFeeCommission(baseFee: number): Promise<{
-  finalFee: number;
-  commissionAmount: number;
-  commissionPercent: number;
-}> {
-  const config = await getPlatformCommissionConfig();
-
-  if (!config.isActive || config.pickupFeeCommissionPercent <= 0) {
-    return {
-      finalFee: baseFee,
-      commissionAmount: 0,
-      commissionPercent: 0,
-    };
-  }
-
-  const commissionMultiplier = 1 + config.pickupFeeCommissionPercent / 100;
-  const finalFee = baseFee * commissionMultiplier;
-  const commissionAmount = finalFee - baseFee;
-
-  return {
-    finalFee: Math.round(finalFee * 100) / 100,
-    commissionAmount: Math.round(commissionAmount * 100) / 100,
-    commissionPercent: config.pickupFeeCommissionPercent,
-  };
-}
-
-/**
  * Calcula comissoes em centavos para registro no shipment
  *
  * @param freightCostCents Custo do frete em centavos (ja com comissao aplicada)
- * @param pickupFeeCents Taxa de coleta em centavos (ja com comissao aplicada)
  * @param carrierSlug Slug da transportadora (ex: "correios")
  * @returns Valores de comissao em centavos
  */
 export async function calculateCommissionsInCents(
   freightCostCents: number,
-  pickupFeeCents: number,
   carrierSlug: string
 ): Promise<{
   shippingCommissionCents: number;
-  pickupCommissionCents: number;
 }> {
-  const [shippingCommissionPercent, platformConfig] = await Promise.all([
-    getCarrierShippingCommissionPercent(carrierSlug),
-    getPlatformCommissionConfig(),
-  ]);
+  const shippingCommissionPercent = await getCarrierShippingCommissionPercent(carrierSlug);
 
   // Calcular valor da comissao a partir do valor final
   // Se o preco final = base * (1 + percent/100), entao:
@@ -215,17 +128,8 @@ export async function calculateCommissionsInCents(
     );
   }
 
-  let pickupCommissionCents = 0;
-  if (platformConfig.isActive && platformConfig.pickupFeeCommissionPercent > 0 && pickupFeeCents > 0) {
-    const multiplier = platformConfig.pickupFeeCommissionPercent / 100;
-    pickupCommissionCents = Math.round(
-      pickupFeeCents * (multiplier / (1 + multiplier))
-    );
-  }
-
   return {
     shippingCommissionCents,
-    pickupCommissionCents,
   };
 }
 

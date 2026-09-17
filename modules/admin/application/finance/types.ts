@@ -21,7 +21,6 @@ export interface FinanceSummary {
   grossRevenue: number;        // receita bruta (R$)
   platformFees: number;        // taxas (R$)
   carrierPayouts: number;      // repasses (R$)
-  partnerCommissions: number;  // comissões (R$)
   refunds: number;             // estornos (R$)
   chargebacks: number;         // chargebacks (R$)
   customersWalletBalance: number; // soma dos saldos em carteira

@@ -17,8 +17,6 @@ export const ADMIN_PERMISSION_KEYS = [
   "OPERACOES",
   "INTEGRACOES",
   "SUPORTE",
-  "COLETORES",
-  "PONTOS_COLETA",
   "USUARIOS",
   "CONFIGURACOES",
 ] as const;

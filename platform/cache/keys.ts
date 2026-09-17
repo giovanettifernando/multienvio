@@ -40,8 +40,6 @@ function getPrefix(): string {
 export type KeyType =
   | 'session'
   | 'staff_session'
-  | 'collector_session'
-  | 'pickup_point_session'
   | 'idempotency'
   | 'ratelimit'
   | 'wallet_balance'
@@ -49,10 +47,8 @@ export type KeyType =
   | 'quote'
   | 'config'
   | 'user'
-  | 'collector'
   | 'shipment'
   | 'faq'
-  | 'pickup_points'
   | 'agencies'
   | 'lock';
 
@@ -100,11 +96,6 @@ export const Keys = {
   staffSession: (staffId: string) => buildKey('staff_session', staffId),
   staffSessionTokenVersion: (staffId: string) => buildKey('staff_session', staffId, 'tokenVersion'),
 
-  collectorSession: (collectorId: string) => buildKey('collector_session', collectorId),
-  collectorSessionTokenVersion: (collectorId: string) => buildKey('collector_session', collectorId, 'tokenVersion'),
-
-  pickupPointSession: (pointId: string) => buildKey('pickup_point_session', pointId),
-  pickupPointSessionTokenVersion: (pointId: string) => buildKey('pickup_point_session', pointId, 'tokenVersion'),
 
   // Idempotência
   idempotency: (key: string) => buildKey('idempotency', key),
@@ -119,7 +110,6 @@ export const Keys = {
   cep: (cep: string) => buildKey('cep', cep.replace(/\D/g, '')),
   config: (configKey: string) => buildKey('config', configKey),
   user: (userId: string) => buildKey('user', userId),
-  collector: (collectorId: string) => buildKey('collector', collectorId),
 
   // Cache de cotações
   quote: (params: {
@@ -151,8 +141,6 @@ export const Keys = {
     allStaffSessions: () => buildPattern('staff_session', '*'),
     allQuotesForCep: (cep: string) => buildPattern('quote', `*${cep.replace(/\D/g, '')}*`),
     allFaq: () => buildPattern('faq', '*'),
-    allPickupPoints: () => buildPattern('pickup_points', '*'),
-    pickupPointsByUf: (uf: string) => buildPattern('pickup_points', uf.toUpperCase(), '*'),
   },
 } as const;
 

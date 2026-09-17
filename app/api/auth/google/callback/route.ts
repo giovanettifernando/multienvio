@@ -1,7 +1,7 @@
 /**
  * GET /api/auth/google/callback
  *
- * Handles Google OAuth callback for User and Collector authentication.
+ * Handles Google OAuth callback for User authentication.
  * Creates/links accounts and establishes sessions based on context.
  */
 
@@ -25,7 +25,7 @@ import {
 import { sessionCache } from '@/platform/cache/cache';
 import type { RequestLogger } from '@/platform/api/types';
 
-// JWT secret for collector tokens - OBRIGATÓRIO, sem fallback
+// JWT secret - OBRIGATÓRIO, sem fallback
 const JWT_SECRET_RAW = process.env.JWT_SECRET;
 if (!JWT_SECRET_RAW) {
   throw new Error('[SECURITY] JWT_SECRET não configurado. Esta variável é obrigatória.');
@@ -35,13 +35,11 @@ const JWT_SECRET = new TextEncoder().encode(JWT_SECRET_RAW);
 // Default redirect URLs
 const DEFAULT_REDIRECTS: Record<OAuthContext, string> = {
   user: '/',
-  collector: '/coletores',
 };
 
 // Error redirect URLs
 const ERROR_REDIRECTS: Record<OAuthContext, string> = {
   user: '/auth/login',
-  collector: '/coletores/login',
 };
 
 /**
@@ -126,143 +124,7 @@ async function handleUserCallback(
   }
 }
 
-/**
- * Handle Collector OAuth callback
- * Note: Collectors must already exist (created via manual registration)
- */
-async function handleCollectorCallback(
-  googleId: string,
-  email: string,
-  logger: RequestLogger
-): Promise<
-  | { success: true; collector: { id: string; pfNome: string; pfEmail: string | null; pjRazaoSocial: string; pjCnpj: string; status: string } }
-  | { success: false; error: string; code?: string }
-> {
-  try {
-    // Check if collector exists with this googleId
-    let collector = await prisma.collector.findUnique({
-      where: { googleId },
-    });
 
-    if (collector) {
-      // Collector exists with this Google account - verify status and login
-      if (collector.status === 'BLOCKED') {
-        return {
-          success: false,
-          error: 'Sua conta está bloqueada. Entre em contato com o suporte.',
-          code: 'ACCOUNT_BLOCKED',
-        };
-      }
-
-      return {
-        success: true,
-        collector: {
-          id: collector.id,
-          pfNome: collector.pfNome,
-          pfEmail: collector.pfEmail,
-          pjRazaoSocial: collector.pjRazaoSocial,
-          pjCnpj: collector.pjCnpj,
-          status: collector.status,
-        },
-      };
-    }
-
-    // Check if collector exists with this email but no googleId (link account)
-    collector = await prisma.collector.findFirst({
-      where: {
-        pfEmail: {
-          equals: email,
-          mode: 'insensitive',
-        },
-      },
-    });
-
-    if (collector) {
-      // Collector exists with email - link Google account
-      if (collector.googleId && collector.googleId !== googleId) {
-        return {
-          success: false,
-          error: 'Este e-mail já está vinculado a outra conta Google',
-          code: 'EMAIL_ALREADY_LINKED',
-        };
-      }
-
-      // Check email verification and status
-      if (!collector.pfEmailVerified) {
-        // Auto-verify email since Google already verified it
-        await prisma.collector.update({
-          where: { id: collector.id },
-          data: {
-            pfEmailVerified: true,
-            pfEmailVerifiedAt: new Date(),
-          },
-        });
-      }
-
-      if (collector.status === 'BLOCKED') {
-        return {
-          success: false,
-          error: 'Sua conta está bloqueada. Entre em contato com o suporte.',
-          code: 'ACCOUNT_BLOCKED',
-        };
-      }
-
-      // Link Google account
-      await prisma.collector.update({
-        where: { id: collector.id },
-        data: {
-          googleId,
-          authProvider: 'google',
-        },
-      });
-
-      return {
-        success: true,
-        collector: {
-          id: collector.id,
-          pfNome: collector.pfNome,
-          pfEmail: collector.pfEmail,
-          pjRazaoSocial: collector.pjRazaoSocial,
-          pjCnpj: collector.pjCnpj,
-          status: collector.status,
-        },
-      };
-    }
-
-    // Collector not found - they must register first
-    return {
-      success: false,
-      error: 'Coletor não encontrado. Faça o cadastro primeiro.',
-      code: 'COLLECTOR_NOT_FOUND',
-    };
-  } catch (error) {
-    logger.error('google_oauth_collector_error', { err: error });
-    return { success: false, error: 'Erro ao processar autenticação' };
-  }
-}
-
-/**
- * Create collector JWT token (cookie will be set on response)
- */
-async function createCollectorToken(collector: {
-  id: string;
-  pfNome: string;
-  pfEmail: string | null;
-  pjRazaoSocial: string;
-  status: string;
-}): Promise<string> {
-  return new SignJWT({
-    coletorId: collector.id,
-    pfEmail: collector.pfEmail,
-    pfNome: collector.pfNome,
-    pjRazaoSocial: collector.pjRazaoSocial,
-    status: collector.status,
-  })
-    .setProtectedHeader({ alg: 'HS256' })
-    .setIssuedAt()
-    .setExpirationTime('7d')
-    .sign(JWT_SECRET);
-}
 
 export const GET = withApiHandlerResponse(async (context) => {
   const { req, logger } = context;
@@ -315,118 +177,87 @@ export const GET = withApiHandlerResponse(async (context) => {
       context: oauthContext,
     });
 
-    if (oauthContext === 'user') {
-      // Handle User authentication
-      const result = await handleUserCallback(
-        googleUser.sub,
-        googleUser.email,
-        googleUser.name,
-        logger,
-        googleUser.picture
+    // Handle User authentication
+    const result = await handleUserCallback(
+      googleUser.sub,
+      googleUser.email,
+      googleUser.name,
+      logger,
+      googleUser.picture
+    );
+
+    if (!result.success) {
+      return NextResponse.redirect(
+        new URL(`${errorRedirect}?error=${encodeURIComponent(result.error)}`, req.url)
       );
-
-      if (!result.success) {
-        return NextResponse.redirect(
-          new URL(`${errorRedirect}?error=${encodeURIComponent(result.error)}`, req.url)
-        );
-      }
-
-      // Get user data for session
-      const user = await prisma.user.findUnique({
-        where: { id: result.userId },
-      });
-
-      if (!user) {
-        return NextResponse.redirect(
-          new URL(`${errorRedirect}?error=Usuário não encontrado`, req.url)
-        );
-      }
-
-      // Get tokenVersion from Redis (or init with 1)
-      const tokenVersion = await sessionCache.getOrInitTokenVersion(user.id);
-
-      // Create JWT token pair for session (access + refresh)
-      // Note: Role removed from User - use 'user' as default for all clients
-      const { accessToken, refreshToken } = await signTokenPair({
-        userId: user.id,
-        email: user.email,
-        role: 'user',
-        tokenVersion,
-      });
-
-      // Save session to Redis
-      await sessionCache.set(user.id, {
-        userId: user.id,
-        email: user.email,
-        role: 'user',
-        status: user.status,
-        tokenVersion,
-      });
-
-      logger.info('google_oauth_user_session', { userId: user.id });
-
-      // Create redirect response and set auth cookies
-      const response = NextResponse.redirect(new URL(successRedirect, req.url));
-      const isProduction = process.env.NODE_ENV === 'production';
-
-      // Set access token cookie (15 min)
-      response.cookies.set(ACCESS_TOKEN_COOKIE, accessToken, {
-        httpOnly: true,
-        secure: isProduction,
-        sameSite: 'lax',
-        path: '/',
-        maxAge: ACCESS_TOKEN_MAX_AGE_SECONDS,
-      });
-
-      // Set refresh token cookie (7 days)
-      response.cookies.set(REFRESH_TOKEN_COOKIE, refreshToken, {
-        httpOnly: true,
-        secure: isProduction,
-        sameSite: 'lax',
-        path: '/',
-        maxAge: REFRESH_TOKEN_MAX_AGE_SECONDS,
-      });
-
-      // Set last activity cookie
-      response.cookies.set('last_activity_user', Date.now().toString(), {
-        httpOnly: true,
-        secure: isProduction,
-        sameSite: 'lax',
-        path: '/',
-        maxAge: 60 * 60 * 24,
-      });
-
-      return response;
-    } else {
-      // Handle Collector authentication
-      const result = await handleCollectorCallback(googleUser.sub, googleUser.email, logger);
-
-      if (!result.success) {
-        const errorParams = new URLSearchParams({
-          error: result.error,
-          ...(result.code && { code: result.code }),
-        });
-        return NextResponse.redirect(
-          new URL(`${errorRedirect}?${errorParams.toString()}`, req.url)
-        );
-      }
-
-      // Create collector token
-      const collectorToken = await createCollectorToken(result.collector);
-
-      logger.info('google_oauth_collector_session', { collectorId: result.collector.id });
-
-      // Create redirect response and set collector cookie directly on it
-      const response = NextResponse.redirect(new URL(successRedirect, req.url));
-      response.cookies.set('coletor-token', collectorToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        path: '/',
-        maxAge: 60 * 60 * 24 * 7, // 7 days
-      });
-      return response;
     }
+
+    // Get user data for session
+    const user = await prisma.user.findUnique({
+      where: { id: result.userId },
+    });
+
+    if (!user) {
+      return NextResponse.redirect(
+        new URL(`${errorRedirect}?error=Usuário não encontrado`, req.url)
+      );
+    }
+
+    // Get tokenVersion from Redis (or init with 1)
+    const tokenVersion = await sessionCache.getOrInitTokenVersion(user.id);
+
+    // Create JWT token pair for session (access + refresh)
+    // Note: Role removed from User - use 'user' as default for all clients
+    const { accessToken, refreshToken } = await signTokenPair({
+      userId: user.id,
+      email: user.email,
+      role: 'user',
+      tokenVersion,
+    });
+
+    // Save session to Redis
+    await sessionCache.set(user.id, {
+      userId: user.id,
+      email: user.email,
+      role: 'user',
+      status: user.status,
+      tokenVersion,
+    });
+
+    logger.info('google_oauth_user_session', { userId: user.id });
+
+    // Create redirect response and set auth cookies
+    const response = NextResponse.redirect(new URL(successRedirect, req.url));
+    const isProduction = process.env.NODE_ENV === 'production';
+
+    // Set access token cookie (15 min)
+    response.cookies.set(ACCESS_TOKEN_COOKIE, accessToken, {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: 'lax',
+      path: '/',
+      maxAge: ACCESS_TOKEN_MAX_AGE_SECONDS,
+    });
+
+    // Set refresh token cookie (7 days)
+    response.cookies.set(REFRESH_TOKEN_COOKIE, refreshToken, {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: 'lax',
+      path: '/',
+      maxAge: REFRESH_TOKEN_MAX_AGE_SECONDS,
+    });
+
+    // Set last activity cookie
+    response.cookies.set('last_activity_user', Date.now().toString(), {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 60 * 60 * 24,
+    });
+
+    return response;
   } catch (error) {
     logger.error('google_oauth_callback_error', { err: error });
     const message = error instanceof Error ? error.message : 'Erro ao processar autenticação';

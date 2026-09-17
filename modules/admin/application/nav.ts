@@ -29,12 +29,6 @@ export const ADMIN_NAV: AdminNavItem[] = [
         permissions: ["FINANCEIRO"],
       },
       {
-        key: "comissoes-financeiro",
-        label: "Comissões",
-        href: "/admin/financeiro/comissoes",
-        permissions: ["FINANCEIRO"],
-      },
-      {
         key: "despesas",
         label: "Despesas",
         href: "/admin/financeiro/despesas",
@@ -152,12 +146,6 @@ export const ADMIN_NAV: AdminNavItem[] = [
         key: "knowledge-base",
         label: "Base de Conhecimento",
         href: "/admin/config/knowledge-base",
-        permissions: ["CONFIGURACOES"],
-      },
-      {
-        key: "comissoes",
-        label: "Comissões da plataforma",
-        href: "/admin/config/comissoes",
         permissions: ["CONFIGURACOES"],
       },
       {

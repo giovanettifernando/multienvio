@@ -20,7 +20,7 @@ const faqItems = [
 5. Escolha a transportadora de sua preferência
 6. Efetue o pagamento (cartão, PIX ou saldo da carteira)
 7. Imprima a etiqueta gerada e cole no pacote
-8. Leve o pacote até um ponto de coleta ou agende uma coleta em domicílio`,
+8. Leve o pacote até uma agência dos Correios ou unidade da transportadora escolhida`,
     category: 'Envios',
     audience: 'USER' as const,
     sortOrder: 1,
@@ -185,40 +185,6 @@ O e-mail não pode ser alterado por segurança. Para trocar o e-mail, entre em c
     category: 'Conta',
     audience: 'USER' as const,
     sortOrder: 31,
-  },
-
-  // ============== CATEGORIA: COLETA ==============
-  {
-    question: 'Como funciona a coleta em domicílio?',
-    answer: `A coleta em domicílio permite que o entregador busque seu pacote:
-
-1. Ao criar o envio, selecione "Coleta em domicílio"
-2. Escolha a data e período (manhã, tarde ou dia todo)
-3. Finalize o pagamento (há uma taxa adicional de coleta)
-4. Aguarde o coletor no endereço informado
-
-Importante:
-- Tenha o pacote pronto e etiquetado
-- Alguém deve estar no local para entregar o pacote
-- O coletor não sobe para retirar pacotes
-- Guarde o comprovante de coleta`,
-    category: 'Coleta',
-    audience: 'USER' as const,
-    sortOrder: 40,
-  },
-  {
-    question: 'Onde encontro os pontos de coleta mais próximos?',
-    answer: `Para encontrar pontos de coleta:
-
-1. Acesse "Pontos de Coleta" no menu
-2. Digite seu CEP ou endereço
-3. Veja os pontos mais próximos no mapa
-4. Consulte horários de funcionamento e serviços disponíveis
-
-Dica: Ao criar um envio, o sistema mostra automaticamente os pontos de coleta mais próximos do seu endereço de origem.`,
-    category: 'Coleta',
-    audience: 'USER' as const,
-    sortOrder: 41,
   },
 
   // ============== CATEGORIA: PROBLEMAS ==============

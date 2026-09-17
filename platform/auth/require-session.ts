@@ -12,14 +12,6 @@ import {
   getAdminSessionFromRequest,
   type AdminJWTPayload,
 } from '@/modules/auth/application/admin-session';
-import {
-  getAutonomousCollectorSession,
-  type AutonomousCollectorSession,
-} from '@/modules/auth/application/autonomous-collector-session';
-import {
-  getCollectorSessionFromRequest,
-  type CollectorJWTPayload,
-} from '@/modules/auth/application/collector-session';
 import type { AdminPermission } from '@prisma/client';
 
 /**
@@ -105,47 +97,4 @@ export async function requireAdminSession(
   return session;
 }
 
-/**
- * Requer sessão de coletor autônomo autenticado
- *
- * @returns AutonomousCollectorSession com dados do coletor
- * @throws ApiError 401 se não autenticado
- *
- * @example
- * const session = await requireCollectorSession();
- * // session.coletorId está garantidamente disponível aqui
- */
-export async function requireCollectorSession(): Promise<AutonomousCollectorSession> {
-  const session = await getAutonomousCollectorSession();
-  if (!session) {
-    throw new ApiError({
-      code: 'unauthorized',
-      message: 'Não autenticado',
-      status: 401,
-    });
-  }
-  return session;
-}
 
-/**
- * Requer sessão de ponto de coleta autenticado
- *
- * @param req Request object
- * @returns CollectorJWTPayload com dados do ponto de coleta
- * @throws ApiError 401 se não autenticado
- *
- * @example
- * const session = await requirePickupPointSession(req);
- * // session.pointId está garantidamente disponível aqui
- */
-export async function requirePickupPointSession(req: Request): Promise<CollectorJWTPayload> {
-  const session = await getCollectorSessionFromRequest(req);
-  if (!session) {
-    throw new ApiError({
-      code: 'unauthorized',
-      message: 'Não autenticado',
-      status: 401,
-    });
-  }
-  return session;
-}

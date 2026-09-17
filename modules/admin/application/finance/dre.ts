@@ -40,10 +40,6 @@ export const DRE_CHART_OF_ACCOUNTS: DREAccount[] = [
   { code: '1.1.01', name: 'Comissão sobre frete por envio', level: 3, type: 'account' },
   { code: '1.1.02', name: 'Comissão sobre serviços adicionais do envio', level: 3, type: 'account' },
 
-  { code: '1.2', name: 'Comissão sobre Coletas', level: 2, type: 'subgroup' },
-  { code: '1.2.01', name: 'Comissão por coleta na origem', level: 3, type: 'account' },
-  { code: '1.2.02', name: 'Comissão por logística reversa', level: 3, type: 'account' },
-
   { code: '1.3', name: 'Outras Receitas Operacionais', level: 2, type: 'subgroup' },
   { code: '1.3.01', name: 'Multas e penalidades cobradas', level: 3, type: 'account' },
   { code: '1.3.02', name: 'Ajustes positivos de cobrança', level: 3, type: 'account' },
@@ -59,11 +55,9 @@ export const DRE_CHART_OF_ACCOUNTS: DREAccount[] = [
 
   { code: '2.2', name: 'Estornos e Devoluções', level: 2, type: 'subgroup' },
   { code: '2.2.01', name: 'Estornos de envios', level: 3, type: 'account' },
-  { code: '2.2.02', name: 'Estornos de coletas', level: 3, type: 'account' },
 
   { code: '2.3', name: 'Descontos Comerciais', level: 2, type: 'subgroup' },
   { code: '2.3.01', name: 'Descontos concedidos em envios', level: 3, type: 'account' },
-  { code: '2.3.02', name: 'Descontos concedidos em coletas', level: 3, type: 'account' },
 
   // Receita Líquida (calculado)
   { code: 'RL', name: 'RECEITA LÍQUIDA', level: 1, type: 'group', isBold: true, isTotal: true },
@@ -73,10 +67,6 @@ export const DRE_CHART_OF_ACCOUNTS: DREAccount[] = [
 
   { code: '3.1', name: 'Repasses a Transportadoras', level: 2, type: 'subgroup' },
   { code: '3.1.01', name: 'Fretes repassados', level: 3, type: 'account' },
-
-  { code: '3.2', name: 'Comissões Operacionais', level: 2, type: 'subgroup' },
-  { code: '3.2.01', name: 'Comissão de pontos de coleta', level: 3, type: 'account' },
-  { code: '3.2.02', name: 'Comissão de coletores autônomos', level: 3, type: 'account' },
 
   { code: '3.3', name: 'Taxas de Meios de Pagamento', level: 2, type: 'subgroup' },
   { code: '3.3.01', name: 'Taxas de cartão de crédito', level: 3, type: 'account' },
