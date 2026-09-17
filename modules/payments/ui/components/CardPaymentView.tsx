@@ -52,7 +52,7 @@ export function CardPaymentView({
           onError={onError}
           onUseNewCard={() => onUseSavedCard(false)}
           paymentType="checkout_payment"
-          paymentDescription={`Pagamento de ${itemCount} envio(s) - Envio Legal`}
+          paymentDescription={`Pagamento de ${itemCount} envio(s) - Multienvio`}
         />
       ) : (
         <Space orientation="vertical" size="large" style={{ width: '100%' }}>

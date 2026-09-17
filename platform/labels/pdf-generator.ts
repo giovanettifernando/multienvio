@@ -1,7 +1,7 @@
 /**
- * Gerador de PDF para etiquetas Envio Legal
+ * Gerador de PDF para etiquetas Multienvio
  *
- * Cria PDF final com header Envio Legal + código de barras + PDF dos Correios
+ * Cria PDF final com header Multienvio + código de barras + PDF dos Correios
  */
 
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
@@ -10,7 +10,7 @@ import { buildDceQrCodeUrl, isValidDceKey } from '@/shared/validation/dce';
 import { readFile } from 'fs/promises';
 import { join } from 'path';
 
-export interface EnvioLegalPdfOptions {
+export interface MultienvioPdfOptions {
   /** Código de rastreamento da plataforma */
   platformTrackingCode: string;
   /** Buffers dos PDFs dos Correios */
@@ -25,12 +25,12 @@ export interface EnvioLegalPdfOptions {
 }
 
 /**
- * Cria o PDF final com header Envio Legal + código de barras + PDFs dos Correios
+ * Cria o PDF final com header Multienvio + código de barras + PDFs dos Correios
  *
  * @param options Opções de geração do PDF
  * @returns Buffer do PDF gerado
  */
-export async function createEnvioLegalPdf(options: EnvioLegalPdfOptions): Promise<Buffer> {
+export async function createMultienvioPdf(options: MultienvioPdfOptions): Promise<Buffer> {
   const { platformTrackingCode, correioPdfBuffers, packageNumber, dceKey } = options;
 
   const pdfDoc = await PDFDocument.create();
@@ -105,7 +105,7 @@ export async function createEnvioLegalPdf(options: EnvioLegalPdfOptions): Promis
 
       const page = pdfDoc.addPage([pageWidth, pageHeight]);
 
-      // === HEADER ENVIO LEGAL ===
+      // === HEADER MULTIENVIO ===
       const CONTENT_WIDTH = 320;
       const headerCenterX = CONTENT_WIDTH / 2;
 
@@ -154,9 +154,9 @@ export async function createEnvioLegalPdf(options: EnvioLegalPdfOptions): Promis
         }
       }
 
-      // Texto "ENVIO LEGAL" + código + volume (se aplicável)
+      // Texto "MULTIENVIO" + código + volume (se aplicável)
       const codeSize = 9;
-      const titleText = 'ENVIO LEGAL';
+      const titleText = 'MULTIENVIO';
       const titleWidth = helveticaBold.widthOfTextAtSize(titleText, codeSize);
       const trackingWidth = helveticaBold.widthOfTextAtSize(platformTrackingCode || '', codeSize);
       const gap = 8;

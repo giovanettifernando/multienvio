@@ -1,7 +1,7 @@
 import 'server-only';
 
 /**
- * Adapter para integração da Loggi com o sistema de cotação do Envio Legal
+ * Adapter para integração da Loggi com o sistema de cotação do Multienvio
  *
  * Responsabilidades:
  * - Converter tipos internos para formato da API da Loggi
@@ -131,7 +131,7 @@ export type LoggiQuoteResult = {
 };
 
 /**
- * Obtém cotações da Loggi para uma requisição do Envio Legal
+ * Obtém cotações da Loggi para uma requisição do Multienvio
  */
 export async function quoteFromLoggi(
   request: QuoteRequest

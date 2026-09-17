@@ -91,7 +91,7 @@ export default function ShipmentsTable({ dateStart, dateEnd }: ShipmentsTablePro
     }
 
     const headers = [
-      'Tracking Envio Legal',
+      'Tracking Multienvio',
       'Tracking Transportadora',
       'Cliente',
       'Destinatário',

@@ -144,7 +144,7 @@ export function UserDrawer({ open, user, onClose }: UserDrawerProps) {
             name="email"
             control={control}
             render={({ field }) => (
-              <ELInput {...field} type="email" placeholder="usuario@enviolegal.com" />
+              <ELInput {...field} type="email" placeholder="usuario@empresa.com" />
             )}
           />
         </ELFormItem>

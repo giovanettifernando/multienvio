@@ -3,7 +3,7 @@ import { connection } from "next/server";
 import PaymentPageClient from "./PaymentPageClient";
 
 export const metadata = {
-  title: "Pagar Frete - Envio Legal",
+  title: "Pagar Frete - Multienvio",
   description: "Efetue o pagamento do frete do seu envio",
 };
 

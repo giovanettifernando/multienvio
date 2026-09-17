@@ -74,7 +74,7 @@ export function CheckoutModal({
       mode="checkout"
       amount={totalAmount}
       allowWallet={true}
-      description={`Pagamento envio ${trackingCode || shipmentId} - Envio Legal`}
+      description={`Pagamento envio ${trackingCode || shipmentId} - Multienvio`}
       metadata={{
         type: 'checkout_payment',
         shipmentId,

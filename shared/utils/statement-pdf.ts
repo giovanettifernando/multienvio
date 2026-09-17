@@ -97,7 +97,7 @@ export async function generateStatementPdf(params: StatementPdfParams): Promise<
     });
   } else {
     // Fallback para texto se logo não carregar
-    page.drawText('ENVIO LEGAL', {
+    page.drawText('MULTIENVIO', {
       x: margin,
       y: yPosition - 10,
       size: 28,
@@ -435,7 +435,7 @@ export async function generateStatementPdf(params: StatementPdfParams): Promise<
     color: rgb(0.8, 0.8, 0.8),
   });
 
-  page.drawText('Este documento foi gerado automaticamente pelo sistema Envio Legal.', {
+  page.drawText('Este documento foi gerado automaticamente pelo sistema Multienvio.', {
     x: margin,
     y: yPosition,
     size: 8,

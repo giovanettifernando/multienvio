@@ -646,7 +646,7 @@ export default function OpenRouterClient() {
               extra="Nome da aplicação para identificação no dashboard"
             >
               <Input
-                placeholder="Envio Legal"
+                placeholder="Multienvio"
                 size="large"
               />
             </Form.Item>

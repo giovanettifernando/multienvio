@@ -7,7 +7,7 @@
 
 import { prisma } from '../../../platform/db/db';
 import { baixarRotuloPdf } from '../../../platform/integrations/correios/prepostagem';
-import { createEnvioLegalPdf } from '../../../platform/labels/pdf-generator';
+import { createMultienvioPdf } from '../../../platform/labels/pdf-generator';
 import type { JobLogger } from '../../../platform/queue/helpers';
 
 export async function generatePackagePdf(params: {
@@ -59,9 +59,9 @@ export async function generatePackagePdf(params: {
     throw new Error(rotuloResult.erro || 'Erro ao baixar PDF dos Correios');
   }
 
-  // 3. Criar PDF com header Envio Legal
+  // 3. Criar PDF com header Multienvio
   const platformTrackingCode = pkg.shipment.platformTrackingCode || '';
-  const pdfBuffer = await createEnvioLegalPdf({
+  const pdfBuffer = await createMultienvioPdf({
     platformTrackingCode,
     correioPdfBuffers: [rotuloResult.content],
     packageNumber: pkg.packageNumber,

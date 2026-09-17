@@ -289,7 +289,7 @@ export default function EtiquetasClient() {
           title="Etiqueta Correios"
         />
 
-        {/* Modal PDF - Etiqueta Envio Legal */}
+        {/* Modal PDF - Etiqueta Multienvio */}
         <ELModal
           open={pdfModalOpen}
           onCancel={handleClosePdfModal}

@@ -404,7 +404,7 @@ export function generateDeclarationPDF(
   doc.setFontSize(7);
   doc.setTextColor(128, 128, 128);
   doc.text(
-    `Documento gerado em ${new Date().toLocaleString('pt-BR')} - EnvioLegal`,
+    `Documento gerado em ${new Date().toLocaleString('pt-BR')} - Multienvio`,
     pageWidth / 2,
     y,
     { align: 'center' }
@@ -756,7 +756,7 @@ export function generateNFePDF(
   y = 285;
   doc.setFontSize(6);
   doc.setTextColor(150, 150, 150);
-  doc.text(`Documento gerado em ${new Date().toLocaleString('pt-BR')} - EnvioLegal`, pageWidth / 2, y, { align: 'center' });
+  doc.text(`Documento gerado em ${new Date().toLocaleString('pt-BR')} - Multienvio`, pageWidth / 2, y, { align: 'center' });
 
   return doc;
 }

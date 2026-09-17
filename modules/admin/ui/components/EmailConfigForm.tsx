@@ -300,7 +300,7 @@ export default function EmailConfigForm() {
               rules={[{ required: true, message: 'Nome remetente é obrigatório' }]}
               tooltip="Nome que aparecerá como remetente nas mensagens"
             >
-              <Input placeholder="Envio Legal" />
+              <Input placeholder="Multienvio" />
             </Form.Item>
 
             <Alert

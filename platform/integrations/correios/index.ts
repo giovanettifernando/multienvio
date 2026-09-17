@@ -120,7 +120,7 @@ export {
   type CorreiosCepResponse,
 } from './cep';
 
-// Adapter (conversão de tipos Envio Legal <-> Correios)
+// Adapter (conversão de tipos Multienvio <-> Correios)
 export {
   CORREIOS_CARRIER_ID,
   CORREIOS_CARRIER_NAME,

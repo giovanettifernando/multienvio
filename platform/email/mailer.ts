@@ -104,7 +104,7 @@ export async function sendVerificationEmail(
     <head>
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Verifique seu email - Envio Legal</title>
+      <title>Verifique seu email - Multienvio</title>
     </head>
     <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f5f5f5;">
       <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f5f5f5; padding: 20px 0;">
@@ -114,7 +114,7 @@ export async function sendVerificationEmail(
               <!-- Header -->
               <tr>
                 <td style="background-color: #1890ff; padding: 30px; text-align: center;">
-                  <h1 style="margin: 0; color: #ffffff; font-size: 28px;">Envio Legal</h1>
+                  <h1 style="margin: 0; color: #ffffff; font-size: 28px;">Multienvio</h1>
                 </td>
               </tr>
 
@@ -123,7 +123,7 @@ export async function sendVerificationEmail(
                 <td style="padding: 40px 30px;">
                   <h2 style="margin: 0 0 20px 0; color: #333333; font-size: 24px;">Olá, ${name}!</h2>
                   <p style="margin: 0 0 20px 0; color: #666666; font-size: 16px; line-height: 1.6;">
-                    Bem-vindo ao Envio Legal! Para começar a usar sua conta, precisamos verificar seu endereço de email.
+                    Bem-vindo ao Multienvio! Para começar a usar sua conta, precisamos verificar seu endereço de email.
                   </p>
                   <p style="margin: 0 0 30px 0; color: #666666; font-size: 16px; line-height: 1.6;">
                     Clique no botão abaixo para confirmar seu email:
@@ -141,7 +141,7 @@ export async function sendVerificationEmail(
                   </table>
 
                   <p style="margin: 30px 0 0 0; color: #999999; font-size: 14px; line-height: 1.6;">
-                    Se você não criou uma conta no Envio Legal, pode ignorar este email com segurança.
+                    Se você não criou uma conta no Multienvio, pode ignorar este email com segurança.
                   </p>
 
                   <!-- Fallback URL -->
@@ -156,7 +156,7 @@ export async function sendVerificationEmail(
               <tr>
                 <td style="background-color: #f5f5f5; padding: 20px 30px; text-align: center; border-top: 1px solid #e8e8e8;">
                   <p style="margin: 0; color: #999999; font-size: 12px;">
-                    © ${new Date().getFullYear()} Envio Legal. Todos os direitos reservados.
+                    © ${new Date().getFullYear()} Multienvio. Todos os direitos reservados.
                   </p>
                 </td>
               </tr>
@@ -170,7 +170,7 @@ export async function sendVerificationEmail(
 
   return sendEmail({
     to,
-    subject: 'Verifique seu email - Envio Legal',
+    subject: 'Verifique seu email - Multienvio',
     html,
   });
 }
@@ -201,7 +201,7 @@ export async function sendPasswordChangedEmail(
     <head>
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Senha alterada - Envio Legal</title>
+      <title>Senha alterada - Multienvio</title>
     </head>
     <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f5f5f5;">
       <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f5f5f5; padding: 20px 0;">
@@ -211,7 +211,7 @@ export async function sendPasswordChangedEmail(
               <!-- Header -->
               <tr>
                 <td style="background-color: #52c41a; padding: 30px; text-align: center;">
-                  <h1 style="margin: 0; color: #ffffff; font-size: 28px;">Envio Legal</h1>
+                  <h1 style="margin: 0; color: #ffffff; font-size: 28px;">Multienvio</h1>
                 </td>
               </tr>
 
@@ -280,7 +280,7 @@ export async function sendPasswordChangedEmail(
               <tr>
                 <td style="background-color: #f5f5f5; padding: 20px 30px; text-align: center; border-top: 1px solid #e8e8e8;">
                   <p style="margin: 0; color: #999999; font-size: 12px;">
-                    © ${new Date().getFullYear()} Envio Legal. Todos os direitos reservados.
+                    © ${new Date().getFullYear()} Multienvio. Todos os direitos reservados.
                   </p>
                 </td>
               </tr>
@@ -294,7 +294,7 @@ export async function sendPasswordChangedEmail(
 
   return sendEmail({
     to,
-    subject: 'Senha alterada com sucesso - Envio Legal',
+    subject: 'Senha alterada com sucesso - Multienvio',
     html,
   });
 }
@@ -316,7 +316,7 @@ export async function sendStaffTempPasswordEmail(
     <head>
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Sua conta foi criada - Envio Legal Admin</title>
+      <title>Sua conta foi criada - Multienvio Admin</title>
     </head>
     <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f5f5f5;">
       <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f5f5f5; padding: 20px 0;">
@@ -326,7 +326,7 @@ export async function sendStaffTempPasswordEmail(
               <!-- Header -->
               <tr>
                 <td style="background-color: #722ed1; padding: 30px; text-align: center;">
-                  <h1 style="margin: 0; color: #ffffff; font-size: 28px;">Envio Legal - Admin</h1>
+                  <h1 style="margin: 0; color: #ffffff; font-size: 28px;">Multienvio - Admin</h1>
                 </td>
               </tr>
 
@@ -335,7 +335,7 @@ export async function sendStaffTempPasswordEmail(
                 <td style="padding: 40px 30px;">
                   <h2 style="margin: 0 0 20px 0; color: #333333; font-size: 24px;">Olá, ${name}!</h2>
                   <p style="margin: 0 0 20px 0; color: #666666; font-size: 16px; line-height: 1.6;">
-                    Sua conta de administrador no <strong>Envio Legal</strong> foi criada com sucesso.
+                    Sua conta de administrador no <strong>Multienvio</strong> foi criada com sucesso.
                   </p>
                   <p style="margin: 0 0 20px 0; color: #666666; font-size: 16px; line-height: 1.6;">
                     Use as credenciais abaixo para fazer seu primeiro login:
@@ -391,7 +391,7 @@ export async function sendStaffTempPasswordEmail(
               <tr>
                 <td style="background-color: #f5f5f5; padding: 20px 30px; text-align: center; border-top: 1px solid #e8e8e8;">
                   <p style="margin: 0; color: #999999; font-size: 12px;">
-                    © ${new Date().getFullYear()} Envio Legal. Todos os direitos reservados.
+                    © ${new Date().getFullYear()} Multienvio. Todos os direitos reservados.
                   </p>
                 </td>
               </tr>
@@ -405,7 +405,7 @@ export async function sendStaffTempPasswordEmail(
 
   return sendEmail({
     to,
-    subject: 'Sua conta foi criada - Envio Legal Admin',
+    subject: 'Sua conta foi criada - Multienvio Admin',
     html,
   });
 }
@@ -433,7 +433,7 @@ export async function sendShipmentTrackingEmail(
     <head>
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Seu envio foi criado - Envio Legal</title>
+      <title>Seu envio foi criado - Multienvio</title>
     </head>
     <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f5f5f5;">
       <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f5f5f5; padding: 20px 0;">
@@ -443,7 +443,7 @@ export async function sendShipmentTrackingEmail(
               <!-- Header -->
               <tr>
                 <td style="background-color: #1890ff; padding: 30px; text-align: center;">
-                  <h1 style="margin: 0; color: #ffffff; font-size: 28px;">Envio Legal</h1>
+                  <h1 style="margin: 0; color: #ffffff; font-size: 28px;">Multienvio</h1>
                 </td>
               </tr>
 
@@ -493,7 +493,7 @@ export async function sendShipmentTrackingEmail(
               <tr>
                 <td style="background-color: #f5f5f5; padding: 20px 30px; text-align: center; border-top: 1px solid #e8e8e8;">
                   <p style="margin: 0; color: #999999; font-size: 12px;">
-                    © ${new Date().getFullYear()} Envio Legal. Todos os direitos reservados.
+                    © ${new Date().getFullYear()} Multienvio. Todos os direitos reservados.
                   </p>
                 </td>
               </tr>
@@ -507,7 +507,7 @@ export async function sendShipmentTrackingEmail(
 
   return sendEmail({
     to,
-    subject: `Seu envio ${trackingCode} foi criado - Envio Legal`,
+    subject: `Seu envio ${trackingCode} foi criado - Multienvio`,
     html,
   });
 }
@@ -526,7 +526,7 @@ export async function sendPasswordResetEmail(
     <head>
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Redefinir senha - Envio Legal</title>
+      <title>Redefinir senha - Multienvio</title>
     </head>
     <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f5f5f5;">
       <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f5f5f5; padding: 20px 0;">
@@ -536,7 +536,7 @@ export async function sendPasswordResetEmail(
               <!-- Header -->
               <tr>
                 <td style="background-color: #1890ff; padding: 30px; text-align: center;">
-                  <h1 style="margin: 0; color: #ffffff; font-size: 28px;">Envio Legal</h1>
+                  <h1 style="margin: 0; color: #ffffff; font-size: 28px;">Multienvio</h1>
                 </td>
               </tr>
 
@@ -604,7 +604,7 @@ export async function sendPasswordResetEmail(
               <tr>
                 <td style="background-color: #f5f5f5; padding: 20px; text-align: center;">
                   <p style="margin: 0; color: #999999; font-size: 12px;">
-                    © ${new Date().getFullYear()} Envio Legal. Todos os direitos reservados.
+                    © ${new Date().getFullYear()} Multienvio. Todos os direitos reservados.
                   </p>
                 </td>
               </tr>
@@ -618,7 +618,7 @@ export async function sendPasswordResetEmail(
 
   return sendEmail({
     to,
-    subject: 'Redefinir senha - Envio Legal',
+    subject: 'Redefinir senha - Multienvio',
     html,
   });
 }

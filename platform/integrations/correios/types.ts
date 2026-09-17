@@ -151,7 +151,7 @@ export interface CorreiosPrazoResponse {
 }
 
 // ============================================================================
-// Tipos Internos (Envio Legal)
+// Tipos Internos (Multienvio)
 // ============================================================================
 
 export interface CorreiosPrecoPrazoInput {

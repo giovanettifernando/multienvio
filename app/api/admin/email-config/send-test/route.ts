@@ -93,7 +93,7 @@ export const POST = withApiHandler<EmailSendTestResponse>(async (context) => {
     await transporter.sendMail({
       from: `"${config.fromName}" <${config.fromAddress}>`,
       to,
-      subject: 'Email de Teste - Envio Legal',
+      subject: 'Email de Teste - Multienvio',
       html: `
         <!DOCTYPE html>
         <html>
@@ -145,12 +145,12 @@ export const POST = withApiHandler<EmailSendTestResponse>(async (context) => {
           <div class="header">
             <div class="success-icon">✓</div>
             <h1 style="margin: 0;">Email de Teste</h1>
-            <p style="margin: 10px 0 0 0; opacity: 0.9;">Envio Legal - Sistema de Gestão de Entregas</p>
+            <p style="margin: 10px 0 0 0; opacity: 0.9;">Multienvio - Sistema de Gestão de Entregas</p>
           </div>
 
           <div class="content">
             <h2>Configuração SMTP Funcionando!</h2>
-            <p>Parabéns! Se você está lendo este email, significa que a configuração SMTP do Envio Legal está funcionando corretamente.</p>
+            <p>Parabéns! Se você está lendo este email, significa que a configuração SMTP do Multienvio está funcionando corretamente.</p>
 
             <div class="info-box">
               <h3 style="margin-top: 0;">Informações da Configuração:</h3>
@@ -173,16 +173,16 @@ export const POST = withApiHandler<EmailSendTestResponse>(async (context) => {
           </div>
 
           <div class="footer">
-            <p>Este é um email automático do sistema Envio Legal.</p>
+            <p>Este é um email automático do sistema Multienvio.</p>
             <p>Data de envio: ${new Date().toLocaleString('pt-BR')}</p>
           </div>
         </body>
         </html>
       `,
       text: `
-Email de Teste - Envio Legal
+Email de Teste - Multienvio
 
-Parabéns! Se você está lendo este email, significa que a configuração SMTP do Envio Legal está funcionando corretamente.
+Parabéns! Se você está lendo este email, significa que a configuração SMTP do Multienvio está funcionando corretamente.
 
 Informações da Configuração:
 - Servidor: ${config.host}:${config.port}

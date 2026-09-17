@@ -155,7 +155,7 @@ export function usePixPayment({ onPaymentConfirmed }: UsePixPaymentOptions) {
       body: JSON.stringify({
         amountCents,
         paymentMethod: 'pix',
-        description: `Pagamento de ${itemCount} envio(s) - Envio Legal`,
+        description: `Pagamento de ${itemCount} envio(s) - Multienvio`,
         metadata: { type: 'checkout_payment' },
       }),
     });
@@ -214,7 +214,7 @@ export function usePixPayment({ onPaymentConfirmed }: UsePixPaymentOptions) {
         body: JSON.stringify({
           amountCents,
           paymentMethod: 'boleto',
-          description: description || `Pagamento de ${itemCount} envio(s) - Envio Legal`,
+          description: description || `Pagamento de ${itemCount} envio(s) - Multienvio`,
           metadata: { type: 'checkout_payment' },
         }),
       });

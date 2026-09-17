@@ -142,7 +142,7 @@ async function generateManifestPdf(pickup: PickupRequestWithRelations): Promise<
     yPos -= logoHeight + 20;
   } catch {
     // Se não carregar logo, desenhar texto
-    page.drawText('ENVIO LEGAL', {
+    page.drawText('MULTIENVIO', {
       x: margin,
       y: yPos - 20,
       size: 24,
@@ -246,7 +246,7 @@ async function generateManifestPdf(pickup: PickupRequestWithRelations): Promise<
   });
   yPos -= 25;
 
-  drawField('Código Envio Legal:', pickup.shipment.platformTrackingCode, true);
+  drawField('Código Multienvio:', pickup.shipment.platformTrackingCode, true);
   if (pickup.shipment.carrierTrackingCode) {
     drawField('Código Transportadora:', pickup.shipment.carrierTrackingCode);
   }

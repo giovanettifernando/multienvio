@@ -329,7 +329,7 @@ export default function AdminLayout({
             fontSize: 15,
           }}
         >
-          Envio Legal · Admin
+          Multienvio · Admin
         </Typography.Text>
       </Flex>
       <Menu
@@ -395,7 +395,7 @@ export default function AdminLayout({
                 fontSize: 15,
               }}
             >
-              Envio Legal · Admin
+              Multienvio · Admin
             </Typography.Text>
             <Button
               type="text"

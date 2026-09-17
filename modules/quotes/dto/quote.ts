@@ -16,7 +16,7 @@ export const origemDestinoSchema = z.object({
 /**
  * Dimensões mínimas aceitas para um volume, em centímetros.
  *
- * Regra de negócio do Envio Legal — mais restritiva que o mínimo dos Correios
+ * Regra de negócio do Multienvio — mais restritiva que o mínimo dos Correios
  * (que valida as três dimensões ORDENADAS: menor ≥ 2, média ≥ 11, maior ≥ 16,
  * em `platform/integrations/correios/correios-volume-validator.ts`). Qualquer
  * volume que passe por estes mínimos também satisfaz os dos Correios.

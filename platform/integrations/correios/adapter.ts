@@ -1,8 +1,8 @@
 /**
- * Adapter para integração dos Correios com o sistema de cotação do Envio Legal
+ * Adapter para integração dos Correios com o sistema de cotação do Multienvio
  *
  * Responsabilidades:
- * - Converter tipos internos do Envio Legal para formato da API dos Correios
+ * - Converter tipos internos do Multienvio para formato da API dos Correios
  * - Converter respostas dos Correios para tipos internos
  * - Integrar com o fluxo de cotação existente
  * - Integrar com o fluxo de criação de envio (pré-postagem)
@@ -122,7 +122,7 @@ export interface CorreiosShipmentResult {
 // ============================================================================
 
 /**
- * Converte QuoteRequest do Envio Legal para input dos Correios
+ * Converte QuoteRequest do Multienvio para input dos Correios
  */
 export function quoteRequestToCorreiosInput(request: QuoteRequest): CorreiosPrecoPrazoInput {
   // Calcular peso total em gramas
@@ -160,7 +160,7 @@ export function quoteRequestToCorreiosInput(request: QuoteRequest): CorreiosPrec
 }
 
 /**
- * Converte cotação dos Correios para QuoteResultItem do Envio Legal
+ * Converte cotação dos Correios para QuoteResultItem do Multienvio
  */
 export function correiosCotacaoToQuoteResult(
   cotacao: CorreiosCotacaoCompleta
@@ -181,7 +181,7 @@ export function correiosCotacaoToQuoteResult(
 }
 
 /**
- * Converte input de shipment do Envio Legal para CreatePrePostagemInput
+ * Converte input de shipment do Multienvio para CreatePrePostagemInput
  */
 export function shipmentInputToPrePostagem(
   input: CorreiosShipmentInput
@@ -277,14 +277,14 @@ export type CorreiosQuoteResult = {
 };
 
 /**
- * Obtém cotações dos Correios para uma requisição do Envio Legal
+ * Obtém cotações dos Correios para uma requisição do Multienvio
  *
  * IMPORTANTE:
  * - Verifica elegibilidade dos volumes ANTES de chamar a API
  * - Se algum volume não atender as regras, retorna vazio com info de elegibilidade
  * - Cada volume é cotado individualmente e os preços são somados
  *
- * @param request Requisição de cotação do Envio Legal
+ * @param request Requisição de cotação do Multienvio
  * @returns Resultado com cotações e informações de elegibilidade
  */
 export async function quoteFromCorreios(
@@ -375,7 +375,7 @@ export async function quoteFromCorreios(
       request.seguro ?? undefined
     );
 
-    // 7. Converter para formato do Envio Legal
+    // 7. Converter para formato do Multienvio
     const results = multiVolumeResults
       .filter((r) => r.totalPrice > 0 && !r.hasErrors)
       .map(multiVolumeResultToQuoteResult);
@@ -518,7 +518,7 @@ export async function createCorreiosShipment(
 }
 
 /**
- * Cria envio nos Correios a partir de dados do checkout do Envio Legal
+ * Cria envio nos Correios a partir de dados do checkout do Multienvio
  *
  * Esta função é usada no fluxo de checkout quando o usuário
  * seleciona um serviço dos Correios.

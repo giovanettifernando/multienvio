@@ -107,7 +107,7 @@ function AdminLoginForm() {
           ]}
           required
         >
-          <ELInput placeholder="usuario@enviolegal.com" />
+          <ELInput placeholder="usuario@empresa.com" />
         </ELFormItem>
         <ELFormItem
           label="Senha"

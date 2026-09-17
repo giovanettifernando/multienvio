@@ -1,5 +1,5 @@
 /**
- * Tema unificado Envio Legal
+ * Tema unificado Multienvio
  * Centraliza tokens, ConfigProvider e presets para Admin e Cliente
  */
 import type { ThemeConfig } from "antd";

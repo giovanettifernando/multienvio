@@ -10,8 +10,8 @@ const prisma = new PrismaClient();
 const faqItems = [
   // ============== CATEGORIA: ENVIOS ==============
   {
-    question: 'Como faço para enviar um pacote pelo Envio Legal?',
-    answer: `Para enviar um pacote pelo Envio Legal, siga estes passos simples:
+    question: 'Como faço para enviar um pacote pelo Multienvio?',
+    answer: `Para enviar um pacote pelo Multienvio, siga estes passos simples:
 
 1. Faça login na sua conta ou crie uma nova
 2. Clique em "Novo Envio" no menu principal
@@ -67,7 +67,7 @@ Após a postagem do pacote, não é possível cancelar o envio.`,
 - Cartão de crédito (Visa, Mastercard, Elo, American Express)
 - Cartão de débito
 - PIX (pagamento instantâneo)
-- Saldo da Carteira Digital Envio Legal
+- Saldo da Carteira Digital Multienvio
 
 Os pagamentos via PIX são processados instantaneamente. Cartões de crédito podem ter aprovação em até 2 minutos.`,
     category: 'Pagamentos',
@@ -76,7 +76,7 @@ Os pagamentos via PIX são processados instantaneamente. Cartões de crédito po
   },
   {
     question: 'Como funciona a Carteira Digital?',
-    answer: `A Carteira Digital é sua conta de créditos no Envio Legal:
+    answer: `A Carteira Digital é sua conta de créditos no Multienvio:
 
 - Você pode adicionar saldo a qualquer momento via PIX ou cartão
 - Use o saldo para pagar seus envios de forma rápida

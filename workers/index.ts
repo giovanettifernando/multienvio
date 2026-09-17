@@ -81,7 +81,7 @@ let isShuttingDown = false;
 
 async function start(): Promise<void> {
   console.log('='.repeat(60));
-  console.log('[WORKERS] Starting Envio Legal worker process...');
+  console.log('[WORKERS] Starting Multienvio worker process...');
   console.log('[WORKERS] PID:', process.pid);
   console.log('[WORKERS] Node:', process.version);
   console.log('[WORKERS] ENV:', process.env.NODE_ENV || 'development');

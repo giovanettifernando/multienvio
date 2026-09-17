@@ -279,7 +279,7 @@ export default function PaymentPageClient({ token }: PaymentPageClientProps) {
         {/* Header */}
         <div style={{ textAlign: "center", marginBottom: 24 }}>
           <Title level={2} style={{ marginBottom: 8 }}>
-            Envio Legal
+            Multienvio
           </Title>
           <Text type="secondary">Pagamento de Frete</Text>
         </div>
@@ -433,7 +433,7 @@ export default function PaymentPageClient({ token }: PaymentPageClientProps) {
         {/* Footer */}
         <div style={{ textAlign: "center", marginTop: 24 }}>
           <Text type="secondary" style={{ fontSize: 12 }}>
-            Envio Legal - Plataforma de envios{" "}
+            Multienvio - Plataforma de envios{" "}
             {new Date().getFullYear()}
           </Text>
         </div>

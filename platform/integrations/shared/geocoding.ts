@@ -109,7 +109,7 @@ async function waitForNominatimRateLimit(): Promise<void> {
  * https://operations.osmfoundation.org/policies/nominatim/
  */
 const NOMINATIM_HEADERS = {
-  'User-Agent': 'EnvioLegal/1.0 (https://enviolegal.com.br; contato@enviolegal.com.br)',
+  'User-Agent': 'Multienvio/1.0 (https://enviolegal.com.br; contato@enviolegal.com.br)',
   'Accept': 'application/json',
 };
 

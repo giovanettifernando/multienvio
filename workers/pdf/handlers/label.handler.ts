@@ -2,7 +2,7 @@
  * Handler: Label PDF Generation
  *
  * Extrai a lógica de geração de PDF de etiqueta de app/api/labels/[id]/pdf/route.ts.
- * Gera PDF com header Envio Legal + códigos de barras + PDFs dos Correios.
+ * Gera PDF com header Multienvio + códigos de barras + PDFs dos Correios.
  * Opcionalmente anexa Declaração de Conteúdo.
  */
 
@@ -18,7 +18,7 @@ import {
   validateCorreiosConfig,
 } from '../../../platform/integrations/correios/client';
 import { printLoggiLabel } from '../../../platform/integrations/loggi/label';
-import { createEnvioLegalPdf } from '../../../platform/labels/pdf-generator';
+import { createMultienvioPdf } from '../../../platform/labels/pdf-generator';
 // Usados apenas pelo anexo da declaração em papel, desativado em 01/09/2026.
 // Ver o bloco comentado mais abaixo.
 // import { buildRemetente, buildDestinatario } from '@/modules/shipments/application/declaracao-parties';
@@ -438,9 +438,9 @@ export async function generateLabelPdf(params: {
     throw new Error(`Não foi possível gerar nenhum PDF. Erros: ${errors.join('; ')}`);
   }
 
-  // 3. Criar PDF com header Envio Legal
+  // 3. Criar PDF com header Multienvio
   const platformTrackingCode = label.shipment.platformTrackingCode || '';
-  let finalPdf: Buffer | Uint8Array = await createEnvioLegalPdf({
+  let finalPdf: Buffer | Uint8Array = await createMultienvioPdf({
     platformTrackingCode,
     correioPdfBuffers: pdfBuffers,
     // O QR da DC-e precisa estar visível na embalagem. Substitui o anexo da

@@ -44,7 +44,7 @@ const CARRIER_TERMS: Record<string, CarrierTermsConfig> = {
 };
 
 const ENVIO_LEGAL_TERMS: TermLink = {
-  label: "Termos de Uso Envio Legal",
+  label: "Termos de Uso Multienvio",
   url: "/assets/termos-envio-legal.pdf",
 };
 
@@ -125,7 +125,7 @@ export function CarrierTermsModal({
 
         <div>
           <Typography.Text strong style={{ display: "block", marginBottom: 8 }}>
-            Termos de Uso Envio Legal
+            Termos de Uso Multienvio
           </Typography.Text>
           <a
             href={ENVIO_LEGAL_TERMS.url}
@@ -140,7 +140,7 @@ export function CarrierTermsModal({
             checked={enviolegalAgreed}
             onChange={(e) => setEnviolegalAgreed(e.target.checked)}
           >
-            Li e concordo com os Termos de Uso da Envio Legal
+            Li e concordo com os Termos de Uso do Multienvio
           </Checkbox>
         </div>
 

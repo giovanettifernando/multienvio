@@ -4,7 +4,7 @@ import dynamic from 'next/dynamic';
 import Loading from './loading';
 
 export const metadata = {
-  title: "Pagamentos Pendentes - Envio Legal",
+  title: "Pagamentos Pendentes - Multienvio",
   description: "Gerencie as solicitacoes de pagamento enviadas para destinatarios",
 };
 

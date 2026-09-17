@@ -62,7 +62,7 @@ const INITIAL_MESSAGES: Message[] = [
   {
     id: "welcome",
     role: "assistant",
-    content: "Olá! Sou o assistente virtual do Envio Legal. Como posso ajudar você hoje?",
+    content: "Olá! Sou o assistente virtual do Multienvio. Como posso ajudar você hoje?",
     timestamp: new Date(),
   },
 ];

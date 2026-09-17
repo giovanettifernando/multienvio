@@ -333,7 +333,7 @@ export default function ShipmentDetailDrawer({
               </Space>
 
               <Descriptions column={1} bordered size="small">
-                <Descriptions.Item label="Tracking Envio Legal">
+                <Descriptions.Item label="Tracking Multienvio">
                   <Text copyable strong>
                     {shipment.platformTrackingCode}
                   </Text>

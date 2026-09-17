@@ -80,7 +80,7 @@ export async function sendRecipientPaymentRequestEmail(
     <head>
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Solicitacao de Pagamento de Frete - Envio Legal</title>
+      <title>Solicitacao de Pagamento de Frete - Multienvio</title>
     </head>
     <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f5f5f5;">
       <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f5f5f5; padding: 20px 0;">
@@ -90,7 +90,7 @@ export async function sendRecipientPaymentRequestEmail(
               <!-- Header -->
               <tr>
                 <td style="background-color: #1890ff; padding: 30px; text-align: center;">
-                  <h1 style="margin: 0; color: #ffffff; font-size: 28px;">Envio Legal</h1>
+                  <h1 style="margin: 0; color: #ffffff; font-size: 28px;">Multienvio</h1>
                 </td>
               </tr>
 
@@ -181,7 +181,7 @@ export async function sendRecipientPaymentRequestEmail(
               <tr>
                 <td style="background-color: #f5f5f5; padding: 20px 30px; text-align: center; border-top: 1px solid #e8e8e8;">
                   <p style="margin: 0; color: #999999; font-size: 12px;">
-                    © ${new Date().getFullYear()} Envio Legal. Todos os direitos reservados.
+                    © ${new Date().getFullYear()} Multienvio. Todos os direitos reservados.
                   </p>
                 </td>
               </tr>
@@ -195,7 +195,7 @@ export async function sendRecipientPaymentRequestEmail(
 
   return sendEmail({
     to: data.recipientEmail,
-    subject: `${data.senderName} solicita pagamento de frete - Envio Legal`,
+    subject: `${data.senderName} solicita pagamento de frete - Multienvio`,
     html,
   });
 }
@@ -236,7 +236,7 @@ export async function sendRecipientPaymentConfirmedEmail(
     <head>
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Pagamento Confirmado - Envio Legal</title>
+      <title>Pagamento Confirmado - Multienvio</title>
     </head>
     <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f5f5f5;">
       <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f5f5f5; padding: 20px 0;">
@@ -246,7 +246,7 @@ export async function sendRecipientPaymentConfirmedEmail(
               <!-- Header -->
               <tr>
                 <td style="background-color: #52c41a; padding: 30px; text-align: center;">
-                  <h1 style="margin: 0; color: #ffffff; font-size: 28px;">Envio Legal</h1>
+                  <h1 style="margin: 0; color: #ffffff; font-size: 28px;">Multienvio</h1>
                 </td>
               </tr>
 
@@ -329,7 +329,7 @@ export async function sendRecipientPaymentConfirmedEmail(
               <tr>
                 <td style="background-color: #f5f5f5; padding: 20px 30px; text-align: center; border-top: 1px solid #e8e8e8;">
                   <p style="margin: 0; color: #999999; font-size: 12px;">
-                    © ${new Date().getFullYear()} Envio Legal. Todos os direitos reservados.
+                    © ${new Date().getFullYear()} Multienvio. Todos os direitos reservados.
                   </p>
                 </td>
               </tr>
@@ -343,7 +343,7 @@ export async function sendRecipientPaymentConfirmedEmail(
 
   return sendEmail({
     to: data.recipientEmail,
-    subject: `Pagamento confirmado - Rastreio ${data.trackingCode} - Envio Legal`,
+    subject: `Pagamento confirmado - Rastreio ${data.trackingCode} - Multienvio`,
     html,
   });
 }
@@ -374,7 +374,7 @@ export async function sendRecipientPaymentExpiredEmail(
     <head>
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Link de Pagamento Expirado - Envio Legal</title>
+      <title>Link de Pagamento Expirado - Multienvio</title>
     </head>
     <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f5f5f5;">
       <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f5f5f5; padding: 20px 0;">
@@ -384,7 +384,7 @@ export async function sendRecipientPaymentExpiredEmail(
               <!-- Header -->
               <tr>
                 <td style="background-color: #ff4d4f; padding: 30px; text-align: center;">
-                  <h1 style="margin: 0; color: #ffffff; font-size: 28px;">Envio Legal</h1>
+                  <h1 style="margin: 0; color: #ffffff; font-size: 28px;">Multienvio</h1>
                 </td>
               </tr>
 
@@ -424,7 +424,7 @@ export async function sendRecipientPaymentExpiredEmail(
               <tr>
                 <td style="background-color: #f5f5f5; padding: 20px 30px; text-align: center; border-top: 1px solid #e8e8e8;">
                   <p style="margin: 0; color: #999999; font-size: 12px;">
-                    © ${new Date().getFullYear()} Envio Legal. Todos os direitos reservados.
+                    © ${new Date().getFullYear()} Multienvio. Todos os direitos reservados.
                   </p>
                 </td>
               </tr>
@@ -438,7 +438,7 @@ export async function sendRecipientPaymentExpiredEmail(
 
   return sendEmail({
     to: data.recipientEmail,
-    subject: `Link de pagamento expirado - Envio Legal`,
+    subject: `Link de pagamento expirado - Multienvio`,
     html,
   });
 }
@@ -482,7 +482,7 @@ export async function sendRecipientPaymentReminderEmail(
     <head>
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Lembrete: Pagamento de Frete Pendente - Envio Legal</title>
+      <title>Lembrete: Pagamento de Frete Pendente - Multienvio</title>
     </head>
     <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f5f5f5;">
       <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f5f5f5; padding: 20px 0;">
@@ -492,7 +492,7 @@ export async function sendRecipientPaymentReminderEmail(
               <!-- Header -->
               <tr>
                 <td style="background-color: #fa8c16; padding: 30px; text-align: center;">
-                  <h1 style="margin: 0; color: #ffffff; font-size: 28px;">Envio Legal</h1>
+                  <h1 style="margin: 0; color: #ffffff; font-size: 28px;">Multienvio</h1>
                 </td>
               </tr>
 
@@ -574,7 +574,7 @@ export async function sendRecipientPaymentReminderEmail(
               <tr>
                 <td style="background-color: #f5f5f5; padding: 20px 30px; text-align: center; border-top: 1px solid #e8e8e8;">
                   <p style="margin: 0; color: #999999; font-size: 12px;">
-                    © ${new Date().getFullYear()} Envio Legal. Todos os direitos reservados.
+                    © ${new Date().getFullYear()} Multienvio. Todos os direitos reservados.
                   </p>
                 </td>
               </tr>
@@ -623,7 +623,7 @@ export async function sendSenderPaymentReceivedEmail(
     <head>
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Pagamento Recebido - Envio Legal</title>
+      <title>Pagamento Recebido - Multienvio</title>
     </head>
     <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f5f5f5;">
       <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f5f5f5; padding: 20px 0;">
@@ -633,7 +633,7 @@ export async function sendSenderPaymentReceivedEmail(
               <!-- Header -->
               <tr>
                 <td style="background-color: #52c41a; padding: 30px; text-align: center;">
-                  <h1 style="margin: 0; color: #ffffff; font-size: 28px;">Envio Legal</h1>
+                  <h1 style="margin: 0; color: #ffffff; font-size: 28px;">Multienvio</h1>
                 </td>
               </tr>
 
@@ -704,7 +704,7 @@ export async function sendSenderPaymentReceivedEmail(
               <tr>
                 <td style="background-color: #f5f5f5; padding: 20px 30px; text-align: center; border-top: 1px solid #e8e8e8;">
                   <p style="margin: 0; color: #999999; font-size: 12px;">
-                    © ${new Date().getFullYear()} Envio Legal. Todos os direitos reservados.
+                    © ${new Date().getFullYear()} Multienvio. Todos os direitos reservados.
                   </p>
                 </td>
               </tr>

@@ -1,10 +1,10 @@
 import 'server-only';
 
 /**
- * Adapter para integração da J&T Express com o sistema de cotação do Envio Legal
+ * Adapter para integração da J&T Express com o sistema de cotação do Multienvio
  *
  * Responsabilidades:
- * - Converter tipos internos do Envio Legal para formato da API da J&T
+ * - Converter tipos internos do Multienvio para formato da API da J&T
  * - Converter respostas da J&T para tipos internos
  * - Integrar com o fluxo de cotação existente
  */
@@ -33,7 +33,7 @@ export { JT_CARRIER_NAME };
 // ============================================================================
 
 /**
- * Converte resposta de cotação da J&T para QuoteResultItem do Envio Legal
+ * Converte resposta de cotação da J&T para QuoteResultItem do Multienvio
  */
 export function jtCotacaoToQuoteResult(
   response: JTCostTimeResponse,
@@ -113,7 +113,7 @@ export type JTQuoteResult = {
 };
 
 /**
- * Obtém cotações da J&T para uma requisição do Envio Legal
+ * Obtém cotações da J&T para uma requisição do Multienvio
  *
  * Fluxo:
  * 1. Verifica elegibilidade dos volumes

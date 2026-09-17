@@ -104,22 +104,22 @@ function LabelPrintLayout({ data }: { data: LabelDetailData }) {
         >
           EL
         </div>
-        <span style={{ fontSize: '18px', fontWeight: 'bold' }}>Envio Legal</span>
+        <span style={{ fontSize: '18px', fontWeight: 'bold' }}>Multienvio</span>
       </div>
 
       <Divider style={{ margin: '8px 0', borderColor: '#000' }} />
 
-      {/* Linha 2: Título código Envio Legal */}
+      {/* Linha 2: Título código Multienvio */}
       <div style={{ fontSize: '11px', color: '#666', marginBottom: '4px' }}>
-        Código de rastreio da Envio Legal
+        Código de rastreio do Multienvio
       </div>
 
-      {/* Linha 3: Código de rastreio Envio Legal */}
+      {/* Linha 3: Código de rastreio Multienvio */}
       <div style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '8px', letterSpacing: '1px' }}>
         {data.platformTrackingCode}
       </div>
 
-      {/* Linha 4: Código de barras Envio Legal */}
+      {/* Linha 4: Código de barras Multienvio */}
       <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '12px' }}>
         <Barcode
           value={data.platformTrackingCode}

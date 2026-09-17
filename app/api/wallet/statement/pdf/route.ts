@@ -398,7 +398,7 @@ function generateStatementHTML(params: {
   </div>
 
   <div class="footer">
-    <p>Este documento foi gerado automaticamente pelo sistema Envio Legal.</p>
+    <p>Este documento foi gerado automaticamente pelo sistema Multienvio.</p>
     <p>Para dúvidas ou mais informações, entre em contato com nosso suporte.</p>
   </div>
 </body>

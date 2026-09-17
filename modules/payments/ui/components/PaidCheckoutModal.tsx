@@ -376,7 +376,7 @@ export function PaidCheckoutModal({
         // O envio só é criado quando o polling detecta a compensação e chama
         // onPaymentConfirmed, igual ao PIX.
         console.log('[PAID_CHECKOUT] Gerando boleto...');
-        await generateBoleto(totalAmount, 1, 'Pagamento de envio - Envio Legal');
+        await generateBoleto(totalAmount, 1, 'Pagamento de envio - Multienvio');
         setCheckoutInProgress(true);
         setLoading(false);
         return;

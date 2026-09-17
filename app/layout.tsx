@@ -15,9 +15,9 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Envio Legal | Plataforma de envios inteligentes",
+  title: "Multienvio | Plataforma de envios inteligentes",
   description:
-    "Envio Legal: cotações de frete, geração de etiquetas e gestão completa de envios em um só lugar.",
+    "Multienvio: cotações de frete, geração de etiquetas e gestão completa de envios em um só lugar.",
 };
 
 export default function RootLayout({
