@@ -127,7 +127,6 @@ export default function ShipmentDetailDrawer({
         weight: shipment.weight,
         declaredValue: shipment.declaredValue,
         freightCost: shipment.freightCost,
-        pickupFee: shipment.pickupFee,
         estimatedDays: shipment.estimatedDays,
         recipientName: shipment.recipientName,
         recipientPhone: shipment.recipientPhone,
@@ -251,10 +250,6 @@ export default function ShipmentDetailDrawer({
                 <InputNumber min={0} step={0.01} precision={2} style={{ width: '100%' }} prefix="R$" decimalSeparator="," formatter={inputNumberFormatterBRL} parser={inputNumberParserBRL} />
               </Form.Item>
 
-              <Form.Item label="Taxa de Coleta (R$)" name="pickupFee">
-                <InputNumber min={0} step={0.01} precision={2} style={{ width: '100%' }} prefix="R$" decimalSeparator="," formatter={inputNumberFormatterBRL} parser={inputNumberParserBRL} />
-              </Form.Item>
-
               <Form.Item label="Prazo Estimado (dias)" name="estimatedDays">
                 <InputNumber min={0} style={{ width: '100%' }} />
               </Form.Item>
@@ -364,9 +359,6 @@ export default function ShipmentDetailDrawer({
                 <Descriptions.Item label="Custo do Frete">
                   {shipment.freightCost ? formatBRL(shipment.freightCost) : '—'}
                 </Descriptions.Item>
-                <Descriptions.Item label="Taxa de Coleta">
-                  {shipment.pickupFee ? formatBRL(shipment.pickupFee) : '—'}
-                </Descriptions.Item>
                 <Descriptions.Item label="Prazo Estimado">
                   {shipment.estimatedDays ? `${shipment.estimatedDays} dias` : '—'}
                 </Descriptions.Item>
@@ -379,11 +371,6 @@ export default function ShipmentDetailDrawer({
                 <Descriptions.Item label="Postado em">
                   {shipment.postedAt
                     ? dayjs(shipment.postedAt).format('DD/MM/YYYY HH:mm')
-                    : '—'}
-                </Descriptions.Item>
-                <Descriptions.Item label="Recebido em">
-                  {shipment.receivedAt
-                    ? dayjs(shipment.receivedAt).format('DD/MM/YYYY HH:mm')
                     : '—'}
                 </Descriptions.Item>
                 <Descriptions.Item label="Entregue em">
