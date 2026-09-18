@@ -2,6 +2,7 @@ import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import pg from 'pg';
 import * as bcrypt from 'bcrypt';
+import { seedFaq } from './seed-faq';
 
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
 const adapter = new PrismaPg(pool);
@@ -161,6 +162,9 @@ async function main() {
   });
 
   console.log(`✅ Staff operator criado: ${staffOperator.email}`);
+
+  // A Central de Ajuda vem do banco: sem isto, banco novo nasce sem FAQ.
+  await seedFaq(prisma);
 
   console.log('\n🎉 Seed concluído com sucesso!');
   console.log('\n📋 Credenciais de Clientes:');

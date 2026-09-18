@@ -8,8 +8,10 @@ import { PrismaPg } from '@prisma/adapter-pg';
 import pg from 'pg';
 
 // O Prisma 7 exige um adaptador; sem ele o script nem constrói o client.
-const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
-const prisma = new PrismaClient({ adapter: new PrismaPg(pool) });
+function criarPrisma() {
+  const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
+  return { prisma: new PrismaClient({ adapter: new PrismaPg(pool) }), pool };
+}
 
 const faqItems = [
   // ============== CATEGORIA: ENVIOS ==============
@@ -240,7 +242,11 @@ Importante: Guarde a embalagem original até a conclusão da análise.`,
   },
 ];
 
-async function main() {
+/**
+ * Popula o FAQ. Recebe o client de quem chama (o seed principal) para não
+ * abrir uma segunda conexão, e roda sozinho via `tsx prisma/seed-faq.ts`.
+ */
+export async function seedFaq(prisma: PrismaClient, force = true) {
   console.log('🌱 Populando FAQ com dados iniciais...\n');
 
   // Verificar se já existem FAQs
@@ -249,7 +255,7 @@ async function main() {
     console.log(`⚠️  Já existem ${existingCount} FAQs no banco.`);
     console.log('   Use --force para substituir os dados existentes.\n');
 
-    if (!process.argv.includes('--force')) {
+    if (!force) {
       console.log('❌ Operação cancelada. Execute com --force para sobrescrever.');
       return;
     }
@@ -289,12 +295,18 @@ async function main() {
   }
 }
 
-main()
-  .then(async () => {
-    await prisma.$disconnect();
-  })
-  .catch(async (e) => {
-    console.error('❌ Erro durante o seed:', e);
-    await prisma.$disconnect();
-    process.exit(1);
-  });
+// Execução direta: `pnpm exec tsx prisma/seed-faq.ts`
+if (process.argv[1]?.endsWith('seed-faq.ts')) {
+  const { prisma, pool } = criarPrisma();
+  seedFaq(prisma, process.argv.includes('--force'))
+    .then(async () => {
+      await prisma.$disconnect();
+      await pool.end();
+    })
+    .catch(async (e) => {
+      console.error('❌ Erro durante o seed do FAQ:', e);
+      await prisma.$disconnect();
+      await pool.end();
+      process.exit(1);
+    });
+}
