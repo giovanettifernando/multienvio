@@ -732,7 +732,6 @@ async function integrateWithCarrierSafely(
         carrierTrackingCode: null,
         carrierPrePostageId: null,
         carrierQuotePrice: null,
-        hasDivergence: false,
         divergenceType: null,
         divergenceNotes: null,
         divergenceWidth: null,

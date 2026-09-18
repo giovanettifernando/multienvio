@@ -1,5 +1,5 @@
 /**
- * Google OAuth utilities for User and Collector authentication
+ * Google OAuth utilities for User authentication
  * Carrega credenciais do banco de dados
  */
 

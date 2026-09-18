@@ -35,7 +35,7 @@ export const GET = withApiHandler<GetFAQResponse>(async (context) => {
   const category = searchParams.get('category');
 
   // Validar audience
-  const validAudiences: FAQAudience[] = ['USER', 'COLLECTOR'];
+  const validAudiences: FAQAudience[] = ['USER'];
   const audience: FAQAudience = validAudiences.includes(audienceParam as FAQAudience)
     ? (audienceParam as FAQAudience)
     : 'USER';

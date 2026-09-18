@@ -41,18 +41,6 @@ interface ShipmentDetailPackage {
   carrierTrackingCode: string | null;
   carrierPrePostageId: string | null;
   carrierQuotePrice: number | null;
-  hasDivergence: boolean;
-  divergenceType: string | null;
-  divergenceNotes: string | null;
-  divergenceWidth: number | null;
-  divergenceHeight: number | null;
-  divergenceLength: number | null;
-  divergenceWeight: number | null;
-  divergencePhotoUrl: string | null;
-  divergenceRegisteredAt: string | null;
-  divergenceRegisteredBy: string | null;
-  checkedAt: string | null;
-  checkedBy: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -149,7 +137,6 @@ interface ShipmentUpdateResponse {
     paymentMethod: string | null;
     publicTrackingId: string | null;
     postedAt: Date | null;
-    receivedBy: string | null;
     deliveredAt: Date | null;
     platformShippingCommissionCents: number | null;
       createdAt: Date;
@@ -218,8 +205,6 @@ export const GET = withApiHandler<ShipmentDetailResponse, { id: string }>(async 
       ...pkg,
       createdAt: pkg.createdAt.toISOString(),
       updatedAt: pkg.updatedAt.toISOString(),
-      divergenceRegisteredAt: pkg.divergenceRegisteredAt?.toISOString() || null,
-      checkedAt: pkg.checkedAt?.toISOString() || null,
     })),
     trackingEvents: shipment.trackingEvents.map((evt) => ({
       ...evt,

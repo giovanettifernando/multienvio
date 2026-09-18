@@ -87,7 +87,7 @@ export async function logStatusChange(
 export async function logPasswordReset(
   actorId: string,
   targetUserId: string,
-  entityType: 'StaffUser' | 'User' | 'Collector'
+  entityType: 'StaffUser' | 'User'
 ): Promise<void> {
   await logAdminAction(
     actorId,

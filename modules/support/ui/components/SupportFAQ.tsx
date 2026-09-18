@@ -21,7 +21,7 @@ import { useFAQ, useFAQFeedback, useFAQView, type FAQItem } from '@/modules/supp
 const { Text, Title } = Typography;
 
 interface SupportFAQProps {
-  audience?: 'USER' | 'COLLECTOR';
+  audience?: 'USER';
   showTitle?: boolean;
   maxItems?: number;
 }

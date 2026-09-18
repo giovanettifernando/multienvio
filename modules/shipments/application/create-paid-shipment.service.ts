@@ -148,7 +148,6 @@ export async function createPaidShipment(
       where: { platformTrackingCode: trackingCode },
       include: {
         label: true,
-        pickupRequest: true,
       },
     });
 
@@ -169,7 +168,6 @@ export async function createPaidShipment(
         trackingCode: existingShipment.platformTrackingCode,
         publicTrackingId: existingShipment.publicTrackingId,
         labelId: existingShipment.label?.id || '',
-        pickupRequestId: existingShipment.pickupRequest?.id || null,
         walletTransactionId: existingTransaction?.id || null,
         isIdempotent: true,
       };

@@ -28,5 +28,4 @@ export type Shipment = {
   postedAt: string | null;    // ISO — data de postagem (null = não postado)
   labelUrl?: string;          // URL da etiqueta (stub)
   trackingUrl?: string;       // URL de rastreio externo (stub)
-  hasVolumeDivergence?: boolean; // Flag para alerta de divergência
 };

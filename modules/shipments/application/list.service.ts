@@ -35,7 +35,6 @@ export interface ShipmentListItem {
   postedAt: string | null;
   labelUrl: string | undefined;
   trackingUrl: string | undefined;
-  hasVolumeDivergence: boolean;
 }
 
 export interface ShipmentListFilters {
@@ -151,12 +150,6 @@ async function fetchShipmentsFromDb(
       where,
       include: {
         label: true,
-        packages: {
-          select: {
-            id: true,
-            hasDivergence: true,
-          },
-        },
       },
       orderBy: { createdAt: 'desc' },
       skip,
@@ -185,8 +178,6 @@ async function fetchShipmentsFromDb(
  */
 function mapShipmentsToListItems(shipments: any[]): ShipmentListItem[] {
   return shipments.map((s) => {
-    const hasVolumeDivergence = s.packages.some((pkg: { hasDivergence: boolean }) => pkg.hasDivergence);
-
     return {
       id: s.id,
       trackingCode: s.platformTrackingCode,
@@ -206,7 +197,6 @@ function mapShipmentsToListItems(shipments: any[]): ShipmentListItem[] {
       postedAt: s.postedAt?.toISOString() || null,
       labelUrl: s.label?.fileUrl || (s.label?.fileBase64 ? `data:${s.label.contentType};base64,${s.label.fileBase64}` : undefined),
       trackingUrl: s.publicTrackingId ? `/rastreio/${s.publicTrackingId}` : undefined,
-      hasVolumeDivergence,
     };
   });
 }

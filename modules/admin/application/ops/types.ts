@@ -46,7 +46,6 @@ export interface OpsShipment {
   labelIsPrinted?: boolean;
   // Package info
   packageCount?: number;
-  hasDivergence?: boolean;
 }
 
 export interface OpsException {

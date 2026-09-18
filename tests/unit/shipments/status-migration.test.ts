@@ -1,6 +1,5 @@
 import { describe, it } from 'node:test';
 import {
-  migrateLegacyStatus,
   canBeCancelled,
   getNextCancellationStatus,
   processCancellationBeforeHandoff,
@@ -10,17 +9,6 @@ import { ShipmentStatus } from '@/modules/shipments/application/shipment-status'
 import assert from 'node:assert/strict';
 
 describe('shipments - status migration', () => {
-  it('migra status legado com contexto de pickup', () => {
-    assert.strictEqual(
-      migrateLegacyStatus('criado', { pickupPointId: 'point' }),
-      ShipmentStatus.AWAITING_DROP_OFF_AT_POINT
-    );
-    assert.strictEqual(
-      migrateLegacyStatus('cancelled', { pickupRequestStatus: 'PENDING' }),
-      ShipmentStatus.CANCELLED_BEFORE_HANDOFF
-    );
-  });
-
   it('determina cancelabilidade e próximo status', () => {
     assert.strictEqual(canBeCancelled(ShipmentStatus.AWAITING_DROP_OFF_AT_POINT), true);
     assert.strictEqual(

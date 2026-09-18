@@ -30,7 +30,6 @@ model User {
   razaoSocial              String?
   passwordUpdatedAt        DateTime?
   passwordHistory          Json?
-  defaultPostingUnitId     String?
   addresses                Address[]
   cards                    Card[]
   carts                    Cart[]
@@ -45,7 +44,6 @@ model User {
   packagingTemplates       PackagingTemplate[]
   recurringItems           RecurringItem[]
   wallet                   Wallet?
-  pickupRequests           PickupRequest[]
   trackingCodeReservations TrackingCodeReservation[]
   recipientPaymentRequests RecipientPaymentRequest[]
   assistantChatSessions    AssistantChatSession[]
@@ -154,8 +152,6 @@ model CartItem {
   volumes        Json
   preferences    Json
   insuranceValue Decimal?
-  pickupPoint    Json?
-  pickupFee      Json?
   selectedQuote  Json
   totals         Json
   document       Json? // Documento fiscal: type (NFE/DECLARACAO), volumeDeclarations, packages, etc.
@@ -168,73 +164,67 @@ model CartItem {
 }
 
 model Shipment {
-  id                              String                   @id @default(uuid())
-  platformTrackingCode            String                   @unique // Código interno Envio Legal (customer-facing)
-  carrierTrackingCode             String? // Código da transportadora - primeiro volume ou único (para compatibilidade)
-  carrierMetadata                 Json? // Metadados resumidos (serviceCode, serviceName, totalPrice, isMultiVolume)
-  senderId                        String
-  recipientId                     String?
-  recipientName                   String?
-  recipientPhone                  String?
-  recipientEmail                  String?
-  recipientDocument               String?
-  destinationAddress              String?
-  destinationNeighborhood         String?
-  destinationCity                 String
-  destinationState                String
-  weight                          Float
-  declaredValue                   Float
-  status                          String                   @default("PICKUP_REQUESTED") /// @ShipmentStatus - Deve seguir enum ShipmentStatus (UPPER_SNAKE_CASE)
-  carrier                         String?
-  service                         String?
-  originCep                       String
+  id                               String                   @id @default(uuid())
+  platformTrackingCode             String                   @unique // Código interno Envio Legal (customer-facing)
+  carrierTrackingCode              String? // Código da transportadora - primeiro volume ou único (para compatibilidade)
+  carrierMetadata                  Json? // Metadados resumidos (serviceCode, serviceName, totalPrice, isMultiVolume)
+  senderId                         String
+  recipientId                      String?
+  recipientName                    String?
+  recipientPhone                   String?
+  recipientEmail                   String?
+  recipientDocument                String?
+  destinationAddress               String?
+  destinationNeighborhood          String?
+  destinationCity                  String
+  destinationState                 String
+  weight                           Float
+  declaredValue                    Float
+  status                           String                   @default("AWAITING_DROP_OFF_AT_POINT") /// @ShipmentStatus - Deve seguir enum ShipmentStatus (UPPER_SNAKE_CASE)
+  carrier                          String?
+  service                          String?
+  originCep                        String
   // Endereço de origem COMPLETO, congelado no momento do envio.
   //
   // Antes só o CEP era guardado, e a tela tinha de adivinhar o resto pelo
   // cadastro do usuário — o que dá errado quando ele muda de endereço: envios
   // passados passariam a exibir um endereço de onde a encomenda nunca saiu.
   // O destino já era guardado assim; a origem ficou de fora por descuido.
-  originAddress                   String?
-  originNeighborhood              String?
-  originCity                      String?
-  originState                     String?
-  senderName                      String?
+  originAddress                    String?
+  originNeighborhood               String?
+  originCity                       String?
+  originState                      String?
+  senderName                       String?
   // CPF/CNPJ do remetente, congelado junto com o nome. A declaracao de
   // conteudo exige identificar remetente e destinatario, e ler isso do
   // cadastro do usuario na hora de imprimir daria o documento atual, nao o de
   // quem enviou.
-  senderDocument                  String?
+  senderDocument                   String?
   /// Chave de acesso da DC-e (44 dígitos). Única: a mesma declaração não pode
   /// ser reaproveitada em outro envio.
-  dceKey                          String?                   @unique
-  destinationCep                  String
-  estimatedDays                   Int?
-  freightCost                     Float?
-  pickupFee                       Float? // Taxa de coleta (comissão do coletor)
-  pickupPointId                   String?
-  document                        Json?
-  paymentMethod                   String?
-  publicTrackingId                String?                  @unique @default(cuid())
-  postedAt                        DateTime?
-  receivedAt                      DateTime? // Data/hora de recepção no hub
-  receivedBy                      String? // ID do usuário que registrou a recepção
-  deliveredAt                     DateTime?
-  createdAt                       DateTime                 @default(now())
-  updatedAt                       DateTime                 @updatedAt
+  dceKey                           String?                  @unique
+  destinationCep                   String
+  estimatedDays                    Int?
+  freightCost                      Float?
+  document                         Json?
+  paymentMethod                    String?
+  publicTrackingId                 String?                  @unique @default(cuid())
+  postedAt                         DateTime?
+  deliveredAt                      DateTime?
+  createdAt                        DateTime                 @default(now())
+  updatedAt                        DateTime                 @updatedAt
   // Campos de comissão da plataforma (para reconciliação)
-  platformShippingCommissionCents Int?                     @map("platform_shipping_commission_cents") // Comissão sobre frete em centavos
-  platformPickupCommissionCents   Int?                     @map("platform_pickup_commission_cents") // Comissão sobre coleta em centavos
+  platformShippingCommissionCents  Int?                     @map("platform_shipping_commission_cents") // Comissão sobre frete em centavos
   // Comissão sobre o seguro, em centavos. Fica separada da de frete porque o
   // preço da cotação já traz as duas somadas: sem separar, a comissão de
   // seguro seria contabilizada como se fosse receita de frete.
-  platformInsuranceCommissionCents Int?                    @map("platform_insurance_commission_cents")
-  recipient                       User?                    @relation("RecipientShipments", fields: [recipientId], references: [id])
-  sender                          User                     @relation("SenderShipments", fields: [senderId], references: [id])
-  trackingEvents                  TrackingEvent[]
-  label                           Label?
-  pickupRequest                   PickupRequest?
-  packages                        Package[]
-  recipientPaymentRequest         RecipientPaymentRequest?
+  platformInsuranceCommissionCents Int?                     @map("platform_insurance_commission_cents")
+  recipient                        User?                    @relation("RecipientShipments", fields: [recipientId], references: [id])
+  sender                           User                     @relation("SenderShipments", fields: [senderId], references: [id])
+  trackingEvents                   TrackingEvent[]
+  label                            Label?
+  packages                         Package[]
+  recipientPaymentRequest          RecipientPaymentRequest?
 
   @@index([platformTrackingCode])
   @@index([carrierTrackingCode])
@@ -278,78 +268,25 @@ model Label {
 }
 
 model Package {
-  id                     String    @id @default(uuid())
-  shipmentId             String
-  packageNumber          Int // Número sequencial do volume (1, 2, 3...)
-  width                  Float // Largura em cm
-  height                 Float // Altura em cm
-  length                 Float // Comprimento em cm
-  weight                 Float // Peso em kg
+  id                  String   @id @default(uuid())
+  shipmentId          String
+  packageNumber       Int // Número sequencial do volume (1, 2, 3...)
+  width               Float // Largura em cm
+  height              Float // Altura em cm
+  length              Float // Comprimento em cm
+  weight              Float // Peso em kg
   // Dados específicos da transportadora (Correios)
-  carrierTrackingCode    String? // Código de rastreio deste volume (ex: AB123456789BR)
-  carrierPrePostageId    String? // ID da pré-postagem (ex: PRNnhoiSb6SSKvvVJA13MiOA)
-  carrierQuotePrice      Float? // Preço do frete deste volume
-  hasDivergence          Boolean   @default(false)
-  divergenceType         String? // "DIMENSAO", "PESO", "DIMENSAO_E_PESO"
-  divergenceNotes        String?   @db.Text
-  divergenceWidth        Float? // Nova largura (se houver divergência)
-  divergenceHeight       Float? // Nova altura (se houver divergência)
-  divergenceLength       Float? // Novo comprimento (se houver divergência)
-  divergenceWeight       Float? // Novo peso (se houver divergência)
-  divergencePhotoUrl     String? // URL da foto da divergência (opcional)
-  divergenceRegisteredAt DateTime?
-  divergenceRegisteredBy String? // ID do usuário que registrou
-  checkedAt              DateTime?
-  checkedBy              String? // ID do usuário que conferiu
-  createdAt              DateTime  @default(now())
-  updatedAt              DateTime  @updatedAt
-  shipment               Shipment  @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  carrierTrackingCode String? // Código de rastreio deste volume (ex: AB123456789BR)
+  carrierPrePostageId String? // ID da pré-postagem (ex: PRNnhoiSb6SSKvvVJA13MiOA)
+  carrierQuotePrice   Float? // Preço do frete deste volume
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  shipment            Shipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
 
   @@unique([shipmentId, packageNumber])
   @@index([shipmentId])
-  @@index([hasDivergence])
-  @@index([checkedAt])
   @@index([carrierTrackingCode]) // Busca por código de rastreio do volume
   @@map("packages")
-}
-
-model PickupRequest {
-  id                   String     @id @default(cuid())
-  userId               String // Usuário que solicitou a coleta
-  collectorId          String? // ID do coletor atribuído
-  shipmentId           String     @unique // Garantir 1 coleta por shipment
-  originCep            String
-  originAddress        String?
-  originCity           String?
-  originUf             String?    @db.VarChar(2)
-  windowStart          DateTime? // Início da janela de coleta
-  windowEnd            DateTime? // Fim da janela de coleta
-  status               String     @default("PENDING") // PENDING, SCHEDULED, COLLECTED, FAILED, CANCELED, COMPLETED
-  notes                String?    @db.Text
-  collectedAt          DateTime? // Data/hora em que a coleta foi realizada
-  collectedBy          String? // Nome de quem entregou os volumes
-  scannedCode          String? // Código de rastreio lido/digitado pelo coletor
-  deliveredToCarrierAt DateTime? // Data/hora em que foi entregue na transportadora
-  carrierRecipient     String? // Nome de quem recebeu na transportadora
-  carrierUnit          String? // Unidade da transportadora onde foi entregue
-  scheduleAt           DateTime? // Data/hora agendada pelo coletor para realizar a coleta
-  attemptCount         Int        @default(0) // Contador de tentativas de coleta
-  attemptNotes         Json? // Histórico de tentativas com data/hora e observações
-  createdAt            DateTime   @default(now())
-  updatedAt            DateTime   @updatedAt
-  user                 User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  collector            Collector? @relation(fields: [collectorId], references: [id], onDelete: SetNull)
-  shipment             Shipment   @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
-
-  // Removidos @@index([userId]), @@index([collectorId]), @@index([shipmentId]) - cobertos por compostos/unique
-  @@index([status])
-  @@index([createdAt])
-  @@index([originCep])
-  @@index([scheduleAt])
-  @@index([userId, status, createdAt]) // PERFORMANCE: Dashboard do usuário
-  @@index([collectorId, status]) // PERFORMANCE: Dashboard do coletor
-  @@index([collectorId, collectedAt]) // PERFORMANCE: Coletas realizadas pelo coletor
-  @@map("pickup_requests")
 }
 
 model TrackingEvent {
@@ -489,17 +426,11 @@ model SupportTicket {
   updatedAt      DateTime            @updatedAt
   lastActivityAt DateTime            @default(now())
   tags           Json?
-  pickupPointId  String?
-  collectorId    String?
   messages       SupportMessage[]
-  pickupPoint    PickupPoint?        @relation(fields: [pickupPointId], references: [id], onDelete: Cascade)
   user           User?               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  collector      Collector?          @relation(fields: [collectorId], references: [id], onDelete: Cascade)
 
   @@index([status, priority, createdAt])
   @@index([userId, createdAt])
-  @@index([pickupPointId, createdAt])
-  @@index([collectorId, createdAt])
   @@index([assignedTo])
   @@index([lastActivityAt]) // PERFORMANCE: Ordenação por atividade recente
   @@map("support_tickets")
@@ -531,68 +462,6 @@ model SupportAttachment {
 
   @@index([messageId])
   @@map("support_attachments")
-}
-
-model PickupPoint {
-  id                String            @id @default(cuid())
-  status            PickupPointStatus @default(ACTIVE)
-  razaoSocial       String
-  nomeFantasia      String
-  cnpj              String            @unique
-  ie                String?
-  email             String?
-  telefone          String?
-  cep               String?
-  logradouro        String?
-  numero            String?
-  complemento       String?
-  bairro            String?
-  cidade            String?
-  uf                String?           @db.VarChar(2)
-  // geo removido - usar apenas CEP para geolocalização
-  paymentMethod     Json
-  payoutDay         Int?
-  minPayoutAmount   Decimal?          @db.Decimal(10, 2)
-  commissionPerItem Decimal?          @db.Decimal(10, 2)
-  capacityPerDay    Int?
-  monthlyReceived   Int               @default(0)
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
-  passwordHash      String?
-  receptions        Reception[]
-  supportTickets    SupportTicket[]
-
-  @@index([status])
-  @@index([uf, cidade])
-  @@index([cnpj])
-  @@map("pickup_points")
-}
-
-model Reception {
-  id              String          @id @default(cuid())
-  pickupPointId   String
-  trackingCode    String          @unique
-  senderName      String
-  recipientName   String
-  weight          Float?
-  declaredValue   Float?
-  status          ReceptionStatus @default(PENDING)
-  expectedAt      DateTime?
-  receivedAt      DateTime?
-  processedAt     DateTime?
-  issueType       String?
-  issueDetails    String?
-  issuePhotos     Json?
-  commissionCents Int             @default(0)
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
-  pickupPoint     PickupPoint     @relation(fields: [pickupPointId], references: [id], onDelete: Cascade)
-
-  @@index([pickupPointId, status])
-  @@index([pickupPointId, receivedAt])
-  // Removido @@index([trackingCode]) - trackingCode é @unique
-  @@index([status])
-  @@map("receptions")
 }
 
 model Quote {
@@ -673,26 +542,26 @@ model QuoteSelection {
 }
 
 model Carrier {
-  id                        String                 @id @default(cuid())
-  name                      String
-  slug                      String                 @unique
-  status                    IntegrationStatus      @default(ACTIVE)
-  environment               IntegrationEnvironment @default(PRODUCTION)
-  baseUrl                   String?
-  timeout                   Int                    @default(30000)
-  maxRetries                Int                    @default(3)
-  logoUrl                   String?
-  description               String?
+  id                         String                 @id @default(cuid())
+  name                       String
+  slug                       String                 @unique
+  status                     IntegrationStatus      @default(ACTIVE)
+  environment                IntegrationEnvironment @default(PRODUCTION)
+  baseUrl                    String?
+  timeout                    Int                    @default(30000)
+  maxRetries                 Int                    @default(3)
+  logoUrl                    String?
+  description                String?
   /// Comissao sobre frete (%) - aplicada nas cotacoes desta transportadora
-  shippingCommissionPercent Decimal?               @map("shipping_commission_percent") @db.Decimal(5, 2)
+  shippingCommissionPercent  Decimal?               @map("shipping_commission_percent") @db.Decimal(5, 2)
   /// Comissao de seguro: pontos percentuais somados sobre o VALOR DECLARADO.
   /// Ex.: transportadora cobra 2% de valor declarado e este campo e 1 -> o
   /// cliente paga 3%, e 1% do valor declarado fica com a plataforma.
   /// Nao depende da tarifa interna da transportadora, entao vale para todas.
-  insuranceCommissionPercent Decimal?              @map("insurance_commission_percent") @db.Decimal(5, 2)
-  createdAt                 DateTime               @default(now())
-  updatedAt                 DateTime               @updatedAt
-  credentials               CarrierCredential[]
+  insuranceCommissionPercent Decimal?               @map("insurance_commission_percent") @db.Decimal(5, 2)
+  createdAt                  DateTime               @default(now())
+  updatedAt                  DateTime               @updatedAt
+  credentials                CarrierCredential[]
 
   @@index([slug])
   @@index([status])
@@ -900,109 +769,6 @@ model GoogleOAuthConfig {
   @@map("google_oauth_configs")
 }
 
-model Collector {
-  id                       String               @id @default(cuid())
-  status                   CollectorStatus      @default(ACTIVE)
-  pfNome                   String
-  pfCnhNumber              String
-  pfCnhCategory            String
-  pfCnhExpires             DateTime
-  pfCelular                String
-  pfWhatsapp               String?
-  pfCep                    String?
-  pfLogradouro             String?
-  pfNumero                 String?
-  pfComplemento            String?
-  pfBairro                 String?
-  pfCidade                 String?
-  pfUf                     String?              @db.VarChar(2)
-  // pfGeo removido - usar apenas pfCep para geolocalização
-  pjRazaoSocial            String
-  pjCnpj                   String               @unique
-  pjCep                    String?
-  pjLogradouro             String?
-  pjNumero                 String?
-  pjComplemento            String?
-  pjBairro                 String?
-  pjCidade                 String?
-  pjUf                     String?              @db.VarChar(2)
-  // pjGeo removido - usar apenas pjCep para geolocalização
-  vehiclePlate             String
-  vehicleBrand             String
-  vehicleModel             String?
-  vehicleYear              String?
-  commissionKind           CommissionKind
-  commissionAmount         Float?
-  commissionAmountPerKm    Float?
-  pickupFeeType            PickupFeeType        @default(FIXED) // Tipo de taxa de coleta
-  pickupFixedFee           Float? // Taxa fixa de coleta
-  pickupFeePerKm           Float? // Taxa de coleta por km
-  pickupFeeMinimum         Float? // Taxa mínima de coleta (piso)
-  bankMethodKind           BankMethodKind
-  bankPixType              PixKeyType?
-  bankPixKey               String?
-  bankCode                 String?
-  bankBranch               String?
-  bankAccount              String?
-  bankAccountType          AccountType?
-  bankHolderName           String?
-  bankHolderCnpj           String?
-  createdAt                DateTime             @default(now())
-  updatedAt                DateTime             @updatedAt
-  pfCpf                    String?              @unique
-  pfEmail                  String?              @unique
-  pfEmailVerificationToken String?              @unique
-  pfEmailVerified          Boolean              @default(false)
-  pfEmailVerifiedAt        DateTime?
-  googleId                 String?              @unique
-  authProvider             String               @default("email")
-  credential               CollectorCredential?
-  documents                CollectorDocument[]
-  pickupRequests           PickupRequest[]
-  supportTickets           SupportTicket[]
-
-  @@index([status])
-  @@index([pfCpf])
-  @@index([pfEmail])
-  @@index([pjCnpj])
-  @@index([pfCidade, pfUf])
-  @@index([pjCidade, pjUf])
-  @@index([googleId])
-  @@map("collectors")
-}
-
-model CollectorDocument {
-  id          String    @id @default(cuid())
-  collectorId String
-  type        String
-  filename    String
-  url         String?
-  uploadedAt  DateTime  @default(now())
-  createdAt   DateTime  @default(now())
-  expiresAt   DateTime?
-  issuedAt    DateTime?
-  mimeType    String?
-  size        Int?
-  storageKey  String?
-  updatedAt   DateTime  @updatedAt
-  collector   Collector @relation(fields: [collectorId], references: [id], onDelete: Cascade)
-
-  @@unique([collectorId, type])
-  @@index([collectorId, type])
-  @@map("collector_documents")
-}
-
-model CollectorCredential {
-  id           String    @id @default(cuid())
-  collectorId  String    @unique
-  passwordHash String
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  collector    Collector @relation(fields: [collectorId], references: [id], onDelete: Cascade)
-
-  @@map("collector_credentials")
-}
-
 model PackagingTemplate {
   id        String   @id @default(cuid())
   userId    String
@@ -1038,8 +804,6 @@ enum AdminPermission {
   OPERACOES
   INTEGRACOES
   SUPORTE
-  COLETORES
-  PONTOS_COLETA
   USUARIOS
   CONFIGURACOES
 }
@@ -1076,19 +840,6 @@ enum SupportPriority {
 enum SupportAuthorRole {
   USER
   AGENT
-}
-
-enum PickupPointStatus {
-  ACTIVE
-  BLOCKED
-  PENDING
-}
-
-enum ReceptionStatus {
-  PENDING
-  RECEIVED
-  ISSUE_REPORTED
-  PROCESSED
 }
 
 enum QuoteStatus {
@@ -1158,52 +909,6 @@ enum LedgerEntryType {
   FEE
   PAYOUT
   ADJUSTMENT
-}
-
-enum CollectorStatus {
-  ACTIVE
-  BLOCKED
-  INACTIVE
-
-  @@map("collector_status")
-}
-
-enum PixKeyType {
-  CPF
-  CNPJ
-  EMAIL
-  PHONE
-  RANDOM
-
-  @@map("pix_key_type")
-}
-
-enum AccountType {
-  CORRENTE
-  POUPANCA
-
-  @@map("account_type")
-}
-
-enum CommissionKind {
-  FIXA
-  POR_KM
-
-  @@map("commission_kind")
-}
-
-enum BankMethodKind {
-  PIX
-  TRANSFER
-
-  @@map("bank_method_kind")
-}
-
-enum PickupFeeType {
-  FIXED
-  PER_KM
-
-  @@map("pickup_fee_type")
 }
 
 enum EmailConfigStatus {
@@ -1319,73 +1024,17 @@ model RecurringItem {
 /// Configuração de comissões da plataforma (singleton)
 /// Valores em percentual (ex: 10.5 = 10.5%)
 model PlatformCommission {
-  id                         String   @id @default(cuid())
+  id                        String   @id @default(cuid())
   /// Comissão sobre valor de frete (%)
-  shippingCommissionPercent  Decimal  @default(0) @map("shipping_commission_percent") @db.Decimal(5, 2)
-  /// Comissão sobre taxa de coleta (%)
-  pickupFeeCommissionPercent Decimal  @default(0) @map("pickup_fee_commission_percent") @db.Decimal(5, 2)
+  shippingCommissionPercent Decimal  @default(0) @map("shipping_commission_percent") @db.Decimal(5, 2)
   /// Se ativa, aplica as comissões
-  isActive                   Boolean  @default(true) @map("is_active")
+  isActive                  Boolean  @default(true) @map("is_active")
   /// Última alteração feita por (staff user id)
-  updatedById                String?  @map("updated_by_id")
-  createdAt                  DateTime @default(now()) @map("created_at")
-  updatedAt                  DateTime @updatedAt @map("updated_at")
+  updatedById               String?  @map("updated_by_id")
+  createdAt                 DateTime @default(now()) @map("created_at")
+  updatedAt                 DateTime @updatedAt @map("updated_at")
 
   @@map("platform_commissions")
-}
-
-// ============================================
-// FIPE - Base de Veículos
-// ============================================
-
-enum FipeVehicleType {
-  cars
-  motorcycles
-  trucks
-
-  @@map("fipe_vehicle_type")
-}
-
-/// Marcas de veículos da tabela FIPE
-model FipeVehicleBrand {
-  id             String          @id @default(cuid())
-  vehicleType    FipeVehicleType @map("vehicle_type")
-  fipeCode       String          @map("fipe_code")
-  name           String
-  referenceCode  Int             @map("reference_code")
-  referenceMonth String          @map("reference_month")
-  isActive       Boolean         @default(true) @map("is_active")
-  createdAt      DateTime        @default(now()) @map("created_at")
-  updatedAt      DateTime        @updatedAt @map("updated_at")
-
-  models FipeVehicleModel[]
-
-  @@unique([vehicleType, fipeCode, referenceCode], name: "fipe_brand_unique")
-  @@index([vehicleType, isActive])
-  @@index([name])
-  @@map("fipe_vehicle_brands")
-}
-
-/// Modelos de veículos da tabela FIPE
-model FipeVehicleModel {
-  id             String          @id @default(cuid())
-  brandId        String          @map("brand_id")
-  vehicleType    FipeVehicleType @map("vehicle_type")
-  fipeCode       String          @map("fipe_code")
-  name           String
-  referenceCode  Int             @map("reference_code")
-  referenceMonth String          @map("reference_month")
-  isActive       Boolean         @default(true) @map("is_active")
-  createdAt      DateTime        @default(now()) @map("created_at")
-  updatedAt      DateTime        @updatedAt @map("updated_at")
-
-  brand FipeVehicleBrand @relation(fields: [brandId], references: [id], onDelete: Cascade)
-
-  @@unique([brandId, fipeCode, referenceCode], name: "fipe_model_unique")
-  @@index([brandId, isActive])
-  @@index([vehicleType, isActive])
-  @@index([name])
-  @@map("fipe_vehicle_models")
 }
 
 // =====================================================
@@ -1480,7 +1129,6 @@ model ExpenseTemplate {
 
 enum FAQAudience {
   USER // FAQ para clientes/usuários
-  COLLECTOR // FAQ para coletores
 
   @@map("faq_audience")
 }
@@ -1578,16 +1226,11 @@ model RecipientPaymentRequest {
   estimatedDays Int?    @map("estimated_days")
 
   // Valores (em centavos para precisão)
-  freightCostCents Int  @map("freight_cost_cents")
-  pickupFeeCents   Int? @map("pickup_fee_cents")
-  totalCents       Int  @map("total_cents")
+  freightCostCents Int @map("freight_cost_cents")
+  totalCents       Int @map("total_cents")
 
   // Comissões registradas (para reconciliação)
   shippingCommissionCents Int? @map("shipping_commission_cents")
-  pickupCommissionCents   Int? @map("pickup_commission_cents")
-
-  // Opções
-  pickupAtOrigin Boolean @default(false) @map("pickup_at_origin")
 
   // Documento fiscal
   document Json?

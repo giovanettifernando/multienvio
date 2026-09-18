@@ -127,6 +127,18 @@ async function main() {
       status: 'ACTIVE',
       roleId: staffAdminRole.id,
       lastLoginAt: null,
+      // Sem isto o admin entra e é devolvido para /admin em toda tela que
+      // exige permissão — o layout redireciona quem não tem acesso.
+      isSuperAdmin: true,
+      permissions: [
+        'CONTAS',
+        'FINANCEIRO',
+        'OPERACOES',
+        'INTEGRACOES',
+        'SUPORTE',
+        'USUARIOS',
+        'CONFIGURACOES',
+      ],
     },
   });
 
@@ -144,6 +156,7 @@ async function main() {
       status: 'ACTIVE',
       roleId: staffOperatorRole.id,
       lastLoginAt: null,
+      permissions: ['OPERACOES', 'SUPORTE'],
     },
   });
 

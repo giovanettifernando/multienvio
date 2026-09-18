@@ -61,28 +61,6 @@ const STATUS_VARIANTS: Record<ShipmentStatus, StatusVariant> = {
   Devolvido: "warning",
 };
 
-type ShipmentVolumeDivergence = {
-  id: string;
-  volumeLabel: string;
-  registeredDimensions?: {
-    widthCm: number;
-    heightCm: number;
-    lengthCm: number;
-  };
-  registeredWeightKg?: number;
-  type: 'DIMENSAO' | 'PESO' | 'DIMENSAO_E_PESO';
-  newDimensions?: {
-    widthCm: number;
-    heightCm: number;
-    lengthCm: number;
-  };
-  newWeightKg?: number;
-  observations?: string;
-  photoUrl?: string | null;
-  createdAt: string;
-  collectorName?: string;
-  pickupPointName?: string;
-};
 
 export default function ShipmentsClient() {
   const { message } = App.useApp();
@@ -91,7 +69,6 @@ export default function ShipmentsClient() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [selectedShipmentId, setSelectedShipmentId] = useState<string | null>(null);
-  const [divergenceModalOpen, setDivergenceModalOpen] = useState(false);
   const [labelModalOpen, setLabelModalOpen] = useState(false);
   const [selectedShipmentForLabel, setSelectedShipmentForLabel] = useState<Shipment | null>(null);
   const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
@@ -143,21 +120,6 @@ export default function ShipmentsClient() {
     }
   }, [pageSize]);
 
-  const { data: divergencesData, isLoading: divergencesLoading } = useQuery<{
-    divergences: ShipmentVolumeDivergence[];
-  }>({
-    queryKey: ['shipment-divergences', selectedShipmentId],
-    queryFn: async () => {
-      const res = await fetch(`/api/shipments/${selectedShipmentId}/divergences`);
-      if (!res.ok) {
-        throw new Error('Erro ao buscar divergências');
-      }
-      const json = await res.json();
-      // Handle standardized API response format { data: T, error, meta }
-      return (json.data ?? json) as { divergences: ShipmentVolumeDivergence[] };
-    },
-    enabled: !!selectedShipmentId && divergenceModalOpen,
-  });
 
   // Buscar dados completos do shipment para o modal de etiqueta
   const { data: shipmentDetailForLabel } = useQuery<{
@@ -187,15 +149,7 @@ export default function ShipmentsClient() {
     enabled: !!selectedShipmentForLabel?.id && labelModalOpen,
   });
 
-  const handleOpenDivergenceModal = useCallback((shipmentId: string) => {
-    setSelectedShipmentId(shipmentId);
-    setDivergenceModalOpen(true);
-  }, []);
 
-  const handleCloseDivergenceModal = useCallback(() => {
-    setDivergenceModalOpen(false);
-    setSelectedShipmentId(null);
-  }, []);
 
   const handleOpenLabelModal = useCallback((shipment: Shipment) => {
     setSelectedShipmentForLabel(shipment);
@@ -262,17 +216,6 @@ export default function ShipmentsClient() {
             <Text type="secondary" style={{ fontSize: 11 }}>
               {row.recipientCityUf || '—'}
             </Text>
-            {row.hasVolumeDivergence && (
-              <ELButton
-                variant="danger"
-                size="small"
-                icon={<WarningOutlined />}
-                onClick={() => handleOpenDivergenceModal(row.id)}
-                style={{ width: 'fit-content', marginTop: 2 }}
-              >
-                Divergência
-              </ELButton>
-            )}
           </div>
         ),
       },
@@ -390,7 +333,7 @@ export default function ShipmentsClient() {
         },
       },
     ],
-    [cancelMut, handleOpenLabelModal, handleOpenDivergenceModal, handleOpenCancelConfirm, handlePrintDocument, printingDocumentId],
+    [cancelMut, handleOpenLabelModal, handleOpenCancelConfirm, handlePrintDocument, printingDocumentId],
   );
 
   return (
@@ -445,95 +388,6 @@ export default function ShipmentsClient() {
         </ELCard>
       </div>
 
-      <ELModal
-        title="Divergências de Volumes"
-        open={divergenceModalOpen}
-        onCancel={handleCloseDivergenceModal}
-        footer={
-          <ELButton onClick={handleCloseDivergenceModal}>
-            Fechar
-          </ELButton>
-        }
-        width={800}
-      >
-        {divergencesLoading ? (
-          <ELSkeleton active paragraph={{ rows: 4 }} />
-        ) : divergencesData?.divergences && divergencesData.divergences.length > 0 ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 24, width: '100%' }}>
-            {divergencesData.divergences.map((divergence) => (
-              <div key={divergence.id} style={{ borderBottom: '1px solid #f0f0f0', paddingBottom: 16 }}>
-                <Text strong style={{ fontSize: 16, marginBottom: 12, display: 'block' }}>
-                  Volume {divergence.volumeLabel}
-                </Text>
-                <ELTag color="red" style={{ marginBottom: 12 }}>
-                  {divergence.type === 'DIMENSAO' && 'Divergência de Dimensão'}
-                  {divergence.type === 'PESO' && 'Divergência de Peso'}
-                  {divergence.type === 'DIMENSAO_E_PESO' && 'Divergência de Dimensão e Peso'}
-                </ELTag>
-
-                <Descriptions column={2} size="small" bordered>
-                  {divergence.registeredDimensions && (
-                    <>
-                      <Descriptions.Item label="Dimensões declaradas" span={2}>
-                        {divergence.registeredDimensions.widthCm} × {divergence.registeredDimensions.heightCm} × {divergence.registeredDimensions.lengthCm} cm
-                      </Descriptions.Item>
-                      {divergence.newDimensions && (
-                        <Descriptions.Item label="Dimensões registradas" span={2}>
-                          <Text type="danger" strong>
-                            {divergence.newDimensions.widthCm} × {divergence.newDimensions.heightCm} × {divergence.newDimensions.lengthCm} cm
-                          </Text>
-                        </Descriptions.Item>
-                      )}
-                    </>
-                  )}
-                  {divergence.registeredWeightKg !== undefined && (
-                    <>
-                      <Descriptions.Item label="Peso declarado">
-                        {divergence.registeredWeightKg} kg
-                      </Descriptions.Item>
-                      {divergence.newWeightKg !== undefined && (
-                        <Descriptions.Item label="Peso registrado">
-                          <Text type="danger" strong>{divergence.newWeightKg} kg</Text>
-                        </Descriptions.Item>
-                      )}
-                    </>
-                  )}
-                  {divergence.observations && (
-                    <Descriptions.Item label="Observações" span={2}>
-                      {divergence.observations}
-                    </Descriptions.Item>
-                  )}
-                  {divergence.collectorName && (
-                    <Descriptions.Item label="Registrado por">
-                      {divergence.collectorName}
-                    </Descriptions.Item>
-                  )}
-                  <Descriptions.Item label="Data/hora">
-                    {new Date(divergence.createdAt).toLocaleString('pt-BR')}
-                  </Descriptions.Item>
-                </Descriptions>
-
-                {divergence.photoUrl && (
-                  <div style={{ marginTop: 12 }}>
-                    <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 8 }}>
-                      Foto da divergência:
-                    </Text>
-                    <Image
-                      src={divergence.photoUrl}
-                      alt="Foto da divergência"
-                      style={{ maxWidth: '100%', maxHeight: 300, objectFit: 'contain' }}
-                    />
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div style={{ textAlign: 'center', padding: 32 }}>
-            <Text type="secondary">Nenhuma divergência encontrada</Text>
-          </div>
-        )}
-      </ELModal>
 
       {/* Modal de impressão de etiqueta */}
       {selectedShipmentForLabel && (

@@ -68,7 +68,6 @@ export interface ShipmentInput {
   // Comissões da plataforma (para reconciliação)
   platformShippingCommissionCents?: number | null;
   platformInsuranceCommissionCents?: number | null;
-  platformPickupCommissionCents?: number | null;
 }
 
 export interface CreateShipmentWithVolumesInput {
@@ -148,7 +147,6 @@ export async function createShipmentWithVolumes(
           height: vol.altura,
           length: vol.comprimento,
           weight: vol.peso,
-          hasDivergence: false,
         },
       })
     )

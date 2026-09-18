@@ -74,7 +74,6 @@ export const GET = withApiHandler<Paged<OpsShipment>>(async (context) => {
         packages: {
           select: {
             id: true,
-            hasDivergence: true,
           },
         },
       },
@@ -120,7 +119,6 @@ export const GET = withApiHandler<Paged<OpsShipment>>(async (context) => {
     labelIsPrinted: s.label?.isPrinted || false,
     // Package info
     packageCount: s.packages.length,
-    hasDivergence: s.packages.some((p) => p.hasDivergence),
   }));
 
   const response: Paged<OpsShipment> = {

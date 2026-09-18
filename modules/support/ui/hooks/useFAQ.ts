@@ -5,7 +5,7 @@ export interface FAQItem {
   question: string;
   answer: string;
   category: string | null;
-  audience: 'USER' | 'COLLECTOR';
+  audience: 'USER';
   sortOrder: number;
   isActive: boolean;
   views: number;
@@ -22,7 +22,7 @@ export interface FAQListResponse {
 }
 
 interface UseFAQOptions {
-  audience?: 'USER' | 'COLLECTOR';
+  audience?: 'USER';
   category?: string;
   search?: string;
   enabled?: boolean;

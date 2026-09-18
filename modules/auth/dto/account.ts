@@ -59,16 +59,3 @@ export const RecurringItemUpdateSchema = z.object({
 
 export type RecurringItemUpdateInput = z.infer<typeof RecurringItemUpdateSchema>;
 
-// ============================================================================
-// User Preferences Schema
-// ============================================================================
-
-export const UserPreferencesSchema = z.object({
-  defaultPostingUnitId: z
-    .string()
-    .min(1, 'ID da unidade inválido')
-    .nullable()
-    .optional(),
-});
-
-export type UserPreferencesInput = z.infer<typeof UserPreferencesSchema>;

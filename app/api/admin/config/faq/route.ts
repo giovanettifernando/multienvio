@@ -22,7 +22,7 @@ const faqItemSchema = z.object({
   question: z.string().min(10, 'Pergunta deve ter no mínimo 10 caracteres').max(500),
   answer: z.string().min(20, 'Resposta deve ter no mínimo 20 caracteres').max(5000),
   category: z.string().max(100).nullable().optional(),
-  audience: z.enum(['USER', 'COLLECTOR']).default('USER'),
+  audience: z.enum(['USER']).default('USER'),
   sortOrder: z.number().int().min(0).default(0),
   isActive: z.boolean().default(true),
 });
@@ -43,7 +43,7 @@ export const GET = withApiHandler(async ({ req }) => {
     isActive?: boolean;
   } = {};
 
-  if (audienceParam === 'USER' || audienceParam === 'COLLECTOR') {
+  if (audienceParam === 'USER') {
     where.audience = audienceParam;
   }
 

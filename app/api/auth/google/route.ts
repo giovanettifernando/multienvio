@@ -1,7 +1,7 @@
 /**
  * GET /api/auth/google
  *
- * Initiates Google OAuth flow for User or Collector authentication.
+ * Initiates Google OAuth flow for User authentication.
  *
  * Query parameters:
  * - context: 'user' | 'collector' (required)

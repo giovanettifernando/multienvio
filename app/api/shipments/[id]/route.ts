@@ -14,18 +14,6 @@ interface ShipmentVolume {
   carrierTrackingCode: string | null;
   carrierPrePostageId: string | null;
   carrierQuotePrice: number | null;
-  hasDivergence: boolean;
-  divergenceType: string | null;
-  divergenceNotes: string | null;
-  divergenceWidth: number | null;
-  divergenceHeight: number | null;
-  divergenceLength: number | null;
-  divergenceWeight: number | null;
-  divergencePhotoUrl: string | null;
-  divergenceRegisteredAt: string | null;
-  divergenceRegisteredBy: string | null;
-  checkedAt: string | null;
-  checkedBy: string | null;
   createdAt: string;
   updatedAt: string;
   items?: unknown[];
@@ -97,13 +85,10 @@ interface ShipmentDetail {
   paymentMethod: string | null;
   publicTrackingId: string | null;
   postedAt: string | null;
-  receivedAt: string | null;
-  receivedBy: string | null;
   deliveredAt: string | null;
   createdAt: string;
   updatedAt: string;
   platformShippingCommissionCents: number | null;
-  platformPickupCommissionCents: number | null;
   documentType: string;
   nfeKeys: string[];
   items: unknown[];
@@ -195,7 +180,6 @@ export const GET = withApiHandler<ShipmentDetail, { id: string }>(async (context
     createdAt: shipment.createdAt.toISOString(),
     updatedAt: shipment.updatedAt.toISOString(),
     postedAt: shipment.postedAt?.toISOString() || null,
-    receivedAt: shipment.receivedAt?.toISOString() || null,
     deliveredAt: shipment.deliveredAt?.toISOString() || null,
 
     // Adicionar campos desserializados do document
@@ -230,22 +214,10 @@ export const GET = withApiHandler<ShipmentDetail, { id: string }>(async (context
         length: Number(pkg.length),
         createdAt: pkg.createdAt.toISOString(),
         updatedAt: pkg.updatedAt.toISOString(),
-        checkedAt: pkg.checkedAt?.toISOString() || null,
 
         // Items específicos deste volume
         items: volumeItems.length > 0 ? volumeItems : undefined,
 
-        // Divergence info (stored as flat fields on Package)
-        hasDivergence: pkg.hasDivergence,
-        divergenceType: pkg.divergenceType || null,
-        divergenceWidth: pkg.divergenceWidth || null,
-        divergenceHeight: pkg.divergenceHeight || null,
-        divergenceLength: pkg.divergenceLength || null,
-        divergenceWeight: pkg.divergenceWeight || null,
-        divergenceNotes: pkg.divergenceNotes || null,
-        divergencePhotoUrl: pkg.divergencePhotoUrl || null,
-        divergenceRegisteredAt: pkg.divergenceRegisteredAt?.toISOString() || null,
-        divergenceRegisteredBy: pkg.divergenceRegisteredBy || null,
       };
     }),
     trackingEvents: trackingEvents.map((event) => ({

@@ -129,7 +129,7 @@ export default function LeafletMapInner({
         <div style="min-width: 150px;">
           <b>${m.name}</b><br/>
           <button
-            onclick="window.selectPickupPoint('${m.id}')"
+            onclick="window.selectMapPoint('${m.id}')"
             style="margin-top: 8px; padding: 4px 12px; background: #1890ff; color: white; border: none; border-radius: 4px; cursor: pointer; width: 100%;"
           >
             Selecionar
@@ -190,11 +190,11 @@ export default function LeafletMapInner({
 
   // Global function for popup button
   useEffect(() => {
-    (window as Window & { selectPickupPoint?: (pointId: string) => void }).selectPickupPoint = (pointId: string) => {
+    (window as Window & { selectMapPoint?: (pointId: string) => void }).selectMapPoint = (pointId: string) => {
       onPointClick?.(pointId);
     };
     return () => {
-      delete (window as Window & { selectPickupPoint?: (pointId: string) => void }).selectPickupPoint;
+      delete (window as Window & { selectMapPoint?: (pointId: string) => void }).selectMapPoint;
     };
   }, [onPointClick]);
 

@@ -22,7 +22,7 @@ const updateFaqSchema = z.object({
   question: z.string().min(10, 'Pergunta deve ter no mínimo 10 caracteres').max(500).optional(),
   answer: z.string().min(20, 'Resposta deve ter no mínimo 20 caracteres').max(5000).optional(),
   category: z.string().max(100).nullable().optional(),
-  audience: z.enum(['USER', 'COLLECTOR']).optional(),
+  audience: z.enum(['USER']).optional(),
   sortOrder: z.number().int().min(0).optional(),
   isActive: z.boolean().optional(),
 });

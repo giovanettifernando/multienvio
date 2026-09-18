@@ -51,13 +51,6 @@ export enum SupportPriority {
   CRITICA = "critica",
 }
 
-/**
- * Status de Ponto de Coleta
- */
-export enum PickupPointStatus {
-  ACTIVE = "active",
-  BLOCKED = "blocked",
-}
 
 /**
  * Status de Usuário
@@ -146,47 +139,6 @@ export interface Collection {
   updatedAt: string;
 }
 
-/**
- * Contrato: Ponto de Coleta/Pickup Point
- */
-export interface PickupPoint {
-  id: string;
-  status: PickupPointStatus;
-  // Dados da Empresa
-  companyName: string;
-  tradingName: string;
-  cnpj: string;
-  stateRegistration?: string | null;
-  email?: string | null;
-  phone?: string | null;
-  // Endereço
-  address: Address;
-  // Geolocalização
-  geo?: {
-    lat: number;
-    lng: number;
-  } | null;
-  // Pagamento
-  paymentMethod: {
-    kind: "pix" | "transfer";
-    pixType?: "cpf" | "cnpj" | "email" | "phone" | "random";
-    pixKey?: string;
-    bankCode?: string;
-    branch?: string;
-    account?: string;
-    accountType?: "corrente" | "poupanca";
-    holderName?: string;
-    holderDocument?: string;
-  };
-  payoutDay?: number | null;
-  minPayoutAmount?: number | null;
-  commissionPerItem?: number | null;
-  // Operacional
-  capacityPerDay?: number | null;
-  monthlyReceived?: number;
-  createdAt: string;
-  updatedAt: string;
-}
 
 /**
  * Contrato: Ticket de Suporte

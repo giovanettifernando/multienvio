@@ -5,7 +5,7 @@ CREATE TYPE "CardBrand" AS ENUM ('VISA', 'MASTERCARD', 'ELO', 'AMEX', 'HIPERCARD
 CREATE TYPE "StaffStatus" AS ENUM ('ACTIVE', 'BLOCKED');
 
 -- CreateEnum
-CREATE TYPE "AdminPermission" AS ENUM ('CONTAS', 'FINANCEIRO', 'OPERACOES', 'INTEGRACOES', 'SUPORTE', 'COLETORES', 'PONTOS_COLETA', 'USUARIOS', 'CONFIGURACOES');
+CREATE TYPE "AdminPermission" AS ENUM ('CONTAS', 'FINANCEIRO', 'OPERACOES', 'INTEGRACOES', 'SUPORTE', 'USUARIOS', 'CONFIGURACOES');
 
 -- CreateEnum
 CREATE TYPE "WalletTxType" AS ENUM ('TOPUP', 'PURCHASE', 'REFUND', 'WITHDRAW', 'ADJUSTMENT');
@@ -21,12 +21,6 @@ CREATE TYPE "SupportPriority" AS ENUM ('LOW', 'MEDIUM', 'HIGH', 'URGENT');
 
 -- CreateEnum
 CREATE TYPE "SupportAuthorRole" AS ENUM ('USER', 'AGENT');
-
--- CreateEnum
-CREATE TYPE "PickupPointStatus" AS ENUM ('ACTIVE', 'BLOCKED', 'PENDING');
-
--- CreateEnum
-CREATE TYPE "ReceptionStatus" AS ENUM ('PENDING', 'RECEIVED', 'ISSUE_REPORTED', 'PROCESSED');
 
 -- CreateEnum
 CREATE TYPE "QuoteStatus" AS ENUM ('DRAFT', 'SELECTED', 'CONFIRMED', 'EXPIRED', 'CANCELED');
@@ -56,32 +50,31 @@ CREATE TYPE "TransactionStatus" AS ENUM ('PENDING', 'AUTHORIZED', 'CAPTURED', 'P
 CREATE TYPE "LedgerEntryType" AS ENUM ('CHARGE', 'REFUND', 'CHARGEBACK', 'FEE', 'PAYOUT', 'ADJUSTMENT');
 
 -- CreateEnum
-CREATE TYPE "collector_status" AS ENUM ('ACTIVE', 'BLOCKED', 'INACTIVE');
+CREATE TYPE "EmailConfigStatus" AS ENUM ('ACTIVE', 'INACTIVE');
 
 -- CreateEnum
-CREATE TYPE "pix_key_type" AS ENUM ('CPF', 'CNPJ', 'EMAIL', 'PHONE', 'RANDOM');
+CREATE TYPE "recipient_payment_status" AS ENUM ('PENDING', 'PAID', 'EXPIRED', 'CANCELLED');
 
 -- CreateEnum
-CREATE TYPE "account_type" AS ENUM ('CORRENTE', 'POUPANCA');
+CREATE TYPE "correios_agency_type" AS ENUM ('AC', 'ACF', 'AGF', 'CDD', 'CTE', 'CTCE', 'CEE', 'CTCI', 'OUTROS');
 
 -- CreateEnum
-CREATE TYPE "commission_kind" AS ENUM ('FIXA', 'POR_KM');
+CREATE TYPE "correios_agency_status" AS ENUM ('ATIVA', 'INATIVA', 'OUTRO');
 
 -- CreateEnum
-CREATE TYPE "bank_method_kind" AS ENUM ('PIX', 'TRANSFER');
+CREATE TYPE "ExpenseType" AS ENUM ('FIXED', 'VARIABLE');
 
 -- CreateEnum
-CREATE TYPE "pickup_fee_type" AS ENUM ('FIXED', 'PER_KM');
+CREATE TYPE "ExpenseCategory" AS ENUM ('INFRAESTRUTURA', 'SOFTWARE', 'GATEWAY', 'MARKETING', 'PESSOAL', 'ADMINISTRATIVO', 'LOGISTICA', 'IMPOSTOS', 'OUTROS');
 
--- CreateTable
-CREATE TABLE "roles" (
-    "id" TEXT NOT NULL,
-    "name" TEXT NOT NULL,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
+-- CreateEnum
+CREATE TYPE "ExpenseStatus" AS ENUM ('PENDING', 'PAID', 'CANCELED');
 
-    CONSTRAINT "roles_pkey" PRIMARY KEY ("id")
-);
+-- CreateEnum
+CREATE TYPE "faq_audience" AS ENUM ('USER');
+
+-- CreateEnum
+CREATE TYPE "AssistantMessageAuthor" AS ENUM ('USER', 'ASSISTANT', 'TOOL');
 
 -- CreateTable
 CREATE TABLE "users" (
@@ -91,24 +84,23 @@ CREATE TABLE "users" (
     "passwordHash" TEXT,
     "phone" TEXT,
     "status" TEXT NOT NULL DEFAULT 'pending',
-    "roleId" TEXT,
     "lastLoginAt" TIMESTAMP(3),
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "emailVerificationToken" TEXT,
     "emailVerified" BOOLEAN NOT NULL DEFAULT false,
     "emailVerifiedAt" TIMESTAMP(3),
-    "resetPasswordExpiry" TIMESTAMP(3),
-    "resetPasswordToken" TEXT,
     "termsAcceptedAt" TIMESTAMP(3),
     "avatarUrl" TEXT,
+    "googleId" TEXT,
+    "authProvider" TEXT NOT NULL DEFAULT 'email',
+    "asaasCustomerId" TEXT,
     "cpf" TEXT,
     "cnpj" TEXT,
     "hasCompany" BOOLEAN NOT NULL DEFAULT false,
     "razaoSocial" TEXT,
     "passwordUpdatedAt" TIMESTAMP(3),
     "passwordHistory" JSONB,
-    "tokenVersion" INTEGER NOT NULL DEFAULT 0,
 
     CONSTRAINT "users_pkey" PRIMARY KEY ("id")
 );
@@ -128,10 +120,6 @@ CREATE TABLE "addresses" (
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "isDefault" BOOLEAN NOT NULL DEFAULT false,
     "label" TEXT,
-    "cpfCnpj" TEXT,
-    "name" TEXT,
-    "referencia" TEXT,
-    "role" TEXT DEFAULT 'recipient',
 
     CONSTRAINT "addresses_pkey" PRIMARY KEY ("id")
 );
@@ -202,9 +190,9 @@ CREATE TABLE "cart_items" (
     "volumes" JSONB NOT NULL,
     "preferences" JSONB NOT NULL,
     "insuranceValue" DECIMAL(65,30),
-    "pickupPoint" JSONB,
     "selectedQuote" JSONB NOT NULL,
     "totals" JSONB NOT NULL,
+    "document" JSONB,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -216,6 +204,7 @@ CREATE TABLE "shipments" (
     "id" TEXT NOT NULL,
     "platformTrackingCode" TEXT NOT NULL,
     "carrierTrackingCode" TEXT,
+    "carrierMetadata" JSONB,
     "senderId" TEXT NOT NULL,
     "recipientId" TEXT,
     "recipientName" TEXT,
@@ -228,22 +217,29 @@ CREATE TABLE "shipments" (
     "destinationState" TEXT NOT NULL,
     "weight" DOUBLE PRECISION NOT NULL,
     "declaredValue" DOUBLE PRECISION NOT NULL,
-    "status" TEXT NOT NULL DEFAULT 'criado',
+    "status" TEXT NOT NULL DEFAULT 'AWAITING_DROP_OFF_AT_POINT',
     "carrier" TEXT,
     "service" TEXT,
     "originCep" TEXT NOT NULL,
+    "originAddress" TEXT,
+    "originNeighborhood" TEXT,
+    "originCity" TEXT,
+    "originState" TEXT,
+    "senderName" TEXT,
+    "senderDocument" TEXT,
+    "dceKey" TEXT,
     "destinationCep" TEXT NOT NULL,
     "estimatedDays" INTEGER,
     "freightCost" DOUBLE PRECISION,
-    "pickupPointId" TEXT,
     "document" JSONB,
     "paymentMethod" TEXT,
     "publicTrackingId" TEXT,
-    "publicTrackingAt" TIMESTAMP(3) DEFAULT CURRENT_TIMESTAMP,
     "postedAt" TIMESTAMP(3),
     "deliveredAt" TIMESTAMP(3),
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
+    "platform_shipping_commission_cents" INTEGER,
+    "platform_insurance_commission_cents" INTEGER,
 
     CONSTRAINT "shipments_pkey" PRIMARY KEY ("id")
 );
@@ -272,23 +268,21 @@ CREATE TABLE "labels" (
 );
 
 -- CreateTable
-CREATE TABLE "pickup_requests" (
+CREATE TABLE "packages" (
     "id" TEXT NOT NULL,
-    "companyId" TEXT,
-    "userId" TEXT NOT NULL,
     "shipmentId" TEXT NOT NULL,
-    "originCep" TEXT NOT NULL,
-    "originAddress" TEXT,
-    "originCity" TEXT,
-    "originUf" VARCHAR(2),
-    "windowStart" TIMESTAMP(3),
-    "windowEnd" TIMESTAMP(3),
-    "status" TEXT NOT NULL DEFAULT 'PENDING',
-    "notes" TEXT,
+    "packageNumber" INTEGER NOT NULL,
+    "width" DOUBLE PRECISION NOT NULL,
+    "height" DOUBLE PRECISION NOT NULL,
+    "length" DOUBLE PRECISION NOT NULL,
+    "weight" DOUBLE PRECISION NOT NULL,
+    "carrierTrackingCode" TEXT,
+    "carrierPrePostageId" TEXT,
+    "carrierQuotePrice" DOUBLE PRECISION,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
-    CONSTRAINT "pickup_requests_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "packages_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -412,7 +406,6 @@ CREATE TABLE "support_tickets" (
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "lastActivityAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "tags" JSONB,
-    "pickupPointId" TEXT,
 
     CONSTRAINT "support_tickets_pkey" PRIMARY KEY ("id")
 );
@@ -440,59 +433,6 @@ CREATE TABLE "support_attachments" (
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "support_attachments_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "pickup_points" (
-    "id" TEXT NOT NULL,
-    "status" "PickupPointStatus" NOT NULL DEFAULT 'ACTIVE',
-    "razaoSocial" TEXT NOT NULL,
-    "nomeFantasia" TEXT NOT NULL,
-    "cnpj" TEXT NOT NULL,
-    "ie" TEXT,
-    "email" TEXT,
-    "telefone" TEXT,
-    "cep" TEXT,
-    "logradouro" TEXT,
-    "numero" TEXT,
-    "complemento" TEXT,
-    "bairro" TEXT,
-    "cidade" TEXT,
-    "uf" VARCHAR(2),
-    "paymentMethod" JSONB NOT NULL,
-    "payoutDay" INTEGER,
-    "minPayoutAmount" DECIMAL(10,2),
-    "commissionPerItem" DECIMAL(10,2),
-    "capacityPerDay" INTEGER,
-    "monthlyReceived" INTEGER NOT NULL DEFAULT 0,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-    "passwordHash" TEXT,
-
-    CONSTRAINT "pickup_points_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "receptions" (
-    "id" TEXT NOT NULL,
-    "pickupPointId" TEXT NOT NULL,
-    "trackingCode" TEXT NOT NULL,
-    "senderName" TEXT NOT NULL,
-    "recipientName" TEXT NOT NULL,
-    "weight" DOUBLE PRECISION,
-    "declaredValue" DOUBLE PRECISION,
-    "status" "ReceptionStatus" NOT NULL DEFAULT 'PENDING',
-    "expectedAt" TIMESTAMP(3),
-    "receivedAt" TIMESTAMP(3),
-    "processedAt" TIMESTAMP(3),
-    "issueType" TEXT,
-    "issueDetails" TEXT,
-    "issuePhotos" JSONB,
-    "commissionCents" INTEGER NOT NULL DEFAULT 0,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "receptions_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -574,46 +514,12 @@ CREATE TABLE "carriers" (
     "maxRetries" INTEGER NOT NULL DEFAULT 3,
     "logoUrl" TEXT,
     "description" TEXT,
+    "shipping_commission_percent" DECIMAL(5,2),
+    "insurance_commission_percent" DECIMAL(5,2),
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "carriers_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "carrier_services" (
-    "id" TEXT NOT NULL,
-    "carrierId" TEXT NOT NULL,
-    "serviceId" TEXT NOT NULL,
-    "name" TEXT NOT NULL,
-    "type" TEXT NOT NULL,
-    "isActive" BOOLEAN NOT NULL DEFAULT true,
-    "minDays" INTEGER,
-    "maxDays" INTEGER,
-    "requiresInsurance" BOOLEAN NOT NULL DEFAULT false,
-    "metadata" JSONB,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "carrier_services_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "carrier_endpoints" (
-    "id" TEXT NOT NULL,
-    "carrierId" TEXT NOT NULL,
-    "operation" TEXT NOT NULL,
-    "method" TEXT NOT NULL,
-    "path" TEXT NOT NULL,
-    "timeout" INTEGER,
-    "retryable" BOOLEAN NOT NULL DEFAULT true,
-    "requestMapping" JSONB,
-    "responseMapping" JSONB,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-    "lastTestedAt" TIMESTAMP(3),
-
-    CONSTRAINT "carrier_endpoints_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -640,81 +546,6 @@ CREATE TABLE "carrier_credentials" (
     "lastRotatedAt" TIMESTAMP(3),
 
     CONSTRAINT "carrier_credentials_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "carrier_pricing_rules" (
-    "id" TEXT NOT NULL,
-    "carrierId" TEXT NOT NULL,
-    "name" TEXT NOT NULL,
-    "serviceId" TEXT,
-    "originStates" TEXT,
-    "destStates" TEXT,
-    "minWeight" DECIMAL(6,2),
-    "maxWeight" DECIMAL(6,2),
-    "basePriceCents" INTEGER,
-    "pricePerKg" DECIMAL(10,2),
-    "insurancePercent" DECIMAL(5,2),
-    "additionalFees" JSONB,
-    "isActive" BOOLEAN NOT NULL DEFAULT true,
-    "priority" INTEGER NOT NULL DEFAULT 0,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "carrier_pricing_rules_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "carrier_webhooks" (
-    "id" TEXT NOT NULL,
-    "carrierId" TEXT NOT NULL,
-    "eventType" TEXT NOT NULL,
-    "externalId" TEXT,
-    "payload" JSONB NOT NULL,
-    "signature" TEXT,
-    "status" TEXT NOT NULL,
-    "processedAt" TIMESTAMP(3),
-    "errorMessage" TEXT,
-    "retryCount" INTEGER NOT NULL DEFAULT 0,
-    "maxRetries" INTEGER NOT NULL DEFAULT 5,
-    "nextRetryAt" TIMESTAMP(3),
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "carrier_webhooks_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "carrier_health_checks" (
-    "id" TEXT NOT NULL,
-    "carrierId" TEXT NOT NULL,
-    "status" "HealthStatus" NOT NULL,
-    "responseTime" INTEGER,
-    "errorMessage" TEXT,
-    "successRate" DECIMAL(5,2),
-    "avgLatency" INTEGER,
-    "checkedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT "carrier_health_checks_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "carrier_api_calls" (
-    "id" TEXT NOT NULL,
-    "carrierId" TEXT NOT NULL,
-    "operation" TEXT NOT NULL,
-    "method" TEXT NOT NULL,
-    "endpoint" TEXT NOT NULL,
-    "requestBody" JSONB,
-    "responseBody" JSONB,
-    "statusCode" INTEGER,
-    "startedAt" TIMESTAMP(3) NOT NULL,
-    "completedAt" TIMESTAMP(3),
-    "duration" INTEGER,
-    "success" BOOLEAN NOT NULL,
-    "errorMessage" TEXT,
-
-    CONSTRAINT "carrier_api_calls_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -749,6 +580,7 @@ CREATE TABLE "payment_credentials" (
     "clientSecret" TEXT,
     "accessToken" TEXT,
     "refreshToken" TEXT,
+    "applicationId" TEXT,
     "expiresAt" TIMESTAMP(3),
     "isActive" BOOLEAN NOT NULL DEFAULT true,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -771,7 +603,6 @@ CREATE TABLE "payment_endpoints" (
     "responseMapping" JSONB,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
-    "lastTestedAt" TIMESTAMP(3),
 
     CONSTRAINT "payment_endpoints_pkey" PRIMARY KEY ("id")
 );
@@ -795,42 +626,13 @@ CREATE TABLE "payment_transactions" (
     "boletoUrl" TEXT,
     "boletoBarcode" TEXT,
     "metadata" JSONB,
+    "consumedByReference" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "authorizedAt" TIMESTAMP(3),
-    "capturedAt" TIMESTAMP(3),
     "paidAt" TIMESTAMP(3),
-    "refundedAt" TIMESTAMP(3),
 
     CONSTRAINT "payment_transactions_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "payment_refunds" (
-    "id" TEXT NOT NULL,
-    "transactionId" TEXT NOT NULL,
-    "externalId" TEXT,
-    "amountCents" INTEGER NOT NULL,
-    "reason" TEXT,
-    "status" TEXT NOT NULL,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "completedAt" TIMESTAMP(3),
-
-    CONSTRAINT "payment_refunds_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "payment_chargebacks" (
-    "id" TEXT NOT NULL,
-    "transactionId" TEXT NOT NULL,
-    "externalId" TEXT,
-    "reason" TEXT NOT NULL,
-    "amountCents" INTEGER NOT NULL,
-    "status" TEXT NOT NULL,
-    "receivedAt" TIMESTAMP(3) NOT NULL,
-    "resolvedAt" TIMESTAMP(3),
-
-    CONSTRAINT "payment_chargebacks_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -854,23 +656,8 @@ CREATE TABLE "payment_webhooks" (
 );
 
 -- CreateTable
-CREATE TABLE "payment_health_checks" (
-    "id" TEXT NOT NULL,
-    "gatewayId" TEXT NOT NULL,
-    "status" "HealthStatus" NOT NULL,
-    "responseTime" INTEGER,
-    "errorMessage" TEXT,
-    "successRate" DECIMAL(5,2),
-    "avgLatency" INTEGER,
-    "checkedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT "payment_health_checks_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
 CREATE TABLE "ledger_entries" (
     "id" TEXT NOT NULL,
-    "transactionId" TEXT,
     "type" "LedgerEntryType" NOT NULL,
     "amountCents" INTEGER NOT NULL,
     "accountType" TEXT NOT NULL,
@@ -883,89 +670,32 @@ CREATE TABLE "ledger_entries" (
 );
 
 -- CreateTable
-CREATE TABLE "collectors" (
+CREATE TABLE "email_configs" (
     "id" TEXT NOT NULL,
-    "status" "collector_status" NOT NULL DEFAULT 'ACTIVE',
-    "pfNome" TEXT NOT NULL,
-    "pfCnhNumber" TEXT NOT NULL,
-    "pfCnhCategory" TEXT NOT NULL,
-    "pfCnhExpires" TIMESTAMP(3) NOT NULL,
-    "pfCelular" TEXT NOT NULL,
-    "pfWhatsapp" TEXT,
-    "pfCep" TEXT,
-    "pfLogradouro" TEXT,
-    "pfNumero" TEXT,
-    "pfComplemento" TEXT,
-    "pfBairro" TEXT,
-    "pfCidade" TEXT,
-    "pfUf" VARCHAR(2),
-    "pjRazaoSocial" TEXT NOT NULL,
-    "pjCnpj" TEXT NOT NULL,
-    "pjCep" TEXT,
-    "pjLogradouro" TEXT,
-    "pjNumero" TEXT,
-    "pjComplemento" TEXT,
-    "pjBairro" TEXT,
-    "pjCidade" TEXT,
-    "pjUf" VARCHAR(2),
-    "vehiclePlate" TEXT NOT NULL,
-    "vehicleBrand" TEXT NOT NULL,
-    "vehicleModel" TEXT,
-    "vehicleYear" TEXT,
-    "commissionKind" "commission_kind" NOT NULL,
-    "commissionAmount" DOUBLE PRECISION,
-    "commissionAmountPerKm" DOUBLE PRECISION,
-    "pickupFeeType" "pickup_fee_type" NOT NULL DEFAULT 'FIXED',
-    "pickupFixedFee" DOUBLE PRECISION,
-    "pickupFeePerKm" DOUBLE PRECISION,
-    "bankMethodKind" "bank_method_kind" NOT NULL,
-    "bankPixType" "pix_key_type",
-    "bankPixKey" TEXT,
-    "bankCode" TEXT,
-    "bankBranch" TEXT,
-    "bankAccount" TEXT,
-    "bankAccountType" "account_type",
-    "bankHolderName" TEXT,
-    "bankHolderCnpj" TEXT,
+    "host" TEXT NOT NULL,
+    "port" INTEGER NOT NULL DEFAULT 587,
+    "secure" BOOLEAN NOT NULL DEFAULT false,
+    "user" TEXT NOT NULL,
+    "password" TEXT NOT NULL,
+    "fromAddress" TEXT NOT NULL,
+    "fromName" TEXT NOT NULL,
+    "status" "EmailConfigStatus" NOT NULL DEFAULT 'ACTIVE',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
-    "pfCpf" TEXT,
-    "pfEmail" TEXT,
-    "pfEmailVerificationToken" TEXT,
-    "pfEmailVerified" BOOLEAN NOT NULL DEFAULT false,
-    "pfEmailVerifiedAt" TIMESTAMP(3),
 
-    CONSTRAINT "collectors_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "email_configs_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "collector_documents" (
+CREATE TABLE "google_oauth_configs" (
     "id" TEXT NOT NULL,
-    "collectorId" TEXT NOT NULL,
-    "type" TEXT NOT NULL,
-    "filename" TEXT NOT NULL,
-    "url" TEXT,
-    "uploadedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "expiresAt" TIMESTAMP(3),
-    "issuedAt" TIMESTAMP(3),
-    "mimeType" TEXT,
-    "size" INTEGER,
-    "storageKey" TEXT,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "collector_documents_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "collector_credentials" (
-    "id" TEXT NOT NULL,
-    "collectorId" TEXT NOT NULL,
-    "passwordHash" TEXT NOT NULL,
+    "clientId" TEXT NOT NULL,
+    "clientSecret" TEXT NOT NULL,
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
-    CONSTRAINT "collector_credentials_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "google_oauth_configs_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -997,8 +727,285 @@ CREATE TABLE "cep_locations" (
     CONSTRAINT "cep_locations_pkey" PRIMARY KEY ("cep")
 );
 
--- CreateIndex
-CREATE UNIQUE INDEX "roles_name_key" ON "roles"("name");
+-- CreateTable
+CREATE TABLE "correios_agencies" (
+    "id" TEXT NOT NULL,
+    "nome" TEXT NOT NULL,
+    "status" "correios_agency_status" NOT NULL DEFAULT 'ATIVA',
+    "status_codigo" INTEGER NOT NULL DEFAULT 2,
+    "status_descricao" TEXT,
+    "tipo_unidade_codigo" TEXT NOT NULL,
+    "tipo_unidade_descricao" TEXT,
+    "tipo_unidade_sigla" "correios_agency_type" NOT NULL DEFAULT 'OUTROS',
+    "cep" VARCHAR(8) NOT NULL,
+    "uf" VARCHAR(2) NOT NULL,
+    "municipio" TEXT NOT NULL,
+    "bairro" TEXT,
+    "logradouro" TEXT,
+    "numero" TEXT,
+    "complemento" TEXT,
+    "latitude" DOUBLE PRECISION,
+    "longitude" DOUBLE PRECISION,
+    "horario_funcionamento" TEXT,
+    "ini_expediente" TEXT,
+    "fim_expediente" TEXT,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+    "synced_at" TIMESTAMP(3),
+
+    CONSTRAINT "correios_agencies_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "recurring_items" (
+    "id" TEXT NOT NULL,
+    "user_id" TEXT NOT NULL,
+    "descricao" TEXT NOT NULL,
+    "valor_unitario" DOUBLE PRECISION NOT NULL,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "recurring_items_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "platform_commissions" (
+    "id" TEXT NOT NULL,
+    "shipping_commission_percent" DECIMAL(5,2) NOT NULL DEFAULT 0,
+    "is_active" BOOLEAN NOT NULL DEFAULT true,
+    "updated_by_id" TEXT,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "platform_commissions_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "expenses" (
+    "id" TEXT NOT NULL,
+    "type" "ExpenseType" NOT NULL,
+    "category" "ExpenseCategory" NOT NULL,
+    "description" TEXT NOT NULL,
+    "amount_cents" INTEGER NOT NULL,
+    "status" "ExpenseStatus" NOT NULL DEFAULT 'PENDING',
+    "due_date" TIMESTAMP(3),
+    "paid_at" TIMESTAMP(3),
+    "reference" TEXT,
+    "supplier" TEXT,
+    "notes" TEXT,
+    "dre_account_code" TEXT,
+    "receipt_url" TEXT,
+    "receipt_file_name" TEXT,
+    "receipt_uploaded_at" TIMESTAMP(3),
+    "is_recurring" BOOLEAN NOT NULL DEFAULT false,
+    "recurring_months" INTEGER,
+    "created_by" TEXT NOT NULL,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "expenses_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "expense_templates" (
+    "id" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "type" "ExpenseType" NOT NULL,
+    "category" "ExpenseCategory" NOT NULL,
+    "supplier" TEXT,
+    "default_amount" INTEGER,
+    "is_active" BOOLEAN NOT NULL DEFAULT true,
+    "usage_count" INTEGER NOT NULL DEFAULT 0,
+    "created_by" TEXT NOT NULL,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "expense_templates_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "faq_items" (
+    "id" TEXT NOT NULL,
+    "question" TEXT NOT NULL,
+    "answer" TEXT NOT NULL,
+    "category" TEXT,
+    "audience" "faq_audience" NOT NULL DEFAULT 'USER',
+    "sort_order" INTEGER NOT NULL DEFAULT 0,
+    "is_active" BOOLEAN NOT NULL DEFAULT true,
+    "views" INTEGER NOT NULL DEFAULT 0,
+    "helpful_yes" INTEGER NOT NULL DEFAULT 0,
+    "helpful_no" INTEGER NOT NULL DEFAULT 0,
+    "created_by" TEXT,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "faq_items_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "tracking_code_reservations" (
+    "id" TEXT NOT NULL,
+    "code" TEXT NOT NULL,
+    "user_id" TEXT NOT NULL,
+    "shipment_id" TEXT,
+    "used_at" TIMESTAMP(3),
+    "expires_at" TIMESTAMP(3) NOT NULL,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "tracking_code_reservations_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "recipient_payment_requests" (
+    "id" TEXT NOT NULL,
+    "sender_id" TEXT NOT NULL,
+    "origin_address_id" TEXT,
+    "origin_cep" VARCHAR(8) NOT NULL,
+    "origin_city" TEXT NOT NULL,
+    "origin_state" VARCHAR(2) NOT NULL,
+    "origin_address" TEXT,
+    "origin_neighborhood" TEXT,
+    "origin_number" TEXT,
+    "origin_complement" TEXT,
+    "recipient_name" TEXT NOT NULL,
+    "recipient_email" TEXT NOT NULL,
+    "recipient_phone" TEXT,
+    "recipient_document" TEXT,
+    "destination_cep" VARCHAR(8) NOT NULL,
+    "destination_city" TEXT NOT NULL,
+    "destination_state" VARCHAR(2) NOT NULL,
+    "destination_address" TEXT,
+    "destination_neighborhood" TEXT,
+    "destination_number" TEXT,
+    "destination_complement" TEXT,
+    "total_weight" DOUBLE PRECISION NOT NULL,
+    "declared_value" DOUBLE PRECISION NOT NULL,
+    "carrier" TEXT NOT NULL,
+    "service" TEXT NOT NULL,
+    "service_code" TEXT,
+    "estimated_days" INTEGER,
+    "freight_cost_cents" INTEGER NOT NULL,
+    "total_cents" INTEGER NOT NULL,
+    "shipping_commission_cents" INTEGER,
+    "document" JSONB,
+    "payment_token" TEXT NOT NULL,
+    "status" "recipient_payment_status" NOT NULL DEFAULT 'PENDING',
+    "expires_at" TIMESTAMP(3) NOT NULL,
+    "paid_at" TIMESTAMP(3),
+    "cancelled_at" TIMESTAMP(3),
+    "shipment_id" TEXT,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "recipient_payment_requests_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "recipient_payment_packages" (
+    "id" TEXT NOT NULL,
+    "request_id" TEXT NOT NULL,
+    "package_number" INTEGER NOT NULL,
+    "width" DOUBLE PRECISION NOT NULL,
+    "height" DOUBLE PRECISION NOT NULL,
+    "length" DOUBLE PRECISION NOT NULL,
+    "weight" DOUBLE PRECISION NOT NULL,
+
+    CONSTRAINT "recipient_payment_packages_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "openrouter_configs" (
+    "id" TEXT NOT NULL,
+    "apiKey" TEXT NOT NULL,
+    "base_url" TEXT NOT NULL DEFAULT 'https://openrouter.ai/api/v1',
+    "default_model" TEXT NOT NULL DEFAULT 'anthropic/claude-3-haiku',
+    "temperature" DOUBLE PRECISION NOT NULL DEFAULT 0.7,
+    "max_tokens" INTEGER NOT NULL DEFAULT 2048,
+    "streaming_enabled" BOOLEAN NOT NULL DEFAULT true,
+    "http_referer" TEXT,
+    "x_title" TEXT,
+    "is_active" BOOLEAN NOT NULL DEFAULT true,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "openrouter_configs_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "assistant_chat_sessions" (
+    "id" TEXT NOT NULL,
+    "user_id" TEXT NOT NULL,
+    "title" TEXT,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "assistant_chat_sessions_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "assistant_chat_messages" (
+    "id" TEXT NOT NULL,
+    "session_id" TEXT NOT NULL,
+    "author" "AssistantMessageAuthor" NOT NULL,
+    "content" TEXT NOT NULL,
+    "tool_name" TEXT,
+    "tool_args" JSONB,
+    "tool_result" JSONB,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "assistant_chat_messages_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "knowledge_base_articles" (
+    "id" TEXT NOT NULL,
+    "slug" TEXT NOT NULL,
+    "title" TEXT NOT NULL,
+    "content_markdown" TEXT NOT NULL,
+    "tags" TEXT[],
+    "category" TEXT,
+    "is_published" BOOLEAN NOT NULL DEFAULT false,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "knowledge_base_articles_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "notifications" (
+    "id" TEXT NOT NULL,
+    "user_id" TEXT NOT NULL,
+    "type" TEXT NOT NULL,
+    "title" TEXT NOT NULL,
+    "message" TEXT NOT NULL,
+    "is_read" BOOLEAN NOT NULL DEFAULT false,
+    "metadata" JSONB,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "read_at" TIMESTAMP(3),
+
+    CONSTRAINT "notifications_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "generated_documents" (
+    "id" TEXT NOT NULL,
+    "user_id" TEXT NOT NULL,
+    "document_type" TEXT NOT NULL,
+    "status" TEXT NOT NULL DEFAULT 'PENDING',
+    "job_id" TEXT,
+    "reference_id" TEXT,
+    "file_name" TEXT,
+    "file_path" TEXT,
+    "content_type" TEXT DEFAULT 'application/pdf',
+    "size_bytes" INTEGER,
+    "error_message" TEXT,
+    "metadata" JSONB,
+    "expires_at" TIMESTAMP(3) NOT NULL,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "completed_at" TIMESTAMP(3),
+
+    CONSTRAINT "generated_documents_pkey" PRIMARY KEY ("id")
+);
 
 -- CreateIndex
 CREATE UNIQUE INDEX "users_email_key" ON "users"("email");
@@ -1007,19 +1014,7 @@ CREATE UNIQUE INDEX "users_email_key" ON "users"("email");
 CREATE UNIQUE INDEX "users_emailVerificationToken_key" ON "users"("emailVerificationToken");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "users_resetPasswordToken_key" ON "users"("resetPasswordToken");
-
--- CreateIndex
-CREATE INDEX "users_email_idx" ON "users"("email");
-
--- CreateIndex
-CREATE INDEX "users_emailVerificationToken_idx" ON "users"("emailVerificationToken");
-
--- CreateIndex
-CREATE INDEX "users_resetPasswordToken_idx" ON "users"("resetPasswordToken");
-
--- CreateIndex
-CREATE INDEX "addresses_userId_role_idx" ON "addresses"("userId", "role");
+CREATE UNIQUE INDEX "users_googleId_key" ON "users"("googleId");
 
 -- CreateIndex
 CREATE INDEX "addresses_userId_idx" ON "addresses"("userId");
@@ -1038,9 +1033,6 @@ CREATE INDEX "cards_userId_isDefault_idx" ON "cards"("userId", "isDefault");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "cards_userId_fingerprint_key" ON "cards"("userId", "fingerprint");
-
--- CreateIndex
-CREATE INDEX "recipients_userId_idx" ON "recipients"("userId");
 
 -- CreateIndex
 CREATE INDEX "recipients_userId_isDefault_idx" ON "recipients"("userId", "isDefault");
@@ -1064,6 +1056,9 @@ CREATE INDEX "cart_items_cartId_idx" ON "cart_items"("cartId");
 CREATE UNIQUE INDEX "shipments_platformTrackingCode_key" ON "shipments"("platformTrackingCode");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "shipments_dceKey_key" ON "shipments"("dceKey");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "shipments_publicTrackingId_key" ON "shipments"("publicTrackingId");
 
 -- CreateIndex
@@ -1085,10 +1080,16 @@ CREATE INDEX "shipments_status_idx" ON "shipments"("status");
 CREATE INDEX "shipments_publicTrackingId_idx" ON "shipments"("publicTrackingId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "labels_shipmentId_key" ON "labels"("shipmentId");
+CREATE INDEX "shipments_senderId_status_idx" ON "shipments"("senderId", "status");
 
 -- CreateIndex
-CREATE INDEX "labels_shipmentId_idx" ON "labels"("shipmentId");
+CREATE INDEX "shipments_createdAt_idx" ON "shipments"("createdAt");
+
+-- CreateIndex
+CREATE INDEX "shipments_senderId_status_createdAt_idx" ON "shipments"("senderId", "status", "createdAt");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "labels_shipmentId_key" ON "labels"("shipmentId");
 
 -- CreateIndex
 CREATE INDEX "labels_status_idx" ON "labels"("status");
@@ -1100,28 +1101,22 @@ CREATE INDEX "labels_isPrinted_idx" ON "labels"("isPrinted");
 CREATE INDEX "labels_createdAt_idx" ON "labels"("createdAt");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "pickup_requests_shipmentId_key" ON "pickup_requests"("shipmentId");
+CREATE INDEX "labels_status_isPrinted_idx" ON "labels"("status", "isPrinted");
 
 -- CreateIndex
-CREATE INDEX "pickup_requests_userId_idx" ON "pickup_requests"("userId");
+CREATE INDEX "labels_trackingCode_idx" ON "labels"("trackingCode");
 
 -- CreateIndex
-CREATE INDEX "pickup_requests_shipmentId_idx" ON "pickup_requests"("shipmentId");
+CREATE INDEX "packages_shipmentId_idx" ON "packages"("shipmentId");
 
 -- CreateIndex
-CREATE INDEX "pickup_requests_status_idx" ON "pickup_requests"("status");
+CREATE INDEX "packages_carrierTrackingCode_idx" ON "packages"("carrierTrackingCode");
 
 -- CreateIndex
-CREATE INDEX "pickup_requests_createdAt_idx" ON "pickup_requests"("createdAt");
+CREATE UNIQUE INDEX "packages_shipmentId_packageNumber_key" ON "packages"("shipmentId", "packageNumber");
 
 -- CreateIndex
-CREATE INDEX "pickup_requests_originCep_idx" ON "pickup_requests"("originCep");
-
--- CreateIndex
-CREATE INDEX "tracking_events_shipmentId_idx" ON "tracking_events"("shipmentId");
-
--- CreateIndex
-CREATE INDEX "tracking_events_occurredAt_idx" ON "tracking_events"("occurredAt");
+CREATE INDEX "tracking_events_shipmentId_occurredAt_idx" ON "tracking_events"("shipmentId", "occurredAt");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "staff_roles_name_key" ON "staff_roles"("name");
@@ -1160,13 +1155,7 @@ CREATE INDEX "password_reset_tokens_userId_idx" ON "password_reset_tokens"("user
 CREATE INDEX "password_reset_tokens_expiresAt_idx" ON "password_reset_tokens"("expiresAt");
 
 -- CreateIndex
-CREATE INDEX "password_reset_tokens_tokenHash_idx" ON "password_reset_tokens"("tokenHash");
-
--- CreateIndex
 CREATE UNIQUE INDEX "wallets_userId_key" ON "wallets"("userId");
-
--- CreateIndex
-CREATE INDEX "wallets_userId_idx" ON "wallets"("userId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "wallet_transactions_referenceId_key" ON "wallet_transactions"("referenceId");
@@ -1178,49 +1167,25 @@ CREATE INDEX "wallet_transactions_walletId_status_createdAt_idx" ON "wallet_tran
 CREATE INDEX "wallet_transactions_referenceId_idx" ON "wallet_transactions"("referenceId");
 
 -- CreateIndex
+CREATE INDEX "wallet_transactions_status_confirmedAt_idx" ON "wallet_transactions"("status", "confirmedAt");
+
+-- CreateIndex
 CREATE INDEX "support_tickets_status_priority_createdAt_idx" ON "support_tickets"("status", "priority", "createdAt");
 
 -- CreateIndex
 CREATE INDEX "support_tickets_userId_createdAt_idx" ON "support_tickets"("userId", "createdAt");
 
 -- CreateIndex
-CREATE INDEX "support_tickets_pickupPointId_createdAt_idx" ON "support_tickets"("pickupPointId", "createdAt");
+CREATE INDEX "support_tickets_assignedTo_idx" ON "support_tickets"("assignedTo");
 
 -- CreateIndex
-CREATE INDEX "support_tickets_assignedTo_idx" ON "support_tickets"("assignedTo");
+CREATE INDEX "support_tickets_lastActivityAt_idx" ON "support_tickets"("lastActivityAt");
 
 -- CreateIndex
 CREATE INDEX "support_messages_ticketId_createdAt_idx" ON "support_messages"("ticketId", "createdAt");
 
 -- CreateIndex
 CREATE INDEX "support_attachments_messageId_idx" ON "support_attachments"("messageId");
-
--- CreateIndex
-CREATE UNIQUE INDEX "pickup_points_cnpj_key" ON "pickup_points"("cnpj");
-
--- CreateIndex
-CREATE INDEX "pickup_points_status_idx" ON "pickup_points"("status");
-
--- CreateIndex
-CREATE INDEX "pickup_points_uf_cidade_idx" ON "pickup_points"("uf", "cidade");
-
--- CreateIndex
-CREATE INDEX "pickup_points_cnpj_idx" ON "pickup_points"("cnpj");
-
--- CreateIndex
-CREATE UNIQUE INDEX "receptions_trackingCode_key" ON "receptions"("trackingCode");
-
--- CreateIndex
-CREATE INDEX "receptions_pickupPointId_status_idx" ON "receptions"("pickupPointId", "status");
-
--- CreateIndex
-CREATE INDEX "receptions_pickupPointId_receivedAt_idx" ON "receptions"("pickupPointId", "receivedAt");
-
--- CreateIndex
-CREATE INDEX "receptions_trackingCode_idx" ON "receptions"("trackingCode");
-
--- CreateIndex
-CREATE INDEX "receptions_status_idx" ON "receptions"("status");
 
 -- CreateIndex
 CREATE INDEX "quotes_userId_status_createdAt_idx" ON "quotes"("userId", "status", "createdAt");
@@ -1256,40 +1221,7 @@ CREATE INDEX "carriers_slug_idx" ON "carriers"("slug");
 CREATE INDEX "carriers_status_idx" ON "carriers"("status");
 
 -- CreateIndex
-CREATE INDEX "carrier_services_carrierId_isActive_idx" ON "carrier_services"("carrierId", "isActive");
-
--- CreateIndex
-CREATE UNIQUE INDEX "carrier_services_carrierId_serviceId_key" ON "carrier_services"("carrierId", "serviceId");
-
--- CreateIndex
-CREATE INDEX "carrier_endpoints_carrierId_idx" ON "carrier_endpoints"("carrierId");
-
--- CreateIndex
-CREATE UNIQUE INDEX "carrier_endpoints_carrierId_operation_key" ON "carrier_endpoints"("carrierId", "operation");
-
--- CreateIndex
 CREATE INDEX "carrier_credentials_carrierId_environment_isActive_idx" ON "carrier_credentials"("carrierId", "environment", "isActive");
-
--- CreateIndex
-CREATE INDEX "carrier_pricing_rules_carrierId_isActive_priority_idx" ON "carrier_pricing_rules"("carrierId", "isActive", "priority");
-
--- CreateIndex
-CREATE INDEX "carrier_webhooks_carrierId_status_nextRetryAt_idx" ON "carrier_webhooks"("carrierId", "status", "nextRetryAt");
-
--- CreateIndex
-CREATE INDEX "carrier_webhooks_externalId_idx" ON "carrier_webhooks"("externalId");
-
--- CreateIndex
-CREATE INDEX "carrier_webhooks_createdAt_idx" ON "carrier_webhooks"("createdAt");
-
--- CreateIndex
-CREATE INDEX "carrier_health_checks_carrierId_checkedAt_idx" ON "carrier_health_checks"("carrierId", "checkedAt");
-
--- CreateIndex
-CREATE INDEX "carrier_api_calls_carrierId_operation_startedAt_idx" ON "carrier_api_calls"("carrierId", "operation", "startedAt");
-
--- CreateIndex
-CREATE INDEX "carrier_api_calls_success_startedAt_idx" ON "carrier_api_calls"("success", "startedAt");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "payment_gateways_slug_key" ON "payment_gateways"("slug");
@@ -1325,10 +1257,7 @@ CREATE INDEX "payment_transactions_referenceId_idx" ON "payment_transactions"("r
 CREATE INDEX "payment_transactions_externalId_idx" ON "payment_transactions"("externalId");
 
 -- CreateIndex
-CREATE INDEX "payment_refunds_transactionId_idx" ON "payment_refunds"("transactionId");
-
--- CreateIndex
-CREATE INDEX "payment_chargebacks_transactionId_idx" ON "payment_chargebacks"("transactionId");
+CREATE INDEX "payment_transactions_paidAt_idx" ON "payment_transactions"("paidAt");
 
 -- CreateIndex
 CREATE INDEX "payment_webhooks_gatewayId_status_nextRetryAt_idx" ON "payment_webhooks"("gatewayId", "status", "nextRetryAt");
@@ -1340,61 +1269,145 @@ CREATE INDEX "payment_webhooks_externalId_idx" ON "payment_webhooks"("externalId
 CREATE INDEX "payment_webhooks_createdAt_idx" ON "payment_webhooks"("createdAt");
 
 -- CreateIndex
-CREATE INDEX "payment_health_checks_gatewayId_checkedAt_idx" ON "payment_health_checks"("gatewayId", "checkedAt");
+CREATE UNIQUE INDEX "payment_webhooks_gatewayId_externalId_key" ON "payment_webhooks"("gatewayId", "externalId");
 
 -- CreateIndex
 CREATE INDEX "ledger_entries_accountType_accountId_createdAt_idx" ON "ledger_entries"("accountType", "accountId", "createdAt");
 
 -- CreateIndex
-CREATE INDEX "ledger_entries_transactionId_idx" ON "ledger_entries"("transactionId");
-
--- CreateIndex
 CREATE INDEX "ledger_entries_type_createdAt_idx" ON "ledger_entries"("type", "createdAt");
-
--- CreateIndex
-CREATE UNIQUE INDEX "collectors_pjCnpj_key" ON "collectors"("pjCnpj");
-
--- CreateIndex
-CREATE UNIQUE INDEX "collectors_pfCpf_key" ON "collectors"("pfCpf");
-
--- CreateIndex
-CREATE UNIQUE INDEX "collectors_pfEmail_key" ON "collectors"("pfEmail");
-
--- CreateIndex
-CREATE UNIQUE INDEX "collectors_pfEmailVerificationToken_key" ON "collectors"("pfEmailVerificationToken");
-
--- CreateIndex
-CREATE INDEX "collectors_status_idx" ON "collectors"("status");
-
--- CreateIndex
-CREATE INDEX "collectors_pfCpf_idx" ON "collectors"("pfCpf");
-
--- CreateIndex
-CREATE INDEX "collectors_pfEmail_idx" ON "collectors"("pfEmail");
-
--- CreateIndex
-CREATE INDEX "collectors_pjCnpj_idx" ON "collectors"("pjCnpj");
-
--- CreateIndex
-CREATE INDEX "collectors_pfCidade_pfUf_idx" ON "collectors"("pfCidade", "pfUf");
-
--- CreateIndex
-CREATE INDEX "collectors_pjCidade_pjUf_idx" ON "collectors"("pjCidade", "pjUf");
-
--- CreateIndex
-CREATE INDEX "collector_documents_collectorId_type_idx" ON "collector_documents"("collectorId", "type");
-
--- CreateIndex
-CREATE UNIQUE INDEX "collector_documents_collectorId_type_key" ON "collector_documents"("collectorId", "type");
-
--- CreateIndex
-CREATE UNIQUE INDEX "collector_credentials_collectorId_key" ON "collector_credentials"("collectorId");
 
 -- CreateIndex
 CREATE INDEX "packaging_templates_userId_idx" ON "packaging_templates"("userId");
 
--- AddForeignKey
-ALTER TABLE "users" ADD CONSTRAINT "users_roleId_fkey" FOREIGN KEY ("roleId") REFERENCES "roles"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+-- CreateIndex
+CREATE INDEX "correios_agencies_uf_municipio_idx" ON "correios_agencies"("uf", "municipio");
+
+-- CreateIndex
+CREATE INDEX "correios_agencies_cep_idx" ON "correios_agencies"("cep");
+
+-- CreateIndex
+CREATE INDEX "correios_agencies_status_idx" ON "correios_agencies"("status");
+
+-- CreateIndex
+CREATE INDEX "correios_agencies_tipo_unidade_sigla_status_idx" ON "correios_agencies"("tipo_unidade_sigla", "status");
+
+-- CreateIndex
+CREATE INDEX "recurring_items_user_id_idx" ON "recurring_items"("user_id");
+
+-- CreateIndex
+CREATE INDEX "expenses_type_status_created_at_idx" ON "expenses"("type", "status", "created_at");
+
+-- CreateIndex
+CREATE INDEX "expenses_category_created_at_idx" ON "expenses"("category", "created_at");
+
+-- CreateIndex
+CREATE INDEX "expenses_due_date_idx" ON "expenses"("due_date");
+
+-- CreateIndex
+CREATE INDEX "expenses_created_by_idx" ON "expenses"("created_by");
+
+-- CreateIndex
+CREATE INDEX "expenses_dre_account_code_created_at_idx" ON "expenses"("dre_account_code", "created_at");
+
+-- CreateIndex
+CREATE INDEX "expense_templates_category_is_active_idx" ON "expense_templates"("category", "is_active");
+
+-- CreateIndex
+CREATE INDEX "expense_templates_is_active_usage_count_idx" ON "expense_templates"("is_active", "usage_count");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "expense_templates_name_category_key" ON "expense_templates"("name", "category");
+
+-- CreateIndex
+CREATE INDEX "faq_items_audience_is_active_sort_order_idx" ON "faq_items"("audience", "is_active", "sort_order");
+
+-- CreateIndex
+CREATE INDEX "faq_items_category_is_active_idx" ON "faq_items"("category", "is_active");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "tracking_code_reservations_code_key" ON "tracking_code_reservations"("code");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "tracking_code_reservations_shipment_id_key" ON "tracking_code_reservations"("shipment_id");
+
+-- CreateIndex
+CREATE INDEX "tracking_code_reservations_user_id_idx" ON "tracking_code_reservations"("user_id");
+
+-- CreateIndex
+CREATE INDEX "tracking_code_reservations_expires_at_idx" ON "tracking_code_reservations"("expires_at");
+
+-- CreateIndex
+CREATE INDEX "tracking_code_reservations_used_at_idx" ON "tracking_code_reservations"("used_at");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "recipient_payment_requests_payment_token_key" ON "recipient_payment_requests"("payment_token");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "recipient_payment_requests_shipment_id_key" ON "recipient_payment_requests"("shipment_id");
+
+-- CreateIndex
+CREATE INDEX "recipient_payment_requests_sender_id_idx" ON "recipient_payment_requests"("sender_id");
+
+-- CreateIndex
+CREATE INDEX "recipient_payment_requests_payment_token_idx" ON "recipient_payment_requests"("payment_token");
+
+-- CreateIndex
+CREATE INDEX "recipient_payment_requests_status_idx" ON "recipient_payment_requests"("status");
+
+-- CreateIndex
+CREATE INDEX "recipient_payment_requests_expires_at_idx" ON "recipient_payment_requests"("expires_at");
+
+-- CreateIndex
+CREATE INDEX "recipient_payment_requests_sender_id_status_idx" ON "recipient_payment_requests"("sender_id", "status");
+
+-- CreateIndex
+CREATE INDEX "recipient_payment_packages_request_id_idx" ON "recipient_payment_packages"("request_id");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "recipient_payment_packages_request_id_package_number_key" ON "recipient_payment_packages"("request_id", "package_number");
+
+-- CreateIndex
+CREATE INDEX "assistant_chat_sessions_user_id_idx" ON "assistant_chat_sessions"("user_id");
+
+-- CreateIndex
+CREATE INDEX "assistant_chat_sessions_user_id_updated_at_idx" ON "assistant_chat_sessions"("user_id", "updated_at");
+
+-- CreateIndex
+CREATE INDEX "assistant_chat_messages_session_id_idx" ON "assistant_chat_messages"("session_id");
+
+-- CreateIndex
+CREATE INDEX "assistant_chat_messages_session_id_created_at_idx" ON "assistant_chat_messages"("session_id", "created_at");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "knowledge_base_articles_slug_key" ON "knowledge_base_articles"("slug");
+
+-- CreateIndex
+CREATE INDEX "knowledge_base_articles_is_published_idx" ON "knowledge_base_articles"("is_published");
+
+-- CreateIndex
+CREATE INDEX "knowledge_base_articles_category_idx" ON "knowledge_base_articles"("category");
+
+-- CreateIndex
+CREATE INDEX "notifications_user_id_is_read_idx" ON "notifications"("user_id", "is_read");
+
+-- CreateIndex
+CREATE INDEX "notifications_user_id_created_at_idx" ON "notifications"("user_id", "created_at");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "generated_documents_job_id_key" ON "generated_documents"("job_id");
+
+-- CreateIndex
+CREATE INDEX "generated_documents_user_id_status_idx" ON "generated_documents"("user_id", "status");
+
+-- CreateIndex
+CREATE INDEX "generated_documents_user_id_document_type_created_at_idx" ON "generated_documents"("user_id", "document_type", "created_at");
+
+-- CreateIndex
+CREATE INDEX "generated_documents_expires_at_idx" ON "generated_documents"("expires_at");
+
+-- CreateIndex
+CREATE INDEX "generated_documents_reference_id_document_type_idx" ON "generated_documents"("reference_id", "document_type");
 
 -- AddForeignKey
 ALTER TABLE "addresses" ADD CONSTRAINT "addresses_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -1424,10 +1437,7 @@ ALTER TABLE "shipments" ADD CONSTRAINT "shipments_senderId_fkey" FOREIGN KEY ("s
 ALTER TABLE "labels" ADD CONSTRAINT "labels_shipmentId_fkey" FOREIGN KEY ("shipmentId") REFERENCES "shipments"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "pickup_requests" ADD CONSTRAINT "pickup_requests_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "pickup_requests" ADD CONSTRAINT "pickup_requests_shipmentId_fkey" FOREIGN KEY ("shipmentId") REFERENCES "shipments"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "packages" ADD CONSTRAINT "packages_shipmentId_fkey" FOREIGN KEY ("shipmentId") REFERENCES "shipments"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "tracking_events" ADD CONSTRAINT "tracking_events_shipmentId_fkey" FOREIGN KEY ("shipmentId") REFERENCES "shipments"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -1451,9 +1461,6 @@ ALTER TABLE "wallets" ADD CONSTRAINT "wallets_userId_fkey" FOREIGN KEY ("userId"
 ALTER TABLE "wallet_transactions" ADD CONSTRAINT "wallet_transactions_walletId_fkey" FOREIGN KEY ("walletId") REFERENCES "wallets"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "support_tickets" ADD CONSTRAINT "support_tickets_pickupPointId_fkey" FOREIGN KEY ("pickupPointId") REFERENCES "pickup_points"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE "support_tickets" ADD CONSTRAINT "support_tickets_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -1461,9 +1468,6 @@ ALTER TABLE "support_messages" ADD CONSTRAINT "support_messages_ticketId_fkey" F
 
 -- AddForeignKey
 ALTER TABLE "support_attachments" ADD CONSTRAINT "support_attachments_messageId_fkey" FOREIGN KEY ("messageId") REFERENCES "support_messages"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "receptions" ADD CONSTRAINT "receptions_pickupPointId_fkey" FOREIGN KEY ("pickupPointId") REFERENCES "pickup_points"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "quotes" ADD CONSTRAINT "quotes_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -1478,25 +1482,7 @@ ALTER TABLE "quote_options" ADD CONSTRAINT "quote_options_quoteId_fkey" FOREIGN 
 ALTER TABLE "quote_selections" ADD CONSTRAINT "quote_selections_quoteId_fkey" FOREIGN KEY ("quoteId") REFERENCES "quotes"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "carrier_services" ADD CONSTRAINT "carrier_services_carrierId_fkey" FOREIGN KEY ("carrierId") REFERENCES "carriers"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "carrier_endpoints" ADD CONSTRAINT "carrier_endpoints_carrierId_fkey" FOREIGN KEY ("carrierId") REFERENCES "carriers"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE "carrier_credentials" ADD CONSTRAINT "carrier_credentials_carrierId_fkey" FOREIGN KEY ("carrierId") REFERENCES "carriers"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "carrier_pricing_rules" ADD CONSTRAINT "carrier_pricing_rules_carrierId_fkey" FOREIGN KEY ("carrierId") REFERENCES "carriers"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "carrier_webhooks" ADD CONSTRAINT "carrier_webhooks_carrierId_fkey" FOREIGN KEY ("carrierId") REFERENCES "carriers"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "carrier_health_checks" ADD CONSTRAINT "carrier_health_checks_carrierId_fkey" FOREIGN KEY ("carrierId") REFERENCES "carriers"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "carrier_api_calls" ADD CONSTRAINT "carrier_api_calls_carrierId_fkey" FOREIGN KEY ("carrierId") REFERENCES "carriers"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "payment_credentials" ADD CONSTRAINT "payment_credentials_gatewayId_fkey" FOREIGN KEY ("gatewayId") REFERENCES "payment_gateways"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -1511,26 +1497,34 @@ ALTER TABLE "payment_transactions" ADD CONSTRAINT "payment_transactions_gatewayI
 ALTER TABLE "payment_transactions" ADD CONSTRAINT "payment_transactions_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "payment_refunds" ADD CONSTRAINT "payment_refunds_transactionId_fkey" FOREIGN KEY ("transactionId") REFERENCES "payment_transactions"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "payment_chargebacks" ADD CONSTRAINT "payment_chargebacks_transactionId_fkey" FOREIGN KEY ("transactionId") REFERENCES "payment_transactions"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE "payment_webhooks" ADD CONSTRAINT "payment_webhooks_gatewayId_fkey" FOREIGN KEY ("gatewayId") REFERENCES "payment_gateways"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "payment_health_checks" ADD CONSTRAINT "payment_health_checks_gatewayId_fkey" FOREIGN KEY ("gatewayId") REFERENCES "payment_gateways"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "ledger_entries" ADD CONSTRAINT "ledger_entries_transactionId_fkey" FOREIGN KEY ("transactionId") REFERENCES "payment_transactions"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "collector_documents" ADD CONSTRAINT "collector_documents_collectorId_fkey" FOREIGN KEY ("collectorId") REFERENCES "collectors"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "collector_credentials" ADD CONSTRAINT "collector_credentials_collectorId_fkey" FOREIGN KEY ("collectorId") REFERENCES "collectors"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "packaging_templates" ADD CONSTRAINT "packaging_templates_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
+-- AddForeignKey
+ALTER TABLE "recurring_items" ADD CONSTRAINT "recurring_items_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "tracking_code_reservations" ADD CONSTRAINT "tracking_code_reservations_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "recipient_payment_requests" ADD CONSTRAINT "recipient_payment_requests_sender_id_fkey" FOREIGN KEY ("sender_id") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "recipient_payment_requests" ADD CONSTRAINT "recipient_payment_requests_shipment_id_fkey" FOREIGN KEY ("shipment_id") REFERENCES "shipments"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "recipient_payment_packages" ADD CONSTRAINT "recipient_payment_packages_request_id_fkey" FOREIGN KEY ("request_id") REFERENCES "recipient_payment_requests"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "assistant_chat_sessions" ADD CONSTRAINT "assistant_chat_sessions_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "assistant_chat_messages" ADD CONSTRAINT "assistant_chat_messages_session_id_fkey" FOREIGN KEY ("session_id") REFERENCES "assistant_chat_sessions"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "notifications" ADD CONSTRAINT "notifications_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "generated_documents" ADD CONSTRAINT "generated_documents_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
