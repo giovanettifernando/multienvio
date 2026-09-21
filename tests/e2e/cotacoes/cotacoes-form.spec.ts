@@ -1,5 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
-import { loginAsDefaultUser } from "../../helpers/auth";
+import { loginAsRemetente, salvarSessaoRemetente } from "../utils/auth";
 
 type MockRecipient = {
   id: string;
@@ -175,9 +175,11 @@ async function mockCotacoesApis(page: Page, options: MockOptions = {}) {
 }
 
 async function setupCotacoesTest(page: Page, overrides?: MockOptions) {
-  const user = await loginAsDefaultUser(page);
+  const user = await loginAsRemetente(page);
   await mockCotacoesApis(page, { ...overrides, currentUser: user });
 }
+
+test.afterEach(async ({ page }) => salvarSessaoRemetente(page));
 
 test.describe("Cotacoes - Pré-carga e formulário inicial", () => {
   test("COT-001-01: remove skeleton e preenche origem padrão após carregar empresa", async ({

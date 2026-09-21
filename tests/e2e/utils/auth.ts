@@ -1,4 +1,6 @@
+import fs from "node:fs";
 import { expect, type Page } from "@playwright/test";
+import { REMETENTE_STATE } from "../global-setup";
 
 type LoginOptions = {
   /** Forçar uso de mocks mesmo se variáveis estiverem presentes */
@@ -91,13 +93,30 @@ export async function loginAsRemetente(page: Page, options?: LoginOptions) {
     return user;
   }
 
+  // Sessão criada pelo global-setup: só carregar os cookies no contexto.
+  if (fs.existsSync(REMETENTE_STATE)) {
+    const { cookies } = JSON.parse(fs.readFileSync(REMETENTE_STATE, "utf8"));
+    await page.context().addCookies(cookies);
+    return { email, name: email };
+  }
+
   await page.goto("/auth/login");
-  await page.getByLabel(/e-mail/i).fill(email!);
-  await page.getByLabel(/senha/i).fill(password!);
+  await page.getByLabel("E-mail", { exact: true }).fill(email!);
+  await page.getByLabel("Senha", { exact: true }).fill(password!);
   await page.getByRole("button", { name: /entrar/i }).click();
   await page.waitForURL((url) => !url.pathname.startsWith("/auth"), {
     timeout: 20_000,
   });
 
   return { email, name: email };
+}
+
+/**
+ * Grava de volta a sessão atual do remetente. O app renova o token 2s depois de
+ * carregar a página e cada renovação invalida a anterior; sem isso o próximo
+ * teste herdaria cookies já revogados. Usar em `test.afterEach`.
+ */
+export async function salvarSessaoRemetente(page: Page) {
+  if (!fs.existsSync(REMETENTE_STATE)) return;
+  await page.context().storageState({ path: REMETENTE_STATE });
 }

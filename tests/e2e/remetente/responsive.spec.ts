@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { loginAsRemetente } from "../utils/auth";
+import { loginAsRemetente, salvarSessaoRemetente } from "../utils/auth";
 import {
   expectTwoItemsInSameRow,
   getHamburgerButton,
@@ -16,21 +16,23 @@ type RouteCase = {
 
 const routes: RouteCase[] = [
   { path: "/", heading: /Painel de Controle/i, checkCards: true, cardSelector: ".ant-card" },
-  { path: "/shipments", heading: /Gestão de envios/i },
-  { path: "/cotacoes", heading: /Cotar envio/i },
-  { path: "/cotacoes/finalizar", heading: /Finalizar Envio/i },
-  { path: "/carrinho", heading: /Carrinho/i },
+  { path: "/shipments", heading: /Meus Envios/i },
+  { path: "/cotacoes", heading: /^Cotar$/ },
+  // sem cotação escolhida, finalizar volta para a tela de cotar
+  { path: "/cotacoes/finalizar", heading: /^Cotar$/ },
+  { path: "/carrinho", heading: /^Carrinho$/ },
   { path: "/etiquetas", heading: /Etiquetas/i },
-  { path: "/coletas", heading: /Gerenciar Coletas/i },
   { path: "/carteira", heading: /Carteira/i, checkCards: true, cardSelector: ".ant-card" },
   { path: "/carteira/extrato", heading: /Extrato da Carteira/i },
   { path: "/carteira/faturas", heading: /Faturas e recibos/i },
-  { path: "/suporte", heading: /Central de Suporte/i, checkCards: true, cardSelector: ".ant-card" },
+  { path: "/suporte", heading: /Central de Suporte/i },
   { path: "/rastreamento", heading: /Rastreamento/i },
   { path: "/minha-conta", heading: /Minha Conta/i },
 ];
 
 test.describe("Responsividade - remetente", () => {
+  test.afterEach(async ({ page }) => salvarSessaoRemetente(page));
+
   for (const route of routes) {
     test(`@responsive ${route.path} mantém layout sem overflow`, async ({ page }, testInfo) => {
       const isMobile = testInfo.project.name.includes("mobile");

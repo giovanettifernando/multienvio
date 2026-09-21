@@ -66,3 +66,8 @@ client_secret_*.json
 
 # Override local do Postgres (porta diferente por máquina)
 _infra/postgres/docker-compose.override.yml
+
+# Sessão de teste gerada pelo Playwright
+tests/e2e/.auth/
+test-results/
+playwright-report/
