@@ -1,7 +1,9 @@
 /**
- * POST /api/payments/[id]/refund
+ * POST /api/admin/payment-transactions/[id]/refund
  *
- * Reembolsa um pagamento (total ou parcial)
+ * Reembolsa um pagamento (total ou parcial). Só staff do financeiro: o estorno
+ * não desfaz a recarga nem os envios pagos, então liberado ao próprio cliente
+ * permitia gastar o saldo e depois estornar o cartão.
  *
  * Body:
  * - amount (opcional): Valor a reembolsar. Se não informado, reembolso total.
@@ -11,10 +13,11 @@
 import { z } from 'zod';
 import { withApiHandler } from '@/platform/api/handler';
 import { ApiError } from '@/platform/api/errors';
-import { requireUserSession } from '@/platform/auth/require-session';
+import { requireAdminSession } from '@/platform/auth/require-session';
 import { prisma } from '@/platform/db/db';
-import type { TransactionStatus } from '@prisma/client';
-import { refundCharge, mapAsaasStatus } from '@/platform/integrations/asaas';
+import { AdminPermission, type TransactionStatus } from '@prisma/client';
+import { refundCharge } from '@/platform/integrations/asaas/charges';
+import { mapAsaasStatus } from '@/platform/integrations/asaas/status';
 import { isRefundableTransactionStatus } from '@/shared/utils/payment-status';
 
 const refundSchema = z.object({
@@ -38,7 +41,7 @@ type RefundPaymentResponse = {
 
 export const POST = withApiHandler<RefundPaymentResponse, { id: string }>(async (context) => {
   const { logger } = context;
-  const session = await requireUserSession(context.req);
+  const session = await requireAdminSession(context.req, AdminPermission.FINANCEIRO);
 
   const { id } = await context.params;
 
@@ -66,13 +69,6 @@ export const POST = withApiHandler<RefundPaymentResponse, { id: string }>(async 
       message: `Não é possível reembolsar pagamento com status: ${transaction.status}`,
       status: 400,
     });
-  }
-
-  const isAdmin = session.role === 'ADMIN' || session.role === 'SUPER_ADMIN';
-  const isOwner = transaction.userId === session.userId;
-
-  if (!isAdmin && !isOwner) {
-    throw new ApiError({ code: 'forbidden', message: 'Sem permissão para reembolsar', status: 403 });
   }
 
   let body: unknown = {};
@@ -149,7 +145,7 @@ export const POST = withApiHandler<RefundPaymentResponse, { id: string }>(async 
           amount: refundAmount,
           reason,
           at: new Date().toISOString(),
-          by: session.userId,
+          by: session.staffId,
         },
       },
     },
@@ -157,6 +153,7 @@ export const POST = withApiHandler<RefundPaymentResponse, { id: string }>(async 
 
   logger.info('refund_processed', {
     transactionId: id,
+    adminId: session.staffId,
     refundId,
     amount: refundAmount,
     status: refundStatus,
