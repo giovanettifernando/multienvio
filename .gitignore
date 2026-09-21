@@ -58,3 +58,11 @@ workers.log
 
 # Documentos gerados em runtime (declarações, etiquetas)
 storage/generated-documents/
+
+# Credenciais baixadas do Google Cloud (client_secret_*.json) — nunca versionar.
+# O app lê as credenciais do banco ou do .env.
+google/
+client_secret_*.json
+
+# Override local do Postgres (porta diferente por máquina)
+_infra/postgres/docker-compose.override.yml
