@@ -23,10 +23,16 @@ export const POST = withApiHandlerResponse<Record<string, never>>(async (context
   }
 
   try {
-    // INCR tokenVersion no Redis - invalida todos os tokens existentes
-    const newVersion = await staffSessionCache.incrementTokenVersion(session.staffId);
+    // Encerra só este aparelho; os outros seguem logados. Token de antes da
+    // sessão por aparelho (sem sid) não tem como ser encerrado sozinho: nesse
+    // caso a versão sobe e todos saem, como era antes.
+    if (session.sid) {
+      await staffSessionCache.closeDevice(session.staffId, session.sid);
+    } else {
+      await staffSessionCache.incrementTokenVersion(session.staffId);
+    }
 
-    logger.info('admin_logout_success', { staffId: session.staffId, newTokenVersion: newVersion });
+    logger.info('admin_logout_success', { staffId: session.staffId, device: Boolean(session.sid) });
 
     // Create response with cookie removal header
     const response = NextResponse.json({

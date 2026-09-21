@@ -35,6 +35,8 @@ export interface JWTPayload {
   email: string;
   role: string;
   tokenVersion: number;
+  /** Sessão do aparelho. Tokens antigos não têm. */
+  sid?: string;
   type?: 'access' | 'refresh';
   iat?: number;
   exp?: number;

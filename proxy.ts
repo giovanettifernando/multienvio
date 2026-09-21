@@ -61,6 +61,7 @@ interface JWTPayload {
   email: string;
   role: string;
   tokenVersion?: number; // Adicionado para validação de revogação
+  sid?: string; // Sessão do aparelho (tokens antigos não têm)
   iat?: number;
   exp?: number;
 }
@@ -70,6 +71,7 @@ interface AdminJWTPayload {
   email: string;
   role: string;
   tokenVersion: number;
+  sid?: string; // Sessão do aparelho (tokens antigos não têm)
   iss?: string;
   aud?: string;
   iat?: number;
@@ -164,7 +166,8 @@ function isInactiveSession(lastActivityValue: string | undefined): boolean {
  */
 async function validateUserTokenVersion(
   userId: string,
-  tokenVersion: number | undefined
+  tokenVersion: number | undefined,
+  sid?: string
 ): Promise<{ valid: boolean; reason?: string }> {
   // Se token não tem tokenVersion, consideramos válido por compatibilidade
   // (tokens antigos não tinham tokenVersion)
@@ -184,6 +187,11 @@ async function validateUserTokenVersion(
     // Mismatch = logout foi feito ou sessão inválida → 401
     if (redisTokenVersion !== tokenVersion) {
       return { valid: false, reason: 'token_revoked' };
+    }
+
+    // Logout neste aparelho: os outros aparelhos do usuário seguem logados.
+    if (sid && !(await sessionCache.hasDevice(userId, sid))) {
+      return { valid: false, reason: 'session_closed' };
     }
 
     // Verificar status na sessão Redis
@@ -333,6 +341,13 @@ export async function proxy(request: NextRequest) {
         return NextResponse.redirect(loginUrl);
       }
 
+      // Logout neste aparelho → redirect to login (os outros seguem logados)
+      if (adminPayload.sid && !(await staffSessionCache.hasDevice(staffId, adminPayload.sid))) {
+        const loginUrl = new URL('/admin/login', request.url);
+        loginUrl.searchParams.set('next', pathname);
+        return NextResponse.redirect(loginUrl);
+      }
+
       // Verificar status na sessão Redis
       const session = await staffSessionCache.get(staffId);
       if (!session || session.status !== 'ACTIVE') {
@@ -421,7 +436,8 @@ export async function proxy(request: NextRequest) {
     // SECURITY: Validate user tokenVersion and status against database
     const userAdminValidation = await validateUserTokenVersion(
       payload!.userId,
-      payload!.tokenVersion
+      payload!.tokenVersion,
+      payload!.sid
     );
 
     if (!userAdminValidation.valid) {
@@ -475,7 +491,8 @@ export async function proxy(request: NextRequest) {
     // SECURITY: Validate user tokenVersion and status against database
     const userValidation = await validateUserTokenVersion(
       payload!.userId,
-      payload!.tokenVersion
+      payload!.tokenVersion,
+      payload!.sid
     );
 
     if (!userValidation.valid) {

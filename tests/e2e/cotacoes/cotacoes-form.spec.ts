@@ -1,5 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
-import { loginAsRemetente, salvarSessaoRemetente } from "../utils/auth";
+import { loginAsRemetente } from "../utils/auth";
 
 /**
  * Tela de cotação com as listas do usuário simuladas (endereços,
@@ -97,8 +97,6 @@ async function abrirSelect(page: Page, rotulo: string) {
 function valorDoSelect(page: Page, rotulo: string) {
   return page.getByLabel(rotulo, { exact: true }).first().locator("[title]").first();
 }
-
-test.afterEach(async ({ page }) => salvarSessaoRemetente(page));
 
 test.describe("Cotações - origem", () => {
   test("COT-001: já abre com o endereço padrão como remetente", async ({ page }) => {

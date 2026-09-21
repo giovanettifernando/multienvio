@@ -110,13 +110,3 @@ export async function loginAsRemetente(page: Page, options?: LoginOptions) {
 
   return { email, name: email };
 }
-
-/**
- * Grava de volta a sessão atual do remetente. O app renova o token 2s depois de
- * carregar a página e cada renovação invalida a anterior; sem isso o próximo
- * teste herdaria cookies já revogados. Usar em `test.afterEach`.
- */
-export async function salvarSessaoRemetente(page: Page) {
-  if (!fs.existsSync(REMETENTE_STATE)) return;
-  await page.context().storageState({ path: REMETENTE_STATE });
-}

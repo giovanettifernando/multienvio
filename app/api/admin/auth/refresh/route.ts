@@ -34,6 +34,7 @@ export const POST = createRefreshHandler<AdminJWTPayload, StaffSessionCacheData>
   getIdFromPayload: (payload) => payload.staffId,
   getStatusFromSession: (session) => session.status,
   getTokenVersionFromPayload: (payload) => payload.tokenVersion,
+  getSidFromPayload: (payload) => payload.sid,
 
   getToken: (req) => getAdminTokenFromRequest(req),
 
@@ -42,21 +43,17 @@ export const POST = createRefreshHandler<AdminJWTPayload, StaffSessionCacheData>
     return { payload: result.payload, error: result.error };
   },
 
-  signToken: async (payload, _session, newTokenVersion) => {
+  signToken: async (payload, _session, tokenVersion, sid) => {
     return adminSign({
       staffId: payload.staffId,
       email: payload.email,
       role: payload.role,
       isSuperAdmin: payload.isSuperAdmin,
       permissions: payload.permissions,
-      tokenVersion: newTokenVersion,
+      tokenVersion,
+      sid,
     });
   },
-
-  updateSession: (session, newTokenVersion) => ({
-    ...session,
-    tokenVersion: newTokenVersion,
-  }),
 
   // Usar response.cookies.set() ao invés de headers.set('Set-Cookie', ...)
   // para consistência com o cliente e evitar problemas com múltiplos cookies

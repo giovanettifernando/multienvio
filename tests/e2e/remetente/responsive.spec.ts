@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { loginAsRemetente, salvarSessaoRemetente } from "../utils/auth";
+import { loginAsRemetente } from "../utils/auth";
 import {
   expectTwoItemsInSameRow,
   getHamburgerButton,
@@ -31,8 +31,6 @@ const routes: RouteCase[] = [
 ];
 
 test.describe("Responsividade - remetente", () => {
-  test.afterEach(async ({ page }) => salvarSessaoRemetente(page));
-
   for (const route of routes) {
     test(`@responsive ${route.path} mantém layout sem overflow`, async ({ page }, testInfo) => {
       const isMobile = testInfo.project.name.includes("mobile");

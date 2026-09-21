@@ -17,6 +17,7 @@ test.describe('app/api/auth/logout', () => {
 
   test.beforeEach(() => {
     test.mock.method(sessionCache, 'incrementTokenVersion', async () => 2);
+    test.mock.method(sessionCache, 'closeDevice', async () => true);
     test.mock.method(userCache, 'invalidate', async () => true);
   });
 
@@ -31,7 +32,19 @@ test.describe('app/api/auth/logout', () => {
     assert.strictEqual(destruiu.mock.callCount(), 0);
   });
 
-  test('revoga os tokens emitidos (tokenVersion) e destrói a sessão', async () => {
+  test('encerra só este aparelho: os outros seguem logados', async () => {
+    test.mock.method(sessionModule, 'getSession', async () => ({ userId: 'u1', sid: 's-celular' }));
+    const destruiu = test.mock.method(sessionModule, 'destroySession', async () => {});
+
+    const res = await logout();
+
+    assert.strictEqual(res.status, 200);
+    assert.deepStrictEqual((sessionCache.closeDevice as any).mock.calls[0].arguments, ['u1', 's-celular']);
+    assert.strictEqual((sessionCache.incrementTokenVersion as any).mock.callCount(), 0, 'não pode derrubar os outros aparelhos');
+    assert.strictEqual(destruiu.mock.callCount(), 1);
+  });
+
+  test('token de antes da sessão por aparelho: revoga tudo, como antes', async () => {
     test.mock.method(sessionModule, 'getSession', async () => ({ userId: 'u1' }));
     const destruiu = test.mock.method(sessionModule, 'destroySession', async () => {});
 

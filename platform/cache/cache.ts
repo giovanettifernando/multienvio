@@ -11,6 +11,7 @@
 
 import { getRedisClient, isRedisAvailable, openCircuitBreaker } from '@/platform/cache/redis';
 import { logger } from '@/platform/logging/logger';
+import { randomUUID } from 'node:crypto';
 
 // Verifica se estamos em produção (fail-close para operações críticas de segurança)
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
@@ -482,6 +483,99 @@ export type SessionCacheData = {
 const SESSION_TTL_SECONDS = 604800;
 
 /**
+ * Sessões por aparelho (navegador/celular). Cada login abre um `sid` próprio,
+ * que vai dentro do token; sair num aparelho apaga só o dele. Revogar tudo de
+ * uma vez (bloqueio, troca de permissão) continua sendo pelo tokenVersion.
+ *
+ * Chave: {base}:device:{sid} → '1', com a mesma validade da sessão (renovada
+ * a cada refresh).
+ */
+function deviceSessions(baseKeyPrefixed: (id: string) => string, logName: string) {
+  const deviceKey = (id: string, sid: string) => `${baseKeyPrefixed(id)}:device:${sid}`;
+
+  return {
+    deviceKeyPrefixed: deviceKey,
+
+    /** Abre a sessão de um aparelho e devolve o sid (usado no login). */
+    async openDevice(id: string): Promise<string> {
+      const sid = randomUUID();
+      if (!isRedisAvailable()) {
+        if (IS_PRODUCTION) {
+          logger.error({ event: `${logName}_device_redis_unavailable`, id }, 'Redis unavailable to open device session');
+          throw new Error('Authentication service temporarily unavailable');
+        }
+        return sid;
+      }
+      try {
+        await getRedisClient().setex(deviceKey(id, sid), SESSION_TTL_SECONDS, '1');
+        return sid;
+      } catch (error) {
+        openCircuitBreaker();
+        logger.error({ event: `${logName}_device_open_error`, id, err: error }, 'Failed to open device session');
+        if (IS_PRODUCTION) throw new Error('Authentication service temporarily unavailable');
+        return sid;
+      }
+    },
+
+    /** O aparelho ainda está logado? Falha fechada: sem Redis, não. */
+    async hasDevice(id: string, sid: string): Promise<boolean> {
+      if (!isRedisAvailable()) return false;
+      try {
+        return (await getRedisClient().exists(deviceKey(id, sid))) === 1;
+      } catch (error) {
+        openCircuitBreaker();
+        logger.warn({ event: `${logName}_device_get_error`, id, err: error }, 'Failed to read device session');
+        return false;
+      }
+    },
+
+    /** Renova a validade do aparelho; false se ele já foi encerrado. */
+    async touchDevice(id: string, sid: string): Promise<boolean> {
+      if (!isRedisAvailable()) return false;
+      try {
+        return (await getRedisClient().expire(deviceKey(id, sid), SESSION_TTL_SECONDS)) === 1;
+      } catch (error) {
+        openCircuitBreaker();
+        logger.warn({ event: `${logName}_device_touch_error`, id, err: error }, 'Failed to renew device session');
+        return false;
+      }
+    },
+
+    /** Encerra só este aparelho (logout). */
+    async closeDevice(id: string, sid: string): Promise<boolean> {
+      if (!isRedisAvailable()) return false;
+      try {
+        await getRedisClient().del(deviceKey(id, sid));
+        return true;
+      } catch (error) {
+        openCircuitBreaker();
+        logger.warn({ event: `${logName}_device_close_error`, id, err: error }, 'Failed to close device session');
+        return false;
+      }
+    },
+
+    /**
+     * Renova a validade da sessão sem regravar o tokenVersion — regravar a
+     * versão lida antes podia desfazer um bloqueio feito no meio do refresh.
+     */
+    async touch(id: string): Promise<boolean> {
+      if (!isRedisAvailable()) return false;
+      try {
+        const redis = getRedisClient();
+        await Promise.all([
+          redis.expire(baseKeyPrefixed(id), SESSION_TTL_SECONDS),
+          redis.expire(`${baseKeyPrefixed(id)}:tokenVersion`, SESSION_TTL_SECONDS),
+        ]);
+        return true;
+      } catch (error) {
+        openCircuitBreaker();
+        return false;
+      }
+    },
+  };
+}
+
+/**
  * Cache de sessão do usuário
  * TTL de 7 dias (mesmo que o refresh token)
  *
@@ -496,6 +590,7 @@ export const sessionCache = {
   keyPrefixed: (userId: string) => prefixKey(`${CachePrefix.SESSION}${userId}`),
   tokenVersionKey: (userId: string) => `${CachePrefix.SESSION}${userId}:tokenVersion`,
   tokenVersionKeyPrefixed: (userId: string) => prefixKey(`${CachePrefix.SESSION}${userId}:tokenVersion`),
+  ...deviceSessions((userId: string) => prefixKey(`${CachePrefix.SESSION}${userId}`), 'session'),
 
   async get(userId: string): Promise<SessionCacheData | null> {
     return cacheGet<SessionCacheData>(this.key(userId));
@@ -648,6 +743,7 @@ export const staffSessionCache = {
   keyPrefixed: (staffId: string) => prefixKey(`staff_session:${staffId}`),
   tokenVersionKey: (staffId: string) => `staff_session:${staffId}:tokenVersion`,
   tokenVersionKeyPrefixed: (staffId: string) => prefixKey(`staff_session:${staffId}:tokenVersion`),
+  ...deviceSessions((staffId: string) => prefixKey(`staff_session:${staffId}`), 'staff_session'),
 
   async get(staffId: string): Promise<StaffSessionCacheData | null> {
     return cacheGet<StaffSessionCacheData>(this.key(staffId));

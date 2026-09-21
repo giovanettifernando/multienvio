@@ -88,6 +88,8 @@ export const POST = withApiHandlerResponse(async (context) => {
 
     // Obter tokenVersion do Redis (existente ou inicializa com 1)
     const tokenVersion = await sessionCache.getOrInitTokenVersion(dbUser.id);
+    // Sessão própria deste aparelho: outros aparelhos seguem logados
+    const sid = await sessionCache.openDevice(dbUser.id);
 
     // Criar par de tokens JWT (access + refresh)
     // Note: Role removido do modelo User - todos clientes são 'user'
@@ -96,6 +98,7 @@ export const POST = withApiHandlerResponse(async (context) => {
       email: dbUser.email,
       role: 'user',
       tokenVersion,
+      sid,
     });
 
     // Salvar sessão completa no Redis

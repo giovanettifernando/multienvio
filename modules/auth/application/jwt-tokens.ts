@@ -50,6 +50,8 @@ export interface TokenPayload {
   email: string;
   role: string;
   tokenVersion: number;
+  /** Sessão do aparelho (ver sessionCache.openDevice). Tokens antigos não têm. */
+  sid?: string;
   type: TokenType;
   iat?: number;
   exp?: number;
@@ -149,6 +151,15 @@ export async function verifyToken(
           tokenVersion: tokenPayload.tokenVersion,
           currentVersion: redisTokenVersion,
         }, 'Token version mismatch - session invalidated');
+        return { payload: null, error: 'token_version_mismatch' };
+      }
+
+      // Logout neste aparelho: só este token cai, os outros aparelhos seguem.
+      if (tokenPayload.sid && !(await sessionCache.hasDevice(tokenPayload.userId, tokenPayload.sid))) {
+        logger.info({
+          event: 'token_device_closed',
+          userId: tokenPayload.userId,
+        }, 'Device session closed');
         return { payload: null, error: 'token_version_mismatch' };
       }
     }

@@ -13,7 +13,7 @@ import { requireValidOrigin } from '@/platform/api/csrf';
  * Fluxo:
  * 1. Tenta obter userId do access token (getSession)
  * 2. Se falhar, tenta obter do refresh token (válido por 7 dias)
- * 3. Com userId, incrementa tokenVersion para invalidar todos os tokens
+ * 3. Com userId, encerra a sessão deste aparelho (os outros seguem logados)
  * 4. Limpa cookies e cache
  */
 export const POST = withApiHandlerResponse(async (context) => {
@@ -25,11 +25,13 @@ export const POST = withApiHandlerResponse(async (context) => {
 
   try {
     let userId: string | null = null;
+    let sid: string | undefined;
 
     // 1. Tentar obter userId do access token (via getSession)
     const session = await getSession();
     if (session?.userId) {
       userId = session.userId;
+      sid = session.sid;
       logger.debug('logout_from_access_token', { userId });
     }
 
@@ -47,6 +49,7 @@ export const POST = withApiHandlerResponse(async (context) => {
 
         if (!error && payload?.userId) {
           userId = payload.userId;
+          sid = payload.sid;
           logger.debug('logout_from_refresh_token', { userId });
         } else {
           logger.debug('logout_refresh_token_invalid', { error });
@@ -56,13 +59,19 @@ export const POST = withApiHandlerResponse(async (context) => {
 
     // 3. Com userId, revogar sessão
     if (userId) {
-      // INCR tokenVersion no Redis - invalida todos os tokens existentes
-      const newVersion = await sessionCache.incrementTokenVersion(userId);
+      // Encerra só este aparelho; os outros seguem logados. Token de antes da
+      // sessão por aparelho (sem sid) não tem como ser encerrado sozinho: nesse
+      // caso a versão sobe e todos saem, como era antes.
+      if (sid) {
+        await sessionCache.closeDevice(userId, sid);
+      } else {
+        await sessionCache.incrementTokenVersion(userId);
+      }
 
       // Invalidar cache de dados do usuário
       userCache.invalidate(userId).catch(() => {});
 
-      logger.info('logout_success', { userId, newTokenVersion: newVersion });
+      logger.info('logout_success', { userId, device: Boolean(sid) });
     } else {
       // Nenhum token válido - apenas limpar cookies
       logger.info('logout_no_valid_token');

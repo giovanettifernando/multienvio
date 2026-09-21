@@ -4,12 +4,14 @@
  * Unifica a lógica de refresh entre diferentes tipos de atores (user, admin, etc.)
  * mantendo as especificidades de cada um via configuração.
  *
- * SECURITY: Token Rotation
  * - Valida token atual do cookie
- * - Verifica tokenVersion no Redis (fail-closed)
- * - INCREMENTA tokenVersion (invalidando tokens anteriores)
- * - Gera novo token com novo tokenVersion
- * - Renova TTL da sessão no Redis
+ * - Verifica tokenVersion no Redis (fail-closed): versão nova = sessão revogada
+ *   (bloqueio, troca de permissão), derruba todos os aparelhos
+ * - Verifica que o aparelho (sid) ainda está logado
+ * - Gera token novo com a MESMA versão e o mesmo aparelho e renova a validade
+ *
+ * A renovação não incrementa o tokenVersion: incrementar invalidava a sessão
+ * de todos os outros aparelhos e abas do usuário a cada página aberta.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -22,9 +24,10 @@ import { rateLimitByIP } from '@/platform/cache/rate-limit-redis';
 
 interface SessionCache<TSession> {
   get(id: string): Promise<TSession | null>;
-  set(id: string, data: TSession): Promise<boolean>;
   getTokenVersion(id: string): Promise<number | null>;
-  incrementTokenVersion(id: string): Promise<number | null>;
+  openDevice(id: string): Promise<string>;
+  touchDevice(id: string, sid: string): Promise<boolean>;
+  touch(id: string): Promise<boolean>;
 }
 
 interface RateLimitConfig {
@@ -57,11 +60,11 @@ interface RefreshHandlerConfig<TPayload, TSession> {
   /** Função para extrair tokenVersion do payload */
   getTokenVersionFromPayload: (payload: TPayload) => number;
 
-  /** Função para assinar novo(s) token(s) - recebe payload e session para acesso a todos os campos */
-  signToken: (payload: TPayload, session: TSession, newTokenVersion: number) => Promise<string | { accessToken: string; refreshToken: string }>;
+  /** Aparelho do token (tokens de antes da sessão por aparelho não têm) */
+  getSidFromPayload: (payload: TPayload) => string | undefined;
 
-  /** Função para atualizar a sessão com novo tokenVersion */
-  updateSession: (session: TSession, newTokenVersion: number) => TSession;
+  /** Função para assinar novo(s) token(s) - recebe payload e session para acesso a todos os campos */
+  signToken: (payload: TPayload, session: TSession, tokenVersion: number, sid: string) => Promise<string | { accessToken: string; refreshToken: string }>;
 
   /** Função para setar cookies de autenticação na resposta */
   setAuthCookies: (response: NextResponse, tokens: string | { accessToken: string; refreshToken: string }) => void;
@@ -176,22 +179,29 @@ export function createRefreshHandler<TPayload, TSession>(
         return response;
       }
 
-      // 7. SECURITY: Token Rotation - incrementar tokenVersion
-      const newTokenVersion = await config.sessionCache.incrementTokenVersion(actorId);
-
-      if (newTokenVersion === null) {
-        return NextResponse.json(
-          { error: 'cache_error', message: 'Erro ao renovar sessão. Tente novamente.' },
-          { status: 500 }
-        );
+      // 7. Aparelho ainda logado? (logout neste aparelho encerra só ele)
+      let sid = config.getSidFromPayload(payload);
+      if (sid) {
+        const aberto = await config.sessionCache.touchDevice(actorId, sid);
+        if (!aberto) {
+          const response = NextResponse.json(
+            { error: 'session_closed', message: 'Sessão encerrada. Faça login novamente.' },
+            { status: 401 }
+          );
+          config.clearAuthCookies(response);
+          return response;
+        }
+      } else {
+        // Token de antes da sessão por aparelho: ganha um aparelho agora
+        sid = await config.sessionCache.openDevice(actorId);
       }
 
-      // 8. Gerar novo(s) token(s) com NOVO tokenVersion
-      const tokens = await config.signToken(payload, session, newTokenVersion);
+      // 8. Token novo com a mesma versão e o mesmo aparelho
+      const tokens = await config.signToken(payload, session, redisTokenVersion, sid);
 
-      // 9. Renovar TTL da sessão no Redis
-      const updatedSession = config.updateSession(session, newTokenVersion);
-      await config.sessionCache.set(actorId, updatedSession);
+      // 9. Renovar a validade da sessão (sem regravar a versão, para não
+      // desfazer um bloqueio feito no meio desta renovação)
+      await config.sessionCache.touch(actorId);
 
       // 10. Criar resposta com novo(s) token(s)
       const response = NextResponse.json({

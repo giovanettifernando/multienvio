@@ -40,6 +40,7 @@ test.describe('app/api/auth/login', () => {
     test.mock.method(rateLimit, 'rateLimitByIPStrict', async () => null);
     test.mock.method(sessionCache, 'getOrInitTokenVersion', async () => 1);
     test.mock.method(sessionCache, 'set', async () => true);
+    test.mock.method(sessionCache, 'openDevice', async () => 's-aparelho');
     test.mock.method(jwt, 'signTokenPair', async () => ({ accessToken: 'access.jwt', refreshToken: 'refresh.jwt' }));
   });
 
@@ -129,6 +130,10 @@ test.describe('app/api/auth/login', () => {
     const sessao = (sessionCache.set as any).mock.calls[0].arguments;
     assert.strictEqual(sessao[0], 'u1');
     assert.strictEqual(sessao[1].tokenVersion, 1);
+
+    // Cada login abre a sessão de um aparelho, que vai dentro do token
+    assert.strictEqual((sessionCache.openDevice as any).mock.calls[0].arguments[0], 'u1');
+    assert.strictEqual((jwt.signTokenPair as any).mock.calls[0].arguments[0].sid, 's-aparelho');
   });
   test('aceita e-mail colado com espaços e maiúsculas', async () => {
     const u = await usuario();

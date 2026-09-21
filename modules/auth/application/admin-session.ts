@@ -46,6 +46,8 @@ export interface AdminJWTPayload {
   isSuperAdmin: boolean;
   permissions: AdminPermission[];
   tokenVersion: number;
+  /** Sessão do aparelho (ver staffSessionCache.openDevice). Tokens antigos não têm. */
+  sid?: string;
   iss?: string;
   aud?: string;
   iat?: number;
@@ -64,6 +66,7 @@ export async function adminSign(payload: Omit<AdminJWTPayload, 'iss' | 'aud' | '
     isSuperAdmin: payload.isSuperAdmin || false,
     permissions: payload.permissions || [],
     tokenVersion: payload.tokenVersion,
+    ...(payload.sid ? { sid: payload.sid } : {}),
   };
 
   const jwt = await new SignJWT(jwtPayload)
@@ -165,8 +168,13 @@ export async function getAdminSessionFromRequest(request: Request): Promise<Admi
     return null;
   }
 
-  // Mismatch = logout foi feito ou sessão inválida → null
+  // Mismatch = sessão revogada (bloqueio, troca de permissão) → null
   if (redisTokenVersion !== jwtPayload.tokenVersion) {
+    return null;
+  }
+
+  // Logout neste aparelho → null (os outros aparelhos seguem logados)
+  if (jwtPayload.sid && !(await staffSessionCache.hasDevice(jwtPayload.staffId, jwtPayload.sid))) {
     return null;
   }
 

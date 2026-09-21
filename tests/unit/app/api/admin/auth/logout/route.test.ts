@@ -12,6 +12,7 @@ function logout(headers: Record<string, string> = {}) {
 test.describe('app/api/admin/auth/logout', () => {
   test.beforeEach(() => {
     test.mock.method(staffSessionCache, 'incrementTokenVersion', async () => 2);
+    test.mock.method(staffSessionCache, 'closeDevice', async () => true);
   });
 
   test.afterEach(() => {
@@ -31,7 +32,18 @@ test.describe('app/api/admin/auth/logout', () => {
     assert.strictEqual(res.status, 401);
   });
 
-  test('revoga os tokens do staff e apaga o cookie', async () => {
+  test('encerra só este aparelho e apaga o cookie', async () => {
+    test.mock.method(adminSessionModule, 'getAdminSessionFromRequest', async () => adminSession({ staffId: 's9', sid: 'painel-2' }));
+
+    const res = await logout();
+
+    assert.strictEqual(res.status, 200);
+    assert.deepStrictEqual((staffSessionCache.closeDevice as any).mock.calls[0].arguments, ['s9', 'painel-2']);
+    assert.strictEqual((staffSessionCache.incrementTokenVersion as any).mock.callCount(), 0);
+    assert.match(res.headers.get('set-cookie') ?? '', /Max-Age=0/i);
+  });
+
+  test('token de antes da sessão por aparelho: revoga tudo e apaga o cookie', async () => {
     test.mock.method(adminSessionModule, 'getAdminSessionFromRequest', async () => adminSession({ staffId: 's9' }));
 
     const res = await logout();

@@ -40,6 +40,7 @@ test.describe('app/api/admin/auth/login', () => {
     test.mock.method(rateLimit, 'rateLimitByIPStrict', async () => null);
     test.mock.method(staffSessionCache, 'getOrInitTokenVersion', async () => 3);
     test.mock.method(staffSessionCache, 'set', async () => true);
+    test.mock.method(staffSessionCache, 'openDevice', async () => 'painel-1');
     test.mock.method(adminSession, 'adminSign', async () => 'admin.jwt');
     test.mock.method(audit, 'logAdminLogin', async () => {});
   });
@@ -93,6 +94,7 @@ test.describe('app/api/admin/auth/login', () => {
     const assinatura = (adminSession.adminSign as any).mock.calls[0].arguments[0];
     assert.deepStrictEqual(assinatura.permissions, ['OPERACOES']);
     assert.strictEqual(assinatura.tokenVersion, 3);
+    assert.strictEqual(assinatura.sid, 'painel-1', 'cada login abre a sessão de um aparelho');
     assert.strictEqual((audit.logAdminLogin as any).mock.callCount(), 1);
   });
 

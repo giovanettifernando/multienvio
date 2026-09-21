@@ -205,6 +205,8 @@ export const GET = withApiHandlerResponse(async (context) => {
 
     // Get tokenVersion from Redis (or init with 1)
     const tokenVersion = await sessionCache.getOrInitTokenVersion(user.id);
+    // Sessão própria deste aparelho: outros aparelhos seguem logados
+    const sid = await sessionCache.openDevice(user.id);
 
     // Create JWT token pair for session (access + refresh)
     // Note: Role removed from User - use 'user' as default for all clients
@@ -213,6 +215,7 @@ export const GET = withApiHandlerResponse(async (context) => {
       email: user.email,
       role: 'user',
       tokenVersion,
+      sid,
     });
 
     // Save session to Redis

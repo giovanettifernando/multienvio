@@ -11,7 +11,7 @@
  * os tokens anteriores se tornam imediatamente inválidos.
  */
 
-import { cookies } from 'next/headers';
+import type { NextRequest } from 'next/server';
 import { createRefreshHandler } from '@/platform/auth/refresh-handler';
 import {
   verifyRefreshToken,
@@ -35,30 +35,24 @@ export const POST = createRefreshHandler<TokenPayload, SessionCacheData>({
   getIdFromPayload: (payload) => payload.userId,
   getStatusFromSession: (session) => session.status,
   getTokenVersionFromPayload: (payload) => payload.tokenVersion,
+  getSidFromPayload: (payload) => payload.sid,
 
-  getToken: async () => {
-    const cookieStore = await cookies();
-    return cookieStore.get(REFRESH_TOKEN_COOKIE)?.value ?? null;
-  },
+  getToken: (req) => (req as NextRequest).cookies.get(REFRESH_TOKEN_COOKIE)?.value ?? null,
 
   verifyToken: async (token) => {
     const result = await verifyRefreshToken(token, true);
     return { payload: result.payload, error: result.error };
   },
 
-  signToken: async (_payload, session, newTokenVersion) => {
+  signToken: async (_payload, session, tokenVersion, sid) => {
     return signTokenPair({
       userId: session.userId,
       email: session.email,
       role: session.role,
-      tokenVersion: newTokenVersion,
+      tokenVersion,
+      sid,
     });
   },
-
-  updateSession: (session, newTokenVersion) => ({
-    ...session,
-    tokenVersion: newTokenVersion,
-  }),
 
   setAuthCookies: (response, tokens) => {
     if (typeof tokens === 'string') return;

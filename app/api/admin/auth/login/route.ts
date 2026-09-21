@@ -107,6 +107,8 @@ export const POST = withApiHandlerResponse<Record<string, never>>(async (context
 
     // Obter tokenVersion do Redis (existente ou inicializa com 1)
     const tokenVersion = await staffSessionCache.getOrInitTokenVersion(staffUser.id);
+    // Sessão própria deste aparelho: outros aparelhos seguem logados
+    const sid = await staffSessionCache.openDevice(staffUser.id);
 
     // Create JWT token
     // SuperAdmin gets all permissions
@@ -121,6 +123,7 @@ export const POST = withApiHandlerResponse<Record<string, never>>(async (context
       isSuperAdmin: staffUser.isSuperAdmin,
       permissions: jwtPermissions,
       tokenVersion,
+      sid,
     });
 
     // Salvar sessão no Redis
