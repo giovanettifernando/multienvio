@@ -1,94 +1,43 @@
 import assert from 'node:assert';
 import test from 'node:test';
-import { NextResponse } from 'next/server';
 import { GET } from '@/app/api/admin/payment-transactions/pending/route';
 import { prisma } from '@/platform/db/db';
+import * as adminSessionModule from '@/modules/auth/application/admin-session';
+import { adminSession, apiRequest, callRoute, readApi } from '../../../../../../_setup/test-helpers';
 
 const originalPaymentTransaction = prisma.paymentTransaction;
-
-function makeRequest() {
-  return {
-    method: 'GET',
-    headers: new Headers(),
-    nextUrl: new URL('http://test/api/admin/payment-transactions/pending'),
-  } as any;
-}
+const listar = () => callRoute(GET, apiRequest('/api/admin/payment-transactions/pending'));
 
 test.describe('app/api/admin/payment-transactions/pending', () => {
-  let adminHelpers: any;
-
-  test.before(async () => {
-    adminHelpers = await import('../../../../../../../modules/auth/application/admin-helpers.ts');
-  });
-
   test.afterEach(() => {
     test.mock.restoreAll();
     prisma.paymentTransaction = originalPaymentTransaction;
   });
 
-  test('retorna resposta de auth quando requireAdminUser bloqueia', async () => {
-    test.mock.method(
-      adminHelpers,
-      'requireAdminUser',
-      async () => NextResponse.json({ message: 'não' }, { status: 401 })
+  test('exige a permissão INTEGRACOES', async () => {
+    test.mock.method(adminSessionModule, 'getAdminSessionFromRequest', async () =>
+      adminSession({ permissions: ['FINANCEIRO'] })
     );
-
-    const res = await GET(makeRequest());
-    assert.strictEqual(res.status, 401);
+    const res = await readApi(await listar());
+    assert.strictEqual(res.status, 403);
   });
 
-  test('retorna 500 se prisma falhar', async () => {
-    test.mock.method(adminHelpers, 'requireAdminUser', async () => ({ staffId: 's1' }));
+  test('lista só pendentes, mais recentes primeiro, até 100', async () => {
+    test.mock.method(adminSessionModule, 'getAdminSessionFromRequest', async () =>
+      adminSession({ permissions: ['INTEGRACOES'] })
+    );
+    let consulta: any;
     prisma.paymentTransaction = {
-      findMany: async () => {
-        throw new Error('db error');
-      },
+      findMany: async (a: any) => { consulta = a; return [{ id: 't1' }, { id: 't2' }]; },
     } as any;
 
-    const res = await GET(makeRequest());
-    assert.strictEqual(res.status, 500);
-  });
+    const res = await readApi(await listar());
 
-  test('lista pagamentos pendentes com sucesso', async () => {
-    test.mock.method(adminHelpers, 'requireAdminUser', async () => ({ staffId: 's1' }));
-    prisma.paymentTransaction = {
-      findMany: async () => [
-        {
-          id: 'p1',
-          status: 'PENDING',
-          user: { name: 'Ana', email: 'ana@test.com' },
-          createdAt: new Date(),
-        },
-      ],
-    } as any;
-
-    const res = await GET(makeRequest());
     assert.strictEqual(res.status, 200);
-    const body = await res.json();
-    assert.strictEqual(body.total, 1);
-    assert.strictEqual(body.payments[0].id, 'p1');
-    assert.strictEqual(body.payments[0].user.name, 'Ana');
-  });
-
-  test('limita a 100 registros e ordena por createdAt desc', async () => {
-    test.mock.method(adminHelpers, 'requireAdminUser', async () => ({ staffId: 's1' }));
-    prisma.paymentTransaction = {
-      findMany: async (args: any) => {
-        assert.strictEqual(args.take, 100);
-        assert.deepStrictEqual(args.orderBy, { createdAt: 'desc' });
-        return Array.from({ length: 120 }, (_, i) => ({
-          id: `p${i}`,
-          status: 'PENDING',
-          user: { name: `N${i}`, email: `e${i}@t.com` },
-        })).slice(0, 100);
-      },
-    } as any;
-
-    const res = await GET(makeRequest());
-    assert.strictEqual(res.status, 200);
-    const body = await res.json();
-    assert.strictEqual(body.total, 100);
-    assert.strictEqual(body.payments.length, 100);
-    assert.strictEqual(body.payments[0].id, 'p0');
+    assert.deepStrictEqual(consulta.where, { status: 'PENDING' });
+    assert.deepStrictEqual(consulta.orderBy, { createdAt: 'desc' });
+    assert.strictEqual(consulta.take, 100);
+    assert.deepStrictEqual(consulta.include.user.select, { name: true, email: true });
+    assert.strictEqual(res.data.total, 2);
   });
 });

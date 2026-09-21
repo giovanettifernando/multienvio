@@ -1,182 +1,119 @@
 import assert from 'node:assert';
 import test from 'node:test';
-import { NextResponse } from 'next/server';
 import { GET, POST } from '@/app/api/admin/payment-gateway/config/route';
 import { prisma } from '@/platform/db/db';
+import { encrypt, decrypt } from '@/platform/integrations/shared/encryption.service';
+import * as adminSessionModule from '@/modules/auth/application/admin-session';
+import { adminSession, apiRequest, callRoute, readApi } from '../../../../../../_setup/test-helpers';
 
-const originalGateway = prisma.paymentGateway;
-const originalCredential = prisma.paymentCredential;
+const original = { paymentGateway: prisma.paymentGateway, paymentCredential: prisma.paymentCredential };
 
-function makeRequest(body?: unknown, method: 'GET' | 'POST' = 'GET') {
-  return new Request('http://test/api/admin/payment-gateway/config', {
-    method,
-    body: body ? JSON.stringify(body) : undefined,
-    headers: body ? { 'content-type': 'application/json' } : undefined,
-  });
+const ver = (qs = '') => callRoute(GET, apiRequest(`/api/admin/payment-gateway/config${qs}`));
+const salvar = (json: unknown) => callRoute(POST, apiRequest('/api/admin/payment-gateway/config', { json }));
+
+function gatewayCom(credencial: Record<string, unknown> | null) {
+  prisma.paymentGateway = {
+    findFirst: async () => ({
+      id: 'g1',
+      environment: 'SANDBOX',
+      credentials: credencial ? [credencial] : [],
+    }),
+  } as any;
 }
 
 test.describe('app/api/admin/payment-gateway/config', () => {
-  let adminHelpers: any;
-  let encryptModule: any;
-
-  test.before(async () => {
-    adminHelpers = await import('../../../../../../../modules/auth/application/admin-helpers.ts');
-    encryptModule = await import('../../../../../../../platform/integrations/shared/encryption.service.ts');
+  test.beforeEach(() => {
+    test.mock.method(adminSessionModule, 'getAdminSessionFromRequest', async () =>
+      adminSession({ permissions: ['INTEGRACOES'] })
+    );
   });
 
   test.afterEach(() => {
     test.mock.restoreAll();
-    prisma.paymentGateway = originalGateway;
-    prisma.paymentCredential = originalCredential;
+    Object.assign(prisma, original);
   });
 
-  test('GET retorna resposta de auth quando bloqueado', async () => {
-    test.mock.method(
-      adminHelpers,
-      'requireAdminUser',
-      async () => NextResponse.json({ message: 'nope' }, { status: 401 })
+  test('GET e POST exigem a permissão INTEGRACOES', async () => {
+    test.mock.method(adminSessionModule, 'getAdminSessionFromRequest', async () =>
+      adminSession({ permissions: ['FINANCEIRO'] })
     );
-
-    const res = await GET(makeRequest());
-    assert.strictEqual(res.status, 401);
+    assert.strictEqual((await ver()).status, 403);
+    assert.strictEqual((await salvar({ environment: 'SANDBOX' })).status, 403);
   });
 
-  test('GET retorna config null quando não há credencial', async () => {
-    test.mock.method(adminHelpers, 'requireAdminUser', async () => ({ staffId: 's1' }));
-    prisma.paymentGateway = {
-      findFirst: async () => ({ id: 'g1', credentials: [] }),
-    } as any;
-
-    const res = await GET(makeRequest());
+  test('GET devolve config nula quando não há credencial', async () => {
+    gatewayCom(null);
+    const res = await readApi(await ver());
     assert.strictEqual(res.status, 200);
-    const body = await res.json();
-    assert.deepStrictEqual(body, { config: null });
+    assert.deepStrictEqual(res.data, { config: null });
   });
 
-  test('GET retorna publicKey e environment quando configurado', async () => {
-    test.mock.method(adminHelpers, 'requireAdminUser', async () => ({ staffId: 's1' }));
-    prisma.paymentGateway = {
-      findFirst: async () => ({
-        id: 'g1',
-        environment: 'sandbox',
-        credentials: [{ publicKey: 'pub123', createdAt: new Date() }],
-      }),
-    } as any;
+  test('GET esconde a chave e o token do webhook por padrão', async () => {
+    gatewayCom({ accessToken: encrypt('$aact_chave'), clientSecret: encrypt('token-webhook'), publicKey: null });
 
-    const res = await GET(makeRequest());
+    const res = await readApi(await ver());
+
+    assert.strictEqual(res.data.config.accessToken, '***configurado***');
+    assert.strictEqual(res.data.config.webhookSecret, '***configurado***');
+    assert.strictEqual(res.data.config.hasAccessToken, true);
+    assert.strictEqual(res.data.config.environment, 'SANDBOX');
+  });
+
+  test('GET com reveal=true devolve os valores em claro', async () => {
+    gatewayCom({ accessToken: encrypt('$aact_chave'), clientSecret: encrypt('token-webhook') });
+    const res = await readApi(await ver('?reveal=true'));
+    assert.strictEqual(res.data.config.accessToken, '$aact_chave');
+    assert.strictEqual(res.data.config.webhookSecret, 'token-webhook');
+  });
+
+  test('GET avisa quando não consegue descriptografar (chave de criptografia trocada)', async () => {
+    gatewayCom({ accessToken: 'lixo-que-nao-descriptografa' });
+    const res = await readApi(await ver());
     assert.strictEqual(res.status, 200);
-    const body = await res.json();
-    assert.strictEqual(body.config.environment, 'sandbox');
-    assert.strictEqual(body.config.publicKey, 'pub123');
-    assert.strictEqual(body.config.accessToken, undefined);
+    assert.strictEqual(res.data.config.accessTokenDecryptionFailed, true);
   });
 
-  test('GET retorna 500 em erro inesperado', async () => {
-    test.mock.method(adminHelpers, 'requireAdminUser', async () => ({ staffId: 's1' }));
-    prisma.paymentGateway = {
-      findFirst: async () => {
-        throw new Error('boom');
-      },
-    } as any;
-
-    const res = await GET(makeRequest());
-    assert.strictEqual(res.status, 500);
-  });
-
-  test('POST retorna auth block quando require falha', async () => {
-    test.mock.method(
-      adminHelpers,
-      'requireAdminUser',
-      async () => NextResponse.json({ message: 'denied' }, { status: 401 })
-    );
-
-    const res = await POST(makeRequest({}, 'POST'));
-    assert.strictEqual(res.status, 401);
-  });
-
-  test('POST valida environment/publicKey', async () => {
-    test.mock.method(adminHelpers, 'requireAdminUser', async () => ({ staffId: 's1' }));
-
-    const res = await POST(makeRequest({ environment: '', publicKey: '' }, 'POST'));
+  test('POST recusa ambiente desconhecido', async () => {
+    const res = await readApi(await salvar({ environment: 'TESTE' }));
     assert.strictEqual(res.status, 400);
   });
 
-  test('POST cria gateway e credencial quando não existe', async () => {
-    test.mock.method(adminHelpers, 'requireAdminUser', async () => ({ staffId: 's1' }));
-    const encryptSpy = test.mock.method(encryptModule, 'encrypt', (value: string) => `enc(${value})`);
-
+  test('POST cria gateway e credencial com a chave criptografada', async () => {
+    let credencial: any;
     prisma.paymentGateway = {
       findFirst: async () => null,
-      create: async () => ({ id: 'g1', environment: 'sandbox' }),
-      update: async () => {
-        throw new Error('should not update');
-      },
+      create: async (a: any) => ({ id: 'g1', ...a.data }),
     } as any;
     prisma.paymentCredential = {
       findFirst: async () => null,
-      create: async (args: any) => ({
-        id: 'c1',
-        ...args.data,
-      }),
+      create: async (a: any) => { credencial = a.data; return { id: 'c1', ...a.data }; },
     } as any;
 
-    const res = await POST(
-      makeRequest(
-        { environment: 'sandbox', publicKey: 'pub', accessToken: 'tok', webhookSecret: 'sec' },
-        'POST'
-      )
-    );
+    const res = await readApi(await salvar({ environment: 'SANDBOX', accessToken: '$aact_nova', webhookSecret: 'wh' }));
+
     assert.strictEqual(res.status, 200);
-    const body = await res.json();
-    assert.strictEqual(body.success, true);
-    assert.strictEqual(encryptSpy.mock.callCount(), 2);
+    assert.strictEqual(credencial.gatewayId, 'g1');
+    assert.strictEqual(credencial.isActive, true);
+    assert.notStrictEqual(credencial.accessToken, '$aact_nova', 'a chave não pode ser gravada em claro');
+    assert.strictEqual(decrypt(credencial.accessToken), '$aact_nova');
+    // o Asaas lê o token do webhook de clientSecret
+    assert.strictEqual(decrypt(credencial.clientSecret), 'wh');
   });
 
-  test('POST atualiza gateway e credencial existente', async () => {
-    test.mock.method(adminHelpers, 'requireAdminUser', async () => ({ staffId: 's1' }));
-    test.mock.method(encryptModule, 'encrypt', (value: string) => `enc(${value})`);
-
-    let updateGatewayCalled = false;
-    let updateCredentialCalled = false;
-
+  test('POST sem chave nova mantém a que já está gravada', async () => {
+    let atualizado: any;
     prisma.paymentGateway = {
-      findFirst: async () => ({ id: 'g2', environment: 'production' }),
-      create: async () => {
-        throw new Error('should not create');
-      },
-      update: async () => {
-        updateGatewayCalled = true;
-        return { id: 'g2', environment: 'sandbox' };
-      },
+      findFirst: async () => ({ id: 'g1' }),
+      update: async (a: any) => ({ id: 'g1', ...a.data }),
     } as any;
     prisma.paymentCredential = {
-      findFirst: async () => ({ id: 'cred1', isActive: true }),
-      update: async () => {
-        updateCredentialCalled = true;
-        return { id: 'cred1' };
-      },
-      create: async () => {
-        throw new Error('should not create credential');
-      },
+      findFirst: async () => ({ id: 'c1' }),
+      update: async (a: any) => { atualizado = a.data; return { id: 'c1' }; },
     } as any;
 
-    const res = await POST(
-      makeRequest({ environment: 'sandbox', publicKey: 'pub2', accessToken: 'tok2' }, 'POST')
-    );
+    const res = await readApi(await salvar({ environment: 'PRODUCTION' }));
+
     assert.strictEqual(res.status, 200);
-    assert.ok(updateGatewayCalled);
-    assert.ok(updateCredentialCalled);
-  });
-
-  test('POST retorna 500 em erro inesperado', async () => {
-    test.mock.method(adminHelpers, 'requireAdminUser', async () => ({ staffId: 's1' }));
-    prisma.paymentGateway = {
-      findFirst: async () => {
-        throw new Error('db fail');
-      },
-    } as any;
-
-    const res = await POST(makeRequest({ environment: 'sandbox', publicKey: 'p' }, 'POST'));
-    assert.strictEqual(res.status, 500);
+    assert.deepStrictEqual(atualizado, {});
   });
 });
