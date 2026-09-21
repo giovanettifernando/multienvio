@@ -129,12 +129,14 @@ export default function LoginClient() {
           render={({ field }) => (
             <ELFormItem
               label="E-mail"
+              htmlFor="login-email"
               required
               validateStatus={errors.email ? "error" : undefined}
               help={errors.email?.message}
             >
               <ELInput
                 {...field}
+                id="login-email"
                 autoComplete="email"
                 inputMode="email"
                 placeholder="seuemail@empresa.com"
@@ -150,12 +152,14 @@ export default function LoginClient() {
           render={({ field }) => (
             <ELFormItem
               label="Senha"
+              htmlFor="login-senha"
               required
               validateStatus={errors.senha ? "error" : undefined}
               help={errors.senha?.message}
             >
               <ELInput.Password
                 {...field}
+                id="login-senha"
                 autoComplete="current-password"
                 placeholder="Digite sua senha"
                 aria-invalid={Boolean(errors.senha)}
