@@ -9,6 +9,7 @@ import { requireAdminSession } from '@/platform/auth/require-session';
 import { withApiHandler } from '@/platform/api/handler';
 import { ApiError } from '@/platform/api/errors';
 import { prisma } from '@/platform/db/db';
+import { sessionCache, userCache } from '@/platform/cache/cache';
 
 import { AdminPermission } from '@prisma/client';
 import { logger } from '@/platform/logging/logger';
@@ -47,7 +48,7 @@ export const PUT = withApiHandler<unknown, { id: string }>(async ({ req, params 
   // Verificar se usuário existe
   const existingUser = await prisma.user.findUnique({
     where: { id },
-    select: { id: true, email: true },
+    select: { id: true, email: true, status: true },
   });
 
   if (!existingUser) {
@@ -105,6 +106,15 @@ export const PUT = withApiHandler<unknown, { id: string }>(async ({ req, params 
       updatedAt: true,
     },
   });
+
+  // Status e e-mail ficam guardados na sessão do login: sem revogar, a mudança
+  // só valeria quando a sessão expirasse (7 dias).
+  const statusMudou = data.status !== undefined && data.status !== existingUser.status;
+  const emailMudou = data.email !== undefined && data.email !== existingUser.email;
+  if (statusMudou || emailMudou) {
+    await sessionCache.incrementTokenVersion(id);
+  }
+  userCache.invalidate(id).catch(() => {});
 
   // Log de auditoria
   logger.info({

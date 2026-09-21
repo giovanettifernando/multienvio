@@ -3,6 +3,7 @@ import { ApiError } from '@/platform/api/errors';
 import { requireAdminSession } from '@/platform/auth/require-session';
 import { logClientStatusChange } from '@/platform/logging/audit-admin';
 import { rateLimitByUser, RATE_LIMITS } from '@/platform/cache/rate-limit-redis';
+import { sessionCache, userCache } from '@/platform/cache/cache';
 import { z } from 'zod';
 import { AdminPermission } from '@prisma/client';
 
@@ -71,6 +72,12 @@ export const POST = withApiHandler<AdminClientBlockResponse>(async ({ req }) => 
     where: { id: clientId },
     data: { status: 'blocked' },
   });
+
+  // Derruba as sessões abertas. O proxy e a renovação de token confiam no
+  // status guardado no Redis no momento do login; sem revogar, o cliente
+  // bloqueado seguia usando o sistema até a sessão expirar (7 dias).
+  await sessionCache.incrementTokenVersion(clientId);
+  userCache.invalidate(clientId).catch(() => {});
 
   // Audit log
   await logClientStatusChange(session.staffId, clientId, 'block', reason);

@@ -1,129 +1,136 @@
-import assert from "node:assert";
-import test from "node:test";
-import { NextResponse } from "next/server";
-import { GET, PUT, DELETE } from '@/app/api/admin/staff/users/[id]/route';
-import * as adminHelpers from '@/modules/auth/application/admin-helpers';
-import { AdminPermission } from "@prisma/client";
+import assert from 'node:assert';
+import test from 'node:test';
+import { GET, PUT } from '@/app/api/admin/staff/users/[id]/route';
 import { prisma } from '@/platform/db/db';
+import { staffSessionCache } from '@/platform/cache/cache';
+import * as adminSessionModule from '@/modules/auth/application/admin-session';
+import * as audit from '@/platform/logging/audit-admin';
+import { adminSession, apiRequest, callRoute, readApi } from '../../../../../../../_setup/test-helpers';
 
-const originalPrisma = { ...prisma };
+const originalStaffUser = prisma.staffUser;
 
-function makeRequest(url: string, init?: RequestInit) {
-  const req = new Request(url, init);
+function registro(overrides: Record<string, unknown> = {}) {
   return {
-    ...req,
-    url,
-    headers: req.headers,
-    method: req.method,
-    nextUrl: new URL(url),
-    json: () => req.json(),
-  } as any;
+    id: 'alvo',
+    name: 'Alvo',
+    email: 'alvo@empresa.com',
+    phone: null,
+    status: 'ACTIVE',
+    isSuperAdmin: false,
+    permissions: ['OPERACOES', 'FINANCEIRO'],
+    lastAccessAt: null,
+    lastLoginAt: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    ...overrides,
+  };
 }
 
-test.describe("app/api/admin/staff/users/[id]", () => {
+const ver = () => callRoute(GET, apiRequest('/api/admin/staff/users/alvo'), { id: 'alvo' });
+const editar = (json: unknown) =>
+  callRoute(PUT, apiRequest('/api/admin/staff/users/alvo', { method: 'PUT', json }), { id: 'alvo' });
+
+/** Banco em memória com um staff; `update` aplica os dados recebidos. */
+function banco(existente = registro(), outros: Record<string, any> = {}) {
+  const chamadas: any[] = [];
+  prisma.staffUser = {
+    findUnique: async (a: any) => (a.where.id === 'alvo' ? existente : outros[a.where.email] ?? null),
+    update: async (a: any) => {
+      chamadas.push(a.data);
+      return { ...existente, ...a.data };
+    },
+  } as any;
+  return chamadas;
+}
+
+test.describe('app/api/admin/staff/users/[id]', () => {
+  test.beforeEach(() => {
+    test.mock.method(adminSessionModule, 'getAdminSessionFromRequest', async () =>
+      adminSession({ permissions: ['USUARIOS'] })
+    );
+    test.mock.method(staffSessionCache, 'incrementTokenVersion', async () => 2);
+    test.mock.method(audit, 'logPermissionChange', async () => {});
+    test.mock.method(audit, 'logStatusChange', async () => {});
+    test.mock.method(audit, 'logAdminAction', async () => {});
+  });
+
   test.afterEach(() => {
     test.mock.restoreAll();
-    Object.assign(prisma, originalPrisma);
+    prisma.staffUser = originalStaffUser;
   });
 
-  test("GET retorna 401 quando requireAdminUser bloqueia", async () => {
-    const fake = NextResponse.json({ message: "forbidden" }, { status: 401 });
-    test.mock.method(adminHelpers, "requireAdminUser", async () => fake);
-    const res = await GET(makeRequest("http://test/api/admin/staff/users/s1"), { params: Promise.resolve({ id: "s1" }) } as any);
-    assert.strictEqual(res.status, 401);
-  });
+  const revogacoes = () => (staffSessionCache.incrementTokenVersion as any).mock.calls;
 
-  test("GET retorna 404 quando usuário não existe", async () => {
-    test.mock.method(adminHelpers, "requireAdminUser", async () => true);
-    prisma.staffUser = { findUnique: async () => null } as any;
-    const res = await GET(makeRequest("http://test/api/admin/staff/users/s1"), { params: Promise.resolve({ id: "s1" }) } as any);
-    assert.strictEqual(res.status, 404);
-  });
-
-  test("GET retorna usuário", async () => {
-    test.mock.method(adminHelpers, "requireAdminUser", async () => true);
-    prisma.staffUser = {
-      findUnique: async () => ({
-        id: "s1",
-        name: "Staff",
-        email: "a@b.com",
-        phone: null,
-        status: "ACTIVE",
-        isSuperAdmin: false,
-        permissions: [AdminPermission.USUARIOS],
-        lastAccessAt: new Date(),
-        lastLoginAt: new Date(),
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      }),
-    } as any;
-    const res = await GET(makeRequest("http://test/api/admin/staff/users/s1"), { params: Promise.resolve({ id: "s1" }) } as any);
-    assert.strictEqual(res.status, 200);
-    const body = await res.json();
-    assert.strictEqual(body.user.id, "s1");
-  });
-
-  test("PUT retorna 404 se não existe", async () => {
-    test.mock.method(adminHelpers, "requireAdminUser", async () => true);
-    prisma.staffUser = {
-      findUnique: async () => null,
-    } as any;
-    const res = await PUT(
-      makeRequest("http://test/api/admin/staff/users/s1", { method: "PUT", body: JSON.stringify({ name: "New" }), headers: { "content-type": "application/json" } }),
-      { params: Promise.resolve({ id: "s1" }) } as any,
+  test('GET exige a permissão USUARIOS', async () => {
+    test.mock.method(adminSessionModule, 'getAdminSessionFromRequest', async () =>
+      adminSession({ permissions: ['OPERACOES'] })
     );
-    assert.strictEqual(res.status, 404);
+    const res = await readApi(await ver());
+    assert.strictEqual(res.status, 403);
   });
 
-  test("PUT atualiza usuário", async () => {
-    test.mock.method(adminHelpers, "requireAdminUser", async () => true);
-    prisma.staffUser = {
-      findUnique: async () => ({
-        id: "s1",
-        email: "a@b.com",
-        isSuperAdmin: false,
-        permissions: [AdminPermission.USUARIOS],
-      }),
-      update: async ({ data }: any) => ({
-        id: "s1",
-        name: data.name ?? "Staff",
-        email: data.email ?? "a@b.com",
-        phone: null,
-        status: "ACTIVE",
-        isSuperAdmin: data.isSuperAdmin ?? false,
-        permissions: data.permissions ?? [AdminPermission.USUARIOS],
-        lastAccessAt: new Date(),
-        lastLoginAt: new Date(),
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      }),
-      findUniqueOrThrow: async () => ({}),
-    } as any;
-    const res = await PUT(
-      makeRequest("http://test/api/admin/staff/users/s1", { method: "PUT", body: JSON.stringify({ name: "New", permissions: [AdminPermission.USUARIOS] }), headers: { "content-type": "application/json" } }),
-      { params: Promise.resolve({ id: "s1" }) } as any,
-    );
-    assert.strictEqual(res.status, 200);
-    const body = await res.json();
-    assert.strictEqual(body.user.name, "New");
-  });
-
-  test("DELETE retorna 404 se não existe", async () => {
-    test.mock.method(adminHelpers, "requireAdminUser", async () => true);
+  test('GET responde 404 para staff inexistente', async () => {
     prisma.staffUser = { findUnique: async () => null } as any;
-    const res = await DELETE(makeRequest("http://test/api/admin/staff/users/s1", { method: "DELETE" }), { params: Promise.resolve({ id: "s1" }) } as any);
+    const res = await readApi(await ver());
     assert.strictEqual(res.status, 404);
   });
 
-  test("DELETE remove usuário", async () => {
-    test.mock.method(adminHelpers, "requireAdminUser", async () => true);
-    prisma.staffUser = {
-      findUnique: async () => ({ id: "s1" }),
-      delete: async () => ({}),
-    } as any;
-    const res = await DELETE(makeRequest("http://test/api/admin/staff/users/s1", { method: "DELETE" }), { params: Promise.resolve({ id: "s1" }) } as any);
+  test('GET devolve o staff com status legível', async () => {
+    banco(registro({ status: 'BLOCKED' }));
+    const res = await readApi(await ver());
     assert.strictEqual(res.status, 200);
-    const body = await res.json();
-    assert.match(body.message, /excluído/i);
+    assert.strictEqual(res.data.user.status, 'blocked');
+    assert.deepStrictEqual(res.data.user.permissions, ['OPERACOES', 'FINANCEIRO']);
+  });
+
+  test('PUT recusa e-mail que já pertence a outro staff', async () => {
+    banco(registro(), { 'outro@empresa.com': registro({ id: 'outro' }) });
+    const res = await readApi(await editar({ email: 'outro@empresa.com' }));
+    assert.strictEqual(res.status, 409);
+  });
+
+  test('PUT não deixa um staff comum sem nenhuma permissão', async () => {
+    banco();
+    const res = await readApi(await editar({ permissions: [] }));
+    assert.strictEqual(res.status, 400);
+  });
+
+  test('PUT de dados cadastrais não derruba a sessão', async () => {
+    banco();
+    const res = await readApi(await editar({ name: 'Novo Nome', phone: '11999999999' }));
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(revogacoes().length, 0);
+  });
+
+  test('retirar permissão audita e derruba a sessão na hora', async () => {
+    banco();
+
+    const res = await readApi(await editar({ permissions: ['OPERACOES'] }));
+
+    assert.strictEqual(res.status, 200);
+    assert.deepStrictEqual(
+      (audit.logPermissionChange as any).mock.calls[0].arguments,
+      ['s1', 'alvo', [], ['FINANCEIRO']]
+    );
+    // A permissão vai gravada no token do login: sem revogar, a retirada só
+    // valeria quando a sessão expirasse (7 dias).
+    assert.strictEqual(revogacoes().length, 1);
+    assert.strictEqual(revogacoes()[0].arguments[0], 'alvo');
+  });
+
+  test('bloquear pelo PUT audita e derruba a sessão na hora', async () => {
+    banco();
+    const res = await readApi(await editar({ status: 'BLOCKED' }));
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual((audit.logStatusChange as any).mock.callCount(), 1);
+    assert.strictEqual(revogacoes().length, 1);
+  });
+
+  test('tirar o super admin audita e derruba a sessão', async () => {
+    banco(registro({ isSuperAdmin: true, permissions: [] }));
+    const res = await readApi(await editar({ isSuperAdmin: false, permissions: ['SUPORTE'] }));
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual((audit.logAdminAction as any).mock.calls[0].arguments[1], 'revoke_super_admin');
+    assert.strictEqual(revogacoes().length, 1);
   });
 });

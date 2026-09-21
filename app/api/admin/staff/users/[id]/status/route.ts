@@ -2,6 +2,7 @@ import { withApiHandler } from '@/platform/api/handler';
 import { requireAdminSession } from '@/platform/auth/require-session';
 import { z } from 'zod';
 import { prisma } from '@/platform/db/db';
+import { staffSessionCache } from '@/platform/cache/cache';
 import { AdminPermission, StaffStatus } from '@prisma/client';
 
 type StaffUserApi = {
@@ -88,6 +89,10 @@ export const PATCH = withApiHandler<StaffUserStatusResponse, { id: string }>(asy
       updatedAt: true,
     },
   });
+
+  // O status fica no Redis desde o login: sem revogar, um staff bloqueado
+  // seguia entrando no painel até a sessão expirar (7 dias).
+  await staffSessionCache.incrementTokenVersion(id);
 
   return { data: { user: toApiUser(user) } };
 });

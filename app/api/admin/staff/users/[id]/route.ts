@@ -4,6 +4,7 @@ import { requireAdminSession } from '@/platform/auth/require-session';
 import { logPermissionChange, logStatusChange, logAdminAction } from '@/platform/logging/audit-admin';
 import { z } from 'zod';
 import { prisma } from '@/platform/db/db';
+import { staffSessionCache } from '@/platform/cache/cache';
 import { AdminPermission, StaffStatus } from '@prisma/client';
 
 type StaffUserApi = {
@@ -186,6 +187,16 @@ export const PUT = withApiHandler<StaffUserResponse, { id: string }>(async (cont
       'StaffUser',
       id
     );
+  }
+
+  // Mudança de acesso vale na hora: as permissões vão gravadas no token do
+  // login e o status fica no Redis, então sem revogar a sessão um staff
+  // bloqueado ou rebaixado seguia com o acesso antigo até ela expirar (7 dias).
+  const statusMudou = payload.status !== undefined && payload.status !== existing.status;
+  const superAdminMudou = isSuperAdmin !== existing.isSuperAdmin;
+  const permissoesMudaram = addedPermissions.length > 0 || removedPermissions.length > 0;
+  if (statusMudou || superAdminMudou || permissoesMudaram) {
+    await staffSessionCache.incrementTokenVersion(id);
   }
 
   return { data: { user: toApiUser(updated) } };

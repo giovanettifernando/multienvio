@@ -3,6 +3,7 @@ import { ApiError } from '@/platform/api/errors';
 import { requireAdminSession } from '@/platform/auth/require-session';
 import { logClientStatusChange } from '@/platform/logging/audit-admin';
 import { rateLimitByUser, RATE_LIMITS } from '@/platform/cache/rate-limit-redis';
+import { userCache } from '@/platform/cache/cache';
 import { z } from 'zod';
 import { AdminPermission } from '@prisma/client';
 
@@ -71,6 +72,7 @@ export const POST = withApiHandler<AdminClientUnblockResponse>(async ({ req }) =
     where: { id: clientId },
     data: { status: 'active' },
   });
+  userCache.invalidate(clientId).catch(() => {});
 
   // Audit log
   await logClientStatusChange(session.staffId, clientId, 'unblock', reason);
