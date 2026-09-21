@@ -9,6 +9,7 @@ import { withApiHandler } from '@/platform/api/handler';
 import { ApiError } from '@/platform/api/errors';
 import { getSession } from '@/modules/auth/application/session';
 import { createRecipientPaymentRequest } from '@/modules/recipients/application/service';
+import { validateQuoteAndGetPrice } from '@/modules/cart/application/checkout.service';
 import { createRecipientPaymentSchema } from '@/modules/recipients/application/validation';
 import { sendRecipientPaymentRequestEmail } from '@/platform/email/recipient-payment';
 import { prisma } from '@/platform/db/db';
@@ -36,8 +37,23 @@ export const POST = withApiHandler<CreateResponse>(async (context) => {
   }
 
   // Garantir que o senderId seja do usuario logado
+  // Preço e serviço saem da cotação salva no servidor (dono e validade
+  // conferidos). Sem isso o remetente podia gerar um link de R$ 0,01, pagar ele
+  // mesmo e sair com a etiqueta. A comissão é calculada no pagamento.
+  const { quote } = parsed.data;
+  const cotacao = await validateQuoteAndGetPrice(quote.quoteId, session.userId, quote.totalCents / 100);
+
   const data = {
     ...parsed.data,
+    quote: {
+      quoteId: cotacao.quoteId,
+      carrier: cotacao.carrier,
+      service: cotacao.service,
+      serviceCode: cotacao.serviceCode,
+      estimatedDays: cotacao.estimatedDays,
+      freightCostCents: cotacao.freightCostCents,
+      totalCents: cotacao.freightCostCents,
+    },
     senderId: session.userId,
   };
 

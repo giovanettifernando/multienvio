@@ -319,27 +319,7 @@ export function PaymentModal({
     setLoading(true);
 
     try {
-      if (selectedMethod === "wallet") {
-        // Debitar da carteira
-        // Nota: Opção só fica habilitada se houver saldo suficiente
-        await fetch("/api/wallet/debit", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            referenceId: metadata?.referenceId || `payment:${Date.now()}`,
-            amount,
-            reason: metadata?.reason || "payment",
-            metadata,
-          }),
-        });
-
-        queryClient.invalidateQueries({ queryKey: ["wallet"] });
-        messageApi.success("Pagamento aprovado via carteira!");
-
-        onSuccess?.({ method: "wallet" });
-        handleClose();
-
-      } else if (selectedMethod === "pix" || selectedMethod === "boleto") {
+      if (selectedMethod === "pix" || selectedMethod === "boleto") {
         // Criar cobrança PIX/boleto via Asaas
         const amountCents = Math.round(amount * 100);
         const asaasMetadata = {

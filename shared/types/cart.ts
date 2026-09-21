@@ -102,21 +102,3 @@ export type Cart = {
   total: number;
   currency: "BRL";
 };
-
-export type CartUpdatableFields = Partial<
-  Pick<CartItem, "quantidade" | "avisoRecebimento" | "valorSeguro">
->;
-
-export type CheckoutPayload = {
-  pagamento: {
-    metodo: "WALLET" | "PIX" | "CARD" | "BOLETO";
-  };
-};
-
-export type CheckoutResponse = {
-  ok: boolean;
-  orderId?: string;
-  etiquetaIds?: string[];
-  redirectUrl?: string;
-  message?: string;
-};

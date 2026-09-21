@@ -30,7 +30,6 @@ export {
 export {
   type CartItemDto as CartItemDetailDto,
   addItem,
-  updateItem,
   deleteItem,
   listItems,
   getItem,
@@ -48,8 +47,6 @@ export {
   type CheckoutVolumeDeclaration,
   type CheckoutDocument,
   type CheckoutOriginAddress,
-  type CheckoutInput,
-  type CheckoutResult,
   type ValidatedQuote,
 
   // Funções auxiliares
@@ -62,14 +59,5 @@ export {
 
   // Service principal
   saveRecipientIfRequested,
-  processCheckout,
 } from './checkout.service';
 
-// =============================================================================
-// Cart Checkout Service - Checkout do carrinho
-// =============================================================================
-export {
-  type CartCheckoutInput,
-  type CartCheckoutResult,
-  processCartCheckout,
-} from './cart-checkout.service';

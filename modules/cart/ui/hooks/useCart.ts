@@ -3,9 +3,6 @@ import type {
   Cart,
   CartItem,
   CartItemSnapshot,
-  CartUpdatableFields,
-  CheckoutPayload,
-  CheckoutResponse,
 } from "@/shared/types/cart";
 
 // Calcular peso cubado de um volume: (A × L × C) / 6000
@@ -122,28 +119,6 @@ export function useCartAdd() {
   });
 }
 
-export function useCartUpdate(itemId: string) {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async (patch: CartUpdatableFields) => {
-      const response = await fetch(`/api/cart/items/${itemId}`, {
-        method: "PATCH",
-        body: JSON.stringify(patch),
-        headers: { "Content-Type": "application/json" },
-      });
-      if (!response.ok) {
-        throw new Error("Falha ao atualizar item do carrinho");
-      }
-      const json = await response.json();
-      // Handle standardized API response format { data: T, error, meta }
-      return json.data ?? json;
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["cart"] });
-    },
-  });
-}
-
 export function useCartRemove(itemId: string) {
   const qc = useQueryClient();
   return useMutation({
@@ -171,30 +146,6 @@ export function useCartClear() {
         throw new Error("Falha ao limpar carrinho");
       }
       return response.json();
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["cart"] });
-    },
-  });
-}
-
-export function useCartCheckout() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async (
-      payload: CheckoutPayload,
-    ): Promise<CheckoutResponse> => {
-      const response = await fetch("/api/cart/checkout", {
-        method: "POST",
-        body: JSON.stringify(payload),
-        headers: { "Content-Type": "application/json" },
-      });
-      if (!response.ok) {
-        throw new Error("Falha no checkout");
-      }
-      const json = await response.json();
-      // Handle standardized API response format { data: T, error, meta }
-      return (json.data ?? json) as CheckoutResponse;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["cart"] });

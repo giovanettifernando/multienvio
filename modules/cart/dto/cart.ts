@@ -214,6 +214,8 @@ export const documentSnapshotSchema = z.object({
 
 // Schema para adicionar item ao carrinho
 export const addCartItemSchema = z.object({
+  /** Cotação salva de onde sai o preço (o valor enviado pela tela é ignorado). */
+  quoteId: z.string().min(1, 'Cotação obrigatória'),
   originAddress: addressSnapshotSchema,
   destination: addressSnapshotSchema,
   volumes: z.array(volumeSnapshotSchema),
@@ -226,24 +228,3 @@ export const addCartItemSchema = z.object({
 
 export type AddCartItemInput = z.infer<typeof addCartItemSchema>;
 
-// Schema para atualizar item do carrinho
-export const updateCartItemSchema = z.object({
-  originAddress: addressSnapshotSchema.optional(),
-  destination: addressSnapshotSchema.optional(),
-  volumes: z.array(volumeSnapshotSchema).optional(),
-  preferences: preferencesSnapshotSchema.optional(),
-  insuranceValue: z.number().optional(),
-  selectedQuote: selectedQuoteSnapshotSchema.optional(),
-  totals: totalsSnapshotSchema.optional(),
-  document: documentSnapshotSchema.optional(), // Documento fiscal (NFE/Declaração)
-});
-
-export type UpdateCartItemInput = z.infer<typeof updateCartItemSchema>;
-
-// Schema para checkout
-export const checkoutCartSchema = z.object({
-  itemIds: z.array(z.string()).optional(), // Se vazio, usa todos os itens
-  paymentMethod: z.enum(['wallet', 'pix', 'card']).optional(), // Método de pagamento escolhido
-});
-
-export type CheckoutCartInput = z.infer<typeof checkoutCartSchema>;

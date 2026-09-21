@@ -53,28 +53,3 @@ export const DebitSchema = z.object({
 
 export type DebitInput = z.infer<typeof DebitSchema>;
 
-/**
- * Schema para débito via API /api/wallet/debit
- * Suporta pagamento de shipment individual ou batch
- */
-export const WalletDebitApiSchema = z.object({
-  // Identificação do pagamento (um dos dois é obrigatório)
-  shipmentId: z.string().uuid('ID do envio inválido').optional(),
-  referenceId: z.string().min(1, 'Reference ID inválido').optional(),
-
-  // Valor obrigatório
-  amount: z
-    .number()
-    .positive('O valor deve ser positivo')
-    .max(100000, 'Valor máximo excedido'),
-
-  // Campos opcionais
-  reason: z.string().max(255).optional(),
-  trackingCode: z.string().max(50).optional(),
-  metadata: z.record(z.string(), z.unknown()).optional(),
-}).refine(
-  (data) => data.shipmentId || data.referenceId,
-  { message: 'shipmentId ou referenceId é obrigatório' }
-);
-
-export type WalletDebitApiInput = z.infer<typeof WalletDebitApiSchema>;

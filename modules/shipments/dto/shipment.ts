@@ -101,24 +101,3 @@ export type PacoteData = z.infer<typeof pacoteSchema>;
 export type ServicoData = z.infer<typeof servicoSchema>;
 export type ShipmentFormData = z.infer<typeof shipmentSchema>;
 
-/**
- * Schema para atualização de pagamento via PATCH /api/shipments/[id]/payment
- */
-export const shipmentPaymentUpdateSchema = z.object({
-  method: z
-    .enum(['wallet', 'pix', 'credit_card', 'boleto'], {
-      message: 'Método de pagamento inválido',
-    }),
-  status: z
-    .enum(['approved', 'pending', 'failed', 'cancelled'], {
-      message: 'Status de pagamento inválido',
-    }),
-  meta: z
-    .object({
-      transactionId: z.string().uuid().optional(),
-      paymentId: z.string().optional(),
-    })
-    .optional(),
-});
-
-export type ShipmentPaymentUpdateInput = z.infer<typeof shipmentPaymentUpdateSchema>;

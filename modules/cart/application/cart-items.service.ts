@@ -16,7 +16,7 @@ import {
   recalculateCartTotals,
   type CartServiceDeps,
 } from './cart.service';
-import type { AddCartItemInput, UpdateCartItemInput } from '../dto/cart';
+import type { AddCartItemInput } from '../dto/cart';
 
 // =============================================================================
 // DTOs
@@ -111,78 +111,6 @@ export async function addItem(
   );
 
   return mapCartItemToDto(item);
-}
-
-/**
- * Atualiza um item do carrinho.
- * Verifica propriedade e recalcula totais após atualizar.
- */
-export async function updateItem(
-  userId: string,
-  itemId: string,
-  data: UpdateCartItemInput,
-  deps: CartItemsServiceDeps = defaultDeps
-): Promise<CartItemDto> {
-  const { prisma, logger } = deps;
-
-  // Verificar que o item pertence ao carrinho do usuário
-  const existingItem = await prisma.cartItem.findFirst({
-    where: { id: itemId },
-    include: { cart: true },
-  });
-
-  if (!existingItem || existingItem.cart.userId !== userId) {
-    throw new ApiError({
-      code: 'not_found',
-      message: 'Item não encontrado',
-      status: 404,
-    });
-  }
-
-  // Construir objeto de atualização apenas com campos fornecidos
-  const updateData: Prisma.CartItemUpdateInput = {
-    updatedAt: new Date(),
-  };
-
-  if (data.originAddress) {
-    updateData.originAddress = data.originAddress as Prisma.InputJsonValue;
-  }
-  if (data.destination) {
-    updateData.destination = data.destination as Prisma.InputJsonValue;
-  }
-  if (data.volumes) {
-    updateData.volumes = data.volumes as Prisma.InputJsonValue;
-  }
-  if (data.preferences) {
-    updateData.preferences = data.preferences as Prisma.InputJsonValue;
-  }
-  if (data.insuranceValue !== undefined) {
-    updateData.insuranceValue = data.insuranceValue;
-  }
-  if (data.selectedQuote) {
-    updateData.selectedQuote = data.selectedQuote as Prisma.InputJsonValue;
-  }
-  if (data.totals) {
-    updateData.totals = data.totals as Prisma.InputJsonValue;
-  }
-  if (data.document !== undefined) {
-    updateData.document = (data.document || null) as Prisma.InputJsonValue;
-  }
-
-  const updatedItem = await prisma.cartItem.update({
-    where: { id: itemId },
-    data: updateData,
-  });
-
-  // Recalcular totais do carrinho
-  await recalculateCartTotals(existingItem.cartId, deps as CartServiceDeps);
-
-  logger?.info?.(
-    { event: 'cart_item_updated', userId, cartId: existingItem.cartId, itemId },
-    'Cart item updated'
-  );
-
-  return mapCartItemToDto(updatedItem);
 }
 
 /**

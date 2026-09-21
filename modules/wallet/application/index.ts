@@ -2,20 +2,6 @@
  * Wallet Application Layer Exports
  */
 
-// Debit Service
-export {
-  processDebit,
-  toCents,
-  toReais,
-  generateTransactionTitle,
-  buildReferenceId,
-  validateBalance,
-  DebitErrorCodes,
-  type DebitInput,
-  type DebitResult,
-  type DebitServiceDeps,
-} from './debit.service';
-
 // Statement Service
 export {
   getWalletStatement,

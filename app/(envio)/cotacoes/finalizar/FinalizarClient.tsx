@@ -46,7 +46,6 @@ import {
 import type { DocumentType } from '@/shared/types/quote';
 import { useQuoteDraft } from "@/modules/quotes/ui/state/quoteDraft";
 import { useCheckoutStore } from '@/modules/cart/ui/state/checkout';
-import { CheckoutModal } from "@/modules/payments/ui/components/CheckoutModal";
 import { PaidCheckoutModal, type CheckoutData } from "@/modules/payments/ui/components/PaidCheckoutModal";
 import { generateUUID } from "@/shared/utils/uuid";
 import { useAddressStore } from "@/modules/auth/ui/state/addresses";
@@ -91,14 +90,6 @@ export default function FinalizarClient() {
       router.push("/cotacoes");
     }
   }, [clearIfExpired, message, router]);
-
-  // Estados para o modal de checkout
-  const [checkoutModalOpen, setCheckoutModalOpen] = useState(false);
-  const [createdShipment, setCreatedShipment] = useState<{
-    id: string;
-    trackingCode: string;
-    totalAmount: number;
-  } | null>(null);
 
   // Estado para código de rastreamento reservado (garantia de unicidade)
   const [reservedTrackingCode, setReservedTrackingCode] = useState<string | null>(null);
@@ -781,6 +772,8 @@ export default function FinalizarClient() {
       // Construir payload no novo formato esperado pelo backend
       // Usa dados completos do endereço selecionado (do banco)
       const payload = {
+        // O servidor tira preço e serviço desta cotação (ID da Quote, não da QuoteSelection)
+        quoteId: selection.quoteId,
         originAddress: {
           cep: selectedOriginAddress?.cep || summary.origemCep,
           logradouro: selectedOriginAddress?.logradouro || '',
@@ -1264,36 +1257,9 @@ export default function FinalizarClient() {
           flow: "new_paid_checkout",
         });
       } else {
-        // FLUXO LEGADO: Criar shipment primeiro, pagar depois
-        console.log('[CHECKOUT_FRONTEND] Usando FLUXO LEGADO (sem código reservado)');
-
-        // Criar shipment via API
-        const res = await fetch("/api/checkout", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-
-        if (!res.ok) {
-          const error = await res.json();
-          throw new Error(error.message || "Erro ao processar checkout");
-        }
-
-        const out = await res.json();
-
-        // Guardar informações do shipment e abrir modal de pagamento
-        setCreatedShipment({
-          id: out.shipmentId,
-          trackingCode: out.trackingCode,
-          totalAmount: totalAmount,
-        });
-        setCheckoutModalOpen(true);
-
-        dispatchTelemetry("checkout_created", {
-          selectionId: selection.selectionId,
-          shipmentId: out.shipmentId,
-          flow: "legacy_checkout",
-        });
+        // Sem código reservado não há como pagar: o envio só é criado depois do
+        // pagamento confirmado, com o preço da cotação salva no servidor.
+        throw new Error("Não foi possível reservar o código de rastreio. Recarregue a página e tente de novo.");
       }
     } catch (error: unknown) {
       console.error("Erro ao processar pagamento", error);
@@ -1445,6 +1411,8 @@ export default function FinalizarClient() {
         })),
         // Cotacao
         quote: {
+          // O servidor tira preço e serviço desta cotação
+          quoteId: selection.quoteId,
           carrier: selectedService.carrier,
           service: selectedService.modalidade,
           serviceCode: selectedService.modalidade,
@@ -1930,17 +1898,6 @@ export default function FinalizarClient() {
             </div>
           </Space>
         </ELModal>
-
-        {/* Modal de escolha de pagamento (FLUXO LEGADO) */}
-        {createdShipment && (
-          <CheckoutModal
-            open={checkoutModalOpen}
-            onClose={() => setCheckoutModalOpen(false)}
-            shipmentId={createdShipment.id}
-            totalAmount={createdShipment.totalAmount}
-            trackingCode={createdShipment.trackingCode}
-          />
-        )}
 
         {/* Modal de pagamento integrado (NOVO FLUXO - shipment criado após pagamento) */}
         {paidCheckoutData && reservedTrackingCode && (

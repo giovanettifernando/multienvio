@@ -3,28 +3,16 @@ import 'server-only';
 /**
  * Checkout Service
  *
- * Centraliza a lógica de negócio do checkout, separando-a da rota HTTP.
- * Responsabilidades:
- * - Validar documentos do envio
- * - Calcular valores declarados
- * - Criar shipments com volumes
- * - Integrar com transportadoras
- * - Criar eventos de rastreamento
- * - Salvar destinatários recorrentes
+ * Peças comuns aos checkouts pagos (envio avulso, carrinho, frete pago pelo
+ * destinatário): preço validado na cotação do servidor, documento do envio,
+ * valor declarado, código de rastreio e destinatário recorrente.
  */
 
-import { Prisma, PrismaClient, Package } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { prisma } from '@/platform/db/db';
-import { assertSenderCanUseDeclaration } from '@/shared/validation/dce';
-import { createShipmentWithVolumes } from '@/modules/shipments/application/create-with-volumes';
-import { calculateCommissionsInCents, calculateInsuranceCommission, resolveCarrierSlugByName } from '@/modules/quotes/application/commission';
 import { ShipmentStatus } from '@/modules/shipments/application/shipment-status';
-import { integrateWithCarrier } from '@/modules/shipments/application/carrier-integration';
 import { logger } from '@/platform/logging/logger';
 import { ApiError } from '@/platform/api/errors';
-import { isCorreiosCarrier } from '@/shared/utils/carrier';
-import { getQueue, QUEUE_NAMES, JOB_PRIORITY } from '@/platform/queue';
-import type { LabelGenerateJobPayload } from '@/platform/queue';
 
 // ============================================================================
 // TIPOS
@@ -113,34 +101,6 @@ export interface CheckoutOriginAddress {
   nome?: string; // label/apelido do endereço
 }
 
-export interface CheckoutInput {
-  userId: string;
-  quoteId: string;
-  recipient: CheckoutRecipient;
-  document: CheckoutDocument;
-  volumes: CheckoutVolume[];
-  insuranceValue?: number;
-  carrier: string;
-  service: string;
-  originCep: string;
-  originCidade?: string;
-  originUf?: string;
-  originAddress?: CheckoutOriginAddress;
-  destinationCep: string;
-  estimatedDays: number;
-  freightCost: number;
-  /** Carrier-specific external service ID (e.g. Loggi externalServiceId) */
-  externalServiceId?: string;
-}
-
-export interface CheckoutResult {
-  shipmentId: string;
-  trackingCode: string;
-  publicTrackingId: string | null;
-  labelId: string;
-  isIdempotent: boolean;
-}
-
 // ============================================================================
 // FUNÇÕES AUXILIARES
 // ============================================================================
@@ -158,6 +118,8 @@ export interface ValidatedQuote {
   estimatedDays: number;
   carrier: string;
   service: string;
+  /** Código do serviço na transportadora (ex.: 03298 = PAC) */
+  serviceCode?: string;
   /** Carrier-specific external service ID (e.g. Loggi externalServiceId) */
   externalServiceId?: string;
 }
@@ -250,6 +212,7 @@ export async function validateQuoteAndGetPrice(
     estimatedDays: quote.selection.deliveryDays,
     carrier: quote.selection.carrierName,
     service: quote.selection.serviceName,
+    serviceCode: selectedOption?.serviceId,
     externalServiceId: optionMeta?.externalServiceId,
   };
 }
@@ -396,332 +359,3 @@ export async function saveRecipientIfRequested(
     logger.error({ event: 'checkout_recipient_save_error', err: error }, 'Error saving recurring recipient');
   }
 }
-
-/**
- * Processa o checkout criando shipment, label, integração com transportadora e eventos
- */
-export async function processCheckout(input: CheckoutInput): Promise<CheckoutResult> {
-  // SECURITY FIX F-01: Validar cotação e obter preço do servidor
-  // O preço do cliente é ignorado - usamos SEMPRE o preço da cotação salva
-  const validatedQuote = await validateQuoteAndGetPrice(
-    input.quoteId,
-    input.userId,
-    input.freightCost // Passamos para logging de tentativas de manipulação
-  );
-
-  // Usar valores validados do servidor
-  const serverFreightCost = validatedQuote.freightCost;
-  const serverEstimatedDays = validatedQuote.estimatedDays;
-
-  // Pass carrier-specific external service ID (e.g. Loggi)
-  input.externalServiceId = validatedQuote.externalServiceId;
-
-  const platformTrackingCode = generatePlatformTrackingCode();
-  const declaredValue = calculateDeclaredValue(input.document, input.insuranceValue);
-
-  // A DC-e exige documento do emitente. Barrar aqui, antes de cobrar, evita
-  // criar envio que nunca poderá ter documento válido.
-  if (input.document.type === 'DECLARACAO') {
-    const sender = await prisma.user.findUnique({
-      where: { id: input.userId },
-      select: { cpf: true, cnpj: true },
-    });
-    assertSenderCanUseDeclaration({ cpf: sender?.cpf ?? null, cnpj: sender?.cnpj ?? null });
-  }
-  const documentData = prepareDocumentData(input.document);
-  const initialStatus = determineInitialStatus();
-
-  const result = await prisma.$transaction(async (tx) => {
-    // IDEMPOTÊNCIA: Verificar se já existe um shipment para este checkout
-    const recentShipments = await tx.shipment.findMany({
-      where: {
-        senderId: input.userId,
-        carrier: input.carrier,
-        service: input.service,
-        originCep: input.originCep,
-        destinationCep: input.destinationCep,
-        freightCost: serverFreightCost, // SECURITY: Usar valor do servidor
-        createdAt: {
-          gte: new Date(Date.now() - 5 * 60 * 1000), // Últimos 5 minutos
-        },
-      },
-      include: {
-        label: true,
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-      take: 1,
-    });
-
-    if (recentShipments.length > 0) {
-      const existingShipment = recentShipments[0];
-      logger.info({ event: 'checkout_idempotent', shipmentId: existingShipment.id }, 'Returning existing shipment (idempotent)');
-
-      return {
-        shipmentId: existingShipment.id,
-        trackingCode: existingShipment.platformTrackingCode,
-        publicTrackingId: existingShipment.publicTrackingId,
-        labelId: existingShipment.label?.id || '',
-        isIdempotent: true,
-      };
-    }
-
-    // Garantir que a carteira existe
-    let wallet = await tx.wallet.findUnique({
-      where: { userId: input.userId },
-    });
-
-    if (!wallet) {
-      wallet = await tx.wallet.create({
-        data: {
-          userId: input.userId,
-          availableCents: 0,
-          pendingCents: 0,
-        },
-      });
-    }
-
-    // Comissoes: este caminho tambem nao registrava nenhuma. Mesma conta dos
-    // demais fluxos — a de seguro sai do preco antes do calculo reverso da de
-    // frete, para a de frete nao incidir duas vezes sobre ela.
-    const carrierSlug = resolveCarrierSlugByName(input.carrier) ?? '';
-    const { commissionAmount: insuranceCommission } = await calculateInsuranceCommission(
-      declaredValue,
-      carrierSlug
-    );
-    const insuranceCommissionCents = Math.round(insuranceCommission * 100);
-    const freightCents = Math.round(serverFreightCost * 100) - insuranceCommissionCents;
-    const { shippingCommissionCents } = await calculateCommissionsInCents(freightCents, carrierSlug);
-
-    // Criar shipment com volumes
-    const { shipment, packages } = await createShipmentWithVolumes(tx, {
-      shipment: {
-        platformTrackingCode,
-        carrierTrackingCode: null,
-        senderId: input.userId,
-        recipientName: input.recipient.nome,
-        recipientPhone: input.recipient.telefone ?? null,
-        recipientEmail: input.recipient.email ?? null,
-        recipientDocument: input.recipient.documento ?? null,
-        originCep: input.originCep,
-        originAddress: [
-          input.originAddress?.logradouro,
-          input.originAddress?.numero,
-          input.originAddress?.complemento,
-        ].filter(Boolean).join(', ') || null,
-        originNeighborhood: input.originAddress?.bairro ?? null,
-        originCity: input.originAddress?.cidade ?? input.originCidade ?? null,
-        originState: input.originAddress?.uf ?? input.originUf ?? null,
-        destinationCep: input.destinationCep,
-        destinationAddress: [
-          input.recipient.logradouro,
-          input.recipient.numero,
-          input.recipient.complemento,
-        ].filter(Boolean).join(', ') || null,
-        destinationNeighborhood: input.recipient.bairro ?? null,
-        destinationCity: input.recipient.cidade,
-        destinationState: input.recipient.uf,
-        declaredValue,
-        dceKey: input.document.dceKey ?? null,
-        carrier: input.carrier,
-        service: input.service,
-        estimatedDays: serverEstimatedDays, // SECURITY: Usar valor do servidor
-        freightCost: serverFreightCost, // SECURITY: Usar valor do servidor
-        platformShippingCommissionCents: shippingCommissionCents > 0 ? shippingCommissionCents : null,
-        platformInsuranceCommissionCents: insuranceCommissionCents > 0 ? insuranceCommissionCents : null,
-        document: documentData,
-        status: initialStatus,
-        paymentMethod: null,
-      },
-      volumes: input.volumes.map((vol) => ({
-        peso: vol.peso,
-        altura: vol.altura,
-        largura: vol.largura,
-        comprimento: vol.comprimento,
-      })),
-    });
-
-    // Criar etiqueta vinculada ao shipment
-    const label = await tx.label.create({
-      data: {
-        shipmentId: shipment.id,
-        carrier: input.carrier,
-        service: input.service,
-        status: 'pending',
-        priceCents: validatedQuote.freightCostCents, // SECURITY: Usar valor do servidor (já em centavos)
-        currency: 'BRL',
-        trackingCode: platformTrackingCode,
-        recipientName: input.recipient.nome,
-        isPrinted: false,
-      },
-    });
-
-    // Integração com transportadora (best-effort)
-    await integrateWithCarrierSafely(tx, input, shipment.id, packages, declaredValue);
-
-    // Eventos de rastreamento virão dos Correios via webhook/sync
-    // Não criar evento inicial genérico - API pública tem fallback para timeline vazia
-
-    return {
-      shipmentId: shipment.id,
-      trackingCode: shipment.platformTrackingCode,
-      publicTrackingId: shipment.publicTrackingId,
-      labelId: label.id,
-      isIdempotent: false,
-    };
-  });
-
-  // Enfileirar LABEL_GENERATE para carriers não-Correios (Loggi, J&T, etc.)
-  // O label worker busca o PDF da etiqueta via API da transportadora
-  if (!result.isIdempotent && !isCorreiosCarrier(input.carrier)) {
-    try {
-      const labelQueue = getQueue<LabelGenerateJobPayload>(QUEUE_NAMES.LABEL_GENERATE);
-      // Loggi async-shipments: etiqueta só fica disponível após processamento async (~1min)
-      const isLoggi = input.carrier.toLowerCase() === 'loggi';
-      await labelQueue.add('generate', {
-        shipmentId: result.shipmentId,
-        carrier: input.carrier,
-      }, {
-        priority: JOB_PRIORITY.HIGH,
-        jobId: `label-${result.shipmentId}`,
-        delay: isLoggi ? 60_000 : 0, // 60s de delay para Loggi
-      });
-      logger.info({
-        event: 'label_generate_enqueued',
-        shipmentId: result.shipmentId,
-        carrier: input.carrier,
-      }, 'LABEL_GENERATE job enqueued after checkout');
-    } catch (err) {
-      logger.warn({
-        event: 'label_generate_enqueue_failed',
-        shipmentId: result.shipmentId,
-        error: err instanceof Error ? err.message : String(err),
-      }, 'Failed to enqueue LABEL_GENERATE — label can be generated manually');
-    }
-  }
-
-  // Salvar destinatário recorrente (fora da transação)
-  await saveRecipientIfRequested(input.userId, input.recipient);
-
-  // NOTA: E-mail de rastreamento é enviado após confirmação do pagamento
-  // em /api/wallet/debit (não aqui, pois o shipment ainda não foi pago)
-
-  return result;
-}
-
-/**
- * Integra com a transportadora.
- * CORREIOS: Integração OBRIGATÓRIA - lança erro se falhar
- * OUTRAS: Best-effort (não bloqueia)
- */
-async function integrateWithCarrierSafely(
-  tx: Prisma.TransactionClient,
-  input: CheckoutInput,
-  shipmentId: string,
-  packages: Package[],
-  declaredValue: number
-): Promise<void> {
-  const isCorreios = isCorreiosCarrier(input.carrier);
-
-  const user = await tx.user.findUnique({
-    where: { id: input.userId },
-    select: {
-      name: true,
-      razaoSocial: true,
-      email: true,
-      phone: true,
-      cpf: true,
-      cnpj: true,
-    },
-  });
-
-  const originData = input.originAddress || {
-    cep: input.originCep,
-    cidade: input.originCidade,
-    uf: input.originUf,
-  };
-
-  const senderDocumento =
-    (user?.cnpj && user.cnpj.trim() !== '' ? user.cnpj : null) ||
-    user?.cpf ||
-    '';
-
-  const senderData = {
-    nome: user?.razaoSocial || user?.name || 'Remetente',
-    documento: senderDocumento.replace(/\D/g, ''),
-    telefone: user?.phone || undefined,
-    email: user?.email || undefined,
-    cep: (originData.cep || input.originCep).replace(/\D/g, ''),
-    logradouro: originData.logradouro || undefined,
-    numero: originData.numero || undefined,
-    complemento: originData.complemento || undefined,
-    bairro: originData.bairro || undefined,
-    cidade: originData.cidade || input.originCidade || undefined,
-    uf: originData.uf || input.originUf || undefined,
-  };
-
-  const recipientData = {
-    nome: input.recipient.nome,
-    documento: input.recipient.documento || undefined,
-    telefone: input.recipient.telefone || undefined,
-    email: input.recipient.email || undefined,
-    cep: input.recipient.cep.replace(/\D/g, ''),
-    logradouro: input.recipient.logradouro || '',
-    numero: input.recipient.numero || undefined,
-    complemento: input.recipient.complemento || undefined,
-    bairro: input.recipient.bairro || undefined,
-    cidade: input.recipient.cidade,
-    uf: input.recipient.uf,
-  };
-
-  const integrationResult = await integrateWithCarrier(tx, {
-    shipmentId,
-    carrier: input.carrier,
-    serviceName: input.service,
-    serviceCode: input.externalServiceId,
-    packages,
-    sender: senderData,
-    recipient: recipientData,
-    declaredValue,
-    contentDescription: 'Mercadorias diversas',
-  });
-
-  if (!integrationResult.success) {
-    if (isCorreios) {
-      // CORREIOS: Integração OBRIGATÓRIA
-      logger.error({
-        event: 'checkout_correios_failed_required',
-        shipmentId,
-        carrier: input.carrier,
-        errorMessage: integrationResult.errorMessage,
-      }, 'Correios integration failed - transaction will be rolled back');
-
-      throw Object.assign(
-        new Error(
-          integrationResult.errorMessage ||
-          'Não foi possível gerar a pré-postagem nos Correios. Por favor, tente novamente.'
-        ),
-        { code: 'CARRIER_INTEGRATION_FAILED' }
-      );
-    } else {
-      // OUTRAS TRANSPORTADORAS: Best-effort
-      logger.warn({
-        event: 'checkout_carrier_failed',
-        shipmentId,
-        carrier: input.carrier,
-        errorMessage: integrationResult.errorMessage,
-      }, 'Carrier integration failed (non-blocking for non-Correios)');
-    }
-    return;
-  }
-
-  logger.info({
-    event: 'checkout_carrier_success',
-    shipmentId,
-    carrier: input.carrier,
-    primaryTrackingCode: integrationResult.primaryTrackingCode,
-    packagesUpdated: integrationResult.packageUpdates?.length || 0,
-  }, 'Carrier integration successful');
-}
-

@@ -10,6 +10,7 @@ import { requireUserSession } from '@/platform/auth/require-session';
 import { logger } from '@/platform/logging/logger';
 import { addCartItemSchema } from '@/modules/cart/dto/cart';
 import { addItem, type CartItemDto } from '@/modules/cart/application';
+import { validateQuoteAndGetPrice } from '@/modules/cart/application/checkout.service';
 
 // =============================================================================
 // Response Types
@@ -44,7 +45,29 @@ export const POST = withApiHandler<PostCartItemResponse>(async (context) => {
     });
   }
 
-  const item = await addItem(session.userId, validation.data);
+  // O preço e o serviço saem da cotação salva no servidor (dono e validade
+  // conferidos). O que a tela manda é ignorado: o checkout do carrinho cobra
+  // exatamente o que ficar gravado aqui.
+  const { quoteId, ...itemData } = validation.data;
+  const cotacao = await validateQuoteAndGetPrice(quoteId, session.userId, itemData.selectedQuote.price);
+
+  const item = await addItem(session.userId, {
+    ...itemData,
+    quoteId,
+    selectedQuote: {
+      carrier: cotacao.carrier,
+      serviceCode: cotacao.serviceCode,
+      serviceName: cotacao.service,
+      price: cotacao.freightCost,
+      deadlineDays: cotacao.estimatedDays,
+      source: 'quote',
+    },
+    totals: {
+      subtotal: cotacao.freightCost,
+      total: cotacao.freightCost,
+      moeda: 'BRL',
+    },
+  });
 
   return {
     data: {

@@ -1,8 +1,9 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { addCartItemSchema, updateCartItemSchema, checkoutCartSchema } from '@/shared/validation/cart';
+import { addCartItemSchema } from '@/shared/validation/cart';
 
 const basePayload = {
+  quoteId: 'q1',
   originAddress: {
     logradouro: 'Rua A',
     numero: '123',
@@ -46,16 +47,8 @@ describe('cart validation schemas', () => {
     assert.ok(error instanceof Error);
   });
 
-  it('checkoutCartSchema aceita lista opcional de items', () => {
-    const parsed = checkoutCartSchema.parse({ itemIds: ['1', '2'], paymentMethod: 'wallet' });
-    assert.strictEqual(parsed.itemIds?.length, 2);
-  });
-
-  it('updateCartItemSchema permite campos parciais', () => {
-    const parsed = updateCartItemSchema.parse({
-      destination: { ...basePayload.destination, numero: '999' },
-      totals: { total: 20, moeda: 'BRL' },
-    });
-    assert.strictEqual(parsed.totals?.total, 20);
+  it('recusa item sem a cotação de onde sai o preço', () => {
+    const { quoteId: _sem, ...semCotacao } = basePayload;
+    assert.strictEqual(addCartItemSchema.safeParse(semCotacao).success, false);
   });
 });

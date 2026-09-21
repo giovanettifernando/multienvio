@@ -63,6 +63,8 @@ export const recipientInputSchema = z.object({
  * Schema para dados da cotação
  */
 export const quoteInputSchema = z.object({
+  /** Cotação salva de onde sai o preço (o valor enviado pela tela é ignorado). */
+  quoteId: z.string().min(1, 'Cotação obrigatória'),
   carrier: z.string().min(1, 'Transportadora é obrigatória'),
   service: z.string().min(1, 'Serviço é obrigatório'),
   serviceCode: z.string().optional(),
