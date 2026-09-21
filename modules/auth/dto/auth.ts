@@ -111,9 +111,11 @@ export type ResetInput = z.infer<typeof resetSchema>;
 export const LoginSchema = z.object({
   email: z
     .string({ message: 'Email é obrigatório' })
-    .email('Email inválido')
+    // Apara e baixa a caixa ANTES de conferir o formato: e-mail colado com
+    // espaço no começo ou no fim era recusado como inválido.
+    .trim()
     .toLowerCase()
-    .trim(),
+    .email('Email inválido'),
   password: z
     .string({ message: 'Senha é obrigatória' })
     .min(6, 'Senha deve ter no mínimo 6 caracteres'),
@@ -138,9 +140,11 @@ export const RegisterSchema = z
       .optional(),
     email: z
       .string({ message: 'Email é obrigatório' })
-      .email('Email inválido')
+      // Apara e baixa a caixa ANTES de conferir o formato: e-mail colado com
+      // espaço no começo ou no fim era recusado como inválido.
+      .trim()
       .toLowerCase()
-      .trim(),
+      .email('Email inválido'),
     senha: z
       .string({ message: 'Senha é obrigatória' })
       .min(8, 'Senha deve ter no mínimo 8 caracteres')
@@ -257,9 +261,11 @@ export type RegisterAPIInput = z.infer<typeof RegisterSchema>;
 export const ForgotPasswordSchema = z.object({
   email: z
     .string({ message: 'Email é obrigatório' })
-    .email('Email inválido')
+    // Apara e baixa a caixa ANTES de conferir o formato: e-mail colado com
+    // espaço no começo ou no fim era recusado como inválido.
+    .trim()
     .toLowerCase()
-    .trim(),
+    .email('Email inválido'),
 });
 
 export type ForgotPasswordAPIInput = z.infer<typeof ForgotPasswordSchema>;

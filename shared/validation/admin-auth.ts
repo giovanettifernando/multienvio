@@ -7,9 +7,11 @@ import { z } from 'zod';
 export const AdminLoginSchema = z.object({
   email: z
     .string({ message: 'Email é obrigatório' })
-    .email('Email inválido')
+    // Apara e baixa a caixa ANTES de conferir o formato: e-mail colado com
+    // espaço no começo ou no fim era recusado como inválido.
+    .trim()
     .toLowerCase()
-    .trim(),
+    .email('Email inválido'),
   password: z
     .string({ message: 'Senha é obrigatória' })
     .min(8, 'Senha deve ter no mínimo 8 caracteres'),
@@ -29,9 +31,11 @@ export const AdminRegisterSchema = z.object({
     .trim(),
   email: z
     .string({ message: 'Email é obrigatório' })
-    .email('Email inválido')
+    // Apara e baixa a caixa ANTES de conferir o formato: e-mail colado com
+    // espaço no começo ou no fim era recusado como inválido.
+    .trim()
     .toLowerCase()
-    .trim(),
+    .email('Email inválido'),
   password: z
     .string({ message: 'Senha é obrigatória' })
     .min(8, 'Senha deve ter no mínimo 8 caracteres')

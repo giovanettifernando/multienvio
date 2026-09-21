@@ -1,44 +1,54 @@
 import assert from 'node:assert';
 import test from 'node:test';
 import { POST } from '@/app/api/admin/auth/logout/route';
+import { staffSessionCache } from '@/platform/cache/cache';
+import * as adminSessionModule from '@/modules/auth/application/admin-session';
+import { adminSession, apiRequest, callRoute } from '../../../../../../_setup/test-helpers';
 
-function makeRequest() {
-  return new Request('http://test/api/admin/auth/logout', { method: 'POST' });
+function logout(headers: Record<string, string> = {}) {
+  return callRoute(POST as any, apiRequest('/api/admin/auth/logout', { method: 'POST', headers }));
 }
 
 test.describe('app/api/admin/auth/logout', () => {
-  let sessionModule: any;
-  let cookieModule: any;
-  let cacheModule: any;
-
-  test.before(async () => {
-    sessionModule = await import('../../../../../../../modules/auth/application/admin-session.ts');
-    cookieModule = sessionModule;
-    cacheModule = await import('../../../../../../../platform/cache/cache.ts');
+  test.beforeEach(() => {
+    test.mock.method(staffSessionCache, 'incrementTokenVersion', async () => 2);
   });
 
   test.afterEach(() => {
     test.mock.restoreAll();
   });
 
-  test('retorna 401 sem sessão', async () => {
-    test.mock.method(sessionModule, 'getAdminSessionFromRequest', async () => null);
-    const res = await POST(makeRequest());
+  test('bloqueia logout disparado por outro site (CSRF)', async () => {
+    test.mock.method(adminSessionModule, 'getAdminSessionFromRequest', async () => adminSession());
+    const res = await logout({ origin: 'https://site-malicioso.com', host: 'test' });
+    assert.strictEqual(res.status, 403);
+    assert.strictEqual((staffSessionCache.incrementTokenVersion as any).mock.callCount(), 0);
+  });
+
+  test('responde 401 sem sessão', async () => {
+    test.mock.method(adminSessionModule, 'getAdminSessionFromRequest', async () => null);
+    const res = await logout();
     assert.strictEqual(res.status, 401);
   });
 
-  test('incrementa tokenVersion no Redis e remove cookie', async () => {
-    test.mock.method(sessionModule, 'getAdminSessionFromRequest', async () => ({ staffId: 's1' }));
-    let tokenVersionIncremented = false;
-    test.mock.method(cacheModule.staffSessionCache, 'incrementTokenVersion', async () => {
-      tokenVersionIncremented = true;
-      return 2;
-    });
-    test.mock.method(cookieModule, 'createAdminCookieRemovalHeader', () => 'admin=; Max-Age=0');
+  test('revoga os tokens do staff e apaga o cookie', async () => {
+    test.mock.method(adminSessionModule, 'getAdminSessionFromRequest', async () => adminSession({ staffId: 's9' }));
 
-    const res = await POST(makeRequest());
+    const res = await logout();
+
     assert.strictEqual(res.status, 200);
-    assert.ok(tokenVersionIncremented, 'tokenVersion should be incremented in Redis');
-    assert.ok(res.headers.get('set-cookie')?.includes('admin='));
+    assert.strictEqual((staffSessionCache.incrementTokenVersion as any).mock.calls[0].arguments[0], 's9');
+    const cookie = res.headers.get('set-cookie') ?? '';
+    assert.ok(cookie.startsWith(`${adminSessionModule.ADMIN_AUTH_COOKIE_NAME}=`));
+    assert.match(cookie, /Max-Age=0|Expires=Thu, 01 Jan 1970/i, 'o cookie precisa sair do navegador');
+  });
+
+  test('responde 500 se não conseguir revogar', async () => {
+    test.mock.method(adminSessionModule, 'getAdminSessionFromRequest', async () => adminSession());
+    test.mock.method(staffSessionCache, 'incrementTokenVersion', async () => {
+      throw new Error('redis fora');
+    });
+    const res = await logout();
+    assert.strictEqual(res.status, 500);
   });
 });
