@@ -133,7 +133,7 @@ function getBaseUrl(): string {
   if (!appUrl) {
     throw new Error(
       '[GOOGLE_OAUTH] NEXT_PUBLIC_APP_URL não está configurado. ' +
-      'Defina esta variável de ambiente com a URL do servidor (ex: https://app.enviolegal.com)'
+      'Defina esta variável de ambiente com a URL do servidor (ex: https://seu-dominio.com.br)'
     );
   }
   return appUrl;

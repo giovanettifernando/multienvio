@@ -128,10 +128,10 @@ Se o problema continuar, abra um chamado de suporte.`,
    - Clique no envio desejado
    - Veja o histórico de rastreamento em tempo real
 
-2. Pela página pública:
-   - Acesse enviolegal.com.br/rastreio
-   - Digite o código de rastreamento
-   - Visualize o status atualizado
+2. Pelo link público de rastreio:
+   - Ele chega no e-mail de confirmação do envio
+   - Abre sem precisar de login
+   - Pode ser repassado ao destinatário
 
 O código de rastreamento é enviado por e-mail após a confirmação do pagamento.`,
     category: 'Rastreamento',

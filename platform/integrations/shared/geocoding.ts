@@ -108,8 +108,14 @@ async function waitForNominatimRateLimit(): Promise<void> {
  * Headers para Nominatim seguindo suas políticas de uso
  * https://operations.osmfoundation.org/policies/nominatim/
  */
+// A política do Nominatim pede que o User-Agent identifique o app e um contato
+// para avisos de abuso. Vêm do .env para não fixar domínio no código.
+const NOMINATIM_CONTACT = [process.env.NEXT_PUBLIC_APP_URL, process.env.CONTACT_EMAIL]
+  .filter(Boolean)
+  .join('; ');
+
 const NOMINATIM_HEADERS = {
-  'User-Agent': 'Multienvio/1.0 (https://enviolegal.com.br; contato@enviolegal.com.br)',
+  'User-Agent': NOMINATIM_CONTACT ? `Multienvio/1.0 (${NOMINATIM_CONTACT})` : 'Multienvio/1.0',
   'Accept': 'application/json',
 };
 

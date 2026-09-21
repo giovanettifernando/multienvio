@@ -77,6 +77,8 @@ const optionalEnvSchema = z.object({
 
   // Email
   EMAIL_PUBLIC_URL: z.string().url().optional(),
+  // Contato exibido a serviços externos (ex.: User-Agent do Nominatim)
+  CONTACT_EMAIL: z.string().email().optional(),
 
   // Uploads
   SUPPORT_UPLOAD_DIR: z.string().default('./uploads/support'),
