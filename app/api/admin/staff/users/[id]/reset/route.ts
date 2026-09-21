@@ -8,6 +8,7 @@ import { AdminPermission } from '@prisma/client';
 import { logPasswordReset } from '@/platform/logging/audit-admin';
 import { rateLimitByUser, RATE_LIMITS } from '@/platform/cache/rate-limit-redis';
 import { staffSessionCache } from '@/platform/cache/cache';
+import { exigirPodeConceder, exigirPodeGerenciar } from '@/modules/admin/application/staff-access';
 
 type PasswordResetResponse = {
   message: string;
@@ -29,12 +30,16 @@ export const POST = withApiHandler<PasswordResetResponse, { id: string }>(async 
 
   const target = await prisma.staffUser.findUnique({
     where: { id },
-    select: { id: true, email: true },
+    select: { id: true, email: true, isSuperAdmin: true },
   });
 
   if (!target) {
     throw new ApiError({ code: 'not_found', message: 'Usuário não encontrado', status: 404 });
   }
+
+  // A senha temporária volta para quem pediu: com a de um super admin, um staff
+  // comum entraria como ele.
+  exigirPodeGerenciar(session, target, { mudaAcesso: false });
 
   const tempPassword = crypto.randomUUID();
   const passwordHash = await bcrypt.hash(tempPassword, 10);

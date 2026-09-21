@@ -35,7 +35,7 @@ const novo = { name: 'Bia', email: ' Bia@Empresa.com ', status: 'ACTIVE', permis
 test.describe('app/api/admin/staff/users', () => {
   test.beforeEach(() => {
     test.mock.method(adminSessionModule, 'getAdminSessionFromRequest', async () =>
-      adminSession({ permissions: ['USUARIOS'] })
+      adminSession({ permissions: ['USUARIOS', 'SUPORTE'] })
     );
     test.mock.method(mailer, 'sendStaffTempPasswordEmail', async () => true);
     prisma.$transaction = (async (ops: Promise<unknown>[]) => Promise.all(ops)) as any;
@@ -121,5 +121,20 @@ test.describe('app/api/admin/staff/users', () => {
     prisma.staffRole = { findFirst: async () => null } as any;
     const res = await readApi(await criar(novo));
     assert.strictEqual(res.status, 500);
+  });
+
+  test('POST: só super admin cria super admin', async () => {
+    const criou = { n: 0 };
+    prisma.staffUser = { findUnique: async () => null, create: async () => { criou.n++; return registro(); } } as any;
+    const res = await readApi(await criar({ ...novo, isSuperAdmin: true }));
+    assert.strictEqual(res.status, 403);
+    assert.strictEqual(criou.n, 0);
+  });
+
+  test('POST: não cria conta com permissão que o gestor não tem', async () => {
+    prisma.staffUser = { findUnique: async () => null, create: async () => registro() } as any;
+    const res = await readApi(await criar({ ...novo, permissions: ['SUPORTE', 'FINANCEIRO'] }));
+    assert.strictEqual(res.status, 403);
+    assert.match(res.error.message, /FINANCEIRO/);
   });
 });

@@ -3,6 +3,8 @@ import { requireAdminSession } from '@/platform/auth/require-session';
 import { z } from 'zod';
 import { prisma } from '@/platform/db/db';
 import { staffSessionCache } from '@/platform/cache/cache';
+import { ApiError } from '@/platform/api/errors';
+import { exigirPodeConceder, exigirPodeGerenciar } from '@/modules/admin/application/staff-access';
 import { AdminPermission, StaffStatus } from '@prisma/client';
 
 type StaffUserApi = {
@@ -71,6 +73,12 @@ export const PATCH = withApiHandler<StaffUserStatusResponse, { id: string }>(asy
   const { id } = await params;
   const body = await req.json();
   const payload = schema.parse(body);
+
+  const alvo = await prisma.staffUser.findUnique({ where: { id }, select: { id: true, isSuperAdmin: true } });
+  if (!alvo) {
+    throw new ApiError({ code: 'not_found', message: 'Usuário não encontrado', status: 404 });
+  }
+  exigirPodeGerenciar(session, alvo, { mudaAcesso: true });
 
   const user = await prisma.staffUser.update({
     where: { id },

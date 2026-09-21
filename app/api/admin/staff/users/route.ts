@@ -7,6 +7,7 @@ import { AdminPermission, Prisma, StaffStatus } from '@prisma/client';
 import bcrypt from 'bcrypt';
 import crypto from 'node:crypto';
 import { sendStaffTempPasswordEmail } from '@/platform/email/mailer';
+import { exigirPodeConceder, exigirPodeGerenciar } from '@/modules/admin/application/staff-access';
 
 type StaffUserApi = {
   id: string;
@@ -225,6 +226,8 @@ export const POST = withApiHandler<StaffUserCreateResponse>(async (context) => {
   if (!isSuperAdmin && permissions.length === 0) {
     throw new ApiError({ code: 'validation_error', message: 'Selecione ao menos uma permissão', status: 400 });
   }
+
+  exigirPodeConceder(session, { isSuperAdmin, permissions });
 
   const tempPassword = crypto.randomUUID();
   const passwordHash = await bcrypt.hash(tempPassword, 10);

@@ -18,6 +18,7 @@ test.describe('app/api/admin/staff/users/[id]/status', () => {
     );
     test.mock.method(staffSessionCache, 'incrementTokenVersion', async () => 2);
     prisma.staffUser = {
+      findUnique: async () => ({ id: 'alvo', isSuperAdmin: false }),
       update: async (a: any) => ({
         id: 'alvo', name: 'Alvo', email: 'alvo@empresa.com', phone: null,
         status: a.data.status, isSuperAdmin: false, permissions: ['SUPORTE'],
@@ -47,5 +48,20 @@ test.describe('app/api/admin/staff/users/[id]/status', () => {
     const revogou = (staffSessionCache.incrementTokenVersion as any).mock.calls;
     assert.strictEqual(revogou.length, 1, 'staff bloqueado não pode seguir logado');
     assert.strictEqual(revogou[0].arguments[0], 'alvo');
+  });
+
+  test('não bloqueia o próprio acesso', async () => {
+    test.mock.method(adminSessionModule, 'getAdminSessionFromRequest', async () =>
+      adminSession({ staffId: 'alvo', permissions: ['USUARIOS'] })
+    );
+    const res = await readApi(await mudarStatus('BLOCKED'));
+    assert.strictEqual(res.status, 403);
+  });
+
+  test('staff comum não bloqueia super admin', async () => {
+    (prisma.staffUser as any).findUnique = async () => ({ id: 'alvo', isSuperAdmin: true });
+    const res = await readApi(await mudarStatus('BLOCKED'));
+    assert.strictEqual(res.status, 403);
+    assert.strictEqual((staffSessionCache.incrementTokenVersion as any).mock.callCount(), 0);
   });
 });

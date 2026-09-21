@@ -114,7 +114,7 @@ async function fetchUsers(filters?: AdminUserFilters): Promise<AdminUserListResp
   });
   if (!res.ok) {
     const error = await res.json().catch(() => ({}));
-    throw new Error(error.message || "Erro ao carregar usuários");
+    throw new Error(error.error?.message || error.message || "Erro ao carregar usuários");
   }
 
   const json = await res.json();
@@ -140,7 +140,7 @@ async function fetchUser(id: string): Promise<AdminUser> {
   });
   if (!res.ok) {
     const error = await res.json().catch(() => ({}));
-    throw new Error(error.message || "Erro ao carregar usuário");
+    throw new Error(error.error?.message || error.message || "Erro ao carregar usuário");
   }
 
   const json = await res.json();
@@ -167,7 +167,7 @@ async function createUser(data: CreateAdminUserInput): Promise<AdminUser> {
 
   if (!res.ok) {
     const error = await res.json().catch(() => ({}));
-    throw new Error(error.message || "Erro ao criar usuário");
+    throw new Error(error.error?.message || error.message || "Erro ao criar usuário");
   }
 
   const json = await res.json();
@@ -196,7 +196,7 @@ async function updateUser(id: string, data: UpdateAdminUserInput): Promise<Admin
 
   if (!res.ok) {
     const error = await res.json().catch(() => ({}));
-    throw new Error(error.message || "Erro ao atualizar usuário");
+    throw new Error(error.error?.message || error.message || "Erro ao atualizar usuário");
   }
 
   const json = await res.json();
@@ -211,7 +211,7 @@ async function deleteUser(id: string): Promise<void> {
   });
   if (!res.ok) {
     const error = await res.json().catch(() => ({}));
-    throw new Error(error.message || "Erro ao excluir usuário");
+    throw new Error(error.error?.message || error.message || "Erro ao excluir usuário");
   }
 }
 
@@ -225,7 +225,7 @@ async function toggleUserStatus(id: string, status: "active" | "blocked"): Promi
 
   if (!res.ok) {
     const error = await res.json().catch(() => ({}));
-    throw new Error(error.message || "Erro ao atualizar status");
+    throw new Error(error.error?.message || error.message || "Erro ao atualizar status");
   }
 
   const json = await res.json();
@@ -241,7 +241,7 @@ async function resetPassword(id: string): Promise<ResetPasswordResponse> {
 
   if (!res.ok) {
     const error = await res.json().catch(() => ({}));
-    throw new Error(error.message || error.error?.message || "Erro ao resetar senha");
+    throw new Error(error.error?.message || error.message || "Erro ao resetar senha");
   }
 
   const json = await res.json();

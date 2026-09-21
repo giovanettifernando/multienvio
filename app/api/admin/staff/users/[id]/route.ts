@@ -5,6 +5,7 @@ import { logPermissionChange, logStatusChange, logAdminAction } from '@/platform
 import { z } from 'zod';
 import { prisma } from '@/platform/db/db';
 import { staffSessionCache } from '@/platform/cache/cache';
+import { exigirPodeConceder, exigirPodeGerenciar } from '@/modules/admin/application/staff-access';
 import { AdminPermission, StaffStatus } from '@prisma/client';
 
 type StaffUserApi = {
@@ -118,6 +119,14 @@ export const PUT = withApiHandler<StaffUserResponse, { id: string }>(async (cont
     throw new ApiError({ code: 'not_found', message: 'Usuário não encontrado', status: 404 });
   }
 
+  const pedeMudarAcesso =
+    (payload.status !== undefined && payload.status !== existing.status) ||
+    (payload.isSuperAdmin !== undefined && payload.isSuperAdmin !== existing.isSuperAdmin) ||
+    (payload.permissions !== undefined &&
+      (payload.permissions.length !== existing.permissions.length ||
+        payload.permissions.some((p) => !existing.permissions.includes(p))));
+  exigirPodeGerenciar(session, existing, { mudaAcesso: pedeMudarAcesso });
+
   if (payload.email && payload.email !== existing.email) {
     const emailExists = await prisma.staffUser.findUnique({ where: { email: payload.email } });
     if (emailExists) {
@@ -142,6 +151,12 @@ export const PUT = withApiHandler<StaffUserResponse, { id: string }>(async (cont
   if (!isSuperAdmin && permissions.length === 0) {
     throw new ApiError({ code: 'validation_error', message: 'Selecione ao menos uma permissão', status: 400 });
   }
+
+  // Só o que está sendo dado agora precisa ser do gestor; retirar é livre
+  exigirPodeConceder(session, {
+    isSuperAdmin: isSuperAdmin && !existing.isSuperAdmin,
+    permissions: permissions.filter((p) => !existing.permissions.includes(p)),
+  });
 
   const updated = await prisma.staffUser.update({
     where: { id },
@@ -211,14 +226,19 @@ export const DELETE = withApiHandler<StaffUserDeleteResponse, { id: string }>(as
 
   const existing = await prisma.staffUser.findUnique({
     where: { id },
-    select: { id: true },
+    select: { id: true, isSuperAdmin: true },
   });
 
   if (!existing) {
     throw new ApiError({ code: 'not_found', message: 'Usuário não encontrado', status: 404 });
   }
 
+  exigirPodeGerenciar(session, existing, { mudaAcesso: true });
+
   await prisma.staffUser.delete({ where: { id } });
+
+  // Sem revogar, o token de quem foi excluído seguia aceito até expirar
+  await staffSessionCache.incrementTokenVersion(id);
 
   // Auditoria de exclusao
   await logAdminAction(session.staffId, 'delete_staff', 'StaffUser', id);

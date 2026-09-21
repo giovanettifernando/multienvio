@@ -1,6 +1,6 @@
 import assert from 'node:assert';
 import test from 'node:test';
-import { GET, PUT } from '@/app/api/admin/staff/users/[id]/route';
+import { DELETE, GET, PUT } from '@/app/api/admin/staff/users/[id]/route';
 import { prisma } from '@/platform/db/db';
 import { staffSessionCache } from '@/platform/cache/cache';
 import * as adminSessionModule from '@/modules/auth/application/admin-session';
@@ -39,6 +39,7 @@ function banco(existente = registro(), outros: Record<string, any> = {}) {
       chamadas.push(a.data);
       return { ...existente, ...a.data };
     },
+    delete: async () => existente,
   } as any;
   return chamadas;
 }
@@ -127,10 +128,88 @@ test.describe('app/api/admin/staff/users/[id]', () => {
   });
 
   test('tirar o super admin audita e derruba a sessão', async () => {
+    test.mock.method(adminSessionModule, 'getAdminSessionFromRequest', async () =>
+      adminSession({ isSuperAdmin: true, permissions: [] })
+    );
     banco(registro({ isSuperAdmin: true, permissions: [] }));
     const res = await readApi(await editar({ isSuperAdmin: false, permissions: ['SUPORTE'] }));
     assert.strictEqual(res.status, 200);
     assert.strictEqual((audit.logAdminAction as any).mock.calls[0].arguments[1], 'revoke_super_admin');
     assert.strictEqual(revogacoes().length, 1);
+  });
+
+  test('staff comum não se promove a super admin', async () => {
+    test.mock.method(adminSessionModule, 'getAdminSessionFromRequest', async () =>
+      adminSession({ staffId: 'alvo', permissions: ['USUARIOS'] })
+    );
+    const gravado = banco();
+    const res = await readApi(await editar({ isSuperAdmin: true }));
+    assert.strictEqual(res.status, 403);
+    assert.strictEqual(gravado.length, 0);
+  });
+
+  test('staff comum não promove outro a super admin', async () => {
+    const gravado = banco();
+    const res = await readApi(await editar({ isSuperAdmin: true }));
+    assert.strictEqual(res.status, 403);
+    assert.strictEqual(gravado.length, 0);
+  });
+
+  test('staff comum não edita super admin', async () => {
+    const gravado = banco(registro({ isSuperAdmin: true, permissions: [] }));
+    const res = await readApi(await editar({ name: 'Outro Nome' }));
+    assert.strictEqual(res.status, 403);
+    assert.strictEqual(gravado.length, 0);
+  });
+
+  test('ninguém muda as próprias permissões', async () => {
+    test.mock.method(adminSessionModule, 'getAdminSessionFromRequest', async () =>
+      adminSession({ staffId: 'alvo', permissions: ['USUARIOS', 'FINANCEIRO', 'OPERACOES'] })
+    );
+    banco();
+    const res = await readApi(await editar({ permissions: ['OPERACOES', 'FINANCEIRO', 'USUARIOS'] }));
+    assert.strictEqual(res.status, 403);
+  });
+
+  test('editar só o próprio nome continua liberado', async () => {
+    test.mock.method(adminSessionModule, 'getAdminSessionFromRequest', async () =>
+      adminSession({ staffId: 'alvo', permissions: ['USUARIOS'] })
+    );
+    banco();
+    const res = await readApi(await editar({ name: 'Nome Novo' }));
+    assert.strictEqual(res.status, 200);
+  });
+
+  test('não concede permissão que o próprio gestor não tem', async () => {
+    const gravado = banco();
+    const res = await readApi(await editar({ permissions: ['OPERACOES', 'FINANCEIRO', 'CONTAS'] }));
+    assert.strictEqual(res.status, 403);
+    assert.match(res.error.message, /CONTAS/);
+    assert.strictEqual(gravado.length, 0);
+  });
+
+  const excluir = () =>
+    callRoute(DELETE, apiRequest('/api/admin/staff/users/alvo', { method: 'DELETE' }), { id: 'alvo' });
+
+  test('excluir derruba a sessão na hora', async () => {
+    banco();
+    const res = await readApi(await excluir());
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(revogacoes()[0].arguments[0], 'alvo');
+  });
+
+  test('ninguém se exclui', async () => {
+    test.mock.method(adminSessionModule, 'getAdminSessionFromRequest', async () =>
+      adminSession({ staffId: 'alvo', permissions: ['USUARIOS'] })
+    );
+    banco();
+    const res = await readApi(await excluir());
+    assert.strictEqual(res.status, 403);
+  });
+
+  test('staff comum não exclui super admin', async () => {
+    banco(registro({ isSuperAdmin: true, permissions: [] }));
+    const res = await readApi(await excluir());
+    assert.strictEqual(res.status, 403);
   });
 });
