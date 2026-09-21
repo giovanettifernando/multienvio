@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQueries } from "@tanstack/react-query";
 import { ELCard } from '@/shared/ui/ELCard';
-import type { Shipment } from '@/shared/types/shipment';
+import type { ShipmentListItem } from '@/modules/shipments/application/list.service';
 import type { Tracking } from '@/shared/types/tracking';
 import { TrackingStatusTag } from "@/modules/tracking/ui/components/TrackingStatusTag";
 import { PageShell } from '@/shared/ui/PageShell';
@@ -14,14 +14,32 @@ import { ELSelect } from '@/shared/ui/ELSelect';
 import { DataTable, type DataTableColumn } from '@/shared/ui/DataTable';
 import { ActionBar } from '@/shared/ui/ActionBar';
 
-async function fetchShipments(): Promise<{ dados: Shipment[] }> {
-  const response = await fetch("/api/shipments");
+/** Envio na forma que a tabela usa. */
+type ShipmentRow = {
+  id: string;
+  codigo: string;
+  servico: string;
+  cidadeDestino: string;
+  atualizadoEm: string;
+};
+
+async function fetchShipments(): Promise<{ dados: ShipmentRow[] }> {
+  const response = await fetch("/api/shipments?limit=100");
   if (!response.ok) {
     throw new Error("Não foi possível carregar os envios");
   }
   const json = await response.json();
-  // Handle standardized API response format { data: T, error, meta }
-  return (json.data ?? json) as { dados: Shipment[] };
+  // A API devolve { data: { items, pagination } }
+  const items: ShipmentListItem[] = json.data?.items ?? [];
+  return {
+    dados: items.map((item) => ({
+      id: item.id,
+      codigo: item.trackingCode,
+      servico: [item.carrierName, item.serviceName].filter(Boolean).join(" "),
+      cidadeDestino: item.recipientCityUf ?? "",
+      atualizadoEm: item.postedAt ?? item.createdAt,
+    })),
+  };
 }
 
 async function fetchTracking(shipmentId: string): Promise<Tracking> {
@@ -42,9 +60,8 @@ const STATUS_FILTERS = [
   { label: "Ocorrência", value: "ISSUE" },
 ];
 
-type TrackingRow = Omit<Shipment, "status"> & {
+type TrackingRow = ShipmentRow & {
   status: Tracking["status"];
-  atualizadoEm: string;
   ultimoEvento: string;
 };
 
@@ -84,8 +101,9 @@ export default function RastreamentoClient() {
     const list = shipmentsResult.data?.dados ?? [];
     return list
       .filter((item) => {
+        const termo = search.toLowerCase();
         const matchesSearch = search
-          ? item.id.toLowerCase().includes(search.toLowerCase())
+          ? item.codigo.toLowerCase().includes(termo) || item.id.toLowerCase().includes(termo)
           : true;
         const tracking = trackingMap[item.id];
         const matchesStatus =
@@ -109,10 +127,10 @@ export default function RastreamentoClient() {
   const columns: DataTableColumn<TrackingRow>[] = [
     {
       title: "Envio",
-      dataIndex: "id",
-      key: "id",
+      dataIndex: "codigo",
+      key: "codigo",
       showInCard: true,
-      cardLabel: "ID",
+      cardLabel: "Código",
     },
     {
       title: "Serviço",
