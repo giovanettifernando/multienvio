@@ -1,9 +1,6 @@
 /**
  * Contrato comum das rotas de /api/admin/finance: só staff com FINANCEIRO entra,
  * ações de escrita têm limite por usuário e corpo validado.
- *
- * A maioria destas rotas ainda é esqueleto herdado do Envio Legal (responde ok
- * sem gravar) e nenhuma tela montada as chama; os testes cobrem o controle de acesso.
  */
 import assert from 'node:assert';
 import test from 'node:test';
@@ -89,8 +86,3 @@ export function contratoFinanceiro(r: Rota) {
     });
   });
 }
-
-export const listaVazia = (page = 1, pageSize = 10) => (res: { data: any }) =>
-  assert.deepStrictEqual(res.data, { items: [], page, pageSize, total: 0 });
-
-export const ok = (res: { data: any }) => assert.strictEqual(res.data.ok, true);
