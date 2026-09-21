@@ -2,8 +2,6 @@
 
 import { useMemo, useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
-import type { CompanyWizardData } from '@/shared/validation/company';
 import { QuoteForm } from "@/modules/quotes/ui/components/QuoteForm";
 import { useAddressStore, getCompanyDefaultAddress } from "@/modules/auth/ui/state/addresses";
 import { maskCEP } from "@/shared/utils/masks";
@@ -17,23 +15,9 @@ import { useCanQuote } from "@/modules/wallet/ui/hooks/useWalletStatus";
 import ResolveDebtModal from '@/modules/wallet/ui/components/ResolveDebtModal';
 import { formatNumberBR } from "@/shared/utils/format";
 
-async function fetchCompany(): Promise<CompanyWizardData | null> {
-  const res = await fetch("/api/account/company");
-  if (!res.ok) return null;
-  const data = await res.json().catch(() => null);
-  const company = (data?.company ?? data) as CompanyWizardData | null;
-  return company ?? null;
-}
-
 export default function CotacoesClient() {
   const router = useRouter();
   const [resolveDebtOpen, setResolveDebtOpen] = useState(false);
-
-  const { data: company, isLoading: companyLoading } = useQuery({
-    queryKey: ["account", "company"],
-    queryFn: fetchCompany,
-    staleTime: 60_000,
-  });
 
   // Verificar se o usuário pode cotar (não tem saldo negativo)
   const { canQuote, isLoading: walletLoading, negativeAmountReais } = useCanQuote();
@@ -101,7 +85,7 @@ export default function CotacoesClient() {
     };
   }, [addresses]);
 
-  if (companyLoading || walletLoading || !hasHydrated) {
+  if (walletLoading || !hasHydrated) {
     return (
       <PageShell
         title="Cotar"
@@ -139,26 +123,6 @@ export default function CotacoesClient() {
           open={resolveDebtOpen}
           onClose={() => setResolveDebtOpen(false)}
         />
-      </PageShell>
-    );
-  }
-
-  if (!company) {
-    return (
-      <PageShell
-        title="Cotar"
-        description="Compare serviços e crie etiquetas de forma rápida com os dados da sua empresa."
-      >
-        <ELCard>
-          <ELEmpty
-            title="Complete o cadastro"
-            description="Para cotar frete, finalize as informações da sua empresa na sua conta."
-            primaryAction={{
-              label: "Ir para Minha Conta",
-              onClick: () => router.push("/minha-conta"),
-            }}
-          />
-        </ELCard>
       </PageShell>
     );
   }
