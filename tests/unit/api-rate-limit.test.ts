@@ -25,7 +25,7 @@ test.before(async () => {
     intervals.push(handle);
     return handle;
   };
-  const mod = await import('../../lib/rate-limit.ts');
+  const mod = await import('../../platform/api/rate-limit.ts');
   rateLimitByIP = mod.rateLimitByIP;
   RATE_LIMITS = mod.RATE_LIMITS;
   (globalThis as any).setInterval = originalSetInterval;

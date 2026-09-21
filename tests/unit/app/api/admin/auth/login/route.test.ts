@@ -30,11 +30,11 @@ test.describe('app/api/admin/auth/login', () => {
       fn();
       return { unref: () => {}, ref: () => {} } as any;
     };
-    schemaModule = await import('../../../../../../../lib/validation/admin-auth.ts');
-    rateLimitModule = await import('../../../../../../../lib/rate-limit.ts');
-    adminSessionModule = await import('../../../../../../../lib/auth/admin-session.ts');
-    auditModule = await import('../../../../../../../lib/audit-admin.ts');
-    cacheModule = await import('../../../../../../../lib/cache.ts');
+    schemaModule = await import('../../../../../../../shared/validation/admin-auth.ts');
+    rateLimitModule = await import('../../../../../../../platform/api/rate-limit.ts');
+    adminSessionModule = await import('../../../../../../../modules/auth/application/admin-session.ts');
+    auditModule = await import('../../../../../../../platform/logging/audit-admin.ts');
+    cacheModule = await import('../../../../../../../platform/cache/cache.ts');
     prisma.staffUser = { findUnique: async () => null, update: async () => ({}) } as any;
     ({ POST } = await import('../../../../../../../app/api/admin/auth/login/route.ts'));
   });

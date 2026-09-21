@@ -10,7 +10,7 @@ test.describe('repositories/system-status.repository', () => {
     const originalCwd = process.cwd();
     process.chdir(tmpDir);
     try {
-      const repo = await import('../../../lib/repositories/system-status.repository.ts');
+      const repo = await import('../../../platform/db/system-status.repository.ts');
       const first = await repo.getSystemStatus();
       assert.strictEqual(first.maintenance, false);
 

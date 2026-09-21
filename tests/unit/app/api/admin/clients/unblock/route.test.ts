@@ -16,9 +16,9 @@ test.describe("app/api/admin/clients/unblock", () => {
   let rateLimitModule: any;
 
   test.before(async () => {
-    sessionModule = await import("../../../../../../../lib/auth/admin-session.ts");
-    auditModule = await import("../../../../../../../lib/audit-admin.ts");
-    rateLimitModule = await import("../../../../../../../lib/rate-limit.ts");
+    sessionModule = await import("../../../../../../../modules/auth/application/admin-session.ts");
+    auditModule = await import("../../../../../../../platform/logging/audit-admin.ts");
+    rateLimitModule = await import("../../../../../../../platform/api/rate-limit.ts");
   });
 
   test.afterEach(() => {

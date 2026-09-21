@@ -20,8 +20,8 @@ test.describe('app/api/admin/payment-gateway/config', () => {
   let encryptModule: any;
 
   test.before(async () => {
-    adminHelpers = await import('../../../../../../../lib/auth/admin-helpers.ts');
-    encryptModule = await import('../../../../../../../lib/integrations/shared/encryption.service.ts');
+    adminHelpers = await import('../../../../../../../modules/auth/application/admin-helpers.ts');
+    encryptModule = await import('../../../../../../../platform/integrations/shared/encryption.service.ts');
   });
 
   test.afterEach(() => {

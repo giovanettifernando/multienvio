@@ -14,8 +14,8 @@ test.describe('app/api/account/addresses', () => {
   let addressSchemaModule: any;
 
   test.before(async () => {
-    sessionModule = await import('../../../../../../lib/auth/session.ts');
-    addressSchemaModule = await import('../../../../../../lib/validation/address.ts');
+    sessionModule = await import('../../../../../../modules/auth/application/session.ts');
+    addressSchemaModule = await import('../../../../../../shared/validation/address.ts');
   });
 
   test.afterEach(() => {

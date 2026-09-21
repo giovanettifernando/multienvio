@@ -16,7 +16,7 @@ test.describe('app/api/admin/payment-transactions/sync', () => {
   let paymentsModule: any;
 
   test.before(async () => {
-    adminHelpers = await import('../../../../../../../lib/auth/admin-helpers.ts');
+    adminHelpers = await import('../../../../../../../modules/auth/application/admin-helpers.ts');
     paymentsModule = await import('@/platform/integrations/pagarme');
   });
 

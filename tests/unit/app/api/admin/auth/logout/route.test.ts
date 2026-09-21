@@ -12,9 +12,9 @@ test.describe('app/api/admin/auth/logout', () => {
   let cacheModule: any;
 
   test.before(async () => {
-    sessionModule = await import('../../../../../../../lib/auth/admin-session.ts');
+    sessionModule = await import('../../../../../../../modules/auth/application/admin-session.ts');
     cookieModule = sessionModule;
-    cacheModule = await import('../../../../../../../lib/cache.ts');
+    cacheModule = await import('../../../../../../../platform/cache/cache.ts');
   });
 
   test.afterEach(() => {

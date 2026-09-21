@@ -17,8 +17,8 @@ test.describe('app/api/admin/payment-transactions/[id]/force-approve', () => {
   let walletService: any;
 
   test.before(async () => {
-    adminHelpers = await import('../../../../../../../../lib/auth/admin-helpers.ts');
-    walletService = await import('../../../../../../../../lib/wallet/wallet.service.ts');
+    adminHelpers = await import('../../../../../../../../modules/auth/application/admin-helpers.ts');
+    walletService = await import('../../../../../../../../modules/wallet/application/wallet.service.ts');
   });
 
   test.afterEach(() => {

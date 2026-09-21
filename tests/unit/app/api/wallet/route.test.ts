@@ -11,10 +11,10 @@ const originalPrisma = { walletTransaction: prisma.walletTransaction };
 
 test.describe('app/api/wallet/route', () => {
   test.before(async () => {
-    sessionModule = await import('../../../../../lib/auth/session.ts');
-    walletService = await import('../../../../../lib/wallet/wallet.service.ts');
-    periodModule = await import('../../../../../lib/wallet/period-summary.ts');
-    directionModule = await import('../../../../../lib/wallet/transaction-direction.ts');
+    sessionModule = await import('../../../../../modules/auth/application/session.ts');
+    walletService = await import('../../../../../modules/wallet/application/wallet.service.ts');
+    periodModule = await import('../../../../../modules/wallet/application/period-summary.ts');
+    directionModule = await import('../../../../../modules/wallet/application/transaction-direction.ts');
   });
 
   test.afterEach(() => {

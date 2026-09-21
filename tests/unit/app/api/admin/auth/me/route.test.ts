@@ -13,7 +13,7 @@ test.describe('app/api/admin/auth/me', () => {
   let sessionModule: any;
 
   test.before(async () => {
-    sessionModule = await import('../../../../../../../lib/auth/admin-session.ts');
+    sessionModule = await import('../../../../../../../modules/auth/application/admin-session.ts');
   });
 
   test.afterEach(() => {

@@ -2,7 +2,7 @@ import assert from 'node:assert';
 import test from 'node:test';
 import path from 'node:path';
 
-const MODULE_PATH = path.resolve(__dirname, '../../../../lib/integrations/shared/encryption.service.ts');
+const MODULE_PATH = path.resolve(__dirname, '../../../../platform/integrations/shared/encryption.service.ts');
 const FIXED_KEY = 'a'.repeat(64);
 const originalEnvKey = process.env.ENCRYPTION_KEY;
 
@@ -10,7 +10,7 @@ function loadModule() {
   delete require.cache[MODULE_PATH];
   process.env.ENCRYPTION_KEY = FIXED_KEY;
    
-  return require(MODULE_PATH) as typeof import('../../../../lib/integrations/shared/encryption.service.ts');
+  return require(MODULE_PATH) as typeof import('../../../../platform/integrations/shared/encryption.service.ts');
 }
 
 test.after(() => {

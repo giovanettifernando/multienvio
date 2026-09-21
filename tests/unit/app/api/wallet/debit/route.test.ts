@@ -22,7 +22,7 @@ function makeRequest(body: unknown) {
 
 test.describe('app/api/wallet/debit', () => {
   test.before(async () => {
-    sessionModule = await import('../../../../../../lib/auth/session.ts');
+    sessionModule = await import('../../../../../../modules/auth/application/session.ts');
   });
 
   test.afterEach(() => {

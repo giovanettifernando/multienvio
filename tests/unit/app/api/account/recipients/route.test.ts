@@ -23,7 +23,7 @@ test.describe('app/api/account/recipients', () => {
 
   test('GET retorna 401 se requireUserId falha', async () => {
     test.mock.method(helpers, 'requireUserId', async () => {
-      throw new (await import('../../../../../../lib/api/errors.ts')).ApiError({
+      throw new (await import('../../../../../../platform/api/errors.ts')).ApiError({
         code: 'unauthorized',
         message: 'no auth',
         status: 401,

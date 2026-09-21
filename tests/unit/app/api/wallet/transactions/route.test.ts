@@ -14,9 +14,9 @@ function makeRequest(url: string) {
 
 test.describe('app/api/wallet/transactions', () => {
   test.before(async () => {
-    sessionModule = await import('../../../../../../lib/auth/session.ts');
-    periodModule = await import('../../../../../../lib/wallet/period-summary.ts');
-    directionModule = await import('../../../../../../lib/wallet/transaction-direction.ts');
+    sessionModule = await import('../../../../../../modules/auth/application/session.ts');
+    periodModule = await import('../../../../../../modules/wallet/application/period-summary.ts');
+    directionModule = await import('../../../../../../modules/wallet/application/transaction-direction.ts');
   });
 
   test.afterEach(() => {

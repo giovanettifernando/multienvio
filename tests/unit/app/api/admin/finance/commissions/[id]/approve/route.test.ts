@@ -14,9 +14,9 @@ test.describe("app/api/admin/finance/commissions/[id]/approve", () => {
   let rateLimitModule: any;
 
   test.before(async () => {
-    sessionModule = await import("../../../../../../../../../lib/auth/admin-session.ts");
-    permissionsModule = await import("../../../../../../../../../lib/auth/permissions.ts");
-    rateLimitModule = await import("../../../../../../../../../lib/rate-limit.ts");
+    sessionModule = await import("../../../../../../../../../modules/auth/application/admin-session.ts");
+    permissionsModule = await import("../../../../../../../../../modules/auth/application/permissions.ts");
+    rateLimitModule = await import("../../../../../../../../../platform/api/rate-limit.ts");
   });
 
   test.afterEach(() => {

@@ -6,7 +6,7 @@ let validateCardUpdateInput: any;
 
 test.describe('validation/card', () => {
   test.before(async () => {
-    const mod = require('../../../lib/validation/card.ts');
+    const mod = require('../../../shared/validation/card.ts');
     CardValidationError = mod.CardValidationError;
     validateCardCreateInput = mod.validateCardCreateInput;
     validateCardUpdateInput = mod.validateCardUpdateInput;

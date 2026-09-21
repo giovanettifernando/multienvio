@@ -18,7 +18,7 @@ test.before(async () => {
     return handle;
   };
   ({ POST } = await import('../../../../../../app/api/auth/login/route.ts'));
-  rateLimitModule = await import('../../../../../../lib/rate-limit.ts');
+  rateLimitModule = await import('../../../../../../platform/api/rate-limit.ts');
   originalRateLimit = rateLimitModule.rateLimitByIP as unknown;
   (globalThis as any).setInterval = originalSetInterval;
 });

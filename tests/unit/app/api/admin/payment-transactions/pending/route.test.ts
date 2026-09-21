@@ -18,7 +18,7 @@ test.describe('app/api/admin/payment-transactions/pending', () => {
   let adminHelpers: any;
 
   test.before(async () => {
-    adminHelpers = await import('../../../../../../../lib/auth/admin-helpers.ts');
+    adminHelpers = await import('../../../../../../../modules/auth/application/admin-helpers.ts');
   });
 
   test.afterEach(() => {

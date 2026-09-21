@@ -15,8 +15,8 @@ test.describe("app/api/admin/clients/[id]", () => {
   let permissionsModule: any;
 
   test.before(async () => {
-    sessionModule = await import("../../../../../../../lib/auth/admin-session.ts");
-    permissionsModule = await import("../../../../../../../lib/auth/permissions.ts");
+    sessionModule = await import("../../../../../../../modules/auth/application/admin-session.ts");
+    permissionsModule = await import("../../../../../../../modules/auth/application/permissions.ts");
   });
 
   test.afterEach(() => {

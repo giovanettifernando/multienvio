@@ -9,7 +9,7 @@ test.describe('app/api/auth/logout', () => {
   let sessionModule: any;
 
   test.before(async () => {
-    sessionModule = await import('../../../../../../lib/auth/session.ts');
+    sessionModule = await import('../../../../../../modules/auth/application/session.ts');
   });
 
   test.afterEach(() => {
