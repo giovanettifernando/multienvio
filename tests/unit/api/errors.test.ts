@@ -29,7 +29,8 @@ test.describe('api/errors', () => {
 
     const apiErr = toApiError(new Error("Can't reach database server"));
     assert.strictEqual(apiErr.status, 503);
-    assert.strictEqual(apiErr.code, 'service_unavailable');
+    assert.strictEqual(apiErr.code, 'SERVICE_UNAVAILABLE');
+    assert.match(apiErr.message, /Banco de dados indisponível/);
     // schedulePrismaReconnect executa de forma assíncrona
     await new Promise((resolve) => setTimeout(resolve, 0));
     assert.strictEqual(disconnected, true);
