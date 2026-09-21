@@ -3,7 +3,8 @@ import test from 'node:test';
 import bcrypt from 'bcrypt';
 import { ApiError } from '@/platform/api/errors';
 import { AccountSecurityService, SecurityEventType } from '@/modules/auth/application/account-security.service';
-import * as policyModule from '@/shared/validation/password-policy';
+// Mock no módulo de origem: @/shared/validation/password-policy só reexporta (getter não é mockável)
+import * as policyModule from '@/modules/auth/dto/password-policy';
 import * as cacheModule from '@/platform/cache/cache';
 
 function makeService(overrides: any = {}) {
