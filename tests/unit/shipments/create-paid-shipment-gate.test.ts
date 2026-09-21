@@ -22,6 +22,7 @@ const DB_PATH = path.resolve(ROOT, 'platform/db/db.ts');
 const CREATE_WITH_VOLUMES_PATH = path.resolve(ROOT, 'modules/shipments/application/create-with-volumes.ts');
 const CHECKOUT_SERVICE_PATH = path.resolve(ROOT, 'modules/cart/application/checkout.service.ts');
 const QUEUE_INDEX_PATH = path.resolve(ROOT, 'platform/queue/index.ts');
+const COMMISSION_PATH = path.resolve(ROOT, 'modules/quotes/application/commission.ts');
 const SERVICE_PATH = path.resolve(ROOT, 'modules/shipments/application/create-paid-shipment.service.ts');
 
 function stubModule(absPath: string, exports: Record<string, unknown>) {
@@ -47,6 +48,12 @@ before(() => {
     determineInitialStatus: () => 'AWAITING_DROP_OFF_AT_POINT',
     saveRecipientIfRequested: async () => {},
   });
+  // Comissões leem a configuração da transportadora no banco.
+  stubModule(COMMISSION_PATH, {
+    calculateCommissionsInCents: async () => ({ shippingCommissionCents: 0 }),
+    calculateInsuranceCommission: async () => ({ commissionAmount: 0 }),
+    resolveCarrierSlugByName: () => 'correios',
+  });
   stubModule(QUEUE_INDEX_PATH, {
     getQueue: () => ({ add: async () => {} }),
     QUEUE_NAMES: { SHIPMENT_CREATE: 'shipment.create' },
@@ -67,6 +74,14 @@ const baseRecipient = {
 };
 
 const baseDocument = { type: 'DECLARACAO' as const };
+
+// Declaração exige remetente com CPF/CNPJ e chave de DC-e válida e ainda não
+// usada — checagens feitas antes da transação, direto no prisma.
+const CHAVE_DCE = '41260912345678000195990010000000421011234561';
+const foraDaTransacao = {
+  user: { findUnique: async () => ({ cpf: '12345678900', cnpj: null }) },
+  shipment: { findUnique: async () => null },
+};
 
 const baseVolumes = [{ peso: 1, altura: 10, largura: 10, comprimento: 10 }];
 
@@ -125,6 +140,7 @@ function baseInput(overrides: Record<string, unknown> = {}) {
     freightCost: 20,
     totalCost: 20,
     paymentMethod: 'PAGARME' as const,
+    dceKey: CHAVE_DCE,
     ...overrides,
   };
 }
@@ -147,6 +163,7 @@ describe('createPaidShipment — gate de liberação do pagamento do gateway', (
   it('rejeita quando a transação pertence a outro usuário (dono) — pela checagem certa, não por mock incompleto', async () => {
     const { createPaidShipment } = loadService();
     require.cache[DB_PATH]!.exports.prisma = {
+      ...foraDaTransacao,
       $transaction: async (cb: any) =>
         cb(
           fakeTx({
@@ -172,6 +189,7 @@ describe('createPaidShipment — gate de liberação do pagamento do gateway', (
   it('rejeita quando o valor da transação é insuficiente', async () => {
     const { createPaidShipment } = loadService();
     require.cache[DB_PATH]!.exports.prisma = {
+      ...foraDaTransacao,
       $transaction: async (cb: any) =>
         cb(
           fakeTx({
@@ -197,6 +215,7 @@ describe('createPaidShipment — gate de liberação do pagamento do gateway', (
   it('rejeita enquanto o pagamento está PENDING', async () => {
     const { createPaidShipment } = loadService();
     require.cache[DB_PATH]!.exports.prisma = {
+      ...foraDaTransacao,
       $transaction: async (cb: any) =>
         cb(
           fakeTx({
@@ -222,6 +241,7 @@ describe('createPaidShipment — gate de liberação do pagamento do gateway', (
   it('rejeita quando o claim atômico não vence (transação já reivindicada/consumida)', async () => {
     const { createPaidShipment } = loadService();
     require.cache[DB_PATH]!.exports.prisma = {
+      ...foraDaTransacao,
       $transaction: async (cb: any) =>
         cb(
           fakeTx({
@@ -251,6 +271,7 @@ describe('createPaidShipment — gate de liberação do pagamento do gateway', (
     const { createPaidShipment } = loadService();
     let claimCall: unknown;
     require.cache[DB_PATH]!.exports.prisma = {
+      ...foraDaTransacao,
       $transaction: async (cb: any) =>
         cb(
           fakeTx({
@@ -298,6 +319,7 @@ describe('createPaidShipment — gate de liberação do pagamento do gateway', (
     };
 
     require.cache[DB_PATH]!.exports.prisma = {
+      ...foraDaTransacao,
       $transaction: async (cb: any) =>
         cb(
           fakeTx({

@@ -42,7 +42,9 @@ before(() => {
     }),
   });
   stubModule(COMMISSION_PATH, {
-    calculateCommissionsInCents: async () => ({ shippingCommissionCents: 0, pickupCommissionCents: 0 }),
+    calculateCommissionsInCents: async () => ({ shippingCommissionCents: 0 }),
+    calculateInsuranceCommission: async () => ({ commissionAmount: 0 }),
+    resolveCarrierSlugByName: () => 'correios',
   });
   stubModule(CARRIER_INTEGRATION_PATH, {
     integrateWithCarrier: async () => ({ success: true }),
@@ -105,8 +107,14 @@ function fakeTx(overrides: {
   pickupRequest?: Record<string, unknown>;
   user?: Record<string, unknown>;
   paymentTransaction?: Record<string, unknown>;
+  shipment?: Record<string, unknown>;
 } = {}) {
   return {
+    shipment: {
+      // Correios passa o envio para PROCESSING dentro da transação
+      update: async () => ({}),
+      ...overrides.shipment,
+    },
     walletTransaction: {
       findUnique: async () => null, // não idempotente
       ...overrides.walletTransaction,

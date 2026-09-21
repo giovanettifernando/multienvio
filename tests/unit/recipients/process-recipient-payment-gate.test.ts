@@ -23,6 +23,7 @@ const DB_PATH = path.resolve(ROOT, 'platform/db/db.ts');
 const CREATE_WITH_VOLUMES_PATH = path.resolve(ROOT, 'modules/shipments/application/create-with-volumes.ts');
 const CARRIER_INTEGRATION_PATH = path.resolve(ROOT, 'modules/shipments/application/carrier-integration.ts');
 const CHECKOUT_SERVICE_PATH = path.resolve(ROOT, 'modules/cart/application/checkout.service.ts');
+const COMMISSION_PATH = path.resolve(ROOT, 'modules/quotes/application/commission.ts');
 const SERVICE_PATH = path.resolve(ROOT, 'modules/recipients/application/service.ts');
 
 function stubModule(absPath: string, exports: Record<string, unknown>) {
@@ -50,6 +51,12 @@ before(() => {
         packages: [],
       };
     },
+  });
+  // Comissões leem a configuração da transportadora no banco.
+  stubModule(COMMISSION_PATH, {
+    calculateCommissionsInCents: async () => ({ shippingCommissionCents: 0 }),
+    calculateInsuranceCommission: async () => ({ commissionAmount: 0 }),
+    resolveCarrierSlugByName: () => 'correios',
   });
   stubModule(CARRIER_INTEGRATION_PATH, {
     integrateWithCarrier: async () => ({ success: true }),
