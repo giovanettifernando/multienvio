@@ -3,7 +3,8 @@ import test from 'node:test';
 import { GET, POST } from '@/app/api/account/cards/route';
 import * as helpers from '@/app/api/account/cards/helpers';
 import * as service from '@/modules/auth/application/account-cards.service';
-import * as validation from '@/shared/validation/card';
+// Mock no módulo de origem: shared/validation/card só reexporta (getter não é mockável)
+import * as validation from '@/modules/payments/dto/card';
 import { ApiError } from '@/platform/api/errors';
 
 function makeRequest(url: string, init?: RequestInit) {

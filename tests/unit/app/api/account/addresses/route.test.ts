@@ -2,20 +2,27 @@ import assert from 'node:assert';
 import test from 'node:test';
 import { GET, POST } from '@/app/api/account/addresses/route';
 import { prisma } from '@/platform/db/db';
+import { apiRequest, callRoute, readApi } from '../../../../../_setup/test-helpers';
 
 const originalAddress = prisma.address;
 
-function makeRequest(url: string, init?: RequestInit) {
-  return new Request(url, init);
-}
+const enderecoValido = {
+  label: 'Casa',
+  cep: '01310-100',
+  logradouro: 'Avenida Paulista',
+  numero: '1000',
+  complemento: null,
+  bairro: 'Bela Vista',
+  cidade: 'São Paulo',
+  uf: 'SP',
+  isDefault: true,
+};
 
 test.describe('app/api/account/addresses', () => {
   let sessionModule: any;
-  let addressSchemaModule: any;
 
   test.before(async () => {
     sessionModule = await import('../../../../../../modules/auth/application/session.ts');
-    addressSchemaModule = await import('../../../../../../shared/validation/address.ts');
   });
 
   test.afterEach(() => {
@@ -23,81 +30,94 @@ test.describe('app/api/account/addresses', () => {
     prisma.address = originalAddress;
   });
 
+  const logado = () =>
+    test.mock.method(sessionModule, 'getUserFromRequest', async () => ({ userId: 'u1' }));
+
   test('GET retorna 401 sem sessão', async () => {
     test.mock.method(sessionModule, 'getUserFromRequest', async () => null);
-    const res = await GET(makeRequest('http://test/api/account/addresses'));
+    const res = await readApi(await callRoute(GET, apiRequest('/api/account/addresses')));
     assert.strictEqual(res.status, 401);
+    assert.strictEqual(res.error?.code, 'unauthorized');
   });
 
-  test('GET retorna endereços do usuário', async () => {
-    test.mock.method(sessionModule, 'getUserFromRequest', async () => ({ userId: 'u1' }));
+  test('GET lista só os endereços do usuário, sem cache no navegador', async () => {
+    logado();
+    let filtro: any;
     prisma.address = {
-      findMany: async () => [{ id: 'a1', label: 'Casa', cep: '123', logradouro: 'Rua', numero: '1', complemento: null, bairro: 'B', cidade: 'C', uf: 'SP', isDefault: true, createdAt: new Date(), updatedAt: new Date() }],
+      findMany: async (args: any) => {
+        filtro = args.where;
+        return [{ id: 'a1', label: 'Casa', cep: '01310100', logradouro: 'Rua', numero: '1', complemento: null, bairro: 'B', cidade: 'C', uf: 'SP', isDefault: true, createdAt: new Date(), updatedAt: new Date() }];
+      },
     } as any;
-    const res = await GET(makeRequest('http://test/api/account/addresses'));
+
+    const raw = await callRoute(GET, apiRequest('/api/account/addresses'));
+    const res = await readApi(raw);
+
     assert.strictEqual(res.status, 200);
-    const body = await res.json();
-    assert.strictEqual(body.success, true);
-    assert.strictEqual(body.addresses[0].id, 'a1');
+    assert.deepStrictEqual(filtro, { userId: 'u1' });
+    assert.strictEqual(res.data.success, true);
+    assert.strictEqual(res.data.addresses[0].id, 'a1');
+    assert.strictEqual(typeof res.data.addresses[0].createdAt, 'string');
+    assert.strictEqual(raw.headers.get('cache-control'), 'no-store');
   });
 
   test('POST retorna 401 sem sessão', async () => {
     test.mock.method(sessionModule, 'getUserFromRequest', async () => null);
-    const res = await POST(makeRequest('http://test/api/account/addresses', { method: 'POST' }));
+    const res = await readApi(await callRoute(POST, apiRequest('/api/account/addresses', { json: enderecoValido })));
     assert.strictEqual(res.status, 401);
   });
 
-  test('POST retorna 400 em validação Zod', async () => {
-    test.mock.method(sessionModule, 'getUserFromRequest', async () => ({ userId: 'u1' }));
-    test.mock.method(addressSchemaModule.AddressSchema, 'parse', () => {
-      const err: any = { issues: [{ path: ['cep'], message: 'CEP inválido' }] };
-      err.issues = err.issues;
-      throw err;
-    });
-    const res = await POST(
-      makeRequest('http://test/api/account/addresses', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({}),
-      }),
+  test('POST retorna 400 quando o endereço é inválido', async () => {
+    logado();
+    const res = await readApi(
+      await callRoute(POST, apiRequest('/api/account/addresses', { json: { ...enderecoValido, cep: '123' } }))
     );
     assert.strictEqual(res.status, 400);
-    const body = await res.json();
-    assert.strictEqual(body.code, 'VALIDATION_ERROR');
+    assert.strictEqual(res.error?.code, 'validation_error');
+    assert.match(res.error!.message, /CEP/);
   });
 
-  test('POST cria endereço e redefine default', async () => {
-    test.mock.method(sessionModule, 'getUserFromRequest', async () => ({ userId: 'u1' }));
-    test.mock.method(addressSchemaModule.AddressSchema, 'parse', () => ({
-      label: 'Casa',
-      cep: '12345678',
-      logradouro: 'Rua',
-      numero: '10',
-      complemento: null,
-      bairro: 'Centro',
-      cidade: 'Cidade',
-      uf: 'SP',
-      isDefault: true,
-    }));
-    let updateManyCalled = false;
+  test('POST cria o endereço e desmarca o padrão anterior', async () => {
+    logado();
+    let desmarcou = false;
+    let criado: any;
+    prisma.address = {
+      updateMany: async (args: any) => {
+        desmarcou = args.where.userId === 'u1' && args.data.isDefault === false;
+        return { count: 1 };
+      },
+      create: async ({ data }: any) => {
+        criado = data;
+        return { id: 'a1', createdAt: new Date(), updatedAt: new Date(), ...data };
+      },
+    } as any;
+
+    const res = await readApi(await callRoute(POST, apiRequest('/api/account/addresses', { json: enderecoValido })));
+
+    assert.strictEqual(res.status, 201);
+    assert.strictEqual(res.data.success, true);
+    assert.strictEqual(res.data.address.id, 'a1');
+    assert.ok(desmarcou, 'deveria desmarcar o endereço padrão anterior');
+    assert.strictEqual(criado.cep, '01310100', 'CEP deveria ser gravado sem máscara');
+    assert.strictEqual(criado.userId, 'u1');
+  });
+
+  test('POST não mexe no padrão anterior quando o novo não é padrão', async () => {
+    logado();
+    let desmarcou = false;
     prisma.address = {
       updateMany: async () => {
-        updateManyCalled = true;
-        return {};
+        desmarcou = true;
+        return { count: 0 };
       },
-      create: async ({ data }: any) => ({ id: 'a1', createdAt: new Date(), updatedAt: new Date(), ...data }),
+      create: async ({ data }: any) => ({ id: 'a2', createdAt: new Date(), updatedAt: new Date(), ...data }),
     } as any;
-    const res = await POST(
-      makeRequest('http://test/api/account/addresses', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({}),
-      }),
+
+    const res = await readApi(
+      await callRoute(POST, apiRequest('/api/account/addresses', { json: { ...enderecoValido, isDefault: false } }))
     );
+
     assert.strictEqual(res.status, 201);
-    const body = await res.json();
-    assert.strictEqual(body.success, true);
-    assert.strictEqual(body.address.id, 'a1');
-    assert.ok(updateManyCalled);
+    assert.strictEqual(desmarcou, false);
   });
 });

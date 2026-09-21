@@ -1,104 +1,121 @@
 import assert from 'node:assert';
 import test from 'node:test';
 import { GET, PUT } from '@/app/api/account/profile/route';
+import { prisma } from '@/platform/db/db';
+import { userCache } from '@/platform/cache/cache';
+import { apiRequest, callRoute, readApi } from '../../../../../_setup/test-helpers';
 
-const originalFetch = global.fetch;
+const originalPrismaUser = prisma.user;
 
-function makeRequest(url: string, options?: RequestInit) {
-  const req = new Request(url, options);
-  (req as any).nextUrl = new URL(url);
-  return req;
-}
+const usuarioComEmpresa = {
+  name: 'User',
+  email: 'a@b.com',
+  phone: '11987654321',
+  cpf: '52998224725',
+  avatarUrl: null,
+  hasCompany: true,
+  cnpj: '11222333000181',
+  razaoSocial: 'Empresa LTDA',
+};
 
 test.describe('app/api/account/profile', () => {
+  let sessionModule: any;
+
+  test.before(async () => {
+    sessionModule = await import('../../../../../../modules/auth/application/session.ts');
+  });
+
   test.afterEach(() => {
-    global.fetch = originalFetch;
+    test.mock.restoreAll();
+    prisma.user = originalPrismaUser;
   });
 
-  test('GET propaga erro quando /me falha', async () => {
-    global.fetch = (async () => ({
-      ok: false,
-      status: 401,
-      json: async () => ({ message: 'unauth' }),
-    })) as any;
-    const res = await GET(makeRequest('http://test/api/account/profile'));
+  const logado = () =>
+    test.mock.method(sessionModule, 'getUserFromRequest', async () => ({ userId: 'u1' }));
+
+  test('GET retorna 401 sem sessão', async () => {
+    test.mock.method(sessionModule, 'getUserFromRequest', async () => null);
+    const res = await readApi(await callRoute(GET, apiRequest('/api/account/profile')));
     assert.strictEqual(res.status, 401);
-    const body = await res.json();
-    assert.strictEqual(body.message, 'unauth');
   });
 
-  test('GET transforma user em Profile', async () => {
-    global.fetch = (async () => ({
-      ok: true,
-      json: async () => ({
-        success: true,
-        user: {
-          name: 'User',
-          email: 'a@b.com',
-          phone: '123',
-          cpf: '000',
-          hasCompany: true,
-          cnpj: '11',
-          razaoSocial: 'Empresa',
-          avatarUrl: 'url',
-        },
-      }),
-    })) as any;
-
-    const res = await GET(makeRequest('http://test/api/account/profile'));
-    const body = await res.json();
-    assert.strictEqual(body.fullName, 'User');
-    assert.strictEqual(body.company.cnpj, '11');
+  test('GET retorna 404 quando o usuário não existe', async () => {
+    logado();
+    prisma.user = { findUnique: async () => null } as any;
+    const res = await readApi(await callRoute(GET, apiRequest('/api/account/profile')));
+    assert.strictEqual(res.status, 404);
+    assert.strictEqual(res.error?.code, 'not_found');
   });
 
-  test('PUT envia payload transformado e propaga erro', async () => {
-    const calls: any[] = [];
-    global.fetch = (async (_url: any, init: any) => {
-      calls.push(JSON.parse(init.body));
-      return {
-        ok: false,
-        status: 400,
-        json: async () => ({ message: 'fail' }),
-      };
-    }) as any;
+  test('GET converte o usuário no formato de perfil da tela', async () => {
+    logado();
+    prisma.user = { findUnique: async () => usuarioComEmpresa } as any;
 
-    const res = await PUT(
-      makeRequest('http://test/api/account/profile', {
-        method: 'PUT',
-        body: JSON.stringify({ fullName: 'New Name', phone: '999' }),
-      }),
+    const res = await readApi(await callRoute(GET, apiRequest('/api/account/profile')));
+
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.data.fullName, 'User');
+    assert.strictEqual(res.data.email, 'a@b.com');
+    assert.deepStrictEqual(res.data.company, { cnpj: '11222333000181', razaoSocial: 'Empresa LTDA' });
+  });
+
+  test('GET não devolve empresa quando o usuário não tem', async () => {
+    logado();
+    prisma.user = {
+      findUnique: async () => ({ ...usuarioComEmpresa, hasCompany: false, cnpj: null, razaoSocial: null }),
+    } as any;
+
+    const res = await readApi(await callRoute(GET, apiRequest('/api/account/profile')));
+
+    assert.strictEqual(res.data.company, null);
+    assert.strictEqual(res.data.hasCompany, false);
+  });
+
+  test('PUT recusa CPF inválido sem gravar nada', async () => {
+    logado();
+    let gravou = false;
+    prisma.user = { update: async () => { gravou = true; return usuarioComEmpresa; } } as any;
+
+    const res = await readApi(
+      await callRoute(PUT, apiRequest('/api/account/profile', { method: 'PUT', json: { fullName: 'User', cpf: '11111111111' } }))
     );
+
     assert.strictEqual(res.status, 400);
-    assert.strictEqual(calls[0].name, 'New Name');
+    assert.match(res.error!.message, /CPF/);
+    assert.strictEqual(gravou, false);
   });
 
-  test('PUT retorna Profile salvo', async () => {
-    global.fetch = (async (_url: any, init: any) => {
-      const sent = JSON.parse(init.body);
-      return {
-        ok: true,
-        json: async () => ({
-          success: true,
-          user: {
-            name: sent.name,
-            email: 'a@b.com',
-            phone: sent.phone,
-            cpf: null,
-            hasCompany: false,
-            avatarUrl: null,
-          },
-        }),
-      };
-    }) as any;
+  test('PUT traduz o formulário para o banco e devolve o perfil salvo', async () => {
+    logado();
+    const invalidou = test.mock.method(userCache, 'invalidate', async () => true);
+    let dados: any;
+    prisma.user = {
+      update: async (args: any) => {
+        dados = args.data;
+        return { ...usuarioComEmpresa, ...args.data };
+      },
+    } as any;
 
-    const res = await PUT(
-      makeRequest('http://test/api/account/profile', {
-        method: 'PUT',
-        body: JSON.stringify({ fullName: 'Saved', phone: '123' }),
-      }),
+    const res = await readApi(
+      await callRoute(
+        PUT,
+        apiRequest('/api/account/profile', {
+          method: 'PUT',
+          json: {
+            fullName: '  Nome   Novo ',
+            cpf: '529.982.247-25',
+            hasCompany: true,
+            company: { cnpj: '11222333000181', razaoSocial: 'Empresa LTDA' },
+          },
+        })
+      )
     );
-    const body = await res.json();
-    assert.strictEqual(body.fullName, 'Saved');
-    assert.strictEqual(body.email, 'a@b.com');
+
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(dados.name, 'Nome Novo', 'nome deveria ser aparado e sem espaços duplos');
+    assert.strictEqual(dados.cpf, '52998224725', 'CPF deveria ser gravado sem máscara');
+    assert.strictEqual(dados.cnpj, '11222333000181');
+    assert.strictEqual(res.data.fullName, 'Nome Novo');
+    assert.strictEqual(invalidou.mock.callCount(), 1);
   });
 });

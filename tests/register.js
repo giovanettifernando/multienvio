@@ -17,6 +17,23 @@ global.setInterval = (...args) => {
 // Garante ambiente de teste
 process.env.NODE_ENV = process.env.NODE_ENV ?? "test";
 
+// Segredos de teste: a suíte não pode depender do .env de quem roda (vários
+// módulos leem o segredo no import e quebram com chave vazia). São gerados a
+// cada execução — basta serem estáveis dentro do processo — e nunca valem
+// fora dos testes.
+const { randomBytes } = require("crypto");
+const TEST_SECRETS = {
+  JWT_SECRET: randomBytes(32).toString("hex"),
+  ADMIN_JWT_SECRET: randomBytes(32).toString("hex"),
+  NEXTAUTH_SECRET: randomBytes(32).toString("hex"),
+  ENCRYPTION_KEY: randomBytes(32).toString("hex"),
+  CARD_VAULT_KEY: randomBytes(32).toString("base64"),
+  CRON_SECRET: randomBytes(16).toString("hex"),
+};
+for (const [key, value] of Object.entries(TEST_SECRETS)) {
+  if (!process.env[key]) process.env[key] = value;
+}
+
 // Não deixar o ts-node usar um tsconfig com moduleResolution=bundler
 delete process.env.TS_NODE_PROJECT;
 

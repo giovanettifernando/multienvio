@@ -3,7 +3,8 @@ import test from 'node:test';
 import { GET, POST } from '@/app/api/account/recipients/route';
 import * as helpers from '@/app/api/account/recipients/helpers';
 import * as service from '@/modules/auth/application/account-recipients.service';
-import * as validation from '@/shared/validation/recipient';
+// Mock no módulo de origem: shared/validation/recipient só reexporta (getter não é mockável)
+import * as validation from '@/modules/recipients/dto/recipient';
 
 function makeRequest(url: string, init?: RequestInit) {
   const req = new Request(url, init);
