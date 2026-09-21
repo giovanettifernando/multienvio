@@ -65,3 +65,15 @@ tsConfigPaths.register({
   baseUrl,
   paths,
 });
+
+// 'client-only' não é dependência direta (o Next traz a sua cópia embutida) e,
+// de todo modo, só serve para barrar import em componente de servidor. Nos
+// testes, utilitários de navegador (ex.: shared/utils/pdf) rodam com DOM
+// simulado, então o marcador vira um módulo vazio.
+const Module = require("module");
+const CLIENT_ONLY_STUB = path.join(__dirname, "_setup", "client-only-stub.js");
+const originalResolve = Module._resolveFilename;
+Module._resolveFilename = function (request, ...rest) {
+  if (request === "client-only") return CLIENT_ONLY_STUB;
+  return originalResolve.call(this, request, ...rest);
+};

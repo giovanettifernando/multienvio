@@ -2,7 +2,8 @@
  * Testes unitários para a derivadora de estado de rastreamento
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it } from 'node:test';
+import assert from 'node:assert/strict';
 import {
   deriveCorreiosTrackingState,
   getEventPhase,
@@ -25,27 +26,27 @@ describe('deriveCorreiosTrackingState', () => {
 
     it('deve retornar status AWAITING_DROP_OFF_AT_POINT', () => {
       const result = deriveCorreiosTrackingState(events);
-      expect(result.currentStatus).toBe(ShipmentStatus.AWAITING_DROP_OFF_AT_POINT);
+      assert.strictEqual(result.currentStatus, ShipmentStatus.AWAITING_DROP_OFF_AT_POINT);
     });
 
     it('deve retornar fase AWAITING_DROP_OFF', () => {
       const result = deriveCorreiosTrackingState(events);
-      expect(result.phase).toBe(TrackingPhase.AWAITING_DROP_OFF);
+      assert.strictEqual(result.phase, TrackingPhase.AWAITING_DROP_OFF);
     });
 
     it('deve preencher labelCreatedAt', () => {
       const result = deriveCorreiosTrackingState(events);
-      expect(result.milestones.labelCreatedAt).toEqual(new Date('2025-12-17T20:07:20.000Z'));
+      assert.deepStrictEqual(result.milestones.labelCreatedAt, new Date('2025-12-17T20:07:20.000Z'));
     });
 
     it('NÃO deve preencher postedAt', () => {
       const result = deriveCorreiosTrackingState(events);
-      expect(result.milestones.postedAt).toBeNull();
+      assert.strictEqual(result.milestones.postedAt, null);
     });
 
     it('deve ter sourceEvent apontando para o evento de etiqueta', () => {
       const result = deriveCorreiosTrackingState(events);
-      expect(result.sourceEvent?.descricao).toBe('Etiqueta emitida');
+      assert.strictEqual(result.sourceEvent?.descricao, 'Etiqueta emitida');
     });
   });
 
@@ -83,32 +84,32 @@ describe('deriveCorreiosTrackingState', () => {
 
     it('deve retornar status IN_TRANSFER', () => {
       const result = deriveCorreiosTrackingState(events);
-      expect(result.currentStatus).toBe(ShipmentStatus.IN_TRANSFER);
+      assert.strictEqual(result.currentStatus, ShipmentStatus.IN_TRANSFER);
     });
 
     it('deve retornar fase IN_TRANSFER', () => {
       const result = deriveCorreiosTrackingState(events);
-      expect(result.phase).toBe(TrackingPhase.IN_TRANSFER);
+      assert.strictEqual(result.phase, TrackingPhase.IN_TRANSFER);
     });
 
     it('deve preencher labelCreatedAt com data da etiqueta', () => {
       const result = deriveCorreiosTrackingState(events);
-      expect(result.milestones.labelCreatedAt).toEqual(new Date('2025-12-16T20:48:21.000Z'));
+      assert.deepStrictEqual(result.milestones.labelCreatedAt, new Date('2025-12-16T20:48:21.000Z'));
     });
 
     it('deve preencher postedAt com data da postagem', () => {
       const result = deriveCorreiosTrackingState(events);
-      expect(result.milestones.postedAt).toEqual(new Date('2025-12-19T14:52:03.000Z'));
+      assert.deepStrictEqual(result.milestones.postedAt, new Date('2025-12-19T14:52:03.000Z'));
     });
 
     it('deve preencher inTransitAt com data do primeiro evento de transferência', () => {
       const result = deriveCorreiosTrackingState(events);
-      expect(result.milestones.inTransitAt).toEqual(new Date('2025-12-19T18:13:27.000Z'));
+      assert.deepStrictEqual(result.milestones.inTransitAt, new Date('2025-12-19T18:13:27.000Z'));
     });
 
     it('deve ter sourceEvent apontando para o último evento de transferência', () => {
       const result = deriveCorreiosTrackingState(events);
-      expect(result.sourceEvent?.cidade).toBe('RECIFE');
+      assert.strictEqual(result.sourceEvent?.cidade, 'RECIFE');
     });
   });
 
@@ -147,30 +148,30 @@ describe('deriveCorreiosTrackingState', () => {
     it('deve progredir corretamente de PO para IN_TRANSFER', () => {
       // Apenas PO
       const result1 = deriveCorreiosTrackingState([events[0]]);
-      expect(result1.phase).toBe(TrackingPhase.POSTED);
-      expect(result1.currentStatus).toBe(ShipmentStatus.RECEIVED_AT_ORIGIN_HUB);
+      assert.strictEqual(result1.phase, TrackingPhase.POSTED);
+      assert.strictEqual(result1.currentStatus, ShipmentStatus.RECEIVED_AT_ORIGIN_HUB);
 
       // PO + RO
       const result2 = deriveCorreiosTrackingState([events[0], events[1]]);
-      expect(result2.phase).toBe(TrackingPhase.IN_TRANSFER);
-      expect(result2.currentStatus).toBe(ShipmentStatus.IN_TRANSFER);
+      assert.strictEqual(result2.phase, TrackingPhase.IN_TRANSFER);
+      assert.strictEqual(result2.currentStatus, ShipmentStatus.IN_TRANSFER);
     });
 
     it('deve manter IN_TRANSFER com OEC', () => {
       const result = deriveCorreiosTrackingState([events[0], events[1], events[2]]);
-      expect(result.phase).toBe(TrackingPhase.IN_TRANSFER);
+      assert.strictEqual(result.phase, TrackingPhase.IN_TRANSFER);
     });
 
     it('com todos os eventos, deve estar em OUT_FOR_DELIVERY (BDE com descrição "saiu para entrega")', () => {
       const result = deriveCorreiosTrackingState(events);
       // A descrição "Objeto saiu para entrega ao destinatário" tem prioridade sobre o código BDE
-      expect(result.phase).toBe(TrackingPhase.OUT_FOR_DELIVERY);
+      assert.strictEqual(result.phase, TrackingPhase.OUT_FOR_DELIVERY);
     });
 
     it('deve preencher todos os milestones corretamente', () => {
       const result = deriveCorreiosTrackingState(events);
-      expect(result.milestones.postedAt).toEqual(new Date('2025-12-15T10:00:00.000Z'));
-      expect(result.milestones.inTransitAt).toEqual(new Date('2025-12-16T08:00:00.000Z'));
+      assert.deepStrictEqual(result.milestones.postedAt, new Date('2025-12-15T10:00:00.000Z'));
+      assert.deepStrictEqual(result.milestones.inTransitAt, new Date('2025-12-16T08:00:00.000Z'));
     });
   });
 
@@ -208,18 +209,18 @@ describe('deriveCorreiosTrackingState', () => {
 
     it('deve retornar DELIVERED quando há evento de entrega', () => {
       const result = deriveCorreiosTrackingState(events);
-      expect(result.currentStatus).toBe(ShipmentStatus.DELIVERED);
-      expect(result.phase).toBe(TrackingPhase.DELIVERED);
+      assert.strictEqual(result.currentStatus, ShipmentStatus.DELIVERED);
+      assert.strictEqual(result.phase, TrackingPhase.DELIVERED);
     });
 
     it('deve preencher deliveredAt', () => {
       const result = deriveCorreiosTrackingState(events);
-      expect(result.milestones.deliveredAt).toEqual(new Date('2025-12-17T14:30:00.000Z'));
+      assert.deepStrictEqual(result.milestones.deliveredAt, new Date('2025-12-17T14:30:00.000Z'));
     });
 
     it('deve preencher outForDeliveryAt', () => {
       const result = deriveCorreiosTrackingState(events);
-      expect(result.milestones.outForDeliveryAt).toEqual(new Date('2025-12-17T08:00:00.000Z'));
+      assert.deepStrictEqual(result.milestones.outForDeliveryAt, new Date('2025-12-17T08:00:00.000Z'));
     });
 
     it('DELIVERED é terminal - eventos posteriores não mudam o status', () => {
@@ -235,7 +236,7 @@ describe('deriveCorreiosTrackingState', () => {
         },
       ];
       const result = deriveCorreiosTrackingState(eventsWithExtra);
-      expect(result.phase).toBe(TrackingPhase.DELIVERED);
+      assert.strictEqual(result.phase, TrackingPhase.DELIVERED);
     });
   });
 
@@ -259,28 +260,28 @@ describe('deriveCorreiosTrackingState', () => {
 
       const result = deriveCorreiosTrackingState(events);
       // Deve ter labelCreatedAt correto (o mais antigo)
-      expect(result.milestones.labelCreatedAt).toEqual(new Date('2025-12-16T20:48:21.000Z'));
+      assert.deepStrictEqual(result.milestones.labelCreatedAt, new Date('2025-12-16T20:48:21.000Z'));
       // Deve ter postedAt correto (o mais recente)
-      expect(result.milestones.postedAt).toEqual(new Date('2025-12-19T14:52:03.000Z'));
+      assert.deepStrictEqual(result.milestones.postedAt, new Date('2025-12-19T14:52:03.000Z'));
       // Status final deve ser POSTED (mais forte que AWAITING_DROP_OFF)
-      expect(result.phase).toBe(TrackingPhase.POSTED);
+      assert.strictEqual(result.phase, TrackingPhase.POSTED);
     });
   });
 
   describe('Lista vazia de eventos', () => {
     it('deve retornar AWAITING_DROP_OFF para lista vazia', () => {
       const result = deriveCorreiosTrackingState([]);
-      expect(result.phase).toBe(TrackingPhase.AWAITING_DROP_OFF);
-      expect(result.currentStatus).toBe(ShipmentStatus.AWAITING_DROP_OFF_AT_POINT);
+      assert.strictEqual(result.phase, TrackingPhase.AWAITING_DROP_OFF);
+      assert.strictEqual(result.currentStatus, ShipmentStatus.AWAITING_DROP_OFF_AT_POINT);
     });
 
     it('deve ter todos os milestones como null', () => {
       const result = deriveCorreiosTrackingState([]);
-      expect(result.milestones.labelCreatedAt).toBeNull();
-      expect(result.milestones.postedAt).toBeNull();
-      expect(result.milestones.inTransitAt).toBeNull();
-      expect(result.milestones.outForDeliveryAt).toBeNull();
-      expect(result.milestones.deliveredAt).toBeNull();
+      assert.strictEqual(result.milestones.labelCreatedAt, null);
+      assert.strictEqual(result.milestones.postedAt, null);
+      assert.strictEqual(result.milestones.inTransitAt, null);
+      assert.strictEqual(result.milestones.outForDeliveryAt, null);
+      assert.strictEqual(result.milestones.deliveredAt, null);
     });
   });
 
@@ -295,9 +296,9 @@ describe('deriveCorreiosTrackingState', () => {
       ];
 
       const result = deriveCorreiosTrackingState(events);
-      expect(result.unknownEvents.length).toBe(1);
-      expect(result.unknownEvents[0].codigo).toBe('XXX');
-      expect(result.unknownEvents[0].descricao).toBe('Evento muito estranho nunca visto');
+      assert.strictEqual(result.unknownEvents.length, 1);
+      assert.strictEqual(result.unknownEvents[0].codigo, 'XXX');
+      assert.strictEqual(result.unknownEvents[0].descricao, 'Evento muito estranho nunca visto');
     });
   });
 });
@@ -311,7 +312,7 @@ describe('getEventPhase', () => {
         dataHora: new Date(),
         descricao: 'Etiqueta emitida',
       };
-      expect(getEventPhase(event)).toBe(TrackingPhase.AWAITING_DROP_OFF);
+      assert.strictEqual(getEventPhase(event), TrackingPhase.AWAITING_DROP_OFF);
     });
 
     it('"Objeto postado" retorna POSTED independente do código', () => {
@@ -320,7 +321,7 @@ describe('getEventPhase', () => {
         dataHora: new Date(),
         descricao: 'Objeto postado após o horário limite da unidade',
       };
-      expect(getEventPhase(event)).toBe(TrackingPhase.POSTED);
+      assert.strictEqual(getEventPhase(event), TrackingPhase.POSTED);
     });
   });
 
@@ -331,7 +332,7 @@ describe('getEventPhase', () => {
         dataHora: new Date(),
         descricao: 'Descrição genérica',
       };
-      expect(getEventPhase(event)).toBe(TrackingPhase.POSTED);
+      assert.strictEqual(getEventPhase(event), TrackingPhase.POSTED);
     });
 
     it('código RO retorna IN_TRANSFER', () => {
@@ -340,7 +341,7 @@ describe('getEventPhase', () => {
         dataHora: new Date(),
         descricao: 'Descrição genérica',
       };
-      expect(getEventPhase(event)).toBe(TrackingPhase.IN_TRANSFER);
+      assert.strictEqual(getEventPhase(event), TrackingPhase.IN_TRANSFER);
     });
 
     it('código LDI retorna OUT_FOR_DELIVERY', () => {
@@ -349,7 +350,7 @@ describe('getEventPhase', () => {
         dataHora: new Date(),
         descricao: 'Descrição genérica',
       };
-      expect(getEventPhase(event)).toBe(TrackingPhase.OUT_FOR_DELIVERY);
+      assert.strictEqual(getEventPhase(event), TrackingPhase.OUT_FOR_DELIVERY);
     });
 
     it('código BDI retorna DELIVERED', () => {
@@ -358,7 +359,7 @@ describe('getEventPhase', () => {
         dataHora: new Date(),
         descricao: 'Descrição genérica',
       };
-      expect(getEventPhase(event)).toBe(TrackingPhase.DELIVERED);
+      assert.strictEqual(getEventPhase(event), TrackingPhase.DELIVERED);
     });
   });
 
@@ -368,7 +369,7 @@ describe('getEventPhase', () => {
         dataHora: new Date(),
         descricao: 'Objeto em transferência - por favor aguarde',
       };
-      expect(getEventPhase(event)).toBe(TrackingPhase.IN_TRANSFER);
+      assert.strictEqual(getEventPhase(event), TrackingPhase.IN_TRANSFER);
     });
 
     it('"Saiu para entrega" retorna OUT_FOR_DELIVERY', () => {
@@ -376,7 +377,7 @@ describe('getEventPhase', () => {
         dataHora: new Date(),
         descricao: 'Objeto saiu para entrega ao destinatário',
       };
-      expect(getEventPhase(event)).toBe(TrackingPhase.OUT_FOR_DELIVERY);
+      assert.strictEqual(getEventPhase(event), TrackingPhase.OUT_FOR_DELIVERY);
     });
 
     it('"Objeto entregue" retorna DELIVERED', () => {
@@ -384,7 +385,7 @@ describe('getEventPhase', () => {
         dataHora: new Date(),
         descricao: 'Objeto entregue ao destinatário',
       };
-      expect(getEventPhase(event)).toBe(TrackingPhase.DELIVERED);
+      assert.strictEqual(getEventPhase(event), TrackingPhase.DELIVERED);
     });
   });
 });

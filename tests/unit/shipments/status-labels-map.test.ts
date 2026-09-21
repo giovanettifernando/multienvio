@@ -14,7 +14,8 @@ test.describe('shipments/status-labels-map', () => {
   test('mapToUIStatus cobre todos os grupos e fallback', () => {
     // Coleta
     assert.strictEqual(mapToUIStatus(ShipmentStatus.PICKUP_REQUESTED), 'Aguardando coleta');
-    assert.strictEqual(mapToUIStatus(ShipmentStatus.PICKUP_FAILED), 'Cancelado');
+    // falha na coleta não é cancelamento: a coleta pode ser reagendada
+    assert.strictEqual(mapToUIStatus(ShipmentStatus.PICKUP_FAILED), 'Falha na coleta');
     // Em trânsito
     assert.strictEqual(mapToUIStatus(ShipmentStatus.IN_TRANSIT_TO_CARRIER_HUB), 'Em trânsito');
     // Ponto de coleta
@@ -54,6 +55,8 @@ test.describe('shipments/status-labels-map', () => {
     assert.ok(getBackendStatusesForUIFilter('Em rota de entrega').includes(ShipmentStatus.OUT_FOR_DELIVERY));
     assert.ok(getBackendStatusesForUIFilter('Entregue').includes(ShipmentStatus.DELIVERED));
     assert.ok(getBackendStatusesForUIFilter('Cancelado').includes(ShipmentStatus.CANCELLED_BEFORE_HANDOFF));
+    assert.deepStrictEqual(getBackendStatusesForUIFilter('Falha na coleta'), [ShipmentStatus.PICKUP_FAILED]);
+    assert.ok(!getBackendStatusesForUIFilter('Cancelado').includes(ShipmentStatus.PICKUP_FAILED));
     assert.ok(getBackendStatusesForUIFilter('Devolvido').includes(ShipmentStatus.RETURNED_TO_SENDER));
     assert.deepStrictEqual(getBackendStatusesForUIFilter('Outro' as any), []);
   });

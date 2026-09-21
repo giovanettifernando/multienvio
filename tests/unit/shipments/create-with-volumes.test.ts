@@ -7,6 +7,9 @@ function buildTx() {
   const created: any[] = [];
   return {
     created,
+    user: {
+      findUnique: async () => ({ name: 'Fulana', razaoSocial: 'Loja da Fulana LTDA', cpf: '12345678900', cnpj: '12345678000195' }),
+    },
     shipment: {
       create: async (args: any) => {
         const data = { id: 'shp-1', ...args.data };
@@ -51,6 +54,30 @@ describe('createShipmentWithVolumes', () => {
 
     assert.strictEqual(shipment.weight, 3);
     assert.deepStrictEqual(packages.length, 2);
+  });
+
+  it('remetente é o dono da conta: razão social e CNPJ têm preferência', async () => {
+    const tx = buildTx();
+    const { shipment } = await createShipmentWithVolumes(tx as any, {
+      shipment: {
+        platformTrackingCode: 'BR124',
+        senderId: 'user',
+        recipientName: 'Dest',
+        originCep: '01001000',
+        destinationCep: '22290040',
+        destinationCity: 'Rio',
+        destinationState: 'RJ',
+        declaredValue: 0,
+        carrier: 'TEST',
+        service: 'EXP',
+        estimatedDays: 2,
+        freightCost: 10,
+      },
+      volumes: [{ peso: 1, altura: 10, largura: 10, comprimento: 10 }],
+    });
+
+    assert.strictEqual((shipment as any).senderName, 'Loja da Fulana LTDA');
+    assert.strictEqual((shipment as any).senderDocument, '12345678000195');
   });
 
   it('falha sem volumes ou dimensões inválidas', async () => {

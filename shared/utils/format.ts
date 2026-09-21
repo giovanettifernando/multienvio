@@ -91,10 +91,16 @@ export function parsePaginationParams(
   searchParams: URLSearchParams,
   defaults: { page?: number; pageSize?: number } = {}
 ): PaginationParams {
-  const page = Math.max(1, parseInt(searchParams.get('page') ?? String(defaults.page ?? 1), 10));
+  // Valor que não é número (?page=abc) cai no padrão: NaN chegaria ao banco
+  // como skip/take e viraria erro 500.
+  const inteiro = (raw: string | null, padrao: number) => {
+    const n = parseInt(raw ?? '', 10);
+    return Number.isNaN(n) ? padrao : n;
+  };
+  const page = Math.max(1, inteiro(searchParams.get('page'), defaults.page ?? 1));
   const pageSize = Math.min(
     100, // Limite máximo
-    Math.max(1, parseInt(searchParams.get('pageSize') ?? searchParams.get('limit') ?? String(defaults.pageSize ?? 10), 10))
+    Math.max(1, inteiro(searchParams.get('pageSize') ?? searchParams.get('limit'), defaults.pageSize ?? 10))
   );
 
   return {
