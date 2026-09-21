@@ -139,24 +139,43 @@ describe('wallet.service', () => {
     );
   });
 
-  it('debit valida saldo e valor positivo', async () => {
-    const wallet = fakeWallet({ availableCents: 1000 });
-    const createdTx = { id: 'tx-debit', type: 'PURCHASE', status: 'CONFIRMED', amountCents: -500, title: 'Débito', referenceId: null, createdAt: new Date(), confirmedAt: new Date() };
-    const updatedWallet = { ...wallet, availableCents: 500 };
+  /** Transação interativa com a carteira travada (FOR UPDATE) com o saldo dado. */
+  function carteiraTravada(availableCents: number) {
+    const gravado: { tx?: any; decremento?: number } = {};
+    prisma.$transaction = (async (fn: any) =>
+      fn({
+        wallet: { findUnique: async () => ({ id: 'w1' }), create: async () => ({ id: 'w1' }), update: async (a: any) => { gravado.decremento = a.data.availableCents.decrement; } },
+        $queryRaw: async () => [{ id: 'w1', availableCents }],
+        walletTransaction: {
+          create: async (a: any) => {
+            gravado.tx = a.data;
+            return { id: 'tx-debit', createdAt: new Date(), ...a.data };
+          },
+        },
+      })) as any;
+    return gravado;
+  }
 
-    stubPrismaDelegates({
-      wallet: {
-        findUnique: async () => wallet as any,
-        update: async () => updatedWallet as any,
-      },
-      walletTransaction: {
-        create: async () => createdTx as any,
-      },
-      transactionResult: [createdTx, updatedWallet],
-    });
+  it('debit grava valor negativo e desconta o saldo travado', async () => {
+    const gravado = carteiraTravada(1000);
 
     const result = await debit('user-1', 500, 'Compra', 'ref');
+
     assert.strictEqual(result.amountCents, -500);
+    assert.strictEqual(result.amountReais, 5);
+    assert.strictEqual(gravado.tx.status, 'CONFIRMED');
+    assert.strictEqual(gravado.decremento, 500);
+  });
+
+  it('debit recusa saldo insuficiente sem gravar nada', async () => {
+    const gravado = carteiraTravada(499);
+    await assert.rejects(debit('user-1', 500, 'Compra'), /Saldo insuficiente/);
+    assert.strictEqual(gravado.tx, undefined);
+  });
+
+  it('debit recusa valor zero ou negativo', async () => {
+    await assert.rejects(debit('user-1', 0, 'Compra'), /positivo/);
+    await assert.rejects(debit('user-1', -10, 'Compra'), /positivo/);
   });
 
   it('manualCredit cria crédito confirmado', async () => {

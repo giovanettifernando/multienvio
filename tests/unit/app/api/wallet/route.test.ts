@@ -1,56 +1,34 @@
 import assert from 'node:assert';
 import test from 'node:test';
 import { GET } from '@/app/api/wallet/route';
-import { prisma } from '@/platform/db/db';
+import * as sessionModule from '@/modules/auth/application/session';
+import * as balanceService from '@/modules/wallet/application/balance.service';
+import { apiRequest, callRoute, readApi } from '../../../../_setup/test-helpers';
 
-let sessionModule: any;
-let walletService: any;
-let periodModule: any;
-let directionModule: any;
-const originalPrisma = { walletTransaction: prisma.walletTransaction };
+const saldo = () => callRoute(GET, apiRequest('/api/wallet'));
 
-test.describe('app/api/wallet/route', () => {
-  test.before(async () => {
-    sessionModule = await import('../../../../../modules/auth/application/session.ts');
-    walletService = await import('../../../../../modules/wallet/application/wallet.service.ts');
-    periodModule = await import('../../../../../modules/wallet/application/period-summary.ts');
-    directionModule = await import('../../../../../modules/wallet/application/transaction-direction.ts');
-  });
+test.describe('app/api/wallet', () => {
+  test.afterEach(() => test.mock.restoreAll());
 
-  test.afterEach(() => {
-    test.mock.restoreAll();
-    prisma.walletTransaction = originalPrisma.walletTransaction;
-  });
-
-  test('retorna 401 sem sessão', async () => {
-    test.mock.method(sessionModule, 'getSession', async () => null);
-    const res = await GET();
+  test('responde 401 sem sessão', async () => {
+    test.mock.method(sessionModule, 'getUserFromRequest', async () => null);
+    const res = await readApi(await saldo());
     assert.strictEqual(res.status, 401);
   });
 
-  test('retorna saldo com transações formatadas', async () => {
-    test.mock.method(sessionModule, 'getSession', async () => ({ userId: 'u1' }));
-    test.mock.method(walletService, 'getOrCreateWallet', async () => ({
-      id: 'w1',
-      availableCents: 1000,
-      pendingCents: 0,
-    }));
-    test.mock.method(periodModule, 'getCurrentMonthRange', () => ({
-      start: new Date('2024-01-01'),
-      end: new Date('2024-01-31'),
-    }));
-    test.mock.method(periodModule, 'calculatePeriodSummary', () => ({ total: 10, credits: 10, debits: 0 }));
-    test.mock.method(directionModule, 'getTransactionDirection', () => 'credit');
-    test.mock.method(directionModule, 'getTransactionTypeLabel', () => 'Depósito');
-    test.mock.method(directionModule, 'formatTransactionAmount', () => '+ R$ 10,00');
+  test('devolve o resumo da carteira de quem está logado', async () => {
+    test.mock.method(sessionModule, 'getUserFromRequest', async () => ({ userId: 'u1' }));
+    const resumo = {
+      balance: { availableReais: 100, availableCents: 10_000, pendingReais: 0, pendingCents: 0 },
+      monthlySummary: {},
+      latestTransactions: [],
+    };
+    const overview = test.mock.method(balanceService, 'getWalletOverview', async () => resumo);
 
-    const tx = { id: 'tx1', type: 'deposit', status: 'CONFIRMED', amountCents: 1000, title: 'depósito', referenceId: null, createdAt: new Date(), confirmedAt: new Date() };
-    prisma.walletTransaction = { findMany: async () => [tx] } as any;
+    const res = await readApi(await saldo());
 
-    const res = await GET();
     assert.strictEqual(res.status, 200);
-    const body = await res.json();
-    assert.strictEqual(body.balance.availableReais, 10);
-    assert.strictEqual(body.latestTransactions[0].id, 'tx1');
+    assert.strictEqual(overview.mock.calls[0].arguments[0], 'u1');
+    assert.deepStrictEqual(res.data, resumo);
   });
 });

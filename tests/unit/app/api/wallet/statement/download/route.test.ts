@@ -2,58 +2,55 @@ import assert from 'node:assert';
 import test from 'node:test';
 import { GET } from '@/app/api/wallet/statement/download/route';
 import { prisma } from '@/platform/db/db';
+import * as sessionModule from '@/modules/auth/application/session';
+import * as statementPdf from '@/shared/utils/statement-pdf';
+import { apiRequest, callRoute, readApi } from '../../../../../../_setup/test-helpers';
 
-let sessionModule: any;
-let periodModule: any;
-let directionModule: any;
-let puppeteerModule: any;
-const originalPrisma = { user: prisma.user, wallet: prisma.wallet, walletTransaction: prisma.walletTransaction };
+const original = { user: prisma.user, wallet: prisma.wallet, walletTransaction: prisma.walletTransaction };
+const baixar = (qs = '') => callRoute(GET as any, apiRequest(`/api/wallet/statement/download${qs}`));
 
-function makeRequest(url: string) {
-  return new Request(url);
+function banco(carteira: Record<string, unknown> | null = { id: 'w1' }) {
+  const consulta: { where?: any } = {};
+  prisma.user = { findUnique: async () => ({ id: 'u1', name: 'Cliente', email: 'c@x.com' }) } as any;
+  prisma.wallet = { findUnique: async () => carteira } as any;
+  prisma.walletTransaction = { findMany: async (a: any) => { consulta.where = a.where; return []; } } as any;
+  return consulta;
 }
 
 test.describe('app/api/wallet/statement/download', () => {
-  test.before(async () => {
-    sessionModule = await import('../../../../../../../modules/auth/application/session.ts');
-    periodModule = await import('../../../../../../../modules/wallet/application/period-summary.ts');
-    directionModule = await import('../../../../../../../modules/wallet/application/transaction-direction.ts');
-    puppeteerModule = await import('puppeteer');
+  test.beforeEach(() => {
+    test.mock.method(sessionModule, 'getSession', async () => ({ userId: 'u1' }));
+    test.mock.method(statementPdf, 'generateStatementPdf', async () => Buffer.from('%PDF-1.7'));
   });
 
   test.afterEach(() => {
     test.mock.restoreAll();
-    prisma.user = originalPrisma.user;
-    prisma.wallet = originalPrisma.wallet;
-    prisma.walletTransaction = originalPrisma.walletTransaction;
+    Object.assign(prisma, original);
   });
 
-  test('retorna 401 sem sessão', async () => {
+  test('responde 401 sem sessão', async () => {
     test.mock.method(sessionModule, 'getSession', async () => null);
-    const res = await GET(makeRequest('http://test/api/wallet/statement/download'));
+    const res = await readApi(await baixar());
     assert.strictEqual(res.status, 401);
   });
 
-  test('gera PDF quando autenticado', async () => {
-    test.mock.method(sessionModule, 'getSession', async () => ({ userId: 'u1' }));
-    prisma.user = { findUnique: async () => ({ id: 'u1', name: 'User', email: 'a@b.com' }) } as any;
-    prisma.wallet = { findUnique: async () => ({ id: 'w1' }) } as any;
-    prisma.walletTransaction = { findMany: async () => [] } as any;
-    test.mock.method(periodModule, 'getLastNDaysRange', () => ({ start: new Date('2024-01-01'), end: new Date('2024-01-31') }));
-    test.mock.method(periodModule, 'calculatePeriodSummary', () => ({ credits: 0, debits: 0, total: 0 }));
-    test.mock.method(directionModule, 'getTransactionDirection', () => 'credit');
-    test.mock.method(directionModule, 'getTransactionTypeLabel', () => 'Depósito');
-    test.mock.method(directionModule, 'formatTransactionAmount', () => '+ R$ 0,00');
+  test('responde 404 sem carteira', async () => {
+    banco(null);
+    const res = await readApi(await baixar());
+    assert.strictEqual(res.status, 404);
+  });
 
-    const pdfBuffer = Buffer.from('pdf');
-    const pageMock = { setContent: async () => {}, pdf: async () => pdfBuffer, close: async () => {} };
-    const browserMock = { newPage: async () => pageMock, close: async () => {} };
-    const puppeteerTarget = puppeteerModule.default ?? puppeteerModule;
-    test.mock.method(puppeteerTarget, 'launch', async () => browserMock as any);
+  test('devolve o PDF do período pedido, só com lançamentos confirmados da carteira', async () => {
+    const consulta = banco();
 
-    const res = await GET(makeRequest('http://test/api/wallet/statement/download'));
+    const res = await baixar('?dateFrom=2026-01-01&dateTo=2026-01-31&search=ME1');
+
     assert.strictEqual(res.status, 200);
-    const buf = Buffer.from(await res.arrayBuffer());
-    assert.ok(buf.equals(pdfBuffer));
+    assert.strictEqual(res.headers.get('content-type'), 'application/pdf');
+    assert.match(res.headers.get('content-disposition') ?? '', /^attachment; filename="extrato-carteira-.*\.pdf"$/);
+    assert.strictEqual(Buffer.from(await res.arrayBuffer()).toString(), '%PDF-1.7');
+    assert.strictEqual(consulta.where.walletId, 'w1');
+    assert.strictEqual(consulta.where.status, 'CONFIRMED');
+    assert.strictEqual(consulta.where.OR[0].title.contains, 'ME1');
   });
 });
