@@ -1,57 +1,27 @@
-import assert from "node:assert";
-import test from "node:test";
+import assert from 'node:assert';
+import test from 'node:test';
 import { GET } from '@/app/api/admin/finance/reports/route';
+import { contratoFinanceiro, comoFinanceiro, chamar } from '../_contrato';
 
-function makeRequest(url: string) {
-  return {
-    method: "GET",
-    headers: new Headers(),
-    nextUrl: new URL(url),
-  } as any;
-}
+// Atenção: o CSV desta rota ainda sai com números fixos herdados do Envio Legal
+// (o DRE real está em /reports/dre). Nenhuma tela montada chama esta rota.
+const rota = {
+  nome: 'app/api/admin/finance/reports',
+  handler: GET as any,
+  url: '/api/admin/finance/reports?report=taxes&dateStart=2026-01-01&dateEnd=2026-01-31',
+};
 
-test.describe("app/api/admin/finance/reports", () => {
-  let sessionModule: any;
-  let permissionsModule: any;
+contratoFinanceiro(rota);
 
-  test.before(async () => {
-    sessionModule = await import("../../../../../../../modules/auth/application/admin-session.ts");
-    permissionsModule = await import("../../../../../../../modules/auth/application/permissions.ts");
-  });
+test.describe('app/api/admin/finance/reports (CSV)', () => {
+  test.afterEach(() => test.mock.restoreAll());
 
-  test.afterEach(() => {
-    test.mock.restoreAll();
-  });
-
-  test("401 sem sessão", async () => {
-    test.mock.method(sessionModule, "getAdminSessionFromRequest", async () => null);
-    const res = await GET(makeRequest("http://test/api/admin/finance/reports"));
-    assert.strictEqual(res.status, 401);
-  });
-
-  test("403 sem permissão", async () => {
-    test.mock.method(sessionModule, "getAdminSessionFromRequest", async () => ({ staffId: "s1" }));
-    test.mock.method(
-      permissionsModule,
-      "requirePermission",
-      () => new Response("{}", { status: 403 }) as any,
-    );
-    const res = await GET(makeRequest("http://test/api/admin/finance/reports"));
-    assert.strictEqual(res.status, 403);
-  });
-
-  test("retorna CSV para dre", async () => {
-    test.mock.method(sessionModule, "getAdminSessionFromRequest", async () => ({
-      staffId: "s1",
-      permissions: ["FINANCEIRO"],
-      isSuperAdmin: true,
-    }));
-    test.mock.method(permissionsModule, "requirePermission", () => null);
-
-    const res = await GET(makeRequest("http://test/api/admin/finance/reports?report=dre&dateStart=2025-01-01&dateEnd=2025-01-31"));
-    assert.strictEqual(res.status, 200);
-    const text = await res.text();
-    assert.ok(text.includes("Relatório DRE"));
-    assert.strictEqual(res.headers.get("Content-Type"), "text/csv");
+  test('devolve CSV para download com o período no cabeçalho', async () => {
+    comoFinanceiro();
+    const res = await chamar(rota);
+    assert.strictEqual(res.headers.get('content-type'), 'text/csv');
+    assert.match(res.headers.get('content-disposition') ?? '', /^attachment; filename="relatorio-taxes-\d+\.csv"$/);
+    const csv = await res.text();
+    assert.match(csv.split('\n')[0], /Período: 2026-01-01 a 2026-01-31/);
   });
 });

@@ -81,7 +81,8 @@ export type ApiResult<T = any> = {
 /** Lê o envelope { data, error, meta } de uma resposta. */
 export async function readApi<T = any>(res: Response): Promise<ApiResult<T>> {
   const text = await res.text();
-  const body = text ? JSON.parse(text) : null;
+  let body: any = null;
+  if (text && (res.headers.get('content-type') ?? '').includes('json')) body = JSON.parse(text);
   return {
     status: res.status,
     data: body?.data ?? null,

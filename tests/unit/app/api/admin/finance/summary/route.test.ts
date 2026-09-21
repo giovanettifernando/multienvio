@@ -1,58 +1,75 @@
-import assert from "node:assert";
-import test from "node:test";
+import assert from 'node:assert';
+import test from 'node:test';
 import { GET } from '@/app/api/admin/finance/summary/route';
+import { prisma } from '@/platform/db/db';
+import { contratoFinanceiro, comoFinanceiro, chamar } from '../_contrato';
+import { readApi } from '../../../../../../_setup/test-helpers';
 
-function makeRequest(url: string) {
-  return {
-    method: "GET",
-    headers: new Headers(),
-    nextUrl: new URL(url),
+const original = { walletTransaction: prisma.walletTransaction, shipment: prisma.shipment, package: prisma.package, wallet: prisma.wallet };
+
+/** Agregados do banco, em centavos (o frete da transportadora vem em reais). */
+function banco(v: { topup?: number | null; refund?: number | null; frete?: number | null; seguro?: number | null; repasseReais?: number | null; carteiras?: number | null }) {
+  const consultas: any[] = [];
+  prisma.walletTransaction = {
+    aggregate: async (a: any) => {
+      consultas.push(a.where);
+      return { _sum: { amountCents: a.where.type === 'TOPUP' ? v.topup ?? null : v.refund ?? null } };
+    },
   } as any;
+  prisma.shipment = {
+    aggregate: async () => ({ _sum: { platformShippingCommissionCents: v.frete ?? null, platformInsuranceCommissionCents: v.seguro ?? null } }),
+  } as any;
+  prisma.package = { aggregate: async () => ({ _sum: { carrierQuotePrice: v.repasseReais ?? null } }) } as any;
+  prisma.wallet = { aggregate: async () => ({ _sum: { availableCents: v.carteiras ?? null } }) } as any;
+  return consultas;
 }
 
-test.describe("app/api/admin/finance/summary", () => {
-  let sessionModule: any;
-  let permissionsModule: any;
+const rota = { nome: 'app/api/admin/finance/summary', handler: GET as any, url: '/api/admin/finance/summary' };
 
-  test.before(async () => {
-    sessionModule = await import("../../../../../../../modules/auth/application/admin-session.ts");
-    permissionsModule = await import("../../../../../../../modules/auth/application/permissions.ts");
-  });
-
+test.describe('app/api/admin/finance/summary', () => {
+  test.beforeEach(() => banco({}));
   test.afterEach(() => {
     test.mock.restoreAll();
+    Object.assign(prisma, original);
   });
 
-  test("401 sem sessão", async () => {
-    test.mock.method(sessionModule, "getAdminSessionFromRequest", async () => null);
-    const res = await GET(makeRequest("http://test/api/admin/finance/summary"));
-    assert.strictEqual(res.status, 401);
-  });
+  contratoFinanceiro(rota);
 
-  test("403 sem permissão", async () => {
-    test.mock.method(sessionModule, "getAdminSessionFromRequest", async () => ({ staffId: "s1" }));
-    test.mock.method(
-      permissionsModule,
-      "requirePermission",
-      () => new Response("{}", { status: 403 }) as any,
-    );
-    const res = await GET(makeRequest("http://test/api/admin/finance/summary"));
-    assert.strictEqual(res.status, 403);
-  });
+  test('soma recargas, comissões, repasses e reembolsos', async () => {
+    banco({ topup: 100_000, refund: 5_000, frete: 3_000, seguro: 500, repasseReais: 612.345, carteiras: 42_000 });
+    comoFinanceiro();
 
-  test("200 com summary e datas opcionais", async () => {
-    test.mock.method(sessionModule, "getAdminSessionFromRequest", async () => ({
-      staffId: "s1",
-      permissions: ["FINANCEIRO"],
-      isSuperAdmin: true,
-    }));
-    test.mock.method(permissionsModule, "requirePermission", () => null);
+    const res = await readApi(await chamar(rota));
 
-    const res = await GET(makeRequest("http://test/api/admin/finance/summary?dateStart=2025-01-01&dateEnd=2025-01-31"));
     assert.strictEqual(res.status, 200);
-    const body = await res.json();
-    assert.strictEqual(body.period.dateStart, "2025-01-01");
-    assert.strictEqual(body.period.dateEnd, "2025-01-31");
-    assert.ok(body.grossRevenue > 0);
+    assert.deepStrictEqual(res.data, {
+      period: {},
+      grossRevenue: 100_000,
+      platformFees: 3_500,
+      carrierPayouts: 61_235, // R$ 612,345 arredondado para centavos
+      refunds: 5_000,
+      chargebacks: 0,
+      customersWalletBalance: 42_000,
+      platformOperationalBalance: 100_000 - 61_235 - 5_000,
+    });
+  });
+
+  test('banco sem movimento dá tudo zero', async () => {
+    comoFinanceiro();
+    const res = await readApi(await chamar(rota));
+    assert.strictEqual(res.data.grossRevenue, 0);
+    assert.strictEqual(res.data.platformOperationalBalance, 0);
+  });
+
+  test('filtra o período no fuso de Brasília', async () => {
+    const consultas = banco({});
+    comoFinanceiro();
+
+    const res = await readApi(await chamar({ ...rota, url: `${rota.url}?dateStart=2026-01-01&dateEnd=2026-01-31` }));
+
+    assert.deepStrictEqual(res.data.period, { dateStart: '2026-01-01', dateEnd: '2026-01-31' });
+    const { gte, lte } = consultas[0].createdAt;
+    assert.strictEqual(gte.toISOString(), '2026-01-01T03:00:00.000Z');
+    assert.strictEqual(lte.toISOString(), '2026-02-01T02:59:59.999Z');
   });
 });
