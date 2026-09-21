@@ -311,6 +311,36 @@ export const POST = withApiHandler<CreatePaidShipmentResponse>(async ({ req }) =
         });
       }
 
+      if (errorCode === 'SENDER_DOCUMENT_REQUIRED') {
+        throw new ApiError({
+          code: 'sender_document_required',
+          message: error.message,
+          status: 400,
+        });
+      }
+
+      if (errorCode === 'DCE_KEY_REQUIRED') {
+        throw new ApiError({
+          code: 'dce_key_required',
+          message: 'Informe uma chave de DC-e válida para enviar com declaração de conteúdo.',
+          status: 400,
+        });
+      }
+
+      // P2002 em dceKey: corrida entre duas compras com a mesma chave, que
+      // passou pela checagem do serviço ao mesmo tempo.
+      const isDceKeyUnique =
+        errorCode === 'P2002' &&
+        (error.message.includes('dceKey') ||
+          JSON.stringify((error as { meta?: unknown }).meta ?? '').includes('dceKey'));
+      if (errorCode === 'DCE_KEY_ALREADY_USED' || isDceKeyUnique) {
+        throw new ApiError({
+          code: 'dce_key_already_used',
+          message: 'Esta chave de DC-e já foi usada em outro envio. Cada envio precisa da sua própria declaração.',
+          status: 409,
+        });
+      }
+
       if (errorCode === 'PAGARME_PAYMENT_ALREADY_USED') {
         throw new ApiError({
           code: 'payment_already_used',

@@ -129,6 +129,22 @@ export async function createPaidShipment(
       code: 'DCE_KEY_REQUIRED',
     });
   }
+
+  // A mesma declaração não vale para dois envios (dceKey é única no banco).
+  // Checar aqui, antes da transação, dá uma mensagem clara em vez do erro
+  // genérico da constraint — e nada é debitado. Uma nova tentativa do mesmo
+  // envio (mesmo código de rastreio) segue para a idempotência lá dentro.
+  if (dceKey) {
+    const jaUsada = await prisma.shipment.findUnique({
+      where: { dceKey },
+      select: { platformTrackingCode: true },
+    });
+    if (jaUsada && jaUsada.platformTrackingCode !== trackingCode) {
+      throw Object.assign(new Error('Chave da DC-e já usada em outro envio.'), {
+        code: 'DCE_KEY_ALREADY_USED',
+      });
+    }
+  }
   const documentData = prepareDocumentData(document);
   const initialStatus = determineInitialStatus();
   const amountCents = Math.round(totalCost * 100);
