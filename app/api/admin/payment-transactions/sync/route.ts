@@ -6,7 +6,8 @@
 
 import { AdminPermission } from '@prisma/client';
 import { requireAdminSession } from '@/platform/auth/require-session';
-import { getCharge, mapAsaasStatus } from '@/platform/integrations/asaas';
+import { updatePaymentFromAsaas } from '@/platform/integrations/asaas/tracking';
+import * as walletService from '@/modules/wallet/application/wallet.service';
 import { prisma } from '@/platform/db/db';
 import { withApiHandler } from '@/platform/api/handler';
 import { ApiError } from '@/platform/api/errors';
@@ -40,17 +41,19 @@ export const POST = withApiHandler(async ({ req }) => {
     });
   }
 
-  const charge = await getCharge(externalId);
-  const status = mapAsaasStatus(charge.status);
+  // Mesmo caminho do webhook: atualiza pela cobrança do Asaas e, se for uma
+  // recarga liberada, credita a carteira (idempotente). O monitor de PIX só
+  // olha cobranças PENDING, então marcar PAID aqui sem creditar deixava a
+  // recarga paga sem virar saldo.
+  await updatePaymentFromAsaas(externalId);
+  await walletService.creditTopupIfReleased(existing.id);
 
-  const transaction = await prisma.paymentTransaction.update({
+  const transaction = await prisma.paymentTransaction.findUnique({
     where: { id: existing.id },
-    data: {
-      status,
-      paidAt: status === 'PAID' ? new Date() : undefined,
-      authorizedAt: status === 'CAPTURED' ? new Date() : undefined,
-    },
   });
+  if (!transaction) {
+    throw new ApiError({ code: 'not_found', message: 'Transação não encontrada', status: 404 });
+  }
 
   return {
     data: {

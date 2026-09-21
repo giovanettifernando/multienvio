@@ -1,99 +1,83 @@
 import assert from 'node:assert';
 import test from 'node:test';
-import { NextResponse } from 'next/server';
 import { POST } from '@/app/api/admin/payment-transactions/sync/route';
+import { prisma } from '@/platform/db/db';
+import * as asaasTracking from '@/platform/integrations/asaas/tracking';
+import * as walletService from '@/modules/wallet/application/wallet.service';
+import * as adminSessionModule from '@/modules/auth/application/admin-session';
+import { adminSession, apiRequest, callRoute, readApi } from '../../../../../../_setup/test-helpers';
 
-function makeRequest(body: unknown) {
-  return new Request('http://test/api/admin/payment-transactions/sync', {
-    method: 'POST',
-    body: JSON.stringify(body),
-    headers: { 'content-type': 'application/json' },
-  });
+const originalPaymentTransaction = prisma.paymentTransaction;
+
+const sincronizar = (json: unknown) =>
+  callRoute(POST, apiRequest('/api/admin/payment-transactions/sync', { json }));
+
+function banco(existente: Record<string, unknown> | null, depois: Record<string, unknown> = {}) {
+  prisma.paymentTransaction = {
+    findFirst: async () => existente,
+    findUnique: async () => (existente ? { ...existente, ...depois } : null),
+  } as any;
 }
 
 test.describe('app/api/admin/payment-transactions/sync', () => {
-  let adminHelpers: any;
-  let paymentsModule: any;
-
-  test.before(async () => {
-    adminHelpers = await import('../../../../../../../modules/auth/application/admin-helpers.ts');
-    paymentsModule = await import('@/platform/integrations/pagarme');
+  test.beforeEach(() => {
+    test.mock.method(adminSessionModule, 'getAdminSessionFromRequest', async () =>
+      adminSession({ permissions: ['INTEGRACOES'] })
+    );
+    test.mock.method(asaasTracking, 'updatePaymentFromAsaas', async () => {});
+    test.mock.method(walletService, 'creditTopupIfReleased', async () => true);
   });
 
   test.afterEach(() => {
     test.mock.restoreAll();
+    prisma.paymentTransaction = originalPaymentTransaction;
   });
 
-  test('retorna resposta de auth quando requireAdminUser bloqueia', async () => {
-    test.mock.method(
-      adminHelpers,
-      'requireAdminUser',
-      async () => NextResponse.json({ message: 'sem auth' }, { status: 401 })
+  test('exige a permissão INTEGRACOES', async () => {
+    test.mock.method(adminSessionModule, 'getAdminSessionFromRequest', async () =>
+      adminSession({ permissions: ['CONTAS'] })
     );
-
-    const res = await POST(makeRequest({ externalId: 'ext' }));
-    assert.strictEqual(res.status, 401);
+    const res = await readApi(await sincronizar({ externalId: 'pay_1' }));
+    assert.strictEqual(res.status, 403);
   });
 
-  test('retorna 400 quando externalId ausente', async () => {
-    test.mock.method(adminHelpers, 'requireAdminUser', async () => ({ staffId: 's1' }));
-
-    const res = await POST(makeRequest({}));
+  test('responde 400 sem externalId', async () => {
+    const res = await readApi(await sincronizar({}));
     assert.strictEqual(res.status, 400);
   });
 
-  test('sincroniza pagamento com sucesso', async () => {
-    test.mock.method(adminHelpers, 'requireAdminUser', async () => ({ staffId: 's1' }));
-    test.mock.method(paymentsModule, 'updatePaymentFromPagarme', async () => ({
-      id: 't1',
-      status: 'PAID',
-      externalId: 'ext',
-      amountCents: 2000,
-    }));
+  test('responde 404 para cobrança que não é nossa', async () => {
+    banco(null);
+    const res = await readApi(await sincronizar({ externalId: 'pay_x' }));
+    assert.strictEqual(res.status, 404);
+    assert.strictEqual((asaasTracking.updatePaymentFromAsaas as any).mock.callCount(), 0);
+  });
 
-    const res = await POST(makeRequest({ externalId: 'ext' }));
+  test('atualiza pelo Asaas e credita a recarga liberada', async () => {
+    // O monitor de PIX só olha cobranças PENDING: se o sync marcasse PAID sem
+    // creditar, a recarga paga nunca viraria saldo.
+    banco(
+      { id: 't1', externalId: 'pay_1', status: 'PENDING', amountCents: 5000 },
+      { status: 'PAID' }
+    );
+
+    const res = await readApi(await sincronizar({ externalId: 'pay_1' }));
+
     assert.strictEqual(res.status, 200);
-    const body = await res.json();
-    assert.strictEqual(body.success, true);
-    assert.strictEqual(body.transaction.id, 't1');
-    assert.strictEqual(body.transaction.status, 'PAID');
+    assert.strictEqual((asaasTracking.updatePaymentFromAsaas as any).mock.calls[0].arguments[0], 'pay_1');
+    assert.strictEqual((walletService.creditTopupIfReleased as any).mock.calls[0].arguments[0], 't1');
+    assert.deepStrictEqual(res.data.transaction, { id: 't1', status: 'PAID', externalId: 'pay_1', amountCents: 5000 });
   });
 
-  test('retorna 500 quando sincronização falha', async () => {
-    test.mock.method(adminHelpers, 'requireAdminUser', async () => ({ staffId: 's1' }));
-    test.mock.method(paymentsModule, 'updatePaymentFromPagarme', async () => {
-      throw new Error('pagarme down');
+  test('erro do Asaas não credita nada', async () => {
+    banco({ id: 't1', externalId: 'pay_1', status: 'PENDING', amountCents: 5000 });
+    test.mock.method(asaasTracking, 'updatePaymentFromAsaas', async () => {
+      throw new Error('asaas fora');
     });
 
-    const res = await POST(makeRequest({ externalId: 'ext' }));
+    const res = await readApi(await sincronizar({ externalId: 'pay_1' }));
+
     assert.strictEqual(res.status, 500);
-    const body = await res.json();
-    assert.ok(body.error.includes('pagarme down'));
-  });
-
-  test('retorna 400 para JSON inválido', async () => {
-    test.mock.method(adminHelpers, 'requireAdminUser', async () => ({ staffId: 's1' }));
-    const badReq = new Request('http://test/api/admin/payment-transactions/sync', {
-      method: 'POST',
-      body: '{invalid',
-      headers: { 'content-type': 'application/json' },
-    });
-
-    const res = await POST(badReq);
-    assert.strictEqual(res.status, 500);
-    const body = await res.json();
-    assert.ok(body.error);
-  });
-
-  test('propaga mensagem específica de erro do updatePaymentFromPagarme', async () => {
-    test.mock.method(adminHelpers, 'requireAdminUser', async () => ({ staffId: 's1' }));
-    test.mock.method(paymentsModule, 'updatePaymentFromPagarme', async () => {
-      throw new Error('transação não encontrada');
-    });
-
-    const res = await POST(makeRequest({ externalId: 'missing' }));
-    assert.strictEqual(res.status, 500);
-    const body = await res.json();
-    assert.ok(body.error.includes('transação não encontrada'));
+    assert.strictEqual((walletService.creditTopupIfReleased as any).mock.callCount(), 0);
   });
 });
