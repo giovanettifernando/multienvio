@@ -688,21 +688,16 @@ async function resolveLoggiExternalServiceId(
 }
 
 /**
- * Resolve o tipo de frete e pickup da Loggi a partir do nome do serviço
+ * Resolve o tipo de frete da Loggi a partir do nome do serviço.
+ *
+ * O pickup é sempre postagem: no Multienvio quem leva o pacote ao Loggi Ponto
+ * é o cliente, e a modalidade "Coleta" nem é cotada. Fixar aqui também cobre
+ * item de carrinho antigo que ainda traga "(Coleta)" no nome do serviço.
  */
-function resolveLoggiFreightAndPickup(serviceName?: string): { freightType: string; pickupType?: string } {
-  if (!serviceName) return { freightType: 'FREIGHT_TYPE_ECONOMIC' };
-  const normalized = serviceName.toLowerCase();
+function resolveLoggiFreightAndPickup(serviceName?: string): { freightType: string; pickupType: string } {
+  const normalized = (serviceName ?? '').toLowerCase();
   const freightType = normalized.includes('express') ? 'FREIGHT_TYPE_EXPRESS' : 'FREIGHT_TYPE_ECONOMIC';
-
-  let pickupType: string | undefined;
-  if (normalized.includes('postagem') || normalized.includes('drop')) {
-    pickupType = 'PICKUP_TYPE_DROP_OFF';
-  } else if (normalized.includes('coleta') || normalized.includes('spot')) {
-    pickupType = 'PICKUP_TYPE_SPOT';
-  }
-
-  return { freightType, pickupType };
+  return { freightType, pickupType: 'PICKUP_TYPE_DROP_OFF' };
 }
 
 /**

@@ -150,7 +150,10 @@ export async function cotarLoggi(input: LoggiCotacaoInput): Promise<LoggiQuoteRe
       shipFrom,
       shipTo,
       packages,
-      pickupTypes: ['PICKUP_TYPE_SPOT', 'PICKUP_TYPE_DROP_OFF'],
+      // Só postagem: o cliente leva o pacote ao Loggi Ponto. A modalidade
+      // "Coleta" (PICKUP_TYPE_SPOT), em que a Loggi busca na origem, não é
+      // oferecida no Multienvio.
+      pickupTypes: ['PICKUP_TYPE_DROP_OFF'],
     },
   );
 
