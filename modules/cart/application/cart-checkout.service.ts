@@ -142,7 +142,7 @@ function determineInitialStatus(): ShipmentStatus {
  * Gera código de rastreamento único da plataforma
  */
 function generatePlatformTrackingCode(): string {
-  return `EL${Date.now()}${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
+  return `ME${Date.now()}${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
 }
 
 // ============================================================================

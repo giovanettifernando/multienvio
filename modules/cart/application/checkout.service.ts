@@ -340,7 +340,7 @@ export function prepareDocumentData(document: CheckoutDocument): Prisma.InputJso
  * Gera um código de rastreamento único para a plataforma
  */
 export function generatePlatformTrackingCode(): string {
-  return `EL${Date.now()}${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
+  return `ME${Date.now()}${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
 }
 
 /**

@@ -23,13 +23,13 @@ interface ReserveTrackingCodeResponse {
 }
 
 /**
- * Gera um código de rastreamento no formato EL + timestamp + random
- * Formato: EL1734567890123ABCDE (EL + 13 dígitos timestamp + 5 chars random)
+ * Gera um código de rastreamento no formato ME + timestamp + random
+ * Formato: ME1734567890123ABCDE (ME de Multienvio + 13 dígitos timestamp + 5 chars random)
  */
 function generateTrackingCode(): string {
   const timestamp = Date.now().toString();
   const random = Math.random().toString(36).substring(2, 7).toUpperCase();
-  return `EL${timestamp}${random}`;
+  return `ME${timestamp}${random}`;
 }
 
 /**
