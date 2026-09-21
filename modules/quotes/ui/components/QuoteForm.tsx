@@ -1355,6 +1355,7 @@ export function QuoteForm({ defaultOrigin }: QuoteFormProps) {
                     }}
                     maxLength={9}
                     placeholder="00000-000"
+                    aria-label={destinationManualLabel}
                     suffix={suffix}
                     autoComplete="postal-code"
                     inputMode="numeric"
