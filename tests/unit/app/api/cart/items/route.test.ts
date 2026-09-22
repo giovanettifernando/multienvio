@@ -54,7 +54,14 @@ test.describe('app/api/cart/items (POST)', () => {
     const res = await readApi(await adicionar(itemAdulterado()));
 
     assert.strictEqual(res.status, 200);
-    assert.deepStrictEqual(validar.mock.calls[0].arguments, ['q1', 'u1', 0.01]);
+    assert.deepStrictEqual(validar.mock.calls[0].arguments.slice(0, 3), ['q1', 'u1', 0.01]);
+    // o envio vai junto para ser conferido com a cotação
+    assert.deepStrictEqual(validar.mock.calls[0].arguments[3], {
+      originCep: '01310100',
+      destinationCep: '20040002',
+      insuranceValue: undefined,
+      volumes: [{ comprimentoCm: 20, larguraCm: 16, alturaCm: 15, pesoKg: 1 }],
+    });
     const gravado = (cartItems.addItem as any).mock.calls[0].arguments[1];
     assert.deepStrictEqual(gravado.selectedQuote, {
       carrier: 'Correios',

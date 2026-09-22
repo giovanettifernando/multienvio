@@ -376,6 +376,8 @@ export async function createQuote(
       originCep,
       destCep,
       documentType: 'DECLARATION', // Default to declaration
+      // O preço inclui a comissão sobre este valor; o envio não pode declarar mais
+      insuranceValue: request.seguro ?? 0,
       isReverse: request.devolucao || false,
       expiresAt,
       volumes: {

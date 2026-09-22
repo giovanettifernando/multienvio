@@ -196,7 +196,18 @@ export const POST = withApiHandler<CreatePaidShipmentResponse>(async ({ req }) =
   const validatedQuote = await validateQuoteAndGetPrice(
     data.quoteId,
     session.userId,
-    data.freightCost // Passamos para logging de tentativas de manipulação
+    data.freightCost, // Passamos para logging de tentativas de manipulação
+    {
+      originCep: data.originCep,
+      destinationCep: data.destinationCep,
+      insuranceValue: data.insuranceValue,
+      volumes: data.volumes.map((v) => ({
+        pesoKg: v.peso,
+        alturaCm: v.altura,
+        larguraCm: v.largura,
+        comprimentoCm: v.comprimento,
+      })),
+    }
   );
 
   // O total é o frete validado no servidor (o seguro já entra no preço da cotação)

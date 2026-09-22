@@ -49,7 +49,12 @@ export const POST = withApiHandler<PostCartItemResponse>(async (context) => {
   // conferidos). O que a tela manda é ignorado: o checkout do carrinho cobra
   // exatamente o que ficar gravado aqui.
   const { quoteId, ...itemData } = validation.data;
-  const cotacao = await validateQuoteAndGetPrice(quoteId, session.userId, itemData.selectedQuote.price);
+  const cotacao = await validateQuoteAndGetPrice(quoteId, session.userId, itemData.selectedQuote.price, {
+    originCep: itemData.originAddress.cep,
+    destinationCep: itemData.destination.cep,
+    insuranceValue: itemData.insuranceValue,
+    volumes: itemData.volumes,
+  });
 
   const item = await addItem(session.userId, {
     ...itemData,

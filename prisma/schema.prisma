@@ -473,6 +473,8 @@ model Quote {
   documentType DocumentType
   nfeNumber    String?
   nfeValue     Decimal?        @db.Decimal(10, 2)
+  /// Valor segurado usado no preço da cotação (o envio não pode declarar mais)
+  insuranceValue Decimal?      @map("insurance_value") @db.Decimal(12, 2)
   isReverse    Boolean         @default(false)
   createdAt    DateTime        @default(now())
   updatedAt    DateTime        @updatedAt

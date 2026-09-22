@@ -41,7 +41,17 @@ export const POST = withApiHandler<CreateResponse>(async (context) => {
   // conferidos). Sem isso o remetente podia gerar um link de R$ 0,01, pagar ele
   // mesmo e sair com a etiqueta. A comissão é calculada no pagamento.
   const { quote } = parsed.data;
-  const cotacao = await validateQuoteAndGetPrice(quote.quoteId, session.userId, quote.totalCents / 100);
+  const cotacao = await validateQuoteAndGetPrice(quote.quoteId, session.userId, quote.totalCents / 100, {
+    originCep: parsed.data.origin.cep,
+    destinationCep: parsed.data.destination.cep,
+    insuranceValue: parsed.data.declaredValue,
+    volumes: parsed.data.packages.map((p) => ({
+      pesoKg: p.weight,
+      alturaCm: p.height,
+      larguraCm: p.width,
+      comprimentoCm: p.length,
+    })),
+  });
 
   const data = {
     ...parsed.data,

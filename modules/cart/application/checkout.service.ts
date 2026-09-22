@@ -13,6 +13,7 @@ import { prisma } from '@/platform/db/db';
 import { ShipmentStatus } from '@/modules/shipments/application/shipment-status';
 import { logger } from '@/platform/logging/logger';
 import { ApiError } from '@/platform/api/errors';
+import { conferirEnvioComCotacao, type EnvioCotado } from './cotacao-envio';
 
 // ============================================================================
 // TIPOS
@@ -127,7 +128,9 @@ export interface ValidatedQuote {
 export async function validateQuoteAndGetPrice(
   quoteId: string,
   userId: string,
-  clientFreightCost?: number
+  clientFreightCost: number | undefined,
+  /** O envio que vai ser pago: precisa ser o mesmo que foi cotado */
+  envio: EnvioCotado
 ): Promise<ValidatedQuote> {
   const quote = await prisma.quote.findFirst({
     where: {
@@ -137,6 +140,7 @@ export async function validateQuoteAndGetPrice(
     include: {
       selection: true,
       options: true,
+      volumes: { orderBy: { id: 'asc' } },
     },
   });
 
@@ -180,6 +184,9 @@ export async function validateQuoteAndGetPrice(
       status: 400,
     });
   }
+
+  // O preço vale para o que foi cotado: CEPs, volumes e valor segurado
+  conferirEnvioComCotacao(quote, envio);
 
   const serverFreightCostCents = quote.selection.totalCents;
   const serverFreightCost = serverFreightCostCents / 100;

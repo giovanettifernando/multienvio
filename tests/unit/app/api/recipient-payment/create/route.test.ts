@@ -78,7 +78,14 @@ test.describe('app/api/recipient-payment/create', () => {
     const res = await readApi(await criar(pedidoAdulterado()));
 
     assert.strictEqual(res.status, 201, JSON.stringify(res.error));
-    assert.deepStrictEqual(validar.mock.calls[0].arguments, ['q1', 'u1', 0.01]);
+    assert.deepStrictEqual(validar.mock.calls[0].arguments.slice(0, 3), ['q1', 'u1', 0.01]);
+    // o envio vai junto para ser conferido com a cotação
+    assert.deepStrictEqual(validar.mock.calls[0].arguments[3], {
+      originCep: '01310100',
+      destinationCep: '20040002',
+      insuranceValue: 0,
+      volumes: [{ pesoKg: 1, alturaCm: 15, larguraCm: 16, comprimentoCm: 20 }],
+    });
     const { quote } = (recipientService.createRecipientPaymentRequest as any).mock.calls[0].arguments[0];
     assert.deepStrictEqual(quote, {
       quoteId: 'q1',
