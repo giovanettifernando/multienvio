@@ -72,6 +72,15 @@ export function maskCEP(value: string): string {
 }
 
 /**
+ * Máscara do número do cartão: blocos de 4 dígitos, até 19 dígitos
+ * (ex.: 4111 1111 1111 1111). Quem envia tira os espaços.
+ */
+export function maskCardNumber(value: string): string {
+  const digits = onlyDigits(value).slice(0, 19);
+  return digits.replace(/(\d{4})(?=\d)/g, '$1 ');
+}
+
+/**
  * Máscara de validade de cartão no formato MM/AA — como vem impresso no
  * cartão. A API do Asaas recebe mês e ano em campos separados; a divisão é
  * responsabilidade de quem envia, não de quem digita.

@@ -5,7 +5,7 @@ import { ELAlert } from '@/shared/ui/ELAlert';
 import { ELModal } from '@/shared/ui/ELModal';
 import { ELButton } from '@/shared/ui/ELButton';
 import { LoadingOutlined } from "@ant-design/icons";
-import { maskCEP, isValidCep, normalizeCep } from '@/shared/utils/masks';
+import { maskCEP, isValidCep, normalizeCep, maskCardNumber, maskCardValidity } from '@/shared/utils/masks';
 
 // Timeout para aguardar confirmacao da operadora (15 segundos)
 const CARD_PROCESSING_TIMEOUT_MS = 15000;
@@ -33,8 +33,8 @@ export function RecipientCardPaymentForm({
   const [form, setForm] = useState({
     number: "",
     holderName: "",
-    expMonth: "",
-    expYear: "",
+    // Validade num campo só, no formato MM/AA — é como vem impresso no cartão
+    validity: "",
     cvv: "",
     postalCode: "",
     addressNumber: "",
@@ -44,6 +44,21 @@ export function RecipientCardPaymentForm({
 
 
   const handleSubmit = async () => {
+    // A validade chega como MM/AA; a API do Asaas recebe mês e ano separados,
+    // com o ano em 4 dígitos.
+    const [rawMonth = "", rawYear = ""] = form.validity.split("/");
+    const expMonth = parseInt(rawMonth, 10);
+    const expYear = parseInt(rawYear.length === 2 ? `20${rawYear}` : rawYear, 10);
+
+    if (!Number.isInteger(expMonth) || expMonth < 1 || expMonth > 12) {
+      setFieldError('Validade inválida — use o formato MM/AA (ex.: 12/30)');
+      return;
+    }
+    const anoAtual = new Date().getFullYear();
+    if (!Number.isInteger(expYear) || expYear < anoAtual || expYear > anoAtual + 30) {
+      setFieldError('Validade inválida — verifique o ano');
+      return;
+    }
     // O Asaas exige CEP e número do endereço do titular para tokenizar o cartão
     // (mesma exigência de modules/wallet/ui/components/CardPaymentForm.tsx, Task 14).
     if (!isValidCep(form.postalCode)) {
@@ -80,8 +95,8 @@ export function RecipientCardPaymentForm({
           paymentToken,
           number: form.number.replace(/\D/g, ''),
           holderName: form.holderName,
-          expMonth: parseInt(form.expMonth, 10),
-          expYear: parseInt(form.expYear.length === 2 ? `20${form.expYear}` : form.expYear, 10),
+          expMonth,
+          expYear,
           ccv: form.cvv,
           postalCode: normalizeCep(form.postalCode),
           addressNumber: form.addressNumber.trim(),
@@ -190,34 +205,42 @@ export function RecipientCardPaymentForm({
 
       <div style={{ maxWidth: 600, margin: "0 auto", display: "flex", flexDirection: "column", gap: 12 }}>
         <input
-          placeholder="Numero do cartao"
+          placeholder="0000 0000 0000 0000"
+          aria-label="Número do cartão"
           value={form.number}
-          onChange={(e) => setForm((f) => ({ ...f, number: e.target.value }))}
+          maxLength={23}
+          inputMode="numeric"
+          autoComplete="cc-number"
+          onChange={(e) => setForm((f) => ({ ...f, number: maskCardNumber(e.target.value) }))}
           style={{ padding: 8, border: "1px solid #d9d9d9", borderRadius: 6 }}
         />
         <input
-          placeholder="Nome no cartao"
+          placeholder="Nome no cartão"
+          aria-label="Nome no cartão"
+          autoComplete="cc-name"
           value={form.holderName}
           onChange={(e) => setForm((f) => ({ ...f, holderName: e.target.value }))}
           style={{ padding: 8, border: "1px solid #d9d9d9", borderRadius: 6 }}
         />
         <div style={{ display: "flex", gap: 8 }}>
           <input
-            placeholder="MM"
-            value={form.expMonth}
-            onChange={(e) => setForm((f) => ({ ...f, expMonth: e.target.value }))}
-            style={{ flex: 1, padding: 8, border: "1px solid #d9d9d9", borderRadius: 6 }}
-          />
-          <input
-            placeholder="AA"
-            value={form.expYear}
-            onChange={(e) => setForm((f) => ({ ...f, expYear: e.target.value }))}
+            placeholder="MM/AA"
+            aria-label="Validade"
+            autoComplete="cc-exp"
+            value={form.validity}
+            maxLength={5}
+            inputMode="numeric"
+            onChange={(e) => setForm((f) => ({ ...f, validity: maskCardValidity(e.target.value) }))}
             style={{ flex: 1, padding: 8, border: "1px solid #d9d9d9", borderRadius: 6 }}
           />
           <input
             placeholder="CVV"
+            aria-label="CVV"
+            autoComplete="cc-csc"
             value={form.cvv}
-            onChange={(e) => setForm((f) => ({ ...f, cvv: e.target.value }))}
+            maxLength={4}
+            inputMode="numeric"
+            onChange={(e) => setForm((f) => ({ ...f, cvv: e.target.value.replace(/\D/g, "") }))}
             style={{ flex: 1, padding: 8, border: "1px solid #d9d9d9", borderRadius: 6 }}
           />
         </div>

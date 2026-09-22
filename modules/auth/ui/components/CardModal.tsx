@@ -13,7 +13,7 @@ import {
   SafetyOutlined,
   UserOutlined,
 } from "@ant-design/icons";
-import { maskCEP, isValidCep, normalizeCep, maskCardValidity } from '@/shared/utils/masks';
+import { maskCEP, isValidCep, normalizeCep, maskCardValidity, maskCardNumber } from '@/shared/utils/masks';
 
 export type CardFormValues = {
   /** Token de tokenização do Asaas (Task 9) — o que POST /api/account/cards espera desde a Task 11. */
@@ -181,25 +181,7 @@ export function CardModal({ open, loading, onSubmit, onCancel }: CardModalProps)
     }
   };
 
-  /**
-   * Formata número do cartão com espaços: 0000 0000 0000 0000
-   */
-  const formatCardNumber = (value: string) => {
-    const v = value.replace(/\s+/g, "").replace(/[^0-9]/gi, "");
-    const matches = v.match(/\d{4,16}/g);
-    const match = (matches && matches[0]) || "";
-    const parts = [];
 
-    for (let i = 0, len = match.length; i < len; i += 4) {
-      parts.push(match.substring(i, i + 4));
-    }
-
-    if (parts.length) {
-      return parts.join(" ");
-    } else {
-      return value;
-    }
-  };
 
   /**
    * Formata e valida validade MM/AA
@@ -286,7 +268,9 @@ export function CardModal({ open, loading, onSubmit, onCancel }: CardModalProps)
         >
           <Input
             placeholder="0000 0000 0000 0000"
-            maxLength={19}
+            maxLength={23}
+            inputMode="numeric"
+            autoComplete="cc-number"
             prefix={<CreditCardOutlined style={{ color: "#bfbfbf" }} />}
             suffix={
               cardBrand ? (
@@ -300,7 +284,7 @@ export function CardModal({ open, loading, onSubmit, onCancel }: CardModalProps)
             }
             size="large"
             onChange={(e) => {
-              const formatted = formatCardNumber(e.target.value);
+              const formatted = maskCardNumber(e.target.value);
               form.setFieldValue("cardNumber", formatted);
 
               // Detectar bandeira

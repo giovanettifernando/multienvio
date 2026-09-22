@@ -6,6 +6,8 @@ import {
   maskCNPJ,
   maskCPF,
   maskCEP,
+  maskCardNumber,
+  maskCardValidity,
   normalizePhoneInput,
   normalizeCNPJInput,
   normalizeCPFInput,
@@ -50,5 +52,24 @@ test.describe('utils/masks', () => {
     assert.strictEqual(formatCNPJ('12345678000199'), '12.345.678/0001-99');
     assert.strictEqual(formatPhoneBR('11987654321'), '(11) 98765-4321');
     assert.strictEqual(formatCEP('12345678'), '12345-678');
+  });
+
+  test('número do cartão sai em blocos de 4 desde o primeiro dígito', () => {
+    assert.strictEqual(maskCardNumber('4'), '4');
+    assert.strictEqual(maskCardNumber('411'), '411');
+    assert.strictEqual(maskCardNumber('41111'), '4111 1');
+    assert.strictEqual(maskCardNumber('4111111111111111'), '4111 1111 1111 1111');
+    assert.strictEqual(maskCardNumber('4111-1111 1111.1111'), '4111 1111 1111 1111');
+    assert.strictEqual(maskCardNumber('abc'), '');
+  });
+
+  test('número do cartão aceita até 19 dígitos', () => {
+    assert.strictEqual(maskCardNumber('12345678901234567890123'), '1234 5678 9012 3456 789');
+  });
+
+  test('validade no formato MM/AA', () => {
+    assert.strictEqual(maskCardValidity('1'), '1');
+    assert.strictEqual(maskCardValidity('1230'), '12/30');
+    assert.strictEqual(maskCardValidity('12/3099'), '12/30');
   });
 });

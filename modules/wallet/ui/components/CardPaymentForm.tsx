@@ -2,7 +2,7 @@
 import { useState, useRef } from "react";
 import { ELCard, ELSpin, ELAlert, ELButton, ELModal } from '@/shared/ui';
 import { LoadingOutlined } from "@ant-design/icons";
-import { maskCEP, isValidCep, normalizeCep, maskCardValidity } from '@/shared/utils/masks';
+import { maskCEP, isValidCep, normalizeCep, maskCardValidity, maskCardNumber } from '@/shared/utils/masks';
 
 const CARD_PROCESSING_TIMEOUT_MS = 15000;
 
@@ -146,13 +146,19 @@ export function CardPaymentForm({ amount, onSuccess, onError, paymentType = 'wal
       </ELModal>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         <input
-          placeholder="Número do cartão"
+          placeholder="0000 0000 0000 0000"
+          aria-label="Número do cartão"
           value={form.number}
-          onChange={e => setForm(f => ({ ...f, number: e.target.value }))}
+          maxLength={23}
+          inputMode="numeric"
+          autoComplete="cc-number"
+          onChange={e => setForm(f => ({ ...f, number: maskCardNumber(e.target.value) }))}
           style={{ padding: 8, border: '1px solid #d9d9d9', borderRadius: 6 }}
         />
         <input
           placeholder="Nome no cartão"
+          aria-label="Nome no cartão"
+          autoComplete="cc-name"
           value={form.holderName}
           onChange={e => setForm(f => ({ ...f, holderName: e.target.value }))}
           style={{ padding: 8, border: '1px solid #d9d9d9', borderRadius: 6 }}
@@ -160,6 +166,8 @@ export function CardPaymentForm({ amount, onSuccess, onError, paymentType = 'wal
         <div style={{ display: 'flex', gap: 8 }}>
           <input
             placeholder="MM/AA"
+            aria-label="Validade"
+            autoComplete="cc-exp"
             value={form.validity}
             maxLength={5}
             inputMode="numeric"
@@ -168,6 +176,8 @@ export function CardPaymentForm({ amount, onSuccess, onError, paymentType = 'wal
           />
           <input
             placeholder="CVV"
+            aria-label="CVV"
+            autoComplete="cc-csc"
             value={form.cvv}
             maxLength={4}
             inputMode="numeric"
