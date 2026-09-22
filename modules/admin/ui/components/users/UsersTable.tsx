@@ -1,7 +1,7 @@
 "use client";
 
 import { Tag, Tooltip, Flex, Typography, App } from "antd";
-import { EditOutlined, DeleteOutlined, KeyOutlined } from "@ant-design/icons";
+import { EditOutlined, DeleteOutlined, LockOutlined } from "@ant-design/icons";
 import { ELButton, ELSwitch } from '@/shared/ui';
 import { DataTable, type DataTableColumn } from '@/shared/ui/DataTable';
 import type { AdminUser } from "@/modules/auth/application/types";
@@ -205,7 +205,7 @@ export function UsersTable({
           <Tooltip title="Resetar senha">
             <ELButton
               variant="text"
-              icon={<KeyOutlined />}
+              icon={<LockOutlined />}
               onClick={() => handleResetPassword(user)}
               loading={resetPasswordMutation.isPending}
             />
